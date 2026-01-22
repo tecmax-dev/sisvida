@@ -10,8 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import {
@@ -448,7 +453,7 @@ export default function SubscriptionPage() {
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  Faça upgrade para desbloquear
+                  Faça upgrade para desbloquear estes recursos
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -458,6 +463,7 @@ export default function SubscriptionPage() {
                   </div>
                 ) : blockedFeatures.length > 0 ? (
                   <div className="space-y-3">
+                    {/* Group blocked features by category */}
                     {Object.entries(
                       blockedFeatures.reduce((acc, feature) => {
                         const cat = feature.category || 'Geral';
@@ -475,7 +481,7 @@ export default function SubscriptionPage() {
                             <Badge 
                               key={feature.id} 
                               variant="outline"
-                              className="text-muted-foreground gap-1"
+                              className="text-muted-foreground gap-1 opacity-70"
                             >
                               <Lock className="h-3 w-3" />
                               {feature.name}
@@ -486,40 +492,37 @@ export default function SubscriptionPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Você tem acesso a todos os recursos disponíveis!
-                  </p>
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Todos os recursos estão disponíveis!</span>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Upgrade Requests History */}
+          {/* Add-ons Section */}
+          <ClinicAddonsSection />
           {upgradeRequests.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Histórico de Solicitações</CardTitle>
-                <CardDescription>
-                  Suas últimas solicitações de alteração de plano
-                </CardDescription>
+                <CardTitle className="text-lg">Histórico de Solicitações</CardTitle>
+                <CardDescription>Suas últimas solicitações de upgrade</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {upgradeRequests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
-                    >
-                      <div>
-                        <p className="font-medium">
+                    <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
                           Upgrade para {request.requested_plan?.name || 'Plano'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
                         {request.admin_notes && request.status !== 'pending' && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Nota: {request.admin_notes}
+                          <p className="text-xs text-muted-foreground italic">
+                            "{request.admin_notes}"
                           </p>
                         )}
                       </div>
@@ -530,120 +533,193 @@ export default function SubscriptionPage() {
               </CardContent>
             </Card>
           )}
-
-          {/* Addons Section */}
-          <ClinicAddonsSection />
         </>
       )}
 
-      {/* Upgrade Dialog */}
-      <PopupBase 
-        open={upgradeDialogOpen} 
-        onClose={() => setUpgradeDialogOpen(false)} 
-        maxWidth="2xl"
-      >
-        <PopupHeader>
-          <PopupTitle>Alterar Plano</PopupTitle>
-          <PopupDescription>
-            Selecione o plano desejado e envie sua solicitação para análise.
-          </PopupDescription>
-        </PopupHeader>
+      {/* Plan Change Dialog */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Alterar Plano</DialogTitle>
+            <DialogDescription>
+              Selecione o plano desejado e sua solicitação será analisada pela nossa equipe
+            </DialogDescription>
+          </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh]">
-          <div className="space-y-4 pr-2">
-            {loadingPlans ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {plans
-                  .filter(p => p.is_public && p.is_active)
-                  .map((plan) => {
-                    const isCurrentPlan = subscription?.plan_id === plan.id;
-                    const isSelected = selectedPlan === plan.id;
+          {loadingPlans ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {/* Upgrade Plans */}
+              {(() => {
+                const currentPrice = subscription?.plan?.monthly_price || 0;
+                const upgradePlans = plans.filter(p => p.id !== subscription?.plan_id && p.monthly_price > currentPrice);
+                const downgradePlans = plans.filter(p => p.id !== subscription?.plan_id && p.monthly_price < currentPrice);
 
-                    return (
-                      <div
-                        key={plan.id}
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          isSelected
-                            ? 'border-primary bg-primary/5'
-                            : isCurrentPlan
-                            ? 'border-muted bg-muted/50'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        onClick={() => !isCurrentPlan && setSelectedPlan(plan.id)}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-semibold flex items-center gap-2">
-                              {plan.name}
-                              {isCurrentPlan && (
-                                <Badge variant="secondary">Plano Atual</Badge>
-                              )}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {plan.description}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold">
-                              {plan.monthly_price === 0
-                                ? 'Grátis'
-                                : formatPrice(plan.monthly_price)}
-                            </p>
-                            {plan.monthly_price > 0 && (
-                              <p className="text-xs text-muted-foreground">/mês</p>
-                            )}
-                          </div>
+                return (
+                  <div className="space-y-6 py-4">
+                    {upgradePlans.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-green-600" />
+                          <h3 className="font-medium text-green-600">Upgrade - Planos Superiores</h3>
                         </div>
-                        <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            {plan.max_professionals} profissionais
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="h-4 w-4" />
-                            {plan.max_messages_monthly === 0 
-                              ? 'Mensagens ilimitadas' 
-                              : `${plan.max_messages_monthly} mensagens/mês`}
-                          </span>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {upgradePlans.map((plan) => (
+                            <Card
+                              key={plan.id}
+                              className={`cursor-pointer transition-all hover:border-green-500 border-green-200 dark:border-green-800 ${
+                                selectedPlan === plan.id ? 'border-green-500 ring-2 ring-green-500/20' : ''
+                              }`}
+                              onClick={() => setSelectedPlan(plan.id)}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                                    +{formatPrice(plan.monthly_price - currentPrice)}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="text-xs">
+                                  {plan.description}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div>
+                                  <span className="text-2xl font-bold text-green-600">
+                                    {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
+                                  </span>
+                                  {plan.monthly_price > 0 && (
+                                    <span className="text-muted-foreground text-sm">/mês</span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span>Até {plan.max_professionals} profissional(is)</span>
+                                </div>
+
+                                {plan.features.length > 0 && (
+                                  <ul className="space-y-1">
+                                    {plan.features.slice(0, 4).map((feature, index) => (
+                                      <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <Check className="h-3 w-3 text-green-600" />
+                                        {feature}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
-              </div>
-            )}
+                    )}
 
-            {selectedPlan && (
-              <div className="space-y-2">
-                <Label htmlFor="reason">Motivo da solicitação (opcional)</Label>
-                <Textarea
-                  id="reason"
-                  placeholder="Descreva por que deseja alterar seu plano..."
-                  value={upgradeReason}
-                  onChange={(e) => setUpgradeReason(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            )}
+                    {downgradePlans.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                          <h3 className="font-medium text-yellow-600">Downgrade - Planos Inferiores</h3>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {downgradePlans.map((plan) => (
+                            <Card
+                              key={plan.id}
+                              className={`cursor-pointer transition-all hover:border-yellow-500 border-yellow-200 dark:border-yellow-800 ${
+                                selectedPlan === plan.id ? 'border-yellow-500 ring-2 ring-yellow-500/20' : ''
+                              }`}
+                              onClick={() => setSelectedPlan(plan.id)}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                                  <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
+                                    -{formatPrice(currentPrice - plan.monthly_price)}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="text-xs">
+                                  {plan.description}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div>
+                                  <span className="text-2xl font-bold text-yellow-600">
+                                    {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
+                                  </span>
+                                  {plan.monthly_price > 0 && (
+                                    <span className="text-muted-foreground text-sm">/mês</span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span>Até {plan.max_professionals} profissional(is)</span>
+                                </div>
+
+                                {plan.features.length > 0 && (
+                                  <ul className="space-y-1">
+                                    {plan.features.slice(0, 4).map((feature, index) => (
+                                      <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <Check className="h-3 w-3 text-yellow-600" />
+                                        {feature}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          ⚠️ Ao fazer downgrade, você pode perder acesso a alguns recursos e limites do plano atual.
+                        </p>
+                      </div>
+                    )}
+
+                    {upgradePlans.length === 0 && downgradePlans.length === 0 && (
+                      <div className="flex items-center gap-2 p-4 rounded-lg bg-muted/50 border">
+                        <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Não há outros planos disponíveis para alteração no momento.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {selectedPlan && (
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Motivo da solicitação (opcional)</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Descreva por que você deseja alterar seu plano..."
+                    value={upgradeReason}
+                    onChange={(e) => setUpgradeReason(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRequestUpgrade}
+              disabled={!selectedPlan || requesting}
+            >
+              {requesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Enviar Solicitação
+            </Button>
           </div>
-        </ScrollArea>
-
-        <PopupFooter>
-          <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleRequestUpgrade}
-            disabled={!selectedPlan || requesting}
-          >
-            {requesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Enviar Solicitação
-          </Button>
-        </PopupFooter>
-      </PopupBase>
+        </DialogContent>
+      </Dialog>
     </div>
     </RoleGuard>
   );

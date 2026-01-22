@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Printer, FileText, Award, ClipboardCheck, Settings, FlaskConical, MessageCircle, Send, Loader2, Pill, Cloud, CloudOff } from "lucide-react";
 import {
-  PopupBase,
-  PopupHeader,
-  PopupTitle,
-} from "@/components/ui/popup-base";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -539,24 +540,25 @@ export function PrintDialog({
 
   return (
     <>
-      <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="4xl">
-        <PopupHeader>
-          <div className="flex items-center justify-between">
-            <PopupTitle className="flex items-center gap-2">
-              <Printer className="h-5 w-5" />
-              Impressão de Documentos - {patient.name}
-            </PopupTitle>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setSettingsOpen(true)}
-              className="text-muted-foreground"
-            >
-              <Settings className="h-4 w-4 mr-1" />
-              Configurar
-            </Button>
-          </div>
-        </PopupHeader>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Printer className="h-5 w-5" />
+                Impressão de Documentos - {patient.name}
+              </DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setSettingsOpen(true)}
+                className="text-muted-foreground"
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Configurar
+              </Button>
+            </div>
+          </DialogHeader>
 
           <Tabs
             value={activeTab}
@@ -891,52 +893,55 @@ export function PrintDialog({
               Imprimir {getTabTitle(activeTab)}
             </Button>
           </div>
-      </PopupBase>
+        </DialogContent>
+      </Dialog>
 
       {/* WhatsApp phone dialog */}
-      <PopupBase open={showWhatsAppDialog} onClose={() => setShowWhatsAppDialog(false)} maxWidth="md">
-        <PopupHeader>
-          <PopupTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-green-600" />
-            Enviar Solicitação por WhatsApp
-          </PopupTitle>
-        </PopupHeader>
-        
-        <div className="space-y-4">
-          <div>
-            <Label>Número do WhatsApp</Label>
-            <Input
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              placeholder="(00) 00000-0000"
-              className="mt-1.5"
-            />
-            <p className="text-sm text-muted-foreground mt-1">
-              {patient.phone 
-                ? "Telefone do paciente já preenchido. Altere se necessário."
-                : "Paciente sem telefone cadastrado. Insira o número manualmente."}
-            </p>
-          </div>
+      <Dialog open={showWhatsAppDialog} onOpenChange={setShowWhatsAppDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              Enviar Solicitação por WhatsApp
+            </DialogTitle>
+          </DialogHeader>
           
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowWhatsAppDialog(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSendExamRequestWhatsApp}
-              disabled={!whatsappPhone || sendingWhatsApp}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {sendingWhatsApp ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Enviar
-            </Button>
+          <div className="space-y-4">
+            <div>
+              <Label>Número do WhatsApp</Label>
+              <Input
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+                className="mt-1.5"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                {patient.phone 
+                  ? "Telefone do paciente já preenchido. Altere se necessário."
+                  : "Paciente sem telefone cadastrado. Insira o número manualmente."}
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowWhatsAppDialog(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSendExamRequestWhatsApp}
+                disabled={!whatsappPhone || sendingWhatsApp}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {sendingWhatsApp ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Enviar
+              </Button>
+            </div>
           </div>
-        </div>
-      </PopupBase>
+        </DialogContent>
+      </Dialog>
 
       <DocumentSettingsDialog
         open={settingsOpen}

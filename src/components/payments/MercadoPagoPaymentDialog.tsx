@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,178 +120,176 @@ export function MercadoPagoPaymentDialog({
   };
 
   return (
-    <PopupBase 
-      open={open} 
-      onClose={() => onOpenChange(false)}
-      maxWidth="md"
-    >
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          {paymentType === 'pix' ? <QrCode className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
-          Pagamento via Mercado Pago
-        </PopupTitle>
-        <PopupDescription>
-          Valor: {formatCurrency(amount)}
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {paymentType === 'pix' ? <QrCode className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+            Pagamento via Mercado Pago
+          </DialogTitle>
+          <DialogDescription>
+            Valor: {formatCurrency(amount)}
+          </DialogDescription>
+        </DialogHeader>
 
-      {!paymentResult ? (
-        <>
-          <Tabs value={paymentType} onValueChange={(v) => setPaymentType(v as 'pix' | 'boleto')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pix" className="flex items-center gap-2">
-                <QrCode className="h-4 w-4" />
-                PIX
-              </TabsTrigger>
-              <TabsTrigger value="boleto" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Boleto
-              </TabsTrigger>
-            </TabsList>
+        {!paymentResult ? (
+          <>
+            <Tabs value={paymentType} onValueChange={(v) => setPaymentType(v as 'pix' | 'boleto')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="pix" className="flex items-center gap-2">
+                  <QrCode className="h-4 w-4" />
+                  PIX
+                </TabsTrigger>
+                <TabsTrigger value="boleto" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Boleto
+                </TabsTrigger>
+              </TabsList>
 
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo *</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Nome do pagador"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cpf">CPF *</Label>
-                <Input
-                  id="cpf"
-                  value={cpf}
-                  onChange={(e) => setCpf(formatCpf(e.target.value))}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                />
-              </div>
-
-              <TabsContent value="boleto" className="mt-0">
+              <div className="mt-4 space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dueDays">Dias para vencimento</Label>
+                  <Label htmlFor="name">Nome completo *</Label>
                   <Input
-                    id="dueDays"
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={boletoDueDays}
-                    onChange={(e) => setBoletoDueDays(parseInt(e.target.value) || 3)}
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nome do pagador"
                   />
                 </div>
-              </TabsContent>
-            </div>
-          </Tabs>
 
-          <PopupFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreatePayment} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                `Gerar ${paymentType === 'pix' ? 'PIX' : 'Boleto'}`
-              )}
-            </Button>
-          </PopupFooter>
-        </>
-      ) : (
-        <div className="space-y-4">
-          {paymentResult.payment_type === 'pix' && paymentResult.pix_qr_code && (
-            <>
-              <div className="flex justify-center p-4 bg-white rounded-lg">
-                <QRCodeSVG value={paymentResult.pix_qr_code} size={200} />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Código PIX Copia e Cola</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={paymentResult.pix_qr_code}
-                    readOnly
-                    className="text-xs"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => copyToClipboard(paymentResult.pix_qr_code)}
-                  >
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-sm text-muted-foreground text-center">
-                O PIX expira em 30 minutos
-              </p>
-            </>
-          )}
-
-          {paymentResult.payment_type === 'boleto' && (
-            <>
-              {paymentResult.boleto_barcode && (
                 <div className="space-y-2">
-                  <Label>Código de Barras</Label>
+                  <Label htmlFor="email">E-mail *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF *</Label>
+                  <Input
+                    id="cpf"
+                    value={cpf}
+                    onChange={(e) => setCpf(formatCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
+                </div>
+
+                <TabsContent value="boleto" className="mt-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDays">Dias para vencimento</Label>
+                    <Input
+                      id="dueDays"
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={boletoDueDays}
+                      onChange={(e) => setBoletoDueDays(parseInt(e.target.value) || 3)}
+                    />
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreatePayment} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  `Gerar ${paymentType === 'pix' ? 'PIX' : 'Boleto'}`
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <div className="space-y-4">
+            {paymentResult.payment_type === 'pix' && paymentResult.pix_qr_code && (
+              <>
+                <div className="flex justify-center p-4 bg-white rounded-lg">
+                  <QRCodeSVG value={paymentResult.pix_qr_code} size={200} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Código PIX Copia e Cola</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={paymentResult.boleto_barcode}
+                      value={paymentResult.pix_qr_code}
                       readOnly
                       className="text-xs"
                     />
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => copyToClipboard(paymentResult.boleto_barcode)}
+                      onClick={() => copyToClipboard(paymentResult.pix_qr_code)}
                     >
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
-              )}
 
-              {paymentResult.boleto_url && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => window.open(paymentResult.boleto_url, '_blank')}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Abrir Boleto
-                </Button>
-              )}
+                <p className="text-sm text-muted-foreground text-center">
+                  O PIX expira em 30 minutos
+                </p>
+              </>
+            )}
 
-              <p className="text-sm text-muted-foreground text-center">
-                Vencimento: {new Date(paymentResult.boleto_due_date).toLocaleDateString('pt-BR')}
-              </p>
-            </>
-          )}
+            {paymentResult.payment_type === 'boleto' && (
+              <>
+                {paymentResult.boleto_barcode && (
+                  <div className="space-y-2">
+                    <Label>Código de Barras</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={paymentResult.boleto_barcode}
+                        readOnly
+                        className="text-xs"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(paymentResult.boleto_barcode)}
+                      >
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-          <PopupFooter>
-            <Button onClick={() => onOpenChange(false)} className="w-full">
-              Fechar
-            </Button>
-          </PopupFooter>
-        </div>
-      )}
-    </PopupBase>
+                {paymentResult.boleto_url && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open(paymentResult.boleto_url, '_blank')}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Abrir Boleto
+                  </Button>
+                )}
+
+                <p className="text-sm text-muted-foreground text-center">
+                  Vencimento: {new Date(paymentResult.boleto_due_date).toLocaleDateString('pt-BR')}
+                </p>
+              </>
+            )}
+
+            <DialogFooter>
+              <Button onClick={() => onOpenChange(false)} className="w-full">
+                Fechar
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

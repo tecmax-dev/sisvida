@@ -7,7 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Users,
@@ -331,188 +338,188 @@ export default function MobileDependentsPage() {
       </div>
 
       {/* Detail Dialog */}
-      <PopupBase open={showDetailDialog} onClose={() => setShowDetailDialog(false)} maxWidth="sm">
-        <PopupHeader>
-          <PopupTitle className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-              <span className="text-emerald-700 font-semibold">
-                {selectedDependent?.name.charAt(0)}
-              </span>
-            </div>
-            <span>{selectedDependent?.name}</span>
-          </PopupTitle>
-          <PopupDescription>Informações do dependente</PopupDescription>
-        </PopupHeader>
-
-        {selectedDependent && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Parentesco</p>
-                <p className="font-medium">
-                  {getRelationshipLabel(selectedDependent.relationship)}
-                </p>
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="max-w-sm mx-4 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                <span className="text-emerald-700 font-semibold">
+                  {selectedDependent?.name.charAt(0)}
+                </span>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Idade</p>
-                <p className="font-medium">{getAge(selectedDependent.birth_date)}</p>
+              <span>{selectedDependent?.name}</span>
+            </DialogTitle>
+            <DialogDescription>Informações do dependente</DialogDescription>
+          </DialogHeader>
+
+          {selectedDependent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Parentesco</p>
+                  <p className="font-medium">
+                    {getRelationshipLabel(selectedDependent.relationship)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Idade</p>
+                  <p className="font-medium">{getAge(selectedDependent.birth_date)}</p>
+                </div>
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            <div className="space-y-3">
-              {selectedDependent.birth_date && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Data de Nascimento</p>
-                    <p className="text-sm font-medium">
-                      {format(parseISO(selectedDependent.birth_date), "dd 'de' MMMM 'de' yyyy", {
-                        locale: ptBR,
-                      })}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {selectedDependent.cpf && (
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">CPF</p>
-                    <p className="text-sm font-medium">{selectedDependent.cpf}</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedDependent.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="text-sm font-medium">{selectedDependent.phone}</p>
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Status da Carteirinha</h4>
-              {selectedDependent.card_number ? (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Nº da Carteira</span>
-                    <span className="font-mono font-medium">{selectedDependent.card_number}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Validade</span>
-                    <span
-                      className={`text-sm font-medium ${
-                        isCardExpired(selectedDependent.card_expires_at)
-                          ? "text-red-600"
-                          : "text-emerald-600"
-                      }`}
-                    >
-                      {selectedDependent.card_expires_at
-                        ? format(parseISO(selectedDependent.card_expires_at), "dd/MM/yyyy")
-                        : "-"}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-amber-50 rounded-lg p-3 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <span className="text-sm text-amber-700">Carteirinha não emitida</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <PopupFooter>
-          <Button variant="outline" onClick={() => setShowDetailDialog(false)} className="w-full">
-            Fechar
-          </Button>
-        </PopupFooter>
-      </PopupBase>
-
-      {/* History Dialog */}
-      <PopupBase open={showHistoryDialog} onClose={() => setShowHistoryDialog(false)} maxWidth="sm">
-        <PopupHeader>
-          <PopupTitle>Histórico de Solicitações</PopupTitle>
-          <PopupDescription>Acompanhe suas solicitações de dependentes</PopupDescription>
-        </PopupHeader>
-
-        <ScrollArea className="max-h-[50vh]">
-          {requests.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma solicitação encontrada</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {requests.map((request) => (
-                <Card key={request.id}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">
-                          {request.type === "inclusion"
-                            ? "Inclusão"
-                            : request.type === "alteration"
-                            ? "Alteração"
-                            : "Remoção"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(parseISO(request.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          request.status === "pending"
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : request.status === "approved"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }
-                      >
-                        {request.status === "pending"
-                          ? "Pendente"
-                          : request.status === "approved"
-                          ? "Aprovado"
-                          : "Rejeitado"}
-                      </Badge>
+              <div className="space-y-3">
+                {selectedDependent.birth_date && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Data de Nascimento</p>
+                      <p className="text-sm font-medium">
+                        {format(parseISO(selectedDependent.birth_date), "dd 'de' MMMM 'de' yyyy", {
+                          locale: ptBR,
+                        })}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                )}
+
+                {selectedDependent.cpf && (
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">CPF</p>
+                      <p className="text-sm font-medium">{selectedDependent.cpf}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedDependent.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Telefone</p>
+                      <p className="text-sm font-medium">{selectedDependent.phone}</p>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Status da Carteirinha</h4>
+                {selectedDependent.card_number ? (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Nº da Carteira</span>
+                      <span className="font-mono font-medium">{selectedDependent.card_number}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Validade</span>
+                      <span
+                        className={`text-sm font-medium ${
+                          isCardExpired(selectedDependent.card_expires_at)
+                            ? "text-red-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {selectedDependent.card_expires_at
+                          ? format(parseISO(selectedDependent.card_expires_at), "dd/MM/yyyy")
+                          : "-"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 rounded-lg p-3 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm text-amber-700">Carteirinha não emitida</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </ScrollArea>
 
-        <PopupFooter>
-          <Button variant="outline" onClick={() => setShowHistoryDialog(false)} className="w-full">
-            Fechar
-          </Button>
-        </PopupFooter>
-      </PopupBase>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailDialog(false)} className="w-full">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Request Inclusion Dialog */}
-      {patientClinicId && patientId && (
+      {/* History Dialog */}
+      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+        <DialogContent className="max-w-sm mx-4 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Histórico de Solicitações</DialogTitle>
+            <DialogDescription>Acompanhe suas solicitações de dependentes</DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[50vh]">
+            {requests.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhuma solicitação encontrada</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((request) => (
+                  <Card key={request.id}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">
+                            {request.type === "inclusion"
+                              ? "Inclusão"
+                              : request.type === "alteration"
+                                ? "Alteração"
+                                : "Remoção"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(parseISO(request.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            request.status === "approved"
+                              ? "default"
+                              : request.status === "rejected"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {request.status === "approved"
+                            ? "Aprovada"
+                            : request.status === "rejected"
+                              ? "Recusada"
+                              : "Pendente"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHistoryDialog(false)} className="w-full">
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request Inclusion Form */}
+      {patientId && patientClinicId && (
         <DependentInclusionForm
           open={showRequestDialog}
           onOpenChange={setShowRequestDialog}
-          clinicId={patientClinicId}
           patientId={patientId}
-          onSuccess={() => {
-            setShowRequestDialog(false);
-            loadData();
-          }}
+          clinicId={patientClinicId}
+          onSuccess={loadData}
         />
       )}
     </div>

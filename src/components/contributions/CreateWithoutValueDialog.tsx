@@ -4,12 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  PopupBase,
-  PopupHeader,
-  PopupTitle,
-  PopupDescription,
-  PopupFooter,
-} from "@/components/ui/popup-base";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -298,16 +299,17 @@ ${currentClinic.name}`;
   };
 
   return (
-    <PopupBase open={open} onClose={handleClose} maxWidth="md">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Link2 className="h-5 w-5 text-primary" />
-          Nova Contribuição - Sem Valor
-        </PopupTitle>
-        <PopupDescription>
-          Crie uma contribuição aguardando valor. A empresa receberá um link para informar o valor e gerar o boleto.
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" />
+            Nova Contribuição - Sem Valor
+          </DialogTitle>
+          <DialogDescription>
+            Crie uma contribuição aguardando valor. A empresa receberá um link para informar o valor e gerar o boleto.
+          </DialogDescription>
+        </DialogHeader>
 
         {step === "form" ? (
           <ScrollArea className="max-h-[60vh]">
@@ -549,35 +551,36 @@ ${currentClinic.name}`;
           </div>
         )}
 
-      <PopupFooter>
-        {step === "form" ? (
-          <>
-            <Button variant="outline" onClick={handleClose}>
-              Cancelar
+        <DialogFooter>
+          {step === "form" ? (
+            <>
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCreate} 
+                disabled={loading || !selectedEmployerId || !typeId}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Criar e Gerar Link
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleClose}>
+              Fechar
             </Button>
-            <Button 
-              onClick={handleCreate} 
-              disabled={loading || !selectedEmployerId || !typeId}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Criando...
-                </>
-              ) : (
-                <>
-                  <Link2 className="mr-2 h-4 w-4" />
-                  Criar e Gerar Link
-                </>
-              )}
-            </Button>
-          </>
-        ) : (
-          <Button onClick={handleClose}>
-            Fechar
-          </Button>
-        )}
-      </PopupFooter>
-    </PopupBase>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

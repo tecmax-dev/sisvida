@@ -4,7 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Plus, Pencil, Trash2, Tag, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,8 +58,6 @@ export default function EmployerCategoryDialog({
     color: "#6366f1",
   });
 
-  const handleClose = () => onOpenChange(false);
-
   useEffect(() => {
     if (open && clinicId) {
       fetchCategories();
@@ -62,6 +67,7 @@ export default function EmployerCategoryDialog({
   const fetchCategories = async () => {
     setLoading(true);
     try {
+      // Fetch categories with employer count
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("employer_categories")
         .select("*")
@@ -70,6 +76,7 @@ export default function EmployerCategoryDialog({
 
       if (categoriesError) throw categoriesError;
 
+      // Fetch employer counts per category
       const { data: employerCounts, error: countsError } = await supabase
         .from("employers")
         .select("category_id")
@@ -194,140 +201,142 @@ export default function EmployerCategoryDialog({
   };
 
   return (
-    <PopupBase open={open} onClose={handleClose} maxWidth="lg">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Tag className="h-5 w-5 text-primary" />
-          Categorias de Empresas
-        </PopupTitle>
-        <PopupDescription>
-          Gerencie categorias para organizar e filtrar empresas
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Tag className="h-5 w-5 text-primary" />
+            Categorias de Empresas
+          </DialogTitle>
+          <DialogDescription>
+            Gerencie categorias para organizar e filtrar empresas
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="space-y-4">
-        {!showForm ? (
-          <>
-            <Button
-              onClick={() => setShowForm(true)}
-              className="w-full"
-              variant="outline"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Categoria
-            </Button>
+        <div className="space-y-4">
+          {!showForm ? (
+            <>
+              <Button
+                onClick={() => setShowForm(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Categoria
+              </Button>
 
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : categories.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Tag className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Nenhuma categoria criada</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {categories.map((category) => (
-                    <div
-                      key={category.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <div>
-                          <p className="font-medium">{category.name}</p>
-                          {category.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {category.description}
-                            </p>
-                          )}
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Tag className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Nenhuma categoria criada</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-64">
+                  <div className="space-y-2">
+                    {categories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <div>
+                            <p className="font-medium">{category.name}</p>
+                            {category.description && (
+                              <p className="text-xs text-muted-foreground">
+                                {category.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {category.employer_count || 0}
+                          </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(category)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleDelete(category)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {category.employer_count || 0}
-                        </Badge>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDelete(category)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome *</Label>
+                <Input
+                  placeholder="Ex: Comércio Varejista"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  placeholder="Descrição opcional da categoria"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cor</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`w-7 h-7 rounded-full border-2 transition-all ${
+                        formData.color === color
+                          ? "border-foreground scale-110"
+                          : "border-transparent hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setFormData({ ...formData, color })}
+                    />
                   ))}
                 </div>
-              </ScrollArea>
-            )}
-          </>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input
-                placeholder="Ex: Comércio Varejista"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                placeholder="Descrição opcional da categoria"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cor</Label>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`w-7 h-7 rounded-full border-2 transition-all ${
-                      formData.color === color
-                        ? "border-foreground scale-110"
-                        : "border-transparent hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setFormData({ ...formData, color })}
-                  />
-                ))}
               </div>
-            </div>
 
-            <PopupFooter className="gap-2">
-              <Button variant="outline" onClick={resetForm}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {editingCategory ? "Atualizar" : "Criar"}
-              </Button>
-            </PopupFooter>
-          </div>
-        )}
-      </div>
-    </PopupBase>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingCategory ? "Atualizar" : "Criar"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

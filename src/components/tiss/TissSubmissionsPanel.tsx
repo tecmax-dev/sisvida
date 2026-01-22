@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,7 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -247,80 +254,82 @@ export function TissSubmissionsPanel({ clinicId }: TissSubmissionsPanelProps) {
       </CardContent>
 
       {/* Dialog */}
-      <PopupBase open={dialogOpen} onClose={handleCloseDialog} maxWidth="md">
-        <PopupHeader>
-          <PopupTitle>Novo Lote de Envio</PopupTitle>
-        </PopupHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Operadora</Label>
-            <Select
-              value={formData.insurance_plan_id}
-              onValueChange={(value) => setFormData({ ...formData, insurance_plan_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todas as operadoras</SelectItem>
-                {insurancePlans.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Lote de Envio</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Mês de Referência</Label>
+              <Label>Operadora</Label>
               <Select
-                value={formData.reference_month}
-                onValueChange={(value) => setFormData({ ...formData, reference_month: value })}
+                value={formData.insurance_plan_id}
+                onValueChange={(value) => setFormData({ ...formData, insurance_plan_id: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {monthNames.map((name, index) => (
-                    <SelectItem key={index} value={(index + 1).toString()}>
-                      {name}
+                  <SelectItem value="_all">Todas as operadoras</SelectItem>
+                  {insurancePlans.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Ano</Label>
-              <Select
-                value={formData.reference_year}
-                onValueChange={(value) => setFormData({ ...formData, reference_year: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <PopupFooter>
-            <Button type="button" variant="outline" onClick={handleCloseDialog}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              Criar Lote
-            </Button>
-          </PopupFooter>
-        </form>
-      </PopupBase>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Mês de Referência</Label>
+                <Select
+                  value={formData.reference_month}
+                  onValueChange={(value) => setFormData({ ...formData, reference_month: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthNames.map((name, index) => (
+                      <SelectItem key={index} value={(index + 1).toString()}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ano</Label>
+                <Select
+                  value={formData.reference_year}
+                  onValueChange={(value) => setFormData({ ...formData, reference_year: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                Criar Lote
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

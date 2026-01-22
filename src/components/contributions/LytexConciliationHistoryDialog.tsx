@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +27,7 @@ import {
   Clock, 
   RefreshCw,
   FileText,
+  Download,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -79,8 +85,6 @@ export function LytexConciliationHistoryDialog({
   const [loading, setLoading] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
-  const handleClose = () => onOpenChange(false);
-
   useEffect(() => {
     if (open && clinicId) {
       fetchLogs();
@@ -90,6 +94,7 @@ export function LytexConciliationHistoryDialog({
   const fetchLogs = async () => {
     setLoading(true);
     try {
+      // Buscar logs de sincronização (últimos 50)
       const { data: syncData, error: syncError } = await supabase
         .from("lytex_sync_logs")
         .select("*")
@@ -103,6 +108,7 @@ export function LytexConciliationHistoryDialog({
         setSyncLogs((syncData as SyncLog[]) || []);
       }
 
+      // Buscar logs de conciliação (últimos 100)
       const { data: concData, error: concError } = await supabase
         .from("lytex_conciliation_logs")
         .select("*")
@@ -187,156 +193,162 @@ export function LytexConciliationHistoryDialog({
     }
   };
 
+  const getConciliationLogsForSync = (syncLogId: string) => {
+    return conciliationLogs.filter((log) => log.id === syncLogId);
+  };
+
   return (
-    <PopupBase open={open} onClose={handleClose} maxWidth="5xl" className="max-h-[90vh] flex flex-col">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Histórico de Sincronização e Conciliação Lytex
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Histórico de Sincronização e Conciliação Lytex
+          </DialogTitle>
+        </DialogHeader>
 
-      <ScrollArea className="flex-1 h-[70vh] pr-4">
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 w-full" />
-            ))}
-          </div>
-        ) : syncLogs.length === 0 ? (
-          <div className="text-center text-muted-foreground py-12">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhuma sincronização realizada ainda</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {syncLogs.map((log) => (
-              <Collapsible
-                key={log.id}
-                open={expandedLogId === log.id}
-                onOpenChange={() =>
-                  setExpandedLogId(expandedLogId === log.id ? null : log.id)
-                }
-              >
-                <div className="border rounded-lg overflow-hidden">
-                  <CollapsibleTrigger asChild>
-                    <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer">
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {getSyncTypeLabel(log.sync_type)}
+        <ScrollArea className="h-[70vh] pr-4">
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          ) : syncLogs.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhuma sincronização realizada ainda</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {syncLogs.map((log) => (
+                <Collapsible
+                  key={log.id}
+                  open={expandedLogId === log.id}
+                  onOpenChange={() =>
+                    setExpandedLogId(expandedLogId === log.id ? null : log.id)
+                  }
+                >
+                  <div className="border rounded-lg overflow-hidden">
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer">
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                {getSyncTypeLabel(log.sync_type)}
+                              </span>
+                              {getSyncModeLabel(log.sync_mode)}
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {formatDateTime(log.started_at)}
                             </span>
-                            {getSyncModeLabel(log.sync_mode)}
                           </div>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDateTime(log.started_at)}
-                          </span>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-4">
-                        {log.sync_type === "fetch_paid_invoices" && (
-                          <div className="flex gap-2 text-sm">
-                            {log.invoices_conciliated !== null && log.invoices_conciliated > 0 && (
-                              <Badge className="bg-green-500">
-                                {log.invoices_conciliated} conciliados
-                              </Badge>
-                            )}
-                            {log.invoices_already_conciliated !== null && log.invoices_already_conciliated > 0 && (
-                              <Badge variant="outline" className="text-blue-600 border-blue-600">
-                                {log.invoices_already_conciliated} já pagos
-                              </Badge>
-                            )}
-                            {log.invoices_ignored !== null && log.invoices_ignored > 0 && (
-                              <Badge variant="secondary">
-                                {log.invoices_ignored} ignorados
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        {getStatusBadge(log.status)}
-                        {expandedLogId === log.id ? (
-                          <ChevronDown className="h-5 w-5" />
-                        ) : (
-                          <ChevronRight className="h-5 w-5" />
-                        )}
-                      </div>
-                    </div>
-                  </CollapsibleTrigger>
-
-                  <CollapsibleContent>
-                    <Separator />
-                    <div className="p-4 bg-muted/30">
-                      {log.error_message && (
-                        <div className="text-red-600 text-sm mb-4 p-2 bg-red-50 rounded">
-                          <strong>Erro:</strong> {log.error_message}
-                        </div>
-                      )}
-
-                      {log.details?.items && log.details.items.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Empresa</TableHead>
-                                <TableHead>Competência</TableHead>
-                                <TableHead>Resultado</TableHead>
-                                <TableHead>Valor Pago</TableHead>
-                                <TableHead>Data Pagamento</TableHead>
-                                <TableHead>Motivo</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {log.details.items.slice(0, 50).map((item: any, idx: number) => (
-                                <TableRow key={idx}>
-                                  <TableCell className="font-medium">
-                                    {item.employerName || "-"}
-                                  </TableCell>
-                                  <TableCell>{item.competence || "-"}</TableCell>
-                                  <TableCell>{getResultBadge(item.result)}</TableCell>
-                                  <TableCell>
-                                    {item.paidValue ? formatCurrency(item.paidValue) : "-"}
-                                  </TableCell>
-                                  <TableCell>
-                                    {item.paidAt ? formatDateTime(item.paidAt) : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                                    {item.reason || "-"}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                          {log.details.items.length > 50 && (
-                            <p className="text-sm text-muted-foreground text-center mt-2">
-                              Exibindo 50 de {log.details.items.length} itens
-                            </p>
+                        <div className="flex items-center gap-4">
+                          {log.sync_type === "fetch_paid_invoices" && (
+                            <div className="flex gap-2 text-sm">
+                              {log.invoices_conciliated !== null && log.invoices_conciliated > 0 && (
+                                <Badge className="bg-green-500">
+                                  {log.invoices_conciliated} conciliados
+                                </Badge>
+                              )}
+                              {log.invoices_already_conciliated !== null && log.invoices_already_conciliated > 0 && (
+                                <Badge variant="outline" className="text-blue-600 border-blue-600">
+                                  {log.invoices_already_conciliated} já pagos
+                                </Badge>
+                              )}
+                              {log.invoices_ignored !== null && log.invoices_ignored > 0 && (
+                                <Badge variant="secondary">
+                                  {log.invoices_ignored} ignorados
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          {getStatusBadge(log.status)}
+                          {expandedLogId === log.id ? (
+                            <ChevronDown className="h-5 w-5" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5" />
                           )}
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Sem detalhes disponíveis
-                        </p>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </div>
-              </Collapsible>
-            ))}
-          </div>
-        )}
-      </ScrollArea>
+                      </div>
+                    </CollapsibleTrigger>
 
-      <PopupFooter className="flex justify-between items-center pt-4 border-t">
-        <Button variant="outline" size="sm" onClick={fetchLogs}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
-        <Button variant="outline" onClick={handleClose}>
-          Fechar
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+                    <CollapsibleContent>
+                      <Separator />
+                      <div className="p-4 bg-muted/30">
+                        {log.error_message && (
+                          <div className="text-red-600 text-sm mb-4 p-2 bg-red-50 rounded">
+                            <strong>Erro:</strong> {log.error_message}
+                          </div>
+                        )}
+
+                        {log.details?.items && log.details.items.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Empresa</TableHead>
+                                  <TableHead>Competência</TableHead>
+                                  <TableHead>Resultado</TableHead>
+                                  <TableHead>Valor Pago</TableHead>
+                                  <TableHead>Data Pagamento</TableHead>
+                                  <TableHead>Motivo</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {log.details.items.slice(0, 50).map((item: any, idx: number) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="font-medium">
+                                      {item.employerName || "-"}
+                                    </TableCell>
+                                    <TableCell>{item.competence || "-"}</TableCell>
+                                    <TableCell>{getResultBadge(item.result)}</TableCell>
+                                    <TableCell>
+                                      {item.paidValue ? formatCurrency(item.paidValue) : "-"}
+                                    </TableCell>
+                                    <TableCell>
+                                      {item.paidAt ? formatDateTime(item.paidAt) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                                      {item.reason || "-"}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {log.details.items.length > 50 && (
+                              <p className="text-sm text-muted-foreground text-center mt-2">
+                                Exibindo 50 de {log.details.items.length} itens
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Sem detalhes disponíveis
+                          </p>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        <div className="flex justify-between items-center pt-4 border-t">
+          <Button variant="outline" size="sm" onClick={fetchLogs}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

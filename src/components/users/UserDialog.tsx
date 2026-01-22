@@ -6,7 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useQuery } from "@tanstack/react-query";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -28,14 +34,15 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle, Shield, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Generate a secure temporary password
 function generateTempPassword(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
   let password = "";
   for (let i = 0; i < 12; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  // Ensure password meets requirements (uppercase, lowercase, number, special)
   return password + "Aa1!";
 }
 
@@ -46,7 +53,11 @@ interface ClinicUser {
   access_group_id?: string | null;
   professional_id?: string | null;
   created_at: string;
-  profile: { name: string; phone: string | null; avatar_url: string | null; } | null;
+  profile: {
+    name: string;
+    phone: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 interface UserDialogProps {
@@ -56,6 +67,7 @@ interface UserDialogProps {
   clinicId: string;
 }
 
+// Schema para criação de novo usuário (email obrigatório)
 const createUserSchema = z.object({
   email: z.string().email("Email inválido"),
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -66,6 +78,7 @@ const createUserSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
 });
 
+// Schema para edição de usuário (email não necessário)
 const editUserSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   phone: z.string().optional(),
@@ -89,10 +102,13 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
   const { user } = useAuth();
   const { logAction } = useAuditLog();
   const [loading, setLoading] = useState(false);
+  const [existingUserId, setExistingUserId] = useState<string | null>(null);
+  const [emailChecked, setEmailChecked] = useState(false);
 
   const isEditing = !!clinicUser;
   const isOwner = clinicUser?.role === 'owner';
 
+  // Fetch access groups for this clinic
   const { data: accessGroups } = useQuery({
     queryKey: ['access-groups', clinicId],
     queryFn: async () => {
@@ -103,12 +119,14 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         .eq('is_active', true)
         .order('is_system', { ascending: false })
         .order('name');
+
       if (error) throw error;
       return data || [];
     },
     enabled: open && !!clinicId,
   });
 
+  // Fetch professionals for this clinic
   const { data: professionals } = useQuery({
     queryKey: ['professionals-for-linking', clinicId],
     queryFn: async () => {
@@ -118,6 +136,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         .eq('clinic_id', clinicId)
         .eq('is_active', true)
         .order('name');
+
       if (error) throw error;
       return data || [];
     },
@@ -126,45 +145,128 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
 
   const form = useForm<FormData>({
     resolver: zodResolver(isEditing ? editUserSchema : createUserSchema),
-    defaultValues: { email: "", name: "", phone: "", role: "receptionist", access_group_id: "", professional_id: "", password: "" },
+    defaultValues: {
+      email: "",
+      name: "",
+      phone: "",
+      role: "receptionist",
+      access_group_id: "",
+      professional_id: "",
+      password: "",
+    },
   });
 
   useEffect(() => {
     if (clinicUser) {
       form.reset({
-        email: "", name: clinicUser.profile?.name || "", phone: clinicUser.profile?.phone || "",
+        email: "",
+        name: clinicUser.profile?.name || "",
+        phone: clinicUser.profile?.phone || "",
         role: clinicUser.role === 'owner' ? 'admin' : clinicUser.role,
-        access_group_id: clinicUser.access_group_id || "", professional_id: clinicUser.professional_id || "",
+        access_group_id: clinicUser.access_group_id || "",
+        professional_id: clinicUser.professional_id || "",
       });
     } else {
-      form.reset({ email: "", name: "", phone: "", role: "receptionist", access_group_id: "", professional_id: "", password: "" });
+      form.reset({
+        email: "",
+        name: "",
+        phone: "",
+        role: "receptionist",
+        access_group_id: "",
+        professional_id: "",
+        password: "",
+      });
     }
+    setExistingUserId(null);
+    setEmailChecked(false);
   }, [clinicUser, open]);
+
+  const checkExistingUser = async (email: string) => {
+    if (!email || isEditing) return;
+
+    try {
+      // Check if user exists in profiles by querying auth
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, name, phone')
+        .ilike('name', `%${email}%`);
+
+      // We can't directly query by email, but if user exists in clinic already, show warning
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('clinic_id', clinicId);
+
+      setEmailChecked(true);
+    } catch (error) {
+      console.error('Error checking user:', error);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     if (!clinicId) return;
+
     setLoading(true);
     try {
       if (isEditing && clinicUser) {
-        const { error: roleError } = await supabase.from('user_roles').update({
-          role: data.role, access_group_id: data.access_group_id || null, professional_id: data.professional_id || null,
-        }).eq('user_id', clinicUser.user_id).eq('clinic_id', clinicId);
+        // Update user role and access_group_id (use user_id + clinic_id to avoid mismatches)
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .update({
+            role: data.role,
+            access_group_id: data.access_group_id || null,
+            professional_id: data.professional_id || null,
+          })
+          .eq('user_id', clinicUser.user_id)
+          .eq('clinic_id', clinicId);
+
         if (roleError) throw roleError;
 
-        const { error: profileError } = await supabase.from('profiles').update({
-          name: data.name, phone: data.phone || null,
-        }).eq('user_id', clinicUser.user_id);
+        // Update profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            name: data.name,
+            phone: data.phone || null,
+          })
+          .eq('user_id', clinicUser.user_id);
+
         if (profileError) throw profileError;
 
-        await logAction({ action: 'update_user', entityType: 'user', entityId: clinicUser.id, details: { user_name: data.name, new_role: data.role } });
+        await logAction({
+          action: 'update_user',
+          entityType: 'user',
+          entityId: clinicUser.id,
+          details: {
+            user_name: data.name,
+            new_role: data.role,
+            previous_role: clinicUser.role,
+            access_group_id: data.access_group_id || null,
+            professional_id: data.professional_id || null,
+          },
+        });
+
         toast.success('Usuário atualizado com sucesso');
         onClose(true);
       } else {
+        // Create new user - cast to CreateFormData since we're in create mode
         const createData = data as CreateFormData;
+        
+        // Generate temp password if not provided
         const tempPassword = createData.password || generateTempPassword();
         
+        // Use edge function to create user via Admin API (doesn't affect current session)
         const { data: createResult, error: createError } = await supabase.functions.invoke('create-clinic-user', {
-          body: { email: createData.email, password: tempPassword, name: createData.name, phone: createData.phone || null, role: createData.role, clinicId, accessGroupId: createData.access_group_id || null, professionalId: createData.professional_id || null },
+          body: {
+            email: createData.email,
+            password: tempPassword,
+            name: createData.name,
+            phone: createData.phone || null,
+            role: createData.role,
+            clinicId: clinicId,
+            accessGroupId: createData.access_group_id || null,
+            professionalId: createData.professional_id || null,
+          },
         });
 
         if (createError || !createResult?.success) {
@@ -177,7 +279,49 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           throw new Error(errorMessage);
         }
 
-        await logAction({ action: 'create_user', entityType: 'user', entityId: createResult.userId, details: { user_name: createData.name, user_email: createData.email, role: createData.role, clinic_id: clinicId } });
+        const userId = createResult.userId;
+
+        // Get clinic name for the email
+        let clinicName = "";
+        try {
+          const { data: clinicData } = await supabase
+            .from('clinics')
+            .select('name')
+            .eq('id', clinicId)
+            .single();
+          clinicName = clinicData?.name || "";
+        } catch (e) {
+          console.error('Error fetching clinic name:', e);
+        }
+
+        // Send email with credentials
+        try {
+          await supabase.functions.invoke('send-user-credentials', {
+            body: {
+              userEmail: createData.email,
+              userName: createData.name,
+              tempPassword: tempPassword,
+              clinicName: clinicName,
+            },
+          });
+        } catch (emailError) {
+          console.error('Error sending credentials email:', emailError);
+        }
+
+        await logAction({
+          action: 'create_user',
+          entityType: 'user',
+          entityId: userId,
+          details: {
+            user_name: createData.name,
+            user_email: createData.email,
+            role: createData.role,
+            access_group_id: createData.access_group_id || null,
+            professional_id: createData.professional_id || null,
+            clinic_id: clinicId,
+          },
+        });
+
         toast.success('Usuário criado com sucesso! As credenciais foram enviadas por email.');
         onClose(true);
       }
@@ -190,79 +334,229 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
   };
 
   return (
-    <PopupBase open={open} onClose={() => onClose()} maxWidth="lg">
-      <PopupHeader>
-        <PopupTitle>{isEditing ? 'Editar Usuário' : 'Novo Usuário'}</PopupTitle>
-        <PopupDescription>{isEditing ? 'Atualize as informações e permissões do usuário' : 'Adicione um novo usuário à clínica'}</PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={() => onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>
+            {isEditing ? 'Editar Usuário' : 'Novo Usuário'}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? 'Atualize as informações e permissões do usuário'
+              : 'Adicione um novo usuário à clínica'
+            }
+          </DialogDescription>
+        </DialogHeader>
 
-      {isOwner && (
-        <Alert className="mb-4">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>Este usuário é o proprietário da clínica. Algumas configurações não podem ser alteradas.</AlertDescription>
-        </Alert>
-      )}
+        {isOwner && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Este usuário é o proprietário da clínica. Algumas configurações não podem ser alteradas.
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <ScrollArea className="max-h-[60vh] pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {!isEditing && (
-              <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="email@exemplo.com" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email" 
+                        placeholder="email@exemplo.com" 
+                        {...field}
+                        onBlur={(e) => {
+                          field.onBlur();
+                          checkExistingUser(e.target.value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-            <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Nome completo</FormLabel><FormControl><Input placeholder="Nome do usuário" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="phone" render={({ field }) => (
-              <FormItem><FormLabel>Telefone (opcional)</FormLabel><FormControl><Input placeholder="(00) 00000-0000" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            {!isEditing && (
-              <FormField control={form.control} name="password" render={({ field }) => (
-                <FormItem><FormLabel>Senha inicial (opcional)</FormLabel><FormControl><Input type="password" placeholder="Deixe vazio para gerar automaticamente" {...field} /></FormControl><FormDescription>Se não informada, uma senha será gerada automaticamente</FormDescription><FormMessage /></FormItem>
-              )} />
-            )}
-            <FormField control={form.control} name="role" render={({ field }) => (
-              <FormItem><FormLabel>Perfil Base</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isOwner}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione o perfil" /></SelectTrigger></FormControl>
-                  <SelectContent>{Object.entries(roleLabels).map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}</SelectContent>
-                </Select>
-                <FormDescription>Define o perfil base do usuário.</FormDescription><FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="access_group_id" render={({ field }) => (
-              <FormItem><FormLabel className="flex items-center gap-2"><Shield className="h-4 w-4" />Grupo de Acesso</FormLabel>
-                <Select onValueChange={(value) => field.onChange(value === "none" ? "" : value)} value={field.value || "none"} disabled={isOwner}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione um grupo (opcional)" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="none"><span className="text-muted-foreground">Nenhum (usar perfil base)</span></SelectItem>
-                    {accessGroups?.map((group) => (<SelectItem key={group.id} value={group.id}><div className="flex items-center gap-2">{group.is_system && <Shield className="h-3 w-3 text-primary" />}<span>{group.name}</span></div></SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>Quando definido, as permissões do grupo sobrescrevem o perfil base.</FormDescription><FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="professional_id" render={({ field }) => (
-              <FormItem><FormLabel className="flex items-center gap-2"><User className="h-4 w-4" />Vincular a Profissional</FormLabel>
-                <Select onValueChange={(value) => field.onChange(value === "none" ? "" : value)} value={field.value || "none"} disabled={isOwner}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Selecione um profissional (opcional)" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="none"><span className="text-muted-foreground">Nenhum (ver toda a agenda)</span></SelectItem>
-                    {professionals?.map((prof) => (<SelectItem key={prof.id} value={prof.id}>{prof.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>Quando vinculado, o usuário só poderá ver a agenda deste profissional.</FormDescription><FormMessage />
-              </FormItem>
-            )} />
 
-            <PopupFooter>
-              <Button type="button" variant="outline" onClick={() => onClose()}>Cancelar</Button>
-              <Button type="submit" disabled={loading}>{loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{isEditing ? 'Salvar' : 'Criar Usuário'}</Button>
-            </PopupFooter>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome completo</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nome do usuário" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone (opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="(00) 00000-0000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {!isEditing && (
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha inicial (opcional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder="Deixe vazio para gerar automaticamente" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Se não informada, uma senha será gerada automaticamente
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Perfil Base</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={isOwner}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o perfil" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(roleLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Define o perfil base do usuário. Use o grupo de acesso para permissões granulares.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="access_group_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Grupo de Acesso
+                  </FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
+                    value={field.value || "none"}
+                    disabled={isOwner}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um grupo (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">Nenhum (usar perfil base)</span>
+                      </SelectItem>
+                      {accessGroups?.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          <div className="flex items-center gap-2">
+                            {group.is_system && <Shield className="h-3 w-3 text-primary" />}
+                            <span>{group.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Quando definido, as permissões do grupo sobrescrevem o perfil base.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="professional_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Vincular a Profissional
+                  </FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
+                    value={field.value || "none"}
+                    disabled={isOwner}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um profissional (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">Nenhum (ver toda a agenda)</span>
+                      </SelectItem>
+                      {professionals?.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Quando vinculado, o usuário só poderá ver a agenda deste profissional.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => onClose()}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isEditing ? 'Salvar' : 'Criar Usuário'}
+              </Button>
+            </div>
           </form>
         </Form>
-      </ScrollArea>
-    </PopupBase>
+      </DialogContent>
+    </Dialog>
   );
 }

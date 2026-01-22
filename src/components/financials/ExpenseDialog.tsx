@@ -4,7 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -300,18 +306,19 @@ export function ExpenseDialog({
   );
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Truck className="h-5 w-5 text-red-500" />
-          {expense ? "Editar Despesa" : "Nova Despesa"}
-        </PopupTitle>
-        <PopupDescription>
-          Preencha os dados da despesa. Campos com * são obrigatórios.
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-red-500" />
+            {expense ? "Editar Despesa" : "Nova Despesa"}
+          </DialogTitle>
+          <DialogDescription>
+            Preencha os dados da despesa. Campos com * são obrigatórios.
+          </DialogDescription>
+        </DialogHeader>
 
-      <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Fornecedor */}
@@ -728,9 +735,10 @@ export function ExpenseDialog({
                   {createMutation.isPending ? "Salvando..." : "Salvar Despesa"}
                 </Button>
               </div>
-          </form>
-        </Form>
-      </ScrollArea>
-    </PopupBase>
+            </form>
+          </Form>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

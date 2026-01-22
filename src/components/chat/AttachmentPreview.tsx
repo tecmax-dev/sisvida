@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Download, Loader2, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PopupBase } from '@/components/ui/popup-base';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useChatAttachment } from '@/hooks/useChatAttachment';
 import { cn } from '@/lib/utils';
 
@@ -82,42 +82,38 @@ export const AttachmentPreview = ({ url, name, type, size, isUser = false }: Att
           </div>
         </div>
 
-        <PopupBase 
-          open={lightboxOpen} 
-          onClose={() => setLightboxOpen(false)}
-          maxWidth="4xl"
-          showCloseButton={false}
-          className="p-0 overflow-hidden"
-        >
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 z-10 bg-background/80"
-              onClick={() => setLightboxOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <img
-              src={signedUrl}
-              alt={name}
-              className="w-full h-auto max-h-[80vh] object-contain"
-            />
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
-              <div className="flex items-center justify-between text-white">
-                <span className="text-sm">{name}</span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDownload}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Baixar
-                </Button>
+        <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-10 bg-background/80"
+                onClick={() => setLightboxOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <img
+                src={signedUrl}
+                alt={name}
+                className="w-full h-auto max-h-[80vh] object-contain"
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+                <div className="flex items-center justify-between text-white">
+                  <span className="text-sm">{name}</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleDownload}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Baixar
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </PopupBase>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }

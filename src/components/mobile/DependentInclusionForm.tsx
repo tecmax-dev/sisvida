@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -428,264 +435,293 @@ export function DependentInclusionForm({
   const isLoading = uploading || submitting;
 
   return (
-    <PopupBase open={open} onClose={() => handleOpenChange(false)} maxWidth="md" className="p-0">
-      <PopupHeader className="p-4 pb-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-            <UserPlus className="h-5 w-5 text-emerald-600" />
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md mx-4 max-h-[90vh] p-0 rounded-2xl overflow-hidden">
+        <DialogHeader className="p-4 pb-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+              <UserPlus className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <DialogTitle>Solicitar Inclusão de Dependente</DialogTitle>
+              <DialogDescription>
+                Preencha os dados do dependente para análise
+              </DialogDescription>
+            </div>
           </div>
-          <div>
-            <PopupTitle>Solicitar Inclusão de Dependente</PopupTitle>
-            <PopupDescription>
-              Preencha os dados do dependente para análise
-            </PopupDescription>
-          </div>
-        </div>
-      </PopupHeader>
+        </DialogHeader>
 
-      <ScrollArea className="max-h-[60vh] px-4">
-        <div className="space-y-4 pb-4">
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-medium">
-              Nome completo <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              placeholder="Nome do dependente"
-              value={formData.name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-              className={errors.name ? "border-red-500" : ""}
-              disabled={isLoading}
-            />
-            {errors.name && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.name}
-              </p>
-            )}
-          </div>
-
-          {/* CPF */}
-          <div className="space-y-2">
-            <Label htmlFor="cpf" className="text-sm font-medium">
-              CPF <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
+        <ScrollArea className="max-h-[60vh] px-4">
+          <div className="space-y-4 pb-4">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-medium">
+                Nome completo <span className="text-red-500">*</span>
+              </Label>
               <Input
-                id="cpf"
-                placeholder="000.000.000-00"
-                value={formData.cpf}
-                onChange={(e) => handleInputChange("cpf", e.target.value)}
-                className={errors.cpf || cpfExists ? "border-red-500 pr-10" : ""}
+                id="name"
+                placeholder="Nome do dependente"
+                value={formData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                className={errors.name ? "border-red-500" : ""}
+                disabled={isLoading}
+              />
+              {errors.name && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.name}
+                </p>
+              )}
+            </div>
+
+            {/* CPF */}
+            <div className="space-y-2">
+              <Label htmlFor="cpf" className="text-sm font-medium">
+                CPF <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="cpf"
+                  placeholder="000.000.000-00"
+                  value={formData.cpf}
+                  onChange={(e) => handleInputChange("cpf", e.target.value)}
+                  className={errors.cpf || cpfExists ? "border-red-500 pr-10" : ""}
+                  disabled={isLoading}
+                  inputMode="numeric"
+                />
+                {checkingCpf && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              
+              {/* CPF Already Exists Warning */}
+              {cpfExists && (
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="p-3">
+                    <div className="flex gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-800">
+                        <p className="font-medium mb-1">CPF já cadastrado!</p>
+                        <p className="mb-2">
+                          Este CPF já está registrado em nossa base de dados. 
+                          Para mais informações, entre em contato conosco.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="bg-green-600 hover:bg-green-700 text-white border-0 h-8 text-xs"
+                          onClick={() => window.open("https://wa.me/5573999999999?text=Olá! Estou tentando cadastrar um dependente, mas o CPF já existe no sistema.", "_blank")}
+                        >
+                          <Phone className="h-3 w-3 mr-1" />
+                          Falar no WhatsApp
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {errors.cpf && errors.cpf !== "exists" && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.cpf}
+                </p>
+              )}
+            </div>
+
+            {/* Birth Date */}
+            <div className="space-y-2">
+              <Label htmlFor="birthDate" className="text-sm font-medium">
+                Data de nascimento <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="birthDate"
+                placeholder="DD/MM/AAAA"
+                value={formData.birthDate}
+                onChange={(e) => handleInputChange("birthDate", e.target.value)}
+                className={errors.birthDate ? "border-red-500" : ""}
                 disabled={isLoading}
                 inputMode="numeric"
               />
-              {checkingCpf && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
+              {errors.birthDate && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.birthDate}
+                </p>
               )}
             </div>
-            
-            {/* CPF Already Exists Warning */}
-            {cpfExists && (
-              <Card className="bg-amber-50 border-amber-200">
-                <CardContent className="p-3">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-amber-800">
-                        CPF já cadastrado
-                      </p>
-                      <p className="text-xs text-amber-700">
-                        Este CPF já está vinculado a um titular ou dependente.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {errors.cpf && errors.cpf !== "exists" && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.cpf}
-              </p>
-            )}
-          </div>
 
-          {/* Birth Date */}
-          <div className="space-y-2">
-            <Label htmlFor="birthDate" className="text-sm font-medium">
-              Data de nascimento <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="birthDate"
-              placeholder="DD/MM/AAAA"
-              value={formData.birthDate}
-              onChange={(e) => handleInputChange("birthDate", e.target.value)}
-              className={errors.birthDate ? "border-red-500" : ""}
-              disabled={isLoading}
-              inputMode="numeric"
-            />
-            {errors.birthDate && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.birthDate}
-              </p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="text-sm font-medium">
-              Telefone <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            {/* Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium">
+                Telefone de contato <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="phone"
                 placeholder="(00) 00000-0000"
                 value={formData.phone}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
-                className={`pl-10 ${errors.phone ? "border-red-500" : ""}`}
+                className={errors.phone ? "border-red-500" : ""}
                 disabled={isLoading}
                 inputMode="tel"
               />
+              {errors.phone && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.phone}
+                </p>
+              )}
             </div>
-            {errors.phone && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.phone}
-              </p>
-            )}
-          </div>
 
-          {/* Relationship */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Grau de parentesco <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.relationship}
-              onValueChange={(value) => handleInputChange("relationship", value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger className={errors.relationship ? "border-red-500" : ""}>
-                <SelectValue placeholder="Selecione o parentesco" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="spouse">Cônjuge</SelectItem>
-                <SelectItem value="child">Filho(a)</SelectItem>
-                <SelectItem value="parent">Pai/Mãe</SelectItem>
-                <SelectItem value="sibling">Irmão(ã)</SelectItem>
-                <SelectItem value="other">Outro</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.relationship && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.relationship}
-              </p>
-            )}
-          </div>
-
-          {/* Document Upload */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Foto do RG ou CPF <span className="text-red-500">*</span>
-            </Label>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileSelect}
-              disabled={isLoading}
-            />
-            
-            {documentPreview ? (
-              <Card className="relative overflow-hidden">
-                <CardContent className="p-0">
-                  <img
-                    src={documentPreview}
-                    alt="Documento"
-                    className="w-full h-48 object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-8 w-8"
-                    onClick={removeDocument}
-                    disabled={isLoading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <div className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 rounded-md flex items-center gap-1">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <span className="text-xs font-medium">Documento anexado</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card
-                className={`border-2 border-dashed cursor-pointer hover:border-primary transition-colors ${
-                  errors.document ? "border-red-500" : ""
-                }`}
-                onClick={() => fileInputRef.current?.click()}
+            {/* Relationship */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Grau de parentesco <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.relationship}
+                onValueChange={(value) => handleInputChange("relationship", value)}
+                disabled={isLoading}
               >
-                <CardContent className="flex flex-col items-center justify-center py-8 gap-2">
-                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                    <Camera className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm font-medium">Toque para tirar foto ou anexar</p>
-                  <p className="text-xs text-muted-foreground">
-                    Imagem do RG ou CPF (máx. 5MB)
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            
-            {errors.document && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.document}
-              </p>
-            )}
-          </div>
-        </div>
-      </ScrollArea>
+                <SelectTrigger className={errors.relationship ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Selecione o parentesco" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="spouse">Esposo(a) / Cônjuge</SelectItem>
+                  <SelectItem value="child">Filho(a) - até 21 anos</SelectItem>
+                  <SelectItem value="father">Pai</SelectItem>
+                  <SelectItem value="mother">Mãe</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.relationship && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.relationship}
+                </p>
+              )}
+            </div>
 
-      <PopupFooter className="p-4 pt-2 flex-col gap-2">
-        <Button
-          className="w-full"
-          onClick={handleSubmit}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {uploading ? "Enviando documento..." : "Enviando solicitação..."}
-            </>
-          ) : (
-            <>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Enviar Solicitação
-            </>
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full"
-          onClick={() => handleOpenChange(false)}
-          disabled={isLoading}
-        >
-          Cancelar
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+            {/* Document Upload */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Foto do RG/CPF <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Envie uma foto legível do documento de identidade para validação
+              </p>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              {!documentFile ? (
+                <Card
+                  className={`border-dashed cursor-pointer hover:bg-muted/50 transition-colors ${
+                    errors.document ? "border-red-500" : ""
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <CardContent className="p-6 text-center">
+                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Camera className="h-6 w-6 text-emerald-600" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">
+                      Toque para adicionar foto
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      JPG, PNG ou HEIC até 5MB
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="overflow-hidden">
+                  <CardContent className="p-0 relative">
+                    <img
+                      src={documentPreview || ""}
+                      alt="Documento"
+                      className="w-full h-40 object-cover"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                      onClick={removeDocument}
+                      disabled={isLoading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                      <div className="flex items-center gap-2 text-white text-sm">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Documento anexado</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {errors.document && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.document}
+                </p>
+              )}
+            </div>
+
+            {/* Info Card */}
+            <Card className="bg-amber-50 border-amber-100">
+              <CardContent className="p-3">
+                <div className="flex gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-800">
+                    <p className="font-medium mb-1">Importante</p>
+                    <ul className="space-y-0.5 list-disc list-inside">
+                      <li>A solicitação será analisada em até 5 dias úteis</li>
+                      <li>Você receberá uma notificação sobre o resultado</li>
+                      <li>O cadastro ficará pendente até a validação</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-4 pt-0 flex-col gap-2">
+          <Button
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            onClick={handleSubmit}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {uploading ? "Enviando documento..." : "Enviando solicitação..."}
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Enviar Solicitação
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            className="w-full"
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

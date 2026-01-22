@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -173,69 +173,72 @@ export function PatientAppointmentsModal({
   };
 
   return (
-    <PopupBase 
-      open={open} 
-      onClose={() => onOpenChange(false)}
-      maxWidth="2xl"
-    >
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Agendamentos - {patientName}
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent 
+        className="max-w-2xl max-h-[85vh]"
+        onPointerDownOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Agendamentos - {patientName}
+          </DialogTitle>
+        </DialogHeader>
 
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-6">
-            {/* Upcoming Appointments */}
-            <div>
-              <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                Próximos Agendamentos ({upcomingAppointments.length})
-              </h3>
-              {upcomingAppointments.length > 0 ? (
-                <Accordion type="single" collapsible className="space-y-2">
-                  {upcomingAppointments.map(renderAppointmentItem)}
-                </Accordion>
-              ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
-                  Nenhum agendamento futuro
-                </p>
-              )}
-            </div>
-
-            {/* Past Appointments */}
-            <div>
-              <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                Histórico ({pastAppointments.length})
-              </h3>
-              {pastAppointments.length > 0 ? (
-                <Accordion type="single" collapsible className="space-y-2">
-                  {pastAppointments.map(renderAppointmentItem)}
-                </Accordion>
-              ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
-                  Nenhum histórico de agendamentos
-                </p>
-              )}
-            </div>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        </ScrollArea>
-      )}
+        ) : (
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-6">
+              {/* Upcoming Appointments */}
+              <div>
+                <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                  Próximos Agendamentos ({upcomingAppointments.length})
+                </h3>
+                {upcomingAppointments.length > 0 ? (
+                  <Accordion type="single" collapsible className="space-y-2">
+                    {upcomingAppointments.map(renderAppointmentItem)}
+                  </Accordion>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
+                    Nenhum agendamento futuro
+                  </p>
+                )}
+              </div>
 
-      <PopupFooter className="pt-4 border-t">
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
-          Fechar
-        </Button>
-        <Button onClick={handleNewAppointment} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Agendamento
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+              {/* Past Appointments */}
+              <div>
+                <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                  Histórico ({pastAppointments.length})
+                </h3>
+                {pastAppointments.length > 0 ? (
+                  <Accordion type="single" collapsible className="space-y-2">
+                    {pastAppointments.map(renderAppointmentItem)}
+                  </Accordion>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
+                    Nenhum histórico de agendamentos
+                  </p>
+                )}
+              </div>
+            </div>
+          </ScrollArea>
+        )}
+
+        <div className="flex justify-end pt-4 border-t">
+          <Button onClick={handleNewAppointment} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Agendamento
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

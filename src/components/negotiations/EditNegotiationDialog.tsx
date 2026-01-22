@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +66,7 @@ export default function EditNegotiationDialog({
   const [copied, setCopied] = useState(false);
   const [linkValidityDays, setLinkValidityDays] = useState(30);
 
+  // Editable fields
   const [installmentsCount, setInstallmentsCount] = useState(negotiation.installments_count);
   const [downPaymentValue, setDownPaymentValue] = useState(negotiation.down_payment_value || 0);
   const [downPaymentDueDate, setDownPaymentDueDate] = useState(
@@ -73,10 +81,12 @@ export default function EditNegotiationDialog({
   const [appliedCorrectionRate, setAppliedCorrectionRate] = useState(negotiation.applied_correction_rate);
   const [appliedLateFeeRate, setAppliedLateFeeRate] = useState(negotiation.applied_late_fee_rate);
 
+  // Calculated values
   const [calculatedInstallmentValue, setCalculatedInstallmentValue] = useState(negotiation.installment_value);
 
   useEffect(() => {
     if (open) {
+      // Reset form when dialog opens
       setInstallmentsCount(negotiation.installments_count);
       setDownPaymentValue(negotiation.down_payment_value || 0);
       setDownPaymentDueDate(
@@ -128,6 +138,7 @@ export default function EditNegotiationDialog({
 
     setProcessing(true);
     try {
+      // Update negotiation
       const { error: negError } = await supabase
         .from("debt_negotiations")
         .update({
@@ -145,6 +156,7 @@ export default function EditNegotiationDialog({
 
       if (negError) throw negError;
 
+      // Delete existing installments
       const { error: deleteError } = await supabase
         .from("negotiation_installments")
         .delete()
@@ -152,6 +164,7 @@ export default function EditNegotiationDialog({
 
       if (deleteError) throw deleteError;
 
+      // Create new installments
       const newInstallments = [];
       for (let i = 1; i <= installmentsCount; i++) {
         const dueDate = addMonths(new Date(firstDueDate), i - 1);
@@ -191,6 +204,7 @@ export default function EditNegotiationDialog({
   };
 
   const getPublicBaseUrl = () => {
+    // When testing inside preview, we still want to generate the real public domain.
     const origin = window.location.origin;
     return origin.includes("lovable.app") ? "https://app.eclini.com.br" : origin;
   };
@@ -206,6 +220,7 @@ export default function EditNegotiationDialog({
 
       const accessToken = generateAccessToken();
 
+      // Fetch negotiation items snapshot
       const { data: items, error: itemsError } = await supabase
         .from("negotiation_items")
         .select(
@@ -216,6 +231,7 @@ export default function EditNegotiationDialog({
 
       if (itemsError) throw itemsError;
 
+      // Optional: legal basis from settings
       const { data: settingsData } = await supabase
         .from("negotiation_settings")
         .select("legal_basis")
@@ -291,6 +307,7 @@ export default function EditNegotiationDialog({
     }
   };
 
+  // Only allow editing if status is simulation or pending_approval
   const canEdit = ["simulation", "pending_approval"].includes(negotiation.status);
 
   if (!canEdit) {
@@ -298,217 +315,214 @@ export default function EditNegotiationDialog({
   }
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
-      <PopupHeader>
-        <PopupTitle>Editar Negociação</PopupTitle>
-        <PopupDescription>
-          {negotiation.negotiation_code} - {negotiation.employers?.name}
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Editar Negociação</DialogTitle>
+          <DialogDescription>
+            {negotiation.negotiation_code} - {negotiation.employers?.name}
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="space-y-4 py-4">
-        {/* Installments Count */}
-        <div className="space-y-2">
-          <Label htmlFor="installments">Número de Parcelas</Label>
-          <Input
-            id="installments"
-            type="number"
-            min={1}
-            max={60}
-            value={installmentsCount}
-            onChange={(e) => setInstallmentsCount(parseInt(e.target.value) || 1)}
-          />
-        </div>
-
-        {/* Down Payment */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-4 py-4">
+          {/* Installments Count */}
           <div className="space-y-2">
-            <Label htmlFor="downPayment">Valor de Entrada (R$)</Label>
+            <Label htmlFor="installments">Número de Parcelas</Label>
             <Input
-              id="downPayment"
+              id="installments"
               type="number"
-              min={0}
-              step={0.01}
-              value={downPaymentValue}
-              onChange={(e) => setDownPaymentValue(parseFloat(e.target.value) || 0)}
+              min={1}
+              max={60}
+              value={installmentsCount}
+              onChange={(e) => setInstallmentsCount(parseInt(e.target.value) || 1)}
             />
           </div>
-          {downPaymentValue > 0 && (
+
+          {/* Down Payment */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="downPaymentDueDate">Vencimento da Entrada</Label>
+              <Label htmlFor="downPayment">Valor de Entrada (R$)</Label>
               <Input
-                id="downPaymentDueDate"
-                type="date"
-                value={downPaymentDueDate}
-                onChange={(e) => setDownPaymentDueDate(e.target.value)}
+                id="downPayment"
+                type="number"
+                min={0}
+                step={0.01}
+                value={downPaymentValue}
+                onChange={(e) => setDownPaymentValue(parseFloat(e.target.value) || 0)}
               />
             </div>
-          )}
-        </div>
-
-        {/* First Due Date */}
-        <div className="space-y-2">
-          <Label htmlFor="firstDueDate">Data da Primeira Parcela</Label>
-          <Input
-            id="firstDueDate"
-            type="date"
-            value={firstDueDate}
-            onChange={(e) => setFirstDueDate(e.target.value)}
-          />
-        </div>
-
-        {/* Rates */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="interestRate">Juros (%)</Label>
-            <Input
-              id="interestRate"
-              type="number"
-              min={0}
-              step={0.01}
-              value={appliedInterestRate}
-              onChange={(e) => setAppliedInterestRate(parseFloat(e.target.value) || 0)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="correctionRate">Correção (%)</Label>
-            <Input
-              id="correctionRate"
-              type="number"
-              min={0}
-              step={0.01}
-              value={appliedCorrectionRate}
-              onChange={(e) => setAppliedCorrectionRate(parseFloat(e.target.value) || 0)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lateFeeRate">Multa (%)</Label>
-            <Input
-              id="lateFeeRate"
-              type="number"
-              min={0}
-              step={0.01}
-              value={appliedLateFeeRate}
-              onChange={(e) => setAppliedLateFeeRate(parseFloat(e.target.value) || 0)}
-            />
-          </div>
-        </div>
-
-        {/* Calculated Summary */}
-        <div className="rounded-lg bg-muted p-4 space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Calculator className="h-4 w-4" />
-            Resumo Calculado
-          </div>
-          <div className="text-sm space-y-1">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Negociado:</span>
-              <span className="font-medium">{formatCurrency(negotiation.total_negotiated_value)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Entrada:</span>
-              <span>{formatCurrency(downPaymentValue)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Valor Parcelado:</span>
-              <span>{formatCurrency(negotiation.total_negotiated_value - downPaymentValue)}</span>
-            </div>
-            <div className="flex justify-between font-medium text-primary">
-              <span>Valor de Cada Parcela:</span>
-              <span>{installmentsCount}x de {formatCurrency(calculatedInstallmentValue)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Link Generation Section */}
-        <div className="rounded-lg bg-muted/50 p-4 border space-y-3">
-          <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Compartilhar via Link</span>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              Validade do link:
-            </label>
-            <select
-              value={linkValidityDays}
-              onChange={(e) => setLinkValidityDays(Number(e.target.value))}
-              className="px-2 py-1 text-sm border rounded-md bg-background"
-              disabled={!!generatedLink}
-            >
-              <option value={7}>7 dias</option>
-              <option value={15}>15 dias</option>
-              <option value={30}>30 dias</option>
-              <option value={60}>60 dias</option>
-              <option value={90}>90 dias</option>
-              <option value={180}>180 dias</option>
-              <option value={365}>1 ano</option>
-            </select>
-          </div>
-
-          {generatedLink && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">
-                Link válido por {linkValidityDays} dias (até {format(addDays(new Date(), linkValidityDays), "dd/MM/yyyy")}):
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={generatedLink}
-                  readOnly
-                  className="flex-1 text-xs p-2 border rounded bg-background"
+            {downPaymentValue > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="downPaymentDueDate">Vencimento da Entrada</Label>
+                <Input
+                  id="downPaymentDueDate"
+                  type="date"
+                  value={downPaymentDueDate}
+                  onChange={(e) => setDownPaymentDueDate(e.target.value)}
                 />
-                <Button size="sm" variant="outline" onClick={handleCopyLink}>
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* First Due Date */}
+          <div className="space-y-2">
+            <Label htmlFor="firstDueDate">Data da Primeira Parcela</Label>
+            <Input
+              id="firstDueDate"
+              type="date"
+              value={firstDueDate}
+              onChange={(e) => setFirstDueDate(e.target.value)}
+            />
+          </div>
+
+          {/* Rates */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="interestRate">Juros (%)</Label>
+              <Input
+                id="interestRate"
+                type="number"
+                min={0}
+                step={0.01}
+                value={appliedInterestRate}
+                onChange={(e) => setAppliedInterestRate(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="correctionRate">Correção (%)</Label>
+              <Input
+                id="correctionRate"
+                type="number"
+                min={0}
+                step={0.01}
+                value={appliedCorrectionRate}
+                onChange={(e) => setAppliedCorrectionRate(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lateFeeRate">Multa (%)</Label>
+              <Input
+                id="lateFeeRate"
+                type="number"
+                min={0}
+                step={0.01}
+                value={appliedLateFeeRate}
+                onChange={(e) => setAppliedLateFeeRate(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+
+          {/* Calculated Summary */}
+          <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Calculator className="h-4 w-4" />
+              Resumo Calculado
+            </div>
+            <div className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Negociado:</span>
+                <span className="font-medium">{formatCurrency(negotiation.total_negotiated_value)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Entrada:</span>
+                <span>{formatCurrency(downPaymentValue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Valor Parcelado:</span>
+                <span>{formatCurrency(negotiation.total_negotiated_value - downPaymentValue)}</span>
+              </div>
+              <div className="flex justify-between font-medium text-primary">
+                <span>Valor de Cada Parcela:</span>
+                <span>{installmentsCount}x de {formatCurrency(calculatedInstallmentValue)}</span>
               </div>
             </div>
-          )}
+          </div>
 
-          {!generatedLink && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGenerateLink}
-              disabled={generatingLink}
-              className="w-full"
-            >
-              {generatingLink ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Link2 className="h-4 w-4 mr-2" />
-                  Gerar Link de Compartilhamento
-                </>
-              )}
-            </Button>
-          )}
+          {/* Link Generation Section */}
+          <div className="rounded-lg bg-muted/50 p-4 border space-y-3">
+            <div className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Compartilhar via Link</span>
+            </div>
+            
+            {/* Validity Days Config */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                Validade do link:
+              </label>
+              <select
+                value={linkValidityDays}
+                onChange={(e) => setLinkValidityDays(Number(e.target.value))}
+                className="px-2 py-1 text-sm border rounded-md bg-background"
+                disabled={!!generatedLink}
+              >
+                <option value={7}>7 dias</option>
+                <option value={15}>15 dias</option>
+                <option value={30}>30 dias</option>
+                <option value={60}>60 dias</option>
+                <option value={90}>90 dias</option>
+                <option value={180}>180 dias</option>
+                <option value={365}>1 ano</option>
+              </select>
+            </div>
+
+            {generatedLink && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground text-center">
+                  Link válido por {linkValidityDays} dias (até {format(addDays(new Date(), linkValidityDays), "dd/MM/yyyy")}):
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={generatedLink}
+                    readOnly
+                    className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded-md"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyLink}
+                    className="shrink-0"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <PopupFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={processing}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSave} disabled={processing}>
-          {processing ? (
-            <>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={processing}>
+            Cancelar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleGenerateLink}
+            disabled={processing || generatingLink}
+          >
+            {generatingLink ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
+            ) : (
+              <Link2 className="h-4 w-4 mr-2" />
+            )}
+            Gerar Link
+          </Button>
+          <Button onClick={handleSave} disabled={processing}>
+            {processing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
               <Save className="h-4 w-4 mr-2" />
-              Salvar Alterações
-            </>
-          )}
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+            )}
+            Salvar Alterações
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

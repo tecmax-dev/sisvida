@@ -11,7 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -375,138 +381,140 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
       </CardContent>
 
       {/* Dialog */}
-      <PopupBase open={dialogOpen} onClose={handleCloseDialog} maxWidth="lg">
-        <PopupHeader>
-          <PopupTitle>
-            {editingRule ? "Editar Regra" : "Nova Regra de Repasse"}
-          </PopupTitle>
-        </PopupHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Profissional (opcional)</Label>
-            <Select
-              value={formData.professional_id}
-              onValueChange={(value) => setFormData({ ...formData, professional_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os profissionais" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todos os profissionais</SelectItem>
-                {professionals.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Procedimento (opcional)</Label>
-            <Select
-              value={formData.procedure_id}
-              onValueChange={(value) => setFormData({ ...formData, procedure_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os procedimentos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todos os procedimentos</SelectItem>
-                {procedures.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Convênio (opcional)</Label>
-            <Select
-              value={formData.insurance_plan_id}
-              onValueChange={(value) => setFormData({ ...formData, insurance_plan_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os convênios" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Todos os convênios</SelectItem>
-                {insurancePlans.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingRule ? "Editar Regra" : "Nova Regra de Repasse"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Tipo de Cálculo</Label>
+              <Label>Profissional (opcional)</Label>
               <Select
-                value={formData.calculation_type}
-                onValueChange={(value) => setFormData({ ...formData, calculation_type: value as 'percentage' | 'fixed' })}
+                value={formData.professional_id}
+                onValueChange={(value) => setFormData({ ...formData, professional_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Todos os profissionais" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percentual (%)</SelectItem>
-                  <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                  <SelectItem value="_all">Todos os profissionais</SelectItem>
+                  {professionals.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Valor</Label>
-              <Input
-                type="number"
-                step={formData.calculation_type === 'percentage' ? "0.01" : "0.01"}
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                placeholder={formData.calculation_type === 'percentage' ? "Ex: 30" : "Ex: 100.00"}
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Vigência Início</Label>
-              <Input
-                type="date"
-                value={formData.effective_from}
-                onChange={(e) => setFormData({ ...formData, effective_from: e.target.value })}
-                required
-              />
+              <Label>Procedimento (opcional)</Label>
+              <Select
+                value={formData.procedure_id}
+                onValueChange={(value) => setFormData({ ...formData, procedure_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os procedimentos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">Todos os procedimentos</SelectItem>
+                  {procedures.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-              <Label>Vigência Fim (opcional)</Label>
-              <Input
-                type="date"
-                value={formData.effective_until}
-                onChange={(e) => setFormData({ ...formData, effective_until: e.target.value })}
-              />
+              <Label>Convênio (opcional)</Label>
+              <Select
+                value={formData.insurance_plan_id}
+                onValueChange={(value) => setFormData({ ...formData, insurance_plan_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os convênios" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">Todos os convênios</SelectItem>
+                  {insurancePlans.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-            />
-            <Label htmlFor="is_active">Regra ativa</Label>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo de Cálculo</Label>
+                <Select
+                  value={formData.calculation_type}
+                  onValueChange={(value) => setFormData({ ...formData, calculation_type: value as 'percentage' | 'fixed' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentual (%)</SelectItem>
+                    <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor</Label>
+                <Input
+                  type="number"
+                  step={formData.calculation_type === 'percentage' ? "0.01" : "0.01"}
+                  value={formData.value}
+                  onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                  placeholder={formData.calculation_type === 'percentage' ? "Ex: 30" : "Ex: 100.00"}
+                  required
+                />
+              </div>
+            </div>
 
-          <PopupFooter>
-            <Button type="button" variant="outline" onClick={handleCloseDialog}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {editingRule ? "Salvar" : "Criar"}
-            </Button>
-          </PopupFooter>
-        </form>
-      </PopupBase>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Vigência Início</Label>
+                <Input
+                  type="date"
+                  value={formData.effective_from}
+                  onChange={(e) => setFormData({ ...formData, effective_from: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vigência Fim (opcional)</Label>
+                <Input
+                  type="date"
+                  value={formData.effective_until}
+                  onChange={(e) => setFormData({ ...formData, effective_until: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <Label htmlFor="is_active">Regra ativa</Label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingRule ? "Salvar" : "Criar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -6,7 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
@@ -123,9 +130,14 @@ export function ClinicAddonsSection() {
   }
 
   const activeAddons = clinicAddons.filter(ca => ca.status === 'active');
+  const availableAddons = addons.filter(addon => {
+    const status = getAddonStatus(addon.key);
+    return status === 'not_contracted';
+  });
 
   return (
     <div className="space-y-6">
+      {/* Active Add-ons */}
       {activeAddons.length > 0 && (
         <Card>
           <CardHeader>
@@ -175,6 +187,7 @@ export function ClinicAddonsSection() {
         </Card>
       )}
 
+      {/* Available Add-ons */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -268,6 +281,7 @@ export function ClinicAddonsSection() {
         </CardContent>
       </Card>
 
+      {/* Pending Requests */}
       {requests.filter(r => r.status === 'pending').length > 0 && (
         <Card>
           <CardHeader>
@@ -294,50 +308,53 @@ export function ClinicAddonsSection() {
         </Card>
       )}
 
-      <PopupBase open={requestDialogOpen} onClose={() => setRequestDialogOpen(false)}>
-        <PopupHeader>
-          <PopupTitle className="flex items-center gap-2">
-            {selectedAddon && addonIcons[selectedAddon.key]}
-            Solicitar {selectedAddon?.name}
-          </PopupTitle>
-          <PopupDescription>
-            Sua solicitação será analisada pela nossa equipe
-          </PopupDescription>
-        </PopupHeader>
+      {/* Request Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedAddon && addonIcons[selectedAddon.key]}
+              Solicitar {selectedAddon?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Sua solicitação será analisada pela nossa equipe
+            </DialogDescription>
+          </DialogHeader>
 
-        {selectedAddon && (
-          <div className="space-y-4 py-4">
-            <div className="p-3 rounded-lg bg-muted/50 border">
-              <p className="text-sm">{selectedAddon.description}</p>
-              {selectedAddon.monthly_price > 0 && (
-                <p className="text-lg font-semibold text-primary mt-2">
-                  {formatPrice(selectedAddon.monthly_price)}/mês
-                </p>
-              )}
+          {selectedAddon && (
+            <div className="space-y-4 py-4">
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <p className="text-sm">{selectedAddon.description}</p>
+                {selectedAddon.monthly_price > 0 && (
+                  <p className="text-lg font-semibold text-primary mt-2">
+                    {formatPrice(selectedAddon.monthly_price)}/mês
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Motivo da solicitação (opcional)</label>
+                <Textarea
+                  value={requestReason}
+                  onChange={(e) => setRequestReason(e.target.value)}
+                  placeholder="Descreva por que precisa deste recurso..."
+                  rows={3}
+                />
+              </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Motivo da solicitação (opcional)</label>
-              <Textarea
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-                placeholder="Descreva por que precisa deste recurso..."
-                rows={3}
-              />
-            </div>
-          </div>
-        )}
-
-        <PopupFooter>
-          <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmitRequest} disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Enviar Solicitação
-          </Button>
-        </PopupFooter>
-      </PopupBase>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmitRequest} disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Enviar Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

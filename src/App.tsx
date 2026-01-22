@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ModalProvider } from "@/contexts/ModalContext";
-import { SystemModalProvider } from "@/contexts/SystemModalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoadingFallback } from "@/components/ui/loading-fallback";
 import { Button } from "./components/ui/button";
@@ -289,12 +288,11 @@ const App = () => (
     <ThemeProvider defaultTheme="system" storageKey="eclini-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <SystemModalProvider>
-            <ModalProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AuthProvider>
+          <ModalProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AuthProvider>
                 <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -556,10 +554,9 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>
-              </AuthProvider>
-            </BrowserRouter>
-            </ModalProvider>
-          </SystemModalProvider>
+            </AuthProvider>
+          </BrowserRouter>
+          </ModalProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

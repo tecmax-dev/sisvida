@@ -4,7 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -167,219 +174,221 @@ export function HomologacaoEditDialog({
   ];
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
-      <PopupHeader>
-        <PopupTitle>Editar Agendamento</PopupTitle>
-        <PopupDescription>
-          Altere os dados do agendamento de homologação
-        </PopupDescription>
-      </PopupHeader>
-      
-      <div className="grid gap-4 py-4">
-        {/* Status */}
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select
-            value={formData.status}
-            onValueChange={(value) => setFormData({ ...formData, status: value })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Employee Info */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-muted-foreground">Dados do Funcionário</h4>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="employee_name">Nome do Funcionário *</Label>
-              <Input
-                id="employee_name"
-                value={formData.employee_name}
-                onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
-                placeholder="Nome completo"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="employee_cpf">CPF</Label>
-              <Input
-                id="employee_cpf"
-                value={formData.employee_cpf}
-                onChange={(e) => setFormData({ ...formData, employee_cpf: e.target.value })}
-                placeholder="000.000.000-00"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Company Info */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-muted-foreground">Dados da Empresa</h4>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="company_name">Nome da Empresa *</Label>
-              <Input
-                id="company_name"
-                value={formData.company_name}
-                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                placeholder="Razão social"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company_cnpj">CNPJ</Label>
-              <Input
-                id="company_cnpj"
-                value={formData.company_cnpj}
-                onChange={(e) => setFormData({ ...formData, company_cnpj: e.target.value })}
-                placeholder="00.000.000/0001-00"
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="company_phone">Telefone *</Label>
-              <Input
-                id="company_phone"
-                value={formData.company_phone}
-                onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company_email">E-mail</Label>
-              <Input
-                id="company_email"
-                value={formData.company_email}
-                onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
-                placeholder="email@empresa.com"
-                type="email"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Appointment Info */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-muted-foreground">Dados do Agendamento</h4>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Data</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.appointment_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.appointment_date ? (
-                      format(formData.appointment_date, "dd/MM/yyyy", { locale: ptBR })
-                    ) : (
-                      <span>Selecione</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.appointment_date}
-                    onSelect={(date) => date && setFormData({ ...formData, appointment_date: date })}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label>Horário</Label>
-              <Select
-                value={formData.start_time}
-                onValueChange={(value) => setFormData({ ...formData, start_time: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Profissional</Label>
-              <Select
-                value={formData.professional_id}
-                onValueChange={(value) => setFormData({ ...formData, professional_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {professionals?.map((prof) => (
-                    <SelectItem key={prof.id} value={prof.id}>
-                      {prof.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Tipo de Serviço</Label>
-              <Select
-                value={formData.service_type_id}
-                onValueChange={(value) => setFormData({ ...formData, service_type_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {serviceTypes?.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name} ({service.duration_minutes} min)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar Agendamento</DialogTitle>
+          <DialogDescription>
+            Altere os dados do agendamento de homologação
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          {/* Status */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Observações</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Observações sobre o agendamento..."
-              rows={3}
-            />
+            <Label>Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => setFormData({ ...formData, status: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Employee Info */}
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm text-muted-foreground">Dados do Funcionário</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="employee_name">Nome do Funcionário *</Label>
+                <Input
+                  id="employee_name"
+                  value={formData.employee_name}
+                  onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
+                  placeholder="Nome completo"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="employee_cpf">CPF</Label>
+                <Input
+                  id="employee_cpf"
+                  value={formData.employee_cpf}
+                  onChange={(e) => setFormData({ ...formData, employee_cpf: e.target.value })}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Company Info */}
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm text-muted-foreground">Dados da Empresa</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="company_name">Nome da Empresa *</Label>
+                <Input
+                  id="company_name"
+                  value={formData.company_name}
+                  onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                  placeholder="Razão social"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company_cnpj">CNPJ</Label>
+                <Input
+                  id="company_cnpj"
+                  value={formData.company_cnpj}
+                  onChange={(e) => setFormData({ ...formData, company_cnpj: e.target.value })}
+                  placeholder="00.000.000/0001-00"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="company_phone">Telefone *</Label>
+                <Input
+                  id="company_phone"
+                  value={formData.company_phone}
+                  onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company_email">E-mail</Label>
+                <Input
+                  id="company_email"
+                  value={formData.company_email}
+                  onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
+                  placeholder="email@empresa.com"
+                  type="email"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Appointment Info */}
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm text-muted-foreground">Dados do Agendamento</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.appointment_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.appointment_date ? (
+                        format(formData.appointment_date, "dd/MM/yyyy", { locale: ptBR })
+                      ) : (
+                        <span>Selecione</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.appointment_date}
+                      onSelect={(date) => date && setFormData({ ...formData, appointment_date: date })}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Horário</Label>
+                <Select
+                  value={formData.start_time}
+                  onValueChange={(value) => setFormData({ ...formData, start_time: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Profissional</Label>
+                <Select
+                  value={formData.professional_id}
+                  onValueChange={(value) => setFormData({ ...formData, professional_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professionals?.map((prof) => (
+                      <SelectItem key={prof.id} value={prof.id}>
+                        {prof.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de Serviço</Label>
+                <Select
+                  value={formData.service_type_id}
+                  onValueChange={(value) => setFormData({ ...formData, service_type_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceTypes?.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name} ({service.duration_minutes} min)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Observações</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Observações sobre o agendamento..."
+                rows={3}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <PopupFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSubmit} disabled={isSaving}>
-          {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Salvar Alterações
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSaving}>
+            {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Salvar Alterações
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

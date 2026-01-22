@@ -4,7 +4,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -159,13 +166,14 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
   }
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
-      <PopupHeader>
-        <PopupTitle>Novo Agendamento</PopupTitle>
-        <PopupDescription>
-          Preencha os dados para criar um novo agendamento de homologação
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Novo Agendamento</DialogTitle>
+          <DialogDescription>
+            Preencha os dados para criar um novo agendamento de homologação
+          </DialogDescription>
+        </DialogHeader>
         
         <div className="grid gap-4 py-4">
           {/* Employee Info */}
@@ -332,14 +340,15 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
           </div>
         </div>
 
-        <PopupFooter>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={createMutation.isPending}>
             {createMutation.isPending ? "Salvando..." : "Criar Agendamento"}
           </Button>
-        </PopupFooter>
-    </PopupBase>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

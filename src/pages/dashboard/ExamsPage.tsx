@@ -13,7 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -638,80 +644,82 @@ export default function ExamsPage() {
         </TabsContent>
       </Tabs>
 
-      <PopupBase open={showDialog} onClose={handleCloseDialog} maxWidth="md">
-        <PopupHeader>
-          <PopupTitle>
-            {editingExam ? "Editar Exame" : "Novo Exame"}
-          </PopupTitle>
-        </PopupHeader>
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingExam ? "Editar Exame" : "Novo Exame"}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Nome do exame"
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome do exame"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="code">Código TUSS</Label>
+              <Input
+                id="code"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                placeholder="Código TUSS (opcional)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrição do exame"
+                rows={3}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoria *</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseDialog}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="code">Código TUSS</Label>
-            <Input
-              id="code"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              placeholder="Código TUSS (opcional)"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descrição do exame"
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <PopupFooter>
-          <Button variant="outline" onClick={handleCloseDialog}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {(createMutation.isPending || updateMutation.isPending) && (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            )}
-            {editingExam ? "Salvar" : "Cadastrar"}
-          </Button>
-        </PopupFooter>
-      </PopupBase>
+              {(createMutation.isPending || updateMutation.isPending) && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              {editingExam ? "Salvar" : "Cadastrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

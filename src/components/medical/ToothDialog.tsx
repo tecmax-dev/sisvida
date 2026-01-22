@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,106 +110,108 @@ export function ToothDialog({
   const showFaceField = ["caries", "restoration", "fracture", "sealant"].includes(condition);
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="md">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          Dente {toothNumber}
-          <span className="text-sm font-normal text-muted-foreground">
-            - {toothNumber && getToothName(toothNumber)}
-          </span>
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            Dente {toothNumber}
+            <span className="text-sm font-normal text-muted-foreground">
+              - {toothNumber && getToothName(toothNumber)}
+            </span>
+          </DialogTitle>
+        </DialogHeader>
 
-      <div className="space-y-4 py-4">
-        {/* Condition Selection */}
-        <div className="space-y-2">
-          <Label>Condição</Label>
-          <RadioGroup
-            value={condition}
-            onValueChange={setCondition}
-            className="grid grid-cols-2 gap-2"
-          >
-            {ODONTOGRAM_CONDITIONS.map((cond) => (
-              <div key={cond.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={cond.id} id={cond.id} />
-                <Label
-                  htmlFor={cond.id}
-                  className="flex items-center gap-2 cursor-pointer text-sm"
-                >
-                  <div
-                    className="w-3 h-3 rounded-full border"
-                    style={{ backgroundColor: cond.color, borderColor: cond.color }}
-                  />
-                  {cond.label}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        {/* Face Selection */}
-        {showFaceField && (
+        <div className="space-y-4 py-4">
+          {/* Condition Selection */}
           <div className="space-y-2">
-            <Label>Face do Dente</Label>
-            <Select value={face} onValueChange={setFace}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a face (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {TOOTH_FACES.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Condição</Label>
+            <RadioGroup
+              value={condition}
+              onValueChange={setCondition}
+              className="grid grid-cols-2 gap-2"
+            >
+              {ODONTOGRAM_CONDITIONS.map((cond) => (
+                <div key={cond.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={cond.id} id={cond.id} />
+                  <Label
+                    htmlFor={cond.id}
+                    className="flex items-center gap-2 cursor-pointer text-sm"
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full border"
+                      style={{ backgroundColor: cond.color, borderColor: cond.color }}
+                    />
+                    {cond.label}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
-        )}
 
-        {/* Material Selection */}
-        {showMaterialField && (
-          <div className="space-y-2">
-            <Label>Material</Label>
-            <Select value={material} onValueChange={setMaterial}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o material (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {MATERIALS.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {/* Notes */}
-        <div className="space-y-2">
-          <Label>Observações</Label>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Observações adicionais sobre o dente..."
-            rows={3}
-          />
-        </div>
-      </div>
-
-      <PopupFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
+          {/* Face Selection */}
+          {showFaceField && (
+            <div className="space-y-2">
+              <Label>Face do Dente</Label>
+              <Select value={face} onValueChange={setFace}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a face (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TOOTH_FACES.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
-          Salvar
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+
+          {/* Material Selection */}
+          {showMaterialField && (
+            <div className="space-y-2">
+              <Label>Material</Label>
+              <Select value={material} onValueChange={setMaterial}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o material (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIALS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label>Observações</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Observações adicionais sobre o dente..."
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

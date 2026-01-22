@@ -18,8 +18,7 @@ const Sheet = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      // CRITICAL: Block any close attempt while tab is hidden
-      if (!nextOpen && document.hidden) {
+      if (!nextOpen && (document.hidden || document.visibilityState === "hidden" || !document.hasFocus())) {
         return;
       }
 
@@ -78,7 +77,7 @@ interface SheetContentProps
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, onFocusOutside, onInteractOutside, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => (
-    <SheetPortal forceMount>
+    <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         ref={ref}

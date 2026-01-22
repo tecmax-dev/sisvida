@@ -39,7 +39,6 @@ interface ModalContextValue {
   isModalOpen: (type: ModalType) => boolean;
   getModalData: (type: ModalType) => ModalData;
   updateModalData: (type: ModalType, data: Partial<ModalData>) => void;
-  resetAllModals: () => void;
 }
 
 const defaultModalState: ModalState = {
@@ -66,7 +65,6 @@ const ModalContext = createContext<ModalContextValue | undefined>(undefined);
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [modals, setModals] = useState<Record<ModalType, ModalState>>(defaultModals);
 
-
   const openModal = useCallback((type: ModalType, data: ModalData = {}) => {
     setModals(prev => ({
       ...prev,
@@ -75,7 +73,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const closeModal = useCallback((type: ModalType) => {
-    console.trace("🔥 closeModal chamado", type, "hasFocus:", document.hasFocus());
     // Only close if document has focus (prevents closing on tab switch)
     if (document.hasFocus()) {
       setModals(prev => ({
@@ -103,12 +100,8 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const resetAllModals = useCallback(() => {
-    setModals(defaultModals);
-  }, []);
-
   return (
-    <ModalContext.Provider value={{ modals, openModal, closeModal, isModalOpen, getModalData, updateModalData, resetAllModals }}>
+    <ModalContext.Provider value={{ modals, openModal, closeModal, isModalOpen, getModalData, updateModalData }}>
       {children}
     </ModalContext.Provider>
   );

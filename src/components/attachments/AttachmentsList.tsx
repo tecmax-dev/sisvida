@@ -21,7 +21,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertPopup } from "@/components/ui/alert-popup";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -29,7 +38,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { PatientAttachment, PatientFolder } from "@/hooks/usePatientAttachments";
@@ -196,41 +211,48 @@ export function AttachmentsList({
         })}
       </div>
 
-      <AlertPopup
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        title="Excluir Anexo"
-        description={`Tem certeza que deseja excluir "${deleteTarget?.file_name}"? Esta ação não pode ser desfeita.`}
-        cancelText="Cancelar"
-        confirmText="Excluir"
-        confirmVariant="destructive"
-        onConfirm={handleDelete}
-      />
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Anexo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir "{deleteTarget?.file_name}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <PopupBase open={!!moveTarget} onClose={() => setMoveTarget(null)} maxWidth="sm">
-        <PopupHeader>
-          <PopupTitle>Mover para Pasta</PopupTitle>
-        </PopupHeader>
-        <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a pasta" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="root">Raiz (Sem pasta)</SelectItem>
-            {folders.map(folder => (
-              <SelectItem key={folder.id} value={folder.id}>
-                {folder.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <PopupFooter>
-          <Button variant="outline" onClick={() => setMoveTarget(null)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleMove}>Mover</Button>
-        </PopupFooter>
-      </PopupBase>
+      <Dialog open={!!moveTarget} onOpenChange={() => setMoveTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mover para Pasta</DialogTitle>
+          </DialogHeader>
+          <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a pasta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="root">Raiz (Sem pasta)</SelectItem>
+              {folders.map(folder => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveTarget(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleMove}>Mover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

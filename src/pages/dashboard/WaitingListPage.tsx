@@ -19,8 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
-import { AlertPopup } from "@/components/ui/alert-popup";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -28,6 +33,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Popover,
   PopoverContent,
@@ -271,117 +286,120 @@ function WaitingListContent() {
             Gerencie pacientes aguardando vagas
           </p>
         </div>
-        <Button variant="hero" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar à Lista
-        </Button>
-
-        <PopupBase open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md">
-          <PopupHeader>
-            <PopupTitle>Adicionar à Lista de Espera</PopupTitle>
-          </PopupHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Paciente *</Label>
-              <Popover open={patientPopoverOpen} onOpenChange={setPatientPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={patientPopoverOpen}
-                    className="w-full justify-between mt-1.5"
-                  >
-                    {selectedPatientName || "Selecione o paciente"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar paciente..." />
-                    <CommandList>
-                      <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
-                      <CommandGroup>
-                        {patients.map((patient) => (
-                          <CommandItem
-                            key={patient.id}
-                            value={`${patient.name} ${patient.cpf || ''}`}
-                            onSelect={() => {
-                              setSelectedPatient(patient.id);
-                              setPatientPopoverOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedPatient === patient.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex flex-col">
-                              <span>{patient.name}</span>
-                              {patient.cpf && (
-                                <span className="text-xs text-muted-foreground">{patient.cpf}</span>
-                              )}
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label>Profissional (opcional)</Label>
-              <Select value={selectedProfessional} onValueChange={setSelectedProfessional}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Qualquer profissional" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Qualquer profissional</SelectItem>
-                  {professionals.map((prof) => (
-                    <SelectItem key={prof.id} value={prof.id}>
-                      {prof.name}
-                    </SelectItem>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="hero">
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar à Lista
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adicionar à Lista de Espera</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Paciente *</Label>
+                <Popover open={patientPopoverOpen} onOpenChange={setPatientPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={patientPopoverOpen}
+                      className="w-full justify-between mt-1.5"
+                    >
+                      {selectedPatientName || "Selecione o paciente"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar paciente..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {patients.map((patient) => (
+                            <CommandItem
+                              key={patient.id}
+                              value={`${patient.name} ${patient.cpf || ''}`}
+                              onSelect={() => {
+                                setSelectedPatient(patient.id);
+                                setPatientPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedPatient === patient.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{patient.name}</span>
+                                {patient.cpf && (
+                                  <span className="text-xs text-muted-foreground">{patient.cpf}</span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Profissional (opcional)</Label>
+                <Select value={selectedProfessional} onValueChange={setSelectedProfessional}>
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue placeholder="Qualquer profissional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Qualquer profissional</SelectItem>
+                    {professionals.map((prof) => (
+                      <SelectItem key={prof.id} value={prof.id}>
+                        {prof.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Preferência de Horário</Label>
+                <div className="flex gap-2 mt-1.5">
+                  {timeOptions.map((time) => (
+                    <Button
+                      key={time}
+                      type="button"
+                      variant={preferredTimes.includes(time) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => togglePreferredTime(time)}
+                    >
+                      {time}
+                    </Button>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Preferência de Horário</Label>
-              <div className="flex gap-2 mt-1.5">
-                {timeOptions.map((time) => (
-                  <Button
-                    key={time}
-                    type="button"
-                    variant={preferredTimes.includes(time) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => togglePreferredTime(time)}
-                  >
-                    {time}
-                  </Button>
-                ))}
+                </div>
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Informações adicionais..."
+                  className="mt-1.5"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleAddEntry} disabled={saving || !selectedPatient}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Adicionar
+                </Button>
               </div>
             </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Informações adicionais..."
-                className="mt-1.5"
-              />
-            </div>
-          </div>
-          <PopupFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddEntry} disabled={saving || !selectedPatient}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Adicionar
-            </Button>
-          </PopupFooter>
-        </PopupBase>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {loading ? (
@@ -478,14 +496,22 @@ function WaitingListContent() {
       )}
 
       {/* Delete Confirmation */}
-      <AlertPopup
-        open={!!deleteId}
-        onClose={() => setDeleteId(null)}
-        title="Remover da lista de espera?"
-        description="O paciente será removido da lista de espera."
-        confirmText="Remover"
-        onConfirm={handleRemoveEntry}
-      />
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover da lista de espera?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O paciente será removido da lista de espera.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveEntry}>
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

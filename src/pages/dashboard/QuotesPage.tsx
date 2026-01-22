@@ -29,7 +29,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertPopup } from "@/components/ui/alert-popup";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -60,7 +69,12 @@ import {
   QuoteData,
 } from "@/lib/quoteUtils";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
-import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 
 interface Quote {
@@ -595,22 +609,35 @@ Equipe ${currentClinic?.name || ''}`;
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["quotes"] })}
       />
 
-      <PopupBase open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="4xl">
-        <PopupHeader>
-          <PopupTitle>Preview do Orçamento</PopupTitle>
-        </PopupHeader>
-        {previewData && <QuotePreview data={previewData} />}
-      </PopupBase>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Preview do Orçamento</DialogTitle>
+          </DialogHeader>
+          {previewData && <QuotePreview data={previewData} />}
+        </DialogContent>
+      </Dialog>
 
-      <AlertPopup
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        title="Confirmar exclusão"
-        description={`Tem certeza que deseja excluir o orçamento ${quoteToDelete?.quote_number}? Esta ação não pode ser desfeita.`}
-        confirmText="Excluir"
-        onConfirm={() => quoteToDelete && deleteMutation.mutate(quoteToDelete.id)}
-        confirmVariant="destructive"
-      />
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o orçamento {quoteToDelete?.quote_number}?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => quoteToDelete && deleteMutation.mutate(quoteToDelete.id)}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
     </RoleGuard>

@@ -3,52 +3,8 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { becameVisibleRecently, wasHiddenRecently, isTabInactive } from "@/lib/visibility-grace";
 
-interface AlertDialogProps extends React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Root> {
-  /** When true, bypasses focus/blur protection - use for system modals like session expiry */
-  systemModal?: boolean;
-}
-
-const AlertDialog = ({
-  open: openProp,
-  defaultOpen,
-  onOpenChange,
-  systemModal = false,
-  ...props
-}: AlertDialogProps) => {
-  const isControlled = openProp !== undefined;
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(defaultOpen ?? false);
-
-  const open = isControlled ? openProp : uncontrolledOpen;
-
-  const handleOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
-      // System modals (like session expiry) bypass all focus protection
-      if (systemModal) {
-        if (!isControlled) setUncontrolledOpen(nextOpen);
-        onOpenChange?.(nextOpen);
-        return;
-      }
-
-      // CRITICAL: Block any close attempt while tab is hidden or transitioning
-      if (!nextOpen && document.hidden) {
-        return;
-      }
-      if (!nextOpen) {
-        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
-          return;
-        }
-      }
-
-      if (!isControlled) setUncontrolledOpen(nextOpen);
-      onOpenChange?.(nextOpen);
-    },
-    [isControlled, onOpenChange, systemModal],
-  );
-
-  return <AlertDialogPrimitive.Root {...props} open={open} onOpenChange={handleOpenChange} />;
-};
+const AlertDialog = AlertDialogPrimitive.Root;
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 
@@ -72,8 +28,8 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, onFocusOutside, onEscapeKeyDown, ...props }, ref) => (
-  <AlertDialogPortal forceMount>
+>(({ className, onFocusOutside, ...props }, ref) => (
+  <AlertDialogPortal>
     <AlertDialogOverlay />
     <AlertDialogPrimitive.Content
       ref={ref}
@@ -83,20 +39,12 @@ const AlertDialogContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
-        // ALWAYS block focus-based dismissal for AlertDialog
-        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
+        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
           e.preventDefault();
           return;
         }
         e.preventDefault();
         onFocusOutside?.(e);
-      }}
-      onEscapeKeyDown={(e) => {
-        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
-          e.preventDefault();
-          return;
-        }
-        onEscapeKeyDown?.(e);
       }}
     />
   </AlertDialogPortal>

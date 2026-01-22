@@ -3,8 +3,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
+import { Loader2, Search } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -227,135 +232,164 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
   };
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
-      <PopupHeader>
-        <PopupTitle>Nova Autorização</PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Nova Autorização</DialogTitle>
+        </DialogHeader>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Patient Selection */}
-          <FormField
-            control={form.control}
-            name="patient_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Associado *</FormLabel>
-                <Popover open={patientPopoverOpen} onOpenChange={setPatientPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-start font-normal"
-                      >
-                        {selectedPatient ? (
-                          <span>
-                            {selectedPatient.name}
-                            {selectedPatient.cpf && (
-                              <span className="text-muted-foreground ml-2">
-                                ({formatCPF(selectedPatient.cpf)})
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">Buscar associado...</span>
-                        )}
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput
-                        placeholder="Buscar por nome ou CPF..."
-                        value={patientSearch}
-                        onValueChange={setPatientSearch}
-                      />
-                      <CommandList>
-                        <CommandEmpty>Nenhum associado encontrado</CommandEmpty>
-                        <CommandGroup>
-                          {patients.map((patient) => (
-                            <CommandItem
-                              key={patient.id}
-                              value={patient.id}
-                              onSelect={() => {
-                                field.onChange(patient.id);
-                                setSelectedPatient(patient);
-                                setPatientPopoverOpen(false);
-                              }}
-                            >
-                              <div>
-                                <p>{patient.name}</p>
-                                {patient.cpf && (
-                                  <p className="text-xs text-muted-foreground">
-                                    CPF: {formatCPF(patient.cpf)}
-                                  </p>
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Beneficiary Type */}
-          <FormField
-            control={form.control}
-            name="beneficiary_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Beneficiário</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="titular" id="titular" />
-                      <Label htmlFor="titular">Titular</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem 
-                        value="dependent" 
-                        id="dependent"
-                        disabled={dependents.length === 0}
-                      />
-                      <Label htmlFor="dependent">
-                        Dependente {dependents.length === 0 && "(sem dependentes)"}
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Dependent Selection */}
-          {beneficiaryType === "dependent" && dependents.length > 0 && (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Patient Selection */}
             <FormField
               control={form.control}
-              name="dependent_id"
+              name="patient_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dependente *</FormLabel>
+                  <FormLabel>Associado *</FormLabel>
+                  <Popover open={patientPopoverOpen} onOpenChange={setPatientPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-start font-normal"
+                        >
+                          {selectedPatient ? (
+                            <span>
+                              {selectedPatient.name}
+                              {selectedPatient.cpf && (
+                                <span className="text-muted-foreground ml-2">
+                                  ({formatCPF(selectedPatient.cpf)})
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Buscar associado...</span>
+                          )}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Buscar por nome ou CPF..."
+                          value={patientSearch}
+                          onValueChange={setPatientSearch}
+                        />
+                        <CommandList>
+                          <CommandEmpty>Nenhum associado encontrado</CommandEmpty>
+                          <CommandGroup>
+                            {patients.map((patient) => (
+                              <CommandItem
+                                key={patient.id}
+                                value={patient.id}
+                                onSelect={() => {
+                                  field.onChange(patient.id);
+                                  setSelectedPatient(patient);
+                                  setPatientPopoverOpen(false);
+                                }}
+                              >
+                                <div>
+                                  <p>{patient.name}</p>
+                                  {patient.cpf && (
+                                    <p className="text-xs text-muted-foreground">
+                                      CPF: {formatCPF(patient.cpf)}
+                                    </p>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Beneficiary Type */}
+            <FormField
+              control={form.control}
+              name="beneficiary_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Beneficiário</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="titular" id="titular" />
+                        <Label htmlFor="titular">Titular</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem 
+                          value="dependent" 
+                          id="dependent"
+                          disabled={dependents.length === 0}
+                        />
+                        <Label htmlFor="dependent">
+                          Dependente {dependents.length === 0 && "(sem dependentes)"}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Dependent Selection */}
+            {beneficiaryType === "dependent" && dependents.length > 0 && (
+              <FormField
+                control={form.control}
+                name="dependent_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dependente *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o dependente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {dependents.map((dep) => (
+                          <SelectItem key={dep.id} value={dep.id}>
+                            {dep.name} ({dep.relationship})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Benefit Selection */}
+            <FormField
+              control={form.control}
+              name="benefit_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Benefício *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o dependente" />
+                        <SelectValue placeholder="Selecione o benefício" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {dependents.map((dep) => (
-                        <SelectItem key={dep.id} value={dep.id}>
-                          {dep.name} ({dep.relationship})
+                      {benefits.map((benefit) => (
+                        <SelectItem key={benefit.id} value={benefit.id}>
+                          {benefit.name}
+                          {benefit.partner_name && ` - ${benefit.partner_name}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -364,80 +398,53 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
                 </FormItem>
               )}
             />
-          )}
 
-          {/* Benefit Selection */}
-          <FormField
-            control={form.control}
-            name="benefit_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Benefício *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+            {/* Validity */}
+            <FormField
+              control={form.control}
+              name="validity_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Validade (dias)</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o benefício" />
-                    </SelectTrigger>
+                    <Input type="number" min="1" max="365" {...field} />
                   </FormControl>
-                  <SelectContent>
-                    {benefits.map((benefit) => (
-                      <SelectItem key={benefit.id} value={benefit.id}>
-                        {benefit.name}
-                        {benefit.partner_name && ` - ${benefit.partner_name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {/* Validity */}
-          <FormField
-            control={form.control}
-            name="validity_days"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Validade (dias)</FormLabel>
-                <FormControl>
-                  <Input type="number" min="1" max="365" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            {/* Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Observações adicionais..." 
+                      rows={2}
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {/* Notes */}
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Observações</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Observações adicionais..." 
-                    rows={2}
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Gerar Autorização
-            </Button>
-          </div>
-        </form>
-      </Form>
-    </PopupBase>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Gerar Autorização
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

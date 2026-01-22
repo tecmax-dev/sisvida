@@ -2,7 +2,13 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -191,16 +197,17 @@ export function CheckLiquidationDialog({
     }).format(value);
 
   return (
-    <PopupBase open={open} onClose={handleClose} maxWidth="3xl">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <FileCheck className="h-5 w-5 text-primary" />
-          Liquidação por Cheque
-        </PopupTitle>
-        <PopupDescription>
-          Busque por número de cheque e liquide múltiplas despesas de uma vez.
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileCheck className="h-5 w-5 text-primary" />
+            Liquidação por Cheque
+          </DialogTitle>
+          <DialogDescription>
+            Busque por número de cheque e liquide múltiplas despesas de uma vez.
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="space-y-4">
           {/* Search */}
@@ -389,6 +396,7 @@ export function CheckLiquidationDialog({
             </Button>
           </div>
         </div>
-    </PopupBase>
+      </DialogContent>
+    </Dialog>
   );
 }

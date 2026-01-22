@@ -4,7 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -27,7 +33,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { MessageSquare, Mail, Smartphone, Zap, Calendar, Clock, UserPlus, BellRing, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
@@ -243,17 +248,17 @@ export default function AutomationDialog({
   const messageTemplate = form.watch("message_template");
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="3xl">
-      <PopupHeader>
-        <PopupTitle>
-          {isEditing ? "Editar Automação" : "Nova Automação"}
-        </PopupTitle>
-        <PopupDescription>
-          Configure mensagens automáticas para seus pacientes
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isEditing ? "Editar Automação" : "Nova Automação"}
+          </DialogTitle>
+          <DialogDescription>
+            Configure mensagens automáticas para seus pacientes
+          </DialogDescription>
+        </DialogHeader>
 
-      <ScrollArea className="max-h-[60vh] pr-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
@@ -492,7 +497,7 @@ export default function AutomationDialog({
               )}
             </div>
 
-            <PopupFooter>
+            <div className="flex justify-end gap-3 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -507,13 +512,13 @@ export default function AutomationDialog({
                 {createMutation.isPending || updateMutation.isPending
                   ? "Salvando..."
                   : isEditing
-                  ? "Salvar Alterações"
+                  ? "Atualizar"
                   : "Criar Automação"}
               </Button>
-            </PopupFooter>
+            </div>
           </form>
         </Form>
-      </ScrollArea>
-    </PopupBase>
+      </DialogContent>
+    </Dialog>
   );
 }

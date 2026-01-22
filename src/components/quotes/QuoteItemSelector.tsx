@@ -2,12 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Stethoscope, Package, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/quoteUtils";
 
@@ -120,35 +124,35 @@ export function QuoteItemSelector({ open, onOpenChange, onSelect }: QuoteItemSel
   };
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
-      <PopupHeader>
-        <PopupTitle>Adicionar Item ao Orçamento</PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Adicionar Item ao Orçamento</DialogTitle>
+        </DialogHeader>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "procedures" | "products")} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="procedures" className="flex items-center gap-2">
-            <Stethoscope className="h-4 w-4" />
-            Serviços ({filteredProcedures.length})
-          </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Produtos ({filteredProducts.length})
-          </TabsTrigger>
-        </TabsList>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "procedures" | "products")} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="procedures" className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4" />
+              Serviços ({filteredProcedures.length})
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Produtos ({filteredProducts.length})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="procedures" className="flex-1 mt-4">
-          <ScrollArea className="h-[300px]">
+          <TabsContent value="procedures" className="flex-1 overflow-y-auto mt-4">
             {filteredProcedures.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 {search ? "Nenhum serviço encontrado" : "Nenhum serviço cadastrado"}
@@ -186,11 +190,9 @@ export function QuoteItemSelector({ open, onOpenChange, onSelect }: QuoteItemSel
                 ))}
               </div>
             )}
-          </ScrollArea>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="products" className="flex-1 mt-4">
-          <ScrollArea className="h-[300px]">
+          <TabsContent value="products" className="flex-1 overflow-y-auto mt-4">
             {filteredProducts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 {search 
@@ -229,9 +231,9 @@ export function QuoteItemSelector({ open, onOpenChange, onSelect }: QuoteItemSel
                 ))}
               </div>
             )}
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
-    </PopupBase>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }

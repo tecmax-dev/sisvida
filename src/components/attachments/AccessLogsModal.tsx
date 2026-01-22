@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Eye, Download, Trash2, History } from "lucide-react";
-import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -73,66 +78,68 @@ export function AccessLogsModal({
   }, [open, attachment, onFetchLogs]);
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="md">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <History className="h-5 w-5" />
-          Histórico de Acesso
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Histórico de Acesso
+          </DialogTitle>
+        </DialogHeader>
 
-      {attachment && (
-        <p className="text-sm text-muted-foreground truncate">
-          {attachment.file_name}
-        </p>
-      )}
-
-      <ScrollArea className="h-80 mt-4">
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-16" />
-            ))}
-          </div>
-        ) : logs.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <History className="h-10 w-10 mx-auto mb-3 opacity-50" />
-            <p>Nenhum acesso registrado</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {logs.map(log => {
-              const Icon = getActionIcon(log.action);
-              return (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                >
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                      getActionColor(log.action)
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">
-                      {log.user_name || "Usuário"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {getActionLabel(log.action)} em{" "}
-                      {format(new Date(log.accessed_at), "dd/MM/yyyy 'às' HH:mm:ss", {
-                        locale: ptBR
-                      })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {attachment && (
+          <p className="text-sm text-muted-foreground truncate">
+            {attachment.file_name}
+          </p>
         )}
-      </ScrollArea>
-    </PopupBase>
+
+        <ScrollArea className="h-80">
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-16" />
+              ))}
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <History className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>Nenhum acesso registrado</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {logs.map(log => {
+                const Icon = getActionIcon(log.action);
+                return (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+                  >
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                        getActionColor(log.action)
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">
+                        {log.user_name || "Usuário"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {getActionLabel(log.action)} em{" "}
+                        {format(new Date(log.accessed_at), "dd/MM/yyyy 'às' HH:mm:ss", {
+                          locale: ptBR
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,78 +112,80 @@ export function EditUserEmailDialog({
   };
 
   return (
-    <PopupBase open={open} onClose={handleClose} maxWidth="md">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5 text-primary" />
-          Editar Email de Login
-        </PopupTitle>
-        <PopupDescription>
-          Alterar o email de login do usuário{" "}
-          <span className="font-medium text-foreground">{user?.name}</span>
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Editar Email de Login
+          </DialogTitle>
+          <DialogDescription>
+            Alterar o email de login do usuário{" "}
+            <span className="font-medium text-foreground">{user?.name}</span>
+          </DialogDescription>
+        </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="current-email">Email Atual</Label>
-          <Input
-            id="current-email"
-            type="email"
-            value={user?.email || ""}
-            disabled
-            className="bg-muted"
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-email">Email Atual</Label>
+            <Input
+              id="current-email"
+              type="email"
+              value={user?.email || ""}
+              disabled
+              className="bg-muted"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="new-email">Novo Email</Label>
-          <Input
-            id="new-email"
-            type="email"
-            placeholder="novo@email.com"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            disabled={loading}
-            autoComplete="off"
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-email">Novo Email</Label>
+            <Input
+              id="new-email"
+              type="email"
+              placeholder="novo@email.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              disabled={loading}
+              autoComplete="off"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="confirm-email">Confirmar Novo Email</Label>
-          <Input
-            id="confirm-email"
-            type="email"
-            placeholder="Repita o novo email"
-            value={confirmEmail}
-            onChange={(e) => setConfirmEmail(e.target.value)}
-            disabled={loading}
-            autoComplete="off"
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-email">Confirmar Novo Email</Label>
+            <Input
+              id="confirm-email"
+              type="email"
+              placeholder="Repita o novo email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              disabled={loading}
+              autoComplete="off"
+            />
+          </div>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <PopupFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Salvar Alteração
-          </Button>
-        </PopupFooter>
-      </form>
-    </PopupBase>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar Alteração
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

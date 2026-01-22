@@ -3,7 +3,13 @@ import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -186,14 +192,14 @@ export default function NotificationDialog({
   };
 
   return (
-    <PopupBase open={open} onClose={onClose} maxWidth="2xl">
-      <PopupHeader>
-        <PopupTitle>
-          {isEditing ? "Editar Notificação" : "Nova Notificação"}
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isEditing ? "Editar Notificação" : "Nova Notificação"}
+          </DialogTitle>
+        </DialogHeader>
 
-      <ScrollArea className="max-h-[60vh] pr-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -361,7 +367,7 @@ export default function NotificationDialog({
             </div>
           </div>
 
-          <PopupFooter>
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
@@ -372,9 +378,9 @@ export default function NotificationDialog({
                 ? "Salvar alterações"
                 : "Criar notificação"}
             </Button>
-          </PopupFooter>
+          </DialogFooter>
         </form>
-      </ScrollArea>
-    </PopupBase>
+      </DialogContent>
+    </Dialog>
   );
 }

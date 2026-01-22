@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  PopupBase,
-  PopupHeader,
-  PopupTitle,
-  PopupDescription,
-} from "@/components/ui/popup-base";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -393,15 +394,16 @@ export function UnionTransactionDialog({
 
   return (
     <>
-      <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
-        <PopupHeader>
-          <PopupTitle>
-            {transaction ? "Editar Transação" : type === "income" ? "Nova Receita" : "Nova Despesa"}
-          </PopupTitle>
-          <PopupDescription>
-            Lance {type === "income" ? "receitas" : "despesas"} do módulo sindical
-          </PopupDescription>
-        </PopupHeader>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {transaction ? "Editar Transação" : type === "income" ? "Nova Receita" : "Nova Despesa"}
+            </DialogTitle>
+            <DialogDescription>
+              Lance {type === "income" ? "receitas" : "despesas"} do módulo sindical
+            </DialogDescription>
+          </DialogHeader>
 
           {/* Migration Alert */}
           {requiresMigration && (
@@ -749,7 +751,8 @@ export function UnionTransactionDialog({
               </Button>
             </div>
           </form>
-      </PopupBase>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog para novo fornecedor */}
       <UnionSupplierDialog

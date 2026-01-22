@@ -3,9 +3,38 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { becameVisibleRecently } from "@/lib/visibility-grace";
 
-const Dialog = DialogPrimitive.Root;
+const Dialog = ({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+  const isControlled = openProp !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(defaultOpen ?? false);
 
+  const open = isControlled ? openProp : uncontrolledOpen;
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      // Prevent unintended close events when switching browser tabs / losing focus.
+      // Note: Radix can fire a dismiss on focus restoration; we guard a short grace window.
+      if (
+        !nextOpen &&
+        (document.hidden || document.visibilityState === "hidden" || !document.hasFocus() || becameVisibleRecently(600))
+      ) {
+        return;
+      }
+
+      if (!isControlled) setUncontrolledOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [isControlled, onOpenChange],
+  );
+
+  return <DialogPrimitive.Root {...props} open={open} onOpenChange={handleOpenChange} />;
+};
 const DialogTrigger = DialogPrimitive.Trigger;
 
 const DialogPortal = DialogPrimitive.Portal;
@@ -30,19 +59,53 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onFocusOutside, onInteractOutside, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      {...props}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
         className,
       )}
-      {...props}
+      onFocusOutside={(e) => {
+        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        onFocusOutside?.(e);
+      }}
+      onInteractOutside={(e) => {
+        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+          e.preventDefault();
+          return;
+        }
+        const originalEvent = e.detail?.originalEvent;
+        if (originalEvent instanceof FocusEvent || originalEvent?.type === "focusout" || originalEvent?.type === "blur") {
+          e.preventDefault();
+          return;
+        }
+        onInteractOutside?.(e);
+      }}
+      onPointerDownOutside={(e) => {
+        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+          e.preventDefault();
+          return;
+        }
+        onPointerDownOutside?.(e);
+      }}
+      onEscapeKeyDown={(e) => {
+        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+          e.preventDefault();
+          return;
+        }
+        onEscapeKeyDown?.(e);
+      }}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

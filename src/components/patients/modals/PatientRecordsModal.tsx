@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, FileText, Loader2 } from "lucide-react";
-import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -123,125 +128,135 @@ export function PatientRecordsModal({
   };
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Prontuário - {patientName}
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent 
+        className="max-w-2xl max-h-[85vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Prontuário - {patientName}
+          </DialogTitle>
+        </DialogHeader>
 
-      <div className="flex justify-end mb-4">
-        <Button size="sm" onClick={() => setShowForm(!showForm)} variant={showForm ? "outline" : "default"}>
-          <Plus className="h-4 w-4 mr-1" />
-          {showForm ? "Cancelar" : "Nova Evolução"}
-        </Button>
-      </div>
-
-      {showForm && (
-        <div className="space-y-4 border rounded-lg p-4 bg-muted/30 mb-4">
-          <div className="grid gap-4">
-            <div>
-              <Label>Queixa Principal</Label>
-              <Textarea
-                value={formData.chiefComplaint}
-                onChange={(e) => setFormData((p) => ({ ...p, chiefComplaint: e.target.value }))}
-                placeholder="Descreva a queixa principal..."
-                rows={2}
-              />
-            </div>
-            <div>
-              <Label>Diagnóstico</Label>
-              <Textarea
-                value={formData.diagnosis}
-                onChange={(e) => setFormData((p) => ({ ...p, diagnosis: e.target.value }))}
-                placeholder="Diagnóstico..."
-                rows={2}
-              />
-            </div>
-            <div>
-              <Label>Plano de Tratamento</Label>
-              <Textarea
-                value={formData.treatmentPlan}
-                onChange={(e) => setFormData((p) => ({ ...p, treatmentPlan: e.target.value }))}
-                placeholder="Plano de tratamento..."
-                rows={2}
-              />
-            </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Observações adicionais..."
-                rows={2}
-              />
-            </div>
-          </div>
-          <Button onClick={handleSave} disabled={saving} className="w-full">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Salvar Evolução
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setShowForm(!showForm)} variant={showForm ? "outline" : "default"}>
+            <Plus className="h-4 w-4 mr-1" />
+            {showForm ? "Cancelar" : "Nova Evolução"}
           </Button>
         </div>
-      )}
 
-      <ScrollArea className="max-h-[50vh] pr-4">
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        {showForm && (
+          <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+            <div className="grid gap-4">
+              <div>
+                <Label>Queixa Principal</Label>
+                <Textarea
+                  value={formData.chiefComplaint}
+                  onChange={(e) => setFormData((p) => ({ ...p, chiefComplaint: e.target.value }))}
+                  placeholder="Descreva a queixa principal..."
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label>Diagnóstico</Label>
+                <Textarea
+                  value={formData.diagnosis}
+                  onChange={(e) => setFormData((p) => ({ ...p, diagnosis: e.target.value }))}
+                  placeholder="Diagnóstico..."
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label>Plano de Tratamento</Label>
+                <Textarea
+                  value={formData.treatmentPlan}
+                  onChange={(e) => setFormData((p) => ({ ...p, treatmentPlan: e.target.value }))}
+                  placeholder="Plano de tratamento..."
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Observações adicionais..."
+                  rows={2}
+                />
+              </div>
+            </div>
+            <Button onClick={handleSave} disabled={saving} className="w-full">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar Evolução
+            </Button>
           </div>
-        ) : records.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            Nenhum registro encontrado.
-          </p>
-        ) : (
-          <Accordion type="single" collapsible className="space-y-2">
-            {records.map((record) => (
-              <AccordionItem key={record.id} value={record.id} className="border rounded-lg px-4">
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <span className="text-sm font-medium">
-                      {format(new Date(record.record_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {record.professionals?.name || "Profissional não informado"}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-3 pb-4">
-                  {record.chief_complaint && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Queixa Principal</p>
-                      <p className="text-sm">{record.chief_complaint}</p>
-                    </div>
-                  )}
-                  {record.diagnosis && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Diagnóstico</p>
-                      <p className="text-sm">{record.diagnosis}</p>
-                    </div>
-                  )}
-                  {record.treatment_plan && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Plano de Tratamento</p>
-                      <p className="text-sm">{record.treatment_plan}</p>
-                    </div>
-                  )}
-                  {record.notes && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Observações</p>
-                      <div 
-                        className="text-sm prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: record.notes }} 
-                      />
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
         )}
-      </ScrollArea>
-    </PopupBase>
+
+        <ScrollArea className="flex-1 pr-4">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : records.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              Nenhum registro encontrado.
+            </p>
+          ) : (
+            <Accordion type="single" collapsible className="space-y-2">
+              {records.map((record) => (
+                <AccordionItem key={record.id} value={record.id} className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <span className="text-sm font-medium">
+                        {format(new Date(record.record_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {record.professionals?.name || "Profissional não informado"}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pb-4">
+                    {record.chief_complaint && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Queixa Principal</p>
+                        <p className="text-sm">{record.chief_complaint}</p>
+                      </div>
+                    )}
+                    {record.diagnosis && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Diagnóstico</p>
+                        <p className="text-sm">{record.diagnosis}</p>
+                      </div>
+                    )}
+                    {record.treatment_plan && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Plano de Tratamento</p>
+                        <p className="text-sm">{record.treatment_plan}</p>
+                      </div>
+                    )}
+                    {record.notes && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Observações</p>
+                        <div 
+                          className="text-sm prose prose-sm max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ __html: record.notes }} 
+                        />
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

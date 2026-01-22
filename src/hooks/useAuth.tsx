@@ -3,8 +3,6 @@ import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionTimeout } from "./useSessionTimeout";
-import { useSessionExpiryModal } from "@/contexts/SystemModalContext";
-import { useModal } from "@/contexts/ModalContext";
 import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
 
 interface Profile {
@@ -107,14 +105,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Verifica se está no app mobile - desabilita timeout para manter sessão persistente
   const isMobileApp = location.pathname.startsWith('/app');
 
-  // Hook para resetar modais de UI
-  const { resetAllModals } = useModal();
-
   // Hook de timeout de sessão (desabilitado para mobile app)
   const {
     saveLoginTime,
     clearSessionData,
     renewSession: baseRenewSession,
+    showWarning,
+    timeRemaining,
   } = useSessionTimeout({
     maxSessionDuration: 480, // 8 horas
     inactivityTimeout: 30,   // 30 minutos
@@ -122,9 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onExpire: handleSignOut,
     enabled: !!user && !isMobileApp // Desabilitado para mobile app
   });
-
-  // Obter estado do modal de sessão do contexto de sistema separado
-  const sessionModal = useSessionExpiryModal();
 
   // Função de renovar sessão com redirecionamento para o dashboard
   const handleRenewSession = useCallback(() => {
@@ -357,8 +351,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Salvar tempo de login quando faz login
           if (event === 'SIGNED_IN') {
             saveLoginTime();
-            // Resetar todos os modais de UI ao fazer login
-            resetAllModals();
           }
           
           setLoading(true);
@@ -371,8 +363,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Limpar dados de sessão ao deslogar
           if (event === 'SIGNED_OUT') {
             clearSessionData();
-            // Resetar todos os modais de UI ao fazer logout
-            resetAllModals();
           }
           
           setProfile(null);
@@ -443,7 +433,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initSession();
 
     return () => subscription.unsubscribe();
-  }, [saveLoginTime, clearSessionData, resetAllModals]);
+  }, [saveLoginTime, clearSessionData]);
 
   const signOut = async () => {
     clearSessionData();
@@ -465,14 +455,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile
     }}>
       {children}
-      {/* Modal de sessão expirada desabilitado temporariamente
       <SessionExpiryWarning
-        open={sessionModal.isOpen}
-        timeRemaining={sessionModal.data.timeRemaining ?? 0}
+        open={showWarning}
+        timeRemaining={timeRemaining}
         onRenew={handleRenewSession}
         onLogout={signOut}
       />
-      */}
     </AuthContext.Provider>
   );
 }

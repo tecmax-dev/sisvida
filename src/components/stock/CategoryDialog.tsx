@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,71 +105,73 @@ export function CategoryDialog({
   };
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="md">
-      <PopupHeader>
-        <PopupTitle>
-          {category ? "Editar Categoria" : "Nova Categoria"}
-        </PopupTitle>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {category ? "Editar Categoria" : "Nova Categoria"}
+          </DialogTitle>
+        </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="name">Nome *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="description">Descrição</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={3}
-          />
-        </div>
-
-        <div>
-          <Label>Cor</Label>
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                className={`w-8 h-8 rounded-full transition-all ${
-                  formData.color === color
-                    ? "ring-2 ring-offset-2 ring-primary scale-110"
-                    : "hover:scale-110"
-                }`}
-                style={{ backgroundColor: color }}
-                onClick={() => setFormData({ ...formData, color })}
-              />
-            ))}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Nome *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <Switch
-            id="is_active"
-            checked={formData.is_active}
-            onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-          />
-          <Label htmlFor="is_active">Categoria ativa</Label>
-        </div>
+          <div>
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+          </div>
 
-        <PopupFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar"}
-          </Button>
-        </PopupFooter>
-      </form>
-    </PopupBase>
+          <div>
+            <Label>Cor</Label>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`w-8 h-8 rounded-full transition-all ${
+                    formData.color === color
+                      ? "ring-2 ring-offset-2 ring-primary scale-110"
+                      : "hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setFormData({ ...formData, color })}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Switch
+              id="is_active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+            />
+            <Label htmlFor="is_active">Categoria ativa</Label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

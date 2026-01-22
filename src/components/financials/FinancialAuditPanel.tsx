@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -46,7 +46,6 @@ export function FinancialAuditPanel({ clinicId }: FinancialAuditPanelProps) {
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedLog, setSelectedLog] = useState<any>(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ["financial-audit-logs", clinicId, startDate, endDate],
@@ -87,16 +86,6 @@ export function FinancialAuditPanel({ clinicId }: FinancialAuditPanelProps) {
 
   const formatDateTime = (date: string) => {
     return format(parseISO(date), "dd/MM/yyyy HH:mm", { locale: ptBR });
-  };
-
-  const openDetailDialog = (log: any) => {
-    setSelectedLog(log);
-    setDetailDialogOpen(true);
-  };
-
-  const closeDetailDialog = () => {
-    setDetailDialogOpen(false);
-    setSelectedLog(null);
   };
 
   // Calculate summary stats
@@ -306,7 +295,7 @@ export function FinancialAuditPanel({ clinicId }: FinancialAuditPanelProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openDetailDialog(log)}
+                            onClick={() => setSelectedLog(log)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -321,89 +310,87 @@ export function FinancialAuditPanel({ clinicId }: FinancialAuditPanelProps) {
         </CardContent>
       </Card>
 
-      {/* Detail Popup */}
-      <PopupBase 
-        open={detailDialogOpen} 
-        onClose={closeDetailDialog}
-        maxWidth="2xl"
-      >
-        <PopupHeader>
-          <PopupTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Detalhes da Auditoria
-          </PopupTitle>
-          <PopupDescription>
-            Informações completas do registro de auditoria
-          </PopupDescription>
-        </PopupHeader>
-        {selectedLog && (
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4 pr-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Data/Hora</p>
-                  <p className="font-medium">{formatDateTime(selectedLog.created_at)}</p>
+      {/* Detail Dialog */}
+      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Detalhes da Auditoria
+            </DialogTitle>
+            <DialogDescription>
+              Informações completas do registro de auditoria
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLog && (
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-4 pr-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Data/Hora</p>
+                    <p className="font-medium">{formatDateTime(selectedLog.created_at)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ação</p>
+                    <Badge className={actionLabels[selectedLog.action]?.color || ""}>
+                      {actionLabels[selectedLog.action]?.label || selectedLog.action}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Entidade</p>
+                    <p className="font-medium capitalize">{selectedLog.entity_type?.replace(/_/g, " ")}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">ID da Entidade</p>
+                    <p className="font-mono text-sm">{selectedLog.entity_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Anterior</p>
+                    <p className="font-medium">{formatCurrency(selectedLog.amount_before)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Atual</p>
+                    <p className="font-medium">{formatCurrency(selectedLog.amount_after)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Usuário</p>
+                    <p className="font-medium">{selectedLog.user_name || selectedLog.user_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">IP</p>
+                    <p className="font-mono text-sm">{selectedLog.ip_address || "-"}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ação</p>
-                  <Badge className={actionLabels[selectedLog.action]?.color || ""}>
-                    {actionLabels[selectedLog.action]?.label || selectedLog.action}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Entidade</p>
-                  <p className="font-medium capitalize">{selectedLog.entity_type?.replace(/_/g, " ")}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">ID da Entidade</p>
-                  <p className="font-mono text-sm">{selectedLog.entity_id}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Anterior</p>
-                  <p className="font-medium">{formatCurrency(selectedLog.amount_before)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Atual</p>
-                  <p className="font-medium">{formatCurrency(selectedLog.amount_after)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Usuário</p>
-                  <p className="font-medium">{selectedLog.user_name || selectedLog.user_id}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IP</p>
-                  <p className="font-mono text-sm">{selectedLog.ip_address || "-"}</p>
-                </div>
+
+                {selectedLog.notes && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Observações</p>
+                    <p className="text-sm bg-muted p-2 rounded">{selectedLog.notes}</p>
+                  </div>
+                )}
+
+                {selectedLog.old_data && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Dados Anteriores</p>
+                    <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
+                      {JSON.stringify(selectedLog.old_data, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {selectedLog.new_data && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Dados Atuais</p>
+                    <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
+                      {JSON.stringify(selectedLog.new_data, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
-
-              {selectedLog.notes && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Observações</p>
-                  <p className="text-sm bg-muted p-2 rounded">{selectedLog.notes}</p>
-                </div>
-              )}
-
-              {selectedLog.old_data && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Dados Anteriores</p>
-                  <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
-                    {JSON.stringify(selectedLog.old_data, null, 2)}
-                  </pre>
-                </div>
-              )}
-
-              {selectedLog.new_data && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Dados Atuais</p>
-                  <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
-                    {JSON.stringify(selectedLog.new_data, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        )}
-      </PopupBase>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

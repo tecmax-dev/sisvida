@@ -57,9 +57,6 @@ export function UnionBenefitsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [benefitToDelete, setBenefitToDelete] = useState<Benefit | null>(null);
 
-
-
-
   const { data: benefits = [], isLoading } = useQuery({
     queryKey: ["union-benefits", currentClinic?.id],
     queryFn: async () => {

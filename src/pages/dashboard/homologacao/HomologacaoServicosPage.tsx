@@ -9,7 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { 
@@ -38,6 +45,7 @@ export default function HomologacaoServicosPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceType | null>(null);
   
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -45,6 +53,7 @@ export default function HomologacaoServicosPage() {
     is_active: true,
   });
 
+  // Fetch service types
   const { data: serviceTypes, isLoading } = useQuery({
     queryKey: ["homologacao-service-types", currentClinic?.id],
     queryFn: async () => {
@@ -61,6 +70,7 @@ export default function HomologacaoServicosPage() {
     enabled: !!currentClinic?.id,
   });
 
+  // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase
@@ -81,6 +91,7 @@ export default function HomologacaoServicosPage() {
     },
   });
 
+  // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
       const { error } = await supabase
@@ -99,6 +110,7 @@ export default function HomologacaoServicosPage() {
     },
   });
 
+  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -165,6 +177,7 @@ export default function HomologacaoServicosPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tipos de Serviço</h1>
@@ -176,6 +189,7 @@ export default function HomologacaoServicosPage() {
         </Button>
       </div>
 
+      {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -186,6 +200,7 @@ export default function HomologacaoServicosPage() {
         />
       </div>
 
+      {/* List */}
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map(i => (
@@ -248,65 +263,68 @@ export default function HomologacaoServicosPage() {
         </div>
       )}
 
-      <PopupBase open={isDialogOpen} onClose={closeDialog}>
-        <PopupHeader>
-          <PopupTitle>
-            {editingService ? "Editar Serviço" : "Novo Tipo de Serviço"}
-          </PopupTitle>
-          <PopupDescription>
-            Preencha as informações do tipo de serviço
-          </PopupDescription>
-        </PopupHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Ex: Rescisão CLT"
-            />
+      {/* Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingService ? "Editar Serviço" : "Novo Tipo de Serviço"}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha as informações do tipo de serviço
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Rescisão CLT"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descreva o serviço..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duração (minutos)</Label>
+              <Input
+                id="duration"
+                type="number"
+                min={5}
+                step={5}
+                value={formData.duration_minutes}
+                onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 30 })}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <Label htmlFor="is_active">Serviço ativo</Label>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descreva o serviço..."
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="duration">Duração (minutos)</Label>
-            <Input
-              id="duration"
-              type="number"
-              min={5}
-              step={5}
-              value={formData.duration_minutes}
-              onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 30 })}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-            />
-            <Label htmlFor="is_active">Serviço ativo</Label>
-          </div>
-        </div>
-        <PopupFooter>
-          <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            {createMutation.isPending || updateMutation.isPending ? "Salvando..." : "Salvar"}
-          </Button>
-        </PopupFooter>
-      </PopupBase>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

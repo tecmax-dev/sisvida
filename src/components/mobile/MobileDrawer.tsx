@@ -1,9 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { X, Users, CreditCard, Lock, HelpCircle, Info, Star, Share2, LogOut, ChevronRight, Sparkles, UserCircle } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { createPortal } from "react-dom";
-import { useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
 
 interface MobileDrawerProps {
   open: boolean;
@@ -66,27 +64,6 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     onOpenChange(false);
   };
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onOpenChange(false);
-      }
-    },
-    [onOpenChange]
-  );
-
-  useEffect(() => {
-    if (!open) return;
-    
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-    
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [open, handleKeyDown]);
-
   const menuItems = [
     { 
       icon: Users, 
@@ -147,26 +124,11 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     },
   ];
 
-  if (!open) return null;
-
-  const content = (
-    <div 
-      className="fixed inset-0 z-[9999] flex"
-      onClick={() => onOpenChange(false)}
-    >
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-black/80 animate-in fade-in-0 duration-200" />
-      
-      {/* Drawer */}
-      <div 
-        className={cn(
-          "relative w-[85%] max-w-[340px] h-full flex flex-col bg-slate-50",
-          "animate-in slide-in-from-left duration-200"
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="left" className="w-[85%] max-w-[340px] p-0 flex flex-col bg-slate-50">
         {/* Header with user info - Premium gradient */}
-        <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 text-white p-5 pb-7 relative overflow-hidden">
+        <SheetHeader className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 text-white p-5 pb-7 relative overflow-hidden">
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
           <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/10 rounded-full" />
@@ -201,7 +163,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
               <p className="text-sm text-white/80 mt-0.5">{patient?.email}</p>
             </div>
           </div>
-        </div>
+        </SheetHeader>
 
         {/* Menu Items */}
         <div className="flex-1 py-4 px-3 overflow-y-auto">
@@ -248,9 +210,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
-
-  return createPortal(content, document.body);
 }

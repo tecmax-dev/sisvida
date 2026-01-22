@@ -11,7 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -267,101 +274,103 @@ export default function HomologacaoBloqueiosPage() {
       )}
 
       {/* Create Dialog */}
-      <PopupBase open={isDialogOpen} onClose={closeDialog}>
-        <PopupHeader>
-          <PopupTitle>Novo Bloqueio</PopupTitle>
-          <PopupDescription>
-            Crie um bloqueio de agenda para um dia específico
-          </PopupDescription>
-        </PopupHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Data do Bloqueio</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.block_date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.block_date ? (
-                    format(formData.block_date, "dd/MM/yyyy", { locale: ptBR })
-                  ) : (
-                    <span>Selecione uma data</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.block_date}
-                  onSelect={(date) => date && setFormData({ ...formData, block_date: date })}
-                  locale={ptBR}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Tipo de Bloqueio</Label>
-            <Select
-              value={formData.block_type}
-              onValueChange={(value) => setFormData({ ...formData, block_type: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full_day">Dia Inteiro</SelectItem>
-                <SelectItem value="partial">Parcial</SelectItem>
-                <SelectItem value="holiday">Feriado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Bloqueio</DialogTitle>
+            <DialogDescription>
+              Crie um bloqueio de agenda para um dia específico
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Data do Bloqueio</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.block_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.block_date ? (
+                      format(formData.block_date, "dd/MM/yyyy", { locale: ptBR })
+                    ) : (
+                      <span>Selecione uma data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={formData.block_date}
+                    onSelect={(date) => date && setFormData({ ...formData, block_date: date })}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Tipo de Bloqueio</Label>
+              <Select
+                value={formData.block_type}
+                onValueChange={(value) => setFormData({ ...formData, block_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full_day">Dia Inteiro</SelectItem>
+                  <SelectItem value="partial">Parcial</SelectItem>
+                  <SelectItem value="holiday">Feriado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label>Profissional (opcional)</Label>
-            <Select
-              value={formData.professional_id}
-              onValueChange={(value) => setFormData({ ...formData, professional_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os profissionais" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos os profissionais</SelectItem>
-                {professionals?.map((prof) => (
-                  <SelectItem key={prof.id} value={prof.id}>
-                    {prof.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label>Profissional (opcional)</Label>
+              <Select
+                value={formData.professional_id}
+                onValueChange={(value) => setFormData({ ...formData, professional_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os profissionais" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os profissionais</SelectItem>
+                  {professionals?.map((prof) => (
+                    <SelectItem key={prof.id} value={prof.id}>
+                      {prof.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label>Motivo</Label>
-            <Input
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              placeholder="Ex: Feriado Nacional, Férias, Reunião..."
-            />
+            <div className="space-y-2">
+              <Label>Motivo</Label>
+              <Input
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                placeholder="Ex: Feriado Nacional, Férias, Reunião..."
+              />
+            </div>
           </div>
-        </div>
-        <PopupFooter>
-          <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? "Salvando..." : "Salvar"}
-          </Button>
-        </PopupFooter>
-      </PopupBase>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,12 @@
 import { useState, useRef } from "react";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,194 +160,196 @@ export function UnionOFXImportDialog({
     .reduce((sum, t) => sum + t.amount, 0);
 
   return (
-    <PopupBase open={open} onClose={handleClose} maxWidth="4xl">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Importar Extrato OFX
-        </PopupTitle>
-        <PopupDescription>
-          Importe um arquivo OFX do seu banco para conciliar automaticamente as despesas.
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Importar Extrato OFX
+          </DialogTitle>
+          <DialogDescription>
+            Importe um arquivo OFX do seu banco para conciliar automaticamente as despesas.
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="space-y-4">
-        {/* Cash Register Selection */}
-        <div>
-          <Label>Conta Bancária *</Label>
-          <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
-            <SelectTrigger className="mt-1">
-              <SelectValue placeholder="Selecione a conta bancária" />
-            </SelectTrigger>
-            <SelectContent>
-              {cashRegisters.map((cr) => (
-                <SelectItem key={cr.id} value={cr.id}>
-                  {cr.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* File Upload */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <Label htmlFor="ofx-file">Arquivo OFX *</Label>
-            <Input
-              ref={fileInputRef}
-              id="ofx-file"
-              type="file"
-              accept=".ofx,.OFX"
-              onChange={handleFileUpload}
-              disabled={isImporting}
-              className="mt-1"
-            />
+        <div className="space-y-4">
+          {/* Cash Register Selection */}
+          <div>
+            <Label>Conta Bancária *</Label>
+            <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Selecione a conta bancária" />
+              </SelectTrigger>
+              <SelectContent>
+                {cashRegisters.map((cr) => (
+                  <SelectItem key={cr.id} value={cr.id}>
+                    {cr.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          {fileName && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-6">
-              <FileText className="h-4 w-4" />
-              {fileName}
+
+          {/* File Upload */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Label htmlFor="ofx-file">Arquivo OFX *</Label>
+              <Input
+                ref={fileInputRef}
+                id="ofx-file"
+                type="file"
+                accept=".ofx,.OFX"
+                onChange={handleFileUpload}
+                disabled={isImporting}
+                className="mt-1"
+              />
+            </div>
+            {fileName && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-6">
+                <FileText className="h-4 w-4" />
+                {fileName}
+              </div>
+            )}
+          </div>
+
+          {parseError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{parseError}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Bank Info */}
+          {bankInfo && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+              {bankInfo.bankName && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Banco</p>
+                    <p className="text-sm font-medium">{bankInfo.bankName}</p>
+                  </div>
+                </div>
+              )}
+              {bankInfo.accountNumber && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Conta</p>
+                  <p className="text-sm font-medium">
+                    {bankInfo.agency && `${bankInfo.agency} / `}
+                    {bankInfo.accountNumber}
+                  </p>
+                </div>
+              )}
+              {bankInfo.startDate && bankInfo.endDate && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Período</p>
+                    <p className="text-sm font-medium">
+                      {format(bankInfo.startDate, "dd/MM/yy")} - {format(bankInfo.endDate, "dd/MM/yy")}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground">Transações</p>
+                <p className="text-sm font-medium">{parsedTransactions.length}</p>
+              </div>
             </div>
           )}
-        </div>
 
-        {parseError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{parseError}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Bank Info */}
-        {bankInfo && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
-            {bankInfo.bankName && (
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
+          {/* Summary */}
+          {parsedTransactions.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Banco</p>
-                  <p className="text-sm font-medium">{bankInfo.bankName}</p>
-                </div>
-              </div>
-            )}
-            {bankInfo.accountNumber && (
-              <div>
-                <p className="text-xs text-muted-foreground">Conta</p>
-                <p className="text-sm font-medium">
-                  {bankInfo.agency && `${bankInfo.agency} / `}
-                  {bankInfo.accountNumber}
-                </p>
-              </div>
-            )}
-            {bankInfo.startDate && bankInfo.endDate && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Período</p>
-                  <p className="text-sm font-medium">
-                    {format(bankInfo.startDate, "dd/MM/yy")} - {format(bankInfo.endDate, "dd/MM/yy")}
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">Créditos</p>
+                  <p className="text-lg font-bold text-emerald-600">
+                    {formatCurrency(totalCredits)}
                   </p>
                 </div>
               </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground">Transações</p>
-              <p className="text-sm font-medium">{parsedTransactions.length}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Summary */}
-        {parsedTransactions.length > 0 && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-              <div>
-                <p className="text-xs text-emerald-700 dark:text-emerald-400">Créditos</p>
-                <p className="text-lg font-bold text-emerald-600">
-                  {formatCurrency(totalCredits)}
-                </p>
+              <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
+                <TrendingDown className="h-5 w-5 text-rose-600" />
+                <div>
+                  <p className="text-xs text-rose-700 dark:text-rose-400">Débitos</p>
+                  <p className="text-lg font-bold text-rose-600">
+                    {formatCurrency(totalDebits)}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
-              <TrendingDown className="h-5 w-5 text-rose-600" />
-              <div>
-                <p className="text-xs text-rose-700 dark:text-rose-400">Débitos</p>
-                <p className="text-lg font-bold text-rose-600">
-                  {formatCurrency(totalDebits)}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Transactions Preview */}
-        {parsedTransactions.length > 0 && (
-          <ScrollArea className="h-[300px] border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Nº Cheque</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {parsedTransactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell>
-                      {format(tx.date, "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="font-medium max-w-[280px] truncate">
-                      {tx.description || "—"}
-                    </TableCell>
-                    <TableCell>
-                      {tx.checkNumber ? (
-                        <Badge variant="outline" className="font-mono">
-                          {tx.checkNumber}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-medium ${
-                        tx.type === "credit" ? "text-emerald-600" : "text-rose-600"
-                      }`}
-                    >
-                      {tx.type === "debit" ? "- " : "+ "}
-                      {formatCurrency(tx.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        )}
-      </div>
-
-      <PopupFooter>
-        <Button variant="outline" onClick={handleClose} disabled={isImporting}>
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleImport}
-          disabled={isImporting || !selectedCashRegister || parsedTransactions.length === 0}
-        >
-          {isImporting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Importando...
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Importar e Conciliar
-            </>
           )}
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+
+          {/* Transactions Preview */}
+          {parsedTransactions.length > 0 && (
+            <ScrollArea className="h-[300px] border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Nº Cheque</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parsedTransactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell>
+                        {format(tx.date, "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="font-medium max-w-[280px] truncate">
+                        {tx.description || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {tx.checkNumber ? (
+                          <Badge variant="outline" className="font-mono">
+                            {tx.checkNumber}
+                          </Badge>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-medium ${
+                          tx.type === "credit" ? "text-emerald-600" : "text-rose-600"
+                        }`}
+                      >
+                        {tx.type === "debit" ? "- " : "+ "}
+                        {formatCurrency(tx.amount)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={isImporting}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleImport}
+            disabled={isImporting || !selectedCashRegister || parsedTransactions.length === 0}
+          >
+            {isImporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Importando...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Importar e Conciliar
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

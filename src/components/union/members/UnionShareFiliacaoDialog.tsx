@@ -4,7 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { supabase } from "@/integrations/supabase/client";
 import { openWhatsApp } from "@/lib/whatsapp";
-import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,98 +133,100 @@ export function UnionShareFiliacaoDialog({
   }
 
   return (
-    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="md">
-      <PopupHeader>
-        <PopupTitle className="flex items-center gap-2">
-          <Share2 className="h-5 w-5 text-emerald-600" />
-          Compartilhar Link de Filiação
-        </PopupTitle>
-        <PopupDescription>
-          Envie o link de filiação do {entity.razao_social} via WhatsApp
-        </PopupDescription>
-      </PopupHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5 text-emerald-600" />
+            Compartilhar Link de Filiação
+          </DialogTitle>
+          <DialogDescription>
+            Envie o link de filiação do {entity.razao_social} via WhatsApp
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="space-y-4 py-4">
-        {/* Link de Filiação */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <Link2 className="h-4 w-4" />
-            Link da Página de Filiação
-          </Label>
-          <div className="flex gap-2">
-            <Input 
-              value={filiacaoLink} 
-              readOnly 
-              className="bg-muted text-sm"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleCopyLink}
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-emerald-600" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
+        <div className="space-y-4 py-4">
+          {/* Link de Filiação */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Link da Página de Filiação
+            </Label>
+            <div className="flex gap-2">
+              <Input 
+                value={filiacaoLink} 
+                readOnly 
+                className="bg-muted text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleCopyLink}
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {entity.entity_type === "sindicato" ? "Sindicato" : 
+               entity.entity_type === "federacao" ? "Federação" : "Confederação"}
+            </Badge>
           </div>
-          <Badge variant="secondary" className="text-xs">
-            {entity.entity_type === "sindicato" ? "Sindicato" : 
-             entity.entity_type === "federacao" ? "Federação" : "Confederação"}
-          </Badge>
+
+          {/* Número de WhatsApp */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Número de WhatsApp *</Label>
+            <Input
+              id="phone"
+              placeholder="(00) 00000-0000"
+              value={phone}
+              onChange={handlePhoneChange}
+              maxLength={15}
+            />
+            <p className="text-xs text-muted-foreground">
+              Informe o número com DDD
+            </p>
+          </div>
+
+          {/* Mensagem Personalizada */}
+          <div className="space-y-2">
+            <Label htmlFor="message">Mensagem (opcional)</Label>
+            <Textarea
+              id="message"
+              placeholder={defaultMessage}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={4}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para usar a mensagem padrão
+            </p>
+          </div>
         </div>
 
-        {/* Número de WhatsApp */}
-        <div className="space-y-2">
-          <Label htmlFor="phone">Número de WhatsApp *</Label>
-          <Input
-            id="phone"
-            placeholder="(00) 00000-0000"
-            value={phone}
-            onChange={handlePhoneChange}
-            maxLength={15}
-          />
-          <p className="text-xs text-muted-foreground">
-            Informe o número com DDD
-          </p>
-        </div>
-
-        {/* Mensagem Personalizada */}
-        <div className="space-y-2">
-          <Label htmlFor="message">Mensagem (opcional)</Label>
-          <Textarea
-            id="message"
-            placeholder={defaultMessage}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={4}
-            className="text-sm"
-          />
-          <p className="text-xs text-muted-foreground">
-            Deixe em branco para usar a mensagem padrão
-          </p>
-        </div>
-      </div>
-
-      <PopupFooter className="flex-col sm:flex-row gap-2">
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSendWhatsApp}
-          disabled={sending || !phone}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          {sending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <MessageCircle className="h-4 w-4 mr-2" />
-          )}
-          Enviar via WhatsApp
-        </Button>
-      </PopupFooter>
-    </PopupBase>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSendWhatsApp}
+            disabled={sending || !phone}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {sending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <MessageCircle className="h-4 w-4 mr-2" />
+            )}
+            Enviar via WhatsApp
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
