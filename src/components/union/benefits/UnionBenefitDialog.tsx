@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +84,27 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
   const { currentClinic, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
+
+  const handleCnpjSearch = async () => {
+    const cnpj = form.getValues("partner_cnpj");
+    if (!cnpj) return;
+    
+    const data = await lookupCnpj(cnpj);
+    if (data) {
+      form.setValue("partner_name", data.razao_social || data.nome_fantasia || "");
+      form.setValue("partner_phone", data.telefone || "");
+      form.setValue("partner_email", data.email || "");
+      const endereco = [
+        data.logradouro,
+        data.numero,
+        data.bairro,
+        data.municipio,
+        data.uf,
+      ].filter(Boolean).join(", ");
+      form.setValue("partner_address", endereco);
+    }
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -281,9 +303,33 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>CNPJ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="00.000.000/0001-00" {...field} />
-                      </FormControl>
+                      <div className="relative">
+                        <FormControl>
+                          <Input 
+                            placeholder="00.000.000/0001-00" 
+                            {...field}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleCnpjSearch();
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <button
+                          type="button"
+                          onClick={handleCnpjSearch}
+                          disabled={cnpjLoading}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          title="Buscar CNPJ na Receita Federal"
+                        >
+                          {cnpjLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
