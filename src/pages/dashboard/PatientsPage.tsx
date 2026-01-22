@@ -441,6 +441,7 @@ export default function PatientsPage() {
           orParts.push(`phone.ilike.%${v}%`);
         }
 
+        console.log("[PatientsPage] Search filter:", { safeSearch, searchDigits, orParts });
         query = query.or(orParts.join(","));
       }
 
