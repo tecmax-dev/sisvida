@@ -10,7 +10,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function AuthorizationValidationPage() {
-  const { hash } = useParams<{ hash: string }>();
+  const { slug, hash } = useParams<{ slug: string; hash: string }>();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["authorization-validation", hash],

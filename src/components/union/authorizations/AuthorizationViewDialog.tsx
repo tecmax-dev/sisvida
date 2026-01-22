@@ -107,7 +107,8 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
 
   if (!authorization) return null;
 
-  const publicUrl = `${window.location.origin}/autorizacao/${authorization.validation_hash}`;
+  const entitySlug = currentClinic?.slug || "validar";
+  const publicUrl = `${window.location.origin}/autorizacao/${entitySlug}/${authorization.validation_hash}`;
 
   const formatCPF = (cpf: string | null) => {
     if (!cpf) return "-";
