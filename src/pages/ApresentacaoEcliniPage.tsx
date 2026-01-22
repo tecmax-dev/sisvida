@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, Loader2, Building2, Users, Briefcase, Calculator, Zap, Shield, Globe, Smartphone, BarChart3, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import tecmaxLogo from "@/assets/tecmax-logo.png";
+import ecliniLogo from "@/assets/eclini-logo.png";
 
 const ApresentacaoEcliniPage = () => {
   const [generating, setGenerating] = useState(false);
@@ -14,7 +14,7 @@ const ApresentacaoEcliniPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(tecmaxLogo);
+        const response = await fetch(ecliniLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
