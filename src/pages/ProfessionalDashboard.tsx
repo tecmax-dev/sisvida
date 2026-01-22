@@ -637,7 +637,7 @@ export default function ProfessionalDashboard() {
                                     <Badge 
                                       variant="outline" 
                                       className={cn(
-                                        "text-xs px-1.5 py-0 h-5 flex-shrink-0 font-bold",
+                                        "text-sm px-2 py-0.5 h-6 flex-shrink-0 font-bold",
                                         isPriority 
                                           ? "bg-amber-400 text-amber-900 border-amber-500" 
                                           : "bg-sky-100 text-sky-700 border-sky-300"

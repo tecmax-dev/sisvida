@@ -2725,7 +2725,7 @@ const updateData: Record<string, any> = {
                 <Badge 
                   variant="outline" 
                   className={cn(
-                    "text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-bold",
+                    "text-xs px-2 py-0.5 h-5 flex-shrink-0 font-bold",
                     isPriority 
                       ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
                       : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
@@ -3185,7 +3185,7 @@ const updateData: Record<string, any> = {
                                         return (
                                           <span 
                                             className={cn(
-                                              "text-[9px] px-1 rounded font-bold flex-shrink-0",
+                                              "text-[10px] px-1.5 py-0.5 rounded font-bold flex-shrink-0",
                                               isPriority 
                                                 ? "bg-amber-400 text-amber-900" 
                                                 : "bg-sky-300 text-sky-900"
