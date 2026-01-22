@@ -1212,6 +1212,56 @@ async function handleAIBookingFlow(
       return;
     }
     
+    // CHECK FOR BOLETO HANDOFF
+    if (aiData.handoff_to_boleto === true) {
+      console.log('[ai-booking] AI requested handoff to boleto flow');
+      
+      // Clear the AI conversation to avoid confusion
+      if (conversationId) {
+        await supabase
+          .from('whatsapp_ai_conversations')
+          .delete()
+          .eq('id', conversationId);
+      }
+      
+      // Call boleto flow edge function to start the flow
+      const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      
+      try {
+        const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            clinic_id: clinicId,
+            phone: phone,
+            action: 'start',
+            evolution_config: {
+              api_url: config.api_url,
+              api_key: config.api_key,
+              instance_name: config.instance_name,
+            }
+          }),
+        });
+
+        if (boletoResponse.ok) {
+          const boletoResult = await boletoResponse.json();
+          console.log(`[ai-booking] Boleto flow started: state=${boletoResult.state}`);
+        } else {
+          const errorText = await boletoResponse.text();
+          console.error('[ai-booking] Boleto flow error:', errorText);
+          await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.');
+        }
+      } catch (boletoError) {
+        console.error('[ai-booking] Error calling boleto flow:', boletoError);
+        await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente.');
+      }
+      return;
+    }
+    
     const responseText = aiData.response || 'Desculpe, não consegui processar sua mensagem.';
 
     console.log(`[ai-booking] AI response: ${responseText.substring(0, 100)}...`);

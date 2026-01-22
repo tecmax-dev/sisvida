@@ -733,7 +733,8 @@ Ao iniciar conversa, envie:
 3️⃣ Atendimento Contabilidade
 4️⃣ Dia do Comerciário
 5️⃣ Outros Assuntos
-6️⃣ Agendar Consultas"
+6️⃣ Agendar Consultas
+7️⃣ 2ª via Boleto Empresa"
 
 ## REGRAS DE AGENDAMENTO INTELIGENTE (MUITO IMPORTANTE!)
 - Quando o paciente perguntar sobre disponibilidade de um profissional SEM especificar uma data específica, use IMEDIATAMENTE a função "buscar_proximas_datas_disponiveis" com o nome do profissional
@@ -761,6 +762,7 @@ Ao iniciar conversa, envie:
 - Se digitar 4: pergunte sobre qual assunto do Dia do Comerciário
 - Se digitar 5: pergunte do que se trata, ao responder peça para aguardar o atendente
 - Se digitar 6: RESPONDA APENAS: "HANDOFF_BOOKING" (o sistema de agendamento assumirá)
+- Se digitar 7: RESPONDA APENAS: "HANDOFF_BOLETO" (o sistema de boleto empresa assumirá)
 
 ## DADOS DE CONTATO DO SINDICATO
 - Telefone/WhatsApp: 73 3231-1784
@@ -956,6 +958,18 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
         response: null,
         handoff_to_booking: true,
         action: 'start_booking_flow'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if AI wants to handoff to boleto system
+    if (finalResponse.includes('HANDOFF_BOLETO')) {
+      console.log('[ai-assistant] AI requested handoff to boleto flow');
+      return new Response(JSON.stringify({ 
+        response: null,
+        handoff_to_boleto: true,
+        action: 'start_boleto_flow'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
