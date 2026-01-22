@@ -777,6 +777,82 @@ async function handleBoletoFlow(
         return { response: MESSAGES.invalidCompetence };
       }
 
+      // Check if there's already a pending contribution for this employer/type/competence
+      const { data: existingContribution } = await supabase
+        .from('employer_contributions')
+        .select('id, value, due_date, status, lytex_invoice_url')
+        .eq('employer_id', session.employer_id)
+        .eq('contribution_type_id', session.contribution_type_id)
+        .eq('competence_month', competence.month)
+        .eq('competence_year', competence.year)
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingContribution) {
+        // Contribution already exists
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const compStr = `${monthNames[competence.month - 1]}/${competence.year}`;
+        
+        if (existingContribution.status === 'paid') {
+          return { 
+            response: `✅ *Contribuição já quitada!*\n\nA contribuição de *${compStr}* já foi paga.\n\nDigite *MENU* para recomeçar.`,
+            newState: 'FINISHED'
+          };
+        }
+        
+        // Pending contribution exists - check if it has value
+        if (existingContribution.value && existingContribution.value > 0) {
+          // Has value and URL - offer to resend
+          if (existingContribution.lytex_invoice_url) {
+            return { 
+              response: `⚠️ *Contribuição já cadastrada!*\n\nJá existe um boleto para *${compStr}* no valor de *${formatCurrency(existingContribution.value)}*.\n\n🔗 Link: ${existingContribution.lytex_invoice_url}\n\nSe precisar de uma 2ª via com nova data, escolha a opção *2 (Vencido)* no menu inicial.\n\nDigite *MENU* para recomeçar.`,
+              newState: 'FINISHED'
+            };
+          }
+          
+          // Has value but no URL - redirect to use existing
+          await updateSession(supabase, session.id, {
+            state: 'WAITING_NEW_DUE_DATE',
+            contribution_id: existingContribution.id,
+            competence_month: competence.month,
+            competence_year: competence.year,
+            value_cents: existingContribution.value,
+            flow_context: { 
+              ...session.flow_context, 
+              selected_contribution: existingContribution,
+              using_existing: true
+            }
+          });
+
+          return { 
+            response: `📋 *Contribuição já cadastrada!*\n\nJá existe uma contribuição para *${compStr}* no valor de *${formatCurrency(existingContribution.value)}* aguardando geração do boleto.\n\nVamos gerar o boleto agora!\n\n📅 Informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
+            newState: 'WAITING_NEW_DUE_DATE'
+          };
+        } else {
+          // Exists but has no value - redirect to fill value for existing contribution
+          await updateSession(supabase, session.id, {
+            state: 'WAITING_VALUE',
+            contribution_id: existingContribution.id,
+            competence_month: competence.month,
+            competence_year: competence.year,
+            flow_context: { 
+              ...session.flow_context, 
+              selected_contribution: existingContribution,
+              using_existing: true
+            }
+          });
+
+          return { 
+            response: `📋 *Contribuição já cadastrada!*\n\nJá existe uma contribuição para *${compStr}* aguardando o valor.\n\n💰 Informe o *valor* a recolher:\n\n_Exemplo: 150,00 ou R$ 150,00_`,
+            newState: 'WAITING_VALUE'
+          };
+        }
+      }
+
+      // No existing contribution - proceed normally
       await updateSession(supabase, session.id, {
         state: 'WAITING_VALUE',
         competence_month: competence.month,
