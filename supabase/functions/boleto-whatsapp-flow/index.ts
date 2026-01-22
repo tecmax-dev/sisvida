@@ -143,6 +143,14 @@ function fallbackIntentAnalysis(message: string, currentState: BoletoState): Int
   const text = message.trim().toLowerCase();
   const normalized = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   
+  // Month names for detection
+  const monthMap: Record<string, number> = {
+    'janeiro': 1, 'jan': 1, 'fevereiro': 2, 'fev': 2, 'março': 3, 'marco': 3, 'mar': 3,
+    'abril': 4, 'abr': 4, 'maio': 5, 'mai': 5, 'junho': 6, 'jun': 6,
+    'julho': 7, 'jul': 7, 'agosto': 8, 'ago': 8, 'setembro': 9, 'set': 9,
+    'outubro': 10, 'out': 10, 'novembro': 11, 'nov': 11, 'dezembro': 12, 'dez': 12
+  };
+  
   // Menu/Cancel commands
   if (/^(menu|reiniciar|voltar|inicio|comecar|começar)$/i.test(normalized)) {
     return { intent: 'menu', confidence: 1.0 };
@@ -156,30 +164,121 @@ function fallbackIntentAnalysis(message: string, currentState: BoletoState): Int
     return { intent: 'help', confidence: 0.9 };
   }
   
+  // ==========================================
+  // IMPROVED: Detect "a vencer" anywhere in text
+  // ==========================================
+  if (/\ba\s*vencer\b/i.test(normalized) || /\bnovo\s*boleto\b/i.test(normalized) || 
+      /\bgerar\s*boleto\b/i.test(normalized) || /\bcriar\s*boleto\b/i.test(normalized) || 
+      /\bemitir\s*boleto\b/i.test(normalized)) {
+    
+    // Try to extract competence from the same message
+    let extractedComp: { month: number; year: number } | undefined;
+    
+    // Try month name + year pattern: "janeiro de 2026", "janeiro/2026", "janeiro 2026"
+    for (const [name, num] of Object.entries(monthMap)) {
+      const monthRegex = new RegExp(`${name}(?:\\s*(?:de|/|\\s)\\s*)(\\d{4})`, 'i');
+      const monthMatch = normalized.match(monthRegex);
+      if (monthMatch) {
+        extractedComp = { month: num, year: parseInt(monthMatch[1]) };
+        break;
+      }
+    }
+    
+    // Also try numeric pattern: "01/2026"
+    if (!extractedComp) {
+      const numericMatch = normalized.match(/(\d{1,2})\s*[\/\-]\s*(\d{4})/);
+      if (numericMatch) {
+        const m = parseInt(numericMatch[1]);
+        const y = parseInt(numericMatch[2]);
+        if (m >= 1 && m <= 12) {
+          extractedComp = { month: m, year: y };
+        }
+      }
+    }
+    
+    return { 
+      intent: 'new_boleto', 
+      confidence: 0.9,
+      extracted_competence: extractedComp
+    };
+  }
+  
+  // ==========================================
+  // IMPROVED: Detect competence mentions (even without explicit "boleto" keyword)
+  // e.g., "a contribuição de janeiro de 2026"
+  // ==========================================
+  if (/contribui[çc][aã]o/i.test(normalized) || /competencia/i.test(normalized) || /periodo/i.test(normalized)) {
+    let extractedComp: { month: number; year: number } | undefined;
+    
+    // Try month name patterns
+    for (const [name, num] of Object.entries(monthMap)) {
+      const monthRegex = new RegExp(`${name}(?:\\s*(?:de|/|\\s)\\s*)(\\d{4})`, 'i');
+      const monthMatch = normalized.match(monthRegex);
+      if (monthMatch) {
+        extractedComp = { month: num, year: parseInt(monthMatch[1]) };
+        break;
+      }
+    }
+    
+    // Numeric pattern
+    if (!extractedComp) {
+      const numericMatch = normalized.match(/(\d{1,2})\s*[\/\-]\s*(\d{4})/);
+      if (numericMatch) {
+        const m = parseInt(numericMatch[1]);
+        const y = parseInt(numericMatch[2]);
+        if (m >= 1 && m <= 12) {
+          extractedComp = { month: m, year: y };
+        }
+      }
+    }
+    
+    if (extractedComp) {
+      // User mentioned contribution with competence - assume new boleto
+      return { 
+        intent: 'new_boleto', 
+        confidence: 0.85,
+        extracted_competence: extractedComp
+      };
+    }
+  }
+  
   // Natural language intents for boleto types
-  if (/boleto.*vencid|pendencia|em aberto|atrasad|divida|debito/i.test(normalized)) {
+  if (/boleto.*vencid|pendencia|em\s*aberto|atrasad|divida|debito/i.test(normalized)) {
     return { intent: 'overdue_boleto', confidence: 0.85 };
   }
-  if (/novo boleto|a vencer|gerar boleto|criar boleto|emitir boleto/i.test(normalized)) {
-    return { intent: 'new_boleto', confidence: 0.85 };
-  }
-  if (/alterar valor|mudar valor|valor errado|corrigir valor/i.test(normalized)) {
+  if (/alterar\s*valor|mudar\s*valor|valor\s*errado|corrigir\s*valor/i.test(normalized)) {
     return { intent: 'change_value', confidence: 0.85 };
   }
-  if (/nao recebi|não recebi|manda de novo|reenviar|cade o link|cadê o link|link nao chegou/i.test(normalized)) {
+  if (/nao\s*recebi|não\s*recebi|manda\s*de\s*novo|reenviar|cade\s*o\s*link|cadê\s*o\s*link|link\s*nao\s*chegou/i.test(normalized)) {
     return { intent: 'resend_link', confidence: 0.85 };
   }
-  if (/status|situacao|situação|como esta|verificar/i.test(normalized)) {
+  if (/status|situacao|situação|como\s*esta|verificar/i.test(normalized)) {
     return { intent: 'check_status', confidence: 0.8 };
+  }
+  
+  // ==========================================
+  // IMPROVED: Detect standalone competence (month + year in text)
+  // even if not in WAITING_COMPETENCE state
+  // ==========================================
+  for (const [name, num] of Object.entries(monthMap)) {
+    const monthRegex = new RegExp(`${name}(?:\\s*(?:de|/|\\s)\\s*)(\\d{4})`, 'i');
+    const monthMatch = normalized.match(monthRegex);
+    if (monthMatch) {
+      return { 
+        intent: 'competence_input', 
+        confidence: 0.85, 
+        extracted_competence: { month: num, year: parseInt(monthMatch[1]) }
+      };
+    }
   }
   
   // Confirmations/Denials
   if (/^(sim|s|yes|isso|confirmo|correto|certo|ok|pode|1)$/i.test(normalized) || 
-      /pode gerar|confirmar|ta certo|tá certo/i.test(normalized)) {
+      /pode\s*gerar|confirmar|ta\s*certo|tá\s*certo/i.test(normalized)) {
     return { intent: 'confirm', confidence: 0.9 };
   }
   if (/^(nao|não|n|no|errado|outro|2)$/i.test(normalized) || 
-      /nao e essa|não é essa|empresa errada/i.test(normalized)) {
+      /nao\s*e\s*essa|não\s*é\s*essa|empresa\s*errada/i.test(normalized)) {
     return { intent: 'deny', confidence: 0.9 };
   }
   
@@ -210,9 +309,9 @@ function fallbackIntentAnalysis(message: string, currentState: BoletoState): Int
     return { intent: 'date_input', confidence: 0.9, extracted_date: dateStr };
   }
   
-  // Competence detection
+  // Competence detection (numeric MM/YYYY)
   const compMatch = normalized.match(/(\d{1,2})[\/\-\s]*(\d{4})/);
-  if (compMatch && currentState === 'WAITING_COMPETENCE') {
+  if (compMatch) {
     const month = parseInt(compMatch[1]);
     const year = parseInt(compMatch[2]);
     if (month >= 1 && month <= 12) {
@@ -1043,7 +1142,52 @@ async function handleBoletoFlow(
       };
     }
 
-    // Natural language for boleto types
+    // ==========================================
+    // IMPROVED: Handle competence with new_boleto intent FIRST
+    // User wrote something like "a contribuição de janeiro de 2026"
+    // This must come BEFORE the simple new_boleto check
+    // ==========================================
+    if (intent.intent === 'new_boleto' && intent.extracted_competence) {
+      // User provided competence upfront - save it and ask for CNPJ
+      const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      const compStr = `${monthNames[intent.extracted_competence.month - 1]}/${intent.extracted_competence.year}`;
+      
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'a_vencer',
+        competence_month: intent.extracted_competence.month,
+        competence_year: intent.extracted_competence.year,
+        flow_context: { ...session.flow_context, competence_provided_upfront: true }
+      });
+      
+      return { 
+        response: `✅ *Entendido!* Boleto a vencer para *${compStr}*.\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`, 
+        newState: 'WAITING_CNPJ' 
+      };
+    }
+
+    // Handle standalone competence input (user just typed month/year)
+    if (intent.intent === 'competence_input' && intent.extracted_competence) {
+      const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      const compStr = `${monthNames[intent.extracted_competence.month - 1]}/${intent.extracted_competence.year}`;
+      
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'a_vencer',
+        competence_month: intent.extracted_competence.month,
+        competence_year: intent.extracted_competence.year,
+        flow_context: { ...session.flow_context, competence_provided_upfront: true }
+      });
+      
+      return { 
+        response: `✅ *Competência: ${compStr}*\n\nVou gerar um boleto para esse período.\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`, 
+        newState: 'WAITING_CNPJ' 
+      };
+    }
+
+    // Natural language for boleto types (without competence provided)
     if (intent.intent === 'new_boleto' || text === '1' || /a\s*vencer/i.test(text)) {
       await updateSession(supabase, session.id, { 
         state: 'WAITING_CNPJ', 
@@ -1183,6 +1327,28 @@ async function handleBoletoFlow(
       }
 
       const selectedType = types[optionNum - 1];
+      
+      // ==========================================
+      // IMPROVED: If competence was provided upfront, skip to value
+      // ==========================================
+      if (session.flow_context?.competence_provided_upfront && session.competence_month && session.competence_year) {
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const compStr = `${monthNames[session.competence_month - 1]}/${session.competence_year}`;
+        
+        await updateSession(supabase, session.id, {
+          state: 'WAITING_VALUE',
+          contribution_type_id: selectedType.id,
+          flow_context: { ...session.flow_context, selected_type: selectedType }
+        });
+
+        return { 
+          response: `✅ *${selectedType.name}*\n📅 Competência: *${compStr}*\n\n💰 Agora informe o *valor* a recolher:\n\n_Exemplo: 150,00 ou R$ 150,00_`, 
+          newState: 'WAITING_VALUE' 
+        };
+      }
+      
+      // Normal flow - ask for competence
       await updateSession(supabase, session.id, {
         state: 'WAITING_COMPETENCE',
         contribution_type_id: selectedType.id,
