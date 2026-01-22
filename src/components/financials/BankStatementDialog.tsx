@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -153,136 +148,134 @@ export function BankStatementDialog({
     .reduce((sum, t) => sum + t.amount, 0);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Extrato Bancário - {register?.name}
-          </DialogTitle>
-          {register?.bank_name && (
-            <p className="text-sm text-muted-foreground">
-              {register.bank_name} | Ag: {register.agency} | CC: {register.account_number}
-            </p>
-          )}
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="4xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Extrato Bancário - {register?.name}
+        </PopupTitle>
+        {register?.bank_name && (
+          <p className="text-sm text-muted-foreground">
+            {register.bank_name} | Ag: {register.agency} | CC: {register.account_number}
+          </p>
+        )}
+      </PopupHeader>
 
-        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-          {/* Upload Section */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <Input
-                type="file"
-                accept=".ofx"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="ofx-upload"
-              />
-              <label htmlFor="ofx-upload">
-                <Button variant="outline" className="cursor-pointer" asChild>
-                  <span>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Importar Arquivo OFX
-                  </span>
-                </Button>
-              </label>
-            </div>
-            
-            {fileName && (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{fileName}</Badge>
-                <Button variant="ghost" size="icon" onClick={handleClear}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+      <div className="space-y-4">
+        {/* Upload Section */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <Input
+              type="file"
+              accept=".ofx"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="ofx-upload"
+            />
+            <label htmlFor="ofx-upload">
+              <Button variant="outline" className="cursor-pointer" asChild>
+                <span>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar Arquivo OFX
+                </span>
+              </Button>
+            </label>
           </div>
-
-          {/* Summary */}
-          {transactions.length > 0 && (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
-                <p className="text-sm text-muted-foreground">Entradas</p>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(totalCredits)}
-                </p>
-              </div>
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-900">
-                <p className="text-sm text-muted-foreground">Saídas</p>
-                <p className="text-lg font-bold text-red-600 dark:text-red-400">
-                  {formatCurrency(totalDebits)}
-                </p>
-              </div>
-              <div className="p-3 bg-muted/50 rounded-lg border">
-                <p className="text-sm text-muted-foreground">Saldo do Período</p>
-                <p className={`text-lg font-bold ${totalCredits - totalDebits >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {formatCurrency(totalCredits - totalDebits)}
-                </p>
-              </div>
+          
+          {fileName && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{fileName}</Badge>
+              <Button variant="ghost" size="icon" onClick={handleClear}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           )}
-
-          {/* Transactions Table */}
-          {transactions.length > 0 ? (
-            <ScrollArea className="flex-1 border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="w-[100px] text-center">Tipo</TableHead>
-                    <TableHead className="text-right w-[150px]">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="font-medium">
-                        {format(transaction.date, "dd/MM/yyyy", { locale: ptBR })}
-                      </TableCell>
-                      <TableCell className="max-w-[300px] truncate">
-                        {transaction.description || "-"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {transaction.type === "credit" ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            <ArrowUpCircle className="h-3 w-3 mr-1" />
-                            Entrada
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                            <ArrowDownCircle className="h-3 w-3 mr-1" />
-                            Saída
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        transaction.type === "credit" ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {transaction.type === "credit" ? "+" : "-"} {formatCurrency(transaction.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          ) : (
-            <div className="flex-1 flex items-center justify-center border rounded-lg bg-muted/20">
-              <div className="text-center text-muted-foreground p-8">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Nenhum extrato importado</p>
-                <p className="text-sm">Clique em "Importar Arquivo OFX" para visualizar o extrato</p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={handleClose}>
-              Fechar
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Summary */}
+        {transactions.length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
+              <p className="text-sm text-muted-foreground">Entradas</p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                {formatCurrency(totalCredits)}
+              </p>
+            </div>
+            <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-900">
+              <p className="text-sm text-muted-foreground">Saídas</p>
+              <p className="text-lg font-bold text-red-600 dark:text-red-400">
+                {formatCurrency(totalDebits)}
+              </p>
+            </div>
+            <div className="p-3 bg-muted/50 rounded-lg border">
+              <p className="text-sm text-muted-foreground">Saldo do Período</p>
+              <p className={`text-lg font-bold ${totalCredits - totalDebits >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(totalCredits - totalDebits)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Transactions Table */}
+        {transactions.length > 0 ? (
+          <ScrollArea className="h-[300px] border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Data</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead className="w-[100px] text-center">Tipo</TableHead>
+                  <TableHead className="text-right w-[150px]">Valor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="font-medium">
+                      {format(transaction.date, "dd/MM/yyyy", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="max-w-[300px] truncate">
+                      {transaction.description || "-"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {transaction.type === "credit" ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <ArrowUpCircle className="h-3 w-3 mr-1" />
+                          Entrada
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                          <ArrowDownCircle className="h-3 w-3 mr-1" />
+                          Saída
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className={`text-right font-medium ${
+                      transaction.type === "credit" ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {transaction.type === "credit" ? "+" : "-"} {formatCurrency(transaction.amount)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        ) : (
+          <div className="flex items-center justify-center border rounded-lg bg-muted/20 py-12">
+            <div className="text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Nenhum extrato importado</p>
+              <p className="text-sm">Clique em "Importar Arquivo OFX" para visualizar o extrato</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={handleClose}>
+            Fechar
+          </Button>
+        </div>
+      </div>
+    </PopupBase>
   );
 }

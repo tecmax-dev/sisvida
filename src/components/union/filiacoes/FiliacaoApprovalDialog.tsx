@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -193,127 +187,123 @@ export function FiliacaoApprovalDialog({
     }
   };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setRejectReason("");
-      setSendEmail(true);
-      setSendWhatsApp(true);
-    }
-    onOpenChange(newOpen);
+  const handleClose = () => {
+    setRejectReason("");
+    setSendEmail(true);
+    setSendWhatsApp(true);
+    onOpenChange(false);
   };
 
   if (!filiacao) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isApprove ? (
-              <>
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
-                Aprovar Filiação
-              </>
-            ) : (
-              <>
-                <XCircle className="h-5 w-5 text-red-500" />
-                Rejeitar Filiação
-              </>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Summary */}
-          <div className="bg-muted/50 rounded-lg p-3">
-            <p className="font-medium">{filiacao.nome}</p>
-            <p className="text-sm text-muted-foreground font-mono">{filiacao.cpf}</p>
-          </div>
-
+    <PopupBase open={open} onClose={handleClose} maxWidth="md">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
           {isApprove ? (
             <>
-              <p className="text-sm text-muted-foreground">
-                Ao aprovar, o associado receberá a ficha de filiação e número de matrícula.
-              </p>
-
-              {/* Notification options */}
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Enviar notificação por:</p>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="send-email"
-                    checked={sendEmail}
-                    onCheckedChange={(checked) => setSendEmail(checked === true)}
-                  />
-                  <Label htmlFor="send-email" className="flex items-center gap-2 cursor-pointer">
-                    <Mail className="h-4 w-4" />
-                    E-mail
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="send-whatsapp"
-                    checked={sendWhatsApp}
-                    onCheckedChange={(checked) => setSendWhatsApp(checked === true)}
-                  />
-                  <Label htmlFor="send-whatsapp" className="flex items-center gap-2 cursor-pointer">
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                  </Label>
-                </div>
-              </div>
+              <CheckCircle className="h-5 w-5 text-emerald-500" />
+              Aprovar Filiação
             </>
           ) : (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="reject-reason">
-                  Motivo da Rejeição <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  id="reject-reason"
-                  placeholder="Informe o motivo da rejeição..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  rows={3}
-                />
-              </div>
+              <XCircle className="h-5 w-5 text-red-500" />
+              Rejeitar Filiação
+            </>
+          )}
+        </PopupTitle>
+      </PopupHeader>
 
+      <div className="space-y-4 py-4">
+        {/* Summary */}
+        <div className="bg-muted/50 rounded-lg p-3">
+          <p className="font-medium">{filiacao.nome}</p>
+          <p className="text-sm text-muted-foreground font-mono">{filiacao.cpf}</p>
+        </div>
+
+        {isApprove ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Ao aprovar, o associado receberá a ficha de filiação e número de matrícula.
+            </p>
+
+            {/* Notification options */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Enviar notificação por:</p>
               <div className="flex items-center gap-2">
                 <Checkbox
-                  id="send-rejection-email"
+                  id="send-email"
                   checked={sendEmail}
                   onCheckedChange={(checked) => setSendEmail(checked === true)}
                 />
-                <Label htmlFor="send-rejection-email" className="flex items-center gap-2 cursor-pointer text-sm">
+                <Label htmlFor="send-email" className="flex items-center gap-2 cursor-pointer">
                   <Mail className="h-4 w-4" />
-                  Notificar o solicitante por e-mail
+                  E-mail
                 </Label>
               </div>
-            </>
-          )}
-        </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="send-whatsapp"
+                  checked={sendWhatsApp}
+                  onCheckedChange={(checked) => setSendWhatsApp(checked === true)}
+                />
+                <Label htmlFor="send-whatsapp" className="flex items-center gap-2 cursor-pointer">
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </Label>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">
+                Motivo da Rejeição <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="reject-reason"
+                placeholder="Informe o motivo da rejeição..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={3}
+              />
+            </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={processing}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={processing}
-            className={isApprove ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-            variant={isApprove ? "default" : "destructive"}
-          >
-            {processing ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : isApprove ? (
-              <CheckCircle className="h-4 w-4 mr-2" />
-            ) : (
-              <XCircle className="h-4 w-4 mr-2" />
-            )}
-            {isApprove ? "Aprovar" : "Rejeitar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="send-rejection-email"
+                checked={sendEmail}
+                onCheckedChange={(checked) => setSendEmail(checked === true)}
+              />
+              <Label htmlFor="send-rejection-email" className="flex items-center gap-2 cursor-pointer text-sm">
+                <Mail className="h-4 w-4" />
+                Notificar o solicitante por e-mail
+              </Label>
+            </div>
+          </>
+        )}
+      </div>
+
+      <PopupFooter>
+        <Button variant="ghost" onClick={handleClose} disabled={processing}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={processing}
+          className={isApprove ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+          variant={isApprove ? "default" : "destructive"}
+        >
+          {processing ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : isApprove ? (
+            <CheckCircle className="h-4 w-4 mr-2" />
+          ) : (
+            <XCircle className="h-4 w-4 mr-2" />
+          )}
+          {isApprove ? "Aprovar" : "Rejeitar"}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
