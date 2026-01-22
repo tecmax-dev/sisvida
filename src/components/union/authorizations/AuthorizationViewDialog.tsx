@@ -107,6 +107,7 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
 
   if (!authorization) return null;
 
+  // Build public URL with clinic slug
   const entitySlug = currentClinic?.slug || "validar";
   const publicUrl = `${window.location.origin}/autorizacao/${entitySlug}/${authorization.validation_hash}`;
 
