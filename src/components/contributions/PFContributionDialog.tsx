@@ -3,14 +3,7 @@ import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import {
   Select,
   SelectContent,
@@ -90,7 +83,6 @@ interface PFContributionDialogProps {
   onOpenBatch?: () => void;
 }
 
-// CNPJ do Sindicato Comerciários para emissão de boletos PF
 const SINDICATO_PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000";
 
 export default function PFContributionDialog({
@@ -106,7 +98,6 @@ export default function PFContributionDialog({
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   
-  // Form states
   const [formMemberId, setFormMemberId] = useState("");
   const [formTypeId, setFormTypeId] = useState("");
   const [formMonth, setFormMonth] = useState(new Date().getMonth() + 1);
@@ -116,10 +107,8 @@ export default function PFContributionDialog({
   const [formNotes, setFormNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Member combobox
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
 
-  // Fetch members (patients) when dialog opens
   useEffect(() => {
     if (open && clinicId) {
       fetchMembers();
@@ -129,7 +118,6 @@ export default function PFContributionDialog({
   const fetchMembers = async () => {
     setLoadingMembers(true);
     try {
-      // Fetch all members with pagination to overcome 1000 row limit
       let allMembers: Member[] = [];
       let page = 0;
       const pageSize = 1000;
@@ -183,9 +171,7 @@ export default function PFContributionDialog({
     }
   };
 
-  // Get or create placeholder employer for PF contributions
   const getOrCreatePlaceholderEmployer = async () => {
-    // First, check if placeholder already exists
     const { data: existing } = await supabase
       .from("employers")
       .select("id")
@@ -197,7 +183,6 @@ export default function PFContributionDialog({
       return existing.id;
     }
 
-    // Create placeholder employer for PF contributions
     const { data: created, error } = await supabase
       .from("employers")
       .insert({
@@ -229,7 +214,6 @@ export default function PFContributionDialog({
       return;
     }
 
-    // VALIDAÇÃO CRÍTICA: Vencimento não pode ser anterior ao mês de competência
     const dueDateObj = new Date(formDueDate);
     const competenceStart = new Date(formYear, formMonth - 1, 1);
     const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -240,7 +224,6 @@ export default function PFContributionDialog({
       return;
     }
 
-    // VALIDAÇÃO: Competência não pode estar muito no futuro em relação ao vencimento
     const dueDateYear = dueDateObj.getFullYear();
     if (formYear > dueDateYear + 1) {
       toast.error(`Competência ${MONTHS_PT[formMonth - 1]}/${formYear} é inconsistente com a data de vencimento`);
@@ -286,7 +269,6 @@ export default function PFContributionDialog({
       resetForm();
       onRefresh();
 
-      // Gerar boleto automaticamente
       if (newContribution) {
         try {
           await onGenerateInvoice(newContribution as unknown as Contribution);
@@ -309,225 +291,222 @@ export default function PFContributionDialog({
 
   const selectedMember = members.find((m) => m.id === formMemberId);
 
+  const handleClose = () => {
+    onOpenChange(false);
+    resetForm();
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        onOpenChange(isOpen);
-        if (!isOpen) resetForm();
-      }}
-    >
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-purple-600" />
-            Nova Contribuição PF
-          </DialogTitle>
-          <DialogDescription>
-            Cadastre uma contribuição individual (Pessoa Física)
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="md">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <User className="h-5 w-5 text-purple-600" />
+          Nova Contribuição PF
+        </PopupTitle>
+        <PopupDescription>
+          Cadastre uma contribuição individual (Pessoa Física)
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="space-y-4">
-          {/* Sócio/Associado */}
-          <div className="space-y-2">
-            <Label>Sócio/Associado *</Label>
-            <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={memberPopoverOpen}
-                  className="w-full justify-between font-normal"
-                  disabled={loadingMembers}
-                >
-                  {loadingMembers ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Carregando...
-                    </span>
-                  ) : formMemberId ? (
-                    <span className="truncate">
-                      {selectedMember?.name}
-                    </span>
-                  ) : (
-                    "Selecione o sócio..."
-                  )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar por nome ou CPF..." />
-                  <CommandList>
-                    <CommandEmpty>Nenhum sócio encontrado.</CommandEmpty>
-                    <CommandGroup>
-                      {members.map((member) => {
-                        const formattedCpf = member.cpf ? formatCPF(member.cpf) : "";
-                        return (
-                          <CommandItem
-                            key={member.id}
-                            value={`${member.name} ${member.cpf || ""} ${formattedCpf}`}
-                            onSelect={() => {
-                              setFormMemberId(member.id);
-                              setMemberPopoverOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formMemberId === member.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex flex-col">
-                              <span>{member.name}</span>
-                              {member.cpf && (
-                                <span className="text-xs text-emerald-600">
-                                  {formatCPF(member.cpf)}
-                                </span>
-                              )}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {selectedMember?.cpf && (
-              <p className="text-xs text-muted-foreground">
-                CPF: <span className="font-medium text-emerald-600">{formatCPF(selectedMember.cpf)}</span>
-              </p>
-            )}
-          </div>
+      <div className="space-y-4">
+        {/* Sócio/Associado */}
+        <div className="space-y-2">
+          <Label>Sócio/Associado *</Label>
+          <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={memberPopoverOpen}
+                className="w-full justify-between font-normal"
+                disabled={loadingMembers}
+              >
+                {loadingMembers ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando...
+                  </span>
+                ) : formMemberId ? (
+                  <span className="truncate">
+                    {selectedMember?.name}
+                  </span>
+                ) : (
+                  "Selecione o sócio..."
+                )}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar por nome ou CPF..." />
+                <CommandList>
+                  <CommandEmpty>Nenhum sócio encontrado.</CommandEmpty>
+                  <CommandGroup>
+                    {members.map((member) => {
+                      const formattedCpf = member.cpf ? formatCPF(member.cpf) : "";
+                      return (
+                        <CommandItem
+                          key={member.id}
+                          value={`${member.name} ${member.cpf || ""} ${formattedCpf}`}
+                          onSelect={() => {
+                            setFormMemberId(member.id);
+                            setMemberPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formMemberId === member.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{member.name}</span>
+                            {member.cpf && (
+                              <span className="text-xs text-emerald-600">
+                                {formatCPF(member.cpf)}
+                              </span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {selectedMember?.cpf && (
+            <p className="text-xs text-muted-foreground">
+              CPF: <span className="font-medium text-emerald-600">{formatCPF(selectedMember.cpf)}</span>
+            </p>
+          )}
+        </div>
 
-          {/* Tipo de Contribuição */}
+        {/* Tipo de Contribuição */}
+        <div className="space-y-2">
+          <Label>Tipo de Contribuição *</Label>
+          <Select value={formTypeId} onValueChange={handleTypeChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {contributionTypes
+                .filter((t) => t.is_active)
+                .map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Competência */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Tipo de Contribuição *</Label>
-            <Select value={formTypeId} onValueChange={handleTypeChange}>
+            <Label>Mês Competência *</Label>
+            <Select
+              value={formMonth.toString()}
+              onValueChange={(v) => setFormMonth(parseInt(v))}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {contributionTypes
-                  .filter((t) => t.is_active)
-                  .map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
+                {Array.from({ length: 12 }, (_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    {String(i + 1).padStart(2, "0")}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-
-          {/* Competência */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Mês Competência *</Label>
-              <Select
-                value={formMonth.toString()}
-                onValueChange={(v) => setFormMonth(parseInt(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <SelectItem key={i + 1} value={(i + 1).toString()}>
-                      {String(i + 1).padStart(2, "0")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Ano *</Label>
-              <Select
-                value={formYear.toString()}
-                onValueChange={(v) => setFormYear(parseInt(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getStaticYearRange().map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Valor e Vencimento */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Valor (R$) *</Label>
-              <Input
-                type="text"
-                placeholder="0,00"
-                value={formValue}
-                onChange={(e) => setFormValue(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Vencimento *</Label>
-              <Input
-                type="date"
-                value={formDueDate}
-                onChange={(e) => setFormDueDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Observações */}
           <div className="space-y-2">
-            <Label>Observações</Label>
+            <Label>Ano *</Label>
+            <Select
+              value={formYear.toString()}
+              onValueChange={(v) => setFormYear(parseInt(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {getStaticYearRange().map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Valor e Vencimento */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Valor (R$) *</Label>
             <Input
               type="text"
-              placeholder="Observações opcionais"
-              value={formNotes}
-              onChange={(e) => setFormNotes(e.target.value)}
+              placeholder="0,00"
+              value={formValue}
+              onChange={(e) => setFormValue(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Vencimento *</Label>
+            <Input
+              type="date"
+              value={formDueDate}
+              onChange={(e) => setFormDueDate(e.target.value)}
             />
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          {onOpenBatch && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onOpenBatch}
-              disabled={saving}
-              className="w-full sm:w-auto"
-            >
-              <FileStack className="h-4 w-4 mr-2" />
-              Gerar em Lote
-            </Button>
-          )}
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Salvar"
-              )}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* Observações */}
+        <div className="space-y-2">
+          <Label>Observações</Label>
+          <Input
+            type="text"
+            placeholder="Observações opcionais"
+            value={formNotes}
+            onChange={(e) => setFormNotes(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <PopupFooter className="flex-col sm:flex-row gap-2">
+        {onOpenBatch && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onOpenBatch}
+            disabled={saving}
+            className="w-full sm:w-auto"
+          >
+            <FileStack className="h-4 w-4 mr-2" />
+            Gerar em Lote
+          </Button>
+        )}
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={saving}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              "Salvar"
+            )}
+          </Button>
+        </div>
+      </PopupFooter>
+    </PopupBase>
   );
 }
