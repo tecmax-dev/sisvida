@@ -12181,6 +12181,806 @@ export type Database = {
           },
         ]
       }
+      union_law_firms: {
+        Row: {
+          address: string | null
+          cep: string | null
+          city: string | null
+          clinic_id: string
+          cnpj: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          contract_value: number | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          oab_number: string | null
+          payment_type: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          cep?: string | null
+          city?: string | null
+          clinic_id: string
+          cnpj?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          contract_value?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          oab_number?: string | null
+          payment_type?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          cep?: string | null
+          city?: string | null
+          clinic_id?: string
+          cnpj?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          contract_value?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          oab_number?: string | null
+          payment_type?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_law_firms_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_lawyers: {
+        Row: {
+          clinic_id: string
+          cpf: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          hourly_rate: number | null
+          id: string
+          is_active: boolean | null
+          is_internal: boolean | null
+          law_firm_id: string | null
+          name: string
+          notes: string | null
+          oab_number: string
+          oab_state: string
+          phone: string | null
+          specialty: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_internal?: boolean | null
+          law_firm_id?: string | null
+          name: string
+          notes?: string | null
+          oab_number: string
+          oab_state: string
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_internal?: boolean | null
+          law_firm_id?: string | null
+          name?: string
+          notes?: string | null
+          oab_number?: string
+          oab_state?: string
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_lawyers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_lawyers_law_firm_id_fkey"
+            columns: ["law_firm_id"]
+            isOneToOne: false
+            referencedRelation: "union_law_firms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_audit_logs: {
+        Row: {
+          action: string
+          clinic_id: string
+          entity_id: string
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          performed_at: string | null
+          performed_by: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          performed_at?: string | null
+          performed_by?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_case_documents: {
+        Row: {
+          description: string | null
+          document_type: string
+          event_id: string | null
+          external_url: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string
+          legal_case_id: string
+          name: string
+          storage_path: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          document_type: string
+          event_id?: string | null
+          external_url?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          legal_case_id: string
+          name: string
+          storage_path?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          document_type?: string
+          event_id?: string | null
+          external_url?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          legal_case_id?: string
+          name?: string
+          storage_path?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_case_documents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_case_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_case_documents_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_case_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          event_date: string
+          event_type: string
+          id: string
+          is_milestone: boolean | null
+          legal_case_id: string
+          phase: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          event_date?: string
+          event_type: string
+          id?: string
+          is_milestone?: boolean | null
+          legal_case_id: string
+          phase?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          is_milestone?: boolean | null
+          legal_case_id?: string
+          phase?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_case_events_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_case_parties: {
+        Row: {
+          created_at: string | null
+          document: string | null
+          document_type: string | null
+          id: string
+          is_union: boolean | null
+          legal_case_id: string
+          name: string
+          party_type: string
+          role_description: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document?: string | null
+          document_type?: string | null
+          id?: string
+          is_union?: boolean | null
+          legal_case_id: string
+          name: string
+          party_type: string
+          role_description?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document?: string | null
+          document_type?: string | null
+          id?: string
+          is_union?: boolean | null
+          legal_case_id?: string
+          name?: string
+          party_type?: string
+          role_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_case_parties_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_cases: {
+        Row: {
+          case_number: string
+          case_type: Database["public"]["Enums"]["legal_case_type"]
+          cause_value: number | null
+          clinic_id: string
+          closure_date: string | null
+          closure_reason: string | null
+          court: string | null
+          created_at: string | null
+          created_by: string | null
+          defendant: string
+          defendant_document: string | null
+          description: string | null
+          employer_id: string | null
+          estimated_liability: number | null
+          external_reference: string | null
+          filing_date: string | null
+          id: string
+          instance: string | null
+          jurisdiction: string | null
+          last_update_date: string | null
+          law_firm_id: string | null
+          lawyer_id: string | null
+          member_id: string | null
+          notes: string | null
+          plaintiff: string
+          plaintiff_document: string | null
+          priority: number | null
+          risk_level: Database["public"]["Enums"]["legal_risk_level"] | null
+          risk_notes: string | null
+          service_date: string | null
+          status: Database["public"]["Enums"]["legal_case_status"] | null
+          subject: string
+          tags: string[] | null
+          tribunal: string | null
+          union_role: string
+          updated_at: string | null
+        }
+        Insert: {
+          case_number: string
+          case_type?: Database["public"]["Enums"]["legal_case_type"]
+          cause_value?: number | null
+          clinic_id: string
+          closure_date?: string | null
+          closure_reason?: string | null
+          court?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          defendant: string
+          defendant_document?: string | null
+          description?: string | null
+          employer_id?: string | null
+          estimated_liability?: number | null
+          external_reference?: string | null
+          filing_date?: string | null
+          id?: string
+          instance?: string | null
+          jurisdiction?: string | null
+          last_update_date?: string | null
+          law_firm_id?: string | null
+          lawyer_id?: string | null
+          member_id?: string | null
+          notes?: string | null
+          plaintiff: string
+          plaintiff_document?: string | null
+          priority?: number | null
+          risk_level?: Database["public"]["Enums"]["legal_risk_level"] | null
+          risk_notes?: string | null
+          service_date?: string | null
+          status?: Database["public"]["Enums"]["legal_case_status"] | null
+          subject: string
+          tags?: string[] | null
+          tribunal?: string | null
+          union_role?: string
+          updated_at?: string | null
+        }
+        Update: {
+          case_number?: string
+          case_type?: Database["public"]["Enums"]["legal_case_type"]
+          cause_value?: number | null
+          clinic_id?: string
+          closure_date?: string | null
+          closure_reason?: string | null
+          court?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          defendant?: string
+          defendant_document?: string | null
+          description?: string | null
+          employer_id?: string | null
+          estimated_liability?: number | null
+          external_reference?: string | null
+          filing_date?: string | null
+          id?: string
+          instance?: string | null
+          jurisdiction?: string | null
+          last_update_date?: string | null
+          law_firm_id?: string | null
+          lawyer_id?: string | null
+          member_id?: string | null
+          notes?: string | null
+          plaintiff?: string
+          plaintiff_document?: string | null
+          priority?: number | null
+          risk_level?: Database["public"]["Enums"]["legal_risk_level"] | null
+          risk_notes?: string | null
+          service_date?: string | null
+          status?: Database["public"]["Enums"]["legal_case_status"] | null
+          subject?: string
+          tags?: string[] | null
+          tribunal?: string | null
+          union_role?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_cases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_cases_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_cases_law_firm_id_fkey"
+            columns: ["law_firm_id"]
+            isOneToOne: false
+            referencedRelation: "union_law_firms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_cases_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "union_lawyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_cases_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_associados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_deadline_alerts: {
+        Row: {
+          alert_type: string
+          days_before: number | null
+          deadline_id: string
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          sent_to: string | null
+          success: boolean | null
+        }
+        Insert: {
+          alert_type: string
+          days_before?: number | null
+          deadline_id: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_to?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          alert_type?: string
+          days_before?: number | null
+          deadline_id?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_to?: string | null
+          success?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_deadline_alerts_deadline_id_fkey"
+            columns: ["deadline_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_deadlines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_deadlines: {
+        Row: {
+          alert_days_before: number[] | null
+          clinic_id: string
+          completed_at: string | null
+          completed_by: string | null
+          completion_notes: string | null
+          created_at: string | null
+          created_by: string | null
+          criticality:
+            | Database["public"]["Enums"]["deadline_criticality"]
+            | null
+          deadline_date: string
+          deadline_time: string | null
+          description: string | null
+          id: string
+          last_alert_sent_at: string | null
+          legal_case_id: string
+          missed_reason: string | null
+          responsible_lawyer_id: string | null
+          responsible_user_id: string | null
+          status: Database["public"]["Enums"]["deadline_status"] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          alert_days_before?: number[] | null
+          clinic_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          criticality?:
+            | Database["public"]["Enums"]["deadline_criticality"]
+            | null
+          deadline_date: string
+          deadline_time?: string | null
+          description?: string | null
+          id?: string
+          last_alert_sent_at?: string | null
+          legal_case_id: string
+          missed_reason?: string | null
+          responsible_lawyer_id?: string | null
+          responsible_user_id?: string | null
+          status?: Database["public"]["Enums"]["deadline_status"] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          alert_days_before?: number[] | null
+          clinic_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          criticality?:
+            | Database["public"]["Enums"]["deadline_criticality"]
+            | null
+          deadline_date?: string
+          deadline_time?: string | null
+          description?: string | null
+          id?: string
+          last_alert_sent_at?: string | null
+          legal_case_id?: string
+          missed_reason?: string | null
+          responsible_lawyer_id?: string | null
+          responsible_user_id?: string | null
+          status?: Database["public"]["Enums"]["deadline_status"] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_deadlines_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_deadlines_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_deadlines_responsible_lawyer_id_fkey"
+            columns: ["responsible_lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "union_lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_expenses: {
+        Row: {
+          amount: number
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          expense_date: string
+          expense_type: string
+          financial_transaction_id: string | null
+          id: string
+          is_paid: boolean | null
+          law_firm_id: string | null
+          lawyer_id: string | null
+          legal_case_id: string | null
+          notes: string | null
+          paid_at: string | null
+          payment_reference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          expense_date: string
+          expense_type: string
+          financial_transaction_id?: string | null
+          id?: string
+          is_paid?: boolean | null
+          law_firm_id?: string | null
+          lawyer_id?: string | null
+          legal_case_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          expense_type?: string
+          financial_transaction_id?: string | null
+          id?: string
+          is_paid?: boolean | null
+          law_firm_id?: string | null
+          lawyer_id?: string | null
+          legal_case_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_expenses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_expenses_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_expenses_law_firm_id_fkey"
+            columns: ["law_firm_id"]
+            isOneToOne: false
+            referencedRelation: "union_law_firms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_expenses_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "union_lawyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_expenses_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_legal_provisions: {
+        Row: {
+          amount: number
+          calculated_amount: number | null
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_current: boolean | null
+          legal_case_id: string
+          probability_percentage: number | null
+          provision_date: string
+          reason: string | null
+          review_date: string | null
+        }
+        Insert: {
+          amount: number
+          calculated_amount?: number | null
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_current?: boolean | null
+          legal_case_id: string
+          probability_percentage?: number | null
+          provision_date: string
+          reason?: string | null
+          review_date?: string | null
+        }
+        Update: {
+          amount?: number
+          calculated_amount?: number | null
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_current?: boolean | null
+          legal_case_id?: string
+          probability_percentage?: number | null
+          provision_date?: string
+          reason?: string | null
+          review_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_legal_provisions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_legal_provisions_legal_case_id_fkey"
+            columns: ["legal_case_id"]
+            isOneToOne: false
+            referencedRelation: "union_legal_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_member_audit_logs: {
         Row: {
           action: string
@@ -13926,6 +14726,23 @@ export type Database = {
         | "exam"
         | "procedure"
         | "telemedicine"
+      deadline_criticality: "baixa" | "media" | "alta" | "urgente"
+      deadline_status: "pendente" | "cumprido" | "descumprido" | "cancelado"
+      legal_case_status:
+        | "ativo"
+        | "suspenso"
+        | "arquivado"
+        | "encerrado_favoravel"
+        | "encerrado_desfavoravel"
+        | "acordo"
+      legal_case_type:
+        | "trabalhista"
+        | "civel"
+        | "tributario"
+        | "administrativo"
+        | "coletivo_sindical"
+        | "outro"
+      legal_risk_level: "baixo" | "medio" | "alto" | "critico"
       plan_category: "clinica" | "sindicato"
       specialty_category:
         | "medical"
@@ -14089,6 +14906,25 @@ export const Constants = {
         "procedure",
         "telemedicine",
       ],
+      deadline_criticality: ["baixa", "media", "alta", "urgente"],
+      deadline_status: ["pendente", "cumprido", "descumprido", "cancelado"],
+      legal_case_status: [
+        "ativo",
+        "suspenso",
+        "arquivado",
+        "encerrado_favoravel",
+        "encerrado_desfavoravel",
+        "acordo",
+      ],
+      legal_case_type: [
+        "trabalhista",
+        "civel",
+        "tributario",
+        "administrativo",
+        "coletivo_sindical",
+        "outro",
+      ],
+      legal_risk_level: ["baixo", "medio", "alto", "critico"],
       plan_category: ["clinica", "sindicato"],
       specialty_category: [
         "medical",
