@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,7 +114,6 @@ export function SupplierDialog({
       return;
     }
 
-    // Verificar duplicidade primeiro
     const existing = await checkCnpjDuplicate(formData.cnpj);
     if (existing) {
       setCnpjError(`CNPJ já cadastrado para: ${existing.name}`);
@@ -128,7 +122,6 @@ export function SupplierDialog({
     
     setCnpjError(null);
     
-    // Buscar na Receita Federal
     const data = await lookupCnpj(formData.cnpj);
     if (data) {
       setFormData((prev) => ({
@@ -149,7 +142,6 @@ export function SupplierDialog({
     e.preventDefault();
     if (!clinicId) return;
 
-    // Verificar duplicidade antes de salvar
     if (formData.cnpj && formData.cnpj.replace(/\D/g, "").length === 14) {
       const existing = await checkCnpjDuplicate(formData.cnpj);
       if (existing) {
@@ -206,137 +198,135 @@ export function SupplierDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {supplier ? "Editar Fornecedor" : "Novo Fornecedor"}
-          </DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle>
+          {supplier ? "Editar Fornecedor" : "Novo Fornecedor"}
+        </PopupTitle>
+      </PopupHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <CnpjInputCard
-                value={formData.cnpj}
-                onChange={(value) => {
-                  setFormData({ ...formData, cnpj: value });
-                  setCnpjError(null);
-                }}
-                onLookup={handleCnpjLookup}
-                loading={cnpjLoading}
-                error={cnpjError || undefined}
-                showLookupButton={true}
-                label="CNPJ do Fornecedor"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="name">Razão Social / Nome *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="contact_name">Nome do Contato</Label>
-              <Input
-                id="contact_name"
-                value={formData.contact_name}
-                onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="city">Cidade</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="state">Estado</Label>
-              <Select
-                value={formData.state}
-                onValueChange={(value) => setFormData({ ...formData, state: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATES.map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {state}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="notes">Observações</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="col-span-2 flex items-center gap-2">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-              />
-              <Label htmlFor="is_active">Fornecedor ativo</Label>
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <CnpjInputCard
+              value={formData.cnpj}
+              onChange={(value) => {
+                setFormData({ ...formData, cnpj: value });
+                setCnpjError(null);
+              }}
+              onLookup={handleCnpjLookup}
+              loading={cnpjLoading}
+              error={cnpjError || undefined}
+              showLookupButton={true}
+              label="CNPJ do Fornecedor"
+            />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading || cnpjLoading}>
-              {loading ? "Salvando..." : "Salvar"}
-            </Button>
+          <div className="col-span-2">
+            <Label htmlFor="name">Razão Social / Nome *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+          <div>
+            <Label htmlFor="contact_name">Nome do Contato</Label>
+            <Input
+              id="contact_name"
+              value={formData.contact_name}
+              onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="email">E-mail</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="phone">Telefone</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <Label htmlFor="address">Endereço</Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="city">Cidade</Label>
+            <Input
+              id="city"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="state">Estado</Label>
+            <Select
+              value={formData.state}
+              onValueChange={(value) => setFormData({ ...formData, state: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {STATES.map((state) => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="col-span-2">
+            <Label htmlFor="notes">Observações</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="col-span-2 flex items-center gap-2">
+            <Switch
+              id="is_active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+            />
+            <Label htmlFor="is_active">Fornecedor ativo</Label>
+          </div>
+        </div>
+
+        <PopupFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={loading || cnpjLoading}>
+            {loading ? "Salvando..." : "Salvar"}
+          </Button>
+        </PopupFooter>
+      </form>
+    </PopupBase>
   );
 }
