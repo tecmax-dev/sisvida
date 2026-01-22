@@ -19,7 +19,7 @@ import { BudgetExpensesTab } from "@/components/union/budget/BudgetExpensesTab";
 import { BudgetConsolidationTab } from "@/components/union/budget/BudgetConsolidationTab";
 import { BudgetExecutionTab } from "@/components/union/budget/BudgetExecutionTab";
 import { BudgetApproversTab } from "@/components/union/budget/BudgetApproversTab";
-import { BudgetAlertsTab } from "@/components/union/budget/BudgetAlertsTab";
+// BudgetAlertsTab - to be implemented later
 import { BudgetAuditTab } from "@/components/union/budget/BudgetAuditTab";
 
 export default function UnionBudgetDetailPage() {
@@ -294,9 +294,9 @@ export default function UnionBudgetDetailPage() {
             clinicId={clinicId}
             versionId={currentVersion?.id}
             isEditable={exercise.status === 'draft'}
-            onCreate={createRevenue}
-            onUpdate={updateRevenue}
-            onDelete={deleteRevenue}
+            onCreate={(data) => createRevenue(data)}
+            onUpdate={(data) => updateRevenue(data)}
+            onDelete={(id) => deleteRevenue(id)}
           />
         </TabsContent>
 
@@ -306,9 +306,9 @@ export default function UnionBudgetDetailPage() {
             clinicId={clinicId}
             versionId={currentVersion?.id}
             isEditable={exercise.status === 'draft'}
-            onCreate={createExpense}
-            onUpdate={updateExpense}
-            onDelete={deleteExpense}
+            onCreate={(data) => createExpense(data)}
+            onUpdate={(data) => updateExpense(data)}
+            onDelete={(id) => deleteExpense(id)}
           />
         </TabsContent>
 
