@@ -17,11 +17,14 @@ interface DashboardStats {
 }
 
 export default function UnionDashboard() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles, isSuperAdmin } = useAuth();
   const { entity, isUnionEntityAdmin, loading: entityLoading } = useUnionEntity();
   const { canViewFinancials } = useUnionPermissions();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Check if user has admin-level access to see dashboard data
+  const isAdmin = isSuperAdmin || isUnionEntityAdmin || userRoles.some(r => r.role === 'admin');
 
   // Get the clinic_id to use for queries
   const clinicId = currentClinic?.id;
@@ -193,6 +196,32 @@ export default function UnionDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Non-admin users see a placeholder
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Módulo Sindical</h1>
+          <p className="text-muted-foreground">
+            Visão geral do gerenciamento sindical de {displayName}
+          </p>
+        </div>
+
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="rounded-full bg-muted p-4 mb-4">
+              <Loader2 className="h-8 w-8 text-muted-foreground animate-pulse" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground mb-2">Aguardando dados...</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-md">
+              Os dados do painel serão exibidos em breve. Entre em contato com o administrador para mais informações.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
