@@ -148,13 +148,19 @@ export function PresidentSignatureManager() {
       const signatureData = hasSignature && canvas ? canvas.toDataURL("image/png") : null;
 
       // Deactivate existing signatures
-      await supabase
+      const { error: updateError } = await supabase
         .from("union_president_signatures")
         .update({ is_active: false })
         .eq("clinic_id", currentClinic.id);
 
+      // Ignore "no rows updated" - it's expected when there's no existing signature
+      if (updateError && !updateError.message.includes("0 rows")) {
+        console.error("Erro ao desativar assinaturas existentes:", updateError);
+        throw new Error(`Erro ao desativar assinaturas: ${updateError.message}`);
+      }
+
       // Create new signature
-      const { error } = await supabase
+      const { data, error: insertError } = await supabase
         .from("union_president_signatures")
         .insert({
           clinic_id: currentClinic.id,
@@ -164,15 +170,24 @@ export function PresidentSignatureManager() {
           signature_data: signatureData,
           is_active: true,
           created_by: user.id,
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (insertError) {
+        console.error("Erro ao inserir assinatura:", insertError);
+        throw new Error(`Erro ao salvar assinatura: ${insertError.message}`);
+      }
+
+      console.log("Assinatura salva com sucesso:", data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["president-signature"] });
       toast({ title: "Assinatura salva com sucesso!" });
     },
     onError: (error: any) => {
+      console.error("Mutation error:", error);
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     },
   });
