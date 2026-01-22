@@ -10516,6 +10516,861 @@ export type Database = {
           },
         ]
       }
+      union_budget_alert_logs: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_id: string
+          alert_level: string
+          budget_exercise_id: string
+          budget_item_id: string | null
+          budget_item_type: string | null
+          clinic_id: string
+          current_value: number | null
+          deviation_percentage: number | null
+          id: string
+          justification: string | null
+          message: string
+          threshold_value: number | null
+          triggered_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id: string
+          alert_level: string
+          budget_exercise_id: string
+          budget_item_id?: string | null
+          budget_item_type?: string | null
+          clinic_id: string
+          current_value?: number | null
+          deviation_percentage?: number | null
+          id?: string
+          justification?: string | null
+          message: string
+          threshold_value?: number | null
+          triggered_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_id?: string
+          alert_level?: string
+          budget_exercise_id?: string
+          budget_item_id?: string | null
+          budget_item_type?: string | null
+          clinic_id?: string
+          current_value?: number | null
+          deviation_percentage?: number | null
+          id?: string
+          justification?: string | null
+          message?: string
+          threshold_value?: number | null
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_alert_logs_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_alert_logs_budget_exercise_id_fkey"
+            columns: ["budget_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_alert_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_alerts: {
+        Row: {
+          alert_level: string
+          alert_type: string
+          budget_exercise_id: string
+          category_id: string | null
+          clinic_id: string
+          cost_center_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          notify_by_email: boolean
+          notify_by_system: boolean
+          notify_users: string[] | null
+          threshold_amount: number | null
+          threshold_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          alert_level: string
+          alert_type: string
+          budget_exercise_id: string
+          category_id?: string | null
+          clinic_id: string
+          cost_center_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notify_by_email?: boolean
+          notify_by_system?: boolean
+          notify_users?: string[] | null
+          threshold_amount?: number | null
+          threshold_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alert_level?: string
+          alert_type?: string
+          budget_exercise_id?: string
+          category_id?: string | null
+          clinic_id?: string
+          cost_center_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notify_by_email?: boolean
+          notify_by_system?: boolean
+          notify_users?: string[] | null
+          threshold_amount?: number | null
+          threshold_percentage?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_alerts_budget_exercise_id_fkey"
+            columns: ["budget_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_alerts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_alerts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_alerts_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "union_cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_approvers: {
+        Row: {
+          approval_status: string | null
+          approved_at: string | null
+          budget_exercise_id: string
+          created_at: string
+          id: string
+          is_required: boolean
+          notes: string | null
+          rejection_reason: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          budget_exercise_id: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          rejection_reason?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          budget_exercise_id?: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          rejection_reason?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_approvers_budget_exercise_id_fkey"
+            columns: ["budget_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_audit_logs: {
+        Row: {
+          action: string
+          budget_exercise_id: string | null
+          clinic_id: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          performed_at: string
+          performed_by: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          budget_exercise_id?: string | null
+          clinic_id: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          performed_at?: string
+          performed_by: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          budget_exercise_id?: string | null
+          clinic_id?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          performed_at?: string
+          performed_by?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_audit_logs_budget_exercise_id_fkey"
+            columns: ["budget_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_execution: {
+        Row: {
+          budget_version_id: string
+          calculated_at: string
+          clinic_id: string
+          closed_at: string | null
+          closed_by: string | null
+          expense_deviation: number | null
+          expense_deviation_percentage: number | null
+          id: string
+          is_closed: boolean
+          notes: string | null
+          reference_month: number
+          reference_year: number
+          result_budgeted: number | null
+          result_realized: number | null
+          revenue_deviation: number | null
+          revenue_deviation_percentage: number | null
+          total_expense_budgeted: number
+          total_expense_realized: number
+          total_revenue_budgeted: number
+          total_revenue_realized: number
+          updated_at: string
+        }
+        Insert: {
+          budget_version_id: string
+          calculated_at?: string
+          clinic_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          expense_deviation?: number | null
+          expense_deviation_percentage?: number | null
+          id?: string
+          is_closed?: boolean
+          notes?: string | null
+          reference_month: number
+          reference_year: number
+          result_budgeted?: number | null
+          result_realized?: number | null
+          revenue_deviation?: number | null
+          revenue_deviation_percentage?: number | null
+          total_expense_budgeted?: number
+          total_expense_realized?: number
+          total_revenue_budgeted?: number
+          total_revenue_realized?: number
+          updated_at?: string
+        }
+        Update: {
+          budget_version_id?: string
+          calculated_at?: string
+          clinic_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          expense_deviation?: number | null
+          expense_deviation_percentage?: number | null
+          id?: string
+          is_closed?: boolean
+          notes?: string | null
+          reference_month?: number
+          reference_year?: number
+          result_budgeted?: number | null
+          result_realized?: number | null
+          revenue_deviation?: number | null
+          revenue_deviation_percentage?: number | null
+          total_expense_budgeted?: number
+          total_expense_realized?: number
+          total_revenue_budgeted?: number
+          total_revenue_realized?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_execution_budget_version_id_fkey"
+            columns: ["budget_version_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_execution_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_exercises: {
+        Row: {
+          approved_at: string | null
+          base_member_count: number | null
+          base_year: number | null
+          clinic_id: string
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string
+          fiscal_year_start_day: number
+          fiscal_year_start_month: number
+          growth_rate_expense: number | null
+          growth_rate_revenue: number | null
+          id: string
+          inflation_rate: number | null
+          name: string
+          notes: string | null
+          projected_member_count: number | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          base_member_count?: number | null
+          base_year?: number | null
+          clinic_id: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          fiscal_year_start_day?: number
+          fiscal_year_start_month?: number
+          growth_rate_expense?: number | null
+          growth_rate_revenue?: number | null
+          id?: string
+          inflation_rate?: number | null
+          name: string
+          notes?: string | null
+          projected_member_count?: number | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          base_member_count?: number | null
+          base_year?: number | null
+          clinic_id?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          fiscal_year_start_day?: number
+          fiscal_year_start_month?: number
+          growth_rate_expense?: number | null
+          growth_rate_revenue?: number | null
+          id?: string
+          inflation_rate?: number | null
+          name?: string
+          notes?: string | null
+          projected_member_count?: number | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_exercises_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_expenses: {
+        Row: {
+          budget_limit: number | null
+          budget_version_id: string
+          category_id: string | null
+          chart_account_id: string | null
+          clinic_id: string
+          cost_center_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_nature: string | null
+          expense_type: string
+          growth_rate_applied: number | null
+          historical_basis_end_date: string | null
+          historical_basis_start_date: string | null
+          id: string
+          is_locked: boolean
+          is_recurring: boolean
+          month_01: number
+          month_02: number
+          month_03: number
+          month_04: number
+          month_05: number
+          month_06: number
+          month_07: number
+          month_08: number
+          month_09: number
+          month_10: number
+          month_11: number
+          month_12: number
+          premise_description: string | null
+          requires_approval_above: number | null
+          supplier_id: string | null
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          budget_limit?: number | null
+          budget_version_id: string
+          category_id?: string | null
+          chart_account_id?: string | null
+          clinic_id: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expense_nature?: string | null
+          expense_type: string
+          growth_rate_applied?: number | null
+          historical_basis_end_date?: string | null
+          historical_basis_start_date?: string | null
+          id?: string
+          is_locked?: boolean
+          is_recurring?: boolean
+          month_01?: number
+          month_02?: number
+          month_03?: number
+          month_04?: number
+          month_05?: number
+          month_06?: number
+          month_07?: number
+          month_08?: number
+          month_09?: number
+          month_10?: number
+          month_11?: number
+          month_12?: number
+          premise_description?: string | null
+          requires_approval_above?: number | null
+          supplier_id?: string | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          budget_limit?: number | null
+          budget_version_id?: string
+          category_id?: string | null
+          chart_account_id?: string | null
+          clinic_id?: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_nature?: string | null
+          expense_type?: string
+          growth_rate_applied?: number | null
+          historical_basis_end_date?: string | null
+          historical_basis_start_date?: string | null
+          id?: string
+          is_locked?: boolean
+          is_recurring?: boolean
+          month_01?: number
+          month_02?: number
+          month_03?: number
+          month_04?: number
+          month_05?: number
+          month_06?: number
+          month_07?: number
+          month_08?: number
+          month_09?: number
+          month_10?: number
+          month_11?: number
+          month_12?: number
+          premise_description?: string | null
+          requires_approval_above?: number | null
+          supplier_id?: string | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_expenses_budget_version_id_fkey"
+            columns: ["budget_version_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_expenses_chart_account_id_fkey"
+            columns: ["chart_account_id"]
+            isOneToOne: false
+            referencedRelation: "union_chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_expenses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_expenses_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "union_cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "union_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_replanning: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          budget_exercise_id: string
+          clinic_id: string
+          difference: number | null
+          expense_id: string | null
+          id: string
+          item_type: string
+          justification: string
+          new_value: number
+          original_month: number
+          original_value: number
+          rejection_reason: string | null
+          requested_at: string
+          requested_by: string
+          revenue_id: string | null
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_exercise_id: string
+          clinic_id: string
+          difference?: number | null
+          expense_id?: string | null
+          id?: string
+          item_type: string
+          justification: string
+          new_value: number
+          original_month: number
+          original_value: number
+          rejection_reason?: string | null
+          requested_at?: string
+          requested_by: string
+          revenue_id?: string | null
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_exercise_id?: string
+          clinic_id?: string
+          difference?: number | null
+          expense_id?: string | null
+          id?: string
+          item_type?: string
+          justification?: string
+          new_value?: number
+          original_month?: number
+          original_value?: number
+          rejection_reason?: string | null
+          requested_at?: string
+          requested_by?: string
+          revenue_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_replanning_budget_exercise_id_fkey"
+            columns: ["budget_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_replanning_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_replanning_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_replanning_revenue_id_fkey"
+            columns: ["revenue_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_revenues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_revenues: {
+        Row: {
+          budget_version_id: string
+          category_id: string | null
+          chart_account_id: string | null
+          clinic_id: string
+          cost_center_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          growth_rate_applied: number | null
+          historical_basis_end_date: string | null
+          historical_basis_start_date: string | null
+          id: string
+          is_locked: boolean
+          is_recurring: boolean
+          month_01: number
+          month_02: number
+          month_03: number
+          month_04: number
+          month_05: number
+          month_06: number
+          month_07: number
+          month_08: number
+          month_09: number
+          month_10: number
+          month_11: number
+          month_12: number
+          premise_description: string | null
+          revenue_type: string
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          budget_version_id: string
+          category_id?: string | null
+          chart_account_id?: string | null
+          clinic_id: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          growth_rate_applied?: number | null
+          historical_basis_end_date?: string | null
+          historical_basis_start_date?: string | null
+          id?: string
+          is_locked?: boolean
+          is_recurring?: boolean
+          month_01?: number
+          month_02?: number
+          month_03?: number
+          month_04?: number
+          month_05?: number
+          month_06?: number
+          month_07?: number
+          month_08?: number
+          month_09?: number
+          month_10?: number
+          month_11?: number
+          month_12?: number
+          premise_description?: string | null
+          revenue_type: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          budget_version_id?: string
+          category_id?: string | null
+          chart_account_id?: string | null
+          clinic_id?: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          growth_rate_applied?: number | null
+          historical_basis_end_date?: string | null
+          historical_basis_start_date?: string | null
+          id?: string
+          is_locked?: boolean
+          is_recurring?: boolean
+          month_01?: number
+          month_02?: number
+          month_03?: number
+          month_04?: number
+          month_05?: number
+          month_06?: number
+          month_07?: number
+          month_08?: number
+          month_09?: number
+          month_10?: number
+          month_11?: number
+          month_12?: number
+          premise_description?: string | null
+          revenue_type?: string
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_revenues_budget_version_id_fkey"
+            columns: ["budget_version_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_revenues_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_revenues_chart_account_id_fkey"
+            columns: ["chart_account_id"]
+            isOneToOne: false
+            referencedRelation: "union_chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_revenues_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_budget_revenues_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "union_cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_budget_versions: {
+        Row: {
+          budget_exercise_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_current: boolean
+          notes: string | null
+          version_name: string | null
+          version_number: number
+        }
+        Insert: {
+          budget_exercise_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          version_name?: string | null
+          version_number?: number
+        }
+        Update: {
+          budget_exercise_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          version_name?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_budget_versions_budget_exercise_id_fkey"
+            columns: ["budget_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "union_budget_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_cash_flow_history: {
         Row: {
           amount: number
