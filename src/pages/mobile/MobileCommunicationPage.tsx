@@ -5,12 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase } from "@/components/ui/popup-base";
 import {
   ArrowLeft,
   Image,
@@ -133,26 +128,29 @@ function GaleriaContent() {
         ))}
       </div>
 
-      {/* Image Preview Dialog */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          {selectedImage && (
-            <>
-              <img 
-                src={selectedImage.image_url} 
-                alt={selectedImage.title} 
-                className="w-full" 
-              />
-              <div className="p-4">
-                <h4 className="font-semibold">{selectedImage.title}</h4>
-                {selectedImage.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{selectedImage.description}</p>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Image Preview Popup */}
+      <PopupBase 
+        open={!!selectedImage} 
+        onClose={() => setSelectedImage(null)}
+        maxWidth="md"
+        className="p-0 overflow-hidden"
+      >
+        {selectedImage && (
+          <>
+            <img 
+              src={selectedImage.image_url} 
+              alt={selectedImage.title} 
+              className="w-full" 
+            />
+            <div className="p-4">
+              <h4 className="font-semibold">{selectedImage.title}</h4>
+              {selectedImage.description && (
+                <p className="text-sm text-muted-foreground mt-1">{selectedImage.description}</p>
+              )}
+            </div>
+          </>
+        )}
+      </PopupBase>
     </div>
   );
 }
@@ -500,17 +498,17 @@ export default function MobileCommunicationPage() {
               onClick={() => navigate("/app/home")}
               className="text-white hover:bg-white/20"
             >
-              <ArrowLeft className="h-6 w-6" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <selectedMedia.icon className="h-6 w-6" />
-              <h1 className="text-xl font-bold">{selectedMedia.title}</h1>
+            <div className="flex items-center gap-2">
+              <selectedMedia.icon className="h-5 w-5" />
+              <h1 className="font-bold text-lg">{selectedMedia.title}</h1>
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <ScrollArea className="flex-1 overflow-y-auto">
+        <ScrollArea className="flex-1">
           <div className="p-4">
             {renderMediaContent()}
           </div>
@@ -519,11 +517,11 @@ export default function MobileCommunicationPage() {
     );
   }
 
-  // Media types list view
+  // Main menu view
   return (
     <div className="min-h-screen bg-muted flex flex-col">
       {/* Header */}
-      <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
+      <header className="bg-primary text-white p-4 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -531,26 +529,26 @@ export default function MobileCommunicationPage() {
             onClick={() => navigate("/app/home")}
             className="text-white hover:bg-white/20"
           >
-            <ArrowLeft className="h-6 w-6" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">Comunicação</h1>
+          <h1 className="font-bold text-lg">Comunicação</h1>
         </div>
       </header>
 
-      {/* Media Types Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-2 gap-3">
+      {/* Media type cards */}
+      <div className="flex-1 p-4">
+        <div className="grid grid-cols-2 gap-4">
           {mediaTypes.map((media) => (
             <Card
               key={media.id}
-              className="border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => navigate(`/app/comunicacao/${media.id}`)}
             >
-              <CardContent className="p-4 text-center">
-                <div className={`w-16 h-16 mx-auto ${media.color} rounded-full flex items-center justify-center mb-3`}>
+              <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                <div className={`w-16 h-16 ${media.color} rounded-full flex items-center justify-center mb-3`}>
                   <media.icon className="h-8 w-8 text-white" />
                 </div>
-                <h4 className="font-semibold text-sm">{media.title}</h4>
+                <h3 className="font-semibold text-sm">{media.title}</h3>
               </CardContent>
             </Card>
           ))}

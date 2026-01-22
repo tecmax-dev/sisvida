@@ -15,12 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -270,73 +265,71 @@ export default function InsurancePage() {
       </div>
 
       {/* Dialog for Create/Edit */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingInsurance ? "Editar Convênio" : "Cadastrar Convênio"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSaveInsurance} className="space-y-4">
-            <div>
-              <Label htmlFor="insuranceName">Nome *</Label>
-              <Input
-                id="insuranceName"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ex: Unimed"
-                className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
-              />
-              {formErrors.name && (
-                <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
-              )}
+      <PopupBase open={dialogOpen} onClose={handleCloseDialog}>
+        <PopupHeader>
+          <PopupTitle>
+            {editingInsurance ? "Editar Convênio" : "Cadastrar Convênio"}
+          </PopupTitle>
+        </PopupHeader>
+        <form onSubmit={handleSaveInsurance} className="space-y-4">
+          <div>
+            <Label htmlFor="insuranceName">Nome *</Label>
+            <Input
+              id="insuranceName"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="Ex: Unimed"
+              className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
+            />
+            {formErrors.name && (
+              <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="insuranceCode">Código</Label>
+            <Input
+              id="insuranceCode"
+              value={formCode}
+              onChange={(e) => setFormCode(e.target.value)}
+              placeholder="Código interno (opcional)"
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label>Cor do convênio</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {PRESET_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setFormColor(color)}
+                  className={cn(
+                    "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
+                    formColor === color 
+                      ? "border-foreground ring-2 ring-offset-2 ring-offset-background" 
+                      : "border-transparent"
+                  )}
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+              ))}
             </div>
-            <div>
-              <Label htmlFor="insuranceCode">Código</Label>
-              <Input
-                id="insuranceCode"
-                value={formCode}
-                onChange={(e) => setFormCode(e.target.value)}
-                placeholder="Código interno (opcional)"
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label>Cor do convênio</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormColor(color)}
-                    className={cn(
-                      "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
-                      formColor === color 
-                        ? "border-foreground ring-2 ring-offset-2 ring-offset-background" 
-                        : "border-transparent"
-                    )}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseDialog}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingInsurance ? "Salvar" : "Cadastrar"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+          <PopupFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseDialog}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingInsurance ? "Salvar" : "Cadastrar"}
+            </Button>
+          </PopupFooter>
+        </form>
+      </PopupBase>
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">

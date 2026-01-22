@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -315,205 +308,203 @@ export function SendBoletoEmailDialog({
   const selectedWithEmail = selectedIds.size - withoutEmailCount;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-blue-600" />
-            Enviar Boletos por Email
-          </DialogTitle>
-          <DialogDescription>
-            {isSingleMode 
-              ? "O email será enviado para o endereço cadastrado da empresa, ou você pode informar um email alternativo."
-              : "Os emails serão enviados automaticamente para o endereço cadastrado de cada empresa."}
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-blue-600" />
+          Enviar Boletos por Email
+        </PopupTitle>
+        <PopupDescription>
+          {isSingleMode 
+            ? "O email será enviado para o endereço cadastrado da empresa, ou você pode informar um email alternativo."
+            : "Os emails serão enviados automaticamente para o endereço cadastrado de cada empresa."}
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="space-y-4">
-          {/* Only show override email field for single contribution mode */}
-          {isSingleMode && (
-            <div className="space-y-2">
-              <Label htmlFor="overrideEmail">Email alternativo (opcional)</Label>
-              <Input
-                id="overrideEmail"
-                type="email"
-                placeholder={eligibleContributions.find(c => selectedIds.has(c.id))?.employers?.email || "email@empresa.com"}
-                value={overrideEmail}
-                onChange={(e) => setOverrideEmail(e.target.value)}
-                disabled={sending}
-              />
-              <p className="text-xs text-muted-foreground">
-                Deixe em branco para usar o email cadastrado da empresa
-              </p>
-            </div>
-          )}
-
+      <div className="space-y-4">
+        {/* Only show override email field for single contribution mode */}
+        {isSingleMode && (
           <div className="space-y-2">
-            <Label htmlFor="ccEmail">Email em cópia (CC)</Label>
+            <Label htmlFor="overrideEmail">Email alternativo (opcional)</Label>
             <Input
-              id="ccEmail"
+              id="overrideEmail"
               type="email"
-              placeholder="copia@outro.com (opcional)"
-              value={ccEmail}
-              onChange={(e) => setCcEmail(e.target.value)}
+              placeholder={eligibleContributions.find(c => selectedIds.has(c.id))?.employers?.email || "email@empresa.com"}
+              value={overrideEmail}
+              onChange={(e) => setOverrideEmail(e.target.value)}
               disabled={sending}
             />
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para usar o email cadastrado da empresa
+            </p>
           </div>
+        )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Boletos Disponíveis</Label>
-              {eligibleContributions.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  className="text-xs h-7"
-                  disabled={sending}
-                >
-                  {selectedIds.size === eligibleContributions.length
-                    ? "Desmarcar todos"
-                    : "Selecionar todos"}
-                </Button>
-              )}
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="ccEmail">Email em cópia (CC)</Label>
+          <Input
+            id="ccEmail"
+            type="email"
+            placeholder="copia@outro.com (opcional)"
+            value={ccEmail}
+            onChange={(e) => setCcEmail(e.target.value)}
+            disabled={sending}
+          />
+        </div>
 
-            {eligibleContributions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Nenhum boleto disponível para envio.
-                <br />
-                <span className="text-xs">
-                  (Boletos ou links de valor não encontrados)
-                </span>
-              </p>
-            ) : (
-              <ScrollArea className="h-[180px] border rounded-md">
-                <div className="p-2 space-y-2">
-                  {eligibleContributions.map((contrib) => {
-                    const monthName = format(
-                      new Date(contrib.competence_year, contrib.competence_month - 1),
-                      "MMM/yy",
-                      { locale: ptBR }
-                    );
-                    return (
-                      <div
-                        key={contrib.id}
-                        className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
-                          selectedIds.has(contrib.id)
-                            ? "bg-primary/5 border-primary"
-                            : "hover:bg-muted/50"
-                        } ${sending ? "pointer-events-none opacity-60" : ""}`}
-                        onClick={() => !sending && handleToggle(contrib.id)}
-                      >
-                        <Checkbox
-                          checked={selectedIds.has(contrib.id)}
-                          onCheckedChange={() => handleToggle(contrib.id)}
-                          className="mt-0.5"
-                          disabled={sending}
-                        />
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <p className="text-sm font-medium leading-tight">
-                            {contrib.employers?.name || "Empresa"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {monthName} • Venc: {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yy")}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className="text-sm font-semibold whitespace-nowrap">
-                            {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
-                              ? "Sem valor"
-                              : formatCurrency(contrib.value)}
-                          </span>
-                          <Badge
-                            variant={
-                              contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
-                                ? "secondary"
-                                : contrib.status === "overdue" 
-                                  ? "destructive" 
-                                  : "outline"
-                            }
-                            className="text-[10px] px-1.5"
-                          >
-                            {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
-                              ? "Aguardando"
-                              : contrib.status === "overdue" 
-                                ? "Vencido" 
-                                : "Pendente"}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Boletos Disponíveis</Label>
+            {eligibleContributions.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                className="text-xs h-7"
+                disabled={sending}
+              >
+                {selectedIds.size === eligibleContributions.length
+                  ? "Desmarcar todos"
+                  : "Selecionar todos"}
+              </Button>
             )}
           </div>
 
-          {/* Selection summary and progress */}
-          {selectedIds.size > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{selectedIds.size} boleto(s) selecionado(s)</span>
-                <span className="font-medium text-foreground">
-                  Total: {formatCurrency(totalValue)}
-                </span>
+          {eligibleContributions.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Nenhum boleto disponível para envio.
+              <br />
+              <span className="text-xs">
+                (Boletos ou links de valor não encontrados)
+              </span>
+            </p>
+          ) : (
+            <ScrollArea className="h-[180px] border rounded-md">
+              <div className="p-2 space-y-2">
+                {eligibleContributions.map((contrib) => {
+                  const monthName = format(
+                    new Date(contrib.competence_year, contrib.competence_month - 1),
+                    "MMM/yy",
+                    { locale: ptBR }
+                  );
+                  return (
+                    <div
+                      key={contrib.id}
+                      className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                        selectedIds.has(contrib.id)
+                          ? "bg-primary/5 border-primary"
+                          : "hover:bg-muted/50"
+                      } ${sending ? "pointer-events-none opacity-60" : ""}`}
+                      onClick={() => !sending && handleToggle(contrib.id)}
+                    >
+                      <Checkbox
+                        checked={selectedIds.has(contrib.id)}
+                        onCheckedChange={() => handleToggle(contrib.id)}
+                        className="mt-0.5"
+                        disabled={sending}
+                      />
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-sm font-medium leading-tight">
+                          {contrib.employers?.name || "Empresa"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {monthName} • Venc: {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yy")}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-sm font-semibold whitespace-nowrap">
+                          {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                            ? "Sem valor"
+                            : formatCurrency(contrib.value)}
+                        </span>
+                        <Badge
+                          variant={
+                            contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                              ? "secondary"
+                              : contrib.status === "overdue" 
+                                ? "destructive" 
+                                : "outline"
+                          }
+                          className="text-[10px] px-1.5"
+                        >
+                          {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                            ? "Aguardando"
+                            : contrib.status === "overdue" 
+                              ? "Vencido" 
+                              : "Pendente"}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              
-              {/* Warning for items without email */}
-              {withoutEmailCount > 0 && (
-                <p className="text-xs text-amber-600 text-center">
-                  ⚠️ {withoutEmailCount} empresa(s) sem email cadastrado (não receberão)
-                </p>
-              )}
-              
-              {/* Info about how emails will be sent */}
-              {!isSingleMode && selectedWithEmail > 0 && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {selectedWithEmail} email(s) serão enviados para os endereços cadastrados
-                </p>
-              )}
-              
-              {/* Progress bar during sending */}
-              {sending && sendProgress.total > 0 && (
-                <div className="space-y-1">
-                  <Progress 
-                    value={(sendProgress.current / sendProgress.total) * 100} 
-                    className="h-2"
-                  />
-                  <p className="text-xs text-muted-foreground text-center">
-                    Enviando {sendProgress.current} de {sendProgress.total}... 
-                    ({sendProgress.sent} sucesso, {sendProgress.errors} erro)
-                  </p>
-                </div>
-              )}
-            </div>
+            </ScrollArea>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSend}
-            disabled={sending || selectedIds.size === 0 || (selectedWithEmail === 0 && !overrideEmail.trim())}
-            className="gap-2"
-          >
-            {sending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4" />
-                Enviar Email
-              </>
+        {/* Selection summary and progress */}
+        {selectedIds.size > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{selectedIds.size} boleto(s) selecionado(s)</span>
+              <span className="font-medium text-foreground">
+                Total: {formatCurrency(totalValue)}
+              </span>
+            </div>
+            
+            {/* Warning for items without email */}
+            {withoutEmailCount > 0 && (
+              <p className="text-xs text-amber-600 text-center">
+                ⚠️ {withoutEmailCount} empresa(s) sem email cadastrado (não receberão)
+              </p>
             )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            
+            {/* Info about how emails will be sent */}
+            {!isSingleMode && selectedWithEmail > 0 && (
+              <p className="text-xs text-muted-foreground text-center">
+                {selectedWithEmail} email(s) serão enviados para os endereços cadastrados
+              </p>
+            )}
+            
+            {/* Progress bar during sending */}
+            {sending && sendProgress.total > 0 && (
+              <div className="space-y-1">
+                <Progress 
+                  value={(sendProgress.current / sendProgress.total) * 100} 
+                  className="h-2"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Enviando {sendProgress.current} de {sendProgress.total} lote(s)...
+                  {sendProgress.sent > 0 && ` (${sendProgress.sent} enviado(s))`}
+                  {sendProgress.errors > 0 && ` (${sendProgress.errors} erro(s))`}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSend}
+          disabled={sending || selectedIds.size === 0}
+        >
+          {sending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Enviar {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+            </>
+          )}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
