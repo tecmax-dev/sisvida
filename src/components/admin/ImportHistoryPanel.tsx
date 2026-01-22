@@ -11,16 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -283,21 +274,15 @@ export function ImportHistoryPanel({ clinicId }: ImportHistoryPanelProps) {
           </div>
         )}
 
-        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remover registro?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação irá remover apenas o registro do histórico. Os dados
-                importados não serão afetados.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}>Remover</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AlertPopup
+          open={!!deleteId}
+          onClose={() => setDeleteId(null)}
+          title="Remover registro?"
+          description="Esta ação irá remover apenas o registro do histórico. Os dados importados não serão afetados."
+          cancelText="Cancelar"
+          confirmText="Remover"
+          onConfirm={handleDelete}
+        />
       </CardContent>
     </Card>
   );
