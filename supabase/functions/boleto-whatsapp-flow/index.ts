@@ -582,11 +582,39 @@ async function handleBoletoFlow(
   session: BoletoSession
 ): Promise<{ response: string; newState?: BoletoState }> {
   const text = messageText.trim().toLowerCase();
+  const normalizedText = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
   
   console.log(`[boleto-flow] State: ${session.state}, Message: "${messageText}"`);
 
-  // Check for menu/restart command
-  if (/^(menu|voltar|sair|cancelar)$/i.test(text)) {
+  // MENU should restart the boleto flow (not cancel it)
+  const isMenuCommand = /^(menu|reiniciar|voltar|inicio|comecar|começar)$/i.test(normalizedText);
+  const isCancelCommand = /^(sair|cancelar)$/i.test(normalizedText);
+
+  if (isMenuCommand) {
+    await updateSession(supabase, session.id, {
+      state: 'SELECT_BOLETO_TYPE',
+      employer_id: null,
+      employer_cnpj: null,
+      employer_name: null,
+      contribution_id: null,
+      contribution_type_id: null,
+      competence_month: null,
+      competence_year: null,
+      value_cents: null,
+      new_due_date: null,
+      boleto_type: null,
+      available_contributions: null,
+      flow_context: null,
+    });
+
+    return { response: MESSAGES.welcome, newState: 'SELECT_BOLETO_TYPE' };
+  }
+
+  if (isCancelCommand) {
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
     return { response: MESSAGES.cancelled, newState: 'FINISHED' };
   }
 
