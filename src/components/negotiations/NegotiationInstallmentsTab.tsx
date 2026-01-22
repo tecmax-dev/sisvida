@@ -36,7 +36,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Handshake,
+  FileText,
 } from "lucide-react";
+import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -107,6 +109,7 @@ export default function NegotiationInstallmentsTab({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [internalYearFilter, setInternalYearFilter] = useState(yearFilter);
+  const [generatingBoleto, setGeneratingBoleto] = useState<string | null>(null);
 
   useEffect(() => {
     if (clinicId) {
@@ -148,6 +151,46 @@ export default function NegotiationInstallmentsTab({
       console.error("Error fetching negotiation installments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateBoleto = async (installment: NegotiationInstallment) => {
+    if (!installment.negotiation?.employers) {
+      toast.error("Dados da empresa não encontrados");
+      return;
+    }
+
+    setGeneratingBoleto(installment.id);
+    try {
+      const employer = installment.negotiation.employers;
+      const valueInCents = Math.round(Number(installment.value) * 100);
+      const description = installment.installment_number === 0 
+        ? `Entrada - ${installment.negotiation.negotiation_code}`
+        : `Parcela ${installment.installment_number} - ${installment.negotiation.negotiation_code}`;
+
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "createInvoice",
+          installmentId: installment.id,
+          clientId: employer.id,
+          clientName: employer.name,
+          clientDocument: employer.cnpj,
+          value: valueInCents,
+          dueDate: installment.due_date,
+          description,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro ao gerar boleto");
+
+      toast.success("Boleto gerado com sucesso!");
+      await fetchInstallments();
+    } catch (error: any) {
+      console.error("Erro ao gerar boleto:", error);
+      toast.error(error.message || "Erro ao gerar boleto");
+    } finally {
+      setGeneratingBoleto(null);
     }
   };
 
@@ -316,7 +359,9 @@ export default function NegotiationInstallmentsTab({
                 paginatedInstallments.map((inst) => {
                   const statusConfig = STATUS_CONFIG[inst.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
                   const StatusIcon = statusConfig.icon;
-                  const totalInstallments = installments.filter(i => i.negotiation_id === inst.negotiation_id).length;
+                  const allInstallments = installments.filter(i => i.negotiation_id === inst.negotiation_id);
+                  const regularInstallments = allInstallments.filter(i => i.installment_number > 0).length;
+                  const isDownPayment = inst.installment_number === 0;
 
                   return (
                     <TableRow key={inst.id} className="hover:bg-muted/30">
@@ -349,7 +394,11 @@ export default function NegotiationInstallmentsTab({
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {inst.installment_number}/{totalInstallments}
+                        {isDownPayment ? (
+                          <Badge variant="secondary" className="text-xs">Entrada</Badge>
+                        ) : (
+                          `${inst.installment_number}/${regularInstallments}`
+                        )}
                       </TableCell>
                       <TableCell>
                         {format(parseDateOnlyToLocalNoon(inst.due_date), "dd/MM/yyyy")}
@@ -379,9 +428,33 @@ export default function NegotiationInstallmentsTab({
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Gerado
                           </Badge>
+                        ) : inst.status !== "paid" && inst.status !== "cancelled" ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => handleGenerateBoleto(inst)}
+                                  disabled={generatingBoleto === inst.id}
+                                >
+                                  {generatingBoleto === inst.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <FileText className="h-3 w-3" />
+                                  )}
+                                  Gerar
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Gerar boleto para esta parcela</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : (
                           <Badge variant="outline" className="text-xs text-muted-foreground">
-                            Não gerado
+                            -
                           </Badge>
                         )}
                       </TableCell>
