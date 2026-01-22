@@ -11,6 +11,7 @@ import { LoadingFallback } from "@/components/ui/loading-fallback";
 import { Button } from "./components/ui/button";
 import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDashboard";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { UnionBudgetLegacyRedirect } from "@/components/routing/UnionBudgetLegacyRedirect";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -488,6 +489,9 @@ const App = () => (
                   }
                 >
                   <Route index element={<UnionDashboard />} />
+                  {/* Alias de rotas antigas (evita 404 em links legados) */}
+                  <Route path="orcamento" element={<Navigate to="/union/financeiro/orcamento" replace />} />
+                  <Route path="orcamento/:id" element={<UnionBudgetLegacyRedirect />} />
                   <Route path="planos" element={<UnionPlansPage />} />
                   <Route path="empresas" element={<UnionEmployersPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
