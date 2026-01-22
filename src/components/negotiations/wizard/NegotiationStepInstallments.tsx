@@ -67,10 +67,25 @@ export default function NegotiationStepInstallments({
   const isDownPaymentValid = !settings.require_down_payment || downPayment >= minDownPayment;
 
   // Generate installments preview with custom dates support
+  // When there's a down payment, first installment is 30 days after down payment date
   const generateInstallments = () => {
     const installments = [];
+    
+    // Down payment date defaults to 2 days from now if not customized
+    const downPaymentDate = customDates[0] || addDays(new Date(), 2);
+    
     for (let i = 1; i <= installmentsCount; i++) {
-      const autoDate = addMonths(firstDueDate, i - 1);
+      let autoDate: Date;
+      
+      if (downPayment > 0) {
+        // When there's a down payment, first installment is 30 days after down payment
+        // Subsequent installments are monthly from the first installment date
+        autoDate = addMonths(downPaymentDate, i);
+      } else {
+        // No down payment: use firstDueDate as reference
+        autoDate = addMonths(firstDueDate, i - 1);
+      }
+      
       const customDate = customDates[i];
       const isCustom = !!customDate;
       const dueDate = customDate || autoDate;
