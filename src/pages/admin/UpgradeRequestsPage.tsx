@@ -4,12 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Table,
   TableBody,
@@ -65,6 +60,7 @@ export default function UpgradeRequestsPage() {
   const [requests, setRequests] = useState<UpgradeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<UpgradeRequest | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
   const [processing, setProcessing] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -98,6 +94,18 @@ export default function UpgradeRequestsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenDialog = (request: UpgradeRequest) => {
+    setSelectedRequest(request);
+    setAdminNotes(request.admin_notes || "");
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setSelectedRequest(null);
+    setAdminNotes("");
   };
 
   const handleProcess = async (action: 'approved' | 'rejected') => {
@@ -139,8 +147,7 @@ export default function UpgradeRequestsPage() {
           : "A clínica será notificada sobre a decisão.",
       });
 
-      setSelectedRequest(null);
-      setAdminNotes("");
+      handleCloseDialog();
       fetchRequests();
     } catch (error: any) {
       toast({
@@ -318,7 +325,7 @@ export default function UpgradeRequestsPage() {
                       {request.status === 'pending' ? (
                         <Button
                           size="sm"
-                          onClick={() => setSelectedRequest(request)}
+                          onClick={() => handleOpenDialog(request)}
                         >
                           Processar
                         </Button>
@@ -326,7 +333,7 @@ export default function UpgradeRequestsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedRequest(request)}
+                          onClick={() => handleOpenDialog(request)}
                         >
                           Ver detalhes
                         </Button>
@@ -341,100 +348,98 @@ export default function UpgradeRequestsPage() {
       </Card>
 
       {/* Process Dialog */}
-      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedRequest?.status === 'pending' 
-                ? 'Processar Solicitação' 
-                : 'Detalhes da Solicitação'}
-            </DialogTitle>
-          </DialogHeader>
+      <PopupBase open={dialogOpen} onClose={handleCloseDialog} maxWidth="lg">
+        <PopupHeader>
+          <PopupTitle>
+            {selectedRequest?.status === 'pending' 
+              ? 'Processar Solicitação' 
+              : 'Detalhes da Solicitação'}
+          </PopupTitle>
+        </PopupHeader>
 
-          {selectedRequest && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Clínica</p>
-                  <p className="font-medium">{selectedRequest.clinic?.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  {getStatusBadge(selectedRequest.status)}
-                </div>
+        {selectedRequest && (
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Clínica</p>
+                <p className="font-medium">{selectedRequest.clinic?.name}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Plano Atual</p>
-                  <p className="font-medium">
-                    {selectedRequest.current_plan?.name || "Sem plano"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Plano Solicitado</p>
-                  <p className="font-medium">{selectedRequest.requested_plan?.name}</p>
-                  <p className="text-sm text-primary">
-                    R$ {selectedRequest.requested_plan?.monthly_price}/mês
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                {getStatusBadge(selectedRequest.status)}
               </div>
-
-              {selectedRequest.reason && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Motivo da solicitação</p>
-                  <p className="text-sm bg-muted p-3 rounded-lg mt-1">
-                    {selectedRequest.reason}
-                  </p>
-                </div>
-              )}
-
-              {selectedRequest.status === 'pending' ? (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Notas do admin (opcional)</p>
-                  <Textarea
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Adicione observações sobre esta decisão..."
-                    rows={3}
-                  />
-                </div>
-              ) : (
-                selectedRequest.admin_notes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Notas do admin</p>
-                    <p className="text-sm bg-muted p-3 rounded-lg mt-1">
-                      {selectedRequest.admin_notes}
-                    </p>
-                  </div>
-                )
-              )}
-
-              {selectedRequest.status === 'pending' && (
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleProcess('rejected')}
-                    disabled={processing}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Rejeitar
-                  </Button>
-                  <Button
-                    onClick={() => handleProcess('approved')}
-                    disabled={processing}
-                  >
-                    {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    <Check className="h-4 w-4 mr-2" />
-                    Aprovar Upgrade
-                  </Button>
-                </div>
-              )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Plano Atual</p>
+                <p className="font-medium">
+                  {selectedRequest.current_plan?.name || "Sem plano"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Plano Solicitado</p>
+                <p className="font-medium">{selectedRequest.requested_plan?.name}</p>
+                <p className="text-sm text-primary">
+                  R$ {selectedRequest.requested_plan?.monthly_price}/mês
+                </p>
+              </div>
+            </div>
+
+            {selectedRequest.reason && (
+              <div>
+                <p className="text-sm text-muted-foreground">Motivo da solicitação</p>
+                <p className="text-sm bg-muted p-3 rounded-lg mt-1">
+                  {selectedRequest.reason}
+                </p>
+              </div>
+            )}
+
+            {selectedRequest.status === 'pending' ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Notas do admin (opcional)</p>
+                <Textarea
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Adicione observações sobre esta decisão..."
+                  rows={3}
+                />
+              </div>
+            ) : (
+              selectedRequest.admin_notes && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Notas do admin</p>
+                  <p className="text-sm bg-muted p-3 rounded-lg mt-1">
+                    {selectedRequest.admin_notes}
+                  </p>
+                </div>
+              )
+            )}
+
+            {selectedRequest.status === 'pending' && (
+              <PopupFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => handleProcess('rejected')}
+                  disabled={processing}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Rejeitar
+                </Button>
+                <Button
+                  onClick={() => handleProcess('approved')}
+                  disabled={processing}
+                >
+                  {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Check className="h-4 w-4 mr-2" />
+                  Aprovar Upgrade
+                </Button>
+              </PopupFooter>
+            )}
+          </div>
+        )}
+      </PopupBase>
     </div>
   );
 }
