@@ -84,37 +84,55 @@ export function CnpjEmployerSearch({
     }
   }, [clinicId]);
 
-  // Busca externa via API
+  // Busca externa via API (Receita Federal via BrasilAPI)
   const searchExternalCnpj = async (cnpj: string) => {
     const cleanCnpj = cnpj.replace(/\D/g, "");
     if (cleanCnpj.length !== 14) return;
 
     setLoading(true);
     setNotFound(false);
+    setShowDropdown(false);
 
     try {
+      console.log("Buscando CNPJ na Receita Federal:", cleanCnpj);
+      
       const { data, error } = await supabase.functions.invoke("lookup-cnpj", {
         body: { cnpj: cleanCnpj },
       });
 
-      if (error || !data?.ok) {
+      console.log("Resposta lookup-cnpj:", { data, error });
+
+      if (error) {
+        console.error("Erro na função:", error);
         setNotFound(true);
         setManualMode(true);
         return;
       }
 
-      const result = data.data;
+      if (!data?.ok) {
+        console.log("CNPJ não encontrado:", data?.error);
+        setNotFound(true);
+        setManualMode(true);
+        return;
+      }
+
+      // A resposta vem diretamente no data (não em data.data)
+      const result = data;
+      const endereco = [
+        result.logradouro,
+        result.numero,
+        result.bairro,
+        result.municipio,
+        result.uf,
+      ].filter(Boolean).join(", ");
+
+      console.log("CNPJ encontrado:", result.razao_social);
+
       onSelect({
         cnpj: cleanCnpj,
         razao_social: result.razao_social || "",
         nome_fantasia: result.nome_fantasia || "",
-        endereco: [
-          result.logradouro,
-          result.numero,
-          result.bairro,
-          result.municipio,
-          result.uf,
-        ].filter(Boolean).join(", "),
+        endereco,
       });
       
       setSelectedEmployer({
@@ -122,7 +140,7 @@ export function CnpjEmployerSearch({
         name: result.razao_social || "",
         cnpj: cleanCnpj,
         trade_name: result.nome_fantasia || "",
-        address: [result.logradouro, result.numero, result.bairro].filter(Boolean).join(", "),
+        address: endereco,
       });
     } catch (err) {
       console.error("Error fetching CNPJ:", err);
@@ -133,16 +151,53 @@ export function CnpjEmployerSearch({
     }
   };
 
+  // Efeito para busca automática quando não há resultados locais e CNPJ completo
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (value && !selectedEmployer) {
-        searchLocalEmployers(value);
-        setShowDropdown(true);
+    const timer = setTimeout(async () => {
+      if (value && !selectedEmployer && !loading) {
+        const cleanCnpj = value.replace(/\D/g, "");
+        
+        // Se é um CNPJ completo (14 dígitos)
+        if (cleanCnpj.length === 14) {
+          // Primeiro busca local
+          setLoading(true);
+          try {
+            const searchTerm = cleanCnpj;
+            
+            const { data, error } = await supabase
+              .from("employers")
+              .select("id, name, cnpj, trade_name, address")
+              .eq("clinic_id", clinicId || "")
+              .eq("is_active", true)
+              .or(`cnpj.ilike.%${searchTerm}%,name.ilike.%${value}%,trade_name.ilike.%${value}%`)
+              .limit(8);
+
+            if (!error && data && data.length > 0) {
+              setSuggestions(data);
+              setShowDropdown(true);
+              setLoading(false);
+            } else {
+              // Sem resultados locais - busca na Receita Federal
+              setSuggestions([]);
+              setShowDropdown(false);
+              // Não chamar setLoading(false) aqui - a busca externa vai gerenciar
+              searchExternalCnpj(cleanCnpj);
+            }
+          } catch (err) {
+            console.error("Error searching local employers:", err);
+            // Em caso de erro na busca local, tenta a Receita Federal
+            searchExternalCnpj(cleanCnpj);
+          }
+        } else if (value.length >= 3) {
+          // Busca local por nome/cnpj parcial
+          searchLocalEmployers(value);
+          setShowDropdown(true);
+        }
       }
-    }, 300);
+    }, 500);
 
     return () => clearTimeout(timer);
-  }, [value, searchLocalEmployers, selectedEmployer]);
+  }, [value, selectedEmployer, clinicId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
