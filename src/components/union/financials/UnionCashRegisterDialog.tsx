@@ -4,13 +4,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,141 +132,139 @@ export function UnionCashRegisterDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {register ? "Editar Conta Bancária" : "Nova Conta Bancária"}
-          </DialogTitle>
-          <DialogDescription>
-            Cadastre contas bancárias e caixas para controle financeiro sindical
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle>
+          {register ? "Editar Conta Bancária" : "Nova Conta Bancária"}
+        </PopupTitle>
+        <PopupDescription>
+          Cadastre contas bancárias e caixas para controle financeiro sindical
+        </PopupDescription>
+      </PopupHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="name">Nome da Conta *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ex: Conta Principal Sindical"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="type">Tipo</Label>
+            <Select
+              value={formData.type}
+              onValueChange={(value) => setFormData({ ...formData, type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex items-center gap-2">
+                      <option.icon className="h-4 w-4" />
+                      {option.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.type === "bank_account" && (
+            <>
+              <div>
+                <Label htmlFor="bank_name">Nome do Banco</Label>
+                <Input
+                  id="bank_name"
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                  placeholder="Ex: Banco do Brasil"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="agency">Agência</Label>
+                  <Input
+                    id="agency"
+                    value={formData.agency}
+                    onChange={(e) => setFormData({ ...formData, agency: e.target.value })}
+                    placeholder="0000"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="account_number">Conta</Label>
+                  <Input
+                    id="account_number"
+                    value={formData.account_number}
+                    onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                    placeholder="00000-0"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Nome da Conta *</Label>
+              <Label htmlFor="initial_balance">Saldo Inicial (R$)</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Conta Principal Sindical"
-                required
+                id="initial_balance"
+                value={formData.initial_balance}
+                onChange={(e) => setFormData({ ...formData, initial_balance: e.target.value })}
+                placeholder="0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor="type">Tipo</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center gap-2">
-                        <option.icon className="h-4 w-4" />
-                        {option.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.type === "bank_account" && (
-              <>
-                <div>
-                  <Label htmlFor="bank_name">Nome do Banco</Label>
-                  <Input
-                    id="bank_name"
-                    value={formData.bank_name}
-                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                    placeholder="Ex: Banco do Brasil"
+              <Label>Data do Saldo</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.initial_balance_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.initial_balance_date 
+                      ? format(formData.initial_balance_date, "dd/MM/yyyy", { locale: ptBR })
+                      : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.initial_balance_date}
+                    onSelect={(date) => date && setFormData({ ...formData, initial_balance_date: date })}
+                    initialFocus
+                    className="pointer-events-auto"
+                    locale={ptBR}
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="agency">Agência</Label>
-                    <Input
-                      id="agency"
-                      value={formData.agency}
-                      onChange={(e) => setFormData({ ...formData, agency: e.target.value })}
-                      placeholder="0000"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="account_number">Conta</Label>
-                    <Input
-                      id="account_number"
-                      value={formData.account_number}
-                      onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                      placeholder="00000-0"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="initial_balance">Saldo Inicial (R$)</Label>
-                <Input
-                  id="initial_balance"
-                  value={formData.initial_balance}
-                  onChange={(e) => setFormData({ ...formData, initial_balance: e.target.value })}
-                  placeholder="0,00"
-                />
-              </div>
-
-              <div>
-                <Label>Data do Saldo</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.initial_balance_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.initial_balance_date 
-                        ? format(formData.initial_balance_date, "dd/MM/yyyy", { locale: ptBR })
-                        : "Selecione a data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.initial_balance_date}
-                      onSelect={(date) => date && setFormData({ ...formData, initial_balance_date: date })}
-                      initialFocus
-                      className="pointer-events-auto"
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
+        </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <PopupFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Salvando..." : "Salvar"}
+          </Button>
+        </PopupFooter>
+      </form>
+    </PopupBase>
   );
 }

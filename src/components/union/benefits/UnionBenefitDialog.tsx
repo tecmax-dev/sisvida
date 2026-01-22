@@ -4,12 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -176,172 +171,77 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {benefit ? "Editar Benefício" : "Novo Benefício"}
-          </DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle>
+          {benefit ? "Editar Benefício" : "Novo Benefício"}
+        </PopupTitle>
+      </PopupHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Nome do Benefício *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Consultas Médicas" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="validity_days"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Validade (dias) *</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="1" max="365" {...field} />
-                    </FormControl>
-                    <FormDescription>Validade padrão das autorizações</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Descrição detalhada do benefício..." 
-                        rows={2}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-4">Dados do Convênio/Parceiro</h4>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="partner_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Convênio</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Clínica Popular" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="partner_cnpj"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CNPJ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="00.000.000/0001-00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="partner_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(00) 00000-0000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="partner_email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>E-mail</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="contato@convenio.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="partner_address"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Endereço</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Rua, número, cidade - UF" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Nome do Benefício *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Consultas Médicas" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
-              name="notes"
+              name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observações</FormLabel>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="validity_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Validade (dias) *</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="1" max="365" {...field} />
+                  </FormControl>
+                  <FormDescription>Validade padrão das autorizações</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Informações adicionais..." 
+                      placeholder="Descrição detalhada do benefício..." 
                       rows={2}
                       {...field} 
                     />
@@ -350,19 +250,112 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
                 </FormItem>
               )}
             />
+          </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {benefit ? "Salvar" : "Criar Benefício"}
-              </Button>
+          <div className="border-t pt-4">
+            <h4 className="font-medium mb-4">Dados do Convênio/Parceiro</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="partner_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Convênio</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Clínica Popular" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="partner_cnpj"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CNPJ</FormLabel>
+                    <FormControl>
+                      <Input placeholder="00.000.000/0001-00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="partner_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(00) 00000-0000" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="partner_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="contato@convenio.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="partner_address"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Endereço</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Rua, número, cidade - UF" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          </div>
+
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Observações</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Informações adicionais..." 
+                    rows={2}
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <PopupFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {benefit ? "Salvar" : "Criar Benefício"}
+            </Button>
+          </PopupFooter>
+        </form>
+      </Form>
+    </PopupBase>
   );
 }

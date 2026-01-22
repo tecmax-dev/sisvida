@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -107,7 +101,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
   const generatePDFForMember = async (cpf: string): Promise<Blob | null> => {
     const normalizedCPF = normalizeCPF(cpf);
     
-    // Fetch filiacao data - search by normalized CPF
     const { data: filiacao, error: filiacaoError } = await supabase
       .from("sindical_associados")
       .select("*")
@@ -125,13 +118,11 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
       return null;
     }
 
-    // Fetch dependents
     const { data: dependents } = await supabase
       .from("sindical_associado_dependentes")
       .select("*")
       .eq("associado_id", filiacao.id);
 
-    // Generate PDF using the dedicated function
     return generateFiliacaoPDFBlob(
       filiacao,
       dependents || [],
@@ -200,7 +191,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
 
       setProgress(Math.round(((i + 1) / total) * 100));
       
-      // Small delay to prevent UI freeze
       await new Promise(resolve => setTimeout(resolve, 50));
     }
 
@@ -223,7 +213,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
 
   const handleDownloadAll = () => {
     generatedPDFs.forEach((pdf, index) => {
-      // Stagger downloads to prevent browser blocking
       setTimeout(() => {
         const url = URL.createObjectURL(pdf.blob);
         const a = document.createElement("a");
@@ -247,137 +236,135 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileArchive className="h-5 w-5 text-purple-500" />
-            Gerar Fichas de Filiação em Lote
-          </DialogTitle>
-          <DialogDescription>
-            Gere fichas de filiação em PDF para todos os sócios cadastrados que possuem ficha de filiação.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <FileArchive className="h-5 w-5 text-purple-500" />
+          Gerar Fichas de Filiação em Lote
+        </PopupTitle>
+        <PopupDescription>
+          Gere fichas de filiação em PDF para todos os sócios cadastrados que possuem ficha de filiação.
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="space-y-4">
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="p-3 rounded-lg bg-muted/50 text-center">
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
-            </div>
-            <div className="p-3 rounded-lg bg-emerald-500/10 text-center">
-              <p className="text-2xl font-bold text-emerald-600">{stats.success}</p>
-              <p className="text-xs text-muted-foreground">Geradas</p>
-            </div>
-            <div className="p-3 rounded-lg bg-amber-500/10 text-center">
-              <p className="text-2xl font-bold text-amber-600">{stats.noFiliacao}</p>
-              <p className="text-xs text-muted-foreground">Sem ficha</p>
-            </div>
-            <div className="p-3 rounded-lg bg-red-500/10 text-center">
-              <p className="text-2xl font-bold text-red-600">{stats.error}</p>
-              <p className="text-xs text-muted-foreground">Erros</p>
-            </div>
+      <div className="space-y-4">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-2">
+          <div className="p-3 rounded-lg bg-muted/50 text-center">
+            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">Total</p>
           </div>
-
-          {/* Progress */}
-          {generating && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Gerando fichas...</span>
-                <span className="font-medium">{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
-
-          {/* Members list */}
-          <ScrollArea className="h-[300px] border rounded-lg">
-            <div className="p-2 space-y-1">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : members.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">Nenhum sócio cadastrado</p>
-                </div>
-              ) : (
-                members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-2">
-                      {member.status === "pending" && (
-                        <div className="h-4 w-4 rounded-full bg-muted" />
-                      )}
-                      {member.status === "generating" && (
-                        <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
-                      )}
-                      {member.status === "success" && (
-                        <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      )}
-                      {member.status === "no_filiacao" && (
-                        <AlertCircle className="h-4 w-4 text-amber-500" />
-                      )}
-                      {member.status === "error" && (
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      )}
-                      <span className="text-sm font-medium">{member.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {member.status === "no_filiacao" && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-300">
-                          Sem ficha
-                        </Badge>
-                      )}
-                      {member.status === "error" && (
-                        <Badge variant="outline" className="text-red-600 border-red-300">
-                          {member.error || "Erro"}
-                        </Badge>
-                      )}
-                      {member.status === "success" && (
-                        <Badge variant="outline" className="text-emerald-600 border-emerald-300">
-                          Gerada
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-
-          {/* Actions */}
-          <div className="flex gap-2 justify-end">
-            {generatedPDFs.length > 0 && (
-              <Button onClick={handleDownloadAll} className="gap-2">
-                <Download className="h-4 w-4" />
-                Baixar {generatedPDFs.length} PDFs
-              </Button>
-            )}
-            <Button
-              onClick={handleGenerateAll}
-              disabled={generating || loading || members.length === 0}
-              className="gap-2"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4" />
-                  Gerar Fichas
-                </>
-              )}
-            </Button>
+          <div className="p-3 rounded-lg bg-emerald-500/10 text-center">
+            <p className="text-2xl font-bold text-emerald-600">{stats.success}</p>
+            <p className="text-xs text-muted-foreground">Geradas</p>
+          </div>
+          <div className="p-3 rounded-lg bg-amber-500/10 text-center">
+            <p className="text-2xl font-bold text-amber-600">{stats.noFiliacao}</p>
+            <p className="text-xs text-muted-foreground">Sem ficha</p>
+          </div>
+          <div className="p-3 rounded-lg bg-red-500/10 text-center">
+            <p className="text-2xl font-bold text-red-600">{stats.error}</p>
+            <p className="text-xs text-muted-foreground">Erros</p>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Progress */}
+        {generating && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Gerando fichas...</span>
+              <span className="font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
+
+        {/* Members list */}
+        <ScrollArea className="h-[300px] border rounded-lg">
+          <div className="p-2 space-y-1">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : members.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhum sócio cadastrado</p>
+              </div>
+            ) : (
+              members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    {member.status === "pending" && (
+                      <div className="h-4 w-4 rounded-full bg-muted" />
+                    )}
+                    {member.status === "generating" && (
+                      <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                    )}
+                    {member.status === "success" && (
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    )}
+                    {member.status === "no_filiacao" && (
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                    )}
+                    {member.status === "error" && (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className="text-sm font-medium">{member.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {member.status === "no_filiacao" && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-300">
+                        Sem ficha
+                      </Badge>
+                    )}
+                    {member.status === "error" && (
+                      <Badge variant="outline" className="text-red-600 border-red-300">
+                        {member.error || "Erro"}
+                      </Badge>
+                    )}
+                    {member.status === "success" && (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-300">
+                        Gerada
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Actions */}
+        <div className="flex gap-2 justify-end">
+          {generatedPDFs.length > 0 && (
+            <Button onClick={handleDownloadAll} className="gap-2">
+              <Download className="h-4 w-4" />
+              Baixar {generatedPDFs.length} PDFs
+            </Button>
+          )}
+          <Button
+            onClick={handleGenerateAll}
+            disabled={generating || loading || members.length === 0}
+            className="gap-2"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4" />
+                Gerar Fichas
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </PopupBase>
   );
 }

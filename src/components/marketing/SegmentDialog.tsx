@@ -4,13 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -41,7 +35,6 @@ const formSchema = z.object({
   description: z.string().optional(),
   is_dynamic: z.boolean(),
   is_active: z.boolean(),
-  // Filter criteria
   lastVisitDays: z.string().optional(),
   birthdayMonth: z.string().optional(),
   gender: z.string().optional(),
@@ -231,270 +224,268 @@ export default function SegmentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Editar Segmento" : "Novo Segmento"}
-          </DialogTitle>
-          <DialogDescription>
-            Defina os critérios para agrupar pacientes
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle>
+          {isEditing ? "Editar Segmento" : "Novo Segmento"}
+        </PopupTitle>
+        <PopupDescription>
+          Defina os critérios para agrupar pacientes
+        </PopupDescription>
+      </PopupHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Segmento</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Pacientes inativos" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descreva o objetivo deste segmento..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-6">
               <FormField
                 control={form.control}
-                name="name"
+                name="is_dynamic"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Segmento</FormLabel>
+                  <FormItem className="flex items-center gap-3">
                     <FormControl>
-                      <Input placeholder="Ex: Pacientes inativos" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descreva o objetivo deste segmento..."
-                        {...field}
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <div>
+                      <FormLabel className="mb-0">Segmento Dinâmico</FormLabel>
+                      <FormDescription className="text-xs">
+                        Atualiza automaticamente conforme os critérios
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />
 
-              <div className="flex gap-6">
-                <FormField
-                  control={form.control}
-                  name="is_dynamic"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-3">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div>
-                        <FormLabel className="mb-0">Segmento Dinâmico</FormLabel>
-                        <FormDescription className="text-xs">
-                          Atualiza automaticamente conforme os critérios
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-3">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div>
-                        <FormLabel className="mb-0">Ativo</FormLabel>
-                        <FormDescription className="text-xs">
-                          Pode ser usado em campanhas
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="font-medium">Critérios de Filtragem</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">Última Visita</span>
+              <FormField
+                control={form.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div>
+                      <FormLabel className="mb-0">Ativo</FormLabel>
+                      <FormDescription className="text-xs">
+                        Pode ser usado em campanhas
+                      </FormDescription>
                     </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Critérios de Filtragem</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Última Visita</span>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="lastVisitDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Sem visita há (dias)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 180"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Aniversário</span>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="birthdayMonth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Mês de nascimento</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {months.map((month) => (
+                              <SelectItem key={month.value} value={month.value}>
+                                {month.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Perfil</span>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Gênero</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Qualquer" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="M">Masculino</SelectItem>
+                            <SelectItem value="F">Feminino</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-2 mt-2">
                     <FormField
                       control={form.control}
-                      name="lastVisitDays"
+                      name="ageMin"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Sem visita há (dias)</FormLabel>
+                          <FormLabel className="text-xs">Idade mín.</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="Ex: 180"
-                              {...field}
-                            />
+                            <Input type="number" placeholder="0" {...field} />
                           </FormControl>
                         </FormItem>
                       )}
                     />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">Aniversário</span>
-                    </div>
                     <FormField
                       control={form.control}
-                      name="birthdayMonth"
+                      name="ageMax"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Mês de nascimento</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {months.map((month) => (
-                                <SelectItem key={month.value} value={month.value}>
-                                  {month.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel className="text-xs">Idade máx.</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="100" {...field} />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <User className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">Perfil</span>
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="gender"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Gênero</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Qualquer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="M">Masculino</SelectItem>
-                              <SelectItem value="F">Feminino</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <FormField
-                        control={form.control}
-                        name="ageMin"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Idade mín.</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="0" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="ageMax"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Idade máx.</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="100" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Stethoscope className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">Procedimento</span>
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="procedureId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Realizou procedimento</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Qualquer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {procedures?.map((proc) => (
-                                <SelectItem key={proc.id} value={proc.id}>
-                                  {proc.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Procedimento</span>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="procedureId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Realizou procedimento</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Qualquer" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {procedures?.map((proc) => (
+                              <SelectItem key={proc.id} value={proc.id}>
+                                {proc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
             </div>
+          </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? "Salvando..."
-                  : isEditing
-                  ? "Atualizar"
-                  : "Criar Segmento"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <PopupFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? "Salvando..."
+                : isEditing
+                ? "Atualizar"
+                : "Criar Segmento"}
+            </Button>
+          </PopupFooter>
+        </form>
+      </Form>
+    </PopupBase>
   );
 }
