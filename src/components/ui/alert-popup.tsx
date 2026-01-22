@@ -32,9 +32,6 @@ export function AlertPopup({
   isLoading = false,
   disabled = false,
 }: AlertPopupProps) {
-  // Don't render anything if not open
-  if (!open) return null;
-
   const handleKeyDown = React.useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && !isLoading) {
@@ -45,14 +42,19 @@ export function AlertPopup({
   );
 
   React.useEffect(() => {
+    if (!open) return;
+
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
-    
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [handleKeyDown]);
+  }, [open, handleKeyDown]);
+
+  // Don't render anything if not open
+  if (!open) return null;
 
   const content = (
     <div
