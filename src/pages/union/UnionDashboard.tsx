@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
+import { useUnionPermissions } from "@/hooks/useUnionPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Receipt, DollarSign, Handshake, TrendingUp, TrendingDown, Calendar, Loader2 } from "lucide-react";
@@ -18,6 +19,7 @@ interface DashboardStats {
 export default function UnionDashboard() {
   const { currentClinic } = useAuth();
   const { entity, isUnionEntityAdmin, loading: entityLoading } = useUnionEntity();
+  const { canViewFinancials } = useUnionPermissions();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -229,35 +231,37 @@ export default function UnionDashboard() {
         ))}
       </div>
 
-      {/* Financial Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-blue-500" />
-            Resumo Financeiro
-          </CardTitle>
-          <CardDescription>Movimentações do mês atual</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {financialSummary.map((item) => (
-              <div key={item.label} className="p-4 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <item.icon className={`h-4 w-4 ${item.color}`} />
-                  <span className="text-sm text-muted-foreground">{item.label}</span>
+      {/* Financial Summary - Only visible to users with financial permissions */}
+      {canViewFinancials() && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-blue-500" />
+              Resumo Financeiro
+            </CardTitle>
+            <CardDescription>Movimentações do mês atual</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {financialSummary.map((item) => (
+                <div key={item.label} className="p-4 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <item.icon className={`h-4 w-4 ${item.color}`} />
+                    <span className="text-sm text-muted-foreground">{item.label}</span>
+                  </div>
+                  <p className={`text-xl font-semibold ${item.color}`}>
+                    {loading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      item.value
+                    )}
+                  </p>
                 </div>
-                <p className={`text-xl font-semibold ${item.color}`}>
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    item.value
-                  )}
-                </p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
