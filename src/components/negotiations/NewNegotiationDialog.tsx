@@ -369,12 +369,13 @@ export default function NewNegotiationDialog({
       const installments = [];
       const baseDueDate = new Date(`${firstDueDate.toISOString().split("T")[0]}T12:00:00`);
       
+      // Determine down payment date
+      const downPaymentDate = downPayment > 0
+        ? (customInstallmentDates[0] || addDays(new Date(), 2)) // Default: 2 days from now
+        : null;
+      
       // Add down payment as installment 0 if exists
-      if (downPayment > 0) {
-        const downPaymentDate = customInstallmentDates[0] 
-          ? customInstallmentDates[0] 
-          : addDays(new Date(), 2); // Default: 2 days from now
-        
+      if (downPayment > 0 && downPaymentDate) {
         installments.push({
           negotiation_id: negotiation.id,
           installment_number: 0,
@@ -384,11 +385,22 @@ export default function NewNegotiationDialog({
         });
       }
       
+      // First installment should be 30 days after down payment (if exists), or use baseDueDate
+      // Subsequent installments are 30 days apart (using addMonths for monthly intervals)
       for (let i = 1; i <= installmentsCount; i++) {
-        // Use custom date if available, otherwise calculate automatically
-        const dueDate = customInstallmentDates[i] 
-          ? customInstallmentDates[i] 
-          : addMonths(baseDueDate, i - 1);
+        let dueDate: Date;
+        
+        if (customInstallmentDates[i]) {
+          // Use custom date if available
+          dueDate = customInstallmentDates[i];
+        } else if (downPayment > 0 && downPaymentDate) {
+          // When there's a down payment, first installment is 30 days after down payment
+          // Subsequent installments are monthly from the first installment date
+          dueDate = addMonths(downPaymentDate, i);
+        } else {
+          // No down payment: use baseDueDate as reference, with monthly intervals
+          dueDate = addMonths(baseDueDate, i - 1);
+        }
         
         installments.push({
           negotiation_id: negotiation.id,
