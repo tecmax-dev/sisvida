@@ -369,6 +369,21 @@ export default function NewNegotiationDialog({
       const installments = [];
       const baseDueDate = new Date(`${firstDueDate.toISOString().split("T")[0]}T12:00:00`);
       
+      // Add down payment as installment 0 if exists
+      if (downPayment > 0) {
+        const downPaymentDate = customInstallmentDates[0] 
+          ? customInstallmentDates[0] 
+          : addDays(new Date(), 2); // Default: 2 days from now
+        
+        installments.push({
+          negotiation_id: negotiation.id,
+          installment_number: 0,
+          value: downPayment,
+          due_date: format(downPaymentDate, "yyyy-MM-dd"),
+          status: "pending",
+        });
+      }
+      
       for (let i = 1; i <= installmentsCount; i++) {
         // Use custom date if available, otherwise calculate automatically
         const dueDate = customInstallmentDates[i] 
