@@ -5,14 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -255,19 +248,18 @@ Equipe ${currentClinic.name}`;
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            Envio em Lote - Códigos de Acesso
-          </DialogTitle>
-          <DialogDescription>
-            Envie os códigos de acesso para múltiplos escritórios via WhatsApp e/ou E-mail.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          Envio em Lote - Códigos de Acesso
+        </PopupTitle>
+        <PopupDescription>
+          Envie os códigos de acesso para múltiplos escritórios via WhatsApp e/ou E-mail.
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="space-y-4 py-2">
+      <div className="space-y-4 py-2">
           {/* Send Methods */}
           <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
             <span className="text-sm font-medium">Enviar via:</span>
@@ -385,28 +377,27 @@ Equipe ${currentClinic.name}`;
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
-            {results.length > 0 ? "Fechar" : "Cancelar"}
-          </Button>
-          <Button
-            onClick={handleBulkSend}
-            disabled={isSending || selectedOfficeIds.length === 0 || (!sendViaWhatsApp && !sendViaEmail)}
-          >
-            {isSending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Enviar ({selectedOfficeIds.length})
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <PopupFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
+          {results.length > 0 ? "Fechar" : "Cancelar"}
+        </Button>
+        <Button
+          onClick={handleBulkSend}
+          disabled={isSending || selectedOfficeIds.length === 0 || (!sendViaWhatsApp && !sendViaEmail)}
+        >
+          {isSending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <Send className="mr-2 h-4 w-4" />
+              Enviar ({selectedOfficeIds.length})
+            </>
+          )}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }

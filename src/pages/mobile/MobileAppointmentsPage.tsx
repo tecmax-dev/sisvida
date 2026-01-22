@@ -7,24 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import { 
   ArrowLeft, 
   Plus, 
@@ -478,108 +462,99 @@ export default function MobileAppointmentsPage() {
       </Button>
 
       {/* Appointment Details Dialog */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Agendamento</DialogTitle>
-          </DialogHeader>
-          {selectedAppointment && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                {getStatusBadge(selectedAppointment.status)}
-              </div>
-              
-              <div>
-                <span className="text-sm text-muted-foreground">Procedimento</span>
-                <p className="font-medium">{selectedAppointment.procedure?.name || selectedAppointment.type}</p>
-              </div>
-
-              {selectedAppointment.dependent && (
-                <div>
-                  <span className="text-sm text-muted-foreground">Dependente</span>
-                  <p className="font-medium">{selectedAppointment.dependent.name}</p>
-                </div>
-              )}
-
-              <div>
-                <span className="text-sm text-muted-foreground">Data e Horário</span>
-                <p className="font-medium">
-                  {format(parseISO(selectedAppointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às {selectedAppointment.start_time.slice(0, 5)}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-sm text-muted-foreground">Profissional</span>
-                <p className="font-medium">
-                  {selectedAppointment.professional.name}
-                  {selectedAppointment.professional.specialty && (
-                    <span className="text-muted-foreground"> • {selectedAppointment.professional.specialty}</span>
-                  )}
-                </p>
-              </div>
-
-              {selectedAppointment.notes && (
-                <div>
-                  <span className="text-sm text-muted-foreground">Observações</span>
-                  <p className="text-sm">{selectedAppointment.notes}</p>
-                </div>
-              )}
+      <PopupBase open={showDetails} onClose={() => setShowDetails(false)} maxWidth="md">
+        <PopupHeader>
+          <PopupTitle>Detalhes do Agendamento</PopupTitle>
+        </PopupHeader>
+        {selectedAppointment && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Status</span>
+              {getStatusBadge(selectedAppointment.status)}
             </div>
+            
+            <div>
+              <span className="text-sm text-muted-foreground">Procedimento</span>
+              <p className="font-medium">{selectedAppointment.procedure?.name || selectedAppointment.type}</p>
+            </div>
+
+            {selectedAppointment.dependent && (
+              <div>
+                <span className="text-sm text-muted-foreground">Dependente</span>
+                <p className="font-medium">{selectedAppointment.dependent.name}</p>
+              </div>
+            )}
+
+            <div>
+              <span className="text-sm text-muted-foreground">Data e Horário</span>
+              <p className="font-medium">
+                {format(parseISO(selectedAppointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às {selectedAppointment.start_time.slice(0, 5)}
+              </p>
+            </div>
+
+            <div>
+              <span className="text-sm text-muted-foreground">Profissional</span>
+              <p className="font-medium">
+                {selectedAppointment.professional.name}
+                {selectedAppointment.professional.specialty && (
+                  <span className="text-muted-foreground"> • {selectedAppointment.professional.specialty}</span>
+                )}
+              </p>
+            </div>
+
+            {selectedAppointment.notes && (
+              <div>
+                <span className="text-sm text-muted-foreground">Observações</span>
+                <p className="text-sm">{selectedAppointment.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+        <PopupFooter className="flex gap-2">
+          {selectedAppointment && canReschedule(selectedAppointment) && (
+            <Button variant="outline" onClick={handleReschedule}>
+              <CalendarClock className="h-4 w-4 mr-2" />
+              Remarcar
+            </Button>
           )}
-          <DialogFooter className="flex gap-2">
-            {selectedAppointment && canReschedule(selectedAppointment) && (
-              <Button variant="outline" onClick={handleReschedule}>
-                <CalendarClock className="h-4 w-4 mr-2" />
-                Remarcar
-              </Button>
-            )}
-            {selectedAppointment && canCancel(selectedAppointment) && (
-              <Button 
-                variant="destructive" 
-                onClick={() => {
-                  setShowDetails(false);
-                  setShowCancelDialog(true);
-                }}
-              >
-                <CalendarX className="h-4 w-4 mr-2" />
-                Cancelar
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {selectedAppointment && canCancel(selectedAppointment) && (
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                setShowDetails(false);
+                setShowCancelDialog(true);
+              }}
+            >
+              <CalendarX className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+          )}
+        </PopupFooter>
+      </PopupBase>
 
       {/* Cancel Confirmation Dialog */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar Agendamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
-              {selectedAppointment && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <p className="font-medium">{selectedAppointment.procedure?.name || selectedAppointment.type}</p>
-                  <p className="text-sm">
-                    {format(parseISO(selectedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedAppointment.start_time.slice(0, 5)}
-                  </p>
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelAppointment}
-              disabled={cancelling}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {cancelling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Confirmar cancelamento
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertPopup
+        open={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        title="Cancelar Agendamento?"
+        description={
+          <>
+            Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+            {selectedAppointment && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <p className="font-medium">{selectedAppointment.procedure?.name || selectedAppointment.type}</p>
+                <p className="text-sm">
+                  {format(parseISO(selectedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedAppointment.start_time.slice(0, 5)}
+                </p>
+              </div>
+            )}
+          </>
+        }
+        confirmText="Confirmar cancelamento"
+        onConfirm={handleCancelAppointment}
+        isLoading={cancelling}
+        confirmVariant="destructive"
+      />
     </div>
   );
 }

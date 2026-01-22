@@ -13,24 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import {
   Select,
   SelectContent,
@@ -728,429 +712,409 @@ export function ConveniosManagementTab() {
       </Tabs>
 
       {/* Category Dialog */}
-      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCategory ? "Editar" : "Nova"} Categoria
-            </DialogTitle>
-            <DialogDescription>
-              Categorias ajudam a organizar os convênios no aplicativo
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={isCategoryDialogOpen} onClose={() => setIsCategoryDialogOpen(false)} maxWidth="md">
+        <PopupHeader>
+          <PopupTitle>
+            {editingCategory ? "Editar" : "Nova"} Categoria
+          </PopupTitle>
+        </PopupHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input
-                value={categoryForm.nome}
-                onChange={(e) => setCategoryForm(prev => ({ ...prev, nome: e.target.value }))}
-                placeholder="Ex: Saúde, Educação, Lazer..."
-              />
-            </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nome *</Label>
+            <Input
+              value={categoryForm.nome}
+              onChange={(e) => setCategoryForm(prev => ({ ...prev, nome: e.target.value }))}
+              placeholder="Ex: Saúde, Educação, Lazer..."
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Ícone</Label>
-              <div className="grid grid-cols-6 gap-2">
-                {AVAILABLE_ICONS.map((iconOption) => {
-                  const IconComp = iconOption.icon;
-                  return (
-                    <Button
-                      key={iconOption.name}
-                      type="button"
-                      variant={categoryForm.icon === iconOption.name ? "default" : "outline"}
-                      size="icon"
-                      onClick={() => setCategoryForm(prev => ({ ...prev, icon: iconOption.name }))}
-                      title={iconOption.label}
-                    >
-                      <IconComp className="h-4 w-4" />
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cor</Label>
-              <div className="grid grid-cols-8 gap-2">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color}
+          <div className="space-y-2">
+            <Label>Ícone</Label>
+            <div className="grid grid-cols-6 gap-2">
+              {AVAILABLE_ICONS.map((iconOption) => {
+                const IconComp = iconOption.icon;
+                return (
+                  <Button
+                    key={iconOption.name}
                     type="button"
-                    className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${
-                      categoryForm.color === color ? "border-foreground ring-2 ring-offset-2" : "border-transparent"
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setCategoryForm(prev => ({ ...prev, color }))}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label>Ativo</Label>
-              <Switch
-                checked={categoryForm.is_active}
-                onCheckedChange={(checked) => setCategoryForm(prev => ({ ...prev, is_active: checked }))}
-              />
+                    variant={categoryForm.icon === iconOption.name ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCategoryForm(prev => ({ ...prev, icon: iconOption.name }))}
+                    title={iconOption.label}
+                  >
+                    <IconComp className="h-4 w-4" />
+                  </Button>
+                );
+              })}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveCategory} disabled={saving || !categoryForm.nome.trim()}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-2">
+            <Label>Cor</Label>
+            <div className="grid grid-cols-8 gap-2">
+              {PRESET_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${
+                    categoryForm.color === color ? "border-foreground ring-2 ring-offset-2" : "border-transparent"
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setCategoryForm(prev => ({ ...prev, color }))}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Ativo</Label>
+            <Switch
+              checked={categoryForm.is_active}
+              onCheckedChange={(checked) => setCategoryForm(prev => ({ ...prev, is_active: checked }))}
+            />
+          </div>
+        </div>
+
+        <PopupFooter>
+          <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSaveCategory} disabled={saving || !categoryForm.nome.trim()}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Salvar
+          </Button>
+        </PopupFooter>
+      </PopupBase>
 
       {/* Convenio Dialog */}
-      <Dialog open={isConvenioDialogOpen} onOpenChange={setIsConvenioDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingConvenio ? "Editar" : "Novo"} Convênio
-            </DialogTitle>
-            <DialogDescription>
-              Preencha as informações completas do convênio
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={isConvenioDialogOpen} onClose={() => setIsConvenioDialogOpen(false)} maxWidth="2xl">
+        <PopupHeader>
+          <PopupTitle>
+            {editingConvenio ? "Editar" : "Novo"} Convênio
+          </PopupTitle>
+        </PopupHeader>
 
-          <ScrollArea className="max-h-[65vh] pr-4">
-            <div className="space-y-6">
-              {/* Informações Básicas */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
-                  <FileText className="h-4 w-4" />
-                  Informações Básicas
-                </div>
+        <ScrollArea className="max-h-[65vh] pr-4">
+          <div className="space-y-6">
+            {/* Informações Básicas */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                <FileText className="h-4 w-4" />
+                Informações Básicas
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nome *</Label>
-                    <Input
-                      value={convenioForm.nome}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, nome: e.target.value }))}
-                      placeholder="Nome do convênio/parceiro"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select
-                      value={convenioForm.category_id}
-                      onValueChange={(v) => setConvenioForm(prev => ({ ...prev, category_id: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.filter(c => c.is_active).map((cat) => {
-                          const IconComp = getIconComponent(cat.icon);
-                          return (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              <div className="flex items-center gap-2">
-                                <IconComp className="h-4 w-4" style={{ color: cat.color || undefined }} />
-                                {cat.nome}
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Textarea
-                    value={convenioForm.descricao}
-                    onChange={(e) => setConvenioForm(prev => ({ ...prev, descricao: e.target.value }))}
-                    placeholder="Breve descrição do convênio/parceiro"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Desconto/Benefício</Label>
-                    <Input
-                      value={convenioForm.desconto}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, desconto: e.target.value }))}
-                      placeholder="Ex: 20% de desconto"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      Horário de Funcionamento
-                    </Label>
-                    <Input
-                      value={convenioForm.horario_funcionamento}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, horario_funcionamento: e.target.value }))}
-                      placeholder="Ex: Seg-Sex 8h às 18h"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Imagens */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
-                  <Image className="h-4 w-4" />
-                  Imagens
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Upload className="h-3 w-3" />
-                      URL do Logo
-                    </Label>
-                    <Input
-                      value={convenioForm.logo_url}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, logo_url: e.target.value }))}
-                      placeholder="https://example.com/logo.png"
-                    />
-                    {convenioForm.logo_url && (
-                      <img 
-                        src={convenioForm.logo_url} 
-                        alt="Preview logo" 
-                        className="h-12 w-auto object-contain rounded border"
-                        onError={(e) => e.currentTarget.style.display = 'none'}
-                      />
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Image className="h-3 w-3" />
-                      URL da Imagem Principal
-                    </Label>
-                    <Input
-                      value={convenioForm.image_url}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, image_url: e.target.value }))}
-                      placeholder="https://example.com/imagem.png"
-                    />
-                    {convenioForm.image_url && (
-                      <img 
-                        src={convenioForm.image_url} 
-                        alt="Preview imagem" 
-                        className="h-20 w-auto object-cover rounded border"
-                        onError={(e) => e.currentTarget.style.display = 'none'}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Contato */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
-                  <Phone className="h-4 w-4" />
-                  Contato
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Phone className="h-3 w-3" />
-                      Telefone
-                    </Label>
-                    <Input
-                      value={convenioForm.telefone}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, telefone: e.target.value }))}
-                      placeholder="(00) 0000-0000"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <MessageCircle className="h-3 w-3" />
-                      WhatsApp
-                    </Label>
-                    <Input
-                      value={convenioForm.whatsapp}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, whatsapp: e.target.value }))}
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Mail className="h-3 w-3" />
-                      E-mail
-                    </Label>
-                    <Input
-                      type="email"
-                      value={convenioForm.email}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="contato@empresa.com"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Globe className="h-3 w-3" />
-                      Website
-                    </Label>
-                    <Input
-                      value={convenioForm.website}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, website: e.target.value }))}
-                      placeholder="https://www.empresa.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Redes Sociais */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
-                  <Link2 className="h-4 w-4" />
-                  Redes Sociais
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Instagram className="h-3 w-3" />
-                      Instagram
-                    </Label>
-                    <Input
-                      value={convenioForm.instagram}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, instagram: e.target.value }))}
-                      placeholder="https://instagram.com/usuario"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Facebook className="h-3 w-3" />
-                      Facebook
-                    </Label>
-                    <Input
-                      value={convenioForm.facebook}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, facebook: e.target.value }))}
-                      placeholder="https://facebook.com/pagina"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Localização */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
-                  <MapPin className="h-4 w-4" />
-                  Localização
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Endereço</Label>
+                  <Label>Nome *</Label>
                   <Input
-                    value={convenioForm.endereco}
-                    onChange={(e) => setConvenioForm(prev => ({ ...prev, endereco: e.target.value }))}
-                    placeholder="Endereço completo do estabelecimento"
+                    value={convenioForm.nome}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, nome: e.target.value }))}
+                    placeholder="Nome do convênio/parceiro"
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Map className="h-3 w-3" />
-                      Link Google Maps
-                    </Label>
-                    <Input
-                      value={convenioForm.google_maps_url}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, google_maps_url: e.target.value }))}
-                      placeholder="https://maps.google.com/..."
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <ExternalLink className="h-3 w-3" />
-                      Link Street View
-                    </Label>
-                    <Input
-                      value={convenioForm.street_view_url}
-                      onChange={(e) => setConvenioForm(prev => ({ ...prev, street_view_url: e.target.value }))}
-                      placeholder="https://www.google.com/maps/@..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Detalhes Extras */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
-                  <FileText className="h-4 w-4" />
-                  Informações Adicionais
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Detalhes Extras</Label>
-                  <Textarea
-                    value={convenioForm.detalhes_extras}
-                    onChange={(e) => setConvenioForm(prev => ({ ...prev, detalhes_extras: e.target.value }))}
-                    placeholder="Informações adicionais, condições especiais, observações..."
-                    rows={3}
+                  <Label>Categoria</Label>
+                  <Select
+                    value={convenioForm.category_id}
+                    onValueChange={(v) => setConvenioForm(prev => ({ ...prev, category_id: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.filter(c => c.is_active).map((cat) => {
+                        const IconComp = getIconComponent(cat.icon);
+                        return (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <div className="flex items-center gap-2">
+                              <IconComp className="h-4 w-4" style={{ color: cat.color || undefined }} />
+                              {cat.nome}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  value={convenioForm.descricao}
+                  onChange={(e) => setConvenioForm(prev => ({ ...prev, descricao: e.target.value }))}
+                  placeholder="Breve descrição do convênio/parceiro"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Desconto/Benefício</Label>
+                  <Input
+                    value={convenioForm.desconto}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, desconto: e.target.value }))}
+                    placeholder="Ex: 20% de desconto"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    Horário de Funcionamento
+                  </Label>
+                  <Input
+                    value={convenioForm.horario_funcionamento}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, horario_funcionamento: e.target.value }))}
+                    placeholder="Ex: Seg-Sex 8h às 18h"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Imagens */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                <Image className="h-4 w-4" />
+                Imagens
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Upload className="h-3 w-3" />
+                    URL do Logo
+                  </Label>
+                  <Input
+                    value={convenioForm.logo_url}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, logo_url: e.target.value }))}
+                    placeholder="https://example.com/logo.png"
+                  />
+                  {convenioForm.logo_url && (
+                    <img 
+                      src={convenioForm.logo_url} 
+                      alt="Preview logo" 
+                      className="h-12 w-auto object-contain rounded border"
+                      onError={(e) => e.currentTarget.style.display = 'none'}
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Image className="h-3 w-3" />
+                    URL da Imagem Principal
+                  </Label>
+                  <Input
+                    value={convenioForm.image_url}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, image_url: e.target.value }))}
+                    placeholder="https://example.com/imagem.png"
+                  />
+                  {convenioForm.image_url && (
+                    <img 
+                      src={convenioForm.image_url} 
+                      alt="Preview imagem" 
+                      className="h-20 w-auto object-cover rounded border"
+                      onError={(e) => e.currentTarget.style.display = 'none'}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Contato */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                <Phone className="h-4 w-4" />
+                Contato
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Phone className="h-3 w-3" />
+                    Telefone
+                  </Label>
+                  <Input
+                    value={convenioForm.telefone}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, telefone: e.target.value }))}
+                    placeholder="(00) 0000-0000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <MessageCircle className="h-3 w-3" />
+                    WhatsApp
+                  </Label>
+                  <Input
+                    value={convenioForm.whatsapp}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, whatsapp: e.target.value }))}
+                    placeholder="(00) 00000-0000"
                   />
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <Label className="font-medium">Convênio Ativo</Label>
-                <Switch
-                  checked={convenioForm.is_active}
-                  onCheckedChange={(checked) => setConvenioForm(prev => ({ ...prev, is_active: checked }))}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Mail className="h-3 w-3" />
+                    E-mail
+                  </Label>
+                  <Input
+                    type="email"
+                    value={convenioForm.email}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="contato@empresa.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="h-3 w-3" />
+                    Website
+                  </Label>
+                  <Input
+                    value={convenioForm.website}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="https://www.empresa.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Redes Sociais */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                <Link2 className="h-4 w-4" />
+                Redes Sociais
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Instagram className="h-3 w-3" />
+                    Instagram
+                  </Label>
+                  <Input
+                    value={convenioForm.instagram}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, instagram: e.target.value }))}
+                    placeholder="https://instagram.com/usuario"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Facebook className="h-3 w-3" />
+                    Facebook
+                  </Label>
+                  <Input
+                    value={convenioForm.facebook}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, facebook: e.target.value }))}
+                    placeholder="https://facebook.com/pagina"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Localização */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                <MapPin className="h-4 w-4" />
+                Localização
+              </div>
+
+              <div className="space-y-2">
+                <Label>Endereço</Label>
+                <Input
+                  value={convenioForm.endereco}
+                  onChange={(e) => setConvenioForm(prev => ({ ...prev, endereco: e.target.value }))}
+                  placeholder="Endereço completo do estabelecimento"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Map className="h-3 w-3" />
+                    Link Google Maps
+                  </Label>
+                  <Input
+                    value={convenioForm.google_maps_url}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, google_maps_url: e.target.value }))}
+                    placeholder="https://maps.google.com/..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <ExternalLink className="h-3 w-3" />
+                    Link Street View
+                  </Label>
+                  <Input
+                    value={convenioForm.street_view_url}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, street_view_url: e.target.value }))}
+                    placeholder="https://www.google.com/maps/@..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Detalhes Extras */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                <FileText className="h-4 w-4" />
+                Informações Adicionais
+              </div>
+
+              <div className="space-y-2">
+                <Label>Detalhes Extras</Label>
+                <Textarea
+                  value={convenioForm.detalhes_extras}
+                  onChange={(e) => setConvenioForm(prev => ({ ...prev, detalhes_extras: e.target.value }))}
+                  placeholder="Informações adicionais, condições especiais, observações..."
+                  rows={3}
                 />
               </div>
             </div>
-          </ScrollArea>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConvenioDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveConvenio} disabled={saving || !convenioForm.nome.trim()}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* Status */}
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+              <Label className="font-medium">Convênio Ativo</Label>
+              <Switch
+                checked={convenioForm.is_active}
+                onCheckedChange={(checked) => setConvenioForm(prev => ({ ...prev, is_active: checked }))}
+              />
+            </div>
+          </div>
+        </ScrollArea>
+
+        <PopupFooter>
+          <Button variant="outline" onClick={() => setIsConvenioDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSaveConvenio} disabled={saving || !convenioForm.nome.trim()}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Salvar
+          </Button>
+        </PopupFooter>
+      </PopupBase>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteDialog.type === "category"
-                ? "Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita."
-                : "Tem certeza que deseja excluir este convênio? Esta ação não pode ser desfeita."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={deleteDialog.type === "category" ? handleDeleteCategory : handleDeleteConvenio}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertPopup
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+        title="Confirmar exclusão"
+        description={deleteDialog.type === "category"
+          ? "Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita."
+          : "Tem certeza que deseja excluir este convênio? Esta ação não pode ser desfeita."}
+        confirmText="Excluir"
+        onConfirm={deleteDialog.type === "category" ? handleDeleteCategory : handleDeleteConvenio}
+        confirmVariant="destructive"
+        isLoading={saving}
+      />
     </div>
   );
 }
