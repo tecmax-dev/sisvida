@@ -19,11 +19,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  PopupBase,
+  PopupHeader,
+  PopupTitle,
+} from "@/components/ui/popup-base";
 import {
   Select,
   SelectContent,
@@ -555,11 +554,10 @@ export default function PrescriptionPage() {
       </div>
 
       {/* New Prescription Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nova Prescrição</DialogTitle>
-          </DialogHeader>
+      <PopupBase open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="2xl">
+        <PopupHeader>
+          <PopupTitle>Nova Prescrição</PopupTitle>
+        </PopupHeader>
           
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -635,8 +633,7 @@ Exemplo:
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </PopupBase>
     </div>
   );
 }
