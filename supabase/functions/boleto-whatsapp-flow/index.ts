@@ -1084,9 +1084,9 @@ async function handleBoletoFlow(
                 competence_year: session.competence_year,
                 value: session.value_cents,
                 due_date: session.new_due_date,
-                status: 'pending',
+              status: 'pending',
                 notes: 'Criado via WhatsApp',
-                origin: 'whatsapp'
+                origin: 'manual'
               })
               .select()
               .single();
