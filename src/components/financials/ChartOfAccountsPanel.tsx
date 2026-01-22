@@ -11,13 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Table,
   TableBody,
@@ -344,123 +338,121 @@ export function ChartOfAccountsPanel({ clinicId }: ChartOfAccountsPanelProps) {
       </CardContent>
 
       {/* Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingAccount ? "Editar Conta" : "Nova Conta"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="account_code">Código</Label>
-                <Input
-                  id="account_code"
-                  value={formData.account_code}
-                  onChange={(e) =>
-                    setFormData({ ...formData, account_code: e.target.value })
-                  }
-                  placeholder="1.1.01"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="account_type">Tipo</Label>
-                <Select
-                  value={formData.account_type}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, account_type: value as Account['account_type'] })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="asset">Ativo</SelectItem>
-                    <SelectItem value="liability">Passivo</SelectItem>
-                    <SelectItem value="equity">Patrimônio Líquido</SelectItem>
-                    <SelectItem value="revenue">Receita</SelectItem>
-                    <SelectItem value="expense">Despesa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+      <PopupBase open={dialogOpen} onClose={handleCloseDialog}>
+        <PopupHeader>
+          <PopupTitle>
+            {editingAccount ? "Editar Conta" : "Nova Conta"}
+          </PopupTitle>
+        </PopupHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="account_name">Nome</Label>
+              <Label htmlFor="account_code">Código</Label>
               <Input
-                id="account_name"
-                value={formData.account_name}
+                id="account_code"
+                value={formData.account_code}
                 onChange={(e) =>
-                  setFormData({ ...formData, account_name: e.target.value })
+                  setFormData({ ...formData, account_code: e.target.value })
                 }
-                placeholder="Nome da conta"
+                placeholder="1.1.01"
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="parent_id">Conta Pai (opcional)</Label>
+              <Label htmlFor="account_type">Tipo</Label>
               <Select
-                value={formData.parent_id || "__none__"}
+                value={formData.account_type}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, parent_id: value === "__none__" ? "" : value })
+                  setFormData({ ...formData, account_type: value as Account['account_type'] })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a conta pai" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
-                  {parentAccounts
-                    .filter((a) => a.id !== editingAccount?.id)
-                    .map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.account_code} - {account.account_name}
-                      </SelectItem>
-                    ))}
+                  <SelectItem value="asset">Ativo</SelectItem>
+                  <SelectItem value="liability">Passivo</SelectItem>
+                  <SelectItem value="equity">Patrimônio Líquido</SelectItem>
+                  <SelectItem value="revenue">Receita</SelectItem>
+                  <SelectItem value="expense">Despesa</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_synthetic"
-                  checked={formData.is_synthetic}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_synthetic: checked })
-                  }
-                />
-                <Label htmlFor="is_synthetic">Conta Sintética (agrupadora)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_active: checked })
-                  }
-                />
-                <Label htmlFor="is_active">Ativa</Label>
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="account_name">Nome</Label>
+            <Input
+              id="account_name"
+              value={formData.account_name}
+              onChange={(e) =>
+                setFormData({ ...formData, account_name: e.target.value })
+              }
+              placeholder="Nome da conta"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="parent_id">Conta Pai (opcional)</Label>
+            <Select
+              value={formData.parent_id || "__none__"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, parent_id: value === "__none__" ? "" : value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a conta pai" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
+                {parentAccounts
+                  .filter((a) => a.id !== editingAccount?.id)
+                  .map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.account_code} - {account.account_name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_synthetic"
+                checked={formData.is_synthetic}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, is_synthetic: checked })
+                }
+              />
+              <Label htmlFor="is_synthetic">Conta Sintética (agrupadora)</Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, is_active: checked })
+                }
+              />
+              <Label htmlFor="is_active">Ativa</Label>
+            </div>
+          </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {editingAccount ? "Salvar" : "Criar"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          <PopupFooter>
+            <Button type="button" variant="outline" onClick={handleCloseDialog}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {editingAccount ? "Salvar" : "Criar"}
+            </Button>
+          </PopupFooter>
+        </form>
+      </PopupBase>
     </Card>
   );
 }

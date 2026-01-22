@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -249,289 +243,288 @@ export function UnionMemberLinkDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-purple-500" />
-            Incluir Novo Associado
-          </DialogTitle>
-          <DialogDescription>
-            Vincule um paciente existente ou crie um novo cadastro como associado sindical.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase
+      open={open}
+      onClose={() => onOpenChange(false)}
+      maxWidth="2xl"
+    >
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5 text-purple-500" />
+          Incluir Novo Associado
+        </PopupTitle>
+        <PopupDescription>
+          Vincule um paciente existente ou crie um novo cadastro como associado sindical.
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="flex-1 overflow-hidden">
-          {!selectedPatient ? (
-            <div className="space-y-4">
-              {/* Mode Selection */}
-              <RadioGroup
-                value={mode}
-                onValueChange={(v) => setMode(v as "search" | "create")}
-                className="grid grid-cols-2 gap-4"
+      <div className="flex-1 overflow-hidden">
+        {!selectedPatient ? (
+          <div className="space-y-4">
+            {/* Mode Selection */}
+            <RadioGroup
+              value={mode}
+              onValueChange={(v) => setMode(v as "search" | "create")}
+              className="grid grid-cols-2 gap-4"
+            >
+              <Label
+                htmlFor="mode-search"
+                className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                  mode === "search" ? "border-primary bg-primary/5" : "hover:bg-muted"
+                }`}
               >
-                <Label
-                  htmlFor="mode-search"
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    mode === "search" ? "border-primary bg-primary/5" : "hover:bg-muted"
-                  }`}
-                >
-                  <RadioGroupItem value="search" id="mode-search" />
-                  <div>
-                    <p className="font-medium">Vincular Existente</p>
-                    <p className="text-xs text-muted-foreground">
-                      Buscar paciente cadastrado
-                    </p>
-                  </div>
-                </Label>
-                <Label
-                  htmlFor="mode-create"
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                    mode === "create" ? "border-primary bg-primary/5" : "hover:bg-muted"
-                  }`}
-                >
-                  <RadioGroupItem value="create" id="mode-create" />
-                  <div>
-                    <p className="font-medium">Novo Cadastro</p>
-                    <p className="text-xs text-muted-foreground">
-                      Criar paciente + associado
-                    </p>
-                  </div>
-                </Label>
-              </RadioGroup>
-
-              {mode === "search" ? (
-                <div className="space-y-4">
-                  {/* Search Input */}
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar por nome, CPF, telefone ou e-mail..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        className="pl-10"
-                      />
-                    </div>
-                    <Button onClick={handleSearch} disabled={searching || !searchTerm.trim()}>
-                      {searching ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Buscar"
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Search Results */}
-                  <ScrollArea className="h-[300px] border rounded-lg">
-                    {searchResults.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                        <Search className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                        <p className="text-muted-foreground">
-                          {searchTerm
-                            ? "Nenhum paciente encontrado"
-                            : "Digite para buscar pacientes"}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="p-2 space-y-2">
-                        {searchResults.map((patient) => (
-                          <div
-                            key={patient.id}
-                            onClick={() => handleSelectPatient(patient)}
-                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                              patient.is_union_member
-                                ? "bg-muted/50 opacity-60 cursor-not-allowed"
-                                : "hover:bg-muted"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium">{patient.name}</span>
-                                  {patient.is_union_member && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      Já é associado
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                  {patient.cpf && (
-                                    <span>CPF: {formatCPF(patient.cpf)}</span>
-                                  )}
-                                  {patient.phone && (
-                                    <span className="flex items-center gap-1">
-                                      <Phone className="h-3 w-3" />
-                                      {patient.phone}
-                                    </span>
-                                  )}
-                                  {patient.email && (
-                                    <span className="flex items-center gap-1">
-                                      <Mail className="h-3 w-3" />
-                                      {patient.email}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {!patient.is_union_member && (
-                                <Button variant="ghost" size="sm">
-                                  <Link2 className="h-4 w-4 mr-1" />
-                                  Vincular
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <UserPlus className="h-12 w-12 text-primary/50 mb-4" />
-                  <h3 className="font-medium mb-2">Criar Novo Cadastro</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Você será redirecionado para o formulário completo de cadastro
+                <RadioGroupItem value="search" id="mode-search" />
+                <div>
+                  <p className="font-medium">Vincular Existente</p>
+                  <p className="text-xs text-muted-foreground">
+                    Buscar paciente cadastrado
                   </p>
-                  <Button onClick={handleCreateNew}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Iniciar Cadastro
+                </div>
+              </Label>
+              <Label
+                htmlFor="mode-create"
+                className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                  mode === "create" ? "border-primary bg-primary/5" : "hover:bg-muted"
+                }`}
+              >
+                <RadioGroupItem value="create" id="mode-create" />
+                <div>
+                  <p className="font-medium">Novo Cadastro</p>
+                  <p className="text-xs text-muted-foreground">
+                    Criar paciente + associado
+                  </p>
+                </div>
+              </Label>
+            </RadioGroup>
+
+            {mode === "search" ? (
+              <div className="space-y-4">
+                {/* Search Input */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome, CPF, telefone ou e-mail..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button onClick={handleSearch} disabled={searching || !searchTerm.trim()}>
+                    {searching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Buscar"
+                    )}
                   </Button>
                 </div>
-              )}
-            </div>
-          ) : (
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-6">
-                {/* Selected Patient Info */}
-                <div className="p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 rounded-full bg-emerald-500/20">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{selectedPatient.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        CPF: {formatCPF(selectedPatient.cpf) || "Não informado"}
+
+                {/* Search Results */}
+                <ScrollArea className="h-[300px] border rounded-lg">
+                  {searchResults.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                      <Search className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                      <p className="text-muted-foreground">
+                        {searchTerm
+                          ? "Nenhum paciente encontrado"
+                          : "Digite para buscar pacientes"}
                       </p>
                     </div>
+                  ) : (
+                    <div className="p-2 space-y-2">
+                      {searchResults.map((patient) => (
+                        <div
+                          key={patient.id}
+                          onClick={() => handleSelectPatient(patient)}
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                            patient.is_union_member
+                              ? "bg-muted/50 opacity-60 cursor-not-allowed"
+                              : "hover:bg-muted"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{patient.name}</span>
+                                {patient.is_union_member && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Já é associado
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                                {patient.cpf && (
+                                  <span>CPF: {formatCPF(patient.cpf)}</span>
+                                )}
+                                {patient.phone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    {patient.phone}
+                                  </span>
+                                )}
+                                {patient.email && (
+                                  <span className="flex items-center gap-1">
+                                    <Mail className="h-3 w-3" />
+                                    {patient.email}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {!patient.is_union_member && (
+                              <Button variant="ghost" size="sm">
+                                <Link2 className="h-4 w-4 mr-1" />
+                                Vincular
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <UserPlus className="h-12 w-12 text-primary/50 mb-4" />
+                <h3 className="font-medium mb-2">Criar Novo Cadastro</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Você será redirecionado para o formulário completo de cadastro
+                </p>
+                <Button onClick={handleCreateNew}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Iniciar Cadastro
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-6">
+              {/* Selected Patient Info */}
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-full bg-emerald-500/20">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedPatient(null)}
-                  >
-                    Alterar seleção
-                  </Button>
+                  <div>
+                    <p className="font-medium">{selectedPatient.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      CPF: {formatCPF(selectedPatient.cpf) || "Não informado"}
+                    </p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedPatient(null)}
+                >
+                  Alterar seleção
+                </Button>
+              </div>
 
-                <Separator />
+              <Separator />
 
-                {/* Union Member Fields */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm">Dados Sindicais</h4>
+              {/* Union Member Fields */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm">Dados Sindicais</h4>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Status da Filiação</Label>
-                      <Select value={unionStatus} onValueChange={setUnionStatus}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pendente">Pendente</SelectItem>
-                          <SelectItem value="ativo">Ativo</SelectItem>
-                          <SelectItem value="inativo">Inativo</SelectItem>
-                          <SelectItem value="suspenso">Suspenso</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Categoria</Label>
-                      <Select value={unionCategoryId} onValueChange={handleCategoryChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              {cat.nome} - R$ {cat.valor_contribuicao.toFixed(2)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Valor da Contribuição (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={unionContribution}
-                        onChange={(e) => setUnionContribution(e.target.value)}
-                        placeholder="0,00"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Forma de Pagamento</Label>
-                      <Select value={unionPaymentMethod} onValueChange={setUnionPaymentMethod}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="desconto_folha">Desconto em Folha</SelectItem>
-                          <SelectItem value="pix">PIX</SelectItem>
-                          <SelectItem value="boleto">Boleto Bancário</SelectItem>
-                          <SelectItem value="debito_automatico">Débito Automático</SelectItem>
-                          <SelectItem value="cash">Dinheiro</SelectItem>
-                          <SelectItem value="debit_card">Cartão de Débito</SelectItem>
-                          <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Status da Filiação</Label>
+                    <Select value={unionStatus} onValueChange={setUnionStatus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="ativo">Ativo</SelectItem>
+                        <SelectItem value="inativo">Inativo</SelectItem>
+                        <SelectItem value="suspenso">Suspenso</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Observações</Label>
-                    <Textarea
-                      value={unionObservations}
-                      onChange={(e) => setUnionObservations(e.target.value)}
-                      placeholder="Observações sobre a filiação..."
-                      rows={3}
-                    />
+                    <Label>Categoria</Label>
+                    <Select value={unionCategoryId} onValueChange={handleCategoryChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.nome} - R$ {cat.valor_contribuicao.toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
-            </ScrollArea>
-          )}
-        </div>
 
-        {selectedPatient && (
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleLinkMember} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Vinculando...
-                </>
-              ) : (
-                <>
-                  <Link2 className="h-4 w-4 mr-2" />
-                  Vincular como Associado
-                </>
-              )}
-            </Button>
-          </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Valor Contribuição</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={unionContribution}
+                      onChange={(e) => setUnionContribution(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Forma de Pagamento</Label>
+                    <Select value={unionPaymentMethod} onValueChange={setUnionPaymentMethod}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desconto_folha">Desconto em Folha</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="debito_conta">Débito em Conta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={unionObservations}
+                    onChange={(e) => setUnionObservations(e.target.value)}
+                    placeholder="Observações sobre o associado..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleLinkMember} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Vinculando...
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Vincular Associado
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </PopupBase>
   );
 }
