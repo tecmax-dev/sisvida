@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,17 +174,16 @@ export default function ContributionDetailDialog({
   const originConfig = ORIGIN_CONFIG[contribution.origin || "manual"];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" />
-            Detalhes da Contribuição
-          </DialogTitle>
-          <DialogDescription>
-            Informações completas e histórico de auditoria
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="3xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-primary" />
+          Detalhes da Contribuição
+        </PopupTitle>
+        <PopupDescription>
+          Informações completas e histórico de auditoria
+        </PopupDescription>
+      </PopupHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -553,7 +546,6 @@ export default function ContributionDetailDialog({
             </TabsContent>
           </ScrollArea>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+    </PopupBase>
   );
 }

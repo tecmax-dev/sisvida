@@ -4,12 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -254,11 +249,10 @@ export function TransfersPanel({ clinicId }: TransfersPanelProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova Transferência</DialogTitle>
-          </DialogHeader>
+      <PopupBase open={dialogOpen} onClose={() => setDialogOpen(false)}>
+        <PopupHeader>
+          <PopupTitle>Nova Transferência</PopupTitle>
+        </PopupHeader>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
@@ -366,8 +360,7 @@ export function TransfersPanel({ clinicId }: TransfersPanelProps) {
               </div>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+      </PopupBase>
     </div>
   );
 }
