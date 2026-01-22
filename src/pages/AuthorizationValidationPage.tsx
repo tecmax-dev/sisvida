@@ -38,13 +38,25 @@ export default function AuthorizationValidationPage() {
 
       if (error) throw error;
 
+      // If union_entity is null, try to fetch by clinic_id
+      let unionEntityData = data.union_entity;
+      if (!unionEntityData && data.clinic_id) {
+        const { data: entityByClinic } = await supabase
+          .from("union_entities")
+          .select("razao_social, nome_fantasia, logo_url, president_name, president_signature_url")
+          .eq("clinic_id", data.clinic_id)
+          .eq("status", "ativa")
+          .single();
+        unionEntityData = entityByClinic;
+      }
+
       // Increment view count
       await supabase
         .from("union_authorizations")
         .update({ view_count: (data.view_count || 0) + 1, last_viewed_at: new Date().toISOString() })
         .eq("id", data.id);
 
-      return data;
+      return { ...data, union_entity: unionEntityData };
     },
     enabled: !!hash,
   });

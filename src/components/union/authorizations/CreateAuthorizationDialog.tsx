@@ -146,6 +146,22 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
     enabled: !!currentClinic?.id && open,
   });
 
+  // Fetch union entity to link with authorization
+  const { data: unionEntity } = useQuery({
+    queryKey: ["union-entity-active", currentClinic?.id],
+    queryFn: async () => {
+      if (!currentClinic?.id) return null;
+      const { data } = await supabase
+        .from("union_entities")
+        .select("id")
+        .eq("clinic_id", currentClinic.id)
+        .eq("status", "ativa")
+        .single();
+      return data;
+    },
+    enabled: !!currentClinic?.id && open,
+  });
+
   // Update validity_days when benefit changes
   useEffect(() => {
     if (benefitId) {
@@ -196,6 +212,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
         valid_until: format(validUntil, "yyyy-MM-dd"),
         notes: data.notes || null,
         created_by: user.id,
+        union_entity_id: unionEntity?.id || null,
       };
 
       const { error } = await supabase
