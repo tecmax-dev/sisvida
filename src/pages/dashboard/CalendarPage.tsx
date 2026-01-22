@@ -98,7 +98,7 @@ import {
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { cn, calculateAge } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -2716,6 +2716,28 @@ const updateData: Record<string, any> = {
           )}>
             {getAppointmentDisplayName(appointment)}
           </span>
+          {/* Idade do paciente para lei de prioridade */}
+          {appointment.patient?.birth_date && (() => {
+            const age = calculateAge(appointment.patient.birth_date);
+            if (age !== null) {
+              const isPriority = age >= 60;
+              return (
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium",
+                    isPriority 
+                      ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-700" 
+                      : "bg-muted text-muted-foreground"
+                  )}
+                  title={isPriority ? "Paciente com prioridade legal (60+ anos)" : "Idade do paciente"}
+                >
+                  {age}a
+                </Badge>
+              );
+            }
+            return null;
+          })()}
           {/* Badge de dependente */}
           {appointment.dependent_id && (
             <Badge
@@ -3151,8 +3173,31 @@ const updateData: Record<string, any> = {
                                       <CheckCircle2 className="h-3 w-3 text-gray-600" />
                                     )}
                                   </div>
-                                  <div className="text-xs font-medium text-gray-800 truncate mt-0.5">
-                                    {displayName}
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className="text-xs font-medium text-gray-800 truncate">
+                                      {displayName}
+                                    </span>
+                                    {/* Idade do paciente para lei de prioridade */}
+                                    {apt.patient?.birth_date && (() => {
+                                      const age = calculateAge(apt.patient.birth_date);
+                                      if (age !== null) {
+                                        const isPriority = age >= 60;
+                                        return (
+                                          <span 
+                                            className={cn(
+                                              "text-[9px] px-1 rounded font-medium flex-shrink-0",
+                                              isPriority 
+                                                ? "bg-amber-200 text-amber-800" 
+                                                : "bg-gray-200 text-gray-600"
+                                            )}
+                                            title={isPriority ? "Prioridade legal (60+ anos)" : "Idade"}
+                                          >
+                                            {age}a
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
                                   </div>
                                 </div>
                               </DraggableAppointment>
