@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { Printer, Share2, Copy, ExternalLink } from "lucide-react";
+import { Printer, Copy, ExternalLink, MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { SendAuthorizationWhatsAppDialog } from "./SendAuthorizationWhatsAppDialog";
 
 interface Authorization {
   id: string;
@@ -52,6 +53,7 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
   // Fetch union entity data (includes logo, president name, and signature)
   const { data: unionEntity } = useQuery({
@@ -231,6 +233,14 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
               Abrir Link
             </a>
           </Button>
+          <Button 
+            size="sm" 
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => setWhatsappDialogOpen(true)}
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            WhatsApp
+          </Button>
         </div>
 
         <Separator />
@@ -352,6 +362,21 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
             <p>Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • {publicUrl}</p>
           </div>
         </div>
+
+        {/* WhatsApp Dialog */}
+        <SendAuthorizationWhatsAppDialog
+          open={whatsappDialogOpen}
+          onOpenChange={setWhatsappDialogOpen}
+          authorization={authorization ? {
+            ...authorization,
+            patient: {
+              ...authorization.patient,
+              phone: patient?.phone,
+            }
+          } : null}
+          clinicId={currentClinic?.id || ""}
+          entityName={unionEntity?.razao_social || currentClinic?.name}
+        />
       </DialogContent>
     </Dialog>
   );
