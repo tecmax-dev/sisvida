@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, Loader2 } from "lucide-react";
+import { Settings, CreditCard, FileText, Image, Loader2 } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
+import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 
 export default function UnionConfigPage() {
   const { currentClinic } = useAuth();
@@ -40,8 +40,12 @@ export default function UnionConfigPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="payment-methods" className="space-y-6">
+      <Tabs defaultValue="branding" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="branding" className="gap-2">
+            <Image className="h-4 w-4" />
+            Identidade Visual
+          </TabsTrigger>
           <TabsTrigger value="payment-methods" className="gap-2">
             <CreditCard className="h-4 w-4" />
             Formas de Pagamento
@@ -51,6 +55,25 @@ export default function UnionConfigPage() {
             Documentos
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="branding">
+          {sindicatoId ? (
+            <UnionBrandingSettings
+              entityId={sindicatoId}
+              logoUrl={(entity as any)?.logo_url}
+              presidentName={(entity as any)?.president_name}
+              presidentSignatureUrl={(entity as any)?.president_signature_url}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Configure uma entidade sindical para gerenciar identidade visual.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         <TabsContent value="payment-methods">
           {sindicatoId ? (

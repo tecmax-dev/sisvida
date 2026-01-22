@@ -23,6 +23,9 @@ export interface UnionEntity {
   ultimo_acesso: string | null;
   clinic_id: string | null;
   allow_duplicate_competence: boolean;
+  logo_url: string | null;
+  president_name: string | null;
+  president_signature_url: string | null;
 }
 
 export function useUnionEntity() {
