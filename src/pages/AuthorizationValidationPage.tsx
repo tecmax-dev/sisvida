@@ -24,7 +24,14 @@ export default function AuthorizationValidationPage() {
           patient:patient_id (name, cpf, registration_number),
           dependent:dependent_id (name),
           benefit:benefit_id (name, partner_name),
-          clinic:clinic_id (name)
+          clinic:clinic_id (name),
+          union_entity:union_entity_id (
+            razao_social,
+            nome_fantasia,
+            logo_url,
+            president_name,
+            president_signature_url
+          )
         `)
         .eq("validation_hash", hash)
         .single();
@@ -73,6 +80,12 @@ export default function AuthorizationValidationPage() {
   const isValid = data.status === "active" && new Date(data.valid_until) >= new Date();
   const isExpired = data.status === "expired" || new Date(data.valid_until) < new Date();
   const isRevoked = data.status === "revoked";
+  
+  const unionEntity = data.union_entity as any;
+  const entityName = unionEntity?.nome_fantasia || unionEntity?.razao_social || data.clinic?.name;
+  const logoUrl = unionEntity?.logo_url;
+  const presidentName = unionEntity?.president_name;
+  const signatureUrl = unionEntity?.president_signature_url;
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${
@@ -82,6 +95,17 @@ export default function AuthorizationValidationPage() {
     }`}>
       <Card className="w-full max-w-lg">
         <CardContent className="pt-6 space-y-6">
+          {/* Logo */}
+          {logoUrl && (
+            <div className="flex justify-center">
+              <img 
+                src={logoUrl} 
+                alt={entityName} 
+                className="h-16 w-auto object-contain"
+              />
+            </div>
+          )}
+
           {/* Status */}
           <div className="text-center">
             {isValid ? (
@@ -144,8 +168,31 @@ export default function AuthorizationValidationPage() {
 
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">Entidade</p>
-              <p className="font-medium">{data.clinic?.name}</p>
+              <p className="font-medium">{entityName}</p>
             </div>
+
+            {/* President Signature */}
+            {(presidentName || signatureUrl) && (
+              <>
+                <Separator />
+                <div className="text-center space-y-2">
+                  {signatureUrl && (
+                    <img 
+                      src={signatureUrl} 
+                      alt="Assinatura do Presidente" 
+                      className="h-12 w-auto object-contain mx-auto"
+                    />
+                  )}
+                  {presidentName && (
+                    <>
+                      <div className="w-48 mx-auto border-t border-gray-300" />
+                      <p className="font-medium text-sm">{presidentName}</p>
+                      <p className="text-xs text-muted-foreground">Presidente</p>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* QR Code */}

@@ -11018,8 +11018,11 @@ export type Database = {
           entity_type: Database["public"]["Enums"]["union_entity_type"]
           estado: string | null
           id: string
+          logo_url: string | null
           nome_fantasia: string | null
           plan_id: string | null
+          president_name: string | null
+          president_signature_url: string | null
           razao_social: string
           responsavel_legal: string | null
           status: Database["public"]["Enums"]["union_entity_status"]
@@ -11048,8 +11051,11 @@ export type Database = {
           entity_type?: Database["public"]["Enums"]["union_entity_type"]
           estado?: string | null
           id?: string
+          logo_url?: string | null
           nome_fantasia?: string | null
           plan_id?: string | null
+          president_name?: string | null
+          president_signature_url?: string | null
           razao_social: string
           responsavel_legal?: string | null
           status?: Database["public"]["Enums"]["union_entity_status"]
@@ -11078,8 +11084,11 @@ export type Database = {
           entity_type?: Database["public"]["Enums"]["union_entity_type"]
           estado?: string | null
           id?: string
+          logo_url?: string | null
           nome_fantasia?: string | null
           plan_id?: string | null
+          president_name?: string | null
+          president_signature_url?: string | null
           razao_social?: string
           responsavel_legal?: string | null
           status?: Database["public"]["Enums"]["union_entity_status"]
