@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Download, 
   FileText, 
@@ -23,7 +30,9 @@ import {
   ClipboardList,
   Settings,
   BarChart3,
-  Shield
+  Shield,
+  X,
+  LucideIcon
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
@@ -32,6 +41,8 @@ import ecliniLogo from "@/assets/eclini-logo.png";
 const TutorialSindicatoPage = () => {
   const [generating, setGenerating] = useState(false);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
+  const [selectedModule, setSelectedModule] = useState<ModuleContent | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<TopicContent | null>(null);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -49,6 +60,376 @@ const TutorialSindicatoPage = () => {
     };
     loadLogo();
   }, []);
+
+  // Module content data
+  interface ModuleContent {
+    icon: LucideIcon;
+    title: string;
+    desc: string;
+    color: string;
+    bg: string;
+    fullContent: {
+      overview: string;
+      features: string[];
+      steps: { title: string; desc: string }[];
+      tips: string[];
+    };
+  }
+
+  interface TopicContent {
+    icon: LucideIcon;
+    title: string;
+    desc: string;
+    fullContent: {
+      overview: string;
+      steps: { title: string; desc: string }[];
+      important: string[];
+    };
+  }
+
+  const modules: ModuleContent[] = [
+    { 
+      icon: Building2, 
+      title: "Empresas", 
+      desc: "Gestão de empresas e escritórios", 
+      color: "text-amber-500", 
+      bg: "bg-amber-500/10",
+      fullContent: {
+        overview: "O módulo de Empresas permite o cadastro e gestão completa de todas as empresas associadas ao sindicato, incluindo seus escritórios contábeis vinculados.",
+        features: [
+          "Cadastro completo com CNPJ, razão social e dados de contato",
+          "Vinculação com escritórios de contabilidade",
+          "Gestão de planos e contratos ativos",
+          "Histórico de relacionamento com a entidade",
+          "Controle de documentação obrigatória"
+        ],
+        steps: [
+          { title: "Acessar o módulo", desc: "No menu lateral, clique em 'Empresas' para expandir as opções disponíveis." },
+          { title: "Cadastrar nova empresa", desc: "Clique em 'Nova Empresa' e preencha todos os campos obrigatórios como CNPJ, razão social e endereço." },
+          { title: "Vincular escritório", desc: "Na aba 'Escritório Contábil', selecione ou cadastre o escritório responsável pela empresa." },
+          { title: "Definir plano", desc: "Escolha o plano de associação adequado e configure as condições de contribuição." }
+        ],
+        tips: [
+          "Mantenha sempre os dados de contato atualizados para facilitar a comunicação",
+          "Verifique a situação cadastral do CNPJ antes de finalizar o cadastro",
+          "Use os filtros de busca para localizar empresas rapidamente"
+        ]
+      }
+    },
+    { 
+      icon: Users, 
+      title: "Sócios", 
+      desc: "Cadastro e benefícios", 
+      color: "text-violet-500", 
+      bg: "bg-violet-500/10",
+      fullContent: {
+        overview: "Gerencie todos os trabalhadores filiados ao sindicato, seus benefícios, autorizações e histórico de participação.",
+        features: [
+          "Cadastro completo de trabalhadores filiados",
+          "Gestão de benefícios e convênios",
+          "Controle de autorizações e documentos",
+          "Aprovação de novas filiações",
+          "Emissão de carteirinha digital"
+        ],
+        steps: [
+          { title: "Cadastrar sócio", desc: "Acesse 'Sócios > Novo Cadastro' e preencha os dados pessoais, profissionais e de contato." },
+          { title: "Vincular à empresa", desc: "Selecione a empresa empregadora do trabalhador para associar corretamente." },
+          { title: "Definir benefícios", desc: "Configure os benefícios disponíveis para o sócio conforme seu plano." },
+          { title: "Aprovar filiação", desc: "Revise os dados e aprove a filiação para ativar todos os benefícios." }
+        ],
+        tips: [
+          "Solicite documentos comprobatórios antes de aprovar filiações",
+          "Configure alertas para renovação de documentos",
+          "Use a busca por CPF para evitar cadastros duplicados"
+        ]
+      }
+    },
+    { 
+      icon: Receipt, 
+      title: "Contribuições", 
+      desc: "Controle de pagamentos", 
+      color: "text-emerald-500", 
+      bg: "bg-emerald-500/10",
+      fullContent: {
+        overview: "Controle completo das contribuições sindicais, mensalidades e taxas, com gestão de inadimplência e emissão de boletos.",
+        features: [
+          "Gerenciamento de mensalidades e taxas",
+          "Controle de inadimplência automatizado",
+          "Emissão de boletos e carnês",
+          "Relatórios detalhados por período",
+          "Integração com sistema financeiro"
+        ],
+        steps: [
+          { title: "Visualizar contribuições", desc: "Acesse 'Contribuições > Gerenciamento' para ver todas as contribuições pendentes e pagas." },
+          { title: "Filtrar por status", desc: "Use os filtros para visualizar apenas pendentes, pagas ou vencidas." },
+          { title: "Emitir boletos", desc: "Selecione as contribuições e clique em 'Emitir Boleto' para gerar os documentos." },
+          { title: "Registrar pagamento", desc: "Ao receber confirmação, atualize o status para 'Pago' com a data do pagamento." }
+        ],
+        tips: [
+          "Configure lembretes automáticos para contribuições próximas do vencimento",
+          "Exporte relatórios mensais para acompanhamento",
+          "Use a conciliação bancária para atualizar pagamentos automaticamente"
+        ]
+      }
+    },
+    { 
+      icon: DollarSign, 
+      title: "Financeiro", 
+      desc: "Receitas, despesas e fluxo", 
+      color: "text-blue-500", 
+      bg: "bg-blue-500/10",
+      fullContent: {
+        overview: "Gestão financeira completa com controle de receitas, despesas, fluxo de caixa e conciliação bancária automatizada.",
+        features: [
+          "Dashboard com métricas em tempo real",
+          "Controle de receitas e despesas",
+          "Fluxo de caixa com projeções",
+          "Conciliação bancária automatizada",
+          "Plano de contas personalizável"
+        ],
+        steps: [
+          { title: "Acessar dashboard", desc: "O painel financeiro mostra um resumo das finanças com gráficos e indicadores principais." },
+          { title: "Registrar lançamento", desc: "Clique em 'Novo Lançamento' e escolha entre receita ou despesa, preenchendo todos os dados." },
+          { title: "Categorizar", desc: "Selecione a categoria e centro de custo para organização adequada." },
+          { title: "Conciliar extratos", desc: "Importe o extrato bancário e o sistema fará a conciliação automática." }
+        ],
+        tips: [
+          "Faça a conciliação bancária diariamente para manter os dados atualizados",
+          "Configure alertas de saldo baixo para evitar surpresas",
+          "Use o plano de contas para relatórios gerenciais precisos"
+        ]
+      }
+    },
+    { 
+      icon: Handshake, 
+      title: "Negociações", 
+      desc: "Acordos e parcelamentos", 
+      color: "text-purple-500", 
+      bg: "bg-purple-500/10",
+      fullContent: {
+        overview: "Gerencie negociações de dívidas, acordos de parcelamento e renegociações com empresas e sócios inadimplentes.",
+        features: [
+          "Simulação de parcelamentos",
+          "Cálculo automático de juros e correções",
+          "Aprovação digital de propostas",
+          "Acompanhamento de acordos",
+          "Notificações de inadimplência"
+        ],
+        steps: [
+          { title: "Identificar débitos", desc: "Acesse 'Negociações > Débitos' para ver todas as pendências passíveis de negociação." },
+          { title: "Simular acordo", desc: "Selecione os débitos e clique em 'Simular Acordo' para ver opções de parcelamento." },
+          { title: "Definir condições", desc: "Escolha número de parcelas, data de vencimento e forma de pagamento." },
+          { title: "Formalizar acordo", desc: "Gere o termo de acordo e envie para assinatura digital do devedor." }
+        ],
+        tips: [
+          "Ofereça condições especiais para quitação à vista",
+          "Monitore os pagamentos das parcelas regularmente",
+          "Documente todas as negociações para segurança jurídica"
+        ]
+      }
+    },
+    { 
+      icon: Scale, 
+      title: "Jurídico", 
+      desc: "Processos e prazos", 
+      color: "text-indigo-500", 
+      bg: "bg-indigo-500/10",
+      fullContent: {
+        overview: "Acompanhe processos judiciais, controle prazos processuais e gerencie a relação com advogados e escritórios parceiros.",
+        features: [
+          "Cadastro de ações judiciais",
+          "Controle de prazos processuais",
+          "Alertas automáticos de vencimentos",
+          "Vinculação com advogados",
+          "Histórico de movimentações"
+        ],
+        steps: [
+          { title: "Cadastrar processo", desc: "Acesse 'Jurídico > Novo Processo' e informe número, vara, partes e objeto da ação." },
+          { title: "Definir prazos", desc: "Cadastre os prazos processuais importantes e configure alertas de lembrete." },
+          { title: "Vincular advogado", desc: "Associe o advogado ou escritório responsável pela condução do processo." },
+          { title: "Registrar movimentações", desc: "Atualize o processo com cada nova movimentação ou decisão judicial." }
+        ],
+        tips: [
+          "Configure alertas com antecedência para não perder prazos",
+          "Mantenha cópias digitais de todos os documentos processuais",
+          "Acompanhe regularmente as movimentações nos tribunais"
+        ]
+      }
+    },
+    { 
+      icon: Stethoscope, 
+      title: "Homologação", 
+      desc: "Agenda médica", 
+      color: "text-teal-500", 
+      bg: "bg-teal-500/10",
+      fullContent: {
+        overview: "Módulo dedicado à gestão de homologações, agenda médica e atendimentos de profissionais de saúde vinculados ao sindicato.",
+        features: [
+          "Agenda de homologações",
+          "Cadastro de profissionais de saúde",
+          "Gestão de serviços e procedimentos",
+          "Bloqueios de agenda",
+          "Assinatura digital de documentos"
+        ],
+        steps: [
+          { title: "Configurar agenda", desc: "Defina os horários disponíveis para atendimento em 'Homologação > Configurações'." },
+          { title: "Cadastrar profissionais", desc: "Registre os médicos e especialistas em 'Profissionais' com suas especialidades." },
+          { title: "Agendar homologação", desc: "Selecione data, horário e profissional para criar o agendamento." },
+          { title: "Realizar atendimento", desc: "No dia, acesse o prontuário, registre observações e finalize com assinatura digital." }
+        ],
+        tips: [
+          "Envie lembretes automáticos para os pacientes agendados",
+          "Configure bloqueios para férias e feriados com antecedência",
+          "Mantenha os prontuários sempre atualizados"
+        ]
+      }
+    },
+    { 
+      icon: Smartphone, 
+      title: "App Mobile", 
+      desc: "Gestão de conteúdo", 
+      color: "text-pink-500", 
+      bg: "bg-pink-500/10",
+      fullContent: {
+        overview: "Gerencie o conteúdo e funcionalidades do aplicativo mobile disponível para os sócios do sindicato.",
+        features: [
+          "Carteirinha digital com QR Code",
+          "Gestão de benefícios e convênios",
+          "Visualização de boletos e pagamentos",
+          "Notificações push em tempo real",
+          "Comunicados e avisos"
+        ],
+        steps: [
+          { title: "Acessar gestão do app", desc: "No menu, acesse 'App Mobile > Configurações' para gerenciar o aplicativo." },
+          { title: "Publicar comunicados", desc: "Crie e publique avisos que aparecerão no app dos sócios." },
+          { title: "Gerenciar benefícios", desc: "Configure os benefícios e convênios visíveis no aplicativo." },
+          { title: "Enviar notificações", desc: "Crie notificações push para comunicação imediata com os sócios." }
+        ],
+        tips: [
+          "Mantenha os benefícios sempre atualizados no app",
+          "Use notificações push com moderação para não incomodar",
+          "Verifique regularmente se as informações estão corretas"
+        ]
+      }
+    }
+  ];
+
+  const learningTopics: TopicContent[] = [
+    { 
+      icon: Play, 
+      title: "Primeiros Passos", 
+      desc: "Como acessar e navegar no sistema",
+      fullContent: {
+        overview: "Aprenda como acessar o sistema Eclini pela primeira vez, configurar sua conta e navegar pelas principais funcionalidades.",
+        steps: [
+          { title: "Acessar o sistema", desc: "Acesse o endereço fornecido pela sua entidade e faça login com e-mail e senha cadastrados." },
+          { title: "Conhecer o dashboard", desc: "A tela inicial mostra um resumo com estatísticas importantes: empresas, sócios e finanças." },
+          { title: "Navegar pelo menu", desc: "O menu lateral esquerdo organiza todas as funcionalidades por categorias. Clique para expandir." },
+          { title: "Personalizar perfil", desc: "Acesse seu perfil para atualizar dados pessoais e preferências do sistema." }
+        ],
+        important: [
+          "Guarde sua senha em local seguro e não compartilhe com terceiros",
+          "Altere a senha padrão no primeiro acesso",
+          "Em caso de esquecimento, use a opção 'Recuperar Senha'"
+        ]
+      }
+    },
+    { 
+      icon: UserPlus, 
+      title: "Cadastros", 
+      desc: "Empresas, sócios e escritórios",
+      fullContent: {
+        overview: "Domine os cadastros essenciais do sistema: empresas associadas, trabalhadores filiados e escritórios de contabilidade.",
+        steps: [
+          { title: "Cadastrar empresa", desc: "Acesse 'Empresas > Nova' e preencha CNPJ, razão social, endereço e contatos." },
+          { title: "Cadastrar sócio", desc: "Em 'Sócios > Novo', informe dados pessoais, profissionais e vincule à empresa." },
+          { title: "Cadastrar escritório", desc: "Registre escritórios contábeis em 'Empresas > Escritórios' para vinculação." },
+          { title: "Validar informações", desc: "Revise os dados cadastrados e valide documentos antes de aprovar." }
+        ],
+        important: [
+          "Sempre valide CPF e CNPJ antes de finalizar cadastros",
+          "Mantenha documentos digitalizados anexados aos cadastros",
+          "Use a busca para evitar cadastros duplicados"
+        ]
+      }
+    },
+    { 
+      icon: ClipboardList, 
+      title: "Contribuições", 
+      desc: "Gerenciar e acompanhar pagamentos",
+      fullContent: {
+        overview: "Aprenda a gerenciar as contribuições sindicais, emitir boletos, controlar inadimplência e gerar relatórios.",
+        steps: [
+          { title: "Visualizar pendências", desc: "Acesse 'Contribuições > Gerenciamento' para ver status de todas as contribuições." },
+          { title: "Emitir boletos", desc: "Selecione as contribuições e clique em 'Emitir Boleto' para gerar documentos." },
+          { title: "Registrar pagamentos", desc: "Ao confirmar recebimento, atualize o status para 'Pago' com a data." },
+          { title: "Controlar inadimplência", desc: "Filtre por 'Vencidos' para identificar e notificar devedores." }
+        ],
+        important: [
+          "Configure lembretes automáticos antes do vencimento",
+          "Faça conciliação bancária para atualizar pagamentos",
+          "Exporte relatórios para prestação de contas"
+        ]
+      }
+    },
+    { 
+      icon: BarChart3, 
+      title: "Relatórios", 
+      desc: "Gerar análises e exportar dados",
+      fullContent: {
+        overview: "Utilize as ferramentas de relatórios para gerar análises, acompanhar indicadores e exportar dados do sistema.",
+        steps: [
+          { title: "Acessar relatórios", desc: "No menu, clique em 'Relatórios' para ver todas as opções disponíveis." },
+          { title: "Selecionar tipo", desc: "Escolha o tipo de relatório: financeiro, associados, contribuições, etc." },
+          { title: "Aplicar filtros", desc: "Defina período, empresas, status e outros filtros para refinar os dados." },
+          { title: "Exportar", desc: "Clique em 'Exportar' e escolha o formato: PDF, Excel ou CSV." }
+        ],
+        important: [
+          "Salve relatórios recorrentes como modelos para agilizar",
+          "Use gráficos para apresentações visuais",
+          "Agende relatórios automáticos por e-mail"
+        ]
+      }
+    },
+    { 
+      icon: Settings, 
+      title: "Configurações", 
+      desc: "Personalizar o sistema",
+      fullContent: {
+        overview: "Configure o sistema de acordo com as necessidades da sua entidade: usuários, permissões, integrações e preferências.",
+        steps: [
+          { title: "Acessar configurações", desc: "Clique no ícone de engrenagem no menu para abrir as configurações." },
+          { title: "Gerenciar usuários", desc: "Adicione, edite ou remova usuários do sistema conforme necessário." },
+          { title: "Definir permissões", desc: "Configure grupos de acesso com permissões específicas por função." },
+          { title: "Personalizar sistema", desc: "Ajuste logo, cores, mensagens automáticas e outras preferências." }
+        ],
+        important: [
+          "Revise as permissões de acesso regularmente",
+          "Mantenha poucos usuários com acesso administrativo",
+          "Documente as configurações realizadas"
+        ]
+      }
+    },
+    { 
+      icon: Shield, 
+      title: "Segurança", 
+      desc: "Boas práticas de uso",
+      fullContent: {
+        overview: "Conheça as melhores práticas de segurança para proteger os dados do sistema e garantir a integridade das informações.",
+        steps: [
+          { title: "Criar senha forte", desc: "Use senhas com pelo menos 8 caracteres, incluindo letras, números e símbolos." },
+          { title: "Ativar autenticação", desc: "Habilite a verificação em duas etapas para maior segurança." },
+          { title: "Revisar acessos", desc: "Periodicamente, revise quem tem acesso ao sistema e remova usuários inativos." },
+          { title: "Fazer backup", desc: "Exporte dados importantes regularmente como backup de segurança." }
+        ],
+        important: [
+          "Nunca compartilhe sua senha com outras pessoas",
+          "Faça logout ao terminar de usar o sistema",
+          "Reporte qualquer atividade suspeita imediatamente"
+        ]
+      }
+    }
+  ];
 
   const generatePDF = async () => {
     setGenerating(true);
@@ -623,26 +1004,6 @@ const TutorialSindicatoPage = () => {
     }
   };
 
-  const modules = [
-    { icon: Building2, title: "Empresas", desc: "Gestão de empresas e escritórios", color: "text-amber-500", bg: "bg-amber-500/10" },
-    { icon: Users, title: "Sócios", desc: "Cadastro e benefícios", color: "text-violet-500", bg: "bg-violet-500/10" },
-    { icon: Receipt, title: "Contribuições", desc: "Controle de pagamentos", color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { icon: DollarSign, title: "Financeiro", desc: "Receitas, despesas e fluxo", color: "text-blue-500", bg: "bg-blue-500/10" },
-    { icon: Handshake, title: "Negociações", desc: "Acordos e parcelamentos", color: "text-purple-500", bg: "bg-purple-500/10" },
-    { icon: Scale, title: "Jurídico", desc: "Processos e prazos", color: "text-indigo-500", bg: "bg-indigo-500/10" },
-    { icon: Stethoscope, title: "Homologação", desc: "Agenda médica", color: "text-teal-500", bg: "bg-teal-500/10" },
-    { icon: Smartphone, title: "App Mobile", desc: "Gestão de conteúdo", color: "text-pink-500", bg: "bg-pink-500/10" },
-  ];
-
-  const learningTopics = [
-    { icon: Play, title: "Primeiros Passos", desc: "Como acessar e navegar no sistema" },
-    { icon: UserPlus, title: "Cadastros", desc: "Empresas, sócios e escritórios" },
-    { icon: ClipboardList, title: "Contribuições", desc: "Gerenciar e acompanhar pagamentos" },
-    { icon: BarChart3, title: "Relatórios", desc: "Gerar análises e exportar dados" },
-    { icon: Settings, title: "Configurações", desc: "Personalizar o sistema" },
-    { icon: Shield, title: "Segurança", desc: "Boas práticas de uso" },
-  ];
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
       <Header />
@@ -708,13 +1069,17 @@ const TutorialSindicatoPage = () => {
                 Módulos Abordados
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                O tutorial cobre todas as principais funcionalidades do sistema
+                Clique em cada módulo para ver o conteúdo detalhado
               </p>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
               {modules.map((mod, i) => (
-                <Card key={i} className="border-border/50 hover:border-primary/50 transition-colors">
+                <Card 
+                  key={i} 
+                  className="border-border/50 hover:border-primary/50 transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1"
+                  onClick={() => setSelectedModule(mod)}
+                >
                   <CardContent className="p-4 text-center">
                     <div className={`w-12 h-12 rounded-xl ${mod.bg} flex items-center justify-center mx-auto mb-3`}>
                       <mod.icon className={`h-6 w-6 ${mod.color}`} />
@@ -736,13 +1101,17 @@ const TutorialSindicatoPage = () => {
                 O que você vai aprender
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Conteúdo passo a passo para dominar o sistema
+                Clique em cada tópico para ver o passo a passo completo
               </p>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {learningTopics.map((topic, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors">
+                <div 
+                  key={i} 
+                  className="flex items-start gap-4 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1"
+                  onClick={() => setSelectedTopic(topic)}
+                >
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <topic.icon className="h-5 w-5 text-primary" />
                   </div>
@@ -761,7 +1130,10 @@ const TutorialSindicatoPage = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 to-teal-500 flex items-center justify-center shrink-0">
+                <div 
+                  className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 to-teal-500 flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => setSelectedModule(modules.find(m => m.title === "Homologação") || null)}
+                >
                   <Stethoscope className="h-12 w-12 text-white" />
                 </div>
                 <div className="text-center md:text-left">
@@ -829,6 +1201,152 @@ const TutorialSindicatoPage = () => {
       </main>
 
       <Footer />
+
+      {/* Module Detail Modal */}
+      <Dialog open={!!selectedModule} onOpenChange={() => setSelectedModule(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {selectedModule && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-xl ${selectedModule.bg} flex items-center justify-center`}>
+                    <selectedModule.icon className={`h-7 w-7 ${selectedModule.color}`} />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl">{selectedModule.title}</DialogTitle>
+                    <DialogDescription>{selectedModule.desc}</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              
+              <div className="space-y-6 mt-4">
+                {/* Overview */}
+                <div>
+                  <p className="text-muted-foreground">{selectedModule.fullContent.overview}</p>
+                </div>
+
+                {/* Features */}
+                <div>
+                  <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    Funcionalidades
+                  </h4>
+                  <ul className="space-y-2">
+                    {selectedModule.fullContent.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Steps */}
+                <div>
+                  <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Play className="h-5 w-5 text-primary" />
+                    Passo a Passo
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedModule.fullContent.steps.map((step, i) => (
+                      <div key={i} className="flex gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="w-6 h-6 rounded-full bg-primary text-white text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-foreground text-sm">{step.title}</h5>
+                          <p className="text-sm text-muted-foreground">{step.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    Dicas Importantes
+                  </h4>
+                  <ul className="space-y-1">
+                    {selectedModule.fullContent.tips.map((tip, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="text-primary">•</span>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Topic Detail Modal */}
+      <Dialog open={!!selectedTopic} onOpenChange={() => setSelectedTopic(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {selectedTopic && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <selectedTopic.icon className="h-7 w-7 text-primary" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl">{selectedTopic.title}</DialogTitle>
+                    <DialogDescription>{selectedTopic.desc}</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              
+              <div className="space-y-6 mt-4">
+                {/* Overview */}
+                <div>
+                  <p className="text-muted-foreground">{selectedTopic.fullContent.overview}</p>
+                </div>
+
+                {/* Steps */}
+                <div>
+                  <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Play className="h-5 w-5 text-primary" />
+                    Como Fazer
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedTopic.fullContent.steps.map((step, i) => (
+                      <div key={i} className="flex gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="w-6 h-6 rounded-full bg-primary text-white text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-foreground text-sm">{step.title}</h5>
+                          <p className="text-sm text-muted-foreground">{step.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Important Notes */}
+                <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-amber-500" />
+                    Informações Importantes
+                  </h4>
+                  <ul className="space-y-1">
+                    {selectedTopic.fullContent.important.map((item, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="text-amber-500">•</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
