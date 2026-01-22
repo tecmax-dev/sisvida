@@ -376,6 +376,8 @@ const App = () => (
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
                 <Route path="/homologacao/:slug" element={<HomologacaoClinicBooking />} />
                 <Route path="/protocolo/:token" element={<HomologacaoProtocolValidation />} />
+                {/* Authorization Validation - Public */}
+                <Route path="/autorizacao/:hash" element={<AuthorizationValidationPage />} />
                 <Route
                   path="/clinic-setup"
                   element={
