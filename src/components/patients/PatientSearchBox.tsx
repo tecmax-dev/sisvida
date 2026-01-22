@@ -50,11 +50,25 @@ export function PatientSearchBox() {
         const searchTerm = search.trim();
         const searchTermNumbers = searchTerm.replace(/\D/g, ""); // Remove formatação para CPF/telefone
         
+        // Formata CPF se tiver 11 dígitos para buscar tanto formatado quanto sem formatação
+        let cpfFormatted = "";
+        if (searchTermNumbers.length >= 3) {
+          const cpfClean = searchTermNumbers.slice(0, 11);
+          if (cpfClean.length === 11) {
+            cpfFormatted = cpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+          }
+        }
+        
+        // Busca por nome, CPF (formatado e não formatado) e telefone
+        const cpfFilter = cpfFormatted 
+          ? `cpf.ilike.%${searchTermNumbers}%,cpf.ilike.%${cpfFormatted}%`
+          : `cpf.ilike.%${searchTermNumbers}%`;
+        
         const { data, error } = await supabase
           .from("patients")
           .select("id, name, cpf, phone, record_code")
           .eq("clinic_id", currentClinic.id)
-          .or(`name.ilike.%${searchTerm}%,cpf.ilike.%${searchTermNumbers}%,phone.ilike.%${searchTermNumbers}%`)
+          .or(`name.ilike.%${searchTerm}%,${cpfFilter},phone.ilike.%${searchTermNumbers}%`)
           .order("name")
           .limit(10);
 
