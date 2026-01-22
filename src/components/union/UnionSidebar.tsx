@@ -140,6 +140,7 @@ const unionNavTree: NavCategory[] = [
     color: "financeiro",
     items: [
       { href: "/union/financeiro", icon: Home, label: "Visão Geral", permission: "union_view_financials" },
+      { href: "/union/financeiro/orcamento", icon: FileBarChart, label: "Previsão Orçamentária", permission: "union_view_financials" },
       { href: "/union/financeiro/despesas", icon: TrendingUp, label: "Despesas", permission: "union_view_expenses" },
       { href: "/union/financeiro/receitas", icon: TrendingUp, label: "Receitas", permission: "union_view_income" },
       { href: "/union/financeiro/movimentacao", icon: FileText, label: "Movimentação", permission: "union_view_cash_flow" },

@@ -134,6 +134,8 @@ import { UnionModuleLayout } from "./components/union/UnionModuleLayout";
 // Mobile App Layout (força modo claro)
 import { MobileAppLayout } from "./components/mobile/MobileAppLayout";
 import UnionDashboard from "./pages/union/UnionDashboard";
+import UnionBudgetPage from "./pages/union/budget/UnionBudgetPage";
+import UnionBudgetDetailPage from "./pages/union/budget/UnionBudgetDetailPage";
 import UnionPlansPage from "./pages/union/UnionPlansPage";
 import UnionEmployersPage from "./pages/union/UnionEmployersPage";
 import UnionAccountingOfficesPage from "./pages/union/UnionAccountingOfficesPage";
@@ -508,6 +510,8 @@ const App = () => (
                   <Route path="financeiro/conciliacao-bancaria" element={<UnionBankReconciliationPage />} />
                   <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro/relatorios-lytex" element={<UnionLytexReportsPage />} />
+                  <Route path="financeiro/orcamento" element={<UnionBudgetPage />} />
+                  <Route path="financeiro/orcamento/:id" element={<UnionBudgetDetailPage />} />
                   <Route path="negociacoes" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
