@@ -1,7 +1,6 @@
 import { forwardRef } from "react";
 import { DocumentSettings } from "@/hooks/useDocumentSettings";
-import { formatDateBR } from "@/lib/date";
-
+import { formatDateBR, parseDateOnlyToLocalNoon } from "@/lib/date";
 interface AttendanceDeclarationPrintProps {
   clinic: {
     name: string;
@@ -48,7 +47,7 @@ export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceD
       ? { width: '148mm', height: '210mm', padding: 'p-6', minHeight: 'min-h-[210mm]', logoHeight: 'h-12' }
       : { width: '210mm', height: '297mm', padding: 'p-8', minHeight: 'min-h-[297mm]', logoHeight: 'h-16' };
 
-    const appointmentDate = new Date(date);
+    const appointmentDate = parseDateOnlyToLocalNoon(date);
     
     const defaultTemplate = 'Declaro para os devidos fins que o(a) Sr(a). {patient_name} compareceu a este estabelecimento de saúde na data de {date}, no período das {start_time} às {end_time}, para atendimento médico/consulta.';
     
