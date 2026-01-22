@@ -7,23 +7,13 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  PopupBase,
+  PopupHeader,
+  PopupTitle,
+  PopupDescription,
+  PopupFooter,
+} from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import {
   Accordion,
   AccordionContent,
@@ -344,198 +334,186 @@ export function ApiKeysPanel({ clinicId }: ApiKeysPanelProps) {
         )}
 
         {/* Dialog Criar Chave */}
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Criar Nova Chave de API</DialogTitle>
-              <DialogDescription>
-                Defina um nome e as permissões para esta chave
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="keyName">Nome da Chave</Label>
-                <Input
-                  id="keyName"
-                  placeholder="Ex: Sistema de Agendamento"
-                  value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Permissões</Label>
-                <div className="grid gap-2 max-h-60 overflow-y-auto">
-                  {ALL_PERMISSIONS.map((perm) => (
-                    <div key={perm.id} className="flex items-start gap-2">
-                      <Checkbox
-                        id={perm.id}
-                        checked={newKeyPermissions.includes(perm.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setNewKeyPermissions([...newKeyPermissions, perm.id]);
-                          } else {
-                            setNewKeyPermissions(newKeyPermissions.filter(p => p !== perm.id));
-                          }
-                        }}
-                      />
-                      <label htmlFor={perm.id} className="text-sm cursor-pointer">
-                        <div className="font-medium">{perm.label}</div>
-                        <div className="text-muted-foreground text-xs">{perm.description}</div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
+        <PopupBase open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md">
+          <PopupHeader>
+            <PopupTitle>Criar Nova Chave de API</PopupTitle>
+            <PopupDescription>
+              Defina um nome e as permissões para esta chave
+            </PopupDescription>
+          </PopupHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="keyName">Nome da Chave</Label>
+              <Input
+                id="keyName"
+                placeholder="Ex: Sistema de Agendamento"
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Permissões</Label>
+              <div className="grid gap-2 max-h-60 overflow-y-auto">
+                {ALL_PERMISSIONS.map((perm) => (
+                  <div key={perm.id} className="flex items-start gap-2">
+                    <Checkbox
+                      id={perm.id}
+                      checked={newKeyPermissions.includes(perm.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewKeyPermissions([...newKeyPermissions, perm.id]);
+                        } else {
+                          setNewKeyPermissions(newKeyPermissions.filter(p => p !== perm.id));
+                        }
+                      }}
+                    />
+                    <label htmlFor={perm.id} className="text-sm cursor-pointer">
+                      <div className="font-medium">{perm.label}</div>
+                      <div className="text-muted-foreground text-xs">{perm.description}</div>
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateKey} disabled={creating}>
-                {creating ? "Criando..." : "Criar Chave"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <PopupFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateKey} disabled={creating}>
+              {creating ? "Criando..." : "Criar Chave"}
+            </Button>
+          </PopupFooter>
+        </PopupBase>
 
         {/* Dialog Chave Criada */}
-        <Dialog open={!!createdKey} onOpenChange={() => setCreatedKey(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Chave Criada com Sucesso</DialogTitle>
-              <DialogDescription>
-                Copie esta chave agora. Por segurança, ela não será exibida novamente.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <div className="p-4 bg-muted rounded-lg font-mono text-sm break-all flex items-center gap-2">
-                <span className="flex-1">
-                  {showCreatedKey ? createdKey : '•'.repeat(60)}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowCreatedKey(!showCreatedKey)}
-                >
-                  {showCreatedKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => createdKey && copyToClipboard(createdKey)}
-                >
+        <PopupBase open={!!createdKey} onClose={() => setCreatedKey(null)} maxWidth="lg">
+          <PopupHeader>
+            <PopupTitle>Chave Criada com Sucesso</PopupTitle>
+            <PopupDescription>
+              Copie esta chave agora. Por segurança, ela não será exibida novamente.
+            </PopupDescription>
+          </PopupHeader>
+          <div className="py-4">
+            <div className="p-4 bg-muted rounded-lg font-mono text-sm break-all flex items-center gap-2">
+              <span className="flex-1">
+                {showCreatedKey ? createdKey : '•'.repeat(60)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCreatedKey(!showCreatedKey)}
+              >
+                {showCreatedKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => createdKey && copyToClipboard(createdKey)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <PopupFooter>
+            <Button onClick={() => setCreatedKey(null)}>Fechar</Button>
+          </PopupFooter>
+        </PopupBase>
+
+        {/* Dialog Confirmar Exclusão */}
+        <AlertPopup
+          open={!!deleteKeyId}
+          onClose={() => setDeleteKeyId(null)}
+          onConfirm={handleDeleteKey}
+          title="Excluir Chave de API?"
+          description="Esta ação não pode ser desfeita. Sistemas que utilizam esta chave perderão acesso imediatamente."
+          confirmText="Excluir"
+          confirmVariant="destructive"
+        />
+
+        {/* Dialog Documentação */}
+        <PopupBase open={docsOpen} onClose={() => setDocsOpen(false)} maxWidth="2xl">
+          <PopupHeader>
+            <PopupTitle>Documentação da API</PopupTitle>
+            <PopupDescription>
+              Referência completa dos endpoints disponíveis
+            </PopupDescription>
+          </PopupHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <Label className="text-xs text-muted-foreground">Base URL</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <code className="text-sm flex-1 break-all">{apiBaseUrl}</code>
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(apiBaseUrl)}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <DialogFooter>
-              <Button onClick={() => setCreatedKey(null)}>Fechar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        {/* Dialog Confirmar Exclusão */}
-        <AlertDialog open={!!deleteKeyId} onOpenChange={() => setDeleteKeyId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir Chave de API?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Sistemas que utilizam esta chave perderão acesso imediatamente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteKey} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            <div className="p-3 bg-muted rounded-lg">
+              <Label className="text-xs text-muted-foreground">Autenticação</Label>
+              <code className="text-sm block mt-1">Header: X-API-Key: sua_chave_aqui</code>
+            </div>
 
-        {/* Dialog Documentação */}
-        <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Documentação da API</DialogTitle>
-              <DialogDescription>
-                Referência completa dos endpoints disponíveis
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <Label className="text-xs text-muted-foreground">Base URL</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <code className="text-sm flex-1 break-all">{apiBaseUrl}</code>
-                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(apiBaseUrl)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-3 bg-muted rounded-lg">
-                <Label className="text-xs text-muted-foreground">Autenticação</Label>
-                <code className="text-sm block mt-1">Header: X-API-Key: sua_chave_aqui</code>
-              </div>
-
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="professionals">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="outline">GET</Badge>
-                      /professionals
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Lista todos os profissionais ativos da clínica.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="professionals">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="outline">GET</Badge>
+                    /professionals
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Lista todos os profissionais ativos da clínica.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X GET "${apiBaseUrl}/professionals" \\
   -H "X-API-Key: sua_chave"`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="availability">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="outline">GET</Badge>
-                      /professionals/:id/availability
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Retorna horários disponíveis do profissional.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="availability">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="outline">GET</Badge>
+                    /professionals/:id/availability
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Retorna horários disponíveis do profissional.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X GET "${apiBaseUrl}/professionals/uuid/availability?date=2024-12-25" \\
   -H "X-API-Key: sua_chave"`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="patients-search">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="outline">GET</Badge>
-                      /patients
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Busca pacientes por telefone, CPF ou nome.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="patients-search">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="outline">GET</Badge>
+                    /patients
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Busca pacientes por telefone, CPF ou nome.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X GET "${apiBaseUrl}/patients?phone=71999887766" \\
   -H "X-API-Key: sua_chave"`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="patients-create">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="secondary">POST</Badge>
-                      /patients
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Cadastra um novo paciente.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="patients-create">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="secondary">POST</Badge>
+                    /patients
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Cadastra um novo paciente.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X POST "${apiBaseUrl}/patients" \\
   -H "X-API-Key: sua_chave" \\
   -H "Content-Type: application/json" \\
@@ -545,20 +523,20 @@ export function ApiKeysPanel({ clinicId }: ApiKeysPanelProps) {
     "email": "joao@email.com",
     "cpf": "123.456.789-00"
   }'`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="appointments-create">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="secondary">POST</Badge>
-                      /appointments
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Cria um novo agendamento. Pode criar o paciente automaticamente.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="appointments-create">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="secondary">POST</Badge>
+                    /appointments
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Cria um novo agendamento. Pode criar o paciente automaticamente.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X POST "${apiBaseUrl}/appointments" \\
   -H "X-API-Key: sua_chave" \\
   -H "Content-Type: application/json" \\
@@ -570,63 +548,62 @@ export function ApiKeysPanel({ clinicId }: ApiKeysPanelProps) {
     "start_time": "09:00",
     "type": "first_visit"
   }'`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="appointments-list">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="outline">GET</Badge>
-                      /appointments
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Lista agendamentos com filtros opcionais.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="appointments-list">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="outline">GET</Badge>
+                    /appointments
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Lista agendamentos com filtros opcionais.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X GET "${apiBaseUrl}/appointments?date=2024-12-25&status=scheduled" \\
   -H "X-API-Key: sua_chave"`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="appointments-cancel">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge className="bg-amber-500">PATCH</Badge>
-                      /appointments/:id/cancel
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Cancela um agendamento existente.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="appointments-cancel">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge className="bg-amber-500">PATCH</Badge>
+                    /appointments/:id/cancel
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Cancela um agendamento existente.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X PATCH "${apiBaseUrl}/appointments/uuid/cancel" \\
   -H "X-API-Key: sua_chave" \\
   -H "Content-Type: application/json" \\
   -d '{"cancellation_reason": "Solicitado pelo paciente"}'`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
 
-                <AccordionItem value="history">
-                  <AccordionTrigger>
-                    <span className="flex items-center gap-2">
-                      <Badge variant="outline">GET</Badge>
-                      /patients/:id/history
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm text-muted-foreground mb-2">Retorna o histórico de agendamentos do paciente.</p>
-                    <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
+              <AccordionItem value="history">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Badge variant="outline">GET</Badge>
+                    /patients/:id/history
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-sm text-muted-foreground mb-2">Retorna o histórico de agendamentos do paciente.</p>
+                  <pre className="p-3 bg-muted rounded text-xs overflow-x-auto">
 {`curl -X GET "${apiBaseUrl}/patients/uuid/history" \\
   -H "X-API-Key: sua_chave"`}
-                    </pre>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
-          </DialogContent>
-        </Dialog>
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </PopupBase>
       </CardContent>
     </Card>
   );

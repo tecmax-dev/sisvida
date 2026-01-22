@@ -19,23 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  PopupBase,
+  PopupHeader,
+  PopupTitle,
+  PopupDescription,
+  PopupFooter,
+} from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import {
   Select,
   SelectContent,
@@ -1257,357 +1247,331 @@ export default function EmployerDetailPage() {
       />
 
       {/* View Contribution Dialog */}
-      <Dialog open={viewContribDialogOpen} onOpenChange={setViewContribDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Contribuição</DialogTitle>
-          </DialogHeader>
+      <PopupBase open={viewContribDialogOpen} onClose={() => setViewContribDialogOpen(false)} maxWidth="lg">
+        <PopupHeader>
+          <PopupTitle>Detalhes da Contribuição</PopupTitle>
+        </PopupHeader>
 
-          {selectedContribution && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Tipo</p>
-                  <p className="font-medium">{selectedContribution.contribution_types?.name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Competência</p>
-                  <p className="font-medium">
-                    {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Valor</p>
-                  <p className="font-medium text-lg">{formatCurrency(selectedContribution.value)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Vencimento</p>
-                  <p className="font-medium">
-                    {format(new Date(selectedContribution.due_date + "T12:00:00"), "dd/MM/yyyy")}
-                  </p>
-                </div>
+        {selectedContribution && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Tipo</p>
+                <p className="font-medium">{selectedContribution.contribution_types?.name}</p>
               </div>
-
-              {selectedContribution.lytex_invoice_url && (
-                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span className="font-medium">Dados do Boleto</span>
-                  </div>
-
-                  {selectedContribution.lytex_boleto_digitable_line && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Linha Digitável</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto">
-                          {selectedContribution.lytex_boleto_digitable_line}
-                        </code>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0"
-                          onClick={() => handleCopyToClipboard(selectedContribution.lytex_boleto_digitable_line!, "Linha digitável")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedContribution.lytex_pix_code && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">PIX Copia e Cola</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto max-h-20">
-                          {selectedContribution.lytex_pix_code.slice(0, 50)}...
-                        </code>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0"
-                          onClick={() => handleCopyToClipboard(selectedContribution.lytex_pix_code!, "Código PIX")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    className="w-full"
-                    onClick={() => window.open(selectedContribution.lytex_invoice_url!, "_blank")}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Abrir Boleto / Fatura
-                  </Button>
-                </div>
-              )}
-
-              {selectedContribution.status === "paid" && (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
-                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                    <CheckCircle2 className="h-5 w-5" />
-                    <span className="font-medium">Pagamento Confirmado</span>
-                  </div>
-                  {selectedContribution.paid_at && (
-                    <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">
-                      Pago em {format(new Date(selectedContribution.paid_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      {selectedContribution.payment_method && ` via ${selectedContribution.payment_method}`}
-                      {selectedContribution.paid_value && ` - ${formatCurrency(selectedContribution.paid_value)}`}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <DialogFooter className="flex-wrap gap-2">
-                {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={handleOpenEditDialog}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setManualPaymentValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
-                        setManualPaymentDialogOpen(true);
-                      }}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Baixa Manual
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => setCancelDialogOpen(true)}
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Cancelar
-                    </Button>
-                  </>
-                )}
-                {!selectedContribution.lytex_invoice_id && selectedContribution.status !== "cancelled" && selectedContribution.status !== "paid" && (
-                  <Button
-                    onClick={() => handleGenerateInvoice(selectedContribution)}
-                    disabled={generatingInvoice}
-                  >
-                    {generatingInvoice ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Gerar Boleto
-                  </Button>
-                )}
-              </DialogFooter>
+              <div>
+                <p className="text-muted-foreground">Competência</p>
+                <p className="font-medium">
+                  {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Valor</p>
+                <p className="font-medium text-lg">{formatCurrency(selectedContribution.value)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Vencimento</p>
+                <p className="font-medium">
+                  {format(new Date(selectedContribution.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                </p>
+              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {selectedContribution.lytex_invoice_url && (
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Dados do Boleto</span>
+                </div>
+
+                {selectedContribution.lytex_boleto_digitable_line && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Linha Digitável</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto">
+                        {selectedContribution.lytex_boleto_digitable_line}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => handleCopyToClipboard(selectedContribution.lytex_boleto_digitable_line!, "Linha digitável")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedContribution.lytex_pix_code && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">PIX Copia e Cola</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto max-h-20">
+                        {selectedContribution.lytex_pix_code.slice(0, 50)}...
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => handleCopyToClipboard(selectedContribution.lytex_pix_code!, "Código PIX")}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  className="w-full"
+                  onClick={() => window.open(selectedContribution.lytex_invoice_url!, "_blank")}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Abrir Boleto / Fatura
+                </Button>
+              </div>
+            )}
+
+            {selectedContribution.status === "paid" && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">Pagamento Confirmado</span>
+                </div>
+                {selectedContribution.paid_at && (
+                  <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">
+                    Pago em {format(new Date(selectedContribution.paid_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {selectedContribution.payment_method && ` via ${selectedContribution.payment_method}`}
+                    {selectedContribution.paid_value && ` - ${formatCurrency(selectedContribution.paid_value)}`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <PopupFooter className="flex-wrap gap-2">
+              {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleOpenEditDialog}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setManualPaymentValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
+                      setManualPaymentDialogOpen(true);
+                    }}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Baixa Manual
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setCancelDialogOpen(true)}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                </>
+              )}
+              {!selectedContribution.lytex_invoice_id && selectedContribution.status !== "cancelled" && selectedContribution.status !== "paid" && (
+                <Button
+                  onClick={() => handleGenerateInvoice(selectedContribution)}
+                  disabled={generatingInvoice}
+                >
+                  {generatingInvoice ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Gerar Boleto
+                </Button>
+              )}
+            </PopupFooter>
+          </div>
+        )}
+      </PopupBase>
 
       {/* Manual Payment Dialog */}
-      <Dialog open={manualPaymentDialogOpen} onOpenChange={setManualPaymentDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Baixa Manual</DialogTitle>
-            <DialogDescription>
-              Registrar pagamento recebido fora do sistema
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={manualPaymentDialogOpen} onClose={() => setManualPaymentDialogOpen(false)} maxWidth="sm">
+        <PopupHeader>
+          <PopupTitle>Baixa Manual</PopupTitle>
+          <PopupDescription>
+            Registrar pagamento recebido fora do sistema
+          </PopupDescription>
+        </PopupHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Label>Valor Recebido (R$) *</Label>
-              <Input
-                placeholder="0,00"
-                value={manualPaymentValue}
-                onChange={(e) => setManualPaymentValue(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Forma de Pagamento</Label>
-              <Select value={manualPaymentMethod} onValueChange={setManualPaymentMethod}>
+        <div className="space-y-4">
+          <div>
+            <Label>Valor Recebido (R$) *</Label>
+            <Input
+              placeholder="0,00"
+              value={manualPaymentValue}
+              onChange={(e) => setManualPaymentValue(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Forma de Pagamento</Label>
+            <Select value={manualPaymentMethod} onValueChange={setManualPaymentMethod}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="transferencia">Transferência</SelectItem>
+                <SelectItem value="cheque">Cheque</SelectItem>
+                <SelectItem value="cartao">Cartão</SelectItem>
+                <SelectItem value="outros">Outros</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Data do Pagamento</Label>
+            <Input
+              type="date"
+              value={manualPaymentDate}
+              onChange={(e) => setManualPaymentDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <PopupFooter>
+          <Button variant="outline" onClick={() => setManualPaymentDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleManualPayment}>
+            Confirmar Baixa
+          </Button>
+        </PopupFooter>
+      </PopupBase>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertPopup
+        open={cancelDialogOpen}
+        onClose={() => setCancelDialogOpen(false)}
+        onConfirm={handleCancelContribution}
+        title="Cancelar Contribuição"
+        description={`Tem certeza que deseja cancelar esta contribuição?${selectedContribution?.lytex_invoice_id ? " O boleto também será cancelado na Lytex." : ""}`}
+        confirmText="Confirmar Cancelamento"
+        confirmVariant="destructive"
+        cancelText="Voltar"
+      />
+
+      {/* Edit Contribution Dialog */}
+      <PopupBase open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md">
+        <PopupHeader>
+          <PopupTitle>Editar Contribuição</PopupTitle>
+          <PopupDescription>
+            {selectedContribution?.lytex_invoice_id 
+              ? "A alteração será sincronizada com o boleto na Lytex."
+              : "Altere os dados da contribuição."}
+          </PopupDescription>
+        </PopupHeader>
+
+        <div className="space-y-4">
+          {/* Tipo de Contribuição */}
+          <div className="space-y-2">
+            <Label>Tipo de Contribuição</Label>
+            <Select value={editTypeId} onValueChange={setEditTypeId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {contributionTypes.filter(t => t.is_active).map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Mês e Ano de Competência */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Mês Competência</Label>
+              <Select value={String(editMonth)} onValueChange={(v) => setEditMonth(parseInt(v))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="pix">PIX</SelectItem>
-                  <SelectItem value="transferencia">Transferência</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
-                  <SelectItem value="cartao">Cartão</SelectItem>
-                  <SelectItem value="outros">Outros</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Data do Pagamento</Label>
-              <Input
-                type="date"
-                value={manualPaymentDate}
-                onChange={(e) => setManualPaymentDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setManualPaymentDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleManualPayment}>
-              Confirmar Baixa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Confirmation Dialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar Contribuição</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja cancelar esta contribuição? 
-              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelContribution}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Confirmar Cancelamento
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Edit Contribution Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Contribuição</DialogTitle>
-            <DialogDescription>
-              {selectedContribution?.lytex_invoice_id 
-                ? "A alteração será sincronizada com o boleto na Lytex."
-                : "Altere os dados da contribuição."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Tipo de Contribuição */}
-            <div className="space-y-2">
-              <Label>Tipo de Contribuição</Label>
-              <Select value={editTypeId} onValueChange={setEditTypeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contributionTypes.filter(t => t.is_active).map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Mês e Ano de Competência */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Mês Competência</Label>
-                <Select value={String(editMonth)} onValueChange={(v) => setEditMonth(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Ano</Label>
-                <Select value={String(editYear)} onValueChange={(v) => setEditYear(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getStaticYearRange().map(year => (
-                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Valor e Vencimento */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Valor (R$)</Label>
-                <Input
-                  placeholder="0,00"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Vencimento</Label>
-                <Input
-                  type="date"
-                  value={editDueDate}
-                  onChange={(e) => setEditDueDate(e.target.value)}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Ano</Label>
+              <Select value={String(editYear)} onValueChange={(v) => setEditYear(parseInt(v))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getStaticYearRange().map(year => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleUpdateContribution} disabled={updating}>
-              {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Valor e Vencimento */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Valor (R$)</Label>
+              <Input
+                placeholder="0,00"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Vencimento</Label>
+              <Input
+                type="date"
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        <PopupFooter>
+          <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleUpdateContribution} disabled={updating}>
+            {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Salvar
+          </Button>
+        </PopupFooter>
+      </PopupBase>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta contribuição permanentemente?
-              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteContribution}
-              disabled={deleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Confirmar Exclusão
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertPopup
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteContribution}
+        title="Excluir Contribuição"
+        description={`Tem certeza que deseja excluir esta contribuição permanentemente?${selectedContribution?.lytex_invoice_id ? " O boleto também será cancelado na Lytex." : ""}`}
+        confirmText="Confirmar Exclusão"
+        confirmVariant="destructive"
+        cancelText="Voltar"
+        isLoading={deleting}
+        disabled={deleting}
+      />
 
       {/* WhatsApp Boleto Dialog */}
       <SendBoletoWhatsAppDialog
