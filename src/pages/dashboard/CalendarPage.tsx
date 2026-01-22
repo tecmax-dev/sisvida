@@ -2725,10 +2725,10 @@ const updateData: Record<string, any> = {
                 <Badge 
                   variant="outline" 
                   className={cn(
-                    "text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium",
+                    "text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-bold",
                     isPriority 
-                      ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-700" 
-                      : "bg-muted text-muted-foreground"
+                      ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
+                      : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
                   )}
                   title={isPriority ? "Paciente com prioridade legal (60+ anos)" : "Idade do paciente"}
                 >
@@ -3185,10 +3185,10 @@ const updateData: Record<string, any> = {
                                         return (
                                           <span 
                                             className={cn(
-                                              "text-[9px] px-1 rounded font-medium flex-shrink-0",
+                                              "text-[9px] px-1 rounded font-bold flex-shrink-0",
                                               isPriority 
-                                                ? "bg-amber-200 text-amber-800" 
-                                                : "bg-gray-200 text-gray-600"
+                                                ? "bg-amber-400 text-amber-900" 
+                                                : "bg-sky-300 text-sky-900"
                                             )}
                                             title={isPriority ? "Prioridade legal (60+ anos)" : "Idade"}
                                           >
