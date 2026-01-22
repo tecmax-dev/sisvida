@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,34 +31,40 @@ export interface UnionEntity {
 
 export function useUnionEntity() {
   const { user, userRoles, currentClinic, isSuperAdmin } = useAuth();
-  const [entity, setEntity] = useState<UnionEntity | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isUnionEntityAdmin, setIsUnionEntityAdmin] = useState(false);
+  const hasUnionRole = useMemo(
+    () => userRoles.some((role) => role.role === ("entidade_sindical_admin" as any)),
+    [userRoles]
+  );
 
-  useEffect(() => {
-    const fetchUnionEntity = async () => {
-      if (!user) {
-        setEntity(null);
-        setIsUnionEntityAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      // Check if user has entidade_sindical_admin role
-      const hasUnionRole = userRoles.some(
-        (role) => role.role === ("entidade_sindical_admin" as any)
-      );
+  const adminQuery = useQuery({
+    queryKey: ["union-entity-admin", user?.id, hasUnionRole, isSuperAdmin],
+    enabled: !!user,
+    queryFn: async () => {
+      if (!user) return false;
+      if (isSuperAdmin || hasUnionRole) return true;
 
       // Also check directly in user_roles table for roles without clinic_id
-      const { data: directRoles } = await supabase
+      const { data: directRoles, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("role", "entidade_sindical_admin")
         .maybeSingle();
 
-      const isEntityAdmin = hasUnionRole || !!directRoles || isSuperAdmin;
-      setIsUnionEntityAdmin(isEntityAdmin);
+      if (error) {
+        console.error("[UnionEntity] Error checking direct union role:", error);
+        return false;
+      }
+
+      return !!directRoles;
+    },
+  });
+
+  const entityQuery = useQuery({
+    queryKey: ["union-entity", user?.id, currentClinic?.id, isSuperAdmin],
+    enabled: !!user,
+    queryFn: async () => {
+      if (!user) return null;
 
       // Try to fetch union entity by user_id first (direct entity admin)
       let { data, error } = await supabase
@@ -73,7 +80,7 @@ export function useUnionEntity() {
           .select("*")
           .eq("clinic_id", currentClinic.id)
           .maybeSingle();
-        
+
         data = result.data;
         error = result.error;
       }
@@ -86,27 +93,23 @@ export function useUnionEntity() {
           .eq("status", "ativa")
           .limit(1)
           .maybeSingle();
-        
+
         data = result.data;
         error = result.error;
       }
 
       if (error) {
         console.error("[UnionEntity] Error fetching entity:", error);
-        setEntity(null);
-      } else {
-        setEntity(data as UnionEntity | null);
+        return null;
       }
 
-      setLoading(false);
-    };
-
-    fetchUnionEntity();
-  }, [user, userRoles, currentClinic, isSuperAdmin]);
+      return (data as UnionEntity | null) ?? null;
+    },
+  });
 
   return {
-    entity,
-    loading,
-    isUnionEntityAdmin,
+    entity: entityQuery.data ?? null,
+    loading: adminQuery.isLoading || entityQuery.isLoading,
+    isUnionEntityAdmin: adminQuery.data ?? false,
   };
 }
