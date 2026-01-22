@@ -171,6 +171,7 @@ import UnionLegalCaseFormPage from "./pages/union/legal/UnionLegalCaseFormPage";
 import UnionLawyersPage from "./pages/union/legal/UnionLawyersPage";
 import UnionLawFirmsPage from "./pages/union/legal/UnionLawFirmsPage";
 import UnionLegalDeadlinesPage from "./pages/union/legal/UnionLegalDeadlinesPage";
+import UnionLegalDeadlineFormPage from "./pages/union/legal/UnionLegalDeadlineFormPage";
 import UnionLegalExpensesPage from "./pages/union/legal/UnionLegalExpensesPage";
 const AuthorizationValidationPage = lazy(() => import("./pages/AuthorizationValidationPage"));
 // Admin pages - carregamento imediato
@@ -547,6 +548,7 @@ const App = () => (
                   <Route path="juridico/advogados" element={<UnionLawyersPage />} />
                   <Route path="juridico/escritorios" element={<UnionLawFirmsPage />} />
                   <Route path="juridico/prazos" element={<UnionLegalDeadlinesPage />} />
+                  <Route path="juridico/prazos/novo" element={<UnionLegalDeadlineFormPage />} />
                   <Route path="juridico/despesas" element={<UnionLegalExpensesPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
                 </Route>
