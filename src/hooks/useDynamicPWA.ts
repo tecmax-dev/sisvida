@@ -10,7 +10,7 @@ const DEFAULT_BRANDING = {
   name: "Eclini - Sistema para Clínicas",
   shortName: "Eclini",
   description: "Sistema de gestão para clínicas médicas e consultórios.",
-  logo: "/pwa-192x192.png",
+  logo: "/favicon-eclini.png",
 };
 
 interface ClinicBranding {
