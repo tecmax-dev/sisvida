@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-// Target clinic for this mobile app (Sindicato Comerciários)
+// Target clinic for the mobile app
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
+// Default system branding (Eclini)
+const DEFAULT_BRANDING = {
+  name: "Eclini - Sistema para Clínicas",
+  shortName: "Eclini",
+  description: "Sistema de gestão para clínicas médicas e consultórios.",
+  logo: "/pwa-192x192.png",
+};
 
 interface ClinicBranding {
   name: string;
@@ -12,54 +21,97 @@ interface ClinicBranding {
 
 /**
  * Hook to dynamically update the PWA branding (favicon, manifest, meta tags)
- * based on the clinic's data for the mobile app
+ * based on the clinic's data for the mobile app.
+ * 
+ * IMPORTANT: This hook ONLY applies custom branding on /app/* routes.
+ * On all other routes, it restores the default Eclini branding.
  */
 export function useDynamicPWA() {
   const [clinic, setClinic] = useState<ClinicBranding | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+
+  // Check if current route is a mobile app route
+  const isMobileAppRoute = location.pathname.startsWith("/app");
 
   useEffect(() => {
-    const loadClinicBranding = async () => {
-      // Get clinic ID from localStorage or use target clinic
-      let clinicId = localStorage.getItem("mobile_clinic_id");
-      
-      // If no clinic ID in localStorage, set the target clinic
-      if (!clinicId) {
-        clinicId = TARGET_CLINIC_ID;
-        localStorage.setItem("mobile_clinic_id", clinicId);
+    if (isMobileAppRoute) {
+      loadClinicBranding();
+    } else {
+      // Restore default branding when NOT on mobile app routes
+      restoreDefaultBranding();
+      setIsLoading(false);
+    }
+  }, [isMobileAppRoute]);
+
+  const loadClinicBranding = async () => {
+    // Get clinic ID from localStorage or use target clinic
+    let clinicId = localStorage.getItem("mobile_clinic_id");
+
+    // If no clinic ID in localStorage, set the target clinic
+    if (!clinicId) {
+      clinicId = TARGET_CLINIC_ID;
+      localStorage.setItem("mobile_clinic_id", clinicId);
+    }
+
+    try {
+      const { data } = await supabase
+        .from("clinics")
+        .select("name, logo_url, entity_nomenclature")
+        .eq("id", clinicId)
+        .single();
+
+      if (data) {
+        setClinic(data);
+        applyBranding(data);
       }
+    } catch (error) {
+      console.error("Error loading clinic branding:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      try {
-        const { data } = await supabase
-          .from("clinics")
-          .select("name, logo_url, entity_nomenclature")
-          .eq("id", clinicId)
-          .single();
+  const restoreDefaultBranding = () => {
+    // Restore document title
+    document.title = DEFAULT_BRANDING.name;
 
-        if (data) {
-          setClinic(data);
-          applyBranding(data);
-        }
-      } catch (error) {
-        console.error("Error loading clinic branding:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Restore favicon
+    updateLinkElement("icon", DEFAULT_BRANDING.logo);
+    updateLinkElement("apple-touch-icon", DEFAULT_BRANDING.logo);
 
-    loadClinicBranding();
-  }, []);
+    // Restore meta tags
+    updateMetaTag("apple-mobile-web-app-title", DEFAULT_BRANDING.shortName);
+    updateMetaTag("application-name", DEFAULT_BRANDING.shortName);
+    updateMetaTag("description", DEFAULT_BRANDING.description);
+
+    // Restore Open Graph tags
+    updateMetaProperty("og:title", DEFAULT_BRANDING.name);
+    updateMetaProperty("og:site_name", DEFAULT_BRANDING.shortName);
+    updateMetaProperty("og:description", DEFAULT_BRANDING.description);
+
+    // Restore Twitter tags
+    updateMetaProperty("twitter:title", DEFAULT_BRANDING.name);
+    updateMetaProperty("twitter:description", DEFAULT_BRANDING.description);
+
+    setClinic(null);
+  };
 
   const applyBranding = (clinicData: ClinicBranding) => {
-    const { name, logo_url } = clinicData;
+    const { name, logo_url, entity_nomenclature } = clinicData;
+    const displayName = entity_nomenclature 
+      ? `${name} | ${entity_nomenclature}` 
+      : name;
 
     // Update document title
-    document.title = name;
+    document.title = displayName;
 
     // Update favicon
-    updateLinkElement("icon", logo_url);
-    updateLinkElement("apple-touch-icon", logo_url);
-    updateLinkElement("apple-touch-icon-precomposed", logo_url);
+    if (logo_url) {
+      updateLinkElement("icon", logo_url);
+      updateLinkElement("apple-touch-icon", logo_url);
+      updateLinkElement("apple-touch-icon-precomposed", logo_url);
+    }
 
     // Update meta tags
     updateMetaTag("apple-mobile-web-app-title", name);
@@ -67,14 +119,14 @@ export function useDynamicPWA() {
     updateMetaTag("description", `App oficial do ${name}`);
 
     // Update Open Graph tags
-    updateMetaProperty("og:title", name);
+    updateMetaProperty("og:title", displayName);
     updateMetaProperty("og:site_name", name);
     if (logo_url) {
       updateMetaProperty("og:image", logo_url);
     }
 
     // Update Twitter tags
-    updateMetaProperty("twitter:title", name);
+    updateMetaProperty("twitter:title", displayName);
     if (logo_url) {
       updateMetaProperty("twitter:image", logo_url);
     }
