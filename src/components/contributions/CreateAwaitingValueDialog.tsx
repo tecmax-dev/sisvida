@@ -3,14 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Select,
   SelectContent,
@@ -278,298 +271,270 @@ export default function CreateAwaitingValueDialog({
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i + 1);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Nova Contribuição</DialogTitle>
-          <DialogDescription>
-            Escolha como deseja criar a contribuição para esta empresa.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="md">
+      <PopupHeader>
+        <PopupTitle>Nova Contribuição</PopupTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Escolha como deseja criar a contribuição para esta empresa.
+        </p>
+      </PopupHeader>
 
+      <div className="max-h-[70vh] overflow-y-auto">
         {step === "form" ? (
-          <>
-            <div className="space-y-4 py-4">
-              {/* Employer Info */}
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="font-medium">{employer.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  CNPJ: {employer.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}
-                </p>
-              </div>
+          <div className="space-y-4 py-4">
+            {/* Employer Info */}
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="font-medium">{employer.name}</p>
+              <p className="text-sm text-muted-foreground">
+                CNPJ: {employer.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}
+              </p>
+            </div>
 
-              {/* Mode Selection */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Modo de Criação</Label>
-                <RadioGroup
-                  value={mode}
-                  onValueChange={(v) => setMode(v as CreationMode)}
-                  className="grid grid-cols-2 gap-3"
+            {/* Mode Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Modo de Criação</Label>
+              <RadioGroup
+                value={mode}
+                onValueChange={(v) => setMode(v as CreationMode)}
+                className="grid grid-cols-2 gap-3"
+              >
+                <Label
+                  htmlFor="with_value"
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-all",
+                    mode === "with_value"
+                      ? "border-primary bg-primary/5"
+                      : "border-muted hover:border-muted-foreground/30"
+                  )}
                 >
-                  <Label
-                    htmlFor="with_value"
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-all",
-                      mode === "with_value"
-                        ? "border-primary bg-primary/5"
-                        : "border-muted hover:border-muted-foreground/30"
-                    )}
-                  >
-                    <RadioGroupItem value="with_value" id="with_value" className="sr-only" />
-                    <FileText className={cn(
-                      "h-6 w-6",
-                      mode === "with_value" ? "text-primary" : "text-muted-foreground"
-                    )} />
-                    <span className={cn(
-                      "text-sm font-medium text-center",
-                      mode === "with_value" ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      Com Valor
-                    </span>
-                    <span className="text-xs text-muted-foreground text-center">
-                      Definir valor agora
-                    </span>
-                  </Label>
-                  <Label
-                    htmlFor="without_value"
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-all",
-                      mode === "without_value"
-                        ? "border-amber-500 bg-amber-500/5"
-                        : "border-muted hover:border-muted-foreground/30"
-                    )}
-                  >
-                    <RadioGroupItem value="without_value" id="without_value" className="sr-only" />
-                    <Link2 className={cn(
-                      "h-6 w-6",
-                      mode === "without_value" ? "text-amber-500" : "text-muted-foreground"
-                    )} />
-                    <span className={cn(
-                      "text-sm font-medium text-center",
-                      mode === "without_value" ? "text-amber-600" : "text-muted-foreground"
-                    )}>
-                      Sem Valor
-                    </span>
-                    <span className="text-xs text-muted-foreground text-center">
-                      Empresa informa
-                    </span>
-                  </Label>
-                </RadioGroup>
-              </div>
+                  <RadioGroupItem value="with_value" id="with_value" className="sr-only" />
+                  <FileText className={cn(
+                    "h-6 w-6",
+                    mode === "with_value" ? "text-primary" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(
+                    "text-sm font-medium text-center",
+                    mode === "with_value" ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    Com Valor
+                  </span>
+                  <span className="text-xs text-muted-foreground text-center">
+                    Definir valor agora
+                  </span>
+                </Label>
+                <Label
+                  htmlFor="without_value"
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-all",
+                    mode === "without_value"
+                      ? "border-amber-500 bg-amber-500/5"
+                      : "border-muted hover:border-muted-foreground/30"
+                  )}
+                >
+                  <RadioGroupItem value="without_value" id="without_value" className="sr-only" />
+                  <Link2 className={cn(
+                    "h-6 w-6",
+                    mode === "without_value" ? "text-amber-500" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(
+                    "text-sm font-medium text-center",
+                    mode === "without_value" ? "text-amber-600" : "text-muted-foreground"
+                  )}>
+                    Sem Valor
+                  </span>
+                  <span className="text-xs text-muted-foreground text-center">
+                    Empresa informa
+                  </span>
+                </Label>
+              </RadioGroup>
+            </div>
 
-              {/* Contribution Type */}
+            {/* Contribution Type */}
+            <div className="space-y-2">
+              <Label>Tipo de Contribuição *</Label>
+              <Select value={typeId} onValueChange={setTypeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contributionTypes.filter(t => t.is_active).map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Value (only for with_value mode) */}
+            {mode === "with_value" && (
               <div className="space-y-2">
-                <Label>Tipo de Contribuição *</Label>
-                <Select value={typeId} onValueChange={setTypeId}>
+                <Label>Valor (R$) *</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Competence */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Mês</Label>
+                <Select value={String(month)} onValueChange={v => setMonth(Number(v))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {contributionTypes.filter(t => t.is_active).map(type => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
+                    {MONTHS.map((m, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>
+                        {m}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Value (only for with_value mode) */}
-              {mode === "with_value" && (
-                <div className="space-y-2">
-                  <Label>Valor (R$) *</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                  />
-                </div>
-              )}
-
-              {/* Competence */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Mês</Label>
-                  <Select value={String(month)} onValueChange={v => setMonth(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MONTHS.map((m, i) => (
-                        <SelectItem key={i} value={String(i + 1)}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Ano</Label>
-                  <Select value={String(year)} onValueChange={v => setYear(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map(y => (
-                        <SelectItem key={y} value={String(y)}>
-                          {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Due Date */}
               <div className="space-y-2">
-                <Label>Data de Vencimento *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "dd/MM/yyyy") : "Selecione..."}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      locale={ptBR}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label>Ano</Label>
+                <Select value={String(year)} onValueChange={v => setYear(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map(y => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
 
-              {/* Send Options (only for without_value mode) */}
-              {mode === "without_value" && (
-                <div className="space-y-3 pt-2 border-t">
-                  <Label className="text-xs uppercase text-muted-foreground">Enviar Link para Empresa</Label>
-                  
-                  {/* WhatsApp Option */}
-                  {employer.phone && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="sendWhatsapp"
-                        checked={sendWhatsApp}
-                        onCheckedChange={(checked) => setSendWhatsApp(!!checked)}
-                      />
-                      <label htmlFor="sendWhatsapp" className="text-sm cursor-pointer flex items-center gap-2">
-                        <Send className="h-4 w-4 text-emerald-600" />
-                        Enviar via WhatsApp
-                      </label>
-                    </div>
-                  )}
-
-                  {/* Email Option */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="sendEmail"
-                        checked={sendEmail}
-                        onCheckedChange={(checked) => setSendEmail(!!checked)}
-                      />
-                      <label htmlFor="sendEmail" className="text-sm cursor-pointer flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-blue-600" />
-                        Enviar via E-mail
-                      </label>
-                    </div>
-                    {sendEmail && (
-                      <Input
-                        type="email"
-                        placeholder="email@empresa.com"
-                        value={emailAddress}
-                        onChange={(e) => setEmailAddress(e.target.value)}
-                        className="mt-2"
-                      />
+            {/* Due Date */}
+            <div className="space-y-2">
+              <Label>Data de Vencimento *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dueDate && "text-muted-foreground"
                     )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "dd/MM/yyyy") : "Selecione..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Send Options (only for without_value mode) */}
+            {mode === "without_value" && (
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-xs uppercase text-muted-foreground">Enviar Link para Empresa</Label>
+                
+                {/* WhatsApp Option */}
+                {employer.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="sendWhatsapp"
+                      checked={sendWhatsApp}
+                      onCheckedChange={(checked) => setSendWhatsApp(!!checked)}
+                    />
+                    <label htmlFor="sendWhatsapp" className="text-sm cursor-pointer flex items-center gap-2">
+                      <Send className="h-4 w-4 text-emerald-600" />
+                      Enviar via WhatsApp
+                    </label>
                   </div>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreate} disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando...
-                  </>
-                ) : mode === "with_value" ? (
-                  "Criar Contribuição"
-                ) : (
-                  "Criar e Gerar Link"
                 )}
-              </Button>
-            </DialogFooter>
-          </>
+
+                {/* Email Option */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="sendEmail"
+                      checked={sendEmail}
+                      onCheckedChange={(checked) => setSendEmail(!!checked)}
+                    />
+                    <label htmlFor="sendEmail" className="text-sm cursor-pointer flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      Enviar via E-mail
+                    </label>
+                  </div>
+                  {sendEmail && (
+                    <Input
+                      type="email"
+                      placeholder="email@empresa.com"
+                      value={emailAddress}
+                      onChange={(e) => setEmailAddress(e.target.value)}
+                      className="ml-6"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="py-6 space-y-6">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="p-3 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-                <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+          <div className="space-y-4 py-4">
+            <div className="flex flex-col items-center text-center py-4">
+              <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               </div>
-              <div>
-                <h3 className="font-semibold text-lg">Contribuição Criada!</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {sendWhatsApp && employer.phone 
-                    ? "Link enviado via WhatsApp" 
-                    : "Copie o link e envie para a empresa"}
-                </p>
-              </div>
+              <h3 className="text-lg font-semibold">Contribuição Criada!</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                O link foi gerado para a empresa informar o valor.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              <Label>Link para Preenchimento</Label>
+            <div className="space-y-2">
+              <Label>Link para enviar à empresa</Label>
               <div className="flex gap-2">
-                <Input 
-                  value={publicLink} 
-                  readOnly 
-                  className="text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={copyLink}
-                  className="shrink-0"
-                >
-                  {copied ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
+                <Input value={publicLink} readOnly className="text-xs" />
+                <Button variant="outline" size="icon" onClick={copyLink}>
+                  <Copy className={cn("h-4 w-4", copied && "text-emerald-600")} />
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href={publicLink} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
                 </Button>
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => window.open(publicLink, "_blank")}
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Testar Link
-              </Button>
-              <Button className="flex-1" onClick={() => onOpenChange(false)}>
-                Concluir
-              </Button>
-            </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <PopupFooter>
+        {step === "form" ? (
+          <>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreate} disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Criar Contribuição
+            </Button>
+          </>
+        ) : (
+          <Button onClick={() => onOpenChange(false)} className="w-full">
+            Fechar
+          </Button>
+        )}
+      </PopupFooter>
+    </PopupBase>
   );
 }

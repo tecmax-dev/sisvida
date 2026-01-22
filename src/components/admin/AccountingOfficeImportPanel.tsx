@@ -7,14 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Upload, CheckCircle2, AlertCircle, Building2, Link2, FileSpreadsheet, FileText } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { parseAccountingReport, parseExcelAccountingReport, ParsedOffice, formatCnpj, normalizeCnpj } from "@/lib/pdfAccountingParser";
 import * as XLSX from "xlsx";
 
@@ -293,261 +286,248 @@ export default function AccountingOfficeImportPanel({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Importar Escritórios do Relatório
-          </DialogTitle>
-          <DialogDescription>
-            Importe escritórios de contabilidade a partir de um arquivo Excel ou texto colado.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={isOpen} onClose={handleClose} maxWidth="4xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Upload className="h-5 w-5" />
+          Importar Escritórios do Relatório
+        </PopupTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Importe escritórios de contabilidade a partir de um arquivo Excel ou texto colado.
+        </p>
+      </PopupHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-4">
-          {importResult ? (
-            // Resultado da importação
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  Importação Concluída
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-700">
-                      {importResult.officesCreated}
-                    </div>
-                    <div className="text-sm text-green-600">Escritórios criados</div>
+      <div className="flex-1 overflow-y-auto space-y-4 py-4 max-h-[60vh]">
+        {importResult ? (
+          // Resultado da importação
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-green-600">
+                <CheckCircle2 className="h-5 w-5" />
+                Importação Concluída
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-700">
+                    {importResult.officesCreated}
                   </div>
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-700">
-                      {importResult.officesUpdated}
-                    </div>
-                    <div className="text-sm text-blue-600">Escritórios atualizados</div>
-                  </div>
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-700">
-                      {importResult.linksCreated}
-                    </div>
-                    <div className="text-sm text-purple-600">Vínculos criados</div>
-                  </div>
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-700">
-                      {importResult.companiesNotFound.length}
-                    </div>
-                    <div className="text-sm text-orange-600">Empresas não encontradas</div>
-                  </div>
+                  <div className="text-sm text-green-600">Escritórios criados</div>
                 </div>
-
-                {importResult.companiesNotFound.length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-sm font-medium text-muted-foreground mb-2">
-                      CNPJs não encontrados no sistema:
-                    </div>
-                    <ScrollArea className="h-32 border rounded-md p-2">
-                      <div className="space-y-1">
-                        {importResult.companiesNotFound.map((cnpj, idx) => (
-                          <div key={idx} className="text-sm font-mono">
-                            {formatCnpj(cnpj)}
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-700">
+                    {importResult.officesUpdated}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : preview ? (
-            // Preview dos dados
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Badge variant="secondary" className="text-lg py-1 px-3">
-                    {preview.length} escritório(s)
-                  </Badge>
-                  <Badge variant="outline" className="text-lg py-1 px-3 text-green-600">
-                    {totalMatchedEmployers} empresa(s) encontrada(s)
-                  </Badge>
-                  {totalUnmatchedCnpjs > 0 && (
-                    <Badge variant="outline" className="text-lg py-1 px-3 text-orange-600">
-                      {totalUnmatchedCnpjs} não encontrada(s)
-                    </Badge>
-                  )}
+                  <div className="text-sm text-blue-600">Escritórios atualizados</div>
                 </div>
-                <Button variant="outline" onClick={() => setPreview(null)}>
-                  Voltar
-                </Button>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-700">
+                    {importResult.linksCreated}
+                  </div>
+                  <div className="text-sm text-purple-600">Vínculos criados</div>
+                </div>
+                <div className="p-3 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-700">
+                    {importResult.companiesNotFound.length}
+                  </div>
+                  <div className="text-sm text-orange-600">Empresas não encontradas</div>
+                </div>
               </div>
 
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-3 pr-4">
-                  {preview.map((item, idx) => (
-                    <Card key={idx} className={item.existsInSystem ? "border-blue-300" : "border-green-300"}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{item.office.name}</span>
-                              <Badge variant={item.existsInSystem ? "secondary" : "default"} className="text-xs">
-                                {item.existsInSystem ? "Já existe" : "Novo"}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-muted-foreground space-y-1">
-                              <div>Email: {item.office.email}</div>
-                              <div>Telefone: {item.office.phone}</div>
-                              <div>ID Legado: {item.office.legacyId}</div>
-                            </div>
+              {importResult.companiesNotFound.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium text-muted-foreground mb-2">
+                    CNPJs não encontrados no sistema:
+                  </div>
+                  <ScrollArea className="h-32 border rounded-md p-2">
+                    <div className="space-y-1">
+                      {importResult.companiesNotFound.map((cnpj, idx) => (
+                        <div key={idx} className="text-sm font-mono">
+                          {formatCnpj(cnpj)}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : preview ? (
+          // Preview dos dados
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Badge variant="secondary" className="text-lg py-1 px-3">
+                  {preview.length} escritório(s)
+                </Badge>
+                <Badge variant="outline" className="text-lg py-1 px-3 text-green-600">
+                  {totalMatchedEmployers} empresa(s) encontrada(s)
+                </Badge>
+                {totalUnmatchedCnpjs > 0 && (
+                  <Badge variant="outline" className="text-lg py-1 px-3 text-orange-600">
+                    {totalUnmatchedCnpjs} não encontrada(s)
+                  </Badge>
+                )}
+              </div>
+              <Button variant="outline" onClick={() => setPreview(null)}>
+                Voltar
+              </Button>
+            </div>
+
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-3 pr-4">
+                {preview.map((item, idx) => (
+                  <Card key={idx} className={item.existsInSystem ? "border-blue-300" : "border-green-300"}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{item.office.name}</span>
+                            <Badge variant={item.existsInSystem ? "secondary" : "default"} className="text-xs">
+                              {item.existsInSystem ? "Já existe" : "Novo"}
+                            </Badge>
                           </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-1 text-green-600">
-                              <Link2 className="h-4 w-4" />
-                              <span className="font-medium">{item.matchedEmployers.length}</span>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <div>Email: {item.office.email}</div>
+                            <div>Telefone: {item.office.phone}</div>
+                            <div>ID Legado: {item.office.legacyId}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 text-green-600">
+                            <Link2 className="h-4 w-4" />
+                            <span className="font-medium">{item.matchedEmployers.length}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">empresas</div>
+                          {item.unmatchedCnpjs.length > 0 && (
+                            <div className="text-xs text-orange-600 mt-1">
+                              +{item.unmatchedCnpjs.length} não encontrada(s)
                             </div>
-                            <div className="text-xs text-muted-foreground">empresas</div>
-                            {item.unmatchedCnpjs.length > 0 && (
-                              <div className="text-xs text-orange-600 mt-1">
-                                +{item.unmatchedCnpjs.length} não encontrada(s)
-                              </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {item.matchedEmployers.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="text-xs font-medium text-muted-foreground mb-2">
+                            Empresas vinculadas:
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {item.matchedEmployers.slice(0, 5).map((emp) => (
+                              <Badge key={emp.id} variant="outline" className="text-xs">
+                                {emp.name.substring(0, 25)}...
+                              </Badge>
+                            ))}
+                            {item.matchedEmployers.length > 5 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{item.matchedEmployers.length - 5} mais
+                              </Badge>
                             )}
                           </div>
                         </div>
-
-                        {item.matchedEmployers.length > 0 && (
-                          <div className="mt-3 pt-3 border-t">
-                            <div className="text-xs font-medium text-muted-foreground mb-2">
-                              Empresas vinculadas:
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {item.matchedEmployers.slice(0, 5).map((emp) => (
-                                <Badge key={emp.id} variant="outline" className="text-xs">
-                                  {emp.name.substring(0, 25)}...
-                                </Badge>
-                              ))}
-                              {item.matchedEmployers.length > 5 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{item.matchedEmployers.length - 5} mais
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        ) : inputMode === "select" ? (
+          // Seleção de modo de importação
+          <div className="space-y-6">
+            <div className="text-sm text-muted-foreground text-center">
+              Escolha como deseja importar os escritórios de contabilidade:
             </div>
-          ) : inputMode === "select" ? (
-            // Seleção de modo de importação
-            <div className="space-y-6">
-              <div className="text-sm text-muted-foreground text-center">
-                Escolha como deseja importar os escritórios de contabilidade:
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <Card 
-                  className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <CardContent className="p-6 text-center">
-                    <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-green-600" />
-                    <div className="font-medium mb-2">Upload de Planilha</div>
-                    <div className="text-sm text-muted-foreground">
-                      Faça upload do arquivo Excel (.xlsx) do relatório
-                    </div>
-                  </CardContent>
-                </Card>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Card 
+                className="cursor-pointer hover:border-primary transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <CardContent className="p-6 text-center">
+                  <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                  <div className="font-medium mb-2">Upload de Planilha</div>
+                  <div className="text-sm text-muted-foreground">
+                    Faça upload do arquivo Excel (.xlsx) do relatório
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card 
-                  className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => setInputMode("text")}
-                >
-                  <CardContent className="p-6 text-center">
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-blue-600" />
-                    <div className="font-medium mb-2">Colar Texto</div>
-                    <div className="text-sm text-muted-foreground">
-                      Cole o texto copiado do relatório PDF
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleExcelUpload}
-                className="hidden"
-              />
-
-              {isParsing && (
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processando planilha...
-                </div>
-              )}
+              <Card 
+                className="cursor-pointer hover:border-primary transition-colors"
+                onClick={() => setInputMode("text")}
+              >
+                <CardContent className="p-6 text-center">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+                  <div className="font-medium mb-2">Colar Texto</div>
+                  <div className="text-sm text-muted-foreground">
+                    Cole o conteúdo copiado de um PDF ou planilha
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          ) : inputMode === "text" ? (
-            // Input de texto
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Cole o conteúdo do relatório de contribuição abaixo.
-                </div>
-                <Button variant="ghost" size="sm" onClick={resetToSelectMode}>
-                  ← Voltar
-                </Button>
-              </div>
-              
-              <div className="bg-muted/50 p-3 rounded-lg text-sm">
-                <div className="font-medium mb-1">Formato esperado:</div>
-                <code className="text-xs">
-                  Escritórios: 78 - CONTA CERTA SERVIÇOS CONTABEIS / EMAIL@EXEMPLO.COM / TELEFONE
-                </code>
-              </div>
 
-              <Textarea
-                placeholder="Cole aqui o conteúdo do relatório PDF..."
-                value={textContent}
-                onChange={(e) => setTextContent(e.target.value)}
-                className="min-h-[300px] font-mono text-sm"
-              />
-
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AlertCircle className="h-4 w-4" />
-                <span>
-                  As empresas serão vinculadas automaticamente aos escritórios com base no CNPJ.
-                </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleExcelUpload}
+              className="hidden"
+            />
+          </div>
+        ) : (
+          // Input de texto
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Cole o conteúdo do relatório abaixo:
               </div>
+              <Button variant="ghost" size="sm" onClick={resetToSelectMode}>
+                ← Voltar
+              </Button>
             </div>
-          ) : null}
-        </div>
+            
+            <Textarea
+              placeholder="Cole aqui o conteúdo do relatório..."
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              className="min-h-[300px] font-mono text-sm"
+            />
+          </div>
+        )}
+      </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            {importResult ? "Fechar" : "Cancelar"}
-          </Button>
-          
-          {!importResult && !preview && inputMode === "text" && (
-            <Button onClick={handleParse} disabled={isParsing || !textContent.trim()}>
-              {isParsing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Analisar Conteúdo
+      <PopupFooter>
+        {importResult ? (
+          <Button onClick={handleClose}>Fechar</Button>
+        ) : preview ? (
+          <>
+            <Button variant="outline" onClick={handleClose} disabled={isImporting}>
+              Cancelar
             </Button>
-          )}
-          
-          {preview && !importResult && (
             <Button onClick={handleImport} disabled={isImporting}>
               {isImporting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Importar {preview.length} Escritório(s)
             </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </>
+        ) : inputMode === "text" ? (
+          <>
+            <Button variant="outline" onClick={handleClose} disabled={isParsing}>
+              Cancelar
+            </Button>
+            <Button onClick={handleParse} disabled={isParsing || !textContent.trim()}>
+              {isParsing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Processar Texto
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" onClick={handleClose}>
+            Cancelar
+          </Button>
+        )}
+      </PopupFooter>
+    </PopupBase>
   );
 }

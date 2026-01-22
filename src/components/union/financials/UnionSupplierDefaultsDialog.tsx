@@ -2,13 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,142 +152,140 @@ export function UnionSupplierDefaultsDialog({
     }).format(value);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Tag className="h-5 w-5 text-primary" />
-            Vínculos do Fornecedor
-          </DialogTitle>
-          <DialogDescription>
-            Configure categorias e descrições padrão para <strong>{supplierName}</strong>
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Tag className="h-5 w-5 text-primary" />
+          Vínculos do Fornecedor
+        </PopupTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure categorias e descrições padrão para <strong>{supplierName}</strong>
+        </p>
+      </PopupHeader>
 
-        <div className="space-y-4">
-          {/* Add new default */}
-          <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Adicionar Vínculo
-            </h4>
-            <div className="grid grid-cols-1 gap-3">
+      <div className="space-y-4">
+        {/* Add new default */}
+        <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Adicionar Vínculo
+          </h4>
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <Label className="text-xs">Descrição da Despesa *</Label>
+              <Input
+                placeholder="Ex: Conta de Energia"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Descrição da Despesa *</Label>
+                <Label className="text-xs">Categoria</Label>
+                <Select value={newCategoryId} onValueChange={setNewCategoryId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: cat.color || "#6b7280" }}
+                          />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Valor Padrão</Label>
                 <Input
-                  placeholder="Ex: Conta de Energia"
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="0,00"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
                   className="h-9"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Categoria</Label>
-                  <Select value={newCategoryId} onValueChange={setNewCategoryId}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2.5 h-2.5 rounded-full"
-                              style={{ backgroundColor: cat.color || "#6b7280" }}
-                            />
-                            {cat.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Valor Padrão</Label>
-                  <Input
-                    placeholder="0,00"
-                    value={newValue}
-                    onChange={(e) => setNewValue(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-              </div>
             </div>
-            <Button
-              size="sm"
-              onClick={handleAdd}
-              disabled={saving || !newDescription.trim()}
-              className="w-full"
-            >
-              {saving ? "Adicionando..." : "Adicionar Vínculo"}
-            </Button>
           </div>
-
-          {/* List existing defaults */}
-          <div>
-            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Vínculos Cadastrados
-            </h4>
-            <ScrollArea className="h-[200px]">
-              {isLoading ? (
-                <div className="text-center py-4 text-muted-foreground">Carregando...</div>
-              ) : defaults?.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Nenhum vínculo cadastrado</p>
-                  <p className="text-xs">Adicione descrições padrão para agilizar o lançamento</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {defaults?.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-3 p-3 bg-card border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.description}</p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                          {item.category && (
-                            <span className="flex items-center gap-1">
-                              <div
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: item.category.color || "#6b7280" }}
-                              />
-                              {item.category.name}
-                            </span>
-                          )}
-                          {item.default_value && (
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              {formatCurrency(item.default_value)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-        </div>
-
-        <div className="flex justify-end pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Fechar
+          <Button
+            size="sm"
+            onClick={handleAdd}
+            disabled={saving || !newDescription.trim()}
+            className="w-full"
+          >
+            {saving ? "Adicionando..." : "Adicionar Vínculo"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* List existing defaults */}
+        <div>
+          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Vínculos Cadastrados
+          </h4>
+          <ScrollArea className="h-[200px]">
+            {isLoading ? (
+              <div className="text-center py-4 text-muted-foreground">Carregando...</div>
+            ) : defaults?.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum vínculo cadastrado</p>
+                <p className="text-xs">Adicione descrições padrão para agilizar o lançamento</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {defaults?.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 bg-card border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{item.description}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        {item.category && (
+                          <span className="flex items-center gap-1">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: item.category.color || "#6b7280" }}
+                            />
+                            {item.category.name}
+                          </span>
+                        )}
+                        {item.default_value && (
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {formatCurrency(item.default_value)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>
+          Fechar
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }

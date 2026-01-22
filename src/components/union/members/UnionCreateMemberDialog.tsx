@@ -4,14 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -425,31 +418,158 @@ export function UnionCreateMemberDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle>Novo Sócio</DialogTitle>
-          <DialogDescription>
-            Crie um sócio diretamente no painel sindical (sem depender do formulário público de filiação).
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="3xl">
+      <PopupHeader>
+        <PopupTitle>Novo Sócio</PopupTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Crie um sócio diretamente no painel sindical (sem depender do formulário público de filiação).
+        </p>
+      </PopupHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-180px)] px-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
-              {/* Dados Pessoais */}
-              <div className="space-y-3">
-                <SectionHeader icon={User} title="Dados Pessoais" />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <ScrollArea className="max-h-[calc(90vh-180px)]">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
+            {/* Dados Pessoais */}
+            <div className="space-y-3">
+              <SectionHeader icon={User} title="Dados Pessoais" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Nome Completo *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Nome completo" className="h-9" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CPF *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="000.000.000-00"
+                          className="h-9"
+                          onChange={(e) => field.onChange(formatCPF(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="rg"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>RG</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Número do RG" className="h-9" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="birth_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Nascimento</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" className="h-9" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="(00) 00000-0000"
+                          className="h-9"
+                          onChange={(e) => field.onChange(formatPhone(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>E-mail</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="email" placeholder="email@exemplo.com" className="h-9" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Endereço (Collapsible) */}
+            <Collapsible open={addressOpen} onOpenChange={setAddressOpen}>
+              <SectionHeader 
+                icon={MapPin} 
+                title="Endereço" 
+                isOpen={addressOpen} 
+                onToggle={() => setAddressOpen(!addressOpen)}
+                collapsible 
+              />
+              <CollapsibleContent className="space-y-3 pt-2">
+                <FormField
+                  control={form.control}
+                  name="cep"
+                  render={({ field }) => (
+                    <FormItem className="max-w-[200px]">
+                      <FormLabel>CEP</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="00000-000"
+                          className="h-9"
+                          onChange={(e) => handleCepChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="address"
                     render={({ field }) => (
                       <FormItem className="md:col-span-2">
-                        <FormLabel>Nome Completo *</FormLabel>
+                        <FormLabel>Endereço</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Nome completo" className="h-9" />
+                          <Input {...field} placeholder="Rua, Avenida..." className="h-9" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -458,387 +578,56 @@ export function UnionCreateMemberDialog({
 
                   <FormField
                     control={form.control}
-                    name="cpf"
+                    name="address_number"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CPF *</FormLabel>
+                        <FormLabel>Número</FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder="000.000.000-00"
-                            className="h-9"
-                            onChange={(e) => field.onChange(formatCPF(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="rg"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>RG</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Número do RG" className="h-9" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="birth_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data de Nascimento</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" className="h-9" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefone/WhatsApp *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder="(DD) 9XXXX-XXXX"
-                            className="h-9"
-                            onChange={(e) => field.onChange(formatPhone(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="email@exemplo.com" className="h-9" />
+                          <Input {...field} placeholder="Nº" className="h-9" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-              </div>
 
-              <Separator />
-
-              {/* Endereço - Collapsible */}
-              <Collapsible open={addressOpen} onOpenChange={setAddressOpen}>
-                <SectionHeader 
-                  icon={MapPin} 
-                  title="Endereço" 
-                  isOpen={addressOpen}
-                  onToggle={() => setAddressOpen(!addressOpen)}
-                  collapsible
-                />
-                
-                <CollapsibleContent className="space-y-3 pt-2">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="cep"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CEP</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="00000-000"
-                              className="h-9"
-                              onChange={(e) => handleCepChange(e.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                          <FormLabel>Logradouro</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Rua, Avenida..." className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="address_number"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Número</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Nº" className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="complement"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Complemento</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Apto, Bloco..." className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="neighborhood"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Bairro</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Bairro" className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Cidade" className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>UF</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="UF" maxLength={2} className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              {/* Dados Profissionais - Collapsible */}
-              <Collapsible open={professionalOpen} onOpenChange={setProfessionalOpen}>
-                <SectionHeader 
-                  icon={Briefcase} 
-                  title="Dados Profissionais" 
-                  isOpen={professionalOpen}
-                  onToggle={() => setProfessionalOpen(!professionalOpen)}
-                  collapsible
-                />
-                
-                <CollapsibleContent className="space-y-3 pt-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="job_function"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Função/Cargo</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Selecione a função" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="vendedor">Vendedor(a)</SelectItem>
-                              <SelectItem value="caixa">Operador(a) de Caixa</SelectItem>
-                              <SelectItem value="repositor">Repositor(a)</SelectItem>
-                              <SelectItem value="balconista">Balconista</SelectItem>
-                              <SelectItem value="gerente">Gerente</SelectItem>
-                              <SelectItem value="supervisor">Supervisor(a)</SelectItem>
-                              <SelectItem value="estoquista">Estoquista</SelectItem>
-                              <SelectItem value="atendente">Atendente</SelectItem>
-                              <SelectItem value="fiscal">Fiscal de Loja</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="admission_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data de Admissão</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="date" className="h-9" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <FormLabel>Empresa onde Trabalha</FormLabel>
-                    <CnpjEmployerSearch
-                      clinicId={clinicId}
-                      onSelect={setEmployerData}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              {/* Dependentes - Collapsible */}
-              <Collapsible open={dependentsOpen} onOpenChange={setDependentsOpen}>
-                <SectionHeader 
-                  icon={Users} 
-                  title={`Dependentes ${dependents.length > 0 ? `(${dependents.length})` : "(Opcional)"}`}
-                  isOpen={dependentsOpen}
-                  onToggle={() => setDependentsOpen(!dependentsOpen)}
-                  collapsible
-                />
-                
-                <CollapsibleContent className="pt-2">
-                  <DependentsList
-                    dependents={dependents}
-                    onChange={setDependents}
-                    allowedRelationshipTypes={allowedRelationshipTypes}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              {/* Dados de Filiação Sindical */}
-              <div className="space-y-3">
-                <SectionHeader icon={CreditCard} title="Dados de Filiação" />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <FormField
                     control={form.control}
-                    name="status"
+                    name="complement"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="ativo">Ativo</SelectItem>
-                            <SelectItem value="pendente">Pendente</SelectItem>
-                            <SelectItem value="inativo">Inativo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="payment_method"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Forma de Pagamento</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="desconto_folha">Desconto em Folha</SelectItem>
-                            <SelectItem value="pix">PIX</SelectItem>
-                            <SelectItem value="boleto">Boleto Bancário</SelectItem>
-                            <SelectItem value="debito_automatico">Débito Automático</SelectItem>
-                            <SelectItem value="cash">Dinheiro</SelectItem>
-                            <SelectItem value="debit_card">Cartão de Débito</SelectItem>
-                            <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                            <SelectItem value="bank_transfer">Transferência</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="category_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Categoria</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder={categories.length ? "Selecione" : "Sem categorias"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="contribution_value"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor da Contribuição</FormLabel>
+                        <FormLabel>Complemento</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Ex: 50,00" className="h-9" />
+                          <Input {...field} placeholder="Apto, Bloco..." className="h-9" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="neighborhood"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bairro</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Bairro" className="h-9" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cidade</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Cidade" className="h-9" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -848,31 +637,209 @@ export function UnionCreateMemberDialog({
 
                 <FormField
                   control={form.control}
-                  name="observations"
+                  name="state"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações</FormLabel>
+                    <FormItem className="max-w-[100px]">
+                      <FormLabel>UF</FormLabel>
                       <FormControl>
-                        <Textarea {...field} rows={2} placeholder="Opcional" className="resize-none" />
+                        <Input {...field} placeholder="UF" className="h-9" maxLength={2} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            </form>
-          </Form>
-        </ScrollArea>
+              </CollapsibleContent>
+            </Collapsible>
 
-        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={saving}>
-            {saving ? "Salvando..." : "Criar sócio"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <Separator />
+
+            {/* Dados Profissionais (Collapsible) */}
+            <Collapsible open={professionalOpen} onOpenChange={setProfessionalOpen}>
+              <SectionHeader 
+                icon={Briefcase} 
+                title="Dados Profissionais" 
+                isOpen={professionalOpen} 
+                onToggle={() => setProfessionalOpen(!professionalOpen)}
+                collapsible 
+              />
+              <CollapsibleContent className="space-y-3 pt-2">
+                <CnpjEmployerSearch
+                  clinicId={clinicId}
+                  onSelect={setEmployerData}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="job_function"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Função/Cargo</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Ex: Operador" className="h-9" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="admission_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Admissão</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" className="h-9" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Separator />
+
+            {/* Dependentes (Collapsible) */}
+            <Collapsible open={dependentsOpen} onOpenChange={setDependentsOpen}>
+              <SectionHeader 
+                icon={Users} 
+                title={`Dependentes${dependents.length > 0 ? ` (${dependents.length})` : ""}`} 
+                isOpen={dependentsOpen} 
+                onToggle={() => setDependentsOpen(!dependentsOpen)}
+                collapsible 
+              />
+              <CollapsibleContent className="pt-2">
+                <DependentsList 
+                  dependents={dependents} 
+                  onChange={setDependents}
+                  allowedRelationshipTypes={allowedRelationshipTypes || undefined}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Separator />
+
+            {/* Dados Sindicais */}
+            <div className="space-y-3">
+              <SectionHeader icon={CreditCard} title="Dados Sindicais" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ativo">Ativo</SelectItem>
+                          <SelectItem value="pendente">Pendente</SelectItem>
+                          <SelectItem value="inativo">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contribution_value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Contribuição (R$)</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="0,00" className="h-9" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="payment_method"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Forma de Pagamento</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="desconto_folha">Desconto em Folha</SelectItem>
+                          <SelectItem value="boleto">Boleto</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                          <SelectItem value="debito_conta">Débito em Conta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="observations"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Anotações internas..." rows={2} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </form>
+        </Form>
+      </ScrollArea>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          Cancelar
+        </Button>
+        <Button onClick={form.handleSubmit(onSubmit)} disabled={saving}>
+          {saving ? "Salvando..." : "Criar Sócio"}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
