@@ -5,14 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import {
   Select,
   SelectContent,
@@ -118,19 +111,16 @@ export default function PFBatchContributionDialog({
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   
-  // Form states
   const [formMemberId, setFormMemberId] = useState("");
   const [formTypeId, setFormTypeId] = useState("");
   const [formValue, setFormValue] = useState("");
   const [formNotes, setFormNotes] = useState("");
   
-  // Installments/Parcels
   const [installments, setInstallments] = useState<InstallmentItem[]>([]);
   const [baseMonth, setBaseMonth] = useState(new Date().getMonth() + 1);
   const [baseYear, setBaseYear] = useState(new Date().getFullYear());
   const [baseDueDate, setBaseDueDate] = useState(format(addDays(new Date(), 10), "yyyy-MM-dd"));
   
-  // Processing state
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [results, setResults] = useState<{ 
@@ -141,11 +131,9 @@ export default function PFBatchContributionDialog({
     errors: string[] 
   }>({ success: 0, failed: 0, boletoSuccess: 0, boletoFailed: 0, errors: [] });
 
-  // Member combobox
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
   const { validateSession } = useSessionValidator();
 
-  // Fetch members when dialog opens
   useEffect(() => {
     if (open && clinicId) {
       fetchMembers();
@@ -156,7 +144,6 @@ export default function PFBatchContributionDialog({
   const fetchMembers = async () => {
     setLoadingMembers(true);
     try {
-      // Fetch all members with pagination to overcome 1000 row limit
       let allMembers: Member[] = [];
       let page = 0;
       const pageSize = 1000;
@@ -213,7 +200,6 @@ export default function PFBatchContributionDialog({
     }
   };
 
-  // Add a new installment based on the last one
   const addInstallment = () => {
     const lastInstallment = installments[installments.length - 1];
     
@@ -222,12 +208,10 @@ export default function PFBatchContributionDialog({
     let newDueDate: string;
     
     if (lastInstallment) {
-      // Calculate next month/year
       const nextDate = addMonths(new Date(lastInstallment.year, lastInstallment.month - 1), 1);
       newMonth = nextDate.getMonth() + 1;
       newYear = nextDate.getFullYear();
       
-      // Calculate due date - add 1 month to last due date
       const lastDueDate = parse(lastInstallment.dueDate, "yyyy-MM-dd", new Date());
       newDueDate = format(addMonths(lastDueDate, 1), "yyyy-MM-dd");
     } else {
@@ -248,19 +232,16 @@ export default function PFBatchContributionDialog({
     ]);
   };
 
-  // Remove an installment
   const removeInstallment = (id: string) => {
     setInstallments(installments.filter(i => i.id !== id));
   };
 
-  // Update installment due date
   const updateInstallmentDueDate = (id: string, newDate: string) => {
     setInstallments(installments.map(i => 
       i.id === id ? { ...i, dueDate: newDate, isCustomDate: true } : i
     ));
   };
 
-  // Reset installment to auto-calculated date
   const resetInstallmentDate = (id: string, index: number) => {
     const firstDueDate = parse(installments[0]?.dueDate || baseDueDate, "yyyy-MM-dd", new Date());
     const autoDate = format(addMonths(firstDueDate, index), "yyyy-MM-dd");
@@ -270,7 +251,6 @@ export default function PFBatchContributionDialog({
     ));
   };
 
-  // Get or create placeholder employer for PF contributions
   const getOrCreatePlaceholderEmployer = async () => {
     const { data: existing } = await supabase
       .from("employers")
@@ -345,7 +325,6 @@ export default function PFBatchContributionDialog({
         const competenceLabel = `${String(installment.month).padStart(2, "0")}/${installment.year}`;
 
         try {
-          // Create contribution
           const { data: newContribution, error: insertError } = await supabase
             .from("employer_contributions")
             .insert({
@@ -372,7 +351,6 @@ export default function PFBatchContributionDialog({
 
           successCount++;
 
-          // Generate invoice
           if (newContribution && valueInCents > 0) {
             const { error: invoiceError } = await supabase.functions.invoke("lytex-api", {
               body: {
@@ -442,342 +420,340 @@ export default function PFBatchContributionDialog({
   const selectedMember = members.find((m) => m.id === formMemberId);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-purple-600" />
-            Gerar Contribuições PF em Lote
-          </DialogTitle>
-          <DialogDescription>
-            {step === "config" && "Configure múltiplas contribuições para um sócio"}
-            {step === "processing" && "Processando contribuições e gerando boletos..."}
-            {step === "result" && "Resultado do processamento"}
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <User className="h-5 w-5 text-purple-600" />
+          Gerar Contribuições PF em Lote
+        </PopupTitle>
+        <PopupDescription>
+          {step === "config" && "Configure múltiplas contribuições para um sócio"}
+          {step === "processing" && "Processando contribuições e gerando boletos..."}
+          {step === "result" && "Resultado do processamento"}
+        </PopupDescription>
+      </PopupHeader>
 
-        {step === "config" && (
-          <>
-            <div className="flex-1 overflow-y-auto pr-4">
-              <div className="space-y-4 py-4">
-                {/* Sócio/Associado */}
-                <div className="space-y-2">
-                  <Label>Sócio/Associado *</Label>
-                  <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={memberPopoverOpen}
-                        className="w-full justify-between font-normal"
-                        disabled={loadingMembers}
-                      >
-                        {loadingMembers ? (
-                          <span className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Carregando...
-                          </span>
-                        ) : formMemberId ? (
-                          <span className="truncate">{selectedMember?.name}</span>
-                        ) : (
-                          "Selecione o sócio..."
-                        )}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar por nome ou CPF..." />
-                        <CommandList>
-                          <CommandEmpty>Nenhum sócio encontrado.</CommandEmpty>
-                          <CommandGroup>
-                            {members.map((member) => {
-                              const formattedCpf = member.cpf ? formatCPF(member.cpf) : "";
-                              return (
-                                <CommandItem
-                                  key={member.id}
-                                  value={`${member.name} ${member.cpf || ""} ${formattedCpf}`}
-                                  onSelect={() => {
-                                    setFormMemberId(member.id);
-                                    setMemberPopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      formMemberId === member.id ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span>{member.name}</span>
-                                    {member.cpf && (
-                                      <span className="text-xs text-emerald-600">
-                                        {formatCPF(member.cpf)}
-                                      </span>
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {selectedMember?.cpf && (
-                    <p className="text-xs text-muted-foreground">
-                      CPF: <span className="font-medium text-emerald-600">{formatCPF(selectedMember.cpf)}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Tipo e Valor */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tipo de Contribuição *</Label>
-                    <Select value={formTypeId} onValueChange={handleTypeChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contributionTypes
-                          .filter((t) => t.is_active)
-                          .map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor (R$) *</Label>
-                    <Input
-                      type="text"
-                      placeholder="0,00"
-                      value={formValue}
-                      onChange={(e) => setFormValue(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Base para primeira parcela */}
-                <div className="p-3 bg-muted/50 rounded-lg space-y-3">
-                  <Label className="text-sm font-medium">Configuração Base</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Mês Inicial</Label>
-                      <Select value={String(baseMonth)} onValueChange={(v) => setBaseMonth(parseInt(v))}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {MONTHS.map((m, i) => (
-                            <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Ano</Label>
-                      <Select value={String(baseYear)} onValueChange={(v) => setBaseYear(parseInt(v))}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getStaticYearRange().map(y => (
-                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Vencimento</Label>
-                      <Input
-                        type="date"
-                        className="h-9"
-                        value={baseDueDate}
-                        onChange={(e) => setBaseDueDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parcelas/Competências */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Parcelas/Competências</Label>
+      {step === "config" && (
+        <>
+          <div className="flex-1 overflow-y-auto pr-4 max-h-[60vh]">
+            <div className="space-y-4 py-4">
+              {/* Sócio/Associado */}
+              <div className="space-y-2">
+                <Label>Sócio/Associado *</Label>
+                <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
+                  <PopoverTrigger asChild>
                     <Button
-                      type="button"
                       variant="outline"
-                      size="sm"
-                      onClick={addInstallment}
-                      className="h-8"
+                      role="combobox"
+                      aria-expanded={memberPopoverOpen}
+                      className="w-full justify-between font-normal"
+                      disabled={loadingMembers}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar
+                      {loadingMembers ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Carregando...
+                        </span>
+                      ) : formMemberId ? (
+                        <span className="truncate">{selectedMember?.name}</span>
+                      ) : (
+                        "Selecione o sócio..."
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
-                  </div>
-
-                  {installments.length === 0 ? (
-                    <div className="border border-dashed rounded-lg p-6 text-center text-muted-foreground">
-                      <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Nenhuma parcela adicionada</p>
-                      <p className="text-xs">Clique em "Adicionar" para incluir competências</p>
-                    </div>
-                  ) : (
-                    <ScrollArea className="h-[200px] pr-3">
-                      <div className="space-y-2">
-                        {installments.map((installment, index) => (
-                          <div
-                            key={installment.id}
-                            className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border"
-                          >
-                            <Badge variant="outline" className="shrink-0">
-                              {index + 1}
-                            </Badge>
-                            <div className="flex-1 grid grid-cols-3 gap-2">
-                              <div className="flex items-center gap-1 text-sm">
-                                <span className="text-muted-foreground">Comp:</span>
-                                <span className="font-medium">
-                                  {String(installment.month).padStart(2, "0")}/{installment.year}
-                                </span>
-                              </div>
-                              <div className="col-span-2 flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Venc:</span>
-                                <Input
-                                  type="date"
-                                  className="h-8 flex-1"
-                                  value={installment.dueDate}
-                                  onChange={(e) => updateInstallmentDueDate(installment.id, e.target.value)}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar por nome ou CPF..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum sócio encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {members.map((member) => {
+                            const formattedCpf = member.cpf ? formatCPF(member.cpf) : "";
+                            return (
+                              <CommandItem
+                                key={member.id}
+                                value={`${member.name} ${member.cpf || ""} ${formattedCpf}`}
+                                onSelect={() => {
+                                  setFormMemberId(member.id);
+                                  setMemberPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formMemberId === member.id ? "opacity-100" : "opacity-0"
+                                  )}
                                 />
-                                {installment.isCustomDate && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 shrink-0"
-                                    onClick={() => resetInstallmentDate(installment.id, index)}
-                                    title="Restaurar data automática"
-                                  >
-                                    <RotateCcw className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                            {installment.isCustomDate && (
-                              <Badge variant="secondary" className="text-xs shrink-0">
-                                editado
-                              </Badge>
-                            )}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
-                              onClick={() => removeInstallment(installment.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </div>
-
-                {/* Observações */}
-                <div className="space-y-2">
-                  <Label>Observações (aplicada a todas)</Label>
-                  <Input
-                    type="text"
-                    placeholder="Observações opcionais"
-                    value={formNotes}
-                    onChange={(e) => setFormNotes(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleGenerate} disabled={installments.length === 0}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Gerar {installments.length} Boleto{installments.length !== 1 ? "s" : ""}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {step === "processing" && (
-          <div className="py-8 space-y-6">
-            <div className="text-center space-y-2">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-600" />
-              <p className="text-lg font-medium">Processando contribuições...</p>
-              <p className="text-sm text-muted-foreground">
-                {progress.current} de {progress.total}
-              </p>
-            </div>
-            <Progress value={(progress.current / progress.total) * 100} className="h-2" />
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-3 bg-emerald-50 rounded-lg">
-                <p className="text-2xl font-bold text-emerald-600">{results.success}</p>
-                <p className="text-xs text-muted-foreground">Criados</p>
-              </div>
-              <div className="p-3 bg-rose-50 rounded-lg">
-                <p className="text-2xl font-bold text-rose-600">{results.failed}</p>
-                <p className="text-xs text-muted-foreground">Falhas</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === "result" && (
-          <div className="py-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
-                <p className="text-2xl font-bold text-emerald-600">{results.success}</p>
-                <p className="text-sm text-muted-foreground">Contribuições Criadas</p>
-                <p className="text-xs text-emerald-600 mt-1">
-                  {results.boletoSuccess} boletos gerados
-                </p>
-              </div>
-              <div className="p-4 bg-rose-50 rounded-lg border border-rose-200">
-                <XCircle className="h-8 w-8 mx-auto mb-2 text-rose-600" />
-                <p className="text-2xl font-bold text-rose-600">{results.failed}</p>
-                <p className="text-sm text-muted-foreground">Falhas</p>
-                {results.boletoFailed > 0 && (
-                  <p className="text-xs text-rose-600 mt-1">
-                    {results.boletoFailed} boletos não gerados
+                                <div className="flex flex-col">
+                                  <span>{member.name}</span>
+                                  {member.cpf && (
+                                    <span className="text-xs text-emerald-600">
+                                      {formatCPF(member.cpf)}
+                                    </span>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {selectedMember?.cpf && (
+                  <p className="text-xs text-muted-foreground">
+                    CPF: <span className="font-medium text-emerald-600">{formatCPF(selectedMember.cpf)}</span>
                   </p>
                 )}
               </div>
-            </div>
 
-            {results.errors.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm text-destructive">Erros encontrados:</Label>
-                <ScrollArea className="h-32 border rounded-lg p-2">
-                  <ul className="space-y-1 text-xs">
-                    {results.errors.map((error, i) => (
-                      <li key={i} className="text-destructive">• {error}</li>
-                    ))}
-                  </ul>
-                </ScrollArea>
+              {/* Tipo e Valor */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Contribuição *</Label>
+                  <Select value={formTypeId} onValueChange={handleTypeChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contributionTypes
+                        .filter((t) => t.is_active)
+                        .map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor (R$) *</Label>
+                  <Input
+                    type="text"
+                    placeholder="0,00"
+                    value={formValue}
+                    onChange={(e) => setFormValue(e.target.value)}
+                  />
+                </div>
               </div>
-            )}
 
-            <DialogFooter>
-              <Button onClick={() => onOpenChange(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
+              {/* Base para primeira parcela */}
+              <div className="p-3 bg-muted/50 rounded-lg space-y-3">
+                <Label className="text-sm font-medium">Configuração Base</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mês Inicial</Label>
+                    <Select value={String(baseMonth)} onValueChange={(v) => setBaseMonth(parseInt(v))}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MONTHS.map((m, i) => (
+                          <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Ano</Label>
+                    <Select value={String(baseYear)} onValueChange={(v) => setBaseYear(parseInt(v))}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getStaticYearRange().map(y => (
+                          <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Vencimento</Label>
+                    <Input
+                      type="date"
+                      className="h-9"
+                      value={baseDueDate}
+                      onChange={(e) => setBaseDueDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Parcelas/Competências */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Parcelas/Competências</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addInstallment}
+                    className="h-8"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+
+                {installments.length === 0 ? (
+                  <div className="border border-dashed rounded-lg p-6 text-center text-muted-foreground">
+                    <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma parcela adicionada</p>
+                    <p className="text-xs">Clique em "Adicionar" para incluir competências</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[200px] pr-3">
+                    <div className="space-y-2">
+                      {installments.map((installment, index) => (
+                        <div
+                          key={installment.id}
+                          className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border"
+                        >
+                          <Badge variant="outline" className="shrink-0">
+                            {index + 1}
+                          </Badge>
+                          <div className="flex-1 grid grid-cols-3 gap-2">
+                            <div className="flex items-center gap-1 text-sm">
+                              <span className="text-muted-foreground">Comp:</span>
+                              <span className="font-medium">
+                                {String(installment.month).padStart(2, "0")}/{installment.year}
+                              </span>
+                            </div>
+                            <div className="col-span-2 flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Venc:</span>
+                              <Input
+                                type="date"
+                                className="h-8 flex-1"
+                                value={installment.dueDate}
+                                onChange={(e) => updateInstallmentDueDate(installment.id, e.target.value)}
+                              />
+                              {installment.isCustomDate && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => resetInstallmentDate(installment.id, index)}
+                                  title="Restaurar data automática"
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          {installment.isCustomDate && (
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              editado
+                            </Badge>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                            onClick={() => removeInstallment(installment.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+
+              {/* Observações */}
+              <div className="space-y-2">
+                <Label>Observações (aplicada a todas)</Label>
+                <Input
+                  type="text"
+                  placeholder="Observações opcionais"
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          <PopupFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleGenerate} disabled={installments.length === 0}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Gerar {installments.length} Boleto{installments.length !== 1 ? "s" : ""}
+            </Button>
+          </PopupFooter>
+        </>
+      )}
+
+      {step === "processing" && (
+        <div className="py-8 space-y-6">
+          <div className="text-center space-y-2">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-600" />
+            <p className="text-lg font-medium">Processando contribuições...</p>
+            <p className="text-sm text-muted-foreground">
+              {progress.current} de {progress.total}
+            </p>
+          </div>
+          <Progress value={(progress.current / progress.total) * 100} className="h-2" />
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="p-3 bg-emerald-50 rounded-lg">
+              <p className="text-2xl font-bold text-emerald-600">{results.success}</p>
+              <p className="text-xs text-muted-foreground">Criados</p>
+            </div>
+            <div className="p-3 bg-rose-50 rounded-lg">
+              <p className="text-2xl font-bold text-rose-600">{results.failed}</p>
+              <p className="text-xs text-muted-foreground">Falhas</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === "result" && (
+        <div className="py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
+              <p className="text-2xl font-bold text-emerald-600">{results.success}</p>
+              <p className="text-sm text-muted-foreground">Contribuições Criadas</p>
+              <p className="text-xs text-emerald-600 mt-1">
+                {results.boletoSuccess} boletos gerados
+              </p>
+            </div>
+            <div className="p-4 bg-rose-50 rounded-lg border border-rose-200">
+              <XCircle className="h-8 w-8 mx-auto mb-2 text-rose-600" />
+              <p className="text-2xl font-bold text-rose-600">{results.failed}</p>
+              <p className="text-sm text-muted-foreground">Falhas</p>
+              {results.boletoFailed > 0 && (
+                <p className="text-xs text-rose-600 mt-1">
+                  {results.boletoFailed} boletos não gerados
+                </p>
+              )}
+            </div>
+          </div>
+
+          {results.errors.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm text-destructive">Erros encontrados:</Label>
+              <ScrollArea className="h-32 border rounded-lg p-2">
+                <ul className="space-y-1 text-xs">
+                  {results.errors.map((error, i) => (
+                    <li key={i} className="text-destructive">• {error}</li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            </div>
+          )}
+
+          <PopupFooter>
+            <Button onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+          </PopupFooter>
+        </div>
+      )}
+    </PopupBase>
   );
 }

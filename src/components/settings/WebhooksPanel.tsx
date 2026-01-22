@@ -24,24 +24,8 @@ import {
   ChevronDown,
   ChevronUp
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import {
   Collapsible,
   CollapsibleContent,
@@ -101,7 +85,6 @@ export function WebhooksPanel() {
     if (currentClinic?.id) {
       loadWebhooks();
     } else {
-      // Evita loader infinito quando não há clínica selecionada
       setLoading(false);
       setWebhooks([]);
     }
@@ -175,7 +158,6 @@ export function WebhooksPanel() {
       return;
     }
     
-    // Validate URL
     try {
       new URL(formData.url);
     } catch {
@@ -487,136 +469,127 @@ export function WebhooksPanel() {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedWebhook ? 'Editar Webhook' : 'Novo Webhook'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure a URL e os eventos que dispararão notificações
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={showDialog} onClose={() => setShowDialog(false)} maxWidth="lg">
+        <PopupHeader>
+          <PopupTitle>
+            {selectedWebhook ? 'Editar Webhook' : 'Novo Webhook'}
+          </PopupTitle>
+          <PopupDescription>
+            Configure a URL e os eventos que dispararão notificações
+          </PopupDescription>
+        </PopupHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Ex: Sistema de Marketing"
+            />
+          </div>
           
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Sistema de Marketing"
-              />
+          <div>
+            <Label htmlFor="url">URL do Webhook</Label>
+            <Input
+              id="url"
+              type="url"
+              value={formData.url}
+              onChange={e => setFormData(prev => ({ ...prev, url: e.target.value }))}
+              placeholder="https://exemplo.com/webhook"
+            />
+          </div>
+          
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="secret">Secret (opcional)</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={generateSecret}
+              >
+                Gerar
+              </Button>
             </div>
-            
-            <div>
-              <Label htmlFor="url">URL do Webhook</Label>
+            <div className="relative">
               <Input
-                id="url"
-                type="url"
-                value={formData.url}
-                onChange={e => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                placeholder="https://exemplo.com/webhook"
+                id="secret"
+                type={showSecret ? 'text' : 'password'}
+                value={formData.secret}
+                onChange={e => setFormData(prev => ({ ...prev, secret: e.target.value }))}
+                placeholder="Chave para assinatura HMAC-SHA256"
               />
-            </div>
-            
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="secret">Secret (opcional)</Label>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={generateSecret}
+                  onClick={() => setShowSecret(!showSecret)}
                 >
-                  Gerar
+                  {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-              </div>
-              <div className="relative">
-                <Input
-                  id="secret"
-                  type={showSecret ? 'text' : 'password'}
-                  value={formData.secret}
-                  onChange={e => setFormData(prev => ({ ...prev, secret: e.target.value }))}
-                  placeholder="Chave para assinatura HMAC-SHA256"
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                {formData.secret && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowSecret(!showSecret)}
+                    onClick={() => copyToClipboard(formData.secret)}
                   >
-                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <Copy className="h-4 w-4" />
                   </Button>
-                  {formData.secret && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(formData.secret)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                O secret será usado para assinar os payloads com HMAC-SHA256
-              </p>
-            </div>
-            
-            <div>
-              <Label>Eventos</Label>
-              <div className="mt-2 space-y-2">
-                {AVAILABLE_EVENTS.map(event => (
-                  <label
-                    key={event.id}
-                    className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                  >
-                    <Checkbox
-                      checked={formData.events.includes(event.id)}
-                      onCheckedChange={() => toggleEvent(event.id)}
-                    />
-                    <div>
-                      <div className="font-medium text-sm">{event.label}</div>
-                      <div className="text-xs text-muted-foreground">{event.description}</div>
-                    </div>
-                  </label>
-                ))}
+                )}
               </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              O secret será usado para assinar os payloads com HMAC-SHA256
+            </p>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div>
+            <Label>Eventos</Label>
+            <div className="mt-2 space-y-2">
+              {AVAILABLE_EVENTS.map(event => (
+                <label
+                  key={event.id}
+                  className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                >
+                  <Checkbox
+                    checked={formData.events.includes(event.id)}
+                    onCheckedChange={() => toggleEvent(event.id)}
+                  />
+                  <div>
+                    <div className="font-medium text-sm">{event.label}</div>
+                    <div className="text-xs text-muted-foreground">{event.description}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        <PopupFooter>
+          <Button variant="outline" onClick={() => setShowDialog(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </PopupFooter>
+      </PopupBase>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Webhook</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o webhook "{selectedWebhook?.name}"?
-              Esta ação não pode ser desfeita e todo o histórico de entregas será perdido.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertPopup
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Excluir Webhook"
+        description={`Tem certeza que deseja excluir o webhook "${selectedWebhook?.name}"? Esta ação não pode ser desfeita e todo o histórico de entregas será perdido.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmVariant="destructive"
+      />
     </>
   );
 }
