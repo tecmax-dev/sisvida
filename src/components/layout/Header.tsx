@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
 import { Menu, X } from "lucide-react";
@@ -16,7 +16,27 @@ const navLinks = [
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, userRoles, loading, rolesLoaded } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect logged-in users from home page to dashboard
+  useEffect(() => {
+    if (loading || !rolesLoaded) return;
+    
+    // Only redirect from home page
+    if (location.pathname !== "/") return;
+    
+    if (user) {
+      if (isSuperAdmin) {
+        navigate("/admin", { replace: true });
+      } else if (userRoles.length > 0) {
+        navigate("/dashboard", { replace: true });
+      } else {
+        navigate("/clinic-setup", { replace: true });
+      }
+    }
+  }, [user, isSuperAdmin, userRoles, loading, rolesLoaded, navigate, location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
