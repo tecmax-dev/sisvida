@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 
 export default function AuthorizationValidationPage() {
   const { slug, hash } = useParams<{ slug: string; hash: string }>();
@@ -69,23 +70,27 @@ export default function AuthorizationValidationPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
-      </div>
+      <PublicPageWrapper>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-indigo-100">
+          <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+        </div>
+      </PublicPageWrapper>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 dark:from-slate-900 dark:to-slate-800 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-            <h1 className="text-xl font-bold mb-2">Autorização Não Encontrada</h1>
-            <p className="text-muted-foreground">O link de validação é inválido ou expirou.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <PublicPageWrapper>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 p-4">
+          <Card className="w-full max-w-md bg-white">
+            <CardContent className="pt-6 text-center">
+              <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h1 className="text-xl font-bold mb-2 text-gray-900">Autorização Não Encontrada</h1>
+              <p className="text-gray-600">O link de validação é inválido ou expirou.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </PublicPageWrapper>
     );
   }
 
@@ -100,13 +105,14 @@ export default function AuthorizationValidationPage() {
   const signatureUrl = unionEntity?.president_signature_url;
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${
-      isValid 
-        ? "bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-slate-900 dark:to-slate-800"
-        : "bg-gradient-to-br from-red-50 to-orange-100 dark:from-slate-900 dark:to-slate-800"
-    }`}>
-      <Card className="w-full max-w-lg">
-        <CardContent className="pt-6 space-y-6">
+    <PublicPageWrapper>
+      <div className={`min-h-screen flex items-center justify-center p-4 ${
+        isValid 
+          ? "bg-gradient-to-br from-emerald-50 to-teal-100"
+          : "bg-gradient-to-br from-red-50 to-orange-100"
+      }`}>
+        <Card className="w-full max-w-lg bg-white">
+          <CardContent className="pt-6 space-y-6">
           {/* Logo */}
           {logoUrl && (
             <div className="flex justify-center">
@@ -218,5 +224,6 @@ export default function AuthorizationValidationPage() {
         </CardContent>
       </Card>
     </div>
+    </PublicPageWrapper>
   );
 }
