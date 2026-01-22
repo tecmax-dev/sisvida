@@ -4,13 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -262,18 +256,20 @@ export default function CampaignDialog({
   const selectedSegment = segments?.find((s) => s.id === selectedSegmentId);
   const imageUrl = form.watch("image_url");
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Editar Campanha" : "Nova Campanha"}
-          </DialogTitle>
-          <DialogDescription>
-            Configure os detalhes da sua campanha de marketing
-          </DialogDescription>
-        </DialogHeader>
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
+  return (
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="3xl">
+      <PopupHeader>
+        <PopupTitle>
+          {isEditing ? "Editar Campanha" : "Nova Campanha"}
+        </PopupTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure os detalhes da sua campanha de marketing
+        </p>
+      </PopupHeader>
+
+      <div className="max-h-[60vh] overflow-y-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Tabs defaultValue="details" className="w-full">
@@ -492,131 +488,105 @@ export default function CampaignDialog({
                       <FormLabel>Mensagem</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={
-                            selectedChannel === "whatsapp"
-                              ? "Olá {primeiro_nome}! 👋\n\nEsperamos que esteja bem..."
-                              : selectedChannel === "email"
-                              ? "Prezado(a) {nome},\n\nEsperamos que esta mensagem o encontre bem..."
-                              : "{clinica}: Olá {primeiro_nome}! ..."
-                          }
-                          className="min-h-[200px] font-mono"
+                          placeholder="Escreva sua mensagem aqui..."
+                          className="min-h-[150px]"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
-                        {selectedChannel === "sms" && (
-                          <span className="text-amber-600">
-                            SMS limitado a 160 caracteres. Atual: {messageTemplate.length}
-                          </span>
-                        )}
-                        {selectedChannel === "whatsapp" && (
-                          <span>Você pode usar emojis e formatação do WhatsApp</span>
-                        )}
+                        Use as variáveis acima para personalizar a mensagem
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Upload de imagem para WhatsApp */}
                 {selectedChannel === "whatsapp" && (
-                  <FormItem>
-                    <FormLabel>Imagem (opcional)</FormLabel>
-                    <div className="space-y-3">
-                      {imageUrl ? (
-                        <div className="relative inline-block">
-                          <img
-                            src={imageUrl}
-                            alt="Imagem da campanha"
-                            className="max-h-40 rounded-lg border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute -top-2 -right-2 h-6 w-6"
-                            onClick={removeImage}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <label className="cursor-pointer">
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageUpload}
-                              disabled={isUploading}
+                  <FormField
+                    control={form.control}
+                    name="image_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Imagem (opcional)</FormLabel>
+                        {imageUrl ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={imageUrl}
+                              alt="Preview"
+                              className="max-h-32 rounded-lg border"
                             />
-                            <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted transition-colors">
-                              {isUploading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Upload className="h-4 w-4" />
-                              )}
-                              <span>{isUploading ? "Enviando..." : "Carregar imagem"}</span>
-                            </div>
-                          </label>
-                        </div>
-                      )}
-                      <FormDescription>
-                        A imagem será enviada junto com a mensagem. Formatos aceitos: JPG, PNG, WEBP. Max 5MB.
-                      </FormDescription>
-                    </div>
-                  </FormItem>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6"
+                              onClick={removeImage}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <label className="cursor-pointer">
+                              <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted transition-colors">
+                                {isUploading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4" />
+                                )}
+                                <span className="text-sm">
+                                  {isUploading ? "Enviando..." : "Selecionar imagem"}
+                                </span>
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageUpload}
+                                disabled={isUploading}
+                              />
+                            </label>
+                          </div>
+                        )}
+                        <FormDescription>
+                          Adicione uma imagem para enviar junto com a mensagem
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
 
-                {(messageTemplate || imageUrl) && (
-                  <Card className="bg-muted/50">
+                {messageTemplate && (
+                  <Card>
                     <CardContent className="pt-4">
-                      <div className="text-sm font-medium mb-2">Pré-visualização:</div>
-                      {imageUrl && (
-                        <img
-                          src={imageUrl}
-                          alt="Preview"
-                          className="max-h-32 rounded-lg mb-3"
-                        />
-                      )}
-                      {messageTemplate && (
-                        <div className="bg-background rounded-lg p-4 whitespace-pre-wrap text-sm">
-                          {messageTemplate
-                            .replace("{nome}", "Maria Silva")
-                            .replace("{primeiro_nome}", "Maria")
-                            .replace("{clinica}", "Clínica Exemplo")
-                            .replace("{data}", format(new Date(), "dd/MM/yyyy"))
-                            .replace("{telefone}", "(11) 99999-9999")}
-                        </div>
-                      )}
+                      <div className="text-sm font-medium mb-2">Prévia:</div>
+                      <div className="text-sm bg-muted p-3 rounded-lg whitespace-pre-wrap">
+                        {messageTemplate
+                          .replace("{nome}", "João Silva")
+                          .replace("{primeiro_nome}", "João")
+                          .replace("{clinica}", "Clínica Exemplo")
+                          .replace("{data}", format(new Date(), "dd/MM/yyyy"))
+                          .replace("{telefone}", "(11) 99999-9999")}
+                      </div>
                     </CardContent>
                   </Card>
                 )}
               </TabsContent>
             </Tabs>
-
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? "Salvando..."
-                  : isEditing
-                  ? "Atualizar"
-                  : "Criar Campanha"}
-              </Button>
-            </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          Cancelar
+        </Button>
+        <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
+          {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          {isEditing ? "Salvar Alterações" : "Criar Campanha"}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }

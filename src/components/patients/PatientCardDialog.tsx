@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { format, addMonths, addYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CreditCard, Calendar, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from '@/components/ui/popup-base';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,95 +76,93 @@ export function PatientCardDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            {mode === 'create' ? 'Emitir Carteirinha Digital' : 'Renovar Carteirinha'}
-          </DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="md">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-primary" />
+          {mode === 'create' ? 'Emitir Carteirinha Digital' : 'Renovar Carteirinha'}
+        </PopupTitle>
+      </PopupHeader>
 
-        <div className="space-y-4 py-4">
-          <div>
-            <Label className="text-muted-foreground">Paciente</Label>
-            <p className="font-medium">{patientName}</p>
-          </div>
-
-          {mode === 'renew' && currentExpiresAt && (
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Validade atual</p>
-              <p className="font-medium">
-                {format(new Date(currentExpiresAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Validade</Label>
-            <Select value={validityType} onValueChange={setValidityType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a validade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3months">3 meses</SelectItem>
-                <SelectItem value="6months">6 meses</SelectItem>
-                <SelectItem value="1year">1 ano</SelectItem>
-                <SelectItem value="2years">2 anos</SelectItem>
-                <SelectItem value="custom">Data personalizada</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {validityType === 'custom' && (
-            <div className="space-y-2">
-              <Label>Data de expiração</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={customDate}
-                  onChange={(e) => setCustomDate(e.target.value)}
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Observações (opcional)</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Informações adicionais sobre a carteirinha..."
-              rows={3}
-            />
-          </div>
-
-          {validityType !== 'custom' && (
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <p className="text-sm text-muted-foreground">Nova validade</p>
-              <p className="font-medium text-primary">
-                {format(new Date(calculateExpiryDate()), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-            </div>
-          )}
+      <div className="space-y-4 py-4">
+        <div>
+          <Label className="text-muted-foreground">Paciente</Label>
+          <p className="font-medium">{patientName}</p>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isLoading || (validityType === 'custom' && !customDate)}
-          >
-            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {mode === 'create' ? 'Emitir Carteirinha' : 'Renovar'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {mode === 'renew' && currentExpiresAt && (
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">Validade atual</p>
+            <p className="font-medium">
+              {format(new Date(currentExpiresAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label>Validade</Label>
+          <Select value={validityType} onValueChange={setValidityType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a validade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3months">3 meses</SelectItem>
+              <SelectItem value="6months">6 meses</SelectItem>
+              <SelectItem value="1year">1 ano</SelectItem>
+              <SelectItem value="2years">2 anos</SelectItem>
+              <SelectItem value="custom">Data personalizada</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {validityType === 'custom' && (
+          <div className="space-y-2">
+            <Label>Data de expiração</Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                min={format(new Date(), 'yyyy-MM-dd')}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label>Observações (opcional)</Label>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Informações adicionais sobre a carteirinha..."
+            rows={3}
+          />
+        </div>
+
+        {validityType !== 'custom' && (
+          <div className="p-3 bg-primary/10 rounded-lg">
+            <p className="text-sm text-muted-foreground">Nova validade</p>
+            <p className="font-medium text-primary">
+              {format(new Date(calculateExpiryDate()), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+          Cancelar
+        </Button>
+        <Button 
+          onClick={handleSubmit} 
+          disabled={isLoading || (validityType === 'custom' && !customDate)}
+        >
+          {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          {mode === 'create' ? 'Emitir Carteirinha' : 'Renovar'}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
