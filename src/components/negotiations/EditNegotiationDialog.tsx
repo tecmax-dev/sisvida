@@ -166,6 +166,18 @@ export default function EditNegotiationDialog({
 
       // Create new installments
       const newInstallments = [];
+      
+      // Add down payment as installment 0 if exists
+      if (downPaymentValue > 0) {
+        newInstallments.push({
+          negotiation_id: negotiation.id,
+          installment_number: 0,
+          value: downPaymentValue,
+          due_date: downPaymentDueDate,
+          status: "pending",
+        });
+      }
+      
       for (let i = 1; i <= installmentsCount; i++) {
         const dueDate = addMonths(new Date(firstDueDate), i - 1);
         newInstallments.push({
