@@ -4,12 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -192,13 +187,12 @@ export function TransactionDialog({
     }).format(value);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Nova Transação</DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle>Nova Transação</PopupTitle>
+      </PopupHeader>
 
-        <Form {...form}>
+      <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Tabs
               value={type}
@@ -420,7 +414,6 @@ export function TransactionDialog({
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+      </PopupBase>
+    );
+  }
