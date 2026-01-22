@@ -53,7 +53,7 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Fetch union entity data
+  // Fetch union entity data (includes logo, president name, and signature)
   const { data: unionEntity } = useQuery({
     queryKey: ["union-entity", currentClinic?.id],
     queryFn: async () => {
@@ -69,8 +69,8 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
     enabled: !!currentClinic?.id && open,
   });
 
-  // Fetch president signature
-  const { data: signature } = useQuery({
+  // Also check union_president_signatures for canvas-drawn signatures
+  const { data: drawnSignature } = useQuery({
     queryKey: ["president-signature", currentClinic?.id],
     queryFn: async () => {
       if (!currentClinic?.id) return null;
@@ -84,6 +84,11 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
     },
     enabled: !!currentClinic?.id && open,
   });
+
+  // Use drawn signature if available, otherwise use entity signature
+  const signatureData = drawnSignature?.signature_data || unionEntity?.president_signature_url;
+  const presidentName = drawnSignature?.president_name || unionEntity?.president_name;
+  const presidentTitle = drawnSignature?.president_title || "Presidente";
 
   // Fetch full patient data
   const { data: patient } = useQuery({
@@ -211,8 +216,15 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
 
         {/* Print content */}
         <div ref={printRef} className="space-y-6">
-          {/* Header */}
+          {/* Header with Logo */}
           <div className="header text-center">
+            {unionEntity?.logo_url && (
+              <img 
+                src={unionEntity.logo_url} 
+                alt={unionEntity?.razao_social} 
+                className="h-16 w-auto mx-auto mb-3 object-contain"
+              />
+            )}
             <h1 className="text-xl font-bold">{unionEntity?.razao_social || currentClinic?.name}</h1>
             {unionEntity?.cnpj && <p className="text-sm text-muted-foreground">CNPJ: {unionEntity.cnpj}</p>}
             {unionEntity?.endereco && <p className="text-sm text-muted-foreground">{unionEntity.endereco}</p>}
@@ -299,18 +311,18 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
           </div>
 
           {/* Signature */}
-          {signature && (
+          {(signatureData || presidentName) && (
             <div className="signature text-center mt-8">
-              {signature.signature_data && (
+              {signatureData && (
                 <img 
-                  src={signature.signature_data} 
+                  src={signatureData} 
                   alt="Assinatura" 
                   className="h-16 mx-auto mb-2"
                 />
               )}
               <div className="signature-line border-t border-foreground w-64 mx-auto pt-2">
-                <p className="font-medium">{signature.president_name}</p>
-                <p className="text-sm text-muted-foreground">{signature.president_title}</p>
+                <p className="font-medium">{presidentName}</p>
+                <p className="text-sm text-muted-foreground">{presidentTitle}</p>
               </div>
             </div>
           )}
