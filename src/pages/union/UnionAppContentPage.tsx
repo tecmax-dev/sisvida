@@ -14,7 +14,6 @@ import {
 } from "@/hooks/useUnionAppContent";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -26,24 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import {
   Select,
   SelectContent,
@@ -245,6 +228,12 @@ export default function UnionAppContentPage() {
     setIsDialogOpen(true);
   };
 
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingContent(null);
+    setFormData(defaultFormData);
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -282,7 +271,7 @@ export default function UnionAppContentPage() {
     } else {
       await createContent.mutateAsync(formData);
     }
-    setIsDialogOpen(false);
+    handleCloseDialog();
   };
 
   const handleDelete = async () => {
@@ -436,255 +425,244 @@ export default function UnionAppContentPage() {
       </Tabs>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingContent ? "Editar" : "Novo"} {CONTENT_TYPE_LABELS[formData.content_type].slice(0, -1)}
-            </DialogTitle>
-            <DialogDescription>
-              Preencha os campos para {editingContent ? "atualizar" : "criar"} o conteúdo
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={isDialogOpen} onClose={handleCloseDialog} maxWidth="2xl">
+        <PopupHeader>
+          <PopupTitle>
+            {editingContent ? "Editar" : "Novo"} {CONTENT_TYPE_LABELS[formData.content_type].slice(0, -1)}
+          </PopupTitle>
+          <PopupDescription>
+            Preencha os campos para {editingContent ? "atualizar" : "criar"} o conteúdo
+          </PopupDescription>
+        </PopupHeader>
 
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-4">
-              {/* Content Type */}
-              {!editingContent && (
-                <div className="space-y-2">
-                  <Label>Tipo de Conteúdo</Label>
-                  <Select
-                    value={formData.content_type}
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, content_type: v as ContentType }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          <div className="flex items-center gap-2">
-                            {contentTypeIcons[type]}
-                            {CONTENT_TYPE_LABELS[type]}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Title */}
+        <ScrollArea className="max-h-[60vh] pr-4">
+          <div className="space-y-4">
+            {/* Content Type */}
+            {!editingContent && (
               <div className="space-y-2">
-                <Label>Título *</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Digite o título"
-                />
+                <Label>Tipo de Conteúdo</Label>
+                <Select
+                  value={formData.content_type}
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, content_type: v as ContentType }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        <div className="flex items-center gap-2">
+                          {contentTypeIcons[type]}
+                          {CONTENT_TYPE_LABELS[type]}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            )}
 
-              {/* Description */}
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Digite uma descrição"
-                  rows={3}
-                />
-              </div>
+            {/* Title */}
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Digite o título"
+              />
+            </div>
 
-              {/* Image Upload */}
-              <div className="space-y-2">
-                <Label>Imagem</Label>
-                <div className="flex items-center gap-4">
-                  {formData.image_url && (
-                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted">
-                      <img
-                        src={formData.image_url}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={isUploading}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Ou cole uma URL de imagem abaixo
-                    </p>
-                    <Input
-                      value={formData.image_url}
-                      onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                      placeholder="https://..."
-                      className="mt-2"
+            {/* Description */}
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Digite uma descrição"
+                rows={3}
+              />
+            </div>
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label>Imagem</Label>
+              <div className="flex items-center gap-4">
+                {formData.image_url && (
+                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* File Upload - for documents, declarations, etc */}
-              {(formData.content_type === 'documento' || formData.content_type === 'declaracao' || formData.content_type === 'convencao') && (
-                <div className="space-y-2">
-                  <Label>Arquivo (PDF, DOC, etc)</Label>
+                )}
+                <div className="flex-1">
                   <Input
                     type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                    onChange={handleFileUpload}
+                    accept="image/*"
+                    onChange={handleImageUpload}
                     disabled={isUploading}
                   />
-                  {formData.file_url && (
-                    <a
-                      href={formData.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline flex items-center gap-1"
-                    >
-                      <File className="h-4 w-4" />
-                      Ver arquivo atual
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {/* CCT Category Selection for App Tabs - for CCT only */}
-              {formData.content_type === 'convencao' && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Smartphone className="h-4 w-4" />
-                    Aba no App (Categoria CCT)
-                  </Label>
-                  <Select
-                    value={formData.cct_category_id || "none"}
-                    onValueChange={(v) => setFormData(prev => ({ 
-                      ...prev, 
-                      cct_category_id: v === "none" ? null : v
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a aba..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem categoria (todas as abas)</SelectItem>
-                      {cctCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Organiza as CCTs em abas no aplicativo mobile.
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ou cole uma URL de imagem abaixo
                   </p>
-                  {cctCategories.length === 0 && (
-                    <p className="text-xs text-amber-600">
-                      Nenhuma categoria CCT cadastrada. Adicione em "Categorias CCT".
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Portal Category Selection - for CCT only */}
-              {formData.content_type === 'convencao' && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Categoria de Empresas (Portal)
-                  </Label>
-                  <Select
-                    value={(formData.metadata.target_category_id as string) || "all"}
-                    onValueChange={(v) => setFormData(prev => ({ 
-                      ...prev, 
-                      metadata: { ...prev.metadata, target_category_id: v === "all" ? undefined : v }
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a categoria..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas as categorias</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Apenas empresas da categoria selecionada verão esta CCT no portal.
-                  </p>
-                </div>
-              )}
-
-              {/* External Link */}
-              <div className="space-y-2">
-                <Label>Link Externo</Label>
-                <Input
-                  value={formData.external_link}
-                  onChange={(e) => setFormData(prev => ({ ...prev, external_link: e.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
-
-              {/* Active Status */}
-              <div className="flex items-center justify-between">
-                <Label>Status</Label>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                  <Input
+                    value={formData.image_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                    placeholder="https://..."
+                    className="mt-2"
                   />
-                  <span className="text-sm">
-                    {formData.is_active ? "Ativo" : "Inativo"}
-                  </span>
                 </div>
               </div>
             </div>
-          </ScrollArea>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!formData.title.trim() || createContent.isPending || updateContent.isPending || isUploading}
-            >
-              {(createContent.isPending || updateContent.isPending) && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              {editingContent ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* File Upload - for documents, declarations, etc */}
+            {(formData.content_type === 'documento' || formData.content_type === 'declaracao' || formData.content_type === 'convencao') && (
+              <div className="space-y-2">
+                <Label>Arquivo (PDF, DOC, etc)</Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                />
+                {formData.file_url && (
+                  <a
+                    href={formData.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
+                    <File className="h-4 w-4" />
+                    Ver arquivo atual
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* CCT Category Selection for App Tabs - for CCT only */}
+            {formData.content_type === 'convencao' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  Aba no App (Categoria CCT)
+                </Label>
+                <Select
+                  value={formData.cct_category_id || "none"}
+                  onValueChange={(v) => setFormData(prev => ({ 
+                    ...prev, 
+                    cct_category_id: v === "none" ? null : v
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a aba..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem categoria (todas as abas)</SelectItem>
+                    {cctCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Organiza as CCTs em abas no aplicativo mobile.
+                </p>
+                {cctCategories.length === 0 && (
+                  <p className="text-xs text-amber-600">
+                    Nenhuma categoria CCT cadastrada. Adicione em "Categorias CCT".
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Portal Category Selection - for CCT only */}
+            {formData.content_type === 'convencao' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Categoria de Empresas (Portal)
+                </Label>
+                <Select
+                  value={(formData.metadata.target_category_id as string) || "all"}
+                  onValueChange={(v) => setFormData(prev => ({ 
+                    ...prev, 
+                    metadata: { ...prev.metadata, target_category_id: v === "all" ? undefined : v }
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Apenas empresas da categoria selecionada verão esta CCT no portal.
+                </p>
+              </div>
+            )}
+
+            {/* External Link */}
+            <div className="space-y-2">
+              <Label>Link Externo</Label>
+              <Input
+                value={formData.external_link}
+                onChange={(e) => setFormData(prev => ({ ...prev, external_link: e.target.value }))}
+                placeholder="https://..."
+              />
+            </div>
+
+            {/* Active Status */}
+            <div className="flex items-center justify-between">
+              <Label>Status</Label>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                />
+                <span className="text-sm">
+                  {formData.is_active ? "Ativo" : "Inativo"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+
+        <PopupFooter>
+          <Button variant="outline" onClick={handleCloseDialog}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!formData.title.trim() || createContent.isPending || updateContent.isPending || isUploading}
+          >
+            {(createContent.isPending || updateContent.isPending) && (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            )}
+            {editingContent ? "Salvar" : "Criar"}
+          </Button>
+        </PopupFooter>
+      </PopupBase>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este conteúdo? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteContent.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertPopup
+        open={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Confirmar exclusão"
+        description="Tem certeza que deseja excluir este conteúdo? Esta ação não pode ser desfeita."
+        confirmText={deleteContent.isPending ? "Excluindo..." : "Excluir"}
+        cancelText="Cancelar"
+        confirmVariant="destructive"
+        isLoading={deleteContent.isPending}
+      />
     </div>
   );
 }

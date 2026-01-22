@@ -5,12 +5,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -284,42 +279,66 @@ export function ProcedureDialog({
     }));
   };
 
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Editar Procedimento" : "Novo Procedimento"}
-          </DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle>
+          {isEditing ? "Editar Procedimento" : "Novo Procedimento"}
+        </PopupTitle>
+      </PopupHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <ScrollArea className="max-h-[calc(90vh-180px)] pr-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Consulta Particular" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descrição do procedimento..."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome *</FormLabel>
+                    <FormLabel>Preço Padrão (R$) *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Consulta Particular" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descrição do procedimento..."
-                        className="resize-none"
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
                         {...field}
                       />
                     </FormControl>
@@ -328,173 +347,151 @@ export function ProcedureDialog({
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Preço Padrão (R$) *</FormLabel>
+              <FormField
+                control={form.control}
+                name="duration_minutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duração (min) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="5"
+                        step="5"
+                        placeholder="30"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0,00"
-                          {...field}
-                        />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="duration_minutes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duração (min) *</FormLabel>
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cor</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min="5"
-                          step="5"
-                          placeholder="30"
-                          {...field}
-                        />
+                        <SelectTrigger>
+                          <SelectValue>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: field.value }}
+                              />
+                              {colors.find((c) => c.value === field.value)?.label}
+                            </div>
+                          </SelectValue>
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      <SelectContent>
+                        {colors.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-4 h-4 rounded-full"
+                                style={{ backgroundColor: color.value }}
+                              />
+                              {color.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="color"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cor</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-4 h-4 rounded-full"
-                                  style={{ backgroundColor: field.value }}
-                                />
-                                {colors.find((c) => c.value === field.value)?.label}
-                              </div>
-                            </SelectValue>
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {colors.map((color) => (
-                            <SelectItem key={color.value} value={color.value}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-4 h-4 rounded-full"
-                                  style={{ backgroundColor: color.value }}
-                                />
-                                {color.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Insurance Prices Section */}
-              {insurancePlans.length > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <FormLabel className="text-base">Preços por Convênio</FormLabel>
-                      <Badge variant="outline" className="text-xs">
-                        Opcional
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Defina preços específicos para cada convênio. Se não definido, será usado o preço padrão.
-                    </p>
-                    <div className="space-y-3">
-                      {insurancePlans.map((insurance) => (
-                        <div key={insurance.id} className="flex items-center gap-3">
-                          <span className="text-sm text-foreground min-w-[120px] truncate">
-                            {insurance.name}
-                          </span>
-                          <div className="flex items-center gap-1 flex-1">
-                            <span className="text-sm text-muted-foreground">R$</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="Usar padrão"
-                              value={insurancePrices[insurance.id] || ""}
-                              onChange={(e) => handleInsurancePriceChange(insurance.id, e.target.value)}
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            {/* Insurance Prices Section */}
+            {insurancePlans.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-base">Preços por Convênio</FormLabel>
+                    <Badge variant="outline" className="text-xs">
+                      Opcional
+                    </Badge>
                   </div>
-                </>
-              )}
+                  <p className="text-sm text-muted-foreground">
+                    Defina preços específicos para cada convênio. Se não definido, será usado o preço padrão.
+                  </p>
+                  <div className="space-y-3">
+                    {insurancePlans.map((insurance) => (
+                      <div key={insurance.id} className="flex items-center gap-3">
+                        <span className="text-sm text-foreground min-w-[120px] truncate">
+                          {insurance.name}
+                        </span>
+                        <div className="flex items-center gap-1 flex-1">
+                          <span className="text-sm text-muted-foreground">R$</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Usar padrão"
+                            value={insurancePrices[insurance.id] || ""}
+                            onChange={(e) => handleInsurancePriceChange(insurance.id, e.target.value)}
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending
-                    ? "Salvando..."
-                    : isEditing
-                    ? "Salvar"
-                    : "Criar"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+            <PopupFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending
+                  ? "Salvando..."
+                  : isEditing
+                  ? "Salvar"
+                  : "Criar"}
+              </Button>
+            </PopupFooter>
+          </form>
+        </Form>
+      </ScrollArea>
+    </PopupBase>
   );
 }

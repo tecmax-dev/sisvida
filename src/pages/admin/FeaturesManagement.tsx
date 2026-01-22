@@ -8,13 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Table,
   TableBody,
@@ -96,6 +90,11 @@ export default function FeaturesManagement() {
     setDialogOpen(true);
   };
 
+  const handleClose = () => {
+    setDialogOpen(false);
+    resetForm();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -145,8 +144,7 @@ export default function FeaturesManagement() {
         });
       }
 
-      setDialogOpen(false);
-      resetForm();
+      handleClose();
       refetch();
     } catch (error: any) {
       toast({
@@ -205,121 +203,10 @@ export default function FeaturesManagement() {
           </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Recurso
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingFeature ? "Editar Recurso" : "Novo Recurso"}
-              </DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="key">Chave única *</Label>
-                  <Input
-                    id="key"
-                    value={formKey}
-                    onChange={(e) => setFormKey(e.target.value)}
-                    placeholder="ex: dynamic_anamnesis"
-                    disabled={!!editingFeature}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome *</Label>
-                  <Input
-                    id="name"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="ex: Anamnese Dinâmica"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Descrição do recurso..."
-                  rows={2}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <Select value={formCategory} onValueChange={setFormCategory}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Ícone</Label>
-                  <Select value={formIcon} onValueChange={setFormIcon}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ICONS.map((icon) => (
-                        <SelectItem key={icon} value={icon}>
-                          {icon}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Recurso Ativo</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Disponível para vincular aos planos
-                  </p>
-                </div>
-                <Switch
-                  checked={formIsActive}
-                  onCheckedChange={setFormIsActive}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {editingFeature ? "Salvar" : "Criar Recurso"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Recurso
+        </Button>
       </div>
 
       {/* Stats */}
@@ -436,6 +323,112 @@ export default function FeaturesManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog */}
+      <PopupBase open={dialogOpen} onClose={handleClose} maxWidth="lg">
+        <PopupHeader>
+          <PopupTitle>
+            {editingFeature ? "Editar Recurso" : "Novo Recurso"}
+          </PopupTitle>
+        </PopupHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="key">Chave única *</Label>
+              <Input
+                id="key"
+                value={formKey}
+                onChange={(e) => setFormKey(e.target.value)}
+                placeholder="ex: dynamic_anamnesis"
+                disabled={!!editingFeature}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="ex: Anamnese Dinâmica"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Descrição do recurso..."
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={formCategory} onValueChange={setFormCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ícone</Label>
+              <Select value={formIcon} onValueChange={setFormIcon}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ICONS.map((icon) => (
+                    <SelectItem key={icon} value={icon}>
+                      {icon}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Recurso Ativo</Label>
+              <p className="text-sm text-muted-foreground">
+                Disponível para vincular aos planos
+              </p>
+            </div>
+            <Switch
+              checked={formIsActive}
+              onCheckedChange={setFormIsActive}
+            />
+          </div>
+
+          <PopupFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {editingFeature ? "Salvar" : "Criar Recurso"}
+            </Button>
+          </PopupFooter>
+        </form>
+      </PopupBase>
     </div>
   );
 }
