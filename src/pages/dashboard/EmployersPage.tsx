@@ -29,24 +29,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -1134,17 +1118,16 @@ export default function EmployersPage() {
       )}
 
       {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              {selectedEmployer ? "Editar Empresa" : "Nova Empresa"}
-            </DialogTitle>
-            <DialogDescription>
-              Preencha os dados da empresa
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="2xl">
+        <PopupHeader>
+          <PopupTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            {selectedEmployer ? "Editar Empresa" : "Nova Empresa"}
+          </PopupTitle>
+          <PopupDescription>
+            Preencha os dados da empresa
+          </PopupDescription>
+        </PopupHeader>
           <div className="grid gap-4 py-4">
             {/* CNPJ Destacado */}
             <CnpjInputCard
@@ -1402,7 +1385,7 @@ export default function EmployersPage() {
               <Label htmlFor="is_active">Empresa ativa</Label>
             </div>
           </div>
-          <DialogFooter>
+          <PopupFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
@@ -1410,28 +1393,19 @@ export default function EmployersPage() {
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {selectedEmployer ? "Salvar" : "Cadastrar"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </PopupFooter>
+      </PopupBase>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir empresa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A empresa será removida do sistema,
-              mas os pacientes vinculados manterão o CNPJ no cadastro.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertPopup
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        title="Excluir empresa?"
+        description="Esta ação não pode ser desfeita. A empresa será removida do sistema, mas os pacientes vinculados manterão o CNPJ no cadastro."
+        confirmText="Excluir"
+        confirmVariant="destructive"
+        onConfirm={handleDelete}
+      />
 
       {/* Category Management Dialog */}
       {currentClinic && (
