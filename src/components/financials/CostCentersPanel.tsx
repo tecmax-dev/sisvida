@@ -12,13 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Table,
   TableBody,
@@ -286,93 +280,91 @@ export function CostCentersPanel({ clinicId }: CostCentersPanelProps) {
       </CardContent>
 
       {/* Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingCenter ? "Editar Centro de Custo" : "Novo Centro de Custo"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="code">Código</Label>
-                <Input
-                  id="code"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="CC001"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="parent_id">Centro Pai</Label>
-                <Select
-                  value={formData.parent_id || "__none__"}
-                  onValueChange={(value) => setFormData({ ...formData, parent_id: value === "__none__" ? "" : value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nenhum" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Nenhum (raiz)</SelectItem>
-                    {costCenters
-                      .filter((c) => c.id !== editingCenter?.id)
-                      .map((center) => (
-                        <SelectItem key={center.id} value={center.id}>
-                          {center.code} - {center.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+      <PopupBase open={dialogOpen} onClose={handleCloseDialog}>
+        <PopupHeader>
+          <PopupTitle>
+            {editingCenter ? "Editar Centro de Custo" : "Novo Centro de Custo"}
+          </PopupTitle>
+        </PopupHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="code">Código</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome do centro de custo"
+                id="code"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                placeholder="CC001"
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Descrição do centro de custo"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-              />
-              <Label htmlFor="is_active">Ativo</Label>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+              <Label htmlFor="parent_id">Centro Pai</Label>
+              <Select
+                value={formData.parent_id || "__none__"}
+                onValueChange={(value) => setFormData({ ...formData, parent_id: value === "__none__" ? "" : value })}
               >
-                {editingCenter ? "Salvar" : "Criar"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum (raiz)</SelectItem>
+                  {costCenters
+                    .filter((c) => c.id !== editingCenter?.id)
+                    .map((center) => (
+                      <SelectItem key={center.id} value={center.id}>
+                        {center.code} - {center.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Nome do centro de custo"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descrição do centro de custo"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="is_active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+            />
+            <Label htmlFor="is_active">Ativo</Label>
+          </div>
+
+          <PopupFooter>
+            <Button type="button" variant="outline" onClick={handleCloseDialog}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {editingCenter ? "Salvar" : "Criar"}
+            </Button>
+          </PopupFooter>
+        </form>
+      </PopupBase>
     </Card>
   );
 }

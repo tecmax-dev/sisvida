@@ -4,16 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { addDays } from "date-fns";
 import { UserPlus, Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -86,28 +79,11 @@ export function QuickPatientRegistration({
     },
   });
 
-  const formatCPF = (value: string) => {
-    const cleaned = value.replace(/\D/g, "").slice(0, 11);
-    return cleaned
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-  };
-
   const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, "").slice(0, 11);
     if (cleaned.length <= 2) return cleaned;
     if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-  };
-
-  const formatCNPJ = (value: string) => {
-    const cleaned = value.replace(/\D/g, "").slice(0, 14);
-    return cleaned
-      .replace(/(\d{2})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1/$2")
-      .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
   };
 
   const onSubmit = async (data: QuickRegistrationForm) => {
@@ -209,128 +185,126 @@ export function QuickPatientRegistration({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Cadastro Rápido de Paciente
-          </DialogTitle>
-          <DialogDescription>
-            Preencha os dados abaixo para cadastrar um novo paciente. 
-            Uma carteirinha digital será criada automaticamente com validade de 15 dias.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="md">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5" />
+          Cadastro Rápido de Paciente
+        </PopupTitle>
+        <PopupDescription>
+          Preencha os dados abaixo para cadastrar um novo paciente. 
+          Uma carteirinha digital será criada automaticamente com validade de 15 dias.
+        </PopupDescription>
+      </PopupHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="cpf"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <CpfInputCard
-                      value={field.value}
-                      onChange={field.onChange}
-                      error={form.formState.errors.cpf?.message}
-                      required
-                      showValidation
-                    />
-                  </FormControl>
-                </FormItem>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="cpf"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <CpfInputCard
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={form.formState.errors.cpf?.message}
+                    required
+                    showValidation
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome Completo *</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Nome do paciente" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="birth_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data de Nascimento *</FormLabel>
+                <FormControl>
+                  <Input {...field} type="date" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Telefone WhatsApp *</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="(00) 00000-0000"
+                    onChange={(e) => field.onChange(formatPhone(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="employer_cnpj"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <CnpjInputCard
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    label="CNPJ da Empresa (opcional)"
+                    showLookupButton={false}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cadastrando...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Cadastrar
+                </>
               )}
-            />
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Completo *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Nome do paciente" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="birth_date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de Nascimento *</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone WhatsApp *</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="(00) 00000-0000"
-                      onChange={(e) => field.onChange(formatPhone(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="employer_cnpj"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <CnpjInputCard
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      label="CNPJ da Empresa (opcional)"
-                      showLookupButton={false}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading} className="flex-1">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Cadastrando...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Cadastrar
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </PopupBase>
   );
 }
