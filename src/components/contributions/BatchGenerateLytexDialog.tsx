@@ -1,12 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -367,252 +360,250 @@ export function BatchGenerateLytexDialog({
     .reduce((sum, c) => sum + c.value, 0);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" />
-            Gerar Boletos na Lytex em Lote
-          </DialogTitle>
-          <DialogDescription>
-            Selecione as contribuições sem boleto. Use os filtros para localizar registros específicos.
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="3xl" className="flex flex-col max-h-[90vh]">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-primary" />
+          Gerar Boletos na Lytex em Lote
+        </PopupTitle>
+        <PopupDescription>
+          Selecione as contribuições sem boleto. Use os filtros para localizar registros específicos.
+        </PopupDescription>
+      </PopupHeader>
 
-        {showResults ? (
-          <div className="flex-1 space-y-4 py-4">
-            <div className="text-center space-y-2">
-              {results.success > 0 && (
-                <div className="flex items-center justify-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-medium">{results.success} boleto(s) gerado(s) com sucesso</span>
-                </div>
-              )}
-              {results.errors.length > 0 && (
-                <div className="flex items-center justify-center gap-2 text-red-600">
-                  <XCircle className="h-5 w-5" />
-                  <span className="font-medium">{results.errors.length} erro(s)</span>
-                </div>
-              )}
-            </div>
-
-            {results.errors.length > 0 && (
-              <ScrollArea className="h-48 border rounded-md p-3">
-                <div className="space-y-1 text-sm">
-                  {results.errors.map((error, i) => (
-                    <div key={i} className="flex items-start gap-2 text-red-600">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                      <span>{error}</span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+      {showResults ? (
+        <div className="flex-1 space-y-4 py-4">
+          <div className="text-center space-y-2">
+            {results.success > 0 && (
+              <div className="flex items-center justify-center gap-2 text-green-600">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-medium">{results.success} boleto(s) gerado(s) com sucesso</span>
+              </div>
             )}
-
-            <DialogFooter>
-              <Button onClick={handleClose}>Fechar</Button>
-            </DialogFooter>
+            {results.errors.length > 0 && (
+              <div className="flex items-center justify-center gap-2 text-red-600">
+                <XCircle className="h-5 w-5" />
+                <span className="font-medium">{results.errors.length} erro(s)</span>
+              </div>
+            )}
           </div>
-        ) : (
-          <>
-            {loading ? (
-              <div className="flex-1 flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : contributions.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <FileWarning className="h-12 w-12 mb-2" />
-                <p>Nenhuma contribuição sem boleto encontrada</p>
-                <p className="text-sm">Todas as contribuições já possuem boleto gerado</p>
-              </div>
-            ) : (
-              <>
-                {/* Barra de Filtros */}
-                <div className="flex flex-wrap items-center gap-2 py-2 border-b">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
 
-                  <Select 
-                    value={internalYearFilter?.toString() ?? "all"} 
-                    onValueChange={(v) => setInternalYearFilter(v === "all" ? null : Number(v))}
-                  >
-                    <SelectTrigger className="w-[90px] h-8 text-xs">
-                      <SelectValue placeholder="Ano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {availableYears.map((y) => (
-                        <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select value={personTypeFilter} onValueChange={(v) => setPersonTypeFilter(v as "all" | "pf" | "pj")}>
-                    <SelectTrigger className="w-[80px] h-8 text-xs">
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="pj">PJ</SelectItem>
-                      <SelectItem value="pf">PF</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={competenceFilter} onValueChange={setCompetenceFilter}>
-                    <SelectTrigger className="w-[110px] h-8 text-xs">
-                      <SelectValue placeholder="Competência" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {availableCompetences.map((c) => (
-                        <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[130px] h-8 text-xs">
-                      <SelectValue placeholder="Tipo Contrib." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos Tipos</SelectItem>
-                      {contributionTypes.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "pending" | "overdue")}>
-                    <SelectTrigger className="w-[100px] h-8 text-xs">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="overdue">Atrasado</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    {filteredContributions.length} de {contributions.length}
-                  </Badge>
-                </div>
-
-                {processing && (
-                  <div className="space-y-2 py-4">
-                    <div className="flex justify-between text-sm">
-                      <span>Gerando boletos...</span>
-                      <span>{progress}%</span>
-                    </div>
-                    <Progress value={progress} />
+          {results.errors.length > 0 && (
+            <ScrollArea className="h-48 border rounded-md p-3">
+              <div className="space-y-1 text-sm">
+                {results.errors.map((error, i) => (
+                  <div key={i} className="flex items-start gap-2 text-red-600">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{error}</span>
                   </div>
-                )}
+                ))}
+              </div>
+            </ScrollArea>
+          )}
 
-                <div className="flex items-center gap-2 py-2 border-b">
-                  <Checkbox
-                    id="select-all"
-                    checked={allSelected}
-                    onCheckedChange={(checked) => toggleAll(!!checked)}
-                    disabled={processing || filteredContributions.length === 0}
-                  />
-                  <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                    Selecionar todos ({filteredContributions.length})
-                  </Label>
-                  {someSelected && (
-                    <Badge variant="secondary">{selectedIds.size} selecionado(s)</Badge>
-                  )}
-                  {selectedIds.size > 0 && (
-                    <Badge variant="default" className="ml-auto">
-                      Total: {formatCurrency(totalValue)}
-                    </Badge>
-                  )}
+          <PopupFooter>
+            <Button onClick={handleClose}>Fechar</Button>
+          </PopupFooter>
+        </div>
+      ) : (
+        <>
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : contributions.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <FileWarning className="h-12 w-12 mb-2" />
+              <p>Nenhuma contribuição sem boleto encontrada</p>
+              <p className="text-sm">Todas as contribuições já possuem boleto gerado</p>
+            </div>
+          ) : (
+            <>
+              {/* Barra de Filtros */}
+              <div className="flex flex-wrap items-center gap-2 py-2 border-b">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+
+                <Select 
+                  value={internalYearFilter?.toString() ?? "all"} 
+                  onValueChange={(v) => setInternalYearFilter(v === "all" ? null : Number(v))}
+                >
+                  <SelectTrigger className="w-[90px] h-8 text-xs">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {availableYears.map((y) => (
+                      <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={personTypeFilter} onValueChange={(v) => setPersonTypeFilter(v as "all" | "pf" | "pj")}>
+                  <SelectTrigger className="w-[80px] h-8 text-xs">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="pj">PJ</SelectItem>
+                    <SelectItem value="pf">PF</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={competenceFilter} onValueChange={setCompetenceFilter}>
+                  <SelectTrigger className="w-[110px] h-8 text-xs">
+                    <SelectValue placeholder="Competência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {availableCompetences.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                    <SelectValue placeholder="Tipo Contrib." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Tipos</SelectItem>
+                    {contributionTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "pending" | "overdue")}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="overdue">Atrasado</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Badge variant="outline" className="ml-auto text-xs">
+                  {filteredContributions.length} de {contributions.length}
+                </Badge>
+              </div>
+
+              {processing && (
+                <div className="space-y-2 py-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Gerando boletos...</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <Progress value={progress} />
                 </div>
+              )}
 
-                <ScrollArea className="flex-1 h-[350px]">
-                  <div className="space-y-4 pr-4">
-                    {Object.entries(groupedContributions).map(([competence, items]) => (
-                      <div key={competence} className="space-y-2">
-                        <h4 className="font-medium text-sm text-muted-foreground sticky top-0 bg-background py-1 z-10">
-                          Competência {competence} ({items.length})
-                        </h4>
-                        <div className="space-y-1">
-                          {items.map((contribution) => {
-                            const isPF = !!contribution.member_id;
-                            const name = isPF
-                              ? contribution.patients?.name
-                              : contribution.employers?.name;
-                            const doc = isPF
-                              ? contribution.patients?.cpf
-                              : contribution.employers?.cnpj;
+              <div className="flex items-center gap-2 py-2 border-b">
+                <Checkbox
+                  id="select-all"
+                  checked={allSelected}
+                  onCheckedChange={(checked) => toggleAll(!!checked)}
+                  disabled={processing || filteredContributions.length === 0}
+                />
+                <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                  Selecionar todos ({filteredContributions.length})
+                </Label>
+                {someSelected && (
+                  <Badge variant="secondary">{selectedIds.size} selecionado(s)</Badge>
+                )}
+                {selectedIds.size > 0 && (
+                  <Badge variant="default" className="ml-auto">
+                    Total: {formatCurrency(totalValue)}
+                  </Badge>
+                )}
+              </div>
 
-                            return (
-                              <div
-                                key={contribution.id}
-                                className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50"
-                              >
-                                <Checkbox
-                                  id={contribution.id}
-                                  checked={selectedIds.has(contribution.id)}
-                                  onCheckedChange={(checked) => toggleOne(contribution.id, !!checked)}
-                                  disabled={processing}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm truncate">{name}</span>
-                                    <Badge variant={isPF ? "secondary" : "outline"} className="text-xs shrink-0">
-                                      {isPF ? "PF" : "PJ"}
+              <ScrollArea className="flex-1 h-[350px]">
+                <div className="space-y-4 pr-4">
+                  {Object.entries(groupedContributions).map(([competence, items]) => (
+                    <div key={competence} className="space-y-2">
+                      <h4 className="font-medium text-sm text-muted-foreground sticky top-0 bg-background py-1 z-10">
+                        Competência {competence} ({items.length})
+                      </h4>
+                      <div className="space-y-1">
+                        {items.map((contribution) => {
+                          const isPF = !!contribution.member_id;
+                          const name = isPF
+                            ? contribution.patients?.name
+                            : contribution.employers?.name;
+                          const doc = isPF
+                            ? contribution.patients?.cpf
+                            : contribution.employers?.cnpj;
+
+                          return (
+                            <div
+                              key={contribution.id}
+                              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50"
+                            >
+                              <Checkbox
+                                id={contribution.id}
+                                checked={selectedIds.has(contribution.id)}
+                                onCheckedChange={(checked) => toggleOne(contribution.id, !!checked)}
+                                disabled={processing}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm truncate">{name}</span>
+                                  <Badge variant={isPF ? "secondary" : "outline"} className="text-xs shrink-0">
+                                    {isPF ? "PF" : "PJ"}
+                                  </Badge>
+                                  {contribution.status === "overdue" && (
+                                    <Badge variant="destructive" className="text-xs shrink-0">
+                                      Atrasado
                                     </Badge>
-                                    {contribution.status === "overdue" && (
-                                      <Badge variant="destructive" className="text-xs shrink-0">
-                                        Atrasado
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground flex gap-2 flex-wrap">
-                                    <span>{doc}</span>
-                                    <span>•</span>
-                                    <span>{formatCurrency(contribution.value)}</span>
-                                    <span>•</span>
-                                    <span>Venc: {new Date(contribution.due_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-                                  </div>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground flex gap-2 flex-wrap">
+                                  <span>{doc}</span>
+                                  <span>•</span>
+                                  <span>{formatCurrency(contribution.value)}</span>
+                                  <span>•</span>
+                                  <span>Venc: {new Date(contribution.due_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    </div>
+                  ))}
 
-                    {filteredContributions.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p>Nenhuma contribuição encontrada com os filtros aplicados</p>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
+                  {filteredContributions.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Nenhuma contribuição encontrada com os filtros aplicados</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
 
-                <DialogFooter className="pt-4 border-t">
-                  <Button variant="outline" onClick={handleClose} disabled={processing}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleGenerate} disabled={processing || selectedIds.size === 0}>
-                    {processing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Gerando...
-                      </>
-                    ) : (
-                      <>
-                        <Receipt className="h-4 w-4 mr-2" />
-                        Gerar {selectedIds.size} Boleto(s)
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+              <PopupFooter className="pt-4 border-t">
+                <Button variant="outline" onClick={handleClose} disabled={processing}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleGenerate} disabled={processing || selectedIds.size === 0}>
+                  {processing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Gerar {selectedIds.size} Boleto(s)
+                    </>
+                  )}
+                </Button>
+              </PopupFooter>
+            </>
+          )}
+        </>
+      )}
+    </PopupBase>
   );
 }

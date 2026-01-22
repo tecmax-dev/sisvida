@@ -2,12 +2,7 @@ import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer, Share2, Copy, ExternalLink } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -180,148 +175,146 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
     : authorization.patient?.name;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            Autorização {authorization.authorization_number}
-            {getStatusBadge(authorization.status)}
-          </DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-3">
+          Autorização {authorization.authorization_number}
+          {getStatusBadge(authorization.status)}
+        </PopupTitle>
+      </PopupHeader>
 
-        {/* Actions */}
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleCopyLink}>
-            <Copy className="h-4 w-4 mr-2" />
-            Copiar Link
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href={publicUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Abrir Link
-            </a>
-          </Button>
+      {/* Actions */}
+      <div className="flex gap-2 flex-wrap">
+        <Button variant="outline" size="sm" onClick={handlePrint}>
+          <Printer className="h-4 w-4 mr-2" />
+          Imprimir
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleCopyLink}>
+          <Copy className="h-4 w-4 mr-2" />
+          Copiar Link
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <a href={publicUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Abrir Link
+          </a>
+        </Button>
+      </div>
+
+      <Separator />
+
+      {/* Print content */}
+      <div ref={printRef} className="space-y-6">
+        {/* Header */}
+        <div className="header text-center">
+          <h1 className="text-xl font-bold">{unionEntity?.razao_social || currentClinic?.name}</h1>
+          {unionEntity?.cnpj && <p className="text-sm text-muted-foreground">CNPJ: {unionEntity.cnpj}</p>}
+          {unionEntity?.endereco && <p className="text-sm text-muted-foreground">{unionEntity.endereco}</p>}
         </div>
 
-        <Separator />
+        {/* Title */}
+        <div className="title text-center">
+          <h2 className="text-lg font-semibold border-b-2 border-foreground pb-2">
+            AUTORIZAÇÃO DE BENEFÍCIO
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            Nº {authorization.authorization_number}
+          </p>
+        </div>
 
-        {/* Print content */}
-        <div ref={printRef} className="space-y-6">
-          {/* Header */}
-          <div className="header text-center">
-            <h1 className="text-xl font-bold">{unionEntity?.razao_social || currentClinic?.name}</h1>
-            {unionEntity?.cnpj && <p className="text-sm text-muted-foreground">CNPJ: {unionEntity.cnpj}</p>}
-            {unionEntity?.endereco && <p className="text-sm text-muted-foreground">{unionEntity.endereco}</p>}
+        {/* Content */}
+        <div className="content space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-sm text-muted-foreground">Beneficiário</p>
+              <p className="font-medium">{beneficiaryName}</p>
+            </div>
+            {authorization.is_for_dependent && (
+              <div>
+                <p className="text-sm text-muted-foreground">Titular</p>
+                <p className="font-medium">{authorization.patient?.name}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-muted-foreground">CPF</p>
+              <p className="font-medium font-mono">{formatCPF(patient?.cpf)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Matrícula</p>
+              <p className="font-medium">{patient?.registration_number || "-"}</p>
+            </div>
           </div>
 
-          {/* Title */}
-          <div className="title text-center">
-            <h2 className="text-lg font-semibold border-b-2 border-foreground pb-2">
-              AUTORIZAÇÃO DE BENEFÍCIO
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              Nº {authorization.authorization_number}
-            </p>
-          </div>
+          <Separator />
 
-          {/* Content */}
-          <div className="content space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Beneficiário</p>
-                <p className="font-medium">{beneficiaryName}</p>
-              </div>
-              {authorization.is_for_dependent && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Titular</p>
-                  <p className="font-medium">{authorization.patient?.name}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-muted-foreground">CPF</p>
-                <p className="font-medium font-mono">{formatCPF(patient?.cpf)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Matrícula</p>
-                <p className="font-medium">{patient?.registration_number || "-"}</p>
-              </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-sm text-muted-foreground">Benefício</p>
+              <p className="font-medium">{authorization.benefit?.name}</p>
             </div>
-
-            <Separator />
-
-            <div className="grid gap-3 sm:grid-cols-2">
+            {authorization.benefit?.partner_name && (
               <div>
-                <p className="text-sm text-muted-foreground">Benefício</p>
-                <p className="font-medium">{authorization.benefit?.name}</p>
+                <p className="text-sm text-muted-foreground">Convênio</p>
+                <p className="font-medium">{authorization.benefit.partner_name}</p>
               </div>
-              {authorization.benefit?.partner_name && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Convênio</p>
-                  <p className="font-medium">{authorization.benefit.partner_name}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-muted-foreground">Data de Emissão</p>
-                <p className="font-medium">
-                  {format(new Date(authorization.issued_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Validade</p>
-                <p className="font-medium">
-                  {format(new Date(authorization.valid_from), "dd/MM/yyyy", { locale: ptBR })} até{" "}
-                  {format(new Date(authorization.valid_until), "dd/MM/yyyy", { locale: ptBR })}
-                </p>
-              </div>
+            )}
+            <div>
+              <p className="text-sm text-muted-foreground">Data de Emissão</p>
+              <p className="font-medium">
+                {format(new Date(authorization.issued_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </p>
             </div>
-
-            <Separator />
-
-            <div className="bg-muted/50 p-4 rounded-lg text-sm">
-              <p>
-                Declaramos que o(a) beneficiário(a) acima identificado(a) é associado(a) regular 
-                desta entidade sindical, estando apto(a) a utilizar o benefício mencionado, 
-                conforme convênio vigente.
+            <div>
+              <p className="text-sm text-muted-foreground">Validade</p>
+              <p className="font-medium">
+                {format(new Date(authorization.valid_from), "dd/MM/yyyy", { locale: ptBR })} até{" "}
+                {format(new Date(authorization.valid_until), "dd/MM/yyyy", { locale: ptBR })}
               </p>
             </div>
           </div>
 
-          {/* QR Code */}
-          <div className="qr-section flex flex-col items-center gap-2">
-            <QRCodeSVG value={publicUrl} size={120} />
-            <p className="text-xs text-muted-foreground">
-              Escaneie para validar esta autorização
+          <Separator />
+
+          <div className="bg-muted/50 p-4 rounded-lg text-sm">
+            <p>
+              Declaramos que o(a) beneficiário(a) acima identificado(a) é associado(a) regular 
+              desta entidade sindical, estando apto(a) a utilizar o benefício mencionado, 
+              conforme convênio vigente.
             </p>
           </div>
-
-          {/* Signature */}
-          {signature && (
-            <div className="signature text-center mt-8">
-              {signature.signature_data && (
-                <img 
-                  src={signature.signature_data} 
-                  alt="Assinatura" 
-                  className="h-16 mx-auto mb-2"
-                />
-              )}
-              <div className="signature-line border-t border-foreground w-64 mx-auto pt-2">
-                <p className="font-medium">{signature.president_name}</p>
-                <p className="text-sm text-muted-foreground">{signature.president_title}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="footer text-center text-xs text-muted-foreground mt-6">
-            <p>Documento gerado eletronicamente em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
-            <p>Validação: {publicUrl}</p>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* QR Code */}
+        <div className="qr-section flex flex-col items-center gap-2">
+          <QRCodeSVG value={publicUrl} size={120} />
+          <p className="text-xs text-muted-foreground">
+            Escaneie para validar esta autorização
+          </p>
+        </div>
+
+        {/* Signature */}
+        {signature && (
+          <div className="signature text-center mt-8">
+            {signature.signature_data && (
+              <img 
+                src={signature.signature_data} 
+                alt="Assinatura" 
+                className="h-16 mx-auto mb-2"
+              />
+            )}
+            <div className="signature-line border-t border-foreground w-64 mx-auto pt-2">
+              <p className="font-medium">{signature.president_name}</p>
+              <p className="text-sm text-muted-foreground">{signature.president_title}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="footer text-center text-xs text-muted-foreground mt-6">
+          <p>Documento gerado eletronicamente em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+          <p>Validação: {publicUrl}</p>
+        </div>
+      </div>
+    </PopupBase>
   );
 }

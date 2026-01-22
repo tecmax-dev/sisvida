@@ -1,13 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,11 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Printer, FileCheck } from "lucide-react";
+import { Search, Printer, FileCheck, Loader2 } from "lucide-react";
 
 interface UnionCheckPrintDialogProps {
   open: boolean;
@@ -180,7 +173,6 @@ export function UnionCheckPrintDialog({
               background: white;
             }
             
-            /* Header compacto */
             .header {
               background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
               color: white;
@@ -238,12 +230,10 @@ export function UnionCheckPrintDialog({
               font-weight: 700;
             }
             
-            /* Content area compacto */
             .content {
               padding: 12px 16px;
             }
             
-            /* Summary cards compactos */
             .cards-grid {
               display: grid;
               grid-template-columns: repeat(4, 1fr);
@@ -315,7 +305,6 @@ export function UnionCheckPrintDialog({
               margin-top: 1px;
             }
             
-            /* Table compacta */
             .table-container {
               border: 1px solid #e2e8f0;
               border-radius: 6px;
@@ -388,7 +377,6 @@ export function UnionCheckPrintDialog({
               text-overflow: ellipsis;
             }
             
-            /* Status badges compactos */
             .status {
               display: inline-flex;
               align-items: center;
@@ -425,7 +413,6 @@ export function UnionCheckPrintDialog({
               color: #7c3aed;
             }
             
-            /* Total row */
             .total-row {
               background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
             }
@@ -450,7 +437,6 @@ export function UnionCheckPrintDialog({
               color: #1e3a5f;
             }
             
-            /* Signature area compacta */
             .signature-section {
               display: grid;
               grid-template-columns: 1fr 1fr;
@@ -477,7 +463,6 @@ export function UnionCheckPrintDialog({
               letter-spacing: 0.05em;
             }
             
-            /* Footer compacto */
             .footer {
               background: #f8fafc;
               border-top: 1px solid #e2e8f0;
@@ -514,14 +499,7 @@ export function UnionCheckPrintDialog({
               color: #64748b;
             }
             
-            .footer-text strong {
-              display: block;
-              color: #334155;
-              font-size: 10px;
-            }
-            
             .footer-right {
-              text-align: right;
               font-size: 9px;
               color: #94a3b8;
             }
@@ -529,14 +507,14 @@ export function UnionCheckPrintDialog({
         </head>
         <body>
           <div class="document">
-            <!-- Header -->
             <div class="header">
               <div class="header-logo">
-                ${logoHtml.replace('max-height: 70px', 'max-height: 40px').replace('max-width: 200px', 'max-width: 100px').replace('width: 70px; height: 70px', 'width: 40px; height: 40px').replace('font-size: 28px', 'font-size: 18px')}
+                ${logoHtml}
               </div>
               <div class="header-info">
-                <h1>${clinic?.name || "Entidade Sindical"}</h1>
-                ${clinic?.cnpj ? `<p>CNPJ: ${clinic.cnpj}${clinic?.address ? ` • ${clinic.address}` : ""}</p>` : ""}
+                <h1>${clinic?.name || "Entidade"}</h1>
+                ${clinic?.cnpj ? `<p>CNPJ: ${clinic.cnpj}</p>` : ""}
+                ${clinic?.address ? `<p>${clinic.address}</p>` : ""}
               </div>
               <div class="header-badge">
                 <span>Cheque Nº</span>
@@ -544,103 +522,95 @@ export function UnionCheckPrintDialog({
               </div>
             </div>
             
-            <!-- Content -->
             <div class="content">
-              <!-- Summary Cards -->
               <div class="cards-grid">
                 <div class="card card-slate">
-                  <div class="card-label">Portador</div>
-                  <div class="card-value" style="font-size: 11px;">${expenses[0]?.cash_register?.name || "-"}</div>
-                </div>
-                <div class="card card-blue">
                   <div class="card-label">Despesas</div>
                   <div class="card-value">${expenses.length}</div>
-                  <div class="card-sub">lançamento(s)</div>
+                  <div class="card-sub">itens no cheque</div>
                 </div>
                 <div class="card card-emerald">
-                  <div class="card-label">Pagos</div>
+                  <div class="card-label">Pagas</div>
                   <div class="card-value">${paidCount}</div>
                   <div class="card-sub">${formatCurrency(paidAmount)}</div>
                 </div>
                 <div class="card card-amber">
                   <div class="card-label">Pendentes</div>
                   <div class="card-value">${pendingCount}</div>
-                  <div class="card-sub">a liquidar</div>
+                  <div class="card-sub">a processar</div>
+                </div>
+                <div class="card card-blue">
+                  <div class="card-label">Total</div>
+                  <div class="card-value">${formatCurrency(totalAmount)}</div>
+                  <div class="card-sub">valor do cheque</div>
                 </div>
               </div>
               
-              <!-- Table -->
               <div class="table-container">
                 <table>
                   <thead>
                     <tr>
-                      <th style="width: 35%;">Descrição</th>
-                      <th style="width: 25%;">Fornecedor</th>
+                      <th style="width: 30%;">Descrição</th>
+                      <th style="width: 20%;">Fornecedor</th>
                       <th style="width: 15%;">Vencimento</th>
-                      <th style="width: 15%; text-align: right;">Valor</th>
-                      <th style="width: 10%;">Status</th>
+                      <th style="width: 20%; text-align: right;">Valor</th>
+                      <th style="width: 15%;">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${expenses.map((e) => `
-                      <tr>
-                        <td class="font-medium truncate" title="${e.description}">${e.description}</td>
-                        <td class="truncate-sm" title="${e.supplier?.name || "-"}">${e.supplier?.name || "-"}</td>
-                        <td>${e.due_date ? format(parseISO(e.due_date), "dd/MM/yyyy") : "-"}</td>
-                        <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
-                        <td class="text-center">
-                          <span class="status status-${e.status}">
-                            ${e.status === "paid" ? "Pago" : 
-                              e.status === "pending" ? "Pend" : 
-                              e.status === "overdue" ? "Venc" : 
-                              e.status === "cancelled" ? "Canc" : 
-                              e.status === "reversed" ? "Est" : e.status}
-                          </span>
-                        </td>
-                      </tr>
-                    `).join("")}
+                    ${expenses.map(expense => {
+                      const statusClass = expense.status === "paid" ? "status-paid" 
+                        : expense.status === "pending" ? "status-pending"
+                        : expense.status === "overdue" ? "status-overdue"
+                        : expense.status === "cancelled" ? "status-cancelled"
+                        : "status-reversed";
+                      const statusLabel = expense.status === "paid" ? "Pago"
+                        : expense.status === "pending" ? "Pendente"
+                        : expense.status === "overdue" ? "Vencido"
+                        : expense.status === "cancelled" ? "Cancelado"
+                        : "Estornado";
+                      return `
+                        <tr>
+                          <td class="truncate font-medium">${expense.description || "-"}</td>
+                          <td class="truncate-sm">${expense.supplier?.name || "-"}</td>
+                          <td>${expense.due_date ? format(parseISO(expense.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-"}</td>
+                          <td class="text-right font-semibold">${formatCurrency(Number(expense.net_value || expense.amount))}</td>
+                          <td class="text-center"><span class="status ${statusClass}">${statusLabel}</span></td>
+                        </tr>
+                      `;
+                    }).join("")}
                     <tr class="total-row">
-                      <td colspan="3">
-                        <span class="total-label">Total do Cheque</span>
-                      </td>
-                      <td class="text-right">
-                        <span class="total-value">${formatCurrency(totalAmount)}</span>
-                      </td>
+                      <td colspan="3" class="total-label">Total do Cheque</td>
+                      <td class="text-right total-value">${formatCurrency(totalAmount)}</td>
                       <td></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               
-              <!-- Signature -->
               <div class="signature-section">
                 <div class="signature-box">
                   <div class="signature-line">
-                    <div class="signature-label">Emitente</div>
+                    <span class="signature-label">Assinatura do Portador</span>
                   </div>
                 </div>
                 <div class="signature-box">
                   <div class="signature-line">
-                    <div class="signature-label">Beneficiário</div>
+                    <span class="signature-label">Assinatura do Responsável</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            <!-- Footer -->
             <div class="footer">
               <div class="footer-left">
                 <div class="footer-icon">
                   <span>${(clinic?.name || "E").charAt(0)}</span>
                 </div>
-                <div class="footer-text">
-                  <strong>${clinic?.name || "Entidade Sindical"}</strong>
-                  ${clinic?.phone ? clinic.phone : ""} ${clinic?.email ? `• ${clinic.email}` : ""}
-                </div>
+                <span class="footer-text">Cópia de Cheque - Sistema de Gestão</span>
               </div>
               <div class="footer-right">
-                Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}<br/>
-                <strong>Cópia de Cheque #${searchedCheckNumber}</strong>
+                Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
               </div>
             </div>
           </div>
@@ -649,132 +619,125 @@ export function UnionCheckPrintDialog({
     `);
 
     printWindow.document.close();
-    printWindow.focus();
     setTimeout(() => {
       printWindow.print();
     }, 250);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileCheck className="h-5 w-5" />
-            Cópia de Cheque
-          </DialogTitle>
-          <DialogDescription>
-            Busque um cheque pelo número e imprima o comprovante com as despesas lançadas
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="3xl">
+      <PopupHeader>
+        <PopupTitle>Imprimir Cópia de Cheque</PopupTitle>
+        <PopupDescription>
+          Busque um cheque pelo número para visualizar e imprimir as despesas vinculadas.
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <Label htmlFor="check-search">Número do Cheque</Label>
-            <Input
-              id="check-search"
-              placeholder="Digite o número do cheque..."
-              value={checkNumber}
-              onChange={(e) => setCheckNumber(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="mt-1"
-            />
-          </div>
-          <Button onClick={handleSearch} disabled={isLoading}>
-            <Search className="h-4 w-4 mr-2" />
-            Buscar
-          </Button>
+      {/* Search */}
+      <div className="flex gap-3 items-end py-4">
+        <div className="flex-1 space-y-2">
+          <Label htmlFor="check-number">Número do Cheque</Label>
+          <Input
+            id="check-number"
+            placeholder="Digite o número do cheque"
+            value={checkNumber}
+            onChange={(e) => setCheckNumber(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
         </div>
+        <Button onClick={handleSearch} disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Search className="h-4 w-4 mr-2" />
+          )}
+          Buscar
+        </Button>
+      </div>
 
-        <Separator className="my-4" />
+      {/* Results */}
+      {searchedCheckNumber && !isLoading && (
+        <div className="space-y-4">
+          {expenses && expenses.length > 0 ? (
+            <>
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>Cheque Nº {searchedCheckNumber}</span>
+                    <div className="text-sm font-normal text-muted-foreground">
+                      {expenses[0]?.cash_register?.name || "Portador não definido"}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
 
-        {searchedCheckNumber && (
-          <div ref={printRef} className="flex-1 overflow-hidden flex flex-col">
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Buscando despesas...
-              </div>
-            ) : expenses && expenses.length > 0 ? (
-              <>
-                <Card className="mb-4">
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      <span>Cheque Nº {searchedCheckNumber}</span>
-                      <div className="text-sm font-normal text-muted-foreground">
-                        {expenses[0]?.cash_register?.name || "Portador não definido"}
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-
-                <ScrollArea className="flex-1">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Fornecedor</TableHead>
-                        <TableHead>Vencimento</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenses.map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell className="font-medium">
-                            {expense.description}
-                          </TableCell>
-                          <TableCell>{expense.supplier?.name || "-"}</TableCell>
-                          <TableCell>
-                            {expense.due_date
-                              ? format(parseISO(expense.due_date), "dd/MM/yyyy", {
-                                  locale: ptBR,
-                                })
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatCurrency(Number(expense.net_value || expense.amount))}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(expense.status)}</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow className="bg-muted/50 font-bold">
-                        <TableCell colSpan={3}>TOTAL DO CHEQUE</TableCell>
-                        <TableCell className="text-right text-lg">
-                          {formatCurrency(totalAmount)}
+              <ScrollArea className="h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Fornecedor</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell className="font-medium">
+                          {expense.description}
                         </TableCell>
-                        <TableCell />
+                        <TableCell>{expense.supplier?.name || "-"}</TableCell>
+                        <TableCell>
+                          {expense.due_date
+                            ? format(parseISO(expense.due_date), "dd/MM/yyyy", {
+                                locale: ptBR,
+                              })
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(Number(expense.net_value || expense.amount))}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(expense.status)}</TableCell>
                       </TableRow>
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
+                    ))}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell colSpan={3}>TOTAL DO CHEQUE</TableCell>
+                      <TableCell className="text-right text-lg">
+                        {formatCurrency(totalAmount)}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </ScrollArea>
 
-                <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">
-                    {expenses.length} despesa(s) encontrada(s)
-                  </div>
-                  <Button onClick={handlePrint}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Imprimir Cópia
-                  </Button>
+              <div className="mt-4 pt-4 border-t flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  {expenses.length} despesa(s) encontrada(s)
                 </div>
-              </>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma despesa encontrada para o cheque "{searchedCheckNumber}"</p>
+                <Button onClick={handlePrint}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Cópia
+                </Button>
               </div>
-            )}
-          </div>
-        )}
+            </>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <FileCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhuma despesa encontrada para o cheque "{searchedCheckNumber}"</p>
+            </div>
+          )}
+        </div>
+      )}
 
-        {!searchedCheckNumber && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Digite o número do cheque e clique em "Buscar"</p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+      {!searchedCheckNumber && (
+        <div className="text-center py-12 text-muted-foreground">
+          <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>Digite o número do cheque e clique em "Buscar"</p>
+        </div>
+      )}
+    </PopupBase>
   );
 }
