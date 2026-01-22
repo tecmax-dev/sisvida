@@ -2,22 +2,8 @@ import { useState, useEffect } from "react";
 import { Users, UserX, Trash2, Loader2, Calendar, CreditCard, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
+import { AlertPopup } from "@/components/ui/alert-popup";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -193,118 +179,30 @@ export function PatientDependentsDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Dependentes de {patientName}
-            </DialogTitle>
-            <DialogDescription>
-              Gerencie os dependentes deste associado titular.
-            </DialogDescription>
-          </DialogHeader>
+      <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="lg">
+        <PopupHeader>
+          <PopupTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Dependentes de {patientName}
+          </PopupTitle>
+          <PopupDescription>
+            Gerencie os dependentes deste associado titular.
+          </PopupDescription>
+        </PopupHeader>
 
-          <div className="space-y-3 mt-4">
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                Carregando dependentes...
-              </div>
-            ) : dependents.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p>Nenhum dependente ativo.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-3"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
-                  }}
-                >
-                  Adicionar Dependente
-                </Button>
-              </div>
-            ) : (
-              dependents.map((dependent) => {
-                const age = getAge(dependent.birth_date);
-                const expired = isCardExpired(dependent.card_expires_at);
-
-                return (
-                  <div
-                    key={dependent.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm truncate">{dependent.name}</span>
-                        {dependent.relationship && (
-                          <Badge variant="outline" className="text-xs">
-                            {RELATIONSHIPS[dependent.relationship] || dependent.relationship}
-                          </Badge>
-                        )}
-                        {expired && (
-                          <Badge variant="destructive" className="text-xs">Vencida</Badge>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
-                        {dependent.cpf && (
-                          <span>CPF: {formatCPF(dependent.cpf)}</span>
-                        )}
-                        {dependent.birth_date && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(parseISO(dependent.birth_date), "dd/MM/yyyy", { locale: ptBR })}
-                            {age !== null && ` (${age} anos)`}
-                          </span>
-                        )}
-                        {dependent.card_number && (
-                          <span className="flex items-center gap-1">
-                            <CreditCard className="h-3 w-3" />
-                            {dependent.card_number}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 ml-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEditDependent(dependent)}
-                        title="Editar"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setDependentToDelete(dependent);
-                          setDeleteDialogOpen(true);
-                        }}
-                        title={canPermanentDelete ? "Remover dependente" : "Inativar dependente"}
-                      >
-                        {canPermanentDelete ? (
-                          <Trash2 className="h-4 w-4" />
-                        ) : (
-                          <UserX className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {dependents.length > 0 && (
-            <div className="flex justify-end mt-4 pt-4 border-t">
-              <Button
-                variant="outline"
+        <div className="space-y-3 mt-4">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+              Carregando dependentes...
+            </div>
+          ) : dependents.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>Nenhum dependente ativo.</p>
+              <Button 
+                variant="outline" 
+                className="mt-3"
                 onClick={() => {
                   onOpenChange(false);
                   navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
@@ -313,68 +211,158 @@ export function PatientDependentsDialog({
                 Adicionar Dependente
               </Button>
             </div>
+          ) : (
+            dependents.map((dependent) => {
+              const age = getAge(dependent.birth_date);
+              const expired = isCardExpired(dependent.card_expires_at);
+
+              return (
+                <div
+                  key={dependent.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">{dependent.name}</span>
+                      {dependent.relationship && (
+                        <Badge variant="outline" className="text-xs">
+                          {RELATIONSHIPS[dependent.relationship] || dependent.relationship}
+                        </Badge>
+                      )}
+                      {expired && (
+                        <Badge variant="destructive" className="text-xs">Vencida</Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
+                      {dependent.cpf && (
+                        <span>CPF: {formatCPF(dependent.cpf)}</span>
+                      )}
+                      {dependent.birth_date && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(parseISO(dependent.birth_date), "dd/MM/yyyy", { locale: ptBR })}
+                          {age !== null && ` (${age} anos)`}
+                        </span>
+                      )}
+                      {dependent.card_number && (
+                        <span className="flex items-center gap-1">
+                          <CreditCard className="h-3 w-3" />
+                          {dependent.card_number}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleEditDependent(dependent)}
+                      title="Editar"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setDependentToDelete(dependent);
+                        setDeleteDialogOpen(true);
+                      }}
+                      title={canPermanentDelete ? "Remover dependente" : "Inativar dependente"}
+                    >
+                      {canPermanentDelete ? (
+                        <Trash2 className="h-4 w-4" />
+                      ) : (
+                        <UserX className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {canPermanentDelete ? "Remover dependente?" : "Inativar dependente?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                {canPermanentDelete ? (
-                  <>
-                    <p>
-                      O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?
-                    </p>
-                    <p>
-                      <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
-                    </p>
-                    <p>
-                      <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p>
-                      Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
-                    </p>
-                    <p>O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.</p>
-                  </>
-                )}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+        {dependents.length > 0 && (
+          <PopupFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
+              }}
+            >
+              Adicionar Dependente
+            </Button>
+          </PopupFooter>
+        )}
+      </PopupBase>
 
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+      {/* Custom Delete Dialog with multiple actions */}
+      <PopupBase 
+        open={deleteDialogOpen} 
+        onClose={() => setDeleteDialogOpen(false)} 
+        maxWidth="md"
+      >
+        <PopupHeader>
+          <PopupTitle>
+            {canPermanentDelete ? "Remover dependente?" : "Inativar dependente?"}
+          </PopupTitle>
+          <PopupDescription>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {canPermanentDelete ? (
+                <>
+                  <p>
+                    O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?
+                  </p>
+                  <p>
+                    <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
+                  </p>
+                  <p>
+                    <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
+                  </p>
+                  <p>O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.</p>
+                </>
+              )}
+            </div>
+          </PopupDescription>
+        </PopupHeader>
 
-            <Button variant="outline" onClick={handleInactivate} disabled={isDeleting}>
+        <PopupFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+            Cancelar
+          </Button>
+
+          <Button variant="outline" onClick={handleInactivate} disabled={isDeleting}>
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <UserX className="h-4 w-4 mr-1" />
+            )}
+            Inativar
+          </Button>
+
+          {canPermanentDelete && (
+            <Button variant="destructive" onClick={handlePermanentDelete} disabled={isDeleting}>
               {isDeleting ? (
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               ) : (
-                <UserX className="h-4 w-4 mr-1" />
+                <Trash2 className="h-4 w-4 mr-1" />
               )}
-              Inativar
+              Excluir Permanentemente
             </Button>
-
-            {canPermanentDelete && (
-              <Button variant="destructive" onClick={handlePermanentDelete} disabled={isDeleting}>
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4 mr-1" />
-                )}
-                Excluir Permanentemente
-              </Button>
-            )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          )}
+        </PopupFooter>
+      </PopupBase>
     </>
   );
 }
