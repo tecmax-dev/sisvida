@@ -1,14 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -201,17 +194,16 @@ export function HomologacaoProfessionalScheduleDialog({
   if (!professional) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            Horários de Atendimento
-          </DialogTitle>
-          <DialogDescription>
-            Configure os horários de atendimento de {professional.name}
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="2xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary" />
+          Horários de Atendimento
+        </PopupTitle>
+        <PopupDescription>
+          Configure os horários de atendimento de {professional.name}
+        </PopupDescription>
+      </PopupHeader>
 
         {isLoading ? (
           <div className="space-y-4">
@@ -329,7 +321,7 @@ export function HomologacaoProfessionalScheduleDialog({
           </ScrollArea>
         )}
 
-        <DialogFooter>
+        <PopupFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -349,8 +341,7 @@ export function HomologacaoProfessionalScheduleDialog({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </PopupFooter>
+    </PopupBase>
   );
 }

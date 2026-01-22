@@ -22,12 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
 import {
   Accordion,
   AccordionContent,
@@ -379,11 +374,10 @@ Equipe {clinica}`;
             <Settings className="h-4 w-4" />
             Configurar
           </Button>
-          <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Configurações de Aniversário</DialogTitle>
-              </DialogHeader>
+          <PopupBase open={settingsOpen} onClose={() => setSettingsOpen(false)} maxWidth="lg">
+            <PopupHeader>
+              <PopupTitle>Configurações de Aniversário</PopupTitle>
+            </PopupHeader>
               <div className="space-y-4 py-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -421,8 +415,7 @@ Equipe {clinica}`;
                   {saving ? 'Salvando...' : 'Salvar configurações'}
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
+          </PopupBase>
         </div>
       </CardHeader>
       <CardContent className="pt-4 space-y-4">
