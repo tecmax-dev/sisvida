@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +32,7 @@ interface ClinicUser {
     phone: string | null;
   } | null;
   email: string;
-  name: string | null; // Nome da edge function
+  name: string | null;
 }
 
 function generateTempPassword(): string {
@@ -68,7 +61,6 @@ export function SendWelcomeDialog({
   const [isSending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Carregar usuários da clínica
   useEffect(() => {
     if (open && clinicId) {
       fetchClinicUsers();
@@ -78,7 +70,6 @@ export function SendWelcomeDialog({
   const fetchClinicUsers = async () => {
     setLoadingUsers(true);
     try {
-      // Buscar roles dos usuários da clínica
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role")
@@ -91,7 +82,6 @@ export function SendWelcomeDialog({
         return;
       }
 
-      // Buscar perfis dos usuários
       const userIds = roles.map((r) => r.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
@@ -102,7 +92,6 @@ export function SendWelcomeDialog({
         console.warn("Erro ao buscar perfis:", profilesError);
       }
 
-      // Buscar emails dos usuários via edge function
       const { data: emailsData, error: emailsError } = await supabase.functions.invoke(
         "list-users-with-email"
       );
@@ -119,7 +108,6 @@ export function SendWelcomeDialog({
       const emailMap = new Map<string, { email: string; name: string | null }>();
       if (emailsData?.users) {
         emailsData.users.forEach((u: any) => {
-          // A edge function retorna user_id como identificador do auth
           emailMap.set(u.user_id, { email: u.email, name: u.name });
         });
       }
@@ -176,9 +164,7 @@ export function SendWelcomeDialog({
     setSending(true);
 
     try {
-      // Se for novo usuário, criar primeiro
       if (mode === "new") {
-        // Criar usuário via backend (Admin API) para garantir criação do profile/roles
         const { data: createResult, error: createError } = await supabase.functions.invoke(
           "create-clinic-user",
           {
@@ -199,7 +185,6 @@ export function SendWelcomeDialog({
           const errorMessage =
             (createResult as any)?.error || createError?.message || "Erro ao criar usuário";
 
-          // Se já existe, avisar (não prosseguir para evitar role/profile inconsistentes)
           if (
             errorMessage.includes("já está cadastrado") ||
             errorMessage.includes("already registered") ||
@@ -213,7 +198,6 @@ export function SendWelcomeDialog({
         }
       }
 
-      // Enviar email de boas-vindas
       const { data, error } = await supabase.functions.invoke("send-user-credentials", {
         body: {
           userEmail: email,
@@ -254,230 +238,228 @@ export function SendWelcomeDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            Enviar Boas-Vindas
-          </DialogTitle>
-          <DialogDescription>
-            Envie um email com credenciais de acesso para a clínica{" "}
-            <strong>{clinicName}</strong>
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-primary" />
+          Enviar Boas-Vindas
+        </PopupTitle>
+        <PopupDescription>
+          Envie um email com credenciais de acesso para a clínica{" "}
+          <strong>{clinicName}</strong>
+        </PopupDescription>
+      </PopupHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Seleção de modo */}
-          <RadioGroup
-            value={mode}
-            onValueChange={(v) => {
-              setMode(v as "existing" | "new");
-              setSelectedUserId("");
-              setEmail("");
-              setName("");
-            }}
-            className="grid grid-cols-2 gap-4"
-          >
-            <div className="relative">
-              <RadioGroupItem
-                value="existing"
-                id="mode-existing"
-                className="peer sr-only"
-              />
-              <Label
-                htmlFor="mode-existing"
-                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-              >
-                <Users className="mb-3 h-6 w-6" />
-                <span className="text-sm font-medium">Usuário Existente</span>
-              </Label>
-            </div>
-            <div className="relative">
-              <RadioGroupItem
-                value="new"
-                id="mode-new"
-                className="peer sr-only"
-              />
-              <Label
-                htmlFor="mode-new"
-                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-              >
-                <UserPlus className="mb-3 h-6 w-6" />
-                <span className="text-sm font-medium">Novo Usuário</span>
-              </Label>
-            </div>
-          </RadioGroup>
-
-          {/* Seleção de usuário existente */}
-          {mode === "existing" && (
-            <div className="space-y-2">
-              <Label>Selecionar usuário</Label>
-              {loadingUsers ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ) : clinicUsers.length === 0 ? (
-                <Alert>
-                  <AlertDescription>
-                    Nenhum usuário encontrado nesta clínica. Crie um novo usuário.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Select value={selectedUserId} onValueChange={handleUserSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um usuário..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clinicUsers.map((user) => (
-                      <SelectItem key={user.user_id} value={user.user_id}>
-                        <div className="flex flex-col items-start">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">
-                              {user.name || user.profile?.name || user.email || "Usuário sem identificação"}
-                            </span>
-                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                              {roleLabels[user.role] || user.role}
-                            </span>
-                          </div>
-                          {user.email && user.profile?.name && (
-                            <span className="text-xs text-muted-foreground">
-                              {user.email}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email do responsável</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@exemplo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isSending || (mode === "existing" && !!selectedUserId)}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Seleção de modo */}
+        <RadioGroup
+          value={mode}
+          onValueChange={(v) => {
+            setMode(v as "existing" | "new");
+            setSelectedUserId("");
+            setEmail("");
+            setName("");
+          }}
+          className="grid grid-cols-2 gap-4"
+        >
+          <div className="relative">
+            <RadioGroupItem
+              value="existing"
+              id="mode-existing"
+              className="peer sr-only"
             />
+            <Label
+              htmlFor="mode-existing"
+              className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+            >
+              <Users className="mb-3 h-6 w-6" />
+              <span className="text-sm font-medium">Usuário Existente</span>
+            </Label>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome do responsável</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Nome completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              disabled={isSending || (mode === "existing" && !!selectedUserId)}
+          <div className="relative">
+            <RadioGroupItem
+              value="new"
+              id="mode-new"
+              className="peer sr-only"
             />
+            <Label
+              htmlFor="mode-new"
+              className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+            >
+              <UserPlus className="mb-3 h-6 w-6" />
+              <span className="text-sm font-medium">Novo Usuário</span>
+            </Label>
           </div>
+        </RadioGroup>
 
+        {/* Seleção de usuário existente */}
+        {mode === "existing" && (
           <div className="space-y-2">
-            <Label htmlFor="password">Senha temporária</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={tempPassword}
-                  onChange={(e) => setTempPassword(e.target.value)}
-                  required
-                  disabled={isSending}
-                  className="pr-10 font-mono"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isSending}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
+            <Label>Selecionar usuário</Label>
+            {loadingUsers ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
               </div>
+            ) : clinicUsers.length === 0 ? (
+              <Alert>
+                <AlertDescription>
+                  Nenhum usuário encontrado nesta clínica. Crie um novo usuário.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Select value={selectedUserId} onValueChange={handleUserSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um usuário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clinicUsers.map((user) => (
+                    <SelectItem key={user.user_id} value={user.user_id}>
+                      <div className="flex flex-col items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">
+                            {user.name || user.profile?.name || user.email || "Usuário sem identificação"}
+                          </span>
+                          <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            {roleLabels[user.role] || user.role}
+                          </span>
+                        </div>
+                        {user.email && user.profile?.name && (
+                          <span className="text-xs text-muted-foreground">
+                            {user.email}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email do responsável</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="email@exemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isSending || (mode === "existing" && !!selectedUserId)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome do responsável</Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Nome completo"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            disabled={isSending || (mode === "existing" && !!selectedUserId)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha temporária</Label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                required
+                disabled={isSending}
+                className="pr-10 font-mono"
+              />
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                onClick={handleRegeneratePassword}
+                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
                 disabled={isSending}
-                title="Gerar nova senha"
               >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopyPassword}
-                disabled={isSending}
-                title="Copiar senha"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-success" />
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <Copy className="h-4 w-4" />
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
               </Button>
             </div>
-          </div>
-
-          {mode === "new" && (
-            <Alert className="bg-warning/10 border-warning/20">
-              <AlertDescription className="text-sm">
-                Um novo usuário será criado com a role de <strong>Proprietário</strong> para esta clínica.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <Alert className="bg-info/10 border-info/20">
-            <AlertDescription className="text-sm text-info">
-              O usuário receberá um email com as credenciais de acesso e um link para o sistema. 
-              Recomende que ele altere a senha no primeiro acesso.
-            </AlertDescription>
-          </Alert>
-
-          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
-              onClick={handleClose}
+              size="icon"
+              onClick={handleRegeneratePassword}
               disabled={isSending}
+              title="Gerar nova senha"
             >
-              Cancelar
+              <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSending || (mode === "existing" && !selectedUserId)}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleCopyPassword}
+              disabled={isSending}
+              title="Copiar senha"
             >
-              {isSending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
-                </>
+              {copied ? (
+                <Check className="h-4 w-4 text-success" />
               ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar Email
-                </>
+                <Copy className="h-4 w-4" />
               )}
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </div>
+
+        {mode === "new" && (
+          <Alert className="bg-warning/10 border-warning/20">
+            <AlertDescription className="text-sm">
+              Um novo usuário será criado com a role de <strong>Proprietário</strong> para esta clínica.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Alert className="bg-info/10 border-info/20">
+          <AlertDescription className="text-sm text-info">
+            O usuário receberá um email com as credenciais de acesso e um link para o sistema. 
+            Recomende que ele altere a senha no primeiro acesso.
+          </AlertDescription>
+        </Alert>
+
+        <PopupFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSending}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isSending || (mode === "existing" && !selectedUserId)}
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar Email
+              </>
+            )}
+          </Button>
+        </PopupFooter>
+      </form>
+    </PopupBase>
   );
 }
