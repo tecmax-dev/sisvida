@@ -424,9 +424,15 @@ export default function PatientsPage() {
           `email.ilike.${text}`,
         ];
 
-        // CPF: try both raw and only-digits
+        // CPF: try both raw digits and formatted version (XXX.XXX.XXX-XX)
         if (searchDigits.length >= 3) {
           orParts.push(`cpf.ilike.%${searchDigits}%`);
+          // If we have 11 digits, also search for formatted CPF
+          if (searchDigits.length >= 11) {
+            const cpfClean = searchDigits.slice(0, 11);
+            const cpfFormatted = cpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            orParts.push(`cpf.ilike.%${cpfFormatted}%`);
+          }
         }
 
         // Phone: try raw term and digit-based/format variants
