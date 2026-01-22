@@ -257,16 +257,21 @@ serve(async (req) => {
 
       console.log(`[Clinic ${clinic.name}] Message usage: ${usage?.used || 0}/${usage?.max_allowed || 'unlimited'} (remaining: ${usage?.remaining || 'unlimited'})`);
       
-      // Calculate the target time window for this clinic
-      // We want appointments that are exactly reminder_hours away (within a 1-hour window)
-      const targetStart = new Date(now.getTime() + reminderHours * 60 * 60 * 1000);
-      const targetEnd = new Date(targetStart.getTime() + 60 * 60 * 1000); // +1 hour window
+      // Calculate the reminder window for this clinic
+      // Include all appointments from now until reminder_hours ahead that haven't been reminded yet
+      const todayStr = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().substring(0, 5);
       
-      const targetDate = targetStart.toISOString().split('T')[0];
-      const targetStartTime = targetStart.toTimeString().substring(0, 5);
-      const targetEndTime = targetEnd.toTimeString().substring(0, 5);
+      // Also check tomorrow for appointments that fall within the reminder window
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
       
-      console.log(`Clinic ${clinic.name}: checking appointments for ${targetDate} between ${targetStartTime} and ${targetEndTime} (${reminderHours}h before) [Horário Brasil/Bahia]`);
+      // Calculate the max time ahead we should look (reminder_hours from now)
+      const maxAheadTime = new Date(now.getTime() + reminderHours * 60 * 60 * 1000);
+      const maxAheadDate = maxAheadTime.toISOString().split('T')[0];
+      const maxAheadTimeStr = maxAheadTime.toTimeString().substring(0, 5);
+      
+      console.log(`Clinic ${clinic.name}: checking appointments from ${todayStr} ${currentTime} until ${maxAheadDate} ${maxAheadTimeStr} (within ${reminderHours}h) [Horário Brasil/Bahia]`);
 
       // Fetch clinic's Evolution API config
       const { data: evolutionConfig } = await supabase
@@ -284,7 +289,8 @@ serve(async (req) => {
       const directReplyEnabled = evolutionConfig.direct_reply_enabled || false;
       console.log(`[Clinic ${clinic.name}] Direct reply enabled: ${directReplyEnabled}`);
 
-      // Get appointments in the target window that haven't been reminded yet
+      // Get ALL appointments within the reminder window that haven't been reminded yet
+      // This includes appointments from now until reminder_hours ahead
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -306,23 +312,35 @@ serve(async (req) => {
           )
         `)
         .eq('clinic_id', clinic.id)
-        .eq('appointment_date', targetDate)
-        .gte('start_time', targetStartTime)
-        .lt('start_time', targetEndTime)
+        .gte('appointment_date', todayStr)
+        .lte('appointment_date', maxAheadDate)
         .in('status', ['scheduled', 'confirmed'])
         .eq('reminder_sent', false);
+      
+      // Filter appointments that are actually within the time window
+      const filteredAppointments = (appointments || []).filter((apt: any) => {
+        const aptDateTime = new Date(`${apt.appointment_date}T${apt.start_time}`);
+        // Convert to Brazil time for comparison
+        const aptBrazilTime = new Date(aptDateTime.getTime() + 3 * 60 * 60 * 1000); // Add 3 hours to compensate for UTC
+        
+        // Must be in the future (at least 30 min from now to avoid sending too close to appointment)
+        const minTimeAhead = new Date(now.getTime() + 30 * 60 * 1000);
+        
+        // Must be within reminder_hours from now
+        return aptBrazilTime >= minTimeAhead && aptBrazilTime <= maxAheadTime;
+      });
 
       if (appointmentsError) {
         console.error(`Error fetching appointments for clinic ${clinic.id}:`, appointmentsError);
         continue;
       }
 
-      console.log(`Found ${appointments?.length || 0} appointments for clinic ${clinic.name}`);
+      console.log(`Found ${filteredAppointments.length} appointments for clinic ${clinic.name} (${appointments?.length || 0} total, ${(appointments?.length || 0) - filteredAppointments.length} filtered out)`);
 
       // Track remaining messages for this clinic
       let remainingMessages = usage ? usage.remaining : 999999;
 
-      for (const appointment of appointments || []) {
+      for (const appointment of filteredAppointments) {
         // Check if we still have messages available
         if (usage && usage.max_allowed > 0 && remainingMessages <= 0) {
           console.log(`[Clinic ${clinic.name}] No more messages available, stopping reminders for this clinic`);
@@ -423,7 +441,7 @@ serve(async (req) => {
 
           remainingMessages++;
           sentCount++;
-          console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${targetDate} at ${time}`);
+          console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${appointment.appointment_date} at ${time}`);
         } else {
           errorCount++;
           console.error(`✗ Failed to send reminder to ${displayName}`);
