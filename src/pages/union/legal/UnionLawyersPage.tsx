@@ -68,7 +68,7 @@ export default function UnionLawyersPage() {
     is_internal: false,
   });
 
-  const { lawyers, isLoading, createLawyer } = useUnionLawyers(currentClinic?.id);
+  const { lawyers, isLoading, createLawyer, updateLawyer, deleteLawyer } = useUnionLawyers(currentClinic?.id);
 
   const filteredLawyers = (lawyers || []).filter((l) =>
     l.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -100,15 +100,30 @@ export default function UnionLawyersPage() {
     }
 
     try {
-      await createLawyer.mutateAsync({
-        clinic_id: currentClinic?.id,
+      const payload = {
         ...formData,
         hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
-      });
+      };
+
+      if (editingLawyer) {
+        await updateLawyer.mutateAsync({ id: editingLawyer, ...payload });
+      } else {
+        await createLawyer.mutateAsync({ clinic_id: currentClinic?.id, ...payload });
+      }
       setIsDialogOpen(false);
       resetForm();
     } catch (error) {
       toast.error("Erro ao salvar advogado");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este advogado?")) return;
+    
+    try {
+      await deleteLawyer.mutateAsync(id);
+    } catch (error) {
+      toast.error("Erro ao excluir advogado");
     }
   };
 
@@ -364,7 +379,11 @@ export default function UnionLawyersPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDelete(lawyer.id)}
+                          >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
