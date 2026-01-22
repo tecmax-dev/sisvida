@@ -46,8 +46,9 @@ export function UnionModuleLayout() {
     localStorage.setItem("union-sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  // Redirect if no access: user must be union entity admin OR clinic must have union entity linked
-  if (!isLoadingUnionEntity && !hasUnionAccess() && !isUnionEntityAdmin && !hasUnionEntity) {
+  // Redirect if no access: user must have explicit union permissions OR be union entity admin
+  // Having a clinic linked to a union entity is NOT enough - user must have specific permissions
+  if (!isLoadingUnionEntity && !hasUnionAccess() && !isUnionEntityAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
