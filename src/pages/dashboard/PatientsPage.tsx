@@ -424,13 +424,21 @@ export default function PatientsPage() {
           `email.ilike.${text}`,
         ];
 
-        // CPF: try both raw digits and formatted version (XXX.XXX.XXX-XX)
+        // CPF: support both raw digits and formatted version (XXX.XXX.XXX-XX)
+        // - Partial searches: use ilike
+        // - Full CPF (11 digits): also add exact matches (more reliable and faster)
         if (searchDigits.length >= 3) {
           orParts.push(`cpf.ilike.%${searchDigits}%`);
-          // If we have 11 digits, also search for formatted CPF
+
           if (searchDigits.length >= 11) {
             const cpfClean = searchDigits.slice(0, 11);
             const cpfFormatted = cpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+
+            // Exact match (covers DB values stored with or without punctuation)
+            orParts.push(`cpf.eq.${cpfClean}`);
+            orParts.push(`cpf.eq.${cpfFormatted}`);
+
+            // Also allow formatted partial match
             orParts.push(`cpf.ilike.%${cpfFormatted}%`);
           }
         }
@@ -441,7 +449,6 @@ export default function PatientsPage() {
           orParts.push(`phone.ilike.%${v}%`);
         }
 
-        console.log("[PatientsPage] Search filter:", { safeSearch, searchDigits, orParts });
         query = query.or(orParts.join(","));
       }
 
