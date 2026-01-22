@@ -6349,8 +6349,78 @@ serve(async (req) => {
 
       if (configData) {
         clinicId = configData.clinic_id;
-        console.log(`[webhook] Processing booking flow for clinic ${clinicId}`);
+        console.log(`[webhook] Processing for clinic ${clinicId}`);
 
+        // ===== CHECK FOR BOLETO FLOW =====
+        // Check if there's an active boleto session or user is requesting boleto (option 7)
+        const { data: activeBoletoSession } = await supabase
+          .from('whatsapp_boleto_sessions')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .in('phone', phoneCandidates)
+          .gt('expires_at', new Date().toISOString())
+          .neq('state', 'FINISHED')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const isBoletoRequest = /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
+
+        if (activeBoletoSession || isBoletoRequest) {
+          console.log(`[webhook] Routing to boleto flow - active session: ${!!activeBoletoSession}, is request: ${isBoletoRequest}`);
+          
+          // Call boleto flow edge function
+          const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+          
+          try {
+            const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                clinic_id: clinicId,
+                phone: phone,
+                message: activeBoletoSession ? messageText : undefined,
+                action: !activeBoletoSession ? 'start' : undefined,
+                evolution_config: {
+                  api_url: configData.api_url,
+                  api_key: configData.api_key,
+                  instance_name: configData.instance_name,
+                }
+              }),
+            });
+
+            if (boletoResponse.ok) {
+              const boletoResult = await boletoResponse.json();
+              console.log(`[webhook] Boleto flow result: state=${boletoResult.state}`);
+              
+              // Log the interaction
+              await supabase.from('whatsapp_incoming_logs').insert({
+                clinic_id: clinicId,
+                phone,
+                message_text: messageText,
+                raw_payload: payload,
+                processed: true,
+                processed_action: 'boleto_flow',
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, message: 'Boleto flow processed' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            } else {
+              const errorText = await boletoResponse.text();
+              console.error('[webhook] Boleto flow error:', errorText);
+            }
+          } catch (boletoError) {
+            console.error('[webhook] Error calling boleto flow:', boletoError);
+          }
+        }
+
+        // ===== EXISTING BOOKING FLOW =====
         // Check if clinic has whatsapp_booking feature in their plan
         const { data: hasBookingFeature } = await supabase
           .from('subscriptions')
