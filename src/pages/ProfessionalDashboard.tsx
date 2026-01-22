@@ -25,7 +25,7 @@ import {
   CalendarPlus,
   Ban,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, calculateAge } from "@/lib/utils";
 import { toDateKey } from "@/lib/dateKey";
 
 interface TimeSlot {
@@ -624,9 +624,33 @@ export default function ProfessionalDashboard() {
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-foreground truncate">
-                              {getDisplayName(appointment).toUpperCase()}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-foreground truncate">
+                                {getDisplayName(appointment).toUpperCase()}
+                              </p>
+                              {/* Idade do paciente para lei de prioridade */}
+                              {appointment.patient?.birth_date && (() => {
+                                const age = calculateAge(appointment.patient.birth_date);
+                                if (age !== null) {
+                                  const isPriority = age >= 60;
+                                  return (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        "text-xs px-1.5 py-0 h-5 flex-shrink-0 font-medium",
+                                        isPriority 
+                                          ? "bg-amber-100 text-amber-700 border-amber-300" 
+                                          : "bg-muted text-muted-foreground"
+                                      )}
+                                      title={isPriority ? "Paciente com prioridade legal (60+ anos)" : "Idade do paciente"}
+                                    >
+                                      {age}a
+                                    </Badge>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               {appointment.dependent_id && (
                                 <Badge variant="secondary" className="text-xs">Dependente</Badge>
