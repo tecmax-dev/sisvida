@@ -39,9 +39,6 @@ export function PopupBase({
   closeOnOverlayClick = true,
   maxWidth = "lg",
 }: PopupBaseProps) {
-  // Don't render anything if not open
-  if (!open) return null;
-
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (closeOnOverlayClick && e.target === e.currentTarget) {
       onClose();
@@ -58,15 +55,20 @@ export function PopupBase({
   );
 
   React.useEffect(() => {
+    if (!open) return;
+
     document.addEventListener("keydown", handleKeyDown);
     // Prevent body scroll when popup is open
     document.body.style.overflow = "hidden";
-    
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [handleKeyDown]);
+  }, [open, handleKeyDown]);
+
+  // Don't render anything if not open
+  if (!open) return null;
 
   const content = (
     <div
