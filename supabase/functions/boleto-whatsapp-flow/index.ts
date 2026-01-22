@@ -418,6 +418,38 @@ function parseDate(text: string): string | null {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+/**
+ * Calcula a data de vencimento base para uma competência
+ * Regra: Dia 10 do mês seguinte à competência
+ * Se dia 10 for sábado ou domingo, move para próxima segunda-feira
+ */
+function calculateBaseDueDate(competenceMonth: number, competenceYear: number): string {
+  // Mês seguinte à competência
+  let dueMonth = competenceMonth + 1;
+  let dueYear = competenceYear;
+  
+  if (dueMonth > 12) {
+    dueMonth = 1;
+    dueYear += 1;
+  }
+  
+  // Dia 10 do mês seguinte
+  let dueDate = new Date(dueYear, dueMonth - 1, 10);
+  
+  // Verificar se é dia útil (não sábado nem domingo)
+  const dayOfWeek = dueDate.getDay();
+  
+  if (dayOfWeek === 0) {
+    // Domingo -> move para segunda (dia 11)
+    dueDate.setDate(11);
+  } else if (dayOfWeek === 6) {
+    // Sábado -> move para segunda (dia 12)
+    dueDate.setDate(12);
+  }
+  
+  return dueDate.toISOString().split('T')[0];
+}
+
 // ==========================================
 // FLOW MESSAGES
 // ==========================================
@@ -869,14 +901,31 @@ async function handleBoletoFlow(
         return { response: MESSAGES.invalidValue };
       }
 
-      // Calculate default due date (10 business days from now)
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 14);
-      const dueDateStr = dueDate.toISOString().split('T')[0];
-
       const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
         'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
       const competence = `${monthNames[session.competence_month! - 1]}/${session.competence_year}`;
+
+      // Check if this is a reissue (existing contribution) or new boleto
+      const isReissue = !!session.contribution_id || session.flow_context?.using_existing;
+      
+      let dueDateStr: string;
+      
+      if (isReissue) {
+        // For reissue/existing contribution without URL, ask for due date manually
+        await updateSession(supabase, session.id, {
+          state: 'WAITING_NEW_DUE_DATE',
+          value_cents: valueCents,
+        });
+
+        return { 
+          response: `💰 Valor: *${formatCurrency(valueCents)}*\n\n📅 Agora informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
+          newState: 'WAITING_NEW_DUE_DATE'
+        };
+      } else {
+        // For new "a vencer" boleto - calculate automatic due date based on competence
+        // Rule: Day 10 of the month following competence (or next business day)
+        dueDateStr = calculateBaseDueDate(session.competence_month!, session.competence_year!);
+      }
 
       await updateSession(supabase, session.id, {
         state: 'CONFIRM_BOLETO',
