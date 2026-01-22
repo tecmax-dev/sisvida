@@ -637,10 +637,10 @@ export default function ProfessionalDashboard() {
                                     <Badge 
                                       variant="outline" 
                                       className={cn(
-                                        "text-xs px-1.5 py-0 h-5 flex-shrink-0 font-medium",
+                                        "text-xs px-1.5 py-0 h-5 flex-shrink-0 font-bold",
                                         isPriority 
-                                          ? "bg-amber-100 text-amber-700 border-amber-300" 
-                                          : "bg-muted text-muted-foreground"
+                                          ? "bg-amber-400 text-amber-900 border-amber-500" 
+                                          : "bg-sky-100 text-sky-700 border-sky-300"
                                       )}
                                       title={isPriority ? "Paciente com prioridade legal (60+ anos)" : "Idade do paciente"}
                                     >
