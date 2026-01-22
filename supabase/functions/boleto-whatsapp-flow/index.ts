@@ -709,19 +709,20 @@ async function handleBoletoFlow(
           };
         } else {
           // New boleto - ask for contribution type
-          // Filter only allowed types for WhatsApp: 124, 125, 126
+          // Filter only allowed types for WhatsApp: exact names only
+          const allowedNames = [
+            '124 - MENSALIDADE SINDICAL',
+            '125 - TAXA NEGOCIAL (MERCADOS)',
+            '126 - TAXA NEGOCIAL (COM VEREJ)'
+          ];
+          
           const { data: allTypes } = await supabase
             .from('contribution_types')
             .select('id, name')
             .eq('clinic_id', clinicId)
             .eq('is_active', true)
-            .order('name');
-          
-          // Filter to show only specific contribution types via WhatsApp
-          const allowedPrefixes = ['124 -', '125 -', '126 -'];
-          const types = (allTypes || []).filter((t: any) => 
-            allowedPrefixes.some(prefix => t.name.startsWith(prefix))
-          );
+            .in('name', allowedNames)
+            const types = allTypes || [];
 
           if (!types || types.length === 0) {
             return { 
