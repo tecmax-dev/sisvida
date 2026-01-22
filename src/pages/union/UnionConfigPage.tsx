@@ -1,10 +1,10 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, PenTool, Loader2 } from "lucide-react";
+import { Settings, CreditCard, FileText, Loader2 } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
-import { PresidentSignatureManager } from "@/components/union/signatures/PresidentSignatureManager";
 
 export default function UnionConfigPage() {
   const { currentClinic } = useAuth();
@@ -46,10 +46,6 @@ export default function UnionConfigPage() {
             <CreditCard className="h-4 w-4" />
             Formas de Pagamento
           </TabsTrigger>
-          <TabsTrigger value="signature" className="gap-2">
-            <PenTool className="h-4 w-4" />
-            Assinatura
-          </TabsTrigger>
           <TabsTrigger value="documents" className="gap-2">
             <FileText className="h-4 w-4" />
             Documentos
@@ -68,10 +64,6 @@ export default function UnionConfigPage() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        <TabsContent value="signature">
-          <PresidentSignatureManager />
         </TabsContent>
 
         <TabsContent value="documents">

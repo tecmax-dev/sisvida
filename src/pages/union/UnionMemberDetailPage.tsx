@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Loader2, Users, UserX, Save, FileText } from "lucide-react";
+import { ArrowLeft, Loader2, Users, UserX, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,7 +28,6 @@ import { UnionMemberBadge } from "@/components/union/members/UnionMemberBadge";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
 import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
-import { MemberAuthorizationsTab } from "@/components/union/authorizations/MemberAuthorizationsTab";
 
 interface UnionMember {
   id: string;
@@ -318,10 +317,6 @@ export default function UnionMemberDetailPage() {
           <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
           <TabsTrigger value="sindical">Dados Sindicais</TabsTrigger>
           <TabsTrigger value="dependentes">Dependentes</TabsTrigger>
-          <TabsTrigger value="autorizacoes" className="gap-1.5">
-            <FileText className="h-4 w-4" />
-            Autorizações
-          </TabsTrigger>
           {/* NOTE: Prontuários, Anamnese, Atendimentos tabs are NOT shown in union context */}
         </TabsList>
 
@@ -515,10 +510,6 @@ export default function UnionMemberDetailPage() {
               {member && <DependentsPanel patientId={member.id} clinicId={member.clinic_id} />}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="autorizacoes">
-          {member && <MemberAuthorizationsTab patientId={member.id} />}
         </TabsContent>
       </Tabs>
 
