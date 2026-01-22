@@ -13729,6 +13729,168 @@ export type Database = {
           },
         ]
       }
+      whatsapp_boleto_logs: {
+        Row: {
+          action: string
+          clinic_id: string
+          contribution_id: string | null
+          created_at: string
+          details: Json | null
+          error_message: string | null
+          id: string
+          lytex_request: Json | null
+          lytex_response: Json | null
+          phone: string
+          session_id: string | null
+          success: boolean
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          contribution_id?: string | null
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          lytex_request?: Json | null
+          lytex_response?: Json | null
+          phone: string
+          session_id?: string | null
+          success?: boolean
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          contribution_id?: string | null
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          lytex_request?: Json | null
+          lytex_response?: Json | null
+          phone?: string
+          session_id?: string | null
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_boleto_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_boleto_logs_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_boleto_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_boleto_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_boleto_sessions: {
+        Row: {
+          available_contributions: Json | null
+          boleto_type: string | null
+          clinic_id: string
+          competence_month: number | null
+          competence_year: number | null
+          contribution_id: string | null
+          contribution_type_id: string | null
+          created_at: string
+          employer_cnpj: string | null
+          employer_id: string | null
+          employer_name: string | null
+          expires_at: string
+          flow_context: Json | null
+          id: string
+          new_due_date: string | null
+          phone: string
+          state: string
+          updated_at: string
+          value_cents: number | null
+        }
+        Insert: {
+          available_contributions?: Json | null
+          boleto_type?: string | null
+          clinic_id: string
+          competence_month?: number | null
+          competence_year?: number | null
+          contribution_id?: string | null
+          contribution_type_id?: string | null
+          created_at?: string
+          employer_cnpj?: string | null
+          employer_id?: string | null
+          employer_name?: string | null
+          expires_at?: string
+          flow_context?: Json | null
+          id?: string
+          new_due_date?: string | null
+          phone: string
+          state?: string
+          updated_at?: string
+          value_cents?: number | null
+        }
+        Update: {
+          available_contributions?: Json | null
+          boleto_type?: string | null
+          clinic_id?: string
+          competence_month?: number | null
+          competence_year?: number | null
+          contribution_id?: string | null
+          contribution_type_id?: string | null
+          created_at?: string
+          employer_cnpj?: string | null
+          employer_id?: string | null
+          employer_name?: string | null
+          expires_at?: string
+          flow_context?: Json | null
+          id?: string
+          new_due_date?: string | null
+          phone?: string
+          state?: string
+          updated_at?: string
+          value_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_boleto_sessions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_boleto_sessions_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_boleto_sessions_contribution_type_id_fkey"
+            columns: ["contribution_type_id"]
+            isOneToOne: false
+            referencedRelation: "contribution_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_boleto_sessions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_booking_sessions: {
         Row: {
           action_type: string | null
