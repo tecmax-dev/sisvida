@@ -105,13 +105,19 @@ export function MemberAuthorizationsTab({ patientId }: Props) {
   };
 
   const handleCopyLink = async (hash: string) => {
-    const url = `${window.location.origin}/autorizacao/${hash}`;
+    const entitySlug = currentClinic?.slug || "validar";
+    const url = `${window.location.origin}/autorizacao/${entitySlug}/${hash}`;
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: "Link copiado!" });
     } catch {
       toast({ title: "Erro ao copiar", variant: "destructive" });
     }
+  };
+
+  const getAuthorizationUrl = (hash: string) => {
+    const entitySlug = currentClinic?.slug || "validar";
+    return `${window.location.origin}/autorizacao/${entitySlug}/${hash}`;
   };
 
   return (
@@ -206,7 +212,7 @@ export function MemberAuthorizationsTab({ patientId }: Props) {
                           title="Abrir Link"
                         >
                           <a 
-                            href={`${window.location.origin}/autorizacao/${auth.validation_hash}`} 
+                            href={getAuthorizationUrl(auth.validation_hash)} 
                             target="_blank" 
                             rel="noopener noreferrer"
                           >
