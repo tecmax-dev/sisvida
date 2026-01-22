@@ -60,427 +60,429 @@ const TutorialSindicatoPage = () => {
       const margin = 15;
       const contentWidth = pageWidth - (margin * 2);
 
-      // Colors
-      const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
-      const secondaryColor: [number, number, number] = [139, 92, 246]; // Purple  
+      // Colors - RGB format
+      const primaryColor: [number, number, number] = [0, 136, 169]; // Teal/Cyan
+      const secondaryColor: [number, number, number] = [106, 90, 205]; // Slate Blue
       const accentColor: [number, number, number] = [16, 185, 129]; // Emerald
       const darkColor: [number, number, number] = [30, 41, 59]; // Slate dark
-      const lightColor: [number, number, number] = [248, 250, 252]; // Slate light
+      const lightGray: [number, number, number] = [241, 245, 249]; // Light gray bg
+      const amberColor: [number, number, number] = [245, 158, 11]; // Amber
+      const redColor: [number, number, number] = [239, 68, 68]; // Red
 
-      // Helper functions
+      // Helper: Draw page header with logo
       const drawHeader = (pageNum: number, title: string) => {
-        // Header background
         doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, pageWidth, 28, "F");
+        doc.rect(0, 0, pageWidth, 26, "F");
         
-        // Logo
         if (logoBase64) {
-          doc.addImage(logoBase64, 'PNG', margin, 4, 35, 17);
+          doc.addImage(logoBase64, 'PNG', margin, 3, 32, 16);
         }
 
-        // Page title
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
-        doc.text(title, pageWidth - margin, 16, { align: "right" });
+        doc.text(title, pageWidth - margin, 14, { align: "right" });
 
-        // Page number
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        doc.text(`Página ${pageNum}`, pageWidth - margin, 23, { align: "right" });
+        doc.text(`Pagina ${pageNum}`, pageWidth - margin, 21, { align: "right" });
       };
 
+      // Helper: Draw page footer
       const drawFooter = () => {
         doc.setFillColor(...darkColor);
-        doc.rect(0, pageHeight - 12, pageWidth, 12, "F");
+        doc.rect(0, pageHeight - 10, pageWidth, 10, "F");
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.text("Tutorial Eclini - Módulo Sindical | © 2026 Tecmax Tecnologia", pageWidth / 2, pageHeight - 5, { align: "center" });
+        doc.setFontSize(7);
+        doc.text("Tutorial Eclini - Modulo Sindical | Tecmax Tecnologia 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
       };
 
-      const drawSectionBox = (y: number, title: string, content: string[], icon: string, color: [number, number, number]) => {
-        const boxHeight = 25 + (content.length * 6);
+      // Helper: Draw a content box with colored left bar
+      const drawContentBox = (y: number, title: string, items: string[], iconLetter: string, boxColor: [number, number, number]) => {
+        const boxHeight = 22 + (items.length * 5.5);
         
-        // Box background
-        doc.setFillColor(color[0], color[1], color[2], 0.1);
-        doc.roundedRect(margin, y, contentWidth, boxHeight, 3, 3, "F");
+        // Light background
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, "F");
         
         // Left accent bar
-        doc.setFillColor(...color);
-        doc.roundedRect(margin, y, 4, boxHeight, 2, 2, "F");
+        doc.setFillColor(...boxColor);
+        doc.rect(margin, y, 3, boxHeight, "F");
         
         // Icon circle
-        doc.setFillColor(...color);
-        doc.circle(margin + 15, y + 12, 8, "F");
+        doc.setFillColor(...boxColor);
+        doc.circle(margin + 14, y + 11, 7, "F");
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
-        doc.text(icon, margin + 15, y + 15, { align: "center" });
+        doc.text(iconLetter, margin + 14, y + 14, { align: "center" });
         
         // Title
-        doc.setTextColor(...color);
-        doc.setFontSize(12);
+        doc.setTextColor(...boxColor);
+        doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
-        doc.text(title, margin + 28, y + 14);
+        doc.text(title, margin + 26, y + 13);
         
-        // Content
+        // Items
         doc.setTextColor(...darkColor);
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        content.forEach((line, index) => {
-          doc.text(`• ${line}`, margin + 28, y + 22 + (index * 6));
+        items.forEach((item, index) => {
+          doc.text("- " + item, margin + 26, y + 20 + (index * 5.5));
         });
 
-        return boxHeight + 5;
+        return boxHeight + 4;
       };
 
+      // Helper: Draw numbered step
       const drawStep = (y: number, stepNum: number, title: string, description: string) => {
         // Step number circle
         doc.setFillColor(...accentColor);
-        doc.circle(margin + 8, y + 6, 6, "F");
+        doc.circle(margin + 7, y + 5, 5, "F");
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
-        doc.text(stepNum.toString(), margin + 8, y + 9, { align: "center" });
+        doc.text(stepNum.toString(), margin + 7, y + 7.5, { align: "center" });
 
         // Step title
         doc.setTextColor(...darkColor);
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
-        doc.text(title, margin + 18, y + 8);
+        doc.text(title, margin + 16, y + 7);
 
         // Step description
         doc.setTextColor(100, 116, 139);
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        const lines = doc.splitTextToSize(description, contentWidth - 25);
-        doc.text(lines, margin + 18, y + 15);
+        const lines = doc.splitTextToSize(description, contentWidth - 22);
+        doc.text(lines, margin + 16, y + 13);
 
-        return 20 + (lines.length * 4);
+        return 16 + (lines.length * 3.5);
       };
 
       // =====================
       // PAGE 1 - COVER
       // =====================
       
-      // Full page gradient background
+      // Gradient-like background with overlapping shapes
       doc.setFillColor(...primaryColor);
       doc.rect(0, 0, pageWidth, pageHeight, "F");
       
-      // Decorative circles
-      doc.setFillColor(255, 255, 255, 0.1);
-      doc.circle(pageWidth + 20, -20, 80, "F");
-      doc.circle(-30, pageHeight + 30, 100, "F");
+      // Decorative circles with lighter color (simulating transparency)
+      doc.setFillColor(51, 163, 191); // Lighter teal
+      doc.circle(pageWidth + 10, -10, 70, "F");
+      doc.circle(-20, pageHeight + 20, 90, "F");
       
       // Logo centered
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', (pageWidth - 60) / 2, 35, 60, 30);
+        doc.addImage(logoBase64, 'PNG', (pageWidth - 55) / 2, 32, 55, 28);
       }
 
       // Main title
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(32);
+      doc.setFontSize(28);
       doc.setFont("helvetica", "bold");
-      doc.text("Tutorial Completo", pageWidth / 2, 90, { align: "center" });
+      doc.text("Tutorial Completo", pageWidth / 2, 85, { align: "center" });
       
-      doc.setFontSize(24);
-      doc.text("Módulo Sindical", pageWidth / 2, 105, { align: "center" });
+      doc.setFontSize(22);
+      doc.text("Modulo Sindical", pageWidth / 2, 98, { align: "center" });
 
-      // Subtitle box
-      doc.setFillColor(255, 255, 255, 0.2);
-      doc.roundedRect(margin + 10, 120, contentWidth - 20, 35, 4, 4, "F");
+      // Subtitle box with semi-transparent look
+      doc.setFillColor(51, 163, 191); // Lighter shade for transparency effect
+      doc.roundedRect(margin + 8, 112, contentWidth - 16, 28, 3, 3, "F");
       
-      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("Guia ilustrado para usuários e profissionais de saúde", pageWidth / 2, 132, { align: "center" });
-      doc.text("Sistema Eclini - Gestão Sindical Inteligente", pageWidth / 2, 145, { align: "center" });
+      doc.text("Guia ilustrado para usuarios e profissionais de saude", pageWidth / 2, 122, { align: "center" });
+      doc.text("Sistema Eclini - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
 
-      // Feature cards
+      // Feature cards - 6 items in 2 rows
       const features = [
-        { icon: "🏢", label: "Gestão de Empresas" },
-        { icon: "👥", label: "Cadastro de Sócios" },
-        { icon: "💰", label: "Contribuições" },
-        { icon: "📊", label: "Financeiro" },
-        { icon: "🤝", label: "Negociações" },
-        { icon: "⚖️", label: "Jurídico" }
+        { letter: "E", label: "Gestao de Empresas" },
+        { letter: "S", label: "Cadastro de Socios" },
+        { letter: "C", label: "Contribuicoes" },
+        { letter: "F", label: "Financeiro" },
+        { letter: "N", label: "Negociacoes" },
+        { letter: "J", label: "Juridico" }
       ];
 
-      const cardWidth = (contentWidth - 30) / 3;
+      const cardW = (contentWidth - 20) / 3;
       features.forEach((feat, i) => {
         const row = Math.floor(i / 3);
         const col = i % 3;
-        const x = margin + 5 + (col * (cardWidth + 10));
-        const y = 170 + (row * 30);
+        const x = margin + 5 + (col * (cardW + 5));
+        const y = 155 + (row * 26);
         
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(x, y, cardWidth, 22, 3, 3, "F");
+        doc.roundedRect(x, y, cardW, 20, 2, 2, "F");
         
-        doc.setTextColor(...primaryColor);
-        doc.setFontSize(14);
-        doc.text(feat.icon, x + 8, y + 14);
-        
-        doc.setTextColor(...darkColor);
+        // Icon letter circle
+        doc.setFillColor(...primaryColor);
+        doc.circle(x + 10, y + 10, 6, "F");
+        doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
-        doc.text(feat.label, x + 22, y + 14);
+        doc.text(feat.letter, x + 10, y + 12.5, { align: "center" });
+        
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.text(feat.label, x + 20, y + 12);
       });
 
-      // Footer info
+      // Footer contact box
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(margin, pageHeight - 50, contentWidth, 35, 4, 4, "F");
+      doc.roundedRect(margin, pageHeight - 48, contentWidth, 33, 3, 3, "F");
       
       doc.setTextColor(...darkColor);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Tecmax Tecnologia", pageWidth / 2, pageHeight - 38, { align: "center" });
+      doc.text("Tecmax Tecnologia", pageWidth / 2, pageHeight - 36, { align: "center" });
       
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text("Contato: 71 3144-9898", pageWidth / 2, pageHeight - 28, { align: "center" });
-      doc.text("www.eclini.com.br", pageWidth / 2, pageHeight - 20, { align: "center" });
+      doc.text("Contato: 71 3144-9898", pageWidth / 2, pageHeight - 27, { align: "center" });
+      doc.text("www.eclini.com.br", pageWidth / 2, pageHeight - 19, { align: "center" });
 
       // =====================
-      // PAGE 2 - OVERVIEW & ACCESS
+      // PAGE 2 - OVERVIEW
       // =====================
       doc.addPage();
-      drawHeader(2, "Visão Geral do Sistema");
+      drawHeader(2, "Visao Geral do Sistema");
       drawFooter();
 
-      let yPos = 38;
+      let yPos = 36;
 
       // Intro text
       doc.setTextColor(...darkColor);
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      const introText = "O Módulo Sindical do Eclini foi desenvolvido para oferecer uma solução completa de gestão para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utilizá-las de forma eficiente.";
+      const introText = "O Modulo Sindical do Eclini foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
       const introLines = doc.splitTextToSize(introText, contentWidth);
       doc.text(introLines, margin, yPos);
-      yPos += 20;
+      yPos += 18;
 
-      // Main modules section
+      // Section title
       doc.setTextColor(...primaryColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("📋 Módulos Principais", margin, yPos);
-      yPos += 10;
+      doc.text("Modulos Principais", margin, yPos);
+      yPos += 8;
 
-      yPos += drawSectionBox(yPos, "Empresas", [
+      yPos += drawContentBox(yPos, "Empresas", [
         "Cadastro completo de empresas associadas",
-        "Gestão de escritórios contábeis vinculados",
+        "Gestao de escritorios contabeis vinculados",
         "Controle de planos e contratos"
-      ], "🏢", [245, 158, 11]);
+      ], "E", amberColor);
 
-      yPos += drawSectionBox(yPos, "Sócios", [
+      yPos += drawContentBox(yPos, "Socios", [
         "Cadastro de trabalhadores filiados",
-        "Gestão de benefícios e autorizações",
-        "Aprovação de novas filiações"
-      ], "👥", secondaryColor);
+        "Gestao de beneficios e autorizacoes",
+        "Aprovacao de novas filiacoes"
+      ], "S", secondaryColor);
 
-      yPos += drawSectionBox(yPos, "Contribuições", [
+      yPos += drawContentBox(yPos, "Contribuicoes", [
         "Gerenciamento de mensalidades",
-        "Controle de inadimplência",
-        "Emissão de relatórios detalhados"
-      ], "💳", accentColor);
+        "Controle de inadimplencia",
+        "Emissao de relatorios detalhados"
+      ], "C", accentColor);
 
-      yPos += drawSectionBox(yPos, "Financeiro", [
+      yPos += drawContentBox(yPos, "Financeiro", [
         "Controle de receitas e despesas",
         "Fluxo de caixa em tempo real",
-        "Conciliação bancária automatizada"
-      ], "📊", primaryColor);
+        "Conciliacao bancaria automatizada"
+      ], "F", primaryColor);
 
       // =====================
-      // PAGE 3 - STEP BY STEP
+      // PAGE 3 - FIRST STEPS
       // =====================
       doc.addPage();
       drawHeader(3, "Primeiros Passos");
       drawFooter();
 
-      yPos = 38;
+      yPos = 36;
 
       doc.setTextColor(...primaryColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("🚀 Como Começar", margin, yPos);
-      yPos += 12;
+      doc.text("Como Comecar", margin, yPos);
+      yPos += 10;
 
       yPos += drawStep(yPos, 1, "Acesso ao Sistema", 
-        "Acesse o sistema através do endereço fornecido pela sua entidade. Utilize seu e-mail e senha cadastrados para fazer login.");
+        "Acesse o sistema atraves do endereco fornecido pela sua entidade. Utilize seu e-mail e senha cadastrados para fazer login.");
       
-      yPos += drawStep(yPos, 2, "Navegação no Menu", 
-        "O menu lateral esquerdo contém todas as funcionalidades organizadas por categorias. Clique nas categorias para expandir os submenus.");
+      yPos += drawStep(yPos, 2, "Navegacao no Menu", 
+        "O menu lateral esquerdo contem todas as funcionalidades organizadas por categorias. Clique nas categorias para expandir os submenus.");
       
       yPos += drawStep(yPos, 3, "Dashboard Principal", 
-        "A tela inicial apresenta um resumo com estatísticas importantes: empresas ativas, sócios, contribuições pendentes e saldo financeiro.");
+        "A tela inicial apresenta um resumo com estatisticas importantes: empresas ativas, socios, contribuicoes pendentes e saldo financeiro.");
       
       yPos += drawStep(yPos, 4, "Cadastro de Empresas", 
-        "Acesse Empresas > Cadastro para adicionar novas empresas. Preencha CNPJ, razão social, contatos e endereço completo.");
+        "Acesse Empresas > Cadastro para adicionar novas empresas. Preencha CNPJ, razao social, contatos e endereco completo.");
       
-      yPos += drawStep(yPos, 5, "Gestão de Contribuições", 
-        "Em Contribuições > Gerenciamento você pode visualizar, filtrar e atualizar o status de pagamento das contribuições.");
+      yPos += drawStep(yPos, 5, "Gestao de Contribuicoes", 
+        "Em Contribuicoes > Gerenciamento voce pode visualizar, filtrar e atualizar o status de pagamento das contribuicoes.");
       
-      yPos += drawStep(yPos, 6, "Relatórios", 
-        "Acesse a área de Relatórios para gerar documentos personalizados com filtros por período, empresa ou status.");
+      yPos += drawStep(yPos, 6, "Relatorios", 
+        "Acesse a area de Relatorios para gerar documentos personalizados com filtros por periodo, empresa ou status.");
 
       // Tips box
-      yPos += 10;
-      doc.setFillColor(16, 185, 129, 0.1);
-      doc.roundedRect(margin, yPos, contentWidth, 40, 3, 3, "F");
+      yPos += 8;
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, yPos, contentWidth, 36, 2, 2, "F");
       doc.setFillColor(...accentColor);
-      doc.roundedRect(margin, yPos, 4, 40, 2, 2, "F");
+      doc.rect(margin, yPos, 3, 36, "F");
       
       doc.setTextColor(...accentColor);
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("💡 Dicas Importantes", margin + 10, yPos + 10);
+      doc.text("Dicas Importantes", margin + 10, yPos + 9);
       
       doc.setTextColor(...darkColor);
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
-      doc.text("• Use os filtros de busca para encontrar informações rapidamente", margin + 10, yPos + 20);
-      doc.text("• Exporte relatórios em PDF ou Excel conforme necessidade", margin + 10, yPos + 26);
-      doc.text("• Mantenha os dados de contato das empresas sempre atualizados", margin + 10, yPos + 32);
+      doc.text("- Use os filtros de busca para encontrar informacoes rapidamente", margin + 10, yPos + 18);
+      doc.text("- Exporte relatorios em PDF ou Excel conforme necessidade", margin + 10, yPos + 25);
+      doc.text("- Mantenha os dados de contato das empresas sempre atualizados", margin + 10, yPos + 32);
 
       // =====================
       // PAGE 4 - MEDICAL PROFESSIONALS
       // =====================
       doc.addPage();
-      drawHeader(4, "Guia para Profissionais de Saúde");
+      drawHeader(4, "Guia para Profissionais de Saude");
       drawFooter();
 
-      yPos = 38;
+      yPos = 36;
 
-      // Medical icon header
+      // Medical header banner
       doc.setFillColor(...secondaryColor);
-      doc.roundedRect(margin, yPos, contentWidth, 30, 4, 4, "F");
+      doc.roundedRect(margin, yPos, contentWidth, 24, 3, 3, "F");
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("🩺 Área Médica - Homologações e Atendimentos", pageWidth / 2, yPos + 18, { align: "center" });
-      yPos += 40;
+      doc.text("Area Medica - Homologacoes e Atendimentos", pageWidth / 2, yPos + 15, { align: "center" });
+      yPos += 32;
 
-      // Medical specific content
-      yPos += drawStep(yPos, 1, "Agenda de Homologações", 
-        "Acesse Homologação > Agenda para visualizar e gerenciar os agendamentos de homologação. O calendário mostra todos os horários disponíveis e ocupados.");
+      yPos += drawStep(yPos, 1, "Agenda de Homologacoes", 
+        "Acesse Homologacao > Agenda para visualizar e gerenciar os agendamentos. O calendario mostra todos os horarios disponiveis e ocupados.");
       
       yPos += drawStep(yPos, 2, "Cadastro de Profissionais", 
-        "Em Homologação > Profissionais, cadastre os médicos e especialistas que realizam atendimentos. Defina especialidades, horários e salas.");
+        "Em Homologacao > Profissionais, cadastre os medicos e especialistas que realizam atendimentos. Defina especialidades, horarios e salas.");
       
-      yPos += drawStep(yPos, 3, "Serviços Oferecidos", 
-        "Configure os tipos de serviço disponíveis em Homologação > Serviços. Defina duração, valor e requisitos de cada procedimento.");
+      yPos += drawStep(yPos, 3, "Servicos Oferecidos", 
+        "Configure os tipos de servico disponiveis em Homologacao > Servicos. Defina duracao, valor e requisitos de cada procedimento.");
       
       yPos += drawStep(yPos, 4, "Bloqueios de Agenda", 
-        "Use Homologação > Bloqueios para definir períodos indisponíveis como férias, feriados ou manutenção.");
+        "Use Homologacao > Bloqueios para definir periodos indisponiveis como ferias, feriados ou manutencao.");
       
       yPos += drawStep(yPos, 5, "Atendimento ao Paciente", 
-        "Durante o atendimento, acesse o prontuário do paciente, registre observações e finalize a homologação com assinatura digital.");
+        "Durante o atendimento, acesse o prontuario do paciente, registre observacoes e finalize a homologacao com assinatura digital.");
 
-      // Medical tips
-      yPos += 5;
-      doc.setFillColor(139, 92, 246, 0.1);
-      doc.roundedRect(margin, yPos, contentWidth, 35, 3, 3, "F");
+      // Medical tips box
+      yPos += 6;
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, yPos, contentWidth, 32, 2, 2, "F");
       doc.setFillColor(...secondaryColor);
-      doc.roundedRect(margin, yPos, 4, 35, 2, 2, "F");
+      doc.rect(margin, yPos, 3, 32, "F");
       
       doc.setTextColor(...secondaryColor);
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("⚕️ Boas Práticas Médicas", margin + 10, yPos + 10);
+      doc.text("Boas Praticas Medicas", margin + 10, yPos + 9);
       
       doc.setTextColor(...darkColor);
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
-      doc.text("• Sempre verifique a identidade do paciente antes do atendimento", margin + 10, yPos + 19);
-      doc.text("• Mantenha os registros médicos completos e atualizados", margin + 10, yPos + 25);
-      doc.text("• Utilize a assinatura digital para validar documentos oficiais", margin + 10, yPos + 31);
+      doc.text("- Sempre verifique a identidade do paciente antes do atendimento", margin + 10, yPos + 17);
+      doc.text("- Mantenha os registros medicos completos e atualizados", margin + 10, yPos + 24);
+      doc.text("- Utilize a assinatura digital para validar documentos oficiais", margin + 10, yPos + 31);
 
       // =====================
       // PAGE 5 - FINANCIAL MODULE
       // =====================
       doc.addPage();
-      drawHeader(5, "Módulo Financeiro");
+      drawHeader(5, "Modulo Financeiro");
       drawFooter();
 
-      yPos = 38;
+      yPos = 36;
 
       doc.setTextColor(...primaryColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("💰 Gestão Financeira Completa", margin, yPos);
-      yPos += 12;
+      doc.text("Gestao Financeira Completa", margin, yPos);
+      yPos += 10;
 
-      // Financial sections
-      yPos += drawSectionBox(yPos, "Visão Geral", [
-        "Dashboard com métricas em tempo real",
-        "Gráficos de evolução mensal",
+      yPos += drawContentBox(yPos, "Visao Geral", [
+        "Dashboard com metricas em tempo real",
+        "Graficos de evolucao mensal",
         "Indicadores de desempenho (KPIs)"
-      ], "📈", primaryColor);
+      ], "V", primaryColor);
 
-      yPos += drawSectionBox(yPos, "Despesas e Receitas", [
-        "Cadastro categorizado de lançamentos",
+      yPos += drawContentBox(yPos, "Despesas e Receitas", [
+        "Cadastro categorizado de lancamentos",
         "Anexo de comprovantes digitais",
-        "Aprovação em múltiplos níveis"
-      ], "💳", [239, 68, 68]);
+        "Aprovacao em multiplos niveis"
+      ], "D", redColor);
 
-      yPos += drawSectionBox(yPos, "Fluxo de Caixa", [
-        "Projeção de entradas e saídas",
+      yPos += drawContentBox(yPos, "Fluxo de Caixa", [
+        "Projecao de entradas e saidas",
         "Alertas de saldo baixo",
-        "Transferências entre contas"
-      ], "📊", accentColor);
+        "Transferencias entre contas"
+      ], "F", accentColor);
 
-      yPos += drawSectionBox(yPos, "Conciliação Bancária", [
-        "Importação de extratos OFX",
-        "Conciliação automática",
-        "Identificação de divergências"
-      ], "🏦", secondaryColor);
+      yPos += drawContentBox(yPos, "Conciliacao Bancaria", [
+        "Importacao de extratos OFX",
+        "Conciliacao automatica",
+        "Identificacao de divergencias"
+      ], "B", secondaryColor);
 
       // =====================
       // PAGE 6 - LEGAL & NEGOTIATIONS
       // =====================
       doc.addPage();
-      drawHeader(6, "Jurídico e Negociações");
+      drawHeader(6, "Juridico e Negociacoes");
       drawFooter();
 
-      yPos = 38;
+      yPos = 36;
 
-      // Legal section
       doc.setTextColor(...primaryColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("⚖️ Módulo Jurídico", margin, yPos);
-      yPos += 12;
-
-      yPos += drawSectionBox(yPos, "Gestão de Processos", [
-        "Cadastro de ações judiciais",
-        "Acompanhamento de prazos processuais",
-        "Vinculação com advogados e escritórios"
-      ], "📋", [99, 102, 241]);
-
-      yPos += drawSectionBox(yPos, "Controle de Prazos", [
-        "Alertas automáticos de vencimentos",
-        "Calendário integrado",
-        "Histórico de movimentações"
-      ], "📅", [236, 72, 153]);
-
+      doc.text("Modulo Juridico", margin, yPos);
       yPos += 10;
 
-      // Negotiations section
+      yPos += drawContentBox(yPos, "Gestao de Processos", [
+        "Cadastro de acoes judiciais",
+        "Acompanhamento de prazos processuais",
+        "Vinculacao com advogados e escritorios"
+      ], "P", [99, 102, 241]);
+
+      yPos += drawContentBox(yPos, "Controle de Prazos", [
+        "Alertas automaticos de vencimentos",
+        "Calendario integrado",
+        "Historico de movimentacoes"
+      ], "Z", [236, 72, 153]);
+
+      yPos += 8;
+
       doc.setTextColor(...secondaryColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("🤝 Negociações e Parcelamentos", margin, yPos);
-      yPos += 12;
+      doc.text("Negociacoes e Parcelamentos", margin, yPos);
+      yPos += 10;
 
-      yPos += drawSectionBox(yPos, "Acordos de Dívida", [
-        "Simulação de parcelamentos",
-        "Cálculo de juros e correções",
-        "Aprovação digital de propostas"
-      ], "💼", [245, 158, 11]);
+      yPos += drawContentBox(yPos, "Acordos de Divida", [
+        "Simulacao de parcelamentos",
+        "Calculo de juros e correcoes",
+        "Aprovacao digital de propostas"
+      ], "A", amberColor);
 
-      yPos += drawSectionBox(yPos, "Acompanhamento", [
+      yPos += drawContentBox(yPos, "Acompanhamento", [
         "Status de pagamentos em tempo real",
-        "Notificações de inadimplência",
-        "Renegociação simplificada"
-      ], "📈", accentColor);
+        "Notificacoes de inadimplencia",
+        "Renegociacao simplificada"
+      ], "R", accentColor);
 
       // =====================
       // PAGE 7 - MOBILE APP & SUPPORT
@@ -489,117 +491,126 @@ const TutorialSindicatoPage = () => {
       drawHeader(7, "App Mobile e Suporte");
       drawFooter();
 
-      yPos = 38;
+      yPos = 36;
 
-      // Mobile app section
+      // Mobile app section header
       doc.setFillColor(...accentColor);
-      doc.roundedRect(margin, yPos, contentWidth, 30, 4, 4, "F");
+      doc.roundedRect(margin, yPos, contentWidth, 24, 3, 3, "F");
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("📱 Aplicativo para Sócios", pageWidth / 2, yPos + 18, { align: "center" });
-      yPos += 40;
+      doc.text("Aplicativo para Socios", pageWidth / 2, yPos + 15, { align: "center" });
+      yPos += 32;
 
-      // App features
+      // App features list
       const appFeatures = [
-        { title: "Carteirinha Digital", desc: "Identificação do sócio com QR Code" },
-        { title: "Benefícios", desc: "Consulta e resgate de convênios" },
-        { title: "Contribuições", desc: "Visualização de boletos e pagamentos" },
-        { title: "Notificações", desc: "Avisos importantes em tempo real" }
+        { title: "Carteirinha Digital", desc: "Identificacao do socio com QR Code" },
+        { title: "Beneficios", desc: "Consulta e resgate de convenios" },
+        { title: "Contribuicoes", desc: "Visualizacao de boletos e pagamentos" },
+        { title: "Notificacoes", desc: "Avisos importantes em tempo real" }
       ];
 
       appFeatures.forEach((feat, i) => {
-        const y = yPos + (i * 20);
-        doc.setFillColor(16, 185, 129, 0.1);
-        doc.roundedRect(margin, y, contentWidth, 16, 2, 2, "F");
+        const y = yPos + (i * 18);
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(margin, y, contentWidth, 14, 2, 2, "F");
         
-        doc.setTextColor(...accentColor);
-        doc.setFontSize(10);
+        // Checkmark circle
+        doc.setFillColor(...accentColor);
+        doc.circle(margin + 8, y + 7, 4, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "bold");
-        doc.text(`✓ ${feat.title}`, margin + 5, y + 10);
+        doc.text("OK", margin + 8, y + 9, { align: "center" });
         
         doc.setTextColor(...darkColor);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(feat.title, margin + 18, y + 9);
+        
+        doc.setTextColor(100, 116, 139);
         doc.setFont("helvetica", "normal");
-        doc.text(feat.desc, margin + 60, y + 10);
+        doc.text(feat.desc, margin + 60, y + 9);
       });
 
-      yPos += 95;
+      yPos += 85;
 
       // Support section
       doc.setTextColor(...primaryColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("🆘 Suporte e Ajuda", margin, yPos);
-      yPos += 12;
+      doc.text("Suporte e Ajuda", margin, yPos);
+      yPos += 10;
 
-      doc.setFillColor(...lightColor);
-      doc.roundedRect(margin, yPos, contentWidth, 50, 4, 4, "F");
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, yPos, contentWidth, 45, 3, 3, "F");
       
       doc.setTextColor(...darkColor);
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text("Precisa de ajuda? Entre em contato conosco:", margin + 10, yPos + 12);
       
       doc.setFont("helvetica", "bold");
-      doc.text("📞 Telefone: 71 3144-9898", margin + 10, yPos + 24);
-      doc.text("📧 E-mail: suporte@eclini.com.br", margin + 10, yPos + 34);
-      doc.text("💬 Chat: Disponível no sistema (horário comercial)", margin + 10, yPos + 44);
+      doc.text("Telefone: 71 3144-9898", margin + 10, yPos + 23);
+      doc.text("E-mail: suporte@eclini.com.br", margin + 10, yPos + 32);
+      doc.text("Chat: Disponivel no sistema (horario comercial)", margin + 10, yPos + 41);
 
       // =====================
       // PAGE 8 - BACK COVER
       // =====================
       doc.addPage();
       
-      // Full page gradient
+      // Dark background
       doc.setFillColor(...darkColor);
       doc.rect(0, 0, pageWidth, pageHeight, "F");
       
-      // Decorative elements
+      // Decorative colored circles
       doc.setFillColor(...primaryColor);
-      doc.circle(-20, 50, 60, "F");
+      doc.circle(-15, 45, 50, "F");
       doc.setFillColor(...secondaryColor);
-      doc.circle(pageWidth + 20, pageHeight - 50, 80, "F");
+      doc.circle(pageWidth + 15, pageHeight - 45, 65, "F");
 
       // Logo
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', (pageWidth - 50) / 2, 50, 50, 25);
+        doc.addImage(logoBase64, 'PNG', (pageWidth - 48) / 2, 48, 48, 24);
       }
 
       // Thank you message
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
+      doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.text("Obrigado por escolher", pageWidth / 2, 100, { align: "center" });
-      doc.text("o Eclini!", pageWidth / 2, 115, { align: "center" });
+      doc.text("Obrigado por escolher", pageWidth / 2, 95, { align: "center" });
+      doc.text("o Eclini!", pageWidth / 2, 108, { align: "center" });
 
-      // Closing message box
-      doc.setFillColor(255, 255, 255, 0.1);
-      doc.roundedRect(margin + 10, 130, contentWidth - 20, 50, 4, 4, "F");
+      // Closing message box with darker shade
+      doc.setFillColor(55, 65, 81); // Slightly lighter than dark background
+      doc.roundedRect(margin + 8, 125, contentWidth - 16, 42, 3, 3, "F");
       
-      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      const closingText = "Este tutorial foi desenvolvido para facilitar o seu dia a dia. Em caso de dúvidas, nossa equipe de suporte está sempre pronta para ajudar.";
-      const closingLines = doc.splitTextToSize(closingText, contentWidth - 40);
-      doc.text(closingLines, pageWidth / 2, 150, { align: "center" });
+      const closingText = "Este tutorial foi desenvolvido para facilitar o seu dia a dia. Em caso de duvidas, nossa equipe de suporte esta sempre pronta para ajudar.";
+      const closingLines = doc.splitTextToSize(closingText, contentWidth - 36);
+      doc.text(closingLines, pageWidth / 2, 142, { align: "center" });
 
-      // Contact info
+      // Contact info card
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(margin + 20, 200, contentWidth - 40, 60, 4, 4, "F");
+      doc.roundedRect(margin + 18, 188, contentWidth - 36, 52, 3, 3, "F");
       
       doc.setTextColor(...darkColor);
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("Tecmax Tecnologia", pageWidth / 2, 218, { align: "center" });
+      doc.text("Tecmax Tecnologia", pageWidth / 2, 205, { align: "center" });
       
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("71 3144-9898", pageWidth / 2, 232, { align: "center" });
-      doc.text("www.eclini.com.br", pageWidth / 2, 244, { align: "center" });
+      doc.text("71 3144-9898", pageWidth / 2, 218, { align: "center" });
+      doc.text("www.eclini.com.br", pageWidth / 2, 230, { align: "center" });
 
-      // Version
-      doc.setTextColor(255, 255, 255, 0.5);
-      doc.setFontSize(9);
-      doc.text("Tutorial v1.0 | Janeiro 2026", pageWidth / 2, pageHeight - 20, { align: "center" });
+      // Version footer
+      doc.setTextColor(180, 180, 180);
+      doc.setFontSize(8);
+      doc.text("Tutorial v1.0 | Janeiro 2026", pageWidth / 2, pageHeight - 18, { align: "center" });
 
       // Save PDF
       doc.save("Tutorial-Modulo-Sindical-Eclini.pdf");
