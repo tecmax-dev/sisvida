@@ -1,12 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, Loader2, Building2, Users, Briefcase, Calculator, Zap, Shield, Globe, Smartphone, BarChart3, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import tecmaxLogo from "@/assets/tecmax-logo.png";
 
 const ApresentacaoEcliniPage = () => {
   const [generating, setGenerating] = useState(false);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+  // Load logo as base64 on mount
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const response = await fetch(tecmaxLogo);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Error loading logo:', error);
+      }
+    };
+    loadLogo();
+  }, []);
 
   const generatePDF = async () => {
     setGenerating(true);
@@ -34,14 +54,21 @@ const ApresentacaoEcliniPage = () => {
         doc.setFillColor(...secondaryColor);
         doc.rect(0, 0, pageWidth, 25, 'F');
         
+        // Add logo if available
+        if (logoBase64) {
+          try {
+            doc.addImage(logoBase64, 'PNG', margin, 4, 35, 17);
+          } catch (e) {
+            console.error('Error adding logo to PDF:', e);
+          }
+        }
+        
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text('TECMAX TECNOLOGIA', margin, 10);
         doc.text('(71) 3144-9898', pageWidth - margin, 10, { align: 'right' });
         
         doc.setFontSize(8);
-        doc.text('Soluções Inteligentes em Gestão Sindical', margin, 17);
         doc.text(`Página ${pageNum} de 4`, pageWidth - margin, 17, { align: 'right' });
       };
 
@@ -144,20 +171,26 @@ const ApresentacaoEcliniPage = () => {
         boxX += 60;
       });
       
-      // Company info
-      doc.setFillColor(...secondaryColor);
-      doc.roundedRect(pageWidth - 100, 45, 85, 50, 3, 3, 'F');
+      // Company info box with logo
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(pageWidth - 105, 45, 90, 55, 3, 3, 'F');
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(1);
+      doc.roundedRect(pageWidth - 105, 45, 90, 55, 3, 3, 'S');
       
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('TECMAX', pageWidth - 57.5, 60, { align: 'center' });
-      doc.setFontSize(10);
-      doc.text('TECNOLOGIA', pageWidth - 57.5, 70, { align: 'center' });
+      // Add logo in the company box
+      if (logoBase64) {
+        try {
+          doc.addImage(logoBase64, 'PNG', pageWidth - 95, 50, 70, 30);
+        } catch (e) {
+          console.error('Error adding logo to company box:', e);
+        }
+      }
       
+      doc.setTextColor(...secondaryColor);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('(71) 3144-9898', pageWidth - 57.5, 85, { align: 'center' });
+      doc.text('(71) 3144-9898', pageWidth - 60, 90, { align: 'center' });
       
       drawFooter();
 
