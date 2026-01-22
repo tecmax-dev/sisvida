@@ -2,12 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Table,
@@ -410,33 +405,32 @@ export function LytexSyncStatusIndicator({
         )}
       </div>
 
-      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-5xl max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedLog ? (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => { setSelectedLog(null); setSearchTerm(""); }}
-                    className="h-8 px-2 mr-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Voltar
-                  </Button>
-                  <span>Detalhes da Sincronização</span>
-                </>
-              ) : (
-                <>
-                  <History className="h-5 w-5" />
-                  Histórico de Sincronizações Lytex
-                </>
-              )}
-            </DialogTitle>
-          </DialogHeader>
+      <PopupBase open={historyOpen} onClose={() => setHistoryOpen(false)} maxWidth="5xl">
+        <PopupHeader>
+          <PopupTitle className="flex items-center gap-2">
+            {selectedLog ? (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => { setSelectedLog(null); setSearchTerm(""); }}
+                  className="h-8 px-2 mr-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
+                <span>Detalhes da Sincronização</span>
+              </>
+            ) : (
+              <>
+                <History className="h-5 w-5" />
+                Histórico de Sincronizações Lytex
+              </>
+            )}
+          </PopupTitle>
+        </PopupHeader>
 
-          <ScrollArea className="h-[65vh]">
+        <ScrollArea className="h-[65vh]">
             {selectedLog ? (
               <div className="space-y-4">
                 {/* Header com informações gerais */}
@@ -699,8 +693,7 @@ export function LytexSyncStatusIndicator({
               </Table>
             )}
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      </PopupBase>
     </>
   );
 }

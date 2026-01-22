@@ -5,12 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Form,
   FormControl,
@@ -293,135 +288,135 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open);
-        if (!open) {
+      <PopupBase 
+        open={dialogOpen} 
+        onClose={() => {
+          setDialogOpen(false);
           setEditingRegister(null);
           form.reset();
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingRegister ? "Editar Caixa" : "Novo Caixa"}
-            </DialogTitle>
-          </DialogHeader>
+        }}
+        maxWidth="md"
+      >
+        <PopupHeader>
+          <PopupTitle>
+            {editingRegister ? "Editar Caixa" : "Novo Caixa"}
+          </PopupTitle>
+        </PopupHeader>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome *</FormLabel>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Caixa Principal" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <Input placeholder="Ex: Caixa Principal" {...field} />
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <SelectContent>
+                      <SelectItem value="cash">Dinheiro</SelectItem>
+                      <SelectItem value="bank">Conta Bancária</SelectItem>
+                      <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                      <SelectItem value="investment">Aplicação</SelectItem>
+                      <SelectItem value="other">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+            {type === "bank" && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="bank_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Banco</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                        <Input placeholder="Ex: Banco do Brasil" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="cash">Dinheiro</SelectItem>
-                        <SelectItem value="bank">Conta Bancária</SelectItem>
-                        <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                        <SelectItem value="investment">Aplicação</SelectItem>
-                        <SelectItem value="other">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {type === "bank" && (
-                <>
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="bank_name"
+                    name="agency"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Banco</FormLabel>
+                        <FormLabel>Agência</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Banco do Brasil" {...field} />
+                          <Input placeholder="0000" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="agency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Agência</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <FormField
+                    control={form.control}
+                    name="account_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Conta</FormLabel>
+                        <FormControl>
+                          <Input placeholder="00000-0" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
-                    <FormField
-                      control={form.control}
-                      name="account_number"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Conta</FormLabel>
-                          <FormControl>
-                            <Input placeholder="00000-0" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </>
+            <FormField
+              control={form.control}
+              name="initial_balance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Saldo Inicial</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0,00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
+            />
 
-              <FormField
-                control={form.control}
-                name="initial_balance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Saldo Inicial</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0,00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Salvando..." : "Salvar"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            <PopupFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </PopupFooter>
+          </form>
+        </Form>
+      </PopupBase>
 
       <BankStatementDialog
         open={statementDialogOpen}

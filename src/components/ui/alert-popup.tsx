@@ -13,6 +13,7 @@ interface AlertPopupProps {
   confirmText?: string;
   cancelText?: string;
   confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  confirmClassName?: string;
   isLoading?: boolean;
   disabled?: boolean;
 }
@@ -27,6 +28,7 @@ export function AlertPopup({
   confirmText = "Confirmar",
   cancelText = "Cancelar",
   confirmVariant = "default",
+  confirmClassName,
   isLoading = false,
   disabled = false,
 }: AlertPopupProps) {
@@ -92,6 +94,7 @@ export function AlertPopup({
           <Button
             type="button"
             variant={confirmVariant}
+            className={confirmClassName}
             onClick={onConfirm}
             disabled={disabled || isLoading}
           >
