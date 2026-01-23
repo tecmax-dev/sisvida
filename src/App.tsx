@@ -167,6 +167,7 @@ import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
+import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
 // Legal Module pages
 import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
 import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
@@ -515,6 +516,7 @@ const App = () => (
                   <Route path="socios" element={<UnionMembersListPage />} />
                   <Route path="socios/:id" element={<UnionMemberDetailPage />} />
                   <Route path="socios/novo" element={<PatientEditPage />} />
+                  <Route path="socios/contracheques" element={<UnionPayslipApprovalsPage />} />
                   <Route path="contribuicoes" element={<UnionContributionsPage />} />
                   <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro" element={<UnionFinancialsPage />} />

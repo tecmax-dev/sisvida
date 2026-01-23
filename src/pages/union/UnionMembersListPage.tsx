@@ -454,7 +454,7 @@ export default function UnionMembersListPage() {
         )}
       </div>
 
-      {/* TABS - Titulares / Dependentes */}
+      {/* TABS - Titulares / Dependentes / Contracheques */}
       <div className="flex items-center gap-1 border-b">
         <button
           onClick={() => {
@@ -493,6 +493,15 @@ export default function UnionMembersListPage() {
           {activeTab === "dependentes" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
           )}
+        </button>
+        <button
+          onClick={() => navigate("/union/socios/contracheques")}
+          className="px-4 py-2.5 text-sm font-medium transition-colors relative text-muted-foreground hover:text-foreground"
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Contracheques
+          </div>
         </button>
       </div>
 
