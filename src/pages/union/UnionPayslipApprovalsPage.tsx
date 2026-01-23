@@ -479,10 +479,10 @@ export default function UnionPayslipApprovalsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Exibir</span>
                     <Select value={String(itemsPerPage)} onValueChange={(val) => { setItemsPerPage(Number(val)); setCurrentPage(1); }}>
-                      <SelectTrigger className="w-20 h-8 bg-popover">
+                      <SelectTrigger className="w-20 h-8 bg-background border">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-md z-50">
+                      <SelectContent position="popper" sideOffset={4} className="bg-popover border shadow-lg z-[9999]">
                         <SelectItem value="5">5</SelectItem>
                         <SelectItem value="10">10</SelectItem>
                         <SelectItem value="25">25</SelectItem>
