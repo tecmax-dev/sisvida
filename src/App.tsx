@@ -12,6 +12,7 @@ import { Button } from "./components/ui/button";
 import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDashboard";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { UnionBudgetLegacyRedirect } from "@/components/routing/UnionBudgetLegacyRedirect";
+import { GlobalBackButton } from "@/components/layout/GlobalBackButton";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -310,6 +311,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <AuthProvider>
+                <GlobalBackButton />
                 <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
