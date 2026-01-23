@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,11 @@ function GaleriaContent() {
   const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isAutoPlay, setIsAutoPlay] = useState(false);
+  
+  // Swipe gesture state
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
 
   const selectedImage = selectedImageIndex !== null ? photos[selectedImageIndex] : null;
 
@@ -72,19 +77,46 @@ function GaleriaContent() {
     return () => clearInterval(timer);
   }, [isAutoPlay, selectedImageIndex, photos.length]);
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     if (selectedImageIndex === null) return;
     setSelectedImageIndex(selectedImageIndex <= 0 ? photos.length - 1 : selectedImageIndex - 1);
-  };
+  }, [selectedImageIndex, photos.length]);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     if (selectedImageIndex === null) return;
     setSelectedImageIndex(selectedImageIndex >= photos.length - 1 ? 0 : selectedImageIndex + 1);
-  };
+  }, [selectedImageIndex, photos.length]);
 
   const closeViewer = () => {
     setSelectedImageIndex(null);
     setIsAutoPlay(false);
+  };
+
+  // Touch handlers for swipe gestures
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      goToNext();
+    } else if (isRightSwipe) {
+      goToPrevious();
+    }
+    
+    touchStartX.current = null;
+    touchEndX.current = null;
   };
 
   useEffect(() => {
@@ -280,11 +312,17 @@ function GaleriaContent() {
             )}
 
             {selectedImage && (
-              <div className="relative">
+              <div 
+                className="relative touch-pan-y"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <img 
                   src={selectedImage.image_url} 
                   alt={selectedImage.title || "Foto"} 
-                  className="w-full max-h-[70vh] object-contain" 
+                  className="w-full max-h-[70vh] object-contain select-none pointer-events-none" 
+                  draggable={false}
                 />
                 {(selectedImage.title || selectedImage.description) && (
                   <div className="p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
