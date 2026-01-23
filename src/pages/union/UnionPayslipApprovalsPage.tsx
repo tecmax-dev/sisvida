@@ -397,42 +397,55 @@ export default function UnionPayslipApprovalsPage() {
                         {getStatusBadge(request.status)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
+                        <div className="flex items-center justify-end gap-2">
+                          {request.status === 'received' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => openReviewDialog(request)}
+                              className="gap-1"
+                            >
+                              <FileCheck className="h-4 w-4" />
+                              Avaliar
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-md z-50">
-                            {request.attachment_path && (
-                              <DropdownMenuItem onClick={() => handleViewImage(request)} className="cursor-pointer">
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver Contracheque
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-md z-50">
+                              {request.attachment_path && (
+                                <DropdownMenuItem onClick={() => handleViewImage(request)} className="cursor-pointer">
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Ver Contracheque
+                                </DropdownMenuItem>
+                              )}
+                              {request.status === 'received' && (
+                                <DropdownMenuItem onClick={() => openReviewDialog(request)} className="cursor-pointer text-primary">
+                                  <FileCheck className="h-4 w-4 mr-2" />
+                                  Avaliar
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => navigate(`/union/socios/${request.patient_id}`)}
+                                className="cursor-pointer"
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                Ver Sócio
                               </DropdownMenuItem>
-                            )}
-                            {request.status === 'received' && (
-                              <DropdownMenuItem onClick={() => openReviewDialog(request)} className="cursor-pointer text-primary">
-                                <FileCheck className="h-4 w-4 mr-2" />
-                                Revisar
+                              <DropdownMenuItem 
+                                onClick={() => navigate(`/dashboard/patients/${request.patient_id}/contracheques`)}
+                                className="cursor-pointer"
+                              >
+                                <History className="h-4 w-4 mr-2" />
+                                Histórico de Validações
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => navigate(`/union/socios/${request.patient_id}`)}
-                              className="cursor-pointer"
-                            >
-                              <User className="h-4 w-4 mr-2" />
-                              Ver Sócio
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => navigate(`/dashboard/patients/${request.patient_id}/contracheques`)}
-                              className="cursor-pointer"
-                            >
-                              <History className="h-4 w-4 mr-2" />
-                              Histórico de Validações
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
