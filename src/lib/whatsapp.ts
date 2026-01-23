@@ -412,12 +412,6 @@ Cuidados completos para sua saúde bucal
 ✅ *Exames Laboratoriais*
 Realize seus exames com descontos exclusivos
 
-✅ *Telemedicina*
-Consultas online no conforto da sua casa
-
-✅ *Farmácia Popular*
-Medicamentos com preços reduzidos
-
 ✅ *Assistência Jurídica*
 Orientação legal quando precisar
 
