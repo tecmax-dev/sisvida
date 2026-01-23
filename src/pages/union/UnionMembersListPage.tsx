@@ -49,6 +49,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,6 +150,7 @@ export default function UnionMembersListPage() {
   const [page, setPage] = useState(1);
   const [totalMembers, setTotalMembers] = useState(0);
   const [showInactive, setShowInactive] = useState(false);
+  const [cardFilter, setCardFilter] = useState<"all" | "valid" | "expired" | "no-card">("all");
   const [loading, setLoading] = useState(true);
 
   // Tab state
@@ -274,7 +282,9 @@ export default function UnionMembersListPage() {
 
       if (error) throw error;
 
-      const membersWithData = (data || []).map((p: any) => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      let membersWithData = (data || []).map((p: any) => {
         const activeCard = Array.isArray(p.patient_cards)
           ? p.patient_cards.find((c: any) => c.is_active)
           : null;
@@ -290,15 +300,28 @@ export default function UnionMembersListPage() {
         };
       });
 
+      // Apply card filter client-side (since we need to check card dates)
+      if (cardFilter === "valid") {
+        membersWithData = membersWithData.filter((m: any) => 
+          m.card_expires_at && m.card_expires_at >= today
+        );
+      } else if (cardFilter === "expired") {
+        membersWithData = membersWithData.filter((m: any) => 
+          m.card_expires_at && m.card_expires_at < today
+        );
+      } else if (cardFilter === "no-card") {
+        membersWithData = membersWithData.filter((m: any) => !m.card_number);
+      }
+
       setMembers(membersWithData as UnionMember[]);
-      setTotalMembers(count || 0);
+      setTotalMembers(cardFilter === "all" ? (count || 0) : membersWithData.length);
     } catch (error) {
       console.error("Error fetching members:", error);
       toast({ title: "Erro ao carregar sócios", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, debouncedSearch, page, showInactive, toast]);
+  }, [currentClinic, debouncedSearch, page, showInactive, cardFilter, toast]);
 
   const fetchDependents = useCallback(async () => {
     if (!currentClinic) return;
@@ -527,7 +550,27 @@ export default function UnionMembersListPage() {
                 autoFocus
               />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              {activeTab === "titulares" && (
+                <Select 
+                  value={cardFilter} 
+                  onValueChange={(value: "all" | "valid" | "expired" | "no-card") => {
+                    setCardFilter(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px] h-10">
+                    <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Filtrar carteirinha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas carteirinhas</SelectItem>
+                    <SelectItem value="valid">Carteirinhas válidas</SelectItem>
+                    <SelectItem value="expired">Carteirinhas vencidas</SelectItem>
+                    <SelectItem value="no-card">Sem carteirinha</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
                 <Switch
                   id="show-inactive"
