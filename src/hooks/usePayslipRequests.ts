@@ -134,17 +134,24 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
 
       console.log('[payslip] createSignedUrl result', { path, data, error });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's a "not found" error
+        if (error.message?.includes('not found') || error.message?.includes('Object not found')) {
+          throw new Error('Arquivo não encontrado no servidor. O sócio pode precisar reenviar o contracheque.');
+        }
+        throw error;
+      }
+      
       if (!data?.signedUrl) {
-        throw new Error('Link assinado não foi gerado (sem permissão ou arquivo não encontrado).');
+        throw new Error('Arquivo não encontrado ou sem permissão de acesso.');
       }
 
       return data.signedUrl;
     } catch (error: any) {
-      const message = error?.message ?? 'Não foi possível gerar o link do arquivo.';
+      const message = error?.message ?? 'Não foi possível carregar o arquivo.';
       console.error('[payslip] Error getting attachment URL:', message, { path });
       toast({
-        title: 'Erro ao abrir contracheque',
+        title: 'Arquivo não disponível',
         description: message,
         variant: 'destructive',
       });
