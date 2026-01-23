@@ -67,7 +67,7 @@ import { formatCompetence } from "@/lib/competence-format";
 import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import PFContributionDialog from "@/components/contributions/PFContributionDialog";
 import PFBatchContributionDialog from "@/components/contributions/PFBatchContributionDialog";
-import ContributionDetailDialog from "@/components/contributions/ContributionDetailDialog";
+import PFContributionDetailDialog from "@/components/contributions/PFContributionDetailDialog";
 import { BatchGenerateLytexDialog } from "@/components/contributions/BatchGenerateLytexDialog";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
 import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
@@ -897,10 +897,14 @@ export default function MemberContributionsTab() {
           />
 
           {selectedContribution && (
-            <ContributionDetailDialog
+            <PFContributionDetailDialog
               open={viewDialogOpen}
               onOpenChange={setViewDialogOpen}
               contribution={selectedContribution}
+              contributionTypes={contributionTypes}
+              onGenerateInvoice={handleGenerateInvoice}
+              generatingInvoice={generatingInvoice}
+              onRefresh={fetchData}
             />
           )}
         </>
