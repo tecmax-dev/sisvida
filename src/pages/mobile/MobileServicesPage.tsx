@@ -679,8 +679,27 @@ function ConveniosContent() {
 }
 
 // ============ BOLETOS ============
+interface BoletoItem {
+  id: string;
+  competence_month: number;
+  competence_year: number;
+  value: number;
+  due_date: string;
+  status: string;
+  paid_at: string | null;
+  lytex_invoice_url: string | null;
+  lytex_boleto_digitable_line: string | null;
+  lytex_pix_code: string | null;
+  contribution_type_name: string | null;
+}
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
 function BoletosContent() {
-  const [boletos, setBoletos] = useState<any[]>([]);
+  const [boletos, setBoletos] = useState<BoletoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -689,14 +708,107 @@ function BoletosContent() {
     fetchBoletos();
   }, []);
 
+  const normalizeAndCleanCpf = (cpf: string | null | undefined): string => {
+    if (!cpf) return '';
+    return cpf.replace(/\D/g, '');
+  };
+
   const fetchBoletos = async () => {
     try {
-      // Simulated data - in production, fetch from employer_contributions
-      setBoletos([
-        { id: "1", competencia: "Janeiro/2024", valor: 45.00, vencimento: "2024-01-10", status: "paid", pago_em: "2024-01-08" },
-        { id: "2", competencia: "Fevereiro/2024", valor: 45.00, vencimento: "2024-02-10", status: "paid", pago_em: "2024-02-09" },
-        { id: "3", competencia: "Março/2024", valor: 45.00, vencimento: "2024-03-10", status: "pending", linha_digitavel: "23793.38128 60000.000003 00000.000405 1 84340000004500" },
-      ]);
+      const patientId = localStorage.getItem('mobile_patient_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      
+      if (!patientId || !clinicId) {
+        setLoading(false);
+        return;
+      }
+
+      // 1. Get patient's CPF
+      const { data: patientData, error: patientError } = await supabase
+        .from('patients')
+        .select('cpf')
+        .eq('id', patientId)
+        .single();
+
+      if (patientError || !patientData?.cpf) {
+        console.error('Error fetching patient CPF:', patientError);
+        setLoading(false);
+        return;
+      }
+
+      const patientCpfClean = normalizeAndCleanCpf(patientData.cpf);
+      
+      if (!patientCpfClean) {
+        setLoading(false);
+        return;
+      }
+
+      // 2. Find member with matching CPF in the same clinic
+      const { data: membersData, error: membersError } = await supabase
+        .from('members')
+        .select('id, cpf')
+        .eq('clinic_id', clinicId);
+
+      if (membersError) {
+        console.error('Error fetching members:', membersError);
+        setLoading(false);
+        return;
+      }
+
+      // Find matching member by normalized CPF
+      const matchingMember = membersData?.find(
+        (m) => normalizeAndCleanCpf(m.cpf) === patientCpfClean
+      );
+
+      if (!matchingMember) {
+        // No member found with this CPF - no boletos to show
+        setBoletos([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Fetch contributions for this member
+      const { data: contributions, error: contribError } = await supabase
+        .from('employer_contributions')
+        .select(`
+          id,
+          competence_month,
+          competence_year,
+          value,
+          due_date,
+          status,
+          paid_at,
+          lytex_invoice_url,
+          lytex_boleto_digitable_line,
+          lytex_pix_code,
+          contribution_types:contribution_type_id (name)
+        `)
+        .eq('member_id', matchingMember.id)
+        .in('status', ['pending', 'paid', 'overdue'])
+        .order('competence_year', { ascending: false })
+        .order('competence_month', { ascending: false });
+
+      if (contribError) {
+        console.error('Error fetching contributions:', contribError);
+        setLoading(false);
+        return;
+      }
+
+      const formattedBoletos: BoletoItem[] = (contributions || []).map((c: any) => ({
+        id: c.id,
+        competence_month: c.competence_month,
+        competence_year: c.competence_year,
+        value: c.value,
+        due_date: c.due_date,
+        status: c.status,
+        paid_at: c.paid_at,
+        lytex_invoice_url: c.lytex_invoice_url,
+        lytex_boleto_digitable_line: c.lytex_boleto_digitable_line,
+        lytex_pix_code: c.lytex_pix_code,
+        contribution_type_name: c.contribution_types?.name || null,
+      }));
+
+      setBoletos(formattedBoletos);
     } catch (error) {
       console.error("Erro ao buscar boletos:", error);
     } finally {
@@ -704,15 +816,33 @@ function BoletosContent() {
     }
   };
 
-  const handleCopyLinhaDigitavel = (boleto: any) => {
-    navigator.clipboard.writeText(boleto.linha_digitavel);
-    setCopiedId(boleto.id);
-    toast({ title: "Linha digitável copiada!" });
+  const handleCopyCode = (boleto: BoletoItem, type: 'digitable' | 'pix') => {
+    const code = type === 'pix' ? boleto.lytex_pix_code : boleto.lytex_boleto_digitable_line;
+    if (!code) return;
+    
+    navigator.clipboard.writeText(code);
+    setCopiedId(`${boleto.id}-${type}`);
+    toast({ title: type === 'pix' ? "Código PIX copiado!" : "Linha digitável copiada!" });
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(cents / 100);
+  };
+
+  const getCompetencia = (month: number, year: number) => {
+    return `${MONTH_NAMES[month - 1]}/${year}`;
+  };
+
+  const getStatusBadge = (status: string, dueDate: string) => {
+    // Check if actually overdue
+    const isOverdue = new Date(dueDate) < new Date() && status !== 'paid';
+    const displayStatus = isOverdue ? 'overdue' : status;
+    
+    switch (displayStatus) {
       case "paid":
         return <Badge className="bg-emerald-100 text-emerald-800">Pago</Badge>;
       case "pending":
@@ -732,6 +862,17 @@ function BoletosContent() {
     );
   }
 
+  if (boletos.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Nenhum boleto encontrado para seu CPF.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -744,38 +885,78 @@ function BoletosContent() {
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h4 className="font-semibold text-sm">{boleto.competencia}</h4>
+                  <h4 className="font-semibold text-sm">
+                    {getCompetencia(boleto.competence_month, boleto.competence_year)}
+                  </h4>
+                  {boleto.contribution_type_name && (
+                    <p className="text-xs text-muted-foreground">
+                      {boleto.contribution_type_name}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
-                    Vencimento: {format(new Date(boleto.vencimento), "dd/MM/yyyy")}
+                    Vencimento: {format(new Date(boleto.due_date), "dd/MM/yyyy")}
                   </p>
                 </div>
-                {getStatusBadge(boleto.status)}
+                {getStatusBadge(boleto.status, boleto.due_date)}
               </div>
               
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-lg font-bold text-emerald-600">
-                  R$ {boleto.valor.toFixed(2)}
+                  {formatCurrency(boleto.value)}
                 </span>
                 
-                {boleto.status === "paid" ? (
+                {boleto.status === "paid" && boleto.paid_at && (
                   <span className="text-xs text-muted-foreground">
-                    Pago em {format(new Date(boleto.pago_em), "dd/MM/yyyy")}
+                    Pago em {format(new Date(boleto.paid_at), "dd/MM/yyyy")}
                   </span>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCopyLinhaDigitavel(boleto)}
-                    className="text-xs"
-                  >
-                    {copiedId === boleto.id ? (
-                      <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
-                    ) : (
-                      <><Copy className="h-4 w-4 mr-1" /> Copiar código</>
-                    )}
-                  </Button>
                 )}
               </div>
+              
+              {/* Action buttons for pending/overdue */}
+              {boleto.status !== "paid" && (
+                <div className="flex flex-wrap gap-2">
+                  {boleto.lytex_invoice_url && (
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => window.open(boleto.lytex_invoice_url!, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Pagar
+                    </Button>
+                  )}
+                  
+                  {boleto.lytex_boleto_digitable_line && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopyCode(boleto, 'digitable')}
+                      className="text-xs"
+                    >
+                      {copiedId === `${boleto.id}-digitable` ? (
+                        <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
+                      ) : (
+                        <><Copy className="h-4 w-4 mr-1" /> Boleto</>
+                      )}
+                    </Button>
+                  )}
+                  
+                  {boleto.lytex_pix_code && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopyCode(boleto, 'pix')}
+                      className="text-xs"
+                    >
+                      {copiedId === `${boleto.id}-pix` ? (
+                        <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
+                      ) : (
+                        <><Copy className="h-4 w-4 mr-1" /> PIX</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
