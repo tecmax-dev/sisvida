@@ -517,6 +517,9 @@ function ConveniosContent() {
     ? convenios.filter(c => c.category_id === activeCategory)
     : [];
 
+  // Convênios sem categoria
+  const uncategorizedConvenios = convenios.filter(c => !c.category_id);
+
   const getCategoryInfo = (catId: string) => categorias.find(c => c.id === catId);
 
   if (loading) {
@@ -527,27 +530,28 @@ function ConveniosContent() {
     );
   }
 
-  // Se não há categorias, mostrar lista de convênios do app content
-  if (categorias.length === 0 && appConvenios.length > 0) {
+  // Se não há categorias mas tem convênios (com ou sem categoria), mostrar lista direta
+  if (categorias.length === 0 && (convenios.length > 0 || appConvenios.length > 0)) {
+    const allConvenios = [...convenios, ...appConvenios];
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Aproveite descontos exclusivos em nossos parceiros conveniados.
         </p>
         <div className="space-y-3">
-          {appConvenios.map((conv) => (
+          {allConvenios.map((conv) => (
             <Card key={conv.id} className="border shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  {conv.image_url && (
+                  {(conv.image_url || conv.logo_url) && (
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                      <img src={conv.image_url} alt={conv.title} className="w-full h-full object-cover" />
+                      <img src={conv.image_url || conv.logo_url} alt={conv.title || conv.nome} className="w-full h-full object-cover" />
                     </div>
                   )}
                   <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{conv.title}</h4>
-                    {conv.description && (
-                      <p className="text-xs text-muted-foreground">{conv.description}</p>
+                    <h4 className="font-semibold text-sm">{conv.title || conv.nome}</h4>
+                    {(conv.description || conv.descricao) && (
+                      <p className="text-xs text-muted-foreground">{conv.description || conv.descricao}</p>
                     )}
                   </div>
                   <Badge className="bg-emerald-100 text-emerald-700 text-xs shrink-0">
@@ -614,7 +618,8 @@ function ConveniosContent() {
     );
   }
 
-  if (categorias.length === 0) {
+  // Se não há convênios nem no app content
+  if (convenios.length === 0 && appConvenios.length === 0) {
     return (
       <div className="text-center py-8">
         <Building className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
