@@ -530,16 +530,17 @@ function ConveniosContent() {
     );
   }
 
-  // Se não há categorias mas tem convênios (com ou sem categoria), mostrar lista direta
-  if (categorias.length === 0 && (convenios.length > 0 || appConvenios.length > 0)) {
-    const allConvenios = [...convenios, ...appConvenios];
+  // Se há convênios sem categoria, mostrar lista direta primeiro
+  const allUncategorized = [...uncategorizedConvenios, ...appConvenios];
+  
+  if (allUncategorized.length > 0 && !activeCategory) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Aproveite descontos exclusivos em nossos parceiros conveniados.
         </p>
         <div className="space-y-3">
-          {allConvenios.map((conv) => (
+          {allUncategorized.map((conv) => (
             <Card key={conv.id} className="border shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -618,7 +619,7 @@ function ConveniosContent() {
     );
   }
 
-  // Se não há convênios nem no app content
+  // Se não há convênios
   if (convenios.length === 0 && appConvenios.length === 0) {
     return (
       <div className="text-center py-8">
