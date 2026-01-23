@@ -477,32 +477,45 @@ function ConveniosContent() {
       setLoading(true);
       
       const clinicId = localStorage.getItem('mobile_clinic_id');
+      if (!clinicId) {
+        // Sem clínica selecionada no app mobile, não conseguimos filtrar os convênios.
+        setCategorias([]);
+        setConvenios([]);
+        setAppConvenios([]);
+        return;
+      }
       
       // Fetch categories
-      const { data: catData } = await supabase
+      const { data: catData, error: catError } = await supabase
         .from('union_convenio_categories')
         .select('*')
+        .eq('clinic_id', clinicId)
         .eq('is_active', true)
-        .order('order_index');
+        .order('order_index', { ascending: true });
+
+      if (catError) throw catError;
       
       // Fetch convenios from dedicated table
-      const { data: convData } = await supabase
+      const { data: convData, error: convError } = await supabase
         .from('union_convenios')
         .select('*')
+        .eq('clinic_id', clinicId)
         .eq('is_active', true)
-        .order('order_index');
+        .order('order_index', { ascending: true });
+
+      if (convError) throw convError;
 
       // Fetch convenios from app content (if any)
-      if (clinicId) {
-        const { data: appData } = await supabase
-          .from("union_app_content")
-          .select("*")
-          .eq("clinic_id", clinicId)
-          .eq("content_type", "convenio")
-          .eq("is_active", true)
-          .order("order_index", { ascending: true });
-        setAppConvenios(appData || []);
-      }
+      const { data: appData, error: appError } = await supabase
+        .from("union_app_content")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .eq("content_type", "convenio")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (appError) throw appError;
+      setAppConvenios(appData || []);
 
       if (catData) setCategorias(catData);
       if (convData) setConvenios(convData);
