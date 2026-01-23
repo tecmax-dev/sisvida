@@ -311,7 +311,6 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <AuthProvider>
-                <GlobalBackButton />
                 <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
