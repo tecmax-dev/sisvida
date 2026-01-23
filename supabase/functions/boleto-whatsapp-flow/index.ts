@@ -16,7 +16,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 interface IntentAnalysis {
   intent: 'new_boleto' | 'overdue_boleto' | 'check_status' | 'change_value' | 'resend_link' | 
           'help' | 'confirm' | 'deny' | 'cancel' | 'menu' | 'cnpj_input' | 'number_input' | 
-          'date_input' | 'value_input' | 'competence_input' | 'unclear';
+          'date_input' | 'value_input' | 'competence_input' | 'batch_boleto' | 'unclear';
   confidence: number;
   extracted_cnpj?: string;
   extracted_value?: number;
@@ -24,6 +24,16 @@ interface IntentAnalysis {
   extracted_competence?: { month: number; year: number };
   extracted_number?: number;
   humanized_response?: string;
+  batch_items?: BatchBoletoItem[];
+}
+
+// Interface para processamento em lote
+interface BatchBoletoItem {
+  cnpj: string;
+  competence_month: number;
+  competence_year: number;
+  value_cents: number;
+  type?: string;
 }
 
 async function analyzeUserIntent(
@@ -69,6 +79,11 @@ EXEMPLOS DE MENSAGENS E INTENÇÕES:
 - "15/02/2025" / "quinze de fevereiro" → intent: date_input, extracted_date
 - "janeiro/2025" / "01/2025" / "jan 2025" → intent: competence_input, extracted_competence
 - "1" / "2" / "3" (seleção de opção) → intent: number_input, extracted_number
+- MÚLTIPLOS CNPJs com competência e valor em lista → intent: batch_boleto
+  Exemplo: "60.496.539/0001-05 mês 11/2025, mensalidade, valor 91,20" (várias linhas assim)
+
+IMPORTANTE: Se a mensagem contiver MÚLTIPLOS CNPJs com valores, use intent: batch_boleto.
+O fallback irá processar os itens individuais.
 
 Responda APENAS em JSON válido:
 {
@@ -139,9 +154,97 @@ function getStateDescription(state: BoletoState, context: any): string {
   return descriptions[state] || 'Estado desconhecido';
 }
 
+// ==========================================
+// BATCH BOLETO DETECTION
+// Detecta mensagens com múltiplos CNPJs + competência + valor
+// Formato esperado: "CNPJ mês MM/YYYY, tipo, valor X"
+// ==========================================
+function parseBatchBoletoMessage(message: string): BatchBoletoItem[] {
+  const items: BatchBoletoItem[] = [];
+  
+  // Divide mensagem em linhas
+  const lines = message.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  // Padrão: CNPJ (com ou sem formatação) + mês MM/YYYY + opcional tipo + valor
+  // Exemplos:
+  // "60.496.539/0001-05 mês 11/2025, mensalidade, valor 91,20"
+  // "48293454000124 mes 11/2025 mensalidade valor 212,80"
+  const batchRegex = /(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/]?\d{4}[-]?\d{2})\s*(?:m[eê]s)?\s*(\d{1,2})\s*[\/\-]\s*(\d{4})[,\s]*(?:mensalidade|taxa)?[,\s]*(?:valor)?\s*[R$\s]*(\d+(?:[.,]\d{1,2})?)/gi;
+  
+  for (const line of lines) {
+    let match;
+    // Reset regex lastIndex
+    batchRegex.lastIndex = 0;
+    
+    while ((match = batchRegex.exec(line)) !== null) {
+      const cnpj = match[1].replace(/\D/g, '');
+      const month = parseInt(match[2]);
+      const year = parseInt(match[3]);
+      const valueStr = match[4].replace('.', '').replace(',', '.');
+      const valueCents = Math.round(parseFloat(valueStr) * 100);
+      
+      if (cnpj.length === 14 && month >= 1 && month <= 12 && valueCents > 0) {
+        items.push({
+          cnpj,
+          competence_month: month,
+          competence_year: year,
+          value_cents: valueCents,
+          type: 'mensalidade'
+        });
+      }
+    }
+  }
+  
+  // Também tenta detectar quando usuário lista CNPJs um por linha após uma mensagem contexto
+  // Ex: primeira msg: "Preciso dos boletos da mensalidade sindical do mes 11/2025 de:"
+  //     depois: "CNPJ valor X"
+  if (items.length === 0) {
+    // Padrão simplificado: CNPJ + valor (competência já informada antes)
+    const simpleRegex = /(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/]?\d{4}[-]?\d{2})[,\s]*(?:m[eê]s)?\s*(?:(\d{1,2})\s*[\/\-]\s*(\d{4}))?[,\s]*(?:mensalidade|taxa)?[,\s]*(?:valor)?\s*[R$\s]*(\d+(?:[.,]\d{1,2})?)/gi;
+    
+    for (const line of lines) {
+      simpleRegex.lastIndex = 0;
+      let match;
+      
+      while ((match = simpleRegex.exec(line)) !== null) {
+        const cnpj = match[1].replace(/\D/g, '');
+        const month = match[2] ? parseInt(match[2]) : 0;
+        const year = match[3] ? parseInt(match[3]) : 0;
+        const valueStr = match[4].replace('.', '').replace(',', '.');
+        const valueCents = Math.round(parseFloat(valueStr) * 100);
+        
+        if (cnpj.length === 14 && valueCents > 0) {
+          items.push({
+            cnpj,
+            competence_month: month,
+            competence_year: year,
+            value_cents: valueCents,
+            type: 'mensalidade'
+          });
+        }
+      }
+    }
+  }
+  
+  return items;
+}
+
 function fallbackIntentAnalysis(message: string, currentState: BoletoState): IntentAnalysis {
   const text = message.trim().toLowerCase();
   const normalized = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // ==========================================
+  // BATCH DETECTION - Check for multiple CNPJs in message
+  // ==========================================
+  const batchItems = parseBatchBoletoMessage(message);
+  if (batchItems.length >= 1) {
+    console.log(`[boleto-flow] Detected batch boleto request with ${batchItems.length} items`);
+    return { 
+      intent: 'batch_boleto', 
+      confidence: 0.95, 
+      batch_items: batchItems 
+    };
+  }
   
   // Month names for detection
   const monthMap: Record<string, number> = {
@@ -1112,6 +1215,202 @@ async function handleBoletoFlow(
 
   if (intent.intent === 'help') {
     return { response: HUMANIZED_MESSAGES.help };
+  }
+
+  // ==========================================
+  // BATCH BOLETO PROCESSING
+  // Handle multiple CNPJs + competence + values in single message
+  // ==========================================
+  if (intent.intent === 'batch_boleto' && intent.batch_items && intent.batch_items.length > 0) {
+    console.log(`[boleto-flow] Processing batch boleto with ${intent.batch_items.length} items`);
+    
+    await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${intent.batch_items.length} boleto(s)...*\n\nAguarde um momento.`);
+    
+    const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
+    
+    // Get default contribution type (mensalidade sindical)
+    const { data: defaultType } = await supabase
+      .from('contribution_types')
+      .select('id, name')
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true)
+      .ilike('name', '%mensalidade%')
+      .limit(1)
+      .maybeSingle();
+    
+    for (const item of intent.batch_items) {
+      try {
+        // Find employer by CNPJ
+        const { data: employer } = await supabase
+          .from('employers')
+          .select('id, name, cnpj, email, phone')
+          .eq('clinic_id', clinicId)
+          .or(`cnpj.eq.${item.cnpj},cnpj.eq.${formatCnpj(item.cnpj)}`)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (!employer) {
+          results.push({ 
+            success: false, 
+            cnpj: formatCnpj(item.cnpj), 
+            error: 'Empresa não encontrada' 
+          });
+          continue;
+        }
+        
+        // Check if contribution already exists
+        const { data: existingContrib } = await supabase
+          .from('employer_contributions')
+          .select('id, lytex_invoice_url, status')
+          .eq('employer_id', employer.id)
+          .eq('competence_month', item.competence_month)
+          .eq('competence_year', item.competence_year)
+          .neq('status', 'cancelled')
+          .limit(1)
+          .maybeSingle();
+        
+        if (existingContrib?.lytex_invoice_url && existingContrib.status !== 'paid') {
+          // Already has boleto - return existing link
+          results.push({ 
+            success: true, 
+            cnpj: formatCnpj(item.cnpj), 
+            employer_name: employer.name,
+            url: existingContrib.lytex_invoice_url 
+          });
+          continue;
+        }
+        
+        // Calculate due date (10th of next month)
+        const dueDate = calculateBaseDueDate(item.competence_month, item.competence_year);
+        
+        // Create contribution record
+        const { data: newContrib, error: contribError } = await supabase
+          .from('employer_contributions')
+          .insert({
+            employer_id: employer.id,
+            clinic_id: clinicId,
+            contribution_type_id: defaultType?.id || null,
+            competence_month: item.competence_month,
+            competence_year: item.competence_year,
+            value: item.value_cents,
+            due_date: dueDate,
+            status: 'pending',
+            notes: 'Criado via WhatsApp (lote)',
+            origin: 'manual'
+          })
+          .select()
+          .single();
+        
+        if (contribError) {
+          console.error(`[boleto-flow] Error creating contribution for ${item.cnpj}:`, contribError);
+          results.push({ 
+            success: false, 
+            cnpj: formatCnpj(item.cnpj), 
+            employer_name: employer.name,
+            error: 'Erro ao criar contribuição' 
+          });
+          continue;
+        }
+        
+        // Create invoice in Lytex
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const description = `${defaultType?.name || 'Mensalidade Sindical'} - ${monthNames[item.competence_month - 1]}/${item.competence_year}`;
+        
+        try {
+          const invoice = await createLytexInvoice({
+            employer: {
+              cnpj: item.cnpj,
+              name: employer.name,
+              email: employer.email,
+              phone: employer.phone
+            },
+            value: item.value_cents,
+            dueDate: dueDate,
+            description: description,
+            contributionId: newContrib.id
+          });
+          
+          // Update contribution with Lytex data
+          await supabase
+            .from('employer_contributions')
+            .update({
+              lytex_invoice_id: invoice._id,
+              lytex_invoice_url: invoice.invoiceUrl,
+              lytex_boleto_barcode: invoice.boleto?.barCode || null,
+              lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
+              lytex_pix_code: invoice.pix?.code || null,
+              lytex_pix_qrcode: invoice.pix?.qrCode || null,
+            })
+            .eq('id', newContrib.id);
+          
+          results.push({ 
+            success: true, 
+            cnpj: formatCnpj(item.cnpj), 
+            employer_name: employer.name,
+            url: invoice.invoiceUrl 
+          });
+          
+        } catch (lytexError: any) {
+          console.error(`[boleto-flow] Lytex error for ${item.cnpj}:`, lytexError);
+          results.push({ 
+            success: false, 
+            cnpj: formatCnpj(item.cnpj), 
+            employer_name: employer.name,
+            error: lytexError.message || 'Erro ao gerar boleto' 
+          });
+        }
+        
+      } catch (error: any) {
+        console.error(`[boleto-flow] Error processing batch item ${item.cnpj}:`, error);
+        results.push({ 
+          success: false, 
+          cnpj: formatCnpj(item.cnpj), 
+          error: error.message || 'Erro inesperado' 
+        });
+      }
+    }
+    
+    // Build response message
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.filter(r => !r.success).length;
+    
+    let responseMsg = `✅ *Processamento Concluído!*\n\n`;
+    responseMsg += `📊 ${successCount} boleto(s) gerado(s)`;
+    if (errorCount > 0) {
+      responseMsg += ` | ${errorCount} erro(s)`;
+    }
+    responseMsg += `\n\n`;
+    
+    // List successful boletos
+    const successResults = results.filter(r => r.success);
+    if (successResults.length > 0) {
+      responseMsg += `*Boletos Gerados:*\n`;
+      for (const r of successResults) {
+        responseMsg += `\n🏢 *${r.employer_name || r.cnpj}*\n`;
+        responseMsg += `📋 ${r.cnpj}\n`;
+        responseMsg += `🔗 ${r.url}\n`;
+      }
+    }
+    
+    // List errors
+    const errorResults = results.filter(r => !r.success);
+    if (errorResults.length > 0) {
+      responseMsg += `\n*Erros:*\n`;
+      for (const r of errorResults) {
+        responseMsg += `❌ ${r.cnpj}: ${r.error}\n`;
+      }
+    }
+    
+    responseMsg += `\n_Digite MENU para mais opções._`;
+    
+    await logAction(supabase, session.id, clinicId, phone, 'batch_boleto_generated', 
+      { items_count: intent.batch_items.length, success_count: successCount, error_count: errorCount }, 
+      successCount > 0);
+    
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    
+    return { response: responseMsg, newState: 'FINISHED' };
   }
 
   // Handle natural language intents at INIT or SELECT_BOLETO_TYPE
