@@ -19,7 +19,8 @@ import {
   History,
   ExternalLink,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -478,18 +479,25 @@ export default function UnionPayslipApprovalsPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4 pt-4 border-t">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Exibir</span>
-                    <Select value={String(itemsPerPage)} onValueChange={(val) => { setItemsPerPage(Number(val)); setCurrentPage(1); }}>
-                      <SelectTrigger className="w-20 h-8 bg-background border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent position="popper" sideOffset={4} className="bg-popover border shadow-lg z-[9999]">
-                        <SelectItem value="5">5</SelectItem>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="25">25</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 w-20 gap-1">
+                          {itemsPerPage}
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-20 bg-popover border shadow-lg z-[9999]">
+                        {[5, 10, 25, 50, 100].map((size) => (
+                          <DropdownMenuItem 
+                            key={size} 
+                            onClick={() => { setItemsPerPage(size); setCurrentPage(1); }}
+                            className={itemsPerPage === size ? 'bg-accent' : ''}
+                          >
+                            {size}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <span className="text-sm text-muted-foreground">
                       | {startIndex + 1}-{Math.min(endIndex, filteredRequests.length)} de {filteredRequests.length}
                     </span>
