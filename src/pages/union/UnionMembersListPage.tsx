@@ -21,6 +21,7 @@ import {
   Calendar,
   HeartPulse,
   RefreshCw,
+  Receipt,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,7 @@ import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit
 import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointmentLimitEdit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
+import MemberContributionsTab from "@/components/union/MemberContributionsTab";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -131,10 +133,12 @@ export default function UnionMembersListPage() {
     }
   };
 
-  const getInitialTab = (): "titulares" | "dependentes" => {
+  const getInitialTab = (): "titulares" | "dependentes" | "contribuicoes" => {
     try {
       const saved = sessionStorage.getItem(ACTIVE_TAB_KEY);
-      return saved === "dependentes" ? "dependentes" : "titulares";
+      if (saved === "dependentes") return "dependentes";
+      if (saved === "contribuicoes") return "contribuicoes";
+      return "titulares";
     } catch {
       return "titulares";
     }
@@ -154,7 +158,7 @@ export default function UnionMembersListPage() {
   const [loading, setLoading] = useState(true);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"titulares" | "dependentes">(getInitialTab);
+  const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
 
   // Dependents state
   const [dependents, setDependents] = useState<any[]>([]);
@@ -518,6 +522,25 @@ export default function UnionMembersListPage() {
           )}
         </button>
         <button
+          onClick={() => {
+            setActiveTab("contribuicoes");
+            setPage(1);
+          }}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+            activeTab === "contribuicoes"
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Contribuições
+          </div>
+          {activeTab === "contribuicoes" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
+          )}
+        </button>
+        <button
           onClick={() => navigate("/union/socios/contracheques")}
           className="px-4 py-2.5 text-sm font-medium transition-colors relative text-muted-foreground hover:text-foreground"
         >
@@ -528,7 +551,13 @@ export default function UnionMembersListPage() {
         </button>
       </div>
 
-      {/* SEARCH - Primary Focus */}
+      {/* Contributions Tab Content */}
+      {activeTab === "contribuicoes" && (
+        <MemberContributionsTab />
+      )}
+
+      {/* SEARCH - Primary Focus (for titulares and dependentes) */}
+      {activeTab !== "contribuicoes" && (
       <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent shadow-lg">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -592,7 +621,7 @@ export default function UnionMembersListPage() {
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Stats Cards - Compact row (only for Titulares) */}
       {activeTab === "titulares" && (
         <div className="grid grid-cols-4 gap-2">
