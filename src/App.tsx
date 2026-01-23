@@ -516,9 +516,9 @@ const App = () => (
                   <Route path="empresas" element={<UnionEmployersPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
                   <Route path="socios" element={<UnionMembersListPage />} />
-                  <Route path="socios/:id" element={<UnionMemberDetailPage />} />
                   <Route path="socios/novo" element={<PatientEditPage />} />
                   <Route path="socios/contracheques" element={<UnionPayslipApprovalsPage />} />
+                  <Route path="socios/:id" element={<UnionMemberDetailPage />} />
                   <Route path="contribuicoes" element={<UnionContributionsPage />} />
                   <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro" element={<UnionFinancialsPage />} />

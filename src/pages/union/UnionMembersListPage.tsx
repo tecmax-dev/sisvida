@@ -440,11 +440,11 @@ export default function UnionMembersListPage() {
   });
 
   const handleOpenEdit = (member: UnionMember) => {
-    navigate(`/dashboard/patients/${member.id}/edit`);
+    navigate(`/union/socios/${member.id}`);
   };
 
   const handleViewMember = (memberId: string) => {
-    navigate(`/sindicato/socios/${memberId}`);
+    navigate(`/union/socios/${memberId}`);
   };
 
   // Stats
@@ -473,7 +473,7 @@ export default function UnionMembersListPage() {
         {canManageMembers() && (
           <Button
             className="bg-primary hover:bg-primary/90"
-            onClick={() => navigate("/dashboard/patients/new")}
+            onClick={() => navigate("/union/socios/novo")}
           >
             <Plus className="h-4 w-4 mr-2" />
             Novo Sócio
@@ -791,7 +791,7 @@ export default function UnionMembersListPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
-                                navigate(`/dashboard/patients/${member.id}/attachments`)
+                                navigate(`/union/socios/${member.id}?tab=anexos`)
                               }
                             >
                               <Paperclip className="h-4 w-4 mr-2" />
@@ -801,11 +801,11 @@ export default function UnionMembersListPage() {
                               onClick={() => {
                                 if ((member.dependents_count || 0) > 0) {
                                   navigate(
-                                    `/dashboard/patients/${member.id}/edit?tab=dependentes`
+                                    `/union/socios/${member.id}?tab=dependentes`
                                   );
                                 } else {
                                   navigate(
-                                    `/dashboard/patients/${member.id}/edit?tab=dependentes&dependentes=true`
+                                    `/union/socios/${member.id}?tab=dependentes&add=true`
                                   );
                                 }
                               }}
@@ -827,7 +827,7 @@ export default function UnionMembersListPage() {
                 <HeartPulse className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p className="mb-4">Nenhum sócio encontrado</p>
                 {canManageMembers() && (
-                  <Button variant="outline" onClick={() => navigate("/dashboard/patients/new")}>
+                  <Button variant="outline" onClick={() => navigate("/union/socios/novo")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Adicionar sócio
                   </Button>
@@ -933,7 +933,7 @@ export default function UnionMembersListPage() {
                             <button
                               onClick={() =>
                                 navigate(
-                                  `/dashboard/patients/${dep.patient_id}/edit?tab=dependentes&editDependent=${dep.id}`
+                                  `/union/socios/${dep.patient_id}?tab=dependentes&editDependent=${dep.id}`
                                 )
                               }
                               className="font-medium text-sm text-primary hover:underline text-left truncate max-w-[180px] block"
@@ -974,7 +974,7 @@ export default function UnionMembersListPage() {
                       </TableCell>
                       <TableCell className="py-2">
                         <button
-                          onClick={() => navigate(`/dashboard/patients/${dep.patient_id}/edit`)}
+                          onClick={() => navigate(`/union/socios/${dep.patient_id}`)}
                           className="text-xs text-primary hover:underline truncate max-w-[150px] block"
                         >
                           {dep.patient?.name || "—"}
@@ -987,7 +987,7 @@ export default function UnionMembersListPage() {
                           className="h-7 w-7"
                           onClick={() =>
                             navigate(
-                              `/dashboard/patients/${dep.patient_id}/edit?tab=dependentes&editDependent=${dep.id}`
+                              `/union/socios/${dep.patient_id}?tab=dependentes&editDependent=${dep.id}`
                             )
                           }
                         >
