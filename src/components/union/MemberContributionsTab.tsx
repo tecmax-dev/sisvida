@@ -80,6 +80,7 @@ import PFContributionsReportsTab from "@/components/contributions/PFContribution
 import { SendPFContributionWhatsAppDialog } from "@/components/contributions/SendPFContributionWhatsAppDialog";
 import { SendPFContributionEmailDialog } from "@/components/contributions/SendPFContributionEmailDialog";
 import { BatchWhatsAppDialog } from "@/components/contributions/BatchWhatsAppDialog";
+import { BatchPFEmailDialog } from "@/components/contributions/BatchPFEmailDialog";
 
 interface Member {
   id: string;
@@ -187,6 +188,7 @@ export default function MemberContributionsTab() {
   const [sendingContribution, setSendingContribution] = useState<Contribution | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchWhatsappOpen, setBatchWhatsappOpen] = useState(false);
+  const [batchEmailOpen, setBatchEmailOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!currentClinic) return;
@@ -753,6 +755,14 @@ export default function MemberContributionsTab() {
                     <MessageCircle className="h-4 w-4" />
                     Enviar por WhatsApp
                   </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setBatchEmailOpen(true)}
+                    className="gap-2"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Enviar por Email
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -1084,6 +1094,21 @@ export default function MemberContributionsTab() {
             open={batchWhatsappOpen}
             onOpenChange={(open) => {
               setBatchWhatsappOpen(open);
+              if (!open) clearSelection();
+            }}
+            contributions={selectedContributions}
+            clinicId={currentClinic.id}
+            clinicName={currentClinic.name}
+            onComplete={() => {
+              fetchData();
+            }}
+          />
+
+          {/* Batch Email Dialog */}
+          <BatchPFEmailDialog
+            open={batchEmailOpen}
+            onOpenChange={(open) => {
+              setBatchEmailOpen(open);
               if (!open) clearSelection();
             }}
             contributions={selectedContributions}

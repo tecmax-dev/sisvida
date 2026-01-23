@@ -19,6 +19,7 @@ interface BoletoData {
   digitableLine?: string;
   pixCode?: string;
   isAwaitingValue?: boolean;
+  isPF?: boolean; // If true, this is a person (PF) not a company (PJ)
 }
 
 interface SendBoletoEmailRequest {
@@ -46,7 +47,15 @@ const formatCNPJ = (cnpj: string) => {
   if (cleaned.length === 14) {
     return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
   }
+  if (cleaned.length === 11) {
+    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
   return cnpj;
+};
+
+const isPFDocument = (doc: string) => {
+  const cleaned = (doc || "").replace(/\D/g, "");
+  return cleaned.length <= 11 || cleaned === "";
 };
 
 const formatDate = (dateStr: string) => {
@@ -58,6 +67,9 @@ const formatDate = (dateStr: string) => {
 
 const generateBoletoCard = (boleto: BoletoData): string => {
   const competence = `${MONTHS[boleto.competenceMonth - 1]}/${boleto.competenceYear}`;
+  const isPF = boleto.isPF || isPFDocument(boleto.employerCnpj);
+  const entityLabel = isPF ? "Sócio" : "Empresa";
+  const docLabel = isPF ? "CPF" : "CNPJ";
   
   if (boleto.isAwaitingValue) {
     return `
@@ -67,14 +79,18 @@ const generateBoletoCard = (boleto: BoletoData): string => {
         </h3>
         
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          ${boleto.employerName ? `
           <tr>
-            <td style="padding: 8px 0; color: #6b7280; width: 120px;">Empresa:</td>
+            <td style="padding: 8px 0; color: #6b7280; width: 120px;">${entityLabel}:</td>
             <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${boleto.employerName}</td>
           </tr>
+          ` : ""}
+          ${boleto.employerCnpj ? `
           <tr>
-            <td style="padding: 8px 0; color: #6b7280;">CNPJ:</td>
+            <td style="padding: 8px 0; color: #6b7280;">${docLabel}:</td>
             <td style="padding: 8px 0; color: #1f2937;">${formatCNPJ(boleto.employerCnpj)}</td>
           </tr>
+          ` : ""}
           <tr>
             <td style="padding: 8px 0; color: #6b7280;">Vencimento:</td>
             <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${formatDate(boleto.dueDate)}</td>
@@ -115,14 +131,18 @@ const generateBoletoCard = (boleto: BoletoData): string => {
       </h3>
       
       <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        ${boleto.employerName ? `
         <tr>
-          <td style="padding: 8px 0; color: #6b7280; width: 120px;">Empresa:</td>
+          <td style="padding: 8px 0; color: #6b7280; width: 120px;">${entityLabel}:</td>
           <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${boleto.employerName}</td>
         </tr>
+        ` : ""}
+        ${boleto.employerCnpj ? `
         <tr>
-          <td style="padding: 8px 0; color: #6b7280;">CNPJ:</td>
+          <td style="padding: 8px 0; color: #6b7280;">${docLabel}:</td>
           <td style="padding: 8px 0; color: #1f2937;">${formatCNPJ(boleto.employerCnpj)}</td>
         </tr>
+        ` : ""}
         <tr>
           <td style="padding: 8px 0; color: #6b7280;">Vencimento:</td>
           <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${formatDate(boleto.dueDate)}</td>
