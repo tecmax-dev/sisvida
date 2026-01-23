@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'SECMI',
   webDir: 'dist',
   server: {
-    url: 'https://8431f322-a220-4cd0-b920-4d4e96cf05c6.lovableproject.com?forceHideBadge=true',
+    // Use the published web app so the native wrapper always shows the latest version
+    url: 'https://sisvida.lovable.app?forceHideBadge=true',
     cleartext: true
   },
   plugins: {
