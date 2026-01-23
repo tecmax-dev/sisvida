@@ -10,6 +10,7 @@ import illustrationDocumentos from "@/assets/mobile/illustration-documentos.png"
 import illustrationAtendimentos from "@/assets/mobile/illustration-atendimentos.png";
 import illustrationOuvidoria from "@/assets/mobile/illustration-ouvidoria.png";
 import illustrationJuridico from "@/assets/mobile/illustration-juridico.png";
+import illustrationAutorizacoes from "@/assets/mobile/illustration-autorizacoes.png";
 
 export function MobileServiceGrid() {
   const navigate = useNavigate();
@@ -39,6 +40,12 @@ export function MobileServiceGrid() {
       image: illustrationDeclaracoes, 
       label: "Declarações",
       onClick: () => navigate("/app/servicos/declaracoes") 
+    },
+    { 
+      key: "autorizacoes",
+      image: illustrationAutorizacoes, 
+      label: "Autorizações",
+      onClick: () => navigate("/app/autorizacoes") 
     },
     { 
       key: "convenios",
