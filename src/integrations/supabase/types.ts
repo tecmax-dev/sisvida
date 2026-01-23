@@ -6852,6 +6852,89 @@ export type Database = {
           },
         ]
       }
+      patient_payslip_history: {
+        Row: {
+          attachment_path: string
+          attachment_url: string | null
+          card_id: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          new_card_expiry: string | null
+          patient_id: string
+          payslip_request_id: string | null
+          previous_card_expiry: string | null
+          updated_at: string
+          validated_at: string
+          validated_by: string | null
+          validation_notes: string | null
+          validation_status: string
+        }
+        Insert: {
+          attachment_path: string
+          attachment_url?: string | null
+          card_id?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          new_card_expiry?: string | null
+          patient_id: string
+          payslip_request_id?: string | null
+          previous_card_expiry?: string | null
+          updated_at?: string
+          validated_at?: string
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_status: string
+        }
+        Update: {
+          attachment_path?: string
+          attachment_url?: string | null
+          card_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          new_card_expiry?: string | null
+          patient_id?: string
+          payslip_request_id?: string | null
+          previous_card_expiry?: string | null
+          updated_at?: string
+          validated_at?: string
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_payslip_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "patient_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_payslip_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_payslip_history_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_payslip_history_payslip_request_id_fkey"
+            columns: ["payslip_request_id"]
+            isOneToOne: false
+            referencedRelation: "payslip_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_segments: {
         Row: {
           clinic_id: string

@@ -28,6 +28,7 @@ import { usePayslipRequests, PayslipRequest } from '@/hooks/usePayslipRequests';
 import { PayslipImageViewer } from './PayslipImageViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { savePayslipHistory } from '@/hooks/usePatientPayslipHistory';
 
 interface PayslipRequestsListProps {
   clinicId: string;
@@ -74,8 +75,24 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
     setReviewDialogOpen(true);
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!selectedRequest) return;
+    
+    // Save to payslip history
+    if (selectedRequest.attachment_path) {
+      await savePayslipHistory({
+        clinicId,
+        patientId: selectedRequest.patient_id,
+        payslipRequestId: selectedRequest.id,
+        cardId: selectedRequest.card_id,
+        attachmentPath: selectedRequest.attachment_path,
+        validationStatus: 'approved',
+        validationNotes: reviewNotes || undefined,
+        previousCardExpiry: selectedRequest.patient_cards?.expires_at || null,
+        newCardExpiry: newExpiresAt,
+      });
+    }
+    
     reviewRequest({
       requestId: selectedRequest.id,
       status: 'approved',
@@ -100,7 +117,22 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
 
     setIsRejecting(true);
     try {
-      // First update the request status
+      // Save to payslip history
+      if (selectedRequest.attachment_path) {
+        await savePayslipHistory({
+          clinicId,
+          patientId: selectedRequest.patient_id,
+          payslipRequestId: selectedRequest.id,
+          cardId: selectedRequest.card_id,
+          attachmentPath: selectedRequest.attachment_path,
+          validationStatus: 'rejected',
+          validationNotes: reviewNotes,
+          previousCardExpiry: selectedRequest.patient_cards?.expires_at || null,
+          newCardExpiry: null,
+        });
+      }
+
+      // Update the request status
       reviewRequest({
         requestId: selectedRequest.id,
         status: 'rejected',
