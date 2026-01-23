@@ -14,7 +14,10 @@ import {
   User,
   CreditCard,
   Filter,
-  RefreshCw
+  RefreshCw,
+  MoreVertical,
+  History,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +48,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePayslipRequests, PayslipRequest } from '@/hooks/usePayslipRequests';
 import { PayslipImageViewer } from '@/components/patients/PayslipImageViewer';
 import { supabase } from '@/integrations/supabase/client';
@@ -387,31 +397,42 @@ export default function UnionPayslipApprovalsPage() {
                         {getStatusBadge(request.status)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {request.attachment_path && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewImage(request)}
-                              className="gap-1"
-                            >
-                              <Eye className="h-4 w-4" />
-                              Ver
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
                             </Button>
-                          )}
-
-                          {request.status === 'received' && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => openReviewDialog(request)}
-                              className="gap-1"
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-md z-50">
+                            {request.attachment_path && (
+                              <DropdownMenuItem onClick={() => handleViewImage(request)} className="cursor-pointer">
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Contracheque
+                              </DropdownMenuItem>
+                            )}
+                            {request.status === 'received' && (
+                              <DropdownMenuItem onClick={() => openReviewDialog(request)} className="cursor-pointer text-primary">
+                                <FileCheck className="h-4 w-4 mr-2" />
+                                Revisar
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => navigate(`/union/socios/${request.patient_id}`)}
+                              className="cursor-pointer"
                             >
-                              <FileCheck className="h-4 w-4" />
-                              Revisar
-                            </Button>
-                          )}
-                        </div>
+                              <User className="h-4 w-4 mr-2" />
+                              Ver Sócio
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => navigate(`/dashboard/patients/${request.patient_id}/contracheques`)}
+                              className="cursor-pointer"
+                            >
+                              <History className="h-4 w-4 mr-2" />
+                              Histórico de Validações
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
