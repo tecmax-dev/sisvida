@@ -345,53 +345,58 @@ export default function UnionAppContentPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-        <ScrollArea className="w-full whitespace-nowrap">
-          <TabsList className="inline-flex h-12 items-center justify-start gap-1 bg-muted/50 p-1 rounded-lg">
-            {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+        <div className="relative">
+          <ScrollArea className="w-full pb-3">
+            <TabsList className="inline-flex h-auto min-h-[44px] items-center justify-start gap-1 bg-muted/50 p-1.5 rounded-lg flex-nowrap">
+              {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+                <TabsTrigger
+                  key={type}
+                  value={type}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
+                >
+                  {contentTypeIcons[type]}
+                  <span className="hidden sm:inline">{CONTENT_TYPE_LABELS[type]}</span>
+                  <span className="sm:hidden">{CONTENT_TYPE_LABELS[type].split(' ')[0]}</span>
+                  <Badge variant="secondary" className="ml-0.5 h-5 min-w-5 px-1 text-xs">
+                    {allContent?.filter(c => c.content_type === type).length || 0}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+              <div className="w-px h-6 bg-border mx-1.5 shrink-0" />
               <TabsTrigger
-                key={type}
-                value={type}
-                className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                value="ouvidoria"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
               >
-                {contentTypeIcons[type]}
-                <span>{CONTENT_TYPE_LABELS[type]}</span>
-                <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5">
-                  {allContent?.filter(c => c.content_type === type).length || 0}
-                </Badge>
+                <MessageCircle className="h-4 w-4" />
+                <span>Ouvidoria</span>
               </TabsTrigger>
-            ))}
-            <div className="w-px h-6 bg-border mx-2" />
-            <TabsTrigger
-              value="ouvidoria"
-              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>Ouvidoria</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="push"
-              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
-            >
-              <Bell className="h-4 w-4" />
-              <span>Push</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="tabs"
-              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
-            >
-              <Smartphone className="h-4 w-4" />
-              <span>Abas App</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="cct-categories"
-              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
-            >
-              <FileText className="h-4 w-4" />
-              <span>Cat. CCT</span>
-            </TabsTrigger>
-          </TabsList>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+              <TabsTrigger
+                value="push"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
+              >
+                <Bell className="h-4 w-4" />
+                <span>Push</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="tabs"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
+              >
+                <Smartphone className="h-4 w-4" />
+                <span>Abas</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="cct-categories"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Cat. CCT</span>
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" className="h-2" />
+          </ScrollArea>
+          {/* Gradient fade indicator for more tabs */}
+          <div className="absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+        </div>
 
         <TabsContent value="cct-categories" className="mt-6">
           <CctCategoriesManagement />
