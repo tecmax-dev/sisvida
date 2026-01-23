@@ -459,7 +459,7 @@ export default function UnionPayslipApprovalsPage() {
                                 Ver Sócio
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => navigate(`/dashboard/patients/${request.patient_id}/contracheques`)}
+                                onClick={() => navigate(`/union/socios/${request.patient_id}?tab=sindical`)}
                                 className="cursor-pointer"
                               >
                                 <History className="h-4 w-4 mr-2" />

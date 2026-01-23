@@ -455,12 +455,10 @@ export default function UnionMemberDetailPage() {
   });
 
   const handleTabChange = (tab: UnionMemberTab) => {
-    if (tab === 'cadastro' || tab === 'dependentes' || tab === 'sindical') {
+    if (tab === 'cadastro' || tab === 'dependentes' || tab === 'sindical' || tab === 'anexos') {
       setActiveTab(tab);
     } else if (tab === 'carteirinha') {
       openModal('patientCards', { patientId: id, patientName: formData.name });
-    } else if (tab === 'anexos') {
-      navigate(`/dashboard/patients/${id}/attachments`);
     } else if (tab === 'agendamentos') {
       openModal('patientAppointments', { patientId: id, patientName: formData.name });
     }
