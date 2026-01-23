@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,10 @@ import {
   X,
   Images,
   ZoomIn,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
 } from "lucide-react";
 import {
   useUnionAppAlbumPhotos,
@@ -51,7 +55,53 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
   const [uploadProgress, setUploadProgress] = useState(0);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [viewingPhoto, setViewingPhoto] = useState<UnionAppAlbumPhoto | null>(null);
+  const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null);
+  const [isAutoPlay, setIsAutoPlay] = useState(false);
+
+  const currentPhoto = viewingPhotoIndex !== null && photos ? photos[viewingPhotoIndex] : null;
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (!isAutoPlay || viewingPhotoIndex === null || !photos || photos.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setViewingPhotoIndex((prev) => {
+        if (prev === null || !photos) return null;
+        return prev >= photos.length - 1 ? 0 : prev + 1;
+      });
+    }, 3000); // 3 seconds interval
+
+    return () => clearInterval(timer);
+  }, [isAutoPlay, viewingPhotoIndex, photos]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (viewingPhotoIndex === null || !photos) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        goToPrevious();
+      } else if (e.key === "ArrowRight") {
+        goToNext();
+      } else if (e.key === "Escape") {
+        setViewingPhotoIndex(null);
+        setIsAutoPlay(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewingPhotoIndex, photos]);
+
+  const goToPrevious = () => {
+    if (!photos || viewingPhotoIndex === null) return;
+    setViewingPhotoIndex(viewingPhotoIndex <= 0 ? photos.length - 1 : viewingPhotoIndex - 1);
+  };
+
+  const goToNext = () => {
+    if (!photos || viewingPhotoIndex === null) return;
+    setViewingPhotoIndex(viewingPhotoIndex >= photos.length - 1 ? 0 : viewingPhotoIndex + 1);
+  };
 
   const handleUploadPhotos = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +131,6 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
 
       setIsUploading(false);
       setUploadProgress(0);
-      // Reset input
       e.target.value = "";
     },
     [album.id, photos?.length, uploadPhoto, addPhoto]
@@ -92,6 +141,16 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
     await deletePhoto.mutateAsync({ id: deletingPhotoId, albumId: album.id });
     setIsDeleteDialogOpen(false);
     setDeletingPhotoId(null);
+  };
+
+  const openPhotoViewer = (index: number) => {
+    setViewingPhotoIndex(index);
+    setIsAutoPlay(false);
+  };
+
+  const closePhotoViewer = () => {
+    setViewingPhotoIndex(null);
+    setIsAutoPlay(false);
   };
 
   return (
@@ -159,7 +218,7 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
               </div>
             ) : photos && photos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[50vh] overflow-y-auto p-1">
-                {photos.map((photo) => (
+                {photos.map((photo, index) => (
                   <div
                     key={photo.id}
                     className="relative group aspect-square rounded-lg overflow-hidden bg-muted"
@@ -175,7 +234,7 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
                         variant="secondary"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setViewingPhoto(photo)}
+                        onClick={() => openPhotoViewer(index)}
                       >
                         <ZoomIn className="h-4 w-4" />
                       </Button>
@@ -229,23 +288,98 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Photo Viewer */}
-      <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/90">
+      {/* Photo Viewer with Navigation */}
+      <Dialog open={viewingPhotoIndex !== null} onOpenChange={closePhotoViewer}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95">
+          {/* Close Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 z-10 text-white hover:bg-white/20"
-            onClick={() => setViewingPhoto(null)}
+            className="absolute top-2 right-2 z-20 text-white hover:bg-white/20"
+            onClick={closePhotoViewer}
           >
             <X className="h-5 w-5" />
           </Button>
-          {viewingPhoto && (
-            <img
-              src={viewingPhoto.image_url}
-              alt={viewingPhoto.title || "Foto"}
-              className="w-full h-auto max-h-[80vh] object-contain"
-            />
+
+          {/* Photo Counter */}
+          {photos && photos.length > 1 && (
+            <div className="absolute top-3 left-3 z-20">
+              <Badge variant="secondary" className="bg-black/60 text-white border-0">
+                {(viewingPhotoIndex ?? 0) + 1} / {photos.length}
+              </Badge>
+            </div>
+          )}
+
+          {/* Auto-play Button */}
+          {photos && photos.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-12 z-20 text-white hover:bg-white/20"
+              onClick={() => setIsAutoPlay(!isAutoPlay)}
+            >
+              {isAutoPlay ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+          )}
+
+          {/* Previous Button */}
+          {photos && photos.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/20 h-12 w-12"
+              onClick={goToPrevious}
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </Button>
+          )}
+
+          {/* Next Button */}
+          {photos && photos.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/20 h-12 w-12"
+              onClick={goToNext}
+            >
+              <ChevronRight className="h-8 w-8" />
+            </Button>
+          )}
+
+          {/* Photo */}
+          {currentPhoto && (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <img
+                src={currentPhoto.image_url}
+                alt={currentPhoto.title || "Foto"}
+                className="w-full h-auto max-h-[80vh] object-contain"
+              />
+            </div>
+          )}
+
+          {/* Photo Info */}
+          {currentPhoto && (currentPhoto.title || currentPhoto.description) && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white">
+              {currentPhoto.title && <h4 className="font-semibold">{currentPhoto.title}</h4>}
+              {currentPhoto.description && (
+                <p className="text-sm text-white/80 mt-1">{currentPhoto.description}</p>
+              )}
+            </div>
+          )}
+
+          {/* Dots Indicator */}
+          {photos && photos.length > 1 && photos.length <= 10 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {photos.map((_, idx) => (
+                <button
+                  key={idx}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === viewingPhotoIndex ? "bg-white w-4" : "bg-white/50"
+                  }`}
+                  onClick={() => setViewingPhotoIndex(idx)}
+                />
+              ))}
+            </div>
           )}
         </DialogContent>
       </Dialog>
