@@ -17,7 +17,9 @@ import {
   RefreshCw,
   MoreVertical,
   History,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,6 +76,8 @@ export default function UnionPayslipApprovalsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
@@ -226,6 +230,23 @@ export default function UnionPayslipApprovalsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRequests = filteredRequests.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
   // Stats
   const pendingCount = (requests || []).filter(r => r.status === 'pending').length;
   const receivedCount = (requests || []).filter(r => r.status === 'received').length;
@@ -309,13 +330,13 @@ export default function UnionPayslipApprovalsPage() {
                 <Input
                   placeholder="Buscar por nome ou carteirinha..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-9"
                 />
               </div>
             </div>
             <div className="w-full sm:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filtrar status" />
@@ -367,7 +388,7 @@ export default function UnionPayslipApprovalsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.map((request) => (
+                  {paginatedRequests.map((request) => (
                     <TableRow key={request.id} className={request.status === 'received' ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}>
                       <TableCell>
                         <button 
@@ -451,6 +472,50 @@ export default function UnionPayslipApprovalsPage() {
                   ))}
                 </TableBody>
               </Table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Exibindo {startIndex + 1}-{Math.min(endIndex, filteredRequests.length)} de {filteredRequests.length} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="gap-1"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          className="w-8 h-8 p-0"
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="gap-1"
+                    >
+                      Próximo
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
