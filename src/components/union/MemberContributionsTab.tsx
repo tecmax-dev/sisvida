@@ -55,6 +55,8 @@ import {
   DollarSign,
   LayoutDashboard,
   List,
+  MessageCircle,
+  Mail,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -72,6 +74,8 @@ import { BatchGenerateLytexDialog } from "@/components/contributions/BatchGenera
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
 import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
 import PFContributionsReportsTab from "@/components/contributions/PFContributionsReportsTab";
+import { SendPFContributionWhatsAppDialog } from "@/components/contributions/SendPFContributionWhatsAppDialog";
+import { SendPFContributionEmailDialog } from "@/components/contributions/SendPFContributionEmailDialog";
 
 interface Member {
   id: string;
@@ -174,6 +178,9 @@ export default function MemberContributionsTab() {
   const [batchGenerateLytexOpen, setBatchGenerateLytexOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [sendingContribution, setSendingContribution] = useState<Contribution | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!currentClinic) return;
@@ -802,6 +809,50 @@ export default function MemberContributionsTab() {
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
+
+                              {/* WhatsApp Button */}
+                              {contribution.lytex_invoice_url && contribution.status !== "cancelled" && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSendingContribution(contribution);
+                                          setWhatsappDialogOpen(true);
+                                        }}
+                                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                      >
+                                        <MessageCircle className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Enviar por WhatsApp</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+
+                              {/* Email Button */}
+                              {contribution.lytex_invoice_url && contribution.status !== "cancelled" && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSendingContribution(contribution);
+                                          setEmailDialogOpen(true);
+                                        }}
+                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      >
+                                        <Mail className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Enviar por Email</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -907,6 +958,24 @@ export default function MemberContributionsTab() {
               onRefresh={fetchData}
             />
           )}
+
+          {/* WhatsApp Dialog */}
+          <SendPFContributionWhatsAppDialog
+            open={whatsappDialogOpen}
+            onOpenChange={setWhatsappDialogOpen}
+            contribution={sendingContribution}
+            clinicId={currentClinic.id}
+            clinicName={currentClinic.name}
+          />
+
+          {/* Email Dialog */}
+          <SendPFContributionEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            contribution={sendingContribution}
+            clinicId={currentClinic.id}
+            clinicName={currentClinic.name}
+          />
         </>
       )}
     </div>
