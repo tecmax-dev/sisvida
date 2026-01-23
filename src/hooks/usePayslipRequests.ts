@@ -127,26 +127,31 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
 
   const getAttachmentUrl = async (path: string): Promise<string | null> => {
     try {
-      console.log('[payslip] createSignedUrl start', { path });
-      const { data, error } = await supabase.storage
-        .from('contra-cheques')
-        .createSignedUrl(path, 3600); // 1 hour
-
-      console.log('[payslip] createSignedUrl result', { path, data, error });
+      const { data, error } = await supabase.functions.invoke('get-payslip-signed-url', {
+        body: { path },
+      });
 
       if (error) {
-        // Check if it's a "not found" error
-        if (error.message?.includes('not found') || error.message?.includes('Object not found')) {
-          throw new Error('Arquivo não encontrado no servidor. O sócio pode precisar reenviar o contracheque.');
+        const ctx = (error as any)?.context;
+        let msg = (error as any)?.message || 'Não foi possível carregar o arquivo.';
+        const body = ctx?.body;
+        if (body) {
+          try {
+            const parsed = typeof body === 'string' ? JSON.parse(body) : body;
+            msg = parsed?.error || msg;
+          } catch {
+            // ignore
+          }
         }
-        throw error;
+        throw new Error(msg);
       }
-      
-      if (!data?.signedUrl) {
+
+      const signedUrl = (data as any)?.signedUrl as string | undefined;
+      if (!signedUrl) {
         throw new Error('Arquivo não encontrado ou sem permissão de acesso.');
       }
 
-      return data.signedUrl;
+      return signedUrl;
     } catch (error: any) {
       const message = error?.message ?? 'Não foi possível carregar o arquivo.';
       console.error('[payslip] Error getting attachment URL:', message, { path });
