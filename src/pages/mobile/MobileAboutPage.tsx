@@ -1,11 +1,36 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Building2, Globe, Phone, Mail, MapPin } from "lucide-react";
+import { ArrowLeft, Target, Eye, Award, Phone, Mail, MapPin, Globe, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 
 const APP_VERSION = "1.0.0";
 
 export default function MobileAboutPage() {
   const navigate = useNavigate();
+
+  const principles = [
+    {
+      icon: Target,
+      title: "Missão",
+      description: "Representar, defender e promover os interesses dos trabalhadores do comércio, lutando por melhores condições de trabalho, salários dignos e justiça social.",
+      color: "text-rose-500",
+      bgColor: "bg-rose-100"
+    },
+    {
+      icon: Eye,
+      title: "Visão",
+      description: "Ser reconhecido como o sindicato mais atuante e eficaz na defesa dos comerciários, promovendo o desenvolvimento sustentável da categoria.",
+      color: "text-blue-500",
+      bgColor: "bg-blue-100"
+    },
+    {
+      icon: Award,
+      title: "Valores",
+      description: "Transparência, ética, solidariedade, democracia participativa e compromisso inabalável com a justiça social e os direitos trabalhistas.",
+      color: "text-amber-500",
+      bgColor: "bg-amber-100"
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -14,95 +39,125 @@ export default function MobileAboutPage() {
         <button onClick={() => navigate(-1)} className="p-1">
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-lg font-semibold">Sobre</h1>
+        <h1 className="text-lg font-semibold">Sobre Nós</h1>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Logo and App Info */}
-        <div className="text-center py-6">
-          <div className="w-24 h-24 bg-emerald-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
-            <img 
-              src="/logo-sindicato.png" 
-              alt="SECMI" 
-              className="w-16 h-16 object-contain"
-              onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
-            />
+      <div className="flex-1 overflow-y-auto">
+        {/* Nossa História */}
+        <section className="p-4 space-y-4">
+          <h2 className="text-xl font-bold text-foreground">Nossa História</h2>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Fundado em 1937, o Sindicato dos Comerciários de Ilhéus e Região (SECMI) representa os 
+              interesses dos trabalhadores do comércio há mais de 88 anos.
+            </p>
+            
+            <div className="w-full h-40 bg-emerald-100 rounded-xl flex items-center justify-center overflow-hidden">
+              <Users className="h-16 w-16 text-emerald-600" />
+            </div>
+            
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Nossa missão é defender os direitos trabalhistas, promover melhorias nas condições de 
+              trabalho e oferecer benefícios que melhorem a qualidade de vida dos associados.
+            </p>
+            
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Atuamos em diversas frentes, desde negociações coletivas até a oferta de serviços de 
+              saúde, educação e assistência jurídica.
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-foreground">SECMI</h2>
-          <p className="text-sm text-muted-foreground">Sindicato dos Empregados no Comércio</p>
-          <p className="text-xs text-muted-foreground mt-2">Versão {APP_VERSION}</p>
-        </div>
+        </section>
 
-        <Separator />
+        <Separator className="mx-4" />
 
-        {/* About */}
-        <div>
-          <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-emerald-600" />
-            Sobre o Sindicato
-          </h3>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            O SECMI - Sindicato dos Empregados no Comércio é uma entidade sindical que representa 
-            e defende os interesses dos trabalhadores do comércio. Há décadas trabalhando em prol 
-            da categoria, oferecemos diversos benefícios e serviços aos nossos associados.
-          </p>
-        </div>
+        {/* Nossos Princípios */}
+        <section className="p-4 space-y-4">
+          <h2 className="text-xl font-bold text-foreground text-center">Nossos Princípios</h2>
+          
+          <div className="grid gap-4">
+            {principles.map((principle, index) => (
+              <Card key={index} className="border-0 shadow-sm">
+                <CardContent className="p-4 text-center space-y-3">
+                  <div className={`w-12 h-12 ${principle.bgColor} rounded-full flex items-center justify-center mx-auto`}>
+                    <principle.icon className={`h-6 w-6 ${principle.color}`} />
+                  </div>
+                  <h3 className="font-semibold text-foreground">{principle.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {principle.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
 
-        <Separator />
+        <Separator className="mx-4" />
 
-        {/* Contact Info */}
-        <div>
-          <h3 className="font-semibold text-foreground mb-3">Contato</h3>
+        {/* Contato */}
+        <section className="p-4 space-y-4">
+          <h2 className="text-xl font-bold text-foreground">Contato</h2>
+          
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-emerald-600 mt-0.5" />
+              <MapPin className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">Endereço</p>
                 <p className="text-sm text-muted-foreground">
                   Rua Exemplo, 123 - Centro<br />
-                  Cidade - BA, 12345-678
+                  Ilhéus - BA, 45650-000
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Phone className="h-5 w-5 text-emerald-600" />
+              <Phone className="h-5 w-5 text-emerald-600 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">Telefone</p>
-                <p className="text-sm text-muted-foreground">(73) 9999-9999</p>
+                <p className="text-sm text-muted-foreground">(73) 3231-0000</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-emerald-600" />
+              <Mail className="h-5 w-5 text-emerald-600 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">E-mail</p>
                 <p className="text-sm text-muted-foreground">contato@secmi.org.br</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Globe className="h-5 w-5 text-emerald-600" />
+              <Globe className="h-5 w-5 text-emerald-600 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">Website</p>
                 <p className="text-sm text-muted-foreground">www.secmi.org.br</p>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <Separator />
+        <Separator className="mx-4" />
 
-        {/* Developer */}
-        <div className="text-center py-4">
-          <p className="text-xs text-muted-foreground">
-            Desenvolvido por
-          </p>
-          <p className="text-sm font-medium text-foreground">
-            I & B Tecnologia
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            © 2026 Todos os direitos reservados
-          </p>
-        </div>
+        {/* App Info & Developer */}
+        <section className="p-4 pb-8 text-center space-y-4">
+          <div>
+            <div className="w-16 h-16 bg-emerald-100 rounded-xl mx-auto flex items-center justify-center mb-2">
+              <img 
+                src="/logo-sindicato.png" 
+                alt="SECMI" 
+                className="w-10 h-10 object-contain"
+                onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Versão {APP_VERSION}</p>
+          </div>
+          
+          <div>
+            <p className="text-xs text-muted-foreground">Desenvolvido por</p>
+            <p className="text-sm font-medium text-foreground">I & B Tecnologia</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              © 2026 Todos os direitos reservados
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );
