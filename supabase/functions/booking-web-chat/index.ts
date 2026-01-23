@@ -545,10 +545,9 @@ serve(async (req) => {
         if (patientCard) {
           // Check if card is expired
           if (patientCard.expires_at && new Date(patientCard.expires_at) < new Date()) {
-            const expDate = new Date(patientCard.expires_at).toLocaleDateString("pt-BR");
             return new Response(
               JSON.stringify({
-                response: `Sua carteirinha (${patientCard.card_number}) expirou em ${expDate}. Por favor, renove para poder agendar.`,
+                response: `Sua carteirinha (${patientCard.card_number}) está vencida. Por favor, renove para poder agendar.`,
                 state: session.state,
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -613,10 +612,9 @@ serve(async (req) => {
         if (dependent) {
           // Check if dependent card is expired
           if (dependent.card_expires_at && new Date(dependent.card_expires_at) < new Date()) {
-            const expDate = new Date(dependent.card_expires_at).toLocaleDateString("pt-BR");
             return new Response(
               JSON.stringify({
-                response: `A carteirinha do dependente (${dependent.card_number}) expirou em ${expDate}. Por favor, renove para poder agendar.`,
+                response: `A carteirinha do dependente (${dependent.card_number}) está vencida. Por favor, renove para poder agendar.`,
                 state: session.state,
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -731,11 +729,9 @@ serve(async (req) => {
       });
       const cardRow = Array.isArray(cardData) ? cardData[0] : cardData;
       if (cardRow?.card_number && cardRow.is_valid === false) {
-        const expDate = new Date(cardRow.expires_at);
-        const formattedExpDate = expDate.toLocaleDateString("pt-BR");
         return new Response(
           JSON.stringify({
-            response: `Sua carteirinha (${cardRow.card_number}) expirou em ${formattedExpDate}. Por favor, renove para poder agendar.`,
+            response: `Sua carteirinha (${cardRow.card_number}) está vencida. Por favor, renove para poder agendar.`,
             state: session.state,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
