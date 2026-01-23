@@ -18,12 +18,10 @@ import {
   Calendar,
   User,
   Clock,
-  AlertCircle,
   CheckCircle2,
   XCircle,
   ExternalLink,
   Loader2,
-  QrCode,
 } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -127,7 +125,6 @@ export default function MobileAuthorizationsPage() {
   };
 
   const getAuthStatus = (auth: Authorization) => {
-    const now = new Date();
     const validUntil = parseISO(auth.valid_until);
     
     if (auth.status === "revoked") {
@@ -144,11 +141,6 @@ export default function MobileAuthorizationsPage() {
   const isExpiredOrRevoked = (auth: Authorization) => {
     const status = getAuthStatus(auth);
     return status.label !== "Válida";
-  };
-
-  const getValidationUrl = (auth: Authorization) => {
-    const slug = auth.clinic?.slug || 'sindicato';
-    return `${window.location.origin}/autorizacao/${slug}/${auth.validation_hash}`;
   };
 
   const activeAuthorizations = authorizations.filter(a => !isExpiredOrRevoked(a));
@@ -254,7 +246,6 @@ export default function MobileAuthorizationsPage() {
           {selectedAuth && (
             <AuthorizationDetail
               authorization={selectedAuth}
-              onClose={() => setSelectedAuth(null)}
             />
           )}
         </DialogContent>
@@ -332,10 +323,9 @@ function AuthorizationCard({ authorization, onClick, disabled }: AuthorizationCa
 
 interface AuthorizationDetailProps {
   authorization: Authorization;
-  onClose: () => void;
 }
 
-function AuthorizationDetail({ authorization, onClose }: AuthorizationDetailProps) {
+function AuthorizationDetail({ authorization }: AuthorizationDetailProps) {
   const status = getStatusInfo(authorization);
   const StatusIcon = status.icon;
   const validationUrl = getValidationUrlForAuth(authorization);
@@ -367,7 +357,7 @@ function AuthorizationDetail({ authorization, onClose }: AuthorizationDetailProp
           value={validationUrl}
           size={150}
           level="M"
-          includeMargin={true}
+          marginSize={4}
         />
       </div>
 
@@ -442,7 +432,6 @@ function AuthorizationDetail({ authorization, onClose }: AuthorizationDetailProp
 }
 
 function getStatusInfo(authorization: Authorization) {
-  const now = new Date();
   const validUntil = parseISO(authorization.valid_until);
   
   if (authorization.status === "revoked") {
