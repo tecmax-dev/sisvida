@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CreditCard, Plus, Loader2, FileImage } from 'lucide-react';
+import { CreditCard, Plus, Loader2, FileImage, History } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { usePatientCards, PatientCard } from '@/hooks/usePatientCards';
 import { PatientCardView } from '@/components/patients/PatientCardView';
 import { PatientCardDialog } from '@/components/patients/PatientCardDialog';
 import { PayslipRequestsList } from '@/components/patients/PayslipRequestsList';
+import { PatientPayslipHistory } from '@/components/patients/PatientPayslipHistory';
 
 interface PatientCardsModalProps {
   open: boolean;
@@ -86,7 +87,7 @@ export function PatientCardsModal({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="carteirinha" className="gap-2">
                 <CreditCard className="h-4 w-4" />
                 Carteirinha
@@ -94,6 +95,10 @@ export function PatientCardsModal({
               <TabsTrigger value="contracheques" className="gap-2">
                 <FileImage className="h-4 w-4" />
                 Contracheques
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="gap-2">
+                <History className="h-4 w-4" />
+                Histórico
               </TabsTrigger>
             </TabsList>
 
@@ -153,6 +158,15 @@ export function PatientCardsModal({
             <TabsContent value="contracheques" className="mt-4">
               {currentClinic && (
                 <PayslipRequestsList 
+                  clinicId={currentClinic.id} 
+                  patientId={patientId} 
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="historico" className="mt-4">
+              {currentClinic && (
+                <PatientPayslipHistory 
                   clinicId={currentClinic.id} 
                   patientId={patientId} 
                 />
