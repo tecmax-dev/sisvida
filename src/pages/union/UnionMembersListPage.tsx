@@ -71,6 +71,7 @@ import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointm
 import { usePermissions } from "@/hooks/usePermissions";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import MemberContributionsTab from "@/components/union/MemberContributionsTab";
+import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAppDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -156,6 +157,10 @@ export default function UnionMembersListPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [cardFilter, setCardFilter] = useState<"all" | "valid" | "expired" | "no-card">("all");
   const [loading, setLoading] = useState(true);
+
+  // Welcome message dialog state
+  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
+  const [selectedMemberForWelcome, setSelectedMemberForWelcome] = useState<UnionMember | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -815,6 +820,16 @@ export default function UnionMembersListPage() {
                                 ? `Dependentes (${member.dependents_count})`
                                 : "Novo dependente"}
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedMemberForWelcome(member);
+                                setWelcomeDialogOpen(true);
+                              }}
+                              className="text-green-600"
+                            >
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Enviar Boas-Vindas
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1059,6 +1074,16 @@ export default function UnionMembersListPage() {
           )}
         </Card>
       )}
+
+      {/* Welcome WhatsApp Dialog */}
+      <SendWelcomeWhatsAppDialog
+        open={welcomeDialogOpen}
+        onOpenChange={setWelcomeDialogOpen}
+        member={selectedMemberForWelcome}
+        clinicId={currentClinic?.id || ""}
+        entityName={currentClinic?.name || "Sindicato"}
+        appUrl={`${window.location.origin}/m`}
+      />
     </div>
   );
 }
