@@ -221,6 +221,7 @@ const MobileAboutPage = lazy(() => import("./pages/mobile/MobileAboutPage"));
 const MobileFiliacaoPage = lazy(() => import("./pages/mobile/MobileFiliacaoPage"));
 const MobileLegalBookingPage = lazy(() => import("./pages/mobile/MobileLegalBookingPage"));
 const MobileLegalAppointmentsPage = lazy(() => import("./pages/mobile/MobileLegalAppointmentsPage"));
+const MobileAuthorizationsPage = lazy(() => import("./pages/mobile/MobileAuthorizationsPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -581,6 +582,7 @@ const App = () => (
                   <Route path="sobre" element={<MobileAboutPage />} />
                   <Route path="filiacao" element={<MobileFiliacaoPage />} />
                   <Route path="agendar-juridico" element={<MobileLegalBookingPage />} />
+                  <Route path="autorizacoes" element={<MobileAuthorizationsPage />} />
                   {/* Alias para evitar 404 por diferença de nomenclatura */}
                   <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
                 </Route>
