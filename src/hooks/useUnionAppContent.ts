@@ -3,6 +3,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
+function getErrorMessage(err: unknown): string {
+  if (!err) return "Erro desconhecido";
+  if (typeof err === "string") return err;
+
+  // Supabase PostgrestError / StorageError shapes
+  const anyErr = err as any;
+  const message = typeof anyErr?.message === "string" ? anyErr.message : undefined;
+  const details = typeof anyErr?.details === "string" ? anyErr.details : undefined;
+  const hint = typeof anyErr?.hint === "string" ? anyErr.hint : undefined;
+  const code = typeof anyErr?.code === "string" ? anyErr.code : undefined;
+
+  const parts = [
+    message,
+    code ? `código: ${code}` : undefined,
+    details ? `detalhes: ${details}` : undefined,
+    hint ? `dica: ${hint}` : undefined,
+  ].filter(Boolean);
+
+  return parts.join(" • ") || "Erro desconhecido";
+}
+
 export type ContentType = 'banner' | 'convenio' | 'convencao' | 'declaracao' | 'diretoria' | 'documento' | 'galeria' | 'jornal' | 'radio' | 'video' | 'faq' | 'atendimento' | 'sobre';
 
 export interface UnionAppContent {
@@ -129,7 +150,7 @@ export function useCreateUnionAppContent() {
       console.error("Error creating content:", error);
       toast({
         title: "Erro",
-        description: "Erro ao criar conteúdo",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -176,7 +197,7 @@ export function useUpdateUnionAppContent() {
       console.error("Error updating content:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar conteúdo",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -207,7 +228,7 @@ export function useDeleteUnionAppContent() {
       console.error("Error deleting content:", error);
       toast({
         title: "Erro",
-        description: "Erro ao remover conteúdo",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -249,11 +270,11 @@ export function useUploadContentFile() {
 
       return urlData.publicUrl;
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       console.error("Error uploading file:", error);
       toast({
         title: "Erro no upload",
-        description: error.message || "Erro ao fazer upload do arquivo",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },
