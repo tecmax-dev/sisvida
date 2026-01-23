@@ -227,10 +227,10 @@ function GaleriaContent() {
 
         {/* Image Preview Dialog with Navigation */}
         <Dialog open={selectedImageIndex !== null} onOpenChange={closeViewer}>
-          <DialogContent className="max-w-md p-0 overflow-hidden bg-black/95">
+          <DialogContent className="max-w-md p-0 overflow-visible bg-black/95 [&>button]:hidden">
             {/* Counter */}
             {photos.length > 1 && (
-              <div className="absolute top-3 left-3 z-20">
+              <div className="absolute top-3 left-3 z-50">
                 <Badge variant="secondary" className="bg-black/60 text-white border-0">
                   {(selectedImageIndex ?? 0) + 1} / {photos.length}
                 </Badge>
@@ -242,39 +242,45 @@ function GaleriaContent() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 z-20 text-white hover:bg-white/20"
+                className="absolute top-2 right-2 z-50 text-white hover:bg-white/20 bg-black/40"
                 onClick={() => setIsAutoPlay(!isAutoPlay)}
               >
                 {isAutoPlay ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
               </Button>
             )}
 
-            {/* Previous Button */}
+            {/* Previous Button - OUTSIDE content flow with higher z-index */}
             {photos.length > 1 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute left-1 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/20 h-10 w-10"
-                onClick={goToPrevious}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-50 text-white bg-black/50 hover:bg-black/70 h-12 w-12 rounded-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPrevious();
+                }}
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-8 w-8" />
               </Button>
             )}
 
-            {/* Next Button */}
+            {/* Next Button - OUTSIDE content flow with higher z-index */}
             {photos.length > 1 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/20 h-10 w-10"
-                onClick={goToNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-50 text-white bg-black/50 hover:bg-black/70 h-12 w-12 rounded-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNext();
+                }}
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-8 w-8" />
               </Button>
             )}
 
             {selectedImage && (
-              <>
+              <div className="relative">
                 <img 
                   src={selectedImage.image_url} 
                   alt={selectedImage.title || "Foto"} 
@@ -288,17 +294,17 @@ function GaleriaContent() {
                     )}
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Dots Indicator */}
             {photos.length > 1 && photos.length <= 10 && (
-              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2">
                 {photos.map((_, idx) => (
                   <button
                     key={idx}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      idx === selectedImageIndex ? "bg-white w-4" : "bg-white/50"
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      idx === selectedImageIndex ? "bg-white w-5" : "bg-white/50"
                     }`}
                     onClick={() => setSelectedImageIndex(idx)}
                   />
