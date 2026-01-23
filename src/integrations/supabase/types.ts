@@ -10205,6 +10205,88 @@ export type Database = {
           },
         ]
       }
+      union_app_album_photos: {
+        Row: {
+          album_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string
+          order_index: number
+          title: string | null
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url: string
+          order_index?: number
+          title?: string | null
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+          order_index?: number
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_app_album_photos_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "union_app_albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_app_albums: {
+        Row: {
+          clinic_id: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          order_index: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_app_albums_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_app_content: {
         Row: {
           cct_category_id: string | null

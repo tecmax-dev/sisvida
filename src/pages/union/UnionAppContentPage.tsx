@@ -80,6 +80,7 @@ import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTa
 import { MobileAppTabsManagement } from "@/components/union/MobileAppTabsManagement";
 import { CctCategoriesManagement } from "@/components/union/CctCategoriesManagement";
 import { UnionContentList } from "@/components/union/UnionContentList";
+import { AlbumManagementTab } from "@/components/union/AlbumManagementTab";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployerCategory {
@@ -400,6 +401,8 @@ export default function UnionAppContentPage() {
           <TabsContent key={type} value={type} className="mt-6">
             {type === "convenio" ? (
               <ConveniosManagementTab />
+            ) : type === "galeria" ? (
+              <AlbumManagementTab />
             ) : (
               <UnionContentList
                 content={filteredContent}

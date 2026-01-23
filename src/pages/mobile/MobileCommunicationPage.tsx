@@ -23,6 +23,7 @@ import {
   Calendar,
   Eye,
   ChevronRight,
+  ChevronLeft,
   Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -44,17 +45,20 @@ const mediaTypes: MediaConfig[] = [
   { id: "videos", title: "Vídeos", icon: Youtube, color: "bg-red-600" },
 ];
 
-// ============ GALERIA - DINÂMICO ============
+// ============ GALERIA - ÁLBUNS DINÂMICOS ============
 function GaleriaContent() {
-  const [fotos, setFotos] = useState<any[]>([]);
+  const [albums, setAlbums] = useState<any[]>([]);
+  const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
+  const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any>(null);
 
   useEffect(() => {
-    loadFotos();
+    loadAlbums();
   }, []);
 
-  const loadFotos = async () => {
+  const loadAlbums = async () => {
     try {
       const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) {
@@ -63,20 +67,59 @@ function GaleriaContent() {
       }
 
       const { data, error } = await supabase
-        .from("union_app_content")
+        .from("union_app_albums")
         .select("*")
         .eq("clinic_id", clinicId)
-        .eq("content_type", "galeria")
         .eq("is_active", true)
         .order("order_index", { ascending: true });
 
       if (error) throw error;
-      setFotos(data || []);
+      
+      // Get photo counts
+      const albumsWithCounts = await Promise.all(
+        (data || []).map(async (album: any) => {
+          const { count } = await supabase
+            .from("union_app_album_photos")
+            .select("*", { count: "exact", head: true })
+            .eq("album_id", album.id);
+          return { ...album, photos_count: count || 0 };
+        })
+      );
+      
+      setAlbums(albumsWithCounts);
     } catch (err) {
-      console.error("Error loading galeria:", err);
+      console.error("Error loading albums:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPhotos = async (albumId: string) => {
+    setLoadingPhotos(true);
+    try {
+      const { data, error } = await supabase
+        .from("union_app_album_photos")
+        .select("*")
+        .eq("album_id", albumId)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+      setPhotos(data || []);
+    } catch (err) {
+      console.error("Error loading photos:", err);
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
+  const handleAlbumClick = (album: any) => {
+    setSelectedAlbum(album);
+    loadPhotos(album.id);
+  };
+
+  const handleBackToAlbums = () => {
+    setSelectedAlbum(null);
+    setPhotos([]);
   };
 
   if (loading) {
@@ -87,12 +130,98 @@ function GaleriaContent() {
     );
   }
 
-  if (fotos.length === 0) {
+  // Show photos when album is selected
+  if (selectedAlbum) {
+    return (
+      <div className="space-y-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleBackToAlbums}
+          className="gap-2 -ml-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Voltar aos álbuns
+        </Button>
+        
+        <div>
+          <h3 className="font-semibold text-lg">{selectedAlbum.title}</h3>
+          {selectedAlbum.description && (
+            <p className="text-sm text-muted-foreground mt-1">{selectedAlbum.description}</p>
+          )}
+        </div>
+
+        {loadingPhotos ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+          </div>
+        ) : photos.length === 0 ? (
+          <div className="text-center py-8">
+            <Image className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Nenhuma foto neste álbum ainda.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {photos.map((photo) => (
+              <Card 
+                key={photo.id} 
+                className="border shadow-sm overflow-hidden cursor-pointer"
+                onClick={() => setSelectedImage(photo)}
+              >
+                <CardContent className="p-0">
+                  <div className="aspect-square bg-muted">
+                    <img 
+                      src={photo.image_url} 
+                      alt={photo.title || "Foto"} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {photo.title && (
+                    <div className="p-2">
+                      <p className="text-xs font-medium line-clamp-2">{photo.title}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Image Preview Dialog */}
+        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <DialogContent className="max-w-md p-0 overflow-hidden">
+            {selectedImage && (
+              <>
+                <img 
+                  src={selectedImage.image_url} 
+                  alt={selectedImage.title || "Foto"} 
+                  className="w-full" 
+                />
+                {(selectedImage.title || selectedImage.description) && (
+                  <div className="p-4">
+                    {selectedImage.title && <h4 className="font-semibold">{selectedImage.title}</h4>}
+                    {selectedImage.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{selectedImage.description}</p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Show albums list
+  if (albums.length === 0) {
     return (
       <div className="text-center py-8">
         <Image className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
         <p className="text-sm text-muted-foreground">
-          Nenhuma foto cadastrada na galeria.
+          Nenhum álbum de fotos disponível.
         </p>
       </div>
     );
@@ -101,58 +230,50 @@ function GaleriaContent() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Confira os registros fotográficos dos eventos e atividades do sindicato.
+        Confira os álbuns de fotos dos eventos e atividades do sindicato.
       </p>
       
       <div className="grid grid-cols-2 gap-3">
-        {fotos.map((foto) => (
+        {albums.map((album) => (
           <Card 
-            key={foto.id} 
-            className="border shadow-sm overflow-hidden cursor-pointer"
-            onClick={() => setSelectedImage(foto)}
+            key={album.id} 
+            className="border shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleAlbumClick(album)}
           >
             <CardContent className="p-0">
-              {foto.image_url ? (
-                <div className="aspect-square bg-muted">
+              {album.cover_image_url ? (
+                <div className="aspect-video bg-muted relative">
                   <img 
-                    src={foto.image_url} 
-                    alt={foto.title} 
+                    src={album.cover_image_url} 
+                    alt={album.title} 
                     className="w-full h-full object-cover"
                   />
+                  <div className="absolute bottom-2 right-2">
+                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                      {album.photos_count} fotos
+                    </span>
+                  </div>
                 </div>
               ) : (
-                <div className="aspect-square bg-muted flex items-center justify-center">
+                <div className="aspect-video bg-muted flex items-center justify-center relative">
                   <Image className="h-8 w-8 text-muted-foreground" />
+                  <div className="absolute bottom-2 right-2">
+                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                      {album.photos_count} fotos
+                    </span>
+                  </div>
                 </div>
               )}
-              <div className="p-2">
-                <p className="text-xs font-medium line-clamp-2">{foto.title}</p>
+              <div className="p-3">
+                <p className="text-sm font-medium line-clamp-1">{album.title}</p>
+                {album.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{album.description}</p>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-
-      {/* Image Preview Dialog */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          {selectedImage && (
-            <>
-              <img 
-                src={selectedImage.image_url} 
-                alt={selectedImage.title} 
-                className="w-full" 
-              />
-              <div className="p-4">
-                <h4 className="font-semibold">{selectedImage.title}</h4>
-                {selectedImage.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{selectedImage.description}</p>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
