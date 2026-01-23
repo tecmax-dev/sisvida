@@ -102,6 +102,7 @@ import SettingsPage from "./pages/dashboard/SettingsPage";
 import UsersManagementPage from "./pages/dashboard/UsersManagementPage";
 import PackagesPage from "./pages/dashboard/PackagesPage";
 import PatientAttachmentsPage from "./pages/dashboard/PatientAttachmentsPage";
+import PatientPayslipHistoryPage from "./pages/dashboard/PatientPayslipHistoryPage";
 import StockPage from "./pages/dashboard/StockPage";
 import CatalogPage from "./pages/dashboard/CatalogPage";
 import QuotesPage from "./pages/dashboard/QuotesPage";
@@ -448,6 +449,7 @@ const App = () => (
                   <Route path="patients/:id" element={<PatientEditPage />} />
                   <Route path="patients/:id/edit" element={<PatientEditPage />} />
                   <Route path="patients/:id/attachments" element={<PatientAttachmentsPage />} />
+                  <Route path="patients/:id/contracheques" element={<PatientPayslipHistoryPage />} />
                   <Route path="patients/:id/odontograma" element={<PatientOdontogramPage />} />
                   <Route path="professionals" element={<ProfessionalsPage />} />
                   <Route path="professionals/new" element={<ProfessionalEditPage />} />
