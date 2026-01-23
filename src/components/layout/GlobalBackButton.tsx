@@ -101,7 +101,7 @@ export function GlobalBackButton() {
 
   return (
     <div 
-      className={`fixed top-[72px] z-40 transition-all ${
+      className={`fixed top-4 z-50 transition-all ${
         hasSidebar 
           ? "left-[72px] lg:left-[270px]" // Após sidebar collapsed/expanded
           : "left-4 lg:left-6"
@@ -111,7 +111,7 @@ export function GlobalBackButton() {
         variant="outline"
         size="sm"
         onClick={handleBack}
-        className="gap-2 bg-background/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all border-border"
+        className="gap-2 bg-background/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-all border-border h-8"
       >
         <ArrowLeft className="h-4 w-4" />
         <span className="hidden sm:inline">Voltar</span>
