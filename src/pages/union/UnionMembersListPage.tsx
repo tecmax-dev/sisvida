@@ -1082,7 +1082,7 @@ export default function UnionMembersListPage() {
         member={selectedMemberForWelcome}
         clinicId={currentClinic?.id || ""}
         entityName={currentClinic?.name || "Sindicato"}
-        appUrl={`${window.location.origin}/m`}
+        appUrl="https://sisvida.lovable.app/m"
       />
     </div>
   );
