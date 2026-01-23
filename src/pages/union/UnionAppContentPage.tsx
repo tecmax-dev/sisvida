@@ -345,57 +345,86 @@ export default function UnionAppContentPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-        <div className="relative">
-          <ScrollArea className="w-full pb-3">
-            <TabsList className="inline-flex h-auto min-h-[44px] items-center justify-start gap-1 bg-muted/50 p-1.5 rounded-lg flex-nowrap">
-              {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
-                <TabsTrigger
-                  key={type}
-                  value={type}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-                >
+        {/* Grid layout for all tabs visible */}
+        <div className="bg-muted/50 p-2 rounded-xl">
+          {/* Content Type Tabs - First Row */}
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-1.5 mb-2">
+            {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => setActiveTab(type)}
+                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg text-xs font-medium transition-all ${
+                  activeTab === type
+                    ? "bg-background shadow-sm text-primary border border-border"
+                    : "hover:bg-background/50 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <div className="relative">
                   {contentTypeIcons[type]}
-                  <span className="hidden sm:inline">{CONTENT_TYPE_LABELS[type]}</span>
-                  <span className="sm:hidden">{CONTENT_TYPE_LABELS[type].split(' ')[0]}</span>
-                  <Badge variant="secondary" className="ml-0.5 h-5 min-w-5 px-1 text-xs">
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute -top-2 -right-3 h-4 min-w-4 px-1 text-[10px] leading-none"
+                  >
                     {allContent?.filter(c => c.content_type === type).length || 0}
                   </Badge>
-                </TabsTrigger>
-              ))}
-              <div className="w-px h-6 bg-border mx-1.5 shrink-0" />
-              <TabsTrigger
-                value="ouvidoria"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>Ouvidoria</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="push"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <Bell className="h-4 w-4" />
-                <span>Push</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="tabs"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <Smartphone className="h-4 w-4" />
-                <span>Abas</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="cct-categories"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <FileText className="h-4 w-4" />
-                <span>Cat. CCT</span>
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" className="h-2" />
-          </ScrollArea>
-          {/* Gradient fade indicator for more tabs */}
-          <div className="absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+                </div>
+                <span className="truncate w-full text-center mt-1">
+                  {CONTENT_TYPE_LABELS[type].split(' ')[0]}
+                </span>
+              </button>
+            ))}
+          </div>
+          
+          {/* Separator */}
+          <div className="border-t border-border/50 my-2" />
+          
+          {/* System Tabs - Second Row */}
+          <div className="grid grid-cols-4 gap-1.5">
+            <button
+              onClick={() => setActiveTab("ouvidoria")}
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "ouvidoria"
+                  ? "bg-background shadow-sm text-primary border border-border"
+                  : "hover:bg-background/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Ouvidoria</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("push")}
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "push"
+                  ? "bg-background shadow-sm text-primary border border-border"
+                  : "hover:bg-background/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Push</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("tabs")}
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "tabs"
+                  ? "bg-background shadow-sm text-primary border border-border"
+                  : "hover:bg-background/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Smartphone className="h-4 w-4" />
+              <span className="hidden sm:inline">Abas App</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("cct-categories")}
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "cct-categories"
+                  ? "bg-background shadow-sm text-primary border border-border"
+                  : "hover:bg-background/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Cat. CCT</span>
+            </button>
+          </div>
         </div>
 
         <TabsContent value="cct-categories" className="mt-6">
