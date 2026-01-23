@@ -219,16 +219,29 @@ export function useUploadContentFile() {
 
   return useMutation({
     mutationFn: async ({ file, folder }: { file: File; folder: string }) => {
+      // Check if user is authenticated before attempting upload
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Usuário não autenticado. Faça login novamente.");
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log("[useUploadContentFile] Uploading to union-app-content:", fileName);
+
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from("union-app-content")
         .upload(fileName, file, {
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("[useUploadContentFile] Upload error:", uploadError);
+        throw new Error(uploadError.message || "Erro ao fazer upload do arquivo");
+      }
+
+      console.log("[useUploadContentFile] Upload success:", uploadData);
 
       const { data: urlData } = supabase.storage
         .from("union-app-content")
@@ -236,11 +249,11 @@ export function useUploadContentFile() {
 
       return urlData.publicUrl;
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error uploading file:", error);
       toast({
-        title: "Erro",
-        description: "Erro ao fazer upload do arquivo",
+        title: "Erro no upload",
+        description: error.message || "Erro ao fazer upload do arquivo",
         variant: "destructive",
       });
     },
