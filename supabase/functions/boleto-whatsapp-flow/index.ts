@@ -25,6 +25,8 @@ interface IntentAnalysis {
   extracted_number?: number;
   humanized_response?: string;
   batch_items?: BatchBoletoItem[];
+  // Detected contribution type from message context
+  detected_contribution_type?: 'mensalidade' | 'taxa' | null;
 }
 
 // Interface para processamento em lote
@@ -33,8 +35,15 @@ interface BatchBoletoItem {
   competence_month: number;
   competence_year: number;
   value_cents: number;
-  type?: string;
+  contribution_type?: 'mensalidade' | 'taxa_mercados' | 'taxa_varejista' | 'taxa_indefinida';
 }
+
+// Mapeamento de tipos de contribuição por nome
+const CONTRIBUTION_TYPE_MAP = {
+  mensalidade: '124 - MENSALIDADE SINDICAL',
+  taxa_mercados: '125 - TAXA NEGOCIAL (MERCADOS)',
+  taxa_varejista: '126 - TAXA NEGOCIAL (COM VEREJ)'
+} as const;
 
 async function analyzeUserIntent(
   message: string, 
@@ -143,6 +152,8 @@ function getStateDescription(state: BoletoState, context: any): string {
     'WAITING_CNPJ': 'Aguardando o CNPJ da empresa',
     'CONFIRM_EMPLOYER': `Aguardando confirmação da empresa: ${context?.employer_name || 'N/A'}`,
     'SELECT_CONTRIBUTION_TYPE': 'Aguardando seleção do tipo de contribuição',
+    'SELECT_TAXA_TYPE': 'Aguardando escolha do tipo de taxa (Mercados ou Varejista)',
+    'SELECT_TAXA_TYPE_BATCH': 'Aguardando escolha do tipo de taxa para processamento em lote',
     'WAITING_COMPETENCE': 'Aguardando competência (mês/ano)',
     'WAITING_VALUE': 'Aguardando valor do boleto',
     'SELECT_CONTRIBUTION': 'Aguardando seleção de contribuição vencida',
@@ -165,16 +176,34 @@ function parseBatchBoletoMessage(message: string): BatchBoletoItem[] {
   // Divide mensagem em linhas
   const lines = message.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   
+  // Detecta tipo de contribuição no contexto geral da mensagem
+  const fullTextLower = message.toLowerCase();
+  const hasMensalidade = /mensalidade/i.test(fullTextLower);
+  const hasTaxa = /taxa/i.test(fullTextLower);
+  
   // Padrão: CNPJ (com ou sem formatação) + mês MM/YYYY + opcional tipo + valor
   // Exemplos:
   // "60.496.539/0001-05 mês 11/2025, mensalidade, valor 91,20"
-  // "48293454000124 mes 11/2025 mensalidade valor 212,80"
+  // "48293454000124 mes 11/2025 taxa valor 212,80"
   const batchRegex = /(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/]?\d{4}[-]?\d{2})\s*(?:m[eê]s)?\s*(\d{1,2})\s*[\/\-]\s*(\d{4})[,\s]*(?:mensalidade|taxa)?[,\s]*(?:valor)?\s*[R$\s]*(\d+(?:[.,]\d{1,2})?)/gi;
   
   for (const line of lines) {
     let match;
     // Reset regex lastIndex
     batchRegex.lastIndex = 0;
+    
+    // Detecta tipo específico na linha
+    const lineLower = line.toLowerCase();
+    const lineMensalidade = /mensalidade/i.test(lineLower);
+    const lineTaxa = /taxa/i.test(lineLower);
+    
+    // Determina o tipo de contribuição
+    let contribType: BatchBoletoItem['contribution_type'] = 'mensalidade';
+    if (lineTaxa || (hasTaxa && !hasMensalidade && !lineMensalidade)) {
+      contribType = 'taxa_indefinida'; // Será perguntado depois
+    } else if (lineMensalidade || hasMensalidade) {
+      contribType = 'mensalidade';
+    }
     
     while ((match = batchRegex.exec(line)) !== null) {
       const cnpj = match[1].replace(/\D/g, '');
@@ -189,7 +218,7 @@ function parseBatchBoletoMessage(message: string): BatchBoletoItem[] {
           competence_month: month,
           competence_year: year,
           value_cents: valueCents,
-          type: 'mensalidade'
+          contribution_type: contribType
         });
       }
     }
@@ -206,6 +235,18 @@ function parseBatchBoletoMessage(message: string): BatchBoletoItem[] {
       simpleRegex.lastIndex = 0;
       let match;
       
+      // Detecta tipo na linha
+      const lineLower = line.toLowerCase();
+      const lineMensalidade = /mensalidade/i.test(lineLower);
+      const lineTaxa = /taxa/i.test(lineLower);
+      
+      let contribType: BatchBoletoItem['contribution_type'] = 'mensalidade';
+      if (lineTaxa || (hasTaxa && !hasMensalidade && !lineMensalidade)) {
+        contribType = 'taxa_indefinida';
+      } else if (lineMensalidade || hasMensalidade) {
+        contribType = 'mensalidade';
+      }
+      
       while ((match = simpleRegex.exec(line)) !== null) {
         const cnpj = match[1].replace(/\D/g, '');
         const month = match[2] ? parseInt(match[2]) : 0;
@@ -219,7 +260,7 @@ function parseBatchBoletoMessage(message: string): BatchBoletoItem[] {
             competence_month: month,
             competence_year: year,
             value_cents: valueCents,
-            type: 'mensalidade'
+            contribution_type: contribType
           });
         }
       }
@@ -268,11 +309,26 @@ function fallbackIntentAnalysis(message: string, currentState: BoletoState): Int
   }
   
   // ==========================================
+  // DETECT CONTRIBUTION TYPE FROM MESSAGE
+  // "mensalidade" → auto-select 124
+  // "taxa" without "mensalidade" → ask which taxa
+  // ==========================================
+  const hasMensalidade = /mensalidade/i.test(normalized);
+  const hasTaxa = /taxa/i.test(normalized);
+  let detectedContribType: 'mensalidade' | 'taxa' | null = null;
+  
+  if (hasMensalidade) {
+    detectedContribType = 'mensalidade';
+  } else if (hasTaxa) {
+    detectedContribType = 'taxa';
+  }
+  
+  // ==========================================
   // IMPROVED: Detect "a vencer" anywhere in text
   // ==========================================
   if (/\ba\s*vencer\b/i.test(normalized) || /\bnovo\s*boleto\b/i.test(normalized) || 
       /\bgerar\s*boleto\b/i.test(normalized) || /\bcriar\s*boleto\b/i.test(normalized) || 
-      /\bemitir\s*boleto\b/i.test(normalized)) {
+      /\bemitir\s*boleto\b/i.test(normalized) || hasMensalidade || hasTaxa) {
     
     // Try to extract competence from the same message
     let extractedComp: { month: number; year: number } | undefined;
@@ -302,7 +358,8 @@ function fallbackIntentAnalysis(message: string, currentState: BoletoState): Int
     return { 
       intent: 'new_boleto', 
       confidence: 0.9,
-      extracted_competence: extractedComp
+      extracted_competence: extractedComp,
+      detected_contribution_type: detectedContribType
     };
   }
   
@@ -496,6 +553,8 @@ type BoletoState =
   | 'WAITING_CNPJ'              // Aguardando CNPJ
   | 'CONFIRM_EMPLOYER'          // Confirmação da empresa encontrada
   | 'SELECT_CONTRIBUTION_TYPE'  // Tipo de contribuição
+  | 'SELECT_TAXA_TYPE'          // Escolher entre taxa mercados/varejista (fluxo individual)
+  | 'SELECT_TAXA_TYPE_BATCH'    // Escolher entre taxa mercados/varejista (fluxo em lote)
   | 'WAITING_COMPETENCE'        // Competência (mês/ano)
   | 'WAITING_VALUE'             // Valor a recolher
   | 'SELECT_CONTRIBUTION'       // Selecionar contribuição vencida existente
@@ -1224,19 +1283,49 @@ async function handleBoletoFlow(
   if (intent.intent === 'batch_boleto' && intent.batch_items && intent.batch_items.length > 0) {
     console.log(`[boleto-flow] Processing batch boleto with ${intent.batch_items.length} items`);
     
+    // Check if any items have undefined tax type - need to ask user
+    const hasUndefinedTaxa = intent.batch_items.some(item => item.contribution_type === 'taxa_indefinida');
+    
+    if (hasUndefinedTaxa) {
+      // Store batch items in session and ask which tax type
+      await updateSession(supabase, session.id, {
+        state: 'SELECT_TAXA_TYPE_BATCH' as BoletoState,
+        flow_context: { 
+          ...session.flow_context, 
+          pending_batch_items: intent.batch_items 
+        }
+      });
+      
+      return { 
+        response: `📋 *Detectei ${intent.batch_items.length} boleto(s) para gerar*\n\nVocê mencionou *taxa*. Qual tipo de taxa deseja gerar?\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*\n\n_Digite o número da opção._`,
+        newState: 'SELECT_TAXA_TYPE_BATCH' as BoletoState
+      };
+    }
+    
     await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${intent.batch_items.length} boleto(s)...*\n\nAguarde um momento.`);
     
     const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
     
-    // Get default contribution type (mensalidade sindical)
-    const { data: defaultType } = await supabase
+    // Fetch all contribution types we need
+    const allowedNames = [
+      CONTRIBUTION_TYPE_MAP.mensalidade,
+      CONTRIBUTION_TYPE_MAP.taxa_mercados,
+      CONTRIBUTION_TYPE_MAP.taxa_varejista
+    ];
+    
+    const { data: allContribTypes } = await supabase
       .from('contribution_types')
       .select('id, name')
       .eq('clinic_id', clinicId)
       .eq('is_active', true)
-      .ilike('name', '%mensalidade%')
-      .limit(1)
-      .maybeSingle();
+      .in('name', allowedNames);
+    
+    const contribTypesMap: Record<string, { id: string; name: string }> = {};
+    for (const ct of allContribTypes || []) {
+      if (ct.name === CONTRIBUTION_TYPE_MAP.mensalidade) contribTypesMap.mensalidade = ct;
+      if (ct.name === CONTRIBUTION_TYPE_MAP.taxa_mercados) contribTypesMap.taxa_mercados = ct;
+      if (ct.name === CONTRIBUTION_TYPE_MAP.taxa_varejista) contribTypesMap.taxa_varejista = ct;
+    }
     
     for (const item of intent.batch_items) {
       try {
@@ -1283,13 +1372,21 @@ async function handleBoletoFlow(
         // Calculate due date (10th of next month)
         const dueDate = calculateBaseDueDate(item.competence_month, item.competence_year);
         
+        // Determine the correct contribution type based on item.contribution_type
+        let selectedContribType = contribTypesMap.mensalidade; // default
+        if (item.contribution_type === 'taxa_mercados') {
+          selectedContribType = contribTypesMap.taxa_mercados;
+        } else if (item.contribution_type === 'taxa_varejista') {
+          selectedContribType = contribTypesMap.taxa_varejista;
+        }
+        
         // Create contribution record
         const { data: newContrib, error: contribError } = await supabase
           .from('employer_contributions')
           .insert({
             employer_id: employer.id,
             clinic_id: clinicId,
-            contribution_type_id: defaultType?.id || null,
+            contribution_type_id: selectedContribType?.id || null,
             competence_month: item.competence_month,
             competence_year: item.competence_year,
             value: item.value_cents,
@@ -1315,7 +1412,7 @@ async function handleBoletoFlow(
         // Create invoice in Lytex
         const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
           'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-        const description = `${defaultType?.name || 'Mensalidade Sindical'} - ${monthNames[item.competence_month - 1]}/${item.competence_year}`;
+        const description = `${selectedContribType?.name || 'Mensalidade Sindical'} - ${monthNames[item.competence_month - 1]}/${item.competence_year}`;
         
         try {
           const invoice = await createLytexInvoice({
@@ -1444,7 +1541,7 @@ async function handleBoletoFlow(
     // ==========================================
     // IMPROVED: Handle competence with new_boleto intent FIRST
     // User wrote something like "a contribuição de janeiro de 2026"
-    // This must come BEFORE the simple new_boleto check
+    // Also detect contribution type (mensalidade/taxa)
     // ==========================================
     if (intent.intent === 'new_boleto' && intent.extracted_competence) {
       // User provided competence upfront - save it and ask for CNPJ
@@ -1457,11 +1554,23 @@ async function handleBoletoFlow(
         boleto_type: 'a_vencer',
         competence_month: intent.extracted_competence.month,
         competence_year: intent.extracted_competence.year,
-        flow_context: { ...session.flow_context, competence_provided_upfront: true }
+        flow_context: { 
+          ...session.flow_context, 
+          competence_provided_upfront: true,
+          detected_contribution_type: intent.detected_contribution_type || null
+        }
       });
       
+      let responseText = `✅ *Entendido!* Boleto a vencer para *${compStr}*`;
+      if (intent.detected_contribution_type === 'mensalidade') {
+        responseText += ` (Mensalidade Sindical)`;
+      } else if (intent.detected_contribution_type === 'taxa') {
+        responseText += ` (Taxa)`;
+      }
+      responseText += `.\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`;
+      
       return { 
-        response: `✅ *Entendido!* Boleto a vencer para *${compStr}*.\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`, 
+        response: responseText, 
         newState: 'WAITING_CNPJ' 
       };
     }
@@ -1567,7 +1676,64 @@ async function handleBoletoFlow(
             newState: 'SELECT_CONTRIBUTION' 
           };
         } else {
-          // New boleto - ask for contribution type
+          // New boleto - check if contribution type was detected from message
+          const detectedType = session.flow_context?.detected_contribution_type;
+          
+          if (detectedType === 'mensalidade') {
+            // Auto-select mensalidade sindical (124)
+            const { data: mensalidadeType } = await supabase
+              .from('contribution_types')
+              .select('id, name')
+              .eq('clinic_id', clinicId)
+              .eq('is_active', true)
+              .eq('name', CONTRIBUTION_TYPE_MAP.mensalidade)
+              .single();
+            
+            if (mensalidadeType) {
+              // Check if competence was provided
+              if (session.flow_context?.competence_provided_upfront && session.competence_month && session.competence_year) {
+                const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                const compStr = `${monthNames[session.competence_month - 1]}/${session.competence_year}`;
+                
+                await updateSession(supabase, session.id, {
+                  state: 'WAITING_VALUE',
+                  contribution_type_id: mensalidadeType.id,
+                  flow_context: { ...session.flow_context, selected_type: mensalidadeType }
+                });
+
+                return { 
+                  response: `✅ *${mensalidadeType.name}*\n📅 Competência: *${compStr}*\n\n💰 Agora informe o *valor* a recolher:\n\n_Exemplo: 150,00 ou R$ 150,00_`, 
+                  newState: 'WAITING_VALUE' 
+                };
+              }
+              
+              // Ask for competence
+              await updateSession(supabase, session.id, {
+                state: 'WAITING_COMPETENCE',
+                contribution_type_id: mensalidadeType.id,
+                flow_context: { ...session.flow_context, selected_type: mensalidadeType }
+              });
+
+              return { 
+                response: `✅ *${mensalidadeType.name}*\n\n📅 Agora informe a *competência* (período) do boleto:\n\n_Exemplos: 01/2025, Janeiro/2025, jan/2025_`, 
+                newState: 'WAITING_COMPETENCE' 
+              };
+            }
+          } else if (detectedType === 'taxa') {
+            // Ask which taxa type (mercados or varejista)
+            await updateSession(supabase, session.id, {
+              state: 'SELECT_TAXA_TYPE',
+              flow_context: { ...session.flow_context }
+            });
+
+            return { 
+              response: `📋 *Tipo de Taxa*\n\nQual tipo de taxa deseja gerar?\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*\n\n_Digite o número da opção._`, 
+              newState: 'SELECT_TAXA_TYPE' 
+            };
+          }
+          
+          // Default flow - show all contribution type options
           const allowedNames = [
             '124 - MENSALIDADE SINDICAL',
             '125 - TAXA NEGOCIAL (MERCADOS)',
@@ -2009,6 +2175,283 @@ async function handleBoletoFlow(
         return { response: MESSAGES.cancelled, newState: 'FINISHED' };
       }
       return { response: MESSAGES.invalidOption };
+    }
+
+    case 'SELECT_TAXA_TYPE_BATCH': {
+      // User needs to choose between taxa mercados or taxa varejista for batch processing
+      const optionNum = intent.extracted_number || parseInt(text);
+      
+      if (optionNum !== 1 && optionNum !== 2) {
+        return { 
+          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa:\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*` 
+        };
+      }
+      
+      const selectedTaxaType: 'taxa_mercados' | 'taxa_varejista' = optionNum === 1 ? 'taxa_mercados' : 'taxa_varejista';
+      const pendingItems = session.flow_context?.pending_batch_items || [];
+      
+      // Update all items with undefined taxa to the selected type
+      const updatedItems: BatchBoletoItem[] = pendingItems.map((item: BatchBoletoItem) => ({
+        ...item,
+        contribution_type: item.contribution_type === 'taxa_indefinida' ? selectedTaxaType : item.contribution_type
+      }));
+      
+      console.log(`[boleto-flow] Processing ${updatedItems.length} batch items with taxa type: ${selectedTaxaType}`);
+      
+      await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${updatedItems.length} boleto(s)...*\n\nTipo: ${optionNum === 1 ? 'TAXA NEGOCIAL (MERCADOS)' : 'TAXA NEGOCIAL (COM VEREJ)'}\n\nAguarde um momento.`);
+      
+      const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
+      
+      // Fetch all contribution types we need
+      const allowedNames = [
+        CONTRIBUTION_TYPE_MAP.mensalidade,
+        CONTRIBUTION_TYPE_MAP.taxa_mercados,
+        CONTRIBUTION_TYPE_MAP.taxa_varejista
+      ];
+      
+      const { data: allContribTypes } = await supabase
+        .from('contribution_types')
+        .select('id, name')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .in('name', allowedNames);
+      
+      const contribTypesMap: Record<string, { id: string; name: string }> = {};
+      for (const ct of allContribTypes || []) {
+        if (ct.name === CONTRIBUTION_TYPE_MAP.mensalidade) contribTypesMap.mensalidade = ct;
+        if (ct.name === CONTRIBUTION_TYPE_MAP.taxa_mercados) contribTypesMap.taxa_mercados = ct;
+        if (ct.name === CONTRIBUTION_TYPE_MAP.taxa_varejista) contribTypesMap.taxa_varejista = ct;
+      }
+      
+      for (const item of updatedItems) {
+        try {
+          // Find employer by CNPJ
+          const { data: employer } = await supabase
+            .from('employers')
+            .select('id, name, cnpj, email, phone')
+            .eq('clinic_id', clinicId)
+            .or(`cnpj.eq.${item.cnpj},cnpj.eq.${formatCnpj(item.cnpj)}`)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (!employer) {
+            results.push({ 
+              success: false, 
+              cnpj: formatCnpj(item.cnpj), 
+              error: 'Empresa não encontrada' 
+            });
+            continue;
+          }
+          
+          // Check if contribution already exists
+          const { data: existingContrib } = await supabase
+            .from('employer_contributions')
+            .select('id, lytex_invoice_url, status')
+            .eq('employer_id', employer.id)
+            .eq('competence_month', item.competence_month)
+            .eq('competence_year', item.competence_year)
+            .neq('status', 'cancelled')
+            .limit(1)
+            .maybeSingle();
+          
+          if (existingContrib?.lytex_invoice_url && existingContrib.status !== 'paid') {
+            results.push({ 
+              success: true, 
+              cnpj: formatCnpj(item.cnpj), 
+              employer_name: employer.name,
+              url: existingContrib.lytex_invoice_url 
+            });
+            continue;
+          }
+          
+          const dueDate = calculateBaseDueDate(item.competence_month, item.competence_year);
+          
+          // Determine the correct contribution type
+          let selectedContribType = contribTypesMap.mensalidade;
+          if (item.contribution_type === 'taxa_mercados') {
+            selectedContribType = contribTypesMap.taxa_mercados;
+          } else if (item.contribution_type === 'taxa_varejista') {
+            selectedContribType = contribTypesMap.taxa_varejista;
+          }
+          
+          const { data: newContrib, error: contribError } = await supabase
+            .from('employer_contributions')
+            .insert({
+              employer_id: employer.id,
+              clinic_id: clinicId,
+              contribution_type_id: selectedContribType?.id || null,
+              competence_month: item.competence_month,
+              competence_year: item.competence_year,
+              value: item.value_cents,
+              due_date: dueDate,
+              status: 'pending',
+              notes: 'Criado via WhatsApp (lote)',
+              origin: 'manual'
+            })
+            .select()
+            .single();
+          
+          if (contribError) {
+            results.push({ 
+              success: false, 
+              cnpj: formatCnpj(item.cnpj), 
+              employer_name: employer.name,
+              error: 'Erro ao criar contribuição' 
+            });
+            continue;
+          }
+          
+          const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+          const description = `${selectedContribType?.name || 'Contribuição'} - ${monthNames[item.competence_month - 1]}/${item.competence_year}`;
+          
+          try {
+            const invoice = await createLytexInvoice({
+              employer: {
+                cnpj: item.cnpj,
+                name: employer.name,
+                email: employer.email,
+                phone: employer.phone
+              },
+              value: item.value_cents,
+              dueDate: dueDate,
+              description: description,
+              contributionId: newContrib.id
+            });
+            
+            await supabase
+              .from('employer_contributions')
+              .update({
+                lytex_invoice_id: invoice._id,
+                lytex_invoice_url: invoice.invoiceUrl,
+                lytex_boleto_barcode: invoice.boleto?.barCode || null,
+                lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
+                lytex_pix_code: invoice.pix?.code || null,
+                lytex_pix_qrcode: invoice.pix?.qrCode || null,
+              })
+              .eq('id', newContrib.id);
+            
+            results.push({ 
+              success: true, 
+              cnpj: formatCnpj(item.cnpj), 
+              employer_name: employer.name,
+              url: invoice.invoiceUrl 
+            });
+            
+          } catch (lytexError: any) {
+            results.push({ 
+              success: false, 
+              cnpj: formatCnpj(item.cnpj), 
+              employer_name: employer.name,
+              error: lytexError.message || 'Erro ao gerar boleto' 
+            });
+          }
+          
+        } catch (error: any) {
+          results.push({ 
+            success: false, 
+            cnpj: formatCnpj(item.cnpj), 
+            error: error.message || 'Erro inesperado' 
+          });
+        }
+      }
+      
+      // Build response message
+      const successCount = results.filter(r => r.success).length;
+      const errorCount = results.filter(r => !r.success).length;
+      
+      let responseMsg = `✅ *Processamento Concluído!*\n\n`;
+      responseMsg += `📊 ${successCount} boleto(s) gerado(s)`;
+      if (errorCount > 0) {
+        responseMsg += ` | ${errorCount} erro(s)`;
+      }
+      responseMsg += `\n\n`;
+      
+      const successResults = results.filter(r => r.success);
+      if (successResults.length > 0) {
+        responseMsg += `*Boletos Gerados:*\n`;
+        for (const r of successResults) {
+          responseMsg += `\n🏢 *${r.employer_name || r.cnpj}*\n`;
+          responseMsg += `📋 ${r.cnpj}\n`;
+          responseMsg += `🔗 ${r.url}\n`;
+        }
+      }
+      
+      const errorResults = results.filter(r => !r.success);
+      if (errorResults.length > 0) {
+        responseMsg += `\n*Erros:*\n`;
+        for (const r of errorResults) {
+          responseMsg += `❌ ${r.cnpj}: ${r.error}\n`;
+        }
+      }
+      
+      responseMsg += `\n_Digite MENU para mais opções._`;
+      
+      await logAction(supabase, session.id, clinicId, phone, 'batch_boleto_taxa_generated', 
+        { items_count: updatedItems.length, success_count: successCount, error_count: errorCount, taxa_type: selectedTaxaType }, 
+        successCount > 0);
+      
+      await updateSession(supabase, session.id, { state: 'FINISHED', flow_context: null });
+      
+      return { response: responseMsg, newState: 'FINISHED' };
+    }
+
+    case 'SELECT_TAXA_TYPE': {
+      // Individual flow - user needs to choose between taxa mercados or taxa varejista
+      const optionNum = intent.extracted_number || parseInt(text);
+      
+      if (optionNum !== 1 && optionNum !== 2) {
+        return { 
+          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa:\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*` 
+        };
+      }
+      
+      const taxaTypeName = optionNum === 1 ? CONTRIBUTION_TYPE_MAP.taxa_mercados : CONTRIBUTION_TYPE_MAP.taxa_varejista;
+      
+      // Fetch the selected contribution type
+      const { data: selectedType } = await supabase
+        .from('contribution_types')
+        .select('id, name')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .eq('name', taxaTypeName)
+        .single();
+      
+      if (!selectedType) {
+        return { 
+          response: '❌ Tipo de taxa não encontrado.\n\nEntre em contato com o sindicato.' 
+        };
+      }
+      
+      // Check if competence was provided upfront
+      if (session.flow_context?.competence_provided_upfront && session.competence_month && session.competence_year) {
+        const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const compStr = `${monthNames[session.competence_month - 1]}/${session.competence_year}`;
+        
+        await updateSession(supabase, session.id, {
+          state: 'WAITING_VALUE',
+          contribution_type_id: selectedType.id,
+          flow_context: { ...session.flow_context, selected_type: selectedType }
+        });
+
+        return { 
+          response: `✅ *${selectedType.name}*\n📅 Competência: *${compStr}*\n\n💰 Agora informe o *valor* a recolher:\n\n_Exemplo: 150,00 ou R$ 150,00_`, 
+          newState: 'WAITING_VALUE' 
+        };
+      }
+      
+      // Normal flow - ask for competence
+      await updateSession(supabase, session.id, {
+        state: 'WAITING_COMPETENCE',
+        contribution_type_id: selectedType.id,
+        flow_context: { ...session.flow_context, selected_type: selectedType }
+      });
+
+      return { 
+        response: `✅ *${selectedType.name}*\n\n📅 Agora informe a *competência* (período) do boleto:\n\n_Exemplos: 01/2025, Janeiro/2025, jan/2025_`, 
+        newState: 'WAITING_COMPETENCE' 
+      };
     }
 
     default:
