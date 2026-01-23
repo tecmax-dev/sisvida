@@ -22,10 +22,12 @@ import {
   XCircle,
   ExternalLink,
   Loader2,
+  Plus,
 } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
+import { MobileCreateDeclarationDialog } from "@/components/mobile/MobileCreateDeclarationDialog";
 
 interface Authorization {
   id: string;
@@ -60,8 +62,15 @@ export default function MobileAuthorizationsPage() {
   const [authorizations, setAuthorizations] = useState<Authorization[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuth, setSelectedAuth] = useState<Authorization | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [clinicId, setClinicId] = useState<string | null>(null);
 
   useEffect(() => {
+    const storedPatientId = localStorage.getItem('mobile_patient_id');
+    const storedClinicId = localStorage.getItem('mobile_clinic_id');
+    setPatientId(storedPatientId);
+    setClinicId(storedClinicId);
     loadAuthorizations();
   }, []);
 
@@ -161,19 +170,33 @@ export default function MobileAuthorizationsPage() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-100">
-        <div className="flex items-center px-4 py-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="mr-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Autorizações</h1>
-            <p className="text-xs text-gray-500">Seus benefícios autorizados</p>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="mr-2"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Declarações</h1>
+              <p className="text-xs text-gray-500">Seus benefícios autorizados</p>
+            </div>
           </div>
+          
+          {/* New Declaration Button */}
+          {patientId && clinicId && (
+            <Button
+              size="sm"
+              onClick={() => setCreateDialogOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Nova
+            </Button>
+          )}
         </div>
       </div>
 
@@ -240,7 +263,7 @@ export default function MobileAuthorizationsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileCheck className="h-5 w-5 text-emerald-600" />
-              Detalhes da Autorização
+              Detalhes da Declaração
             </DialogTitle>
           </DialogHeader>
           {selectedAuth && (
@@ -250,6 +273,17 @@ export default function MobileAuthorizationsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Declaration Dialog */}
+      {patientId && clinicId && (
+        <MobileCreateDeclarationDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          patientId={patientId}
+          clinicId={clinicId}
+          onSuccess={loadAuthorizations}
+        />
+      )}
     </div>
   );
 }
