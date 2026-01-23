@@ -38,6 +38,8 @@ import {
   GraduationCap,
   Sparkles,
   Scale,
+  AlertTriangle,
+  FileCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -252,51 +254,80 @@ function ConvencoesContent() {
   );
 }
 
-// ============ DECLARAÇÕES - DINÂMICO ============
+// ============ DECLARAÇÕES - BASEADO EM BENEFÍCIOS DO SINDICATO ============
 function DeclaracoesContent() {
-  const [declaracoes, setDeclaracoes] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [benefits, setBenefits] = useState<any[]>([]);
+  const [activeAuthorizations, setActiveAuthorizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [solicitando, setSolicitando] = useState(false);
+  const [cardExpired, setCardExpired] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadDeclaracoes();
+    loadData();
   }, []);
 
-  const loadDeclaracoes = async () => {
+  const loadData = async () => {
     try {
       const clinicId = localStorage.getItem('mobile_clinic_id');
-      if (!clinicId) {
+      const patientId = localStorage.getItem('mobile_patient_id');
+      
+      if (!clinicId || !patientId) {
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from("union_app_content")
-        .select("*")
+      // Fetch benefits from union_benefits
+      const { data: benefitsData, error: benefitsError } = await supabase
+        .from("union_benefits")
+        .select("id, name, description, category, partner_name, validity_days")
         .eq("clinic_id", clinicId)
-        .eq("content_type", "declaracao")
         .eq("is_active", true)
-        .order("order_index", { ascending: true });
+        .order("name");
 
-      if (error) throw error;
-      setDeclaracoes(data || []);
+      if (benefitsError) throw benefitsError;
+      setBenefits(benefitsData || []);
+
+      // Fetch active authorizations for this patient
+      const { data: authData, error: authError } = await supabase
+        .from("union_authorizations")
+        .select("id, benefit_id, valid_until, status")
+        .eq("patient_id", patientId)
+        .neq("status", "revoked");
+
+      if (authError) throw authError;
+      
+      // Filter to only active (not expired)
+      const now = new Date();
+      const active = (authData || []).filter(auth => {
+        const validUntil = new Date(auth.valid_until);
+        return validUntil > now;
+      });
+      setActiveAuthorizations(active);
+
+      // Check if patient card is expired
+      const { data: cardData } = await supabase
+        .from("patient_cards")
+        .select("id, expires_at, is_active")
+        .eq("patient_id", patientId)
+        .eq("is_active", true)
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!cardData || (cardData.expires_at && new Date(cardData.expires_at) < now)) {
+        setCardExpired(true);
+      }
+
     } catch (err) {
-      console.error("Error loading declaracoes:", err);
+      console.error("Error loading benefits:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSolicitar = (tipo: string) => {
-    setSolicitando(true);
-    setTimeout(() => {
-      setSolicitando(false);
-      toast({
-        title: "Solicitação enviada",
-        description: "Você receberá a declaração por e-mail em breve.",
-      });
-    }, 1500);
+  const hasActiveAuthorization = (benefitId: string) => {
+    return activeAuthorizations.some(auth => auth.benefit_id === benefitId);
   };
 
   if (loading) {
@@ -307,12 +338,24 @@ function DeclaracoesContent() {
     );
   }
 
-  if (declaracoes.length === 0) {
+  if (cardExpired) {
+    return (
+      <div className="text-center py-8">
+        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+        <h4 className="font-semibold text-red-700 mb-1">Carteirinha Vencida</h4>
+        <p className="text-sm text-red-600">
+          Sua carteirinha está vencida. Renove para emitir declarações.
+        </p>
+      </div>
+    );
+  }
+
+  if (benefits.length === 0) {
     return (
       <div className="text-center py-8">
         <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
         <p className="text-sm text-muted-foreground">
-          Nenhum tipo de declaração cadastrado.
+          Nenhum benefício disponível para declaração.
         </p>
       </div>
     );
@@ -321,37 +364,75 @@ function DeclaracoesContent() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Solicite declarações e certidões de forma rápida e prática. Os documentos serão enviados para seu e-mail cadastrado.
+        Selecione um benefício para gerar sua declaração. Declarações ativas não podem ser duplicadas.
       </p>
+      
+      {/* Link to view existing authorizations */}
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => navigate("/app/autorizacoes")}
+      >
+        <FileCheck className="h-4 w-4 mr-2" />
+        Ver minhas declarações emitidas
+      </Button>
+
       <div className="space-y-3">
-        {declaracoes.map((dec) => (
-          <Card key={dec.id} className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-semibold text-sm">{dec.title}</h4>
-                  {dec.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{dec.description}</p>
-                  )}
-                  {dec.metadata?.prazo && (
+        {benefits.map((benefit) => {
+          const hasActive = hasActiveAuthorization(benefit.id);
+          
+          return (
+            <Card 
+              key={benefit.id} 
+              className={`border shadow-sm ${hasActive ? 'opacity-60' : ''}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {hasActive && (
+                        <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-700">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Ativa
+                        </Badge>
+                      )}
+                      {benefit.category && (
+                        <Badge variant="outline" className="text-xs">
+                          {benefit.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <h4 className="font-semibold text-sm">{benefit.name}</h4>
+                    {benefit.partner_name && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Parceiro: {benefit.partner_name}
+                      </p>
+                    )}
+                    {benefit.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {benefit.description}
+                      </p>
+                    )}
                     <div className="flex items-center gap-1 mt-2">
                       <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Prazo: {dec.metadata.prazo}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Validade: {benefit.validity_days} dias
+                      </span>
                     </div>
-                  )}
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={hasActive}
+                    onClick={() => navigate("/app/autorizacoes")}
+                    className="ml-2 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {hasActive ? "Emitida" : "Emitir"}
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => handleSolicitar(dec.id)}
-                  disabled={solicitando}
-                  className="ml-2 bg-emerald-600 hover:bg-emerald-700"
-                >
-                  {solicitando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Solicitar"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
