@@ -317,6 +317,8 @@ export default function UnionBudgetDetailPage() {
             revenues={revenues}
             expenses={expenses}
             summary={summary}
+            projectedMemberCount={exercise.projected_member_count}
+            baseMemberCount={exercise.base_member_count}
           />
         </TabsContent>
 
