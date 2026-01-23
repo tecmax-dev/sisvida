@@ -57,8 +57,11 @@ import {
   List,
   MessageCircle,
   Mail,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,6 +79,7 @@ import { LytexConciliationHistoryDialog } from "@/components/contributions/Lytex
 import PFContributionsReportsTab from "@/components/contributions/PFContributionsReportsTab";
 import { SendPFContributionWhatsAppDialog } from "@/components/contributions/SendPFContributionWhatsAppDialog";
 import { SendPFContributionEmailDialog } from "@/components/contributions/SendPFContributionEmailDialog";
+import { BatchWhatsAppDialog } from "@/components/contributions/BatchWhatsAppDialog";
 
 interface Member {
   id: string;
@@ -181,6 +185,8 @@ export default function MemberContributionsTab() {
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [sendingContribution, setSendingContribution] = useState<Contribution | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchWhatsappOpen, setBatchWhatsappOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!currentClinic) return;
@@ -232,6 +238,47 @@ export default function MemberContributionsTab() {
     setSelectedContribution(contribution);
     setViewDialogOpen(true);
   };
+
+  // Selection handlers
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const selectableIds = paginatedContributions
+      .filter((c) => c.lytex_invoice_url && c.status !== "cancelled")
+      .map((c) => c.id);
+    
+    const allSelected = selectableIds.every((id) => selectedIds.has(id));
+    
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const newSet = new Set(prev);
+        selectableIds.forEach((id) => newSet.delete(id));
+        return newSet;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const newSet = new Set(prev);
+        selectableIds.forEach((id) => newSet.add(id));
+        return newSet;
+      });
+    }
+  };
+
+  const selectedContributions = useMemo(() => {
+    return contributions.filter((c) => selectedIds.has(c.id));
+  }, [contributions, selectedIds]);
+
+  const clearSelection = () => setSelectedIds(new Set());
 
   const handleGenerateInvoice = async (contribution: Contribution) => {
     if (!contribution.patients) {
@@ -680,12 +727,55 @@ export default function MemberContributionsTab() {
             </CardContent>
           </Card>
 
+          {/* Bulk Actions Bar */}
+          {selectedIds.size > 0 && (
+            <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20">
+              <CardContent className="p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5 text-emerald-600" />
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                    {selectedIds.size} contribuição(ões) selecionada(s)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearSelection}
+                  >
+                    Limpar seleção
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setBatchWhatsappOpen(true)}
+                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Enviar por WhatsApp
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Table */}
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={
+                          paginatedContributions.filter(c => c.lytex_invoice_url && c.status !== "cancelled").length > 0 &&
+                          paginatedContributions
+                            .filter(c => c.lytex_invoice_url && c.status !== "cancelled")
+                            .every(c => selectedIds.has(c.id))
+                        }
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todos"
+                      />
+                    </TableHead>
                     <TableHead>Sócio</TableHead>
                     <TableHead>CPF</TableHead>
                     <TableHead>Tipo</TableHead>
@@ -699,7 +789,7 @@ export default function MemberContributionsTab() {
                 <TableBody>
                   {paginatedContributions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         <Receipt className="h-12 w-12 mx-auto mb-2 opacity-30" />
                         <p>Nenhuma contribuição encontrada</p>
                       </TableCell>
@@ -708,9 +798,21 @@ export default function MemberContributionsTab() {
                     paginatedContributions.map((contribution) => {
                       const status = STATUS_CONFIG[contribution.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
                       const StatusIcon = status.icon;
+                      const isSelectable = contribution.lytex_invoice_url && contribution.status !== "cancelled";
                       
                       return (
                         <TableRow key={contribution.id} className={status.rowClass}>
+                          <TableCell>
+                            {isSelectable ? (
+                              <Checkbox
+                                checked={selectedIds.has(contribution.id)}
+                                onCheckedChange={() => toggleSelection(contribution.id)}
+                                aria-label={`Selecionar ${contribution.patients?.name}`}
+                              />
+                            ) : (
+                              <Checkbox disabled className="opacity-30" />
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">
                             {contribution.patients?.name || "-"}
                           </TableCell>
@@ -975,6 +1077,21 @@ export default function MemberContributionsTab() {
             contribution={sendingContribution}
             clinicId={currentClinic.id}
             clinicName={currentClinic.name}
+          />
+
+          {/* Batch WhatsApp Dialog */}
+          <BatchWhatsAppDialog
+            open={batchWhatsappOpen}
+            onOpenChange={(open) => {
+              setBatchWhatsappOpen(open);
+              if (!open) clearSelection();
+            }}
+            contributions={selectedContributions}
+            clinicId={currentClinic.id}
+            clinicName={currentClinic.name}
+            onComplete={() => {
+              fetchData();
+            }}
           />
         </>
       )}
