@@ -1,9 +1,26 @@
-import { useCarouselBanners } from "@/hooks/useCarouselBanners";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export function MobileCarousel() {
-  const { data: banners } = useCarouselBanners();
+  const { data: banners } = useQuery({
+    queryKey: ["union-app-banners"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_app_content")
+        .select("id, title, description, image_url, external_link, order_index")
+        .eq("content_type", "banner")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching union banners:", error);
+        return [];
+      }
+      return data || [];
+    },
+  });
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
