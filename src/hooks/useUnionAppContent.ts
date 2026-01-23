@@ -146,11 +146,14 @@ export function useCreateUnionAppContent() {
         description: "Conteúdo criado com sucesso!",
       });
     },
-    onError: (error) => {
-      console.error("Error creating content:", error);
+    onError: (error: unknown) => {
+      console.error("[useCreateUnionAppContent] Full error object:", JSON.stringify(error, null, 2));
+      console.error("[useCreateUnionAppContent] Error:", error);
+      const msg = getErrorMessage(error);
+      console.error("[useCreateUnionAppContent] Parsed message:", msg);
       toast({
-        title: "Erro",
-        description: getErrorMessage(error),
+        title: "Erro ao criar conteúdo",
+        description: msg,
         variant: "destructive",
       });
     },
