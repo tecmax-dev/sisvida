@@ -583,6 +583,7 @@ const App = () => (
                   <Route path="filiacao" element={<MobileFiliacaoPage />} />
                   <Route path="agendar-juridico" element={<MobileLegalBookingPage />} />
                   <Route path="autorizacoes" element={<MobileAuthorizationsPage />} />
+                  <Route path="servicos/autorizacoes" element={<MobileAuthorizationsPage />} />
                   {/* Alias para evitar 404 por diferença de nomenclatura */}
                   <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
                 </Route>
