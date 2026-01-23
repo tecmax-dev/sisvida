@@ -36,7 +36,10 @@ export function useMobileAppTabs() {
   };
 
   const isTabActive = (tabKey: string): boolean => {
+    // If tabs haven't loaded yet or failed to load, show all tabs by default
+    if (tabs.length === 0) return true;
     const tab = tabs.find((t) => t.tab_key === tabKey);
+    // If tab is not found in config, show it by default
     return tab?.is_active ?? true;
   };
 
