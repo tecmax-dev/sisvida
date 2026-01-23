@@ -18,6 +18,7 @@ import {
   Radio,
   Youtube,
   Play,
+  Pause,
   Download,
   ExternalLink,
   Calendar,
@@ -52,7 +53,39 @@ function GaleriaContent() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [isAutoPlay, setIsAutoPlay] = useState(false);
+
+  const selectedImage = selectedImageIndex !== null ? photos[selectedImageIndex] : null;
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (!isAutoPlay || selectedImageIndex === null || photos.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setSelectedImageIndex((prev) => {
+        if (prev === null) return null;
+        return prev >= photos.length - 1 ? 0 : prev + 1;
+      });
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [isAutoPlay, selectedImageIndex, photos.length]);
+
+  const goToPrevious = () => {
+    if (selectedImageIndex === null) return;
+    setSelectedImageIndex(selectedImageIndex <= 0 ? photos.length - 1 : selectedImageIndex - 1);
+  };
+
+  const goToNext = () => {
+    if (selectedImageIndex === null) return;
+    setSelectedImageIndex(selectedImageIndex >= photos.length - 1 ? 0 : selectedImageIndex + 1);
+  };
+
+  const closeViewer = () => {
+    setSelectedImageIndex(null);
+    setIsAutoPlay(false);
+  };
 
   useEffect(() => {
     loadAlbums();
@@ -164,11 +197,14 @@ function GaleriaContent() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {photos.map((photo) => (
+            {photos.map((photo, index) => (
               <Card 
                 key={photo.id} 
                 className="border shadow-sm overflow-hidden cursor-pointer"
-                onClick={() => setSelectedImage(photo)}
+                onClick={() => {
+                  setSelectedImageIndex(index);
+                  setIsAutoPlay(false);
+                }}
               >
                 <CardContent className="p-0">
                   <div className="aspect-square bg-muted">
@@ -189,25 +225,85 @@ function GaleriaContent() {
           </div>
         )}
 
-        {/* Image Preview Dialog */}
-        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-md p-0 overflow-hidden">
+        {/* Image Preview Dialog with Navigation */}
+        <Dialog open={selectedImageIndex !== null} onOpenChange={closeViewer}>
+          <DialogContent className="max-w-md p-0 overflow-hidden bg-black/95">
+            {/* Counter */}
+            {photos.length > 1 && (
+              <div className="absolute top-3 left-3 z-20">
+                <Badge variant="secondary" className="bg-black/60 text-white border-0">
+                  {(selectedImageIndex ?? 0) + 1} / {photos.length}
+                </Badge>
+              </div>
+            )}
+
+            {/* Auto-play button */}
+            {photos.length > 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-20 text-white hover:bg-white/20"
+                onClick={() => setIsAutoPlay(!isAutoPlay)}
+              >
+                {isAutoPlay ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </Button>
+            )}
+
+            {/* Previous Button */}
+            {photos.length > 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-1 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/20 h-10 w-10"
+                onClick={goToPrevious}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+            )}
+
+            {/* Next Button */}
+            {photos.length > 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 z-20 text-white hover:bg-white/20 h-10 w-10"
+                onClick={goToNext}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Button>
+            )}
+
             {selectedImage && (
               <>
                 <img 
                   src={selectedImage.image_url} 
                   alt={selectedImage.title || "Foto"} 
-                  className="w-full" 
+                  className="w-full max-h-[70vh] object-contain" 
                 />
                 {(selectedImage.title || selectedImage.description) && (
-                  <div className="p-4">
+                  <div className="p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
                     {selectedImage.title && <h4 className="font-semibold">{selectedImage.title}</h4>}
                     {selectedImage.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{selectedImage.description}</p>
+                      <p className="text-sm text-white/80 mt-1">{selectedImage.description}</p>
                     )}
                   </div>
                 )}
               </>
+            )}
+
+            {/* Dots Indicator */}
+            {photos.length > 1 && photos.length <= 10 && (
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                {photos.map((_, idx) => (
+                  <button
+                    key={idx}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === selectedImageIndex ? "bg-white w-4" : "bg-white/50"
+                    }`}
+                    onClick={() => setSelectedImageIndex(idx)}
+                  />
+                ))}
+              </div>
             )}
           </DialogContent>
         </Dialog>
