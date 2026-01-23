@@ -61,12 +61,12 @@ export function usePatientPayslipHistory(clinicId: string | undefined, patientId
 
   const getAttachmentUrl = async (path: string): Promise<string | null> => {
     try {
-      const { data, error } = await supabase.storage
-        .from('contra-cheques')
-        .createSignedUrl(path, 3600);
+      const { data, error } = await supabase.functions.invoke('get-payslip-signed-url', {
+        body: { path },
+      });
 
       if (error) throw error;
-      return data?.signedUrl || null;
+      return (data as any)?.signedUrl || null;
     } catch (error) {
       console.error('Error getting attachment URL:', error);
       return null;

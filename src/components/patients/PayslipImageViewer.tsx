@@ -37,6 +37,8 @@ export function PayslipImageViewer({
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const isPdf = !!imageUrl && imageUrl.toLowerCase().split('?')[0].endsWith('.pdf');
+
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
@@ -63,9 +65,12 @@ export function PayslipImageViewer({
 
   const handleDownload = () => {
     if (!imageUrl) return;
+    const safeName = patientName.replace(/\s+/g, '-').toLowerCase();
+    const withoutQuery = imageUrl.split('?')[0];
+    const ext = (withoutQuery.split('.').pop() || 'jpg').toLowerCase();
     const link = document.createElement('a');
     link.href = imageUrl;
-    link.download = `contracheque-${patientName.replace(/\s+/g, '-').toLowerCase()}.jpg`;
+    link.download = `contracheque-${safeName}.${ext}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -97,6 +102,7 @@ export function PayslipImageViewer({
             variant="outline"
             size="icon"
             onClick={handleRotateLeft}
+            disabled={isPdf}
             title="Girar para esquerda"
           >
             <RotateCcw className="h-4 w-4" />
@@ -105,6 +111,7 @@ export function PayslipImageViewer({
             variant="outline"
             size="icon"
             onClick={handleRotateRight}
+            disabled={isPdf}
             title="Girar para direita"
           >
             <RotateCw className="h-4 w-4" />
@@ -114,19 +121,19 @@ export function PayslipImageViewer({
             variant="outline"
             size="icon"
             onClick={handleZoomOut}
-            disabled={zoom <= 0.5}
+            disabled={isPdf || zoom <= 0.5}
             title="Diminuir zoom"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground w-16 text-center">
-            {Math.round(zoom * 100)}%
+            {isPdf ? 'PDF' : `${Math.round(zoom * 100)}%`}
           </span>
           <Button
             variant="outline"
             size="icon"
             onClick={handleZoomIn}
-            disabled={zoom >= 3}
+            disabled={isPdf || zoom >= 3}
             title="Aumentar zoom"
           >
             <ZoomIn className="h-4 w-4" />
@@ -164,21 +171,34 @@ export function PayslipImageViewer({
               <span className="text-sm text-muted-foreground">Carregando imagem...</span>
             </div>
           ) : imageUrl ? (
-            <div 
-              className="p-4 transition-transform duration-300"
-              style={{
-                transform: `rotate(${rotation}deg) scale(${zoom})`,
-              }}
-            >
-              <img
-                src={imageUrl}
-                alt={`Contracheque de ${patientName}`}
-                className="max-w-full max-h-full object-contain rounded shadow-lg"
+            isPdf ? (
+              <div className="w-full p-2">
+                <iframe
+                  src={imageUrl}
+                  title={`Contracheque de ${patientName}`}
+                  className="w-full rounded border bg-background"
+                  style={{
+                    height: isFullscreen ? '82vh' : '60vh',
+                  }}
+                />
+              </div>
+            ) : (
+              <div 
+                className="p-4 transition-transform duration-300"
                 style={{
-                  maxHeight: isFullscreen ? '80vh' : '55vh',
+                  transform: `rotate(${rotation}deg) scale(${zoom})`,
                 }}
-              />
-            </div>
+              >
+                <img
+                  src={imageUrl}
+                  alt={`Contracheque de ${patientName}`}
+                  className="max-w-full max-h-full object-contain rounded shadow-lg"
+                  style={{
+                    maxHeight: isFullscreen ? '80vh' : '55vh',
+                  }}
+                />
+              </div>
+            )
           ) : (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <X className="h-12 w-12" />
@@ -189,7 +209,9 @@ export function PayslipImageViewer({
 
         {/* Zoom/rotation info */}
         <div className="text-center text-sm text-muted-foreground">
-          Use os controles acima para girar e ampliar a imagem
+          {isPdf
+            ? 'Pré-visualização do PDF (use baixar para salvar)'
+            : 'Use os controles acima para girar e ampliar a imagem'}
         </div>
       </DialogContent>
     </Dialog>
