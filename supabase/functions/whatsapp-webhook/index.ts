@@ -1961,9 +1961,8 @@ async function handleCardNumberSearch(
   if (patientCard) {
     // Check if card is expired
     if (patientCard.expires_at && new Date(patientCard.expires_at) < new Date()) {
-      const expDate = new Date(patientCard.expires_at).toLocaleDateString('pt-BR');
       await sendWhatsAppMessage(config, phone, 
-        `❌ Sua carteirinha (${patientCard.card_number}) expirou em ${expDate}.\n\nPor favor, renove para poder agendar.`);
+        `❌ Sua carteirinha (${patientCard.card_number}) está *vencida*.\n\nPor favor, renove para poder agendar.`);
       return { handled: true, newState: 'WAITING_CPF' };
     }
     
@@ -2392,8 +2391,6 @@ async function handleConfirmIdentity(
             .in('status', ['pending', 'received'])
             .maybeSingle();
 
-          const expiryDate = new Date(cardRow.expires_at).toLocaleDateString('pt-BR');
-
           if (existingRequest) {
             console.log(`[booking] Patient already has pending payslip request: ${existingRequest.id}`);
             if (existingRequest.status === 'pending') {
@@ -2403,7 +2400,7 @@ async function handleConfirmIdentity(
                 `📋 Olá, *${session.patient_name}*!
 
 ` +
-                  `Sua carteirinha (${cardRow.card_number}) está vencida desde *${expiryDate}*.
+                  `Sua carteirinha (${cardRow.card_number}) está *vencida*.
 
 ` +
                   `Você já tem uma solicitação de renovação em aberto!
@@ -2421,7 +2418,7 @@ async function handleConfirmIdentity(
                 `📋 Olá, *${session.patient_name}*!
 
 ` +
-                  `Sua carteirinha (${cardRow.card_number}) está vencida desde *${expiryDate}*.
+                  `Sua carteirinha (${cardRow.card_number}) está *vencida*.
 
 ` +
                   `✅ Recebemos seu contracheque e ele está *em análise*.
@@ -2455,7 +2452,7 @@ async function handleConfirmIdentity(
               `📋 Olá, *${session.patient_name}*!
 
 ` +
-                `Sua carteirinha (${cardRow.card_number}) está vencida desde *${expiryDate}*.
+                `Sua carteirinha (${cardRow.card_number}) está *vencida*.
 
 ` +
                 `Para renovar, precisamos verificar seu vínculo empregatício.
