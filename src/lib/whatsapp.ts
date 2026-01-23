@@ -385,3 +385,61 @@ export function formatProfessionalCancellation(
 
   return lines.join('\n');
 }
+
+export function formatWelcomeNewMember(
+  memberName: string,
+  entityName: string,
+  appUrl: string
+): string {
+  return `🎉 *Seja bem-vindo(a), ${memberName}!*
+
+É com grande satisfação que o *${entityName}* recebe você como nosso mais novo associado! 🤝
+
+📱 *ACESSE NOSSO APLICATIVO*
+Baixe agora e tenha todos os benefícios na palma da mão:
+${appUrl}
+
+━━━━━━━━━━━━━━━━━━━━━━
+🏥 *SEUS BENEFÍCIOS*
+━━━━━━━━━━━━━━━━━━━━━━
+
+✅ *Consultas Médicas*
+Acesso a diversas especialidades com valores especiais
+
+✅ *Atendimento Odontológico*
+Cuidados completos para sua saúde bucal
+
+✅ *Exames Laboratoriais*
+Realize seus exames com descontos exclusivos
+
+✅ *Telemedicina*
+Consultas online no conforto da sua casa
+
+✅ *Farmácia Popular*
+Medicamentos com preços reduzidos
+
+✅ *Assistência Jurídica*
+Orientação legal quando precisar
+
+━━━━━━━━━━━━━━━━━━━━━━
+📲 *RECURSOS DO APP*
+━━━━━━━━━━━━━━━━━━━━━━
+
+📅 Agende consultas online 24h
+💳 Acesse sua carteirinha digital
+👨‍👩‍👧‍👦 Cadastre seus dependentes
+📋 Visualize seu histórico de atendimentos
+📄 Receba documentos e comprovantes
+🔔 Receba notificações importantes
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+💬 *Precisa de ajuda?*
+Estamos sempre disponíveis para atendê-lo!
+Basta responder esta mensagem.
+
+Seja muito bem-vindo(a) à nossa família! 💙
+
+Atenciosamente,
+*Equipe ${entityName}*`;
+}
