@@ -119,6 +119,13 @@ export default function MobileHelpPage() {
     return url;
   };
 
+  // Convert any Google Maps URL to embeddable format
+  const getEmbedMapUrl = (): string => {
+    // Use address-based embed which always works
+    const address = encodeURIComponent(`${content.address}, ${content.city_state}, ${content.cep}`);
+    return `https://maps.google.com/maps?q=${address}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+  };
+
   const handleOpenStreetView = () => {
     if (content.street_view_url) {
       window.open(normalizeUrl(content.street_view_url), "_blank");
@@ -188,27 +195,16 @@ export default function MobileHelpPage() {
         {/* Location Card */}
         <Card className="border shadow-sm overflow-hidden">
           <CardContent className="p-0">
-            {content.street_view_url ? (
-              <div className="h-48 w-full">
-                <iframe
-                  src={normalizeUrl(content.street_view_url)}
-                  className="w-full h-full border-0"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Street View"
-                />
-              </div>
-            ) : (
-              <div className="h-40 bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-12 w-12 text-emerald-600 mx-auto mb-2" />
-                    <p className="text-sm text-emerald-800 font-medium">{content.organization_name}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="h-48 w-full">
+              <iframe
+                src={getEmbedMapUrl()}
+                className="w-full h-full border-0"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Localização no Mapa"
+              />
+            </div>
             <div className="p-4">
               <h3 className="font-semibold text-base mb-2">Como chegar até nós</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -221,7 +217,7 @@ export default function MobileHelpPage() {
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
                 <Navigation className="h-4 w-4 mr-2" />
-                {content.street_view_url ? "Abrir em tela cheia" : "Ver no mapa"}
+                {content.street_view_url ? "Ver Street View" : "Abrir no Google Maps"}
               </Button>
             </div>
           </CardContent>
