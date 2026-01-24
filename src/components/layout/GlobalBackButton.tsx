@@ -23,6 +23,7 @@ const EXCLUDED_ROUTES = [
 
 // Prefixos de rotas públicas que não devem exibir o botão
 const EXCLUDED_PREFIXES = [
+  "/app/",  // Mobile app - has its own navigation
   "/agendamento/",
   "/anamnese/",
   "/nps/",
