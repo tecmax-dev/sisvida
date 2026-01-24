@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,80 +33,122 @@ serve(async (req) => {
       .single();
 
     if (filiacaoError || !filiacao) {
-      throw new Error("Filiação não encontrada");
+      throw new Error("Filiacao nao encontrada");
     }
 
     // Fetch sindicato
     const { data: sindicato } = await supabase
       .from("union_entities")
-      .select("razao_social, clinic_id")
+      .select("razao_social, clinic_id, logo_url")
       .eq("id", filiacao.sindicato_id)
       .single();
 
     const sindicatoName = sindicato?.razao_social || "Sindicato";
+    const logoUrl = sindicato?.logo_url || "";
 
     if (channel === "email") {
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      const resendFrom = Deno.env.get("RESEND_FROM") || "noreply@eclini.com.br";
+      const smtpHost = Deno.env.get("SMTP_HOST");
+      const smtpPort = Deno.env.get("SMTP_PORT");
+      const smtpUser = Deno.env.get("SMTP_USER");
+      const smtpPass = Deno.env.get("SMTP_PASS");
+      const smtpFrom = Deno.env.get("SMTP_FROM");
 
-      if (!resendApiKey) {
-        throw new Error("RESEND_API_KEY não configurada");
+      if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
+        throw new Error("Configuracao SMTP incompleta");
       }
-
-      const resend = new Resend(resendApiKey);
 
       let subject: string;
       let htmlContent: string;
 
+      const logoSection = logoUrl ? `
+        <div style="text-align: center; margin-bottom: 15px;">
+          <img src="${logoUrl}" alt="${sindicatoName}" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+        </div>
+      ` : '';
+
       if (isRejection) {
-        subject = `Solicitação de Filiação - ${sindicatoName}`;
+        subject = `Solicitacao de Filiacao - ${sindicatoName}`;
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
             <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 30px; text-align: center;">
-              <h1 style="color: white; margin: 0;">Solicitação de Filiação</h1>
+              ${logoSection}
+              <h1 style="color: white; margin: 0;">Solicitacao de Filiacao</h1>
               <p style="color: #94a3b8; margin: 10px 0 0 0;">${sindicatoName}</p>
             </div>
             <div style="padding: 30px; background: #f8fafc;">
-              <p>Olá <strong>${filiacao.nome}</strong>,</p>
-              <p>Infelizmente sua solicitação de filiação não foi aprovada.</p>
+              <p>Ola <strong>${filiacao.nome}</strong>,</p>
+              <p>Infelizmente sua solicitacao de filiacao nao foi aprovada.</p>
               ${filiacao.motivo_rejeicao ? `<p><strong>Motivo:</strong> ${filiacao.motivo_rejeicao}</p>` : ""}
-              <p>Caso tenha dúvidas, entre em contato conosco.</p>
+              <p>Caso tenha duvidas, entre em contato conosco.</p>
               <p style="color: #64748b; font-size: 14px; margin-top: 30px;">Atenciosamente,<br>${sindicatoName}</p>
             </div>
-          </div>
-        `;
+          </body>
+          </html>
+        `.replace(/\s+/g, ' ').trim();
       } else {
         subject = `Bem-vindo(a) ao ${sindicatoName}!`;
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
             <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
-              <h1 style="color: white; margin: 0;">Filiação Aprovada!</h1>
+              ${logoSection}
+              <h1 style="color: white; margin: 0;">Filiacao Aprovada!</h1>
               <p style="color: #d1fae5; margin: 10px 0 0 0;">${sindicatoName}</p>
             </div>
             <div style="padding: 30px; background: #f8fafc;">
-              <p>Olá <strong>${filiacao.nome}</strong>,</p>
-              <p>Sua filiação foi aprovada com sucesso! Seja bem-vindo(a) ao nosso sindicato.</p>
+              <p>Ola <strong>${filiacao.nome}</strong>,</p>
+              <p>Sua filiacao foi aprovada com sucesso! Seja bem-vindo(a) ao nosso sindicato.</p>
               ${filiacao.matricula ? `
                 <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
-                  <p style="margin: 0; font-size: 14px; color: #065f46;">Sua matrícula:</p>
+                  <p style="margin: 0; font-size: 14px; color: #065f46;">Sua matricula:</p>
                   <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #059669;">${filiacao.matricula}</p>
                 </div>
               ` : ""}
-              <p>Em breve você receberá sua carteirinha digital e terá acesso a todos os benefícios.</p>
+              <p>Em breve voce recebera sua carteirinha digital e tera acesso a todos os beneficios.</p>
               <p style="color: #64748b; font-size: 14px; margin-top: 30px;">Atenciosamente,<br>${sindicatoName}</p>
             </div>
-          </div>
-        `;
+          </body>
+          </html>
+        `.replace(/\s+/g, ' ').trim();
       }
 
-      const emailResponse = await resend.emails.send({
-        from: resendFrom,
-        to: [filiacao.email],
-        subject,
-        html: htmlContent,
+      const client = new SMTPClient({
+        connection: {
+          hostname: smtpHost,
+          port: parseInt(smtpPort || "465"),
+          tls: true,
+          auth: {
+            username: smtpUser,
+            password: smtpPass,
+          },
+        },
       });
 
-      console.log("Email sent:", emailResponse);
+      await client.send({
+        from: smtpFrom,
+        to: filiacao.email,
+        subject,
+        content: "Visualize este email em um cliente que suporte HTML",
+        html: htmlContent,
+        headers: {
+          "Content-Transfer-Encoding": "base64",
+        },
+      });
+
+      await client.close();
+
+      console.log("Email sent via SMTP");
     } else if (channel === "whatsapp") {
       // WhatsApp notification via Evolution API
       const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
@@ -114,15 +156,15 @@ serve(async (req) => {
       const evolutionInstance = Deno.env.get("EVOLUTION_INSTANCE");
 
       if (!evolutionUrl || !evolutionKey || !evolutionInstance) {
-        throw new Error("Evolution API não configurada");
+        throw new Error("Evolution API nao configurada");
       }
 
       const phone = filiacao.telefone.replace(/\D/g, "");
       const formattedPhone = phone.startsWith("55") ? phone : `55${phone}`;
 
       const message = isRejection
-        ? `Olá ${filiacao.nome}!\n\nInfelizmente sua solicitação de filiação ao ${sindicatoName} não foi aprovada.\n\n${filiacao.motivo_rejeicao ? `Motivo: ${filiacao.motivo_rejeicao}\n\n` : ""}Caso tenha dúvidas, entre em contato conosco.`
-        : `🎉 Olá ${filiacao.nome}!\n\nSua filiação ao ${sindicatoName} foi APROVADA!\n\n${filiacao.matricula ? `📋 Sua matrícula: *${filiacao.matricula}*\n\n` : ""}Em breve você receberá sua carteirinha digital.\n\nSeja bem-vindo(a)!`;
+        ? `Ola ${filiacao.nome}!\n\nInfelizmente sua solicitacao de filiacao ao ${sindicatoName} nao foi aprovada.\n\n${filiacao.motivo_rejeicao ? `Motivo: ${filiacao.motivo_rejeicao}\n\n` : ""}Caso tenha duvidas, entre em contato conosco.`
+        : `Ola ${filiacao.nome}!\n\nSua filiacao ao ${sindicatoName} foi APROVADA!\n\n${filiacao.matricula ? `Sua matricula: *${filiacao.matricula}*\n\n` : ""}Em breve voce recebera sua carteirinha digital.\n\nSeja bem-vindo(a)!`;
 
       const response = await fetch(`${evolutionUrl}/message/sendText/${evolutionInstance}`, {
         method: "POST",
