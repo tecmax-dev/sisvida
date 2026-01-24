@@ -479,27 +479,43 @@ function JornaisContent() {
       
       <div className="space-y-3">
         {jornais.map((jornal) => (
-          <Card key={jornal.id} className="border shadow-sm">
+          <Card 
+            key={jornal.id} 
+            className="border shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              const url = jornal.external_link || jornal.file_url;
+              if (url) window.open(url, '_blank');
+            }}
+          >
+            {jornal.image_url && (
+              <div className="w-full h-40 bg-muted">
+                <img 
+                  src={jornal.image_url} 
+                  alt={jornal.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="w-12 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                  <Newspaper className="h-6 w-6 text-slate-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm truncate">{jornal.title}</h4>
-                  {jornal.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{jornal.description}</p>
-                  )}
-                </div>
-                {jornal.file_url && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => window.open(jornal.file_url, '_blank')}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
+                {!jornal.image_url && (
+                  <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Newspaper className="h-6 w-6 text-slate-600" />
+                  </div>
                 )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm line-clamp-2">{jornal.title}</h4>
+                  {jornal.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{jornal.description}</p>
+                  )}
+                  <p className="text-xs text-slate-400 mt-2">
+                    {format(new Date(jornal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
