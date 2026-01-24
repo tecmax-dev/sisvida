@@ -165,6 +165,11 @@ serve(async (req: Request): Promise<Response> => {
         to: email,
         subject: "Codigo de Primeiro Acesso - App SECMI",
         html: emailHtml,
+        headers: {
+          "X-Priority": "1",
+          "X-MSMail-Priority": "High",
+          "Importance": "High",
+        },
       });
 
       await client.close();
