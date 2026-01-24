@@ -25,10 +25,18 @@ import {
   Loader2,
   Building2,
   LifeBuoy,
+  Map,
+  Home,
 } from "lucide-react";
 
 interface HelpContent {
   id?: string;
+  // Home card section
+  home_card_title: string;
+  home_card_subtitle: string;
+  home_card_button_text: string;
+  // Map
+  map_embed_url: string;
   // Location
   organization_name: string;
   address: string;
@@ -45,6 +53,10 @@ interface HelpContent {
 }
 
 const defaultContent: HelpContent = {
+  home_card_title: "Como chegar até nós?",
+  home_card_subtitle: "Veja nossa localização no mapa",
+  home_card_button_text: "Ver no mapa",
+  map_embed_url: "",
   organization_name: "Sindicato SECMI",
   address: "Rua do Sindicato, 123 - Centro",
   city_state: "São Paulo - SP",
@@ -87,6 +99,10 @@ export function HelpContentManagement() {
         const metadata = data.metadata as Record<string, unknown>;
         setExistingId(data.id);
         setContent({
+          home_card_title: (metadata.home_card_title as string) || defaultContent.home_card_title,
+          home_card_subtitle: (metadata.home_card_subtitle as string) || defaultContent.home_card_subtitle,
+          home_card_button_text: (metadata.home_card_button_text as string) || defaultContent.home_card_button_text,
+          map_embed_url: (metadata.map_embed_url as string) || defaultContent.map_embed_url,
           organization_name: (metadata.organization_name as string) || defaultContent.organization_name,
           address: (metadata.address as string) || defaultContent.address,
           city_state: (metadata.city_state as string) || defaultContent.city_state,
@@ -112,6 +128,10 @@ export function HelpContentManagement() {
     setIsSaving(true);
     try {
       const metadata = {
+        home_card_title: content.home_card_title,
+        home_card_subtitle: content.home_card_subtitle,
+        home_card_button_text: content.home_card_button_text,
+        map_embed_url: content.map_embed_url,
         organization_name: content.organization_name,
         address: content.address,
         city_state: content.city_state,
@@ -196,6 +216,84 @@ export function HelpContentManagement() {
             <Badge variant={existingId ? "default" : "secondary"}>
               {existingId ? "Configurado" : "Não configurado"}
             </Badge>
+          </div>
+
+          <Separator />
+
+          {/* Home Card Section */}
+          <div className="space-y-4">
+            <h3 className="font-medium flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Card "Como chegar até nós" (Tela Inicial)
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Configure o card que aparece na tela inicial do app com acesso ao mapa
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Título do Card</Label>
+                <Input
+                  value={content.home_card_title}
+                  onChange={(e) => setContent({ ...content, home_card_title: e.target.value })}
+                  placeholder="Ex: Como chegar até nós?"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subtítulo (opcional)</Label>
+                <Input
+                  value={content.home_card_subtitle}
+                  onChange={(e) => setContent({ ...content, home_card_subtitle: e.target.value })}
+                  placeholder="Ex: Veja nossa localização"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Texto do Botão</Label>
+                <Input
+                  value={content.home_card_button_text}
+                  onChange={(e) => setContent({ ...content, home_card_button_text: e.target.value })}
+                  placeholder="Ex: Ver no mapa"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Map Configuration */}
+          <div className="space-y-4">
+            <h3 className="font-medium flex items-center gap-2">
+              <Map className="h-4 w-4" />
+              Configuração do Mapa
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Cole a URL de incorporação do Google Maps (embed URL)
+            </p>
+            <div className="space-y-2">
+              <Label>URL do Mapa (Google Maps Embed)</Label>
+              <Textarea
+                value={content.map_embed_url}
+                onChange={(e) => setContent({ ...content, map_embed_url: e.target.value })}
+                placeholder="Ex: https://www.google.com/maps/embed?pb=..."
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Para obter a URL: Abra o Google Maps → Pesquise seu endereço → Clique em "Compartilhar" → "Incorporar um mapa" → Copie apenas a URL do src
+              </p>
+            </div>
+            {content.map_embed_url && (
+              <div className="rounded-lg overflow-hidden border">
+                <iframe
+                  src={content.map_embed_url}
+                  width="100%"
+                  height="200"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Prévia do mapa"
+                />
+              </div>
+            )}
           </div>
 
           <Separator />
