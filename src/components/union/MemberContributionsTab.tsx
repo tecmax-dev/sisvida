@@ -59,6 +59,7 @@ import {
   Mail,
   CheckSquare,
   Square,
+  FileText,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -81,6 +82,7 @@ import { SendPFContributionWhatsAppDialog } from "@/components/contributions/Sen
 import { SendPFContributionEmailDialog } from "@/components/contributions/SendPFContributionEmailDialog";
 import { BatchWhatsAppDialog } from "@/components/contributions/BatchWhatsAppDialog";
 import { BatchPFEmailDialog } from "@/components/contributions/BatchPFEmailDialog";
+import { generatePFBoletosReport } from "@/lib/pf-boleto-report";
 
 interface Member {
   id: string;
@@ -746,6 +748,15 @@ export default function MemberContributionsTab() {
                     onClick={clearSelection}
                   >
                     Limpar seleção
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generatePFBoletosReport(selectedContributions)}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Exportar PDF
                   </Button>
                   <Button
                     size="sm"
