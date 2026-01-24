@@ -26,7 +26,7 @@ interface HelpContentData {
   weekday_hours: string;
   saturday_hours: string;
   sunday_holiday: string;
-  map_embed_url: string;
+  street_view_url: string;
 }
 
 const defaultContent: HelpContentData = {
@@ -40,7 +40,7 @@ const defaultContent: HelpContentData = {
   weekday_hours: "08:00 - 17:00",
   saturday_hours: "08:00 - 12:00",
   sunday_holiday: "Fechado",
-  map_embed_url: "",
+  street_view_url: "",
 };
 
 export default function MobileHelpPage() {
@@ -104,7 +104,7 @@ export default function MobileHelpPage() {
           weekday_hours: (metadata.weekday_hours as string) || defaultContent.weekday_hours,
           saturday_hours: (metadata.saturday_hours as string) || defaultContent.saturday_hours,
           sunday_holiday: (metadata.sunday_holiday as string) || defaultContent.sunday_holiday,
-          map_embed_url: (metadata.map_embed_url as string) || defaultContent.map_embed_url,
+          street_view_url: (metadata.street_view_url as string) || defaultContent.street_view_url,
         });
       }
     } catch (error) {
@@ -114,9 +114,13 @@ export default function MobileHelpPage() {
     }
   };
 
-  const handleOpenMap = () => {
-    const address = encodeURIComponent(`${content.address}, ${content.city_state}, ${content.cep}`);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, "_blank");
+  const handleOpenStreetView = () => {
+    if (content.street_view_url) {
+      window.open(content.street_view_url, "_blank");
+    } else {
+      const address = encodeURIComponent(`${content.address}, ${content.city_state}, ${content.cep}`);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, "_blank");
+    }
   };
 
   const handleCall = (phone: string) => {
@@ -176,32 +180,17 @@ export default function MobileHelpPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Map Card */}
+        {/* Location Card */}
         <Card className="border shadow-sm overflow-hidden">
           <CardContent className="p-0">
-            {content.map_embed_url ? (
-              <div className="h-48 relative">
-                <iframe
-                  src={content.map_embed_url}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Mapa da localização"
-                />
-              </div>
-            ) : (
-              <div className="h-40 bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-12 w-12 text-emerald-600 mx-auto mb-2" />
-                    <p className="text-sm text-emerald-800 font-medium">{content.organization_name}</p>
-                  </div>
+            <div className="h-40 bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center relative">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <MapPin className="h-12 w-12 text-emerald-600 mx-auto mb-2" />
+                  <p className="text-sm text-emerald-800 font-medium">{content.organization_name}</p>
                 </div>
               </div>
-            )}
+            </div>
             <div className="p-4">
               <h3 className="font-semibold text-base mb-2">Como chegar até nós</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -210,11 +199,11 @@ export default function MobileHelpPage() {
                 {content.city_state}, {content.cep}
               </p>
               <Button
-                onClick={handleOpenMap}
+                onClick={handleOpenStreetView}
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
                 <Navigation className="h-4 w-4 mr-2" />
-                Ver no mapa
+                {content.street_view_url ? "Ver no Street View" : "Ver no mapa"}
               </Button>
             </div>
           </CardContent>
