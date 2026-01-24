@@ -268,19 +268,30 @@ export function HelpContentManagement() {
               Embed do Mapa/Street View
             </h3>
             <p className="text-sm text-muted-foreground">
-              Cole o código de incorporação (iframe) do Google Maps ou Street View
+              Cole a URL de incorporação do Google Maps (deve começar com https://www.google.com/maps/embed)
             </p>
             <div className="space-y-2">
-              <Label>Código do Iframe (src)</Label>
+              <Label>URL do Iframe (src)</Label>
               <Textarea
                 value={content.street_view_url}
-                onChange={(e) => setContent({ ...content, street_view_url: e.target.value })}
-                placeholder="Ex: https://www.google.com/maps/embed?pb=!4v1..."
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Extract src from iframe if user pastes full iframe code
+                  const srcMatch = value.match(/src=["']([^"']+)["']/);
+                  const cleanUrl = srcMatch ? srcMatch[1] : value;
+                  setContent({ ...content, street_view_url: cleanUrl });
+                }}
+                placeholder="Ex: https://www.google.com/maps/embed?pb=!1m18..."
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                Para obter: Google Maps → Clique em "Compartilhar" → "Incorporar um mapa" → Copie apenas a URL do src=""
+                <strong>Como obter:</strong> Google Maps → Compartilhar → Incorporar um mapa → Copie o código e cole aqui (o sistema extrairá a URL automaticamente)
               </p>
+              {content.street_view_url && !content.street_view_url.includes('/embed') && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ A URL deve ser de incorporação (conter "/embed"). URLs normais do Google Maps são bloqueadas.
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -293,10 +304,23 @@ export function HelpContentManagement() {
                     setShowPreview(true);
                   }
                 }}
-                disabled={!content.street_view_url}
+                disabled={!content.street_view_url || !content.street_view_url.includes('/embed')}
               >
                 <Map className="h-4 w-4 mr-2" />
-                Pré-visualizar Mapa
+                Pré-visualizar
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (content.street_view_url) {
+                    window.open(content.street_view_url, '_blank');
+                  }
+                }}
+                disabled={!content.street_view_url}
+              >
+                Abrir em Nova Aba
               </Button>
               {showPreview && (
                 <Button
@@ -309,7 +333,7 @@ export function HelpContentManagement() {
                 </Button>
               )}
             </div>
-            {showPreview && previewUrl && (
+            {showPreview && previewUrl && previewUrl.includes('/embed') && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">Pré-visualização:</p>
                 <div className="rounded-lg border overflow-hidden h-48">
