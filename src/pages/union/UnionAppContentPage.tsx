@@ -82,6 +82,7 @@ import { CctCategoriesManagement } from "@/components/union/CctCategoriesManagem
 import { UnionContentList } from "@/components/union/UnionContentList";
 import { AlbumManagementTab } from "@/components/union/AlbumManagementTab";
 import { ImportUrlButton } from "@/components/union/ImportUrlButton";
+import { HelpContentManagement } from "@/components/union/HelpContentManagement";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployerCategory {
@@ -109,6 +110,7 @@ const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   faq: <HelpCircle className="h-4 w-4" />,
   atendimento: <Headphones className="h-4 w-4" />,
   sobre: <Info className="h-4 w-4" />,
+  ajuda: <HelpCircle className="h-4 w-4" />,
 };
 
 interface FormData {
@@ -409,6 +411,8 @@ export default function UnionAppContentPage() {
               <ConveniosManagementTab />
             ) : type === "galeria" ? (
               <AlbumManagementTab />
+            ) : type === "ajuda" ? (
+              <HelpContentManagement />
             ) : (
               <UnionContentList
                 content={filteredContent}
