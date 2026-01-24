@@ -60,6 +60,9 @@ import {
   CheckSquare,
   Square,
   FileText,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -163,6 +166,7 @@ const STATUS_CONFIG = {
 const SEARCH_CONTRIBUTIONS_KEY = "union-members:search-contributions";
 const STATUS_FILTER_KEY = "union-members:status-filter";
 const YEAR_FILTER_KEY = "union-members:year-filter";
+const SORT_ORDER_KEY = "union-members:sort-ascending";
 
 const getInitialSearch = (): string => {
   try {
@@ -189,6 +193,15 @@ const getInitialYearFilter = (): number => {
   }
 };
 
+const getInitialSortOrder = (): boolean => {
+  try {
+    const saved = sessionStorage.getItem(SORT_ORDER_KEY);
+    return saved === "true";
+  } catch {
+    return false; // Default: decrescente (mês mais recente primeiro)
+  }
+};
+
 export default function MemberContributionsTab() {
   const { currentClinic, session, user } = useAuth();
   const { validateSession } = useSessionValidator();
@@ -205,6 +218,7 @@ export default function MemberContributionsTab() {
   const [searchTerm, setSearchTerm] = useState(getInitialSearch);
   const [statusFilter, setStatusFilter] = useState<string>(getInitialStatusFilter);
   const [yearFilter, setYearFilter] = useState<number>(getInitialYearFilter);
+  const [sortAscending, setSortAscending] = useState<boolean>(getInitialSortOrder);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("list");
 
@@ -226,6 +240,12 @@ export default function MemberContributionsTab() {
       sessionStorage.setItem(YEAR_FILTER_KEY, yearFilter.toString());
     } catch {}
   }, [yearFilter]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SORT_ORDER_KEY, sortAscending.toString());
+    } catch {}
+  }, [sortAscending]);
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -521,7 +541,7 @@ export default function MemberContributionsTab() {
   };
 
   const filteredContributions = useMemo(() => {
-    return contributions.filter((c) => {
+    const filtered = contributions.filter((c) => {
       let matchesSearch = true;
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase().trim();
@@ -536,7 +556,19 @@ export default function MemberContributionsTab() {
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       return matchesSearch && matchesStatus;
     });
-  }, [contributions, searchTerm, statusFilter]);
+
+    // Ordenação por mês de competência
+    return [...filtered].sort((a, b) => {
+      const monthDiff = a.competence_month - b.competence_month;
+      if (monthDiff !== 0) {
+        return sortAscending ? monthDiff : -monthDiff;
+      }
+      // Se o mês for igual, ordena por data de criação
+      return sortAscending 
+        ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [contributions, searchTerm, statusFilter, sortAscending]);
 
   // Stats
   const stats = useMemo(() => {
@@ -776,6 +808,33 @@ export default function MemberContributionsTab() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {/* Sort Order Toggle */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSortAscending(!sortAscending)}
+                        className="shrink-0"
+                      >
+                        {sortAscending ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {sortAscending 
+                          ? "Ordenar por mês: Crescente (Jan → Dez)" 
+                          : "Ordenar por mês: Decrescente (Dez → Jan)"}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>
