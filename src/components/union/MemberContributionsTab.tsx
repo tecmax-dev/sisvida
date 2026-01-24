@@ -159,6 +159,36 @@ const STATUS_CONFIG = {
   },
 };
 
+// Storage keys for search persistence
+const SEARCH_CONTRIBUTIONS_KEY = "union-members:search-contributions";
+const STATUS_FILTER_KEY = "union-members:status-filter";
+const YEAR_FILTER_KEY = "union-members:year-filter";
+
+const getInitialSearch = (): string => {
+  try {
+    return sessionStorage.getItem(SEARCH_CONTRIBUTIONS_KEY) || "";
+  } catch {
+    return "";
+  }
+};
+
+const getInitialStatusFilter = (): string => {
+  try {
+    return sessionStorage.getItem(STATUS_FILTER_KEY) || "hide_cancelled";
+  } catch {
+    return "hide_cancelled";
+  }
+};
+
+const getInitialYearFilter = (): number => {
+  try {
+    const saved = sessionStorage.getItem(YEAR_FILTER_KEY);
+    return saved ? parseInt(saved, 10) : new Date().getFullYear();
+  } catch {
+    return new Date().getFullYear();
+  }
+};
+
 export default function MemberContributionsTab() {
   const { currentClinic, session, user } = useAuth();
   const { validateSession } = useSessionValidator();
@@ -171,12 +201,31 @@ export default function MemberContributionsTab() {
   const [fetchingPaid, setFetchingPaid] = useState(false);
   const [importingExternal, setImportingExternal] = useState(false);
   
-  // Filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
-  const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
+  // Filters with persistence
+  const [searchTerm, setSearchTerm] = useState(getInitialSearch);
+  const [statusFilter, setStatusFilter] = useState<string>(getInitialStatusFilter);
+  const [yearFilter, setYearFilter] = useState<number>(getInitialYearFilter);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("list");
+
+  // Persist filters to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SEARCH_CONTRIBUTIONS_KEY, searchTerm);
+    } catch {}
+  }, [searchTerm]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STATUS_FILTER_KEY, statusFilter);
+    } catch {}
+  }, [statusFilter]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(YEAR_FILTER_KEY, yearFilter.toString());
+    } catch {}
+  }, [yearFilter]);
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
