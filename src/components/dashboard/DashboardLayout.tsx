@@ -540,128 +540,48 @@ export function DashboardLayout() {
               </div>
             )}
 
-            {/* Quick access cards */}
-            {!sidebarCollapsed && (
-              <div className="mt-4 pt-4 border-t border-sidebar-border/50 space-y-2">
-                {/* Módulo Sindical */}
-                {hasUnionEntity && (
-                  <Link
-                    to="/union"
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-                      "bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                      "border border-amber-400/30 text-amber-100 hover:text-white"
-                    )}
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
-                      <Building2 className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium">Módulo Sindical</span>
-                      <span className="text-xs text-amber-200/70">Acesso rápido</span>
-                    </div>
-                  </Link>
-                )}
-
-                {/* Módulo Clínica - Active state since we're in it */}
+            {/* Quick access card - only Módulo Sindical since Clínica and Admin are already in nav */}
+            {!sidebarCollapsed && hasUnionEntity && (
+              <div className="mt-4 pt-4 border-t border-sidebar-border/50">
                 <Link
-                  to="/dashboard"
+                  to="/union"
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-                    location.pathname.startsWith("/dashboard")
-                      ? "bg-gradient-to-r from-cyan-500/30 to-emerald-500/30 border border-cyan-400/50 text-cyan-100"
-                      : "bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 border border-cyan-400/30 text-cyan-100 hover:text-white"
+                    "bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
+                    "border border-amber-400/30 text-amber-100 hover:text-white"
                   )}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-sm">
-                    <HeartPulse className="h-4 w-4 text-white" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+                    <Building2 className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-medium">Clínica</span>
-                    <span className="text-xs text-cyan-200/70">Acesso rápido</span>
+                    <span className="font-medium">Módulo Sindical</span>
+                    <span className="text-xs text-amber-200/70">Acesso rápido</span>
                   </div>
                 </Link>
-
-                {/* Administrativo - Only for admins */}
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-                      "bg-gradient-to-r from-slate-500/20 to-gray-500/20 hover:from-slate-500/30 hover:to-gray-500/30",
-                      "border border-slate-400/30 text-slate-100 hover:text-white"
-                    )}
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shadow-sm">
-                      <Settings className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium">Administrativo</span>
-                      <span className="text-xs text-slate-200/70">Acesso rápido</span>
-                    </div>
-                  </Link>
-                )}
               </div>
             )}
 
-            {/* Collapsed quick access icons */}
-            {sidebarCollapsed && (
-              <div className="mt-2 pt-2 border-t border-sidebar-border/50 space-y-1">
-                {hasUnionEntity && (
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        to="/union"
-                        onClick={() => setSidebarOpen(false)}
-                        className={cn(
-                          "flex items-center justify-center p-2 rounded-lg transition-colors",
-                          "bg-gradient-to-br from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                          "border border-amber-400/30"
-                        )}
-                      >
-                        <Building2 className="h-5 w-5 text-amber-200" />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Módulo Sindical</TooltipContent>
-                  </Tooltip>
-                )}
+            {/* Collapsed quick access icon - only Módulo Sindical */}
+            {sidebarCollapsed && hasUnionEntity && (
+              <div className="mt-2 pt-2 border-t border-sidebar-border/50">
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Link
-                      to="/dashboard"
+                      to="/union"
                       onClick={() => setSidebarOpen(false)}
                       className={cn(
                         "flex items-center justify-center p-2 rounded-lg transition-colors",
-                        "bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30",
-                        "border border-cyan-400/30"
+                        "bg-gradient-to-br from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
+                        "border border-amber-400/30"
                       )}
                     >
-                      <HeartPulse className="h-5 w-5 text-cyan-200" />
+                      <Building2 className="h-5 w-5 text-amber-200" />
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent side="right">Clínica</TooltipContent>
+                  <TooltipContent side="right">Módulo Sindical</TooltipContent>
                 </Tooltip>
-                {isAdmin && (
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        to="/admin"
-                        onClick={() => setSidebarOpen(false)}
-                        className={cn(
-                          "flex items-center justify-center p-2 rounded-lg transition-colors",
-                          "bg-gradient-to-br from-slate-500/20 to-gray-500/20 hover:from-slate-500/30 hover:to-gray-500/30",
-                          "border border-slate-400/30"
-                        )}
-                      >
-                        <Settings className="h-5 w-5 text-slate-200" />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Administrativo</TooltipContent>
-                  </Tooltip>
-                )}
               </div>
             )}
           </nav>
