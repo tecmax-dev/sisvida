@@ -35,8 +35,8 @@ interface HelpContent {
   home_card_title: string;
   home_card_subtitle: string;
   home_card_button_text: string;
-  // Map
-  map_embed_url: string;
+  // Street View
+  street_view_url: string;
   // Location
   organization_name: string;
   address: string;
@@ -56,7 +56,7 @@ const defaultContent: HelpContent = {
   home_card_title: "Como chegar até nós?",
   home_card_subtitle: "Veja nossa localização no mapa",
   home_card_button_text: "Ver no mapa",
-  map_embed_url: "",
+  street_view_url: "",
   organization_name: "Sindicato SECMI",
   address: "Rua do Sindicato, 123 - Centro",
   city_state: "São Paulo - SP",
@@ -102,7 +102,7 @@ export function HelpContentManagement() {
           home_card_title: (metadata.home_card_title as string) || defaultContent.home_card_title,
           home_card_subtitle: (metadata.home_card_subtitle as string) || defaultContent.home_card_subtitle,
           home_card_button_text: (metadata.home_card_button_text as string) || defaultContent.home_card_button_text,
-          map_embed_url: (metadata.map_embed_url as string) || defaultContent.map_embed_url,
+          street_view_url: (metadata.street_view_url as string) || defaultContent.street_view_url,
           organization_name: (metadata.organization_name as string) || defaultContent.organization_name,
           address: (metadata.address as string) || defaultContent.address,
           city_state: (metadata.city_state as string) || defaultContent.city_state,
@@ -131,7 +131,7 @@ export function HelpContentManagement() {
         home_card_title: content.home_card_title,
         home_card_subtitle: content.home_card_subtitle,
         home_card_button_text: content.home_card_button_text,
-        map_embed_url: content.map_embed_url,
+        street_view_url: content.street_view_url,
         organization_name: content.organization_name,
         address: content.address,
         city_state: content.city_state,
@@ -259,39 +259,38 @@ export function HelpContentManagement() {
 
           <Separator />
 
-          {/* Map Configuration */}
+          {/* Street View Configuration */}
           <div className="space-y-4">
             <h3 className="font-medium flex items-center gap-2">
               <Map className="h-4 w-4" />
-              Configuração do Mapa
+              Link do Street View
             </h3>
             <p className="text-sm text-muted-foreground">
-              Cole a URL de incorporação do Google Maps (embed URL)
+              Cole o link do Google Street View para que os usuários possam visualizar a localização
             </p>
             <div className="space-y-2">
-              <Label>URL do Mapa (Google Maps Embed)</Label>
+              <Label>URL do Street View</Label>
               <Textarea
-                value={content.map_embed_url}
-                onChange={(e) => setContent({ ...content, map_embed_url: e.target.value })}
-                placeholder="Ex: https://www.google.com/maps/embed?pb=..."
+                value={content.street_view_url}
+                onChange={(e) => setContent({ ...content, street_view_url: e.target.value })}
+                placeholder="Ex: https://www.google.com/maps/@-23.5505,-46.6333,3a,75y..."
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                Para obter a URL: Abra o Google Maps → Pesquise seu endereço → Clique em "Compartilhar" → "Incorporar um mapa" → Copie apenas a URL do src
+                Para obter a URL: Abra o Google Maps → Ative o Street View → Copie o link da barra de endereço
               </p>
             </div>
-            {content.map_embed_url && (
-              <div className="rounded-lg overflow-hidden border">
-                <iframe
-                  src={content.map_embed_url}
-                  width="100%"
-                  height="200"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Prévia do mapa"
-                />
+            {content.street_view_url && (
+              <div className="rounded-lg border p-3 bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-2">Link configurado:</p>
+                <a 
+                  href={content.street_view_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline break-all"
+                >
+                  {content.street_view_url}
+                </a>
               </div>
             )}
           </div>
