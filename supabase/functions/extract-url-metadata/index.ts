@@ -267,7 +267,88 @@ serve(async (req) => {
     metadata.title = decodeHtmlEntities(metadata.title);
     metadata.description = decodeHtmlEntities(metadata.description);
 
-    console.log(`[extract-url-metadata] Extracted:`, metadata);
+    // Detect if metadata still looks generic (home page info)
+    const looksGeneric = (() => {
+      const t = (metadata.title || "").toLowerCase();
+      const img = (metadata.image || "").toLowerCase();
+      const host = parsedUrl.hostname.toLowerCase().replace(/^www\./, "");
+      // If title contains the hostname or common home keywords, or image is a logo
+      const titleGeneric =
+        !metadata.title ||
+        t.includes(host) ||
+        /home|in(í|i)cio|bem-vindo|sindicato/.test(t);
+      const imageGeneric =
+        img.includes("logo") ||
+        img.includes("favicon") ||
+        img.includes("icon");
+      return titleGeneric && imageGeneric;
+    })();
+
+    // Fallback to Firecrawl for rendered content extraction
+    const firecrawlApiKey = Deno.env.get("FIRECRAWL_API_KEY");
+    if (looksGeneric && firecrawlApiKey) {
+      console.log(
+        `[extract-url-metadata] Metadata looks generic, trying Firecrawl...`
+      );
+      try {
+        const fcRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${firecrawlApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url,
+            formats: ["markdown"],
+            onlyMainContent: true,
+            waitFor: 3000,
+          }),
+        });
+
+        if (fcRes.ok) {
+          const fcData = await fcRes.json();
+          const md: string = fcData?.data?.markdown || fcData?.markdown || "";
+          const fcMeta = fcData?.data?.metadata || fcData?.metadata || {};
+
+          // Extract first H1 from markdown
+          const mdH1 = md.match(/^# (.+)$/m)?.[1]?.trim();
+          // First image from markdown
+          const mdImg = md.match(/!\[[^\]]*\]\(([^)]+)\)/)?.[1];
+          // First paragraph of reasonable length (skip links and image lines)
+          const mdParagraphs = md
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(
+              (line) =>
+                line.length > 50 &&
+                !line.startsWith("#") &&
+                !line.startsWith("![") &&
+                !line.startsWith("[") &&
+                !/^\d{2}\/\d{2}\/\d{4}/.test(line)
+            );
+          const mdDesc = mdParagraphs[0]?.slice(0, 250);
+
+          if (mdH1) metadata.title = decodeHtmlEntities(mdH1);
+          if (mdDesc) metadata.description = decodeHtmlEntities(mdDesc);
+          if (mdImg) metadata.image = mdImg;
+          if (fcMeta.title && !metadata.title)
+            metadata.title = decodeHtmlEntities(fcMeta.title);
+          if (fcMeta.description && !metadata.description)
+            metadata.description = decodeHtmlEntities(fcMeta.description);
+          if (fcMeta.ogImage && !metadata.image) metadata.image = fcMeta.ogImage;
+
+          console.log(`[extract-url-metadata] Firecrawl result:`, metadata);
+        } else {
+          console.warn(
+            `[extract-url-metadata] Firecrawl failed: ${fcRes.status}`
+          );
+        }
+      } catch (fcErr) {
+        console.warn("[extract-url-metadata] Firecrawl error:", fcErr);
+      }
+    }
+
+    console.log(`[extract-url-metadata] Final extracted:`, metadata);
 
     return new Response(JSON.stringify(metadata), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
