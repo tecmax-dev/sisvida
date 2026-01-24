@@ -139,11 +139,7 @@ serve(async (req) => {
         from: smtpFrom,
         to: filiacao.email,
         subject,
-        content: "Visualize este email em um cliente que suporte HTML",
         html: htmlContent,
-        headers: {
-          "Content-Transfer-Encoding": "base64",
-        },
       });
 
       await client.close();
