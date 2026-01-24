@@ -152,7 +152,7 @@ export default function MobileAboutPage() {
           
           <div>
             <p className="text-xs text-muted-foreground">Desenvolvido por</p>
-            <p className="text-sm font-medium text-foreground">I & B Tecnologia</p>
+            <p className="text-sm font-medium text-foreground">Tecmax Tecnologia</p>
             <p className="text-xs text-muted-foreground mt-1">
               © 2026 Todos os direitos reservados
             </p>
