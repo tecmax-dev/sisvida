@@ -337,12 +337,19 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     try {
+      // Remove extra whitespace/newlines from HTML to prevent quoted-printable encoding issues
+      const cleanHtml = html.replace(/\n\s*/g, '').replace(/\s{2,}/g, ' ');
+      
       await client.send({
         from: smtpFrom,
         to: toAddresses,
         subject: subject,
         content: "Visualize este email em um cliente que suporte HTML.",
-        html: html,
+        html: cleanHtml,
+        headers: {
+          "Content-Type": "text/html; charset=UTF-8",
+          "Content-Transfer-Encoding": "base64",
+        },
       });
 
       await client.close();
