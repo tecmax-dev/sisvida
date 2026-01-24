@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, FileText, Calendar, Handshake, ExternalLink, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { PortalPdfViewer } from "./PortalPdfViewer";
 
 interface Convention {
   id: string;
@@ -23,6 +24,8 @@ interface PortalConventionsSectionProps {
 export function PortalConventionsSection({ clinicId, employerCategoryId }: PortalConventionsSectionProps) {
   const [conventions, setConventions] = useState<Convention[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedConvention, setSelectedConvention] = useState<Convention | null>(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
 
   useEffect(() => {
     const loadConventions = async () => {
@@ -62,6 +65,11 @@ export function PortalConventionsSection({ clinicId, employerCategoryId }: Porta
     }
   }, [clinicId, employerCategoryId]);
 
+  const handleConventionClick = (convention: Convention) => {
+    setSelectedConvention(convention);
+    setShowPdfViewer(true);
+  };
+
   if (isLoading) {
     return (
       <Card className="bg-white border-0 shadow-sm">
@@ -92,44 +100,53 @@ export function PortalConventionsSection({ clinicId, employerCategoryId }: Porta
   }
 
   return (
-    <Card className="bg-white border-0 shadow-sm overflow-hidden">
-      <CardHeader className="pb-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
-        <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-          <Handshake className="h-5 w-5 text-indigo-600" />
-          Convenções Coletivas
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="divide-y divide-slate-100">
-          {conventions.map((convention) => (
-            <a
-              key={convention.id}
-              href={convention.file_url || convention.external_link || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                  <FileText className="h-5 w-5 text-indigo-600" />
+    <>
+      <Card className="bg-white border-0 shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+            <Handshake className="h-5 w-5 text-indigo-600" />
+            Convenções Coletivas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-slate-100">
+            {conventions.map((convention) => (
+              <button
+                key={convention.id}
+                onClick={() => handleConventionClick(convention)}
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group text-left"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-medium text-slate-900 text-sm truncate">
+                      {convention.title}
+                    </h4>
+                    {convention.description && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        {convention.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h4 className="font-medium text-slate-900 text-sm truncate">
-                    {convention.title}
-                  </h4>
-                  {convention.description && (
-                    <p className="text-xs text-slate-500 truncate mt-0.5">
-                      {convention.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
-            </a>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* PDF Viewer Dialog */}
+      <PortalPdfViewer
+        open={showPdfViewer}
+        onOpenChange={setShowPdfViewer}
+        title={selectedConvention?.title || "Convenção Coletiva"}
+        pdfUrl={selectedConvention?.file_url || null}
+        externalLink={selectedConvention?.external_link}
+      />
+    </>
   );
 }
 
