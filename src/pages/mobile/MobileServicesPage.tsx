@@ -730,45 +730,57 @@ function BoletosContent() {
         .eq('id', patientId)
         .single();
 
-      if (patientError || !patientData?.cpf) {
+      if (patientError) {
         console.error('Error fetching patient CPF:', patientError);
         setLoading(false);
         return;
       }
 
-      const patientCpfClean = normalizeAndCleanCpf(patientData.cpf);
+      const patientCpfClean = normalizeAndCleanCpf(patientData?.cpf);
       
-      if (!patientCpfClean) {
-        setLoading(false);
-        return;
+      // We'll collect contributions from multiple sources
+      const allContributions: any[] = [];
+
+      // 2. First, try to find member contributions (via members table with matching CPF)
+      if (patientCpfClean) {
+        const { data: membersData } = await supabase
+          .from('members')
+          .select('id, cpf')
+          .eq('clinic_id', clinicId);
+
+        // Find matching member by normalized CPF
+        const matchingMember = membersData?.find(
+          (m) => normalizeAndCleanCpf(m.cpf) === patientCpfClean
+        );
+
+        if (matchingMember) {
+          const { data: memberContributions } = await supabase
+            .from('employer_contributions')
+            .select(`
+              id,
+              competence_month,
+              competence_year,
+              value,
+              due_date,
+              status,
+              paid_at,
+              lytex_invoice_url,
+              lytex_boleto_digitable_line,
+              lytex_pix_code,
+              contribution_types:contribution_type_id (name)
+            `)
+            .eq('member_id', matchingMember.id)
+            .in('status', ['pending', 'paid', 'overdue']);
+
+          if (memberContributions) {
+            allContributions.push(...memberContributions);
+          }
+        }
       }
 
-      // 2. Find member with matching CPF in the same clinic
-      const { data: membersData, error: membersError } = await supabase
-        .from('members')
-        .select('id, cpf')
-        .eq('clinic_id', clinicId);
-
-      if (membersError) {
-        console.error('Error fetching members:', membersError);
-        setLoading(false);
-        return;
-      }
-
-      // Find matching member by normalized CPF
-      const matchingMember = membersData?.find(
-        (m) => normalizeAndCleanCpf(m.cpf) === patientCpfClean
-      );
-
-      if (!matchingMember) {
-        // No member found with this CPF - no boletos to show
-        setBoletos([]);
-        setLoading(false);
-        return;
-      }
-
-      // 3. Fetch contributions for this member
-      const { data: contributions, error: contribError } = await supabase
+      // 3. Also fetch PF contributions where member_id = patient_id directly
+      // (This covers contribuições PF where member_id references patients table)
+      const { data: pfContributions } = await supabase
         .from('employer_contributions')
         .select(`
           id,
@@ -783,18 +795,28 @@ function BoletosContent() {
           lytex_pix_code,
           contribution_types:contribution_type_id (name)
         `)
-        .eq('member_id', matchingMember.id)
-        .in('status', ['pending', 'paid', 'overdue'])
-        .order('competence_year', { ascending: false })
-        .order('competence_month', { ascending: false });
+        .eq('member_id', patientId)
+        .in('status', ['pending', 'paid', 'overdue']);
 
-      if (contribError) {
-        console.error('Error fetching contributions:', contribError);
-        setLoading(false);
-        return;
+      if (pfContributions) {
+        // Avoid duplicates by checking IDs
+        const existingIds = new Set(allContributions.map(c => c.id));
+        for (const contrib of pfContributions) {
+          if (!existingIds.has(contrib.id)) {
+            allContributions.push(contrib);
+          }
+        }
       }
 
-      const formattedBoletos: BoletoItem[] = (contributions || []).map((c: any) => ({
+      // Sort by year and month (descending)
+      allContributions.sort((a, b) => {
+        if (a.competence_year !== b.competence_year) {
+          return b.competence_year - a.competence_year;
+        }
+        return b.competence_month - a.competence_month;
+      });
+
+      const formattedBoletos: BoletoItem[] = allContributions.map((c: any) => ({
         id: c.id,
         competence_month: c.competence_month,
         competence_year: c.competence_year,
