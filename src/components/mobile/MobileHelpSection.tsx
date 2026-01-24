@@ -40,7 +40,6 @@ export function MobileHelpSection() {
         clinicId = patientData?.clinic_id;
       }
       
-      // If no clinic_id from patient, fetch any active help content
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (supabase as any)
         .from("union_app_content")
@@ -52,8 +51,14 @@ export function MobileHelpSection() {
         query = query.eq("clinic_id", clinicId);
       }
       
-      const { data: helpData } = await query.limit(1).maybeSingle();
+      const { data: helpDataArray, error } = await query.limit(1);
+      
+      if (error) {
+        console.error("Error fetching help content:", error);
+        return;
+      }
 
+      const helpData = helpDataArray?.[0];
       if (helpData?.metadata) {
         const metadata = helpData.metadata as Record<string, unknown>;
         setContent({
