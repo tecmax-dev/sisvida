@@ -119,37 +119,11 @@ export default function MobileHelpPage() {
     return url;
   };
 
-  // Convert Street View URL to embeddable format or fallback to map
+  // Get embed URL - use configured embed or fallback to address-based map
   const getEmbedMapUrl = (): string => {
-    // If we have a street view URL, try to extract coordinates and create embed
-    if (content.street_view_url) {
-      const url = normalizeUrl(content.street_view_url);
-      
-      // Try to extract coordinates from Google Maps URL
-      // Pattern: @-14.7890,-39.0456 or ll=-14.7890,-39.0456
-      const coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-      if (coordMatch) {
-        const lat = coordMatch[1];
-        const lng = coordMatch[2];
-        // Use Street View embed with coordinates
-        return `https://www.google.com/maps/embed?pb=!4v1!6m8!1m7!1s!2m2!1d${lat}!2d${lng}!3f0!4f0!5f0.7820865974627469`;
-      }
-      
-      // Try alternative coordinate pattern (place/.../@lat,lng)
-      const placeMatch = url.match(/place\/[^@]+@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-      if (placeMatch) {
-        const lat = placeMatch[1];
-        const lng = placeMatch[2];
-        return `https://www.google.com/maps/embed?pb=!4v1!6m8!1m7!1s!2m2!1d${lat}!2d${lng}!3f0!4f0!5f0.7820865974627469`;
-      }
-      
-      // If URL contains streetview or layer=c, extract coordinates
-      const streetViewMatch = url.match(/[?&](?:ll|cbll)=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-      if (streetViewMatch) {
-        const lat = streetViewMatch[1];
-        const lng = streetViewMatch[2];
-        return `https://www.google.com/maps/embed?pb=!4v1!6m8!1m7!1s!2m2!1d${lat}!2d${lng}!3f0!4f0!5f0.7820865974627469`;
-      }
+    // If we have a configured embed URL, use it directly
+    if (content.street_view_url && content.street_view_url.includes('google.com/maps')) {
+      return content.street_view_url;
     }
     
     // Fallback: Use address-based embed
