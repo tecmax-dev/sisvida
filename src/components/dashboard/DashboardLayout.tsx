@@ -14,6 +14,7 @@ import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -94,6 +95,7 @@ interface NavItem {
   permission?: Permission;
   addonKey?: string; // Requires specific addon to be active
   featureKey?: string; // Requires specific plan feature to be active
+  highlight?: boolean; // Highlight with badge
 }
 
 interface NavCategory {
@@ -141,6 +143,7 @@ const navCategories: NavCategory[] = [
     icon: HeartPulse,
     color: "clinica",
     items: [
+      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients", highlight: true },
       { href: "/dashboard", icon: LayoutDashboard, label: "Visão Geral", permission: "view_dashboard" },
       { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
       { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
@@ -152,7 +155,6 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates Anamnese", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
       { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
-      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
     ],
   },
   // ADMINISTRATIVO - Rose/Pink
@@ -286,7 +288,8 @@ export function DashboardLayout() {
         to={item.href}
         onClick={() => setSidebarOpen(false)}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+          "flex items-center gap-3 px-3 rounded-lg transition-colors",
+          item.highlight ? "py-2.5 text-base" : "py-2 text-sm",
           isActive(item.href)
             ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -294,8 +297,17 @@ export function DashboardLayout() {
           isSubItem && !sidebarCollapsed && "ml-6"
         )}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
-        {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+        <item.icon className={cn("shrink-0", item.highlight ? "h-5 w-5" : "h-4 w-4")} />
+        {!sidebarCollapsed && (
+          <span className={cn("truncate flex items-center gap-2", item.highlight && "font-semibold")}>
+            {item.label}
+            {item.highlight && (
+              <Badge variant="secondary" className="bg-white/20 text-white text-[10px] px-1.5 py-0 h-4">
+                Destaque
+              </Badge>
+            )}
+          </span>
+        )}
       </Link>
     );
 
@@ -347,17 +359,23 @@ export function DashboardLayout() {
           </Tooltip>
           <DropdownMenuContent side="right" align="start" className="min-w-48">
             {category.items.map((item) => (
-              <DropdownMenuItem key={item.href} asChild>
+              <DropdownMenuItem key={item.href} asChild className={item.highlight ? "py-2.5" : ""}>
                 <Link
                   to={item.href}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
                     "flex items-center gap-2 cursor-pointer",
+                    item.highlight && "text-base font-semibold",
                     isActive(item.href) && "bg-accent"
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={item.highlight ? "h-5 w-5" : "h-4 w-4"} />
                   {item.label}
+                  {item.highlight && (
+                    <Badge variant="default" className="ml-1 text-[10px] px-1.5 py-0 h-4">
+                      Destaque
+                    </Badge>
+                  )}
                 </Link>
               </DropdownMenuItem>
             ))}
