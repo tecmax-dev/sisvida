@@ -55,38 +55,36 @@ export default function MobileHelpPage() {
   const loadContent = async () => {
     setIsLoading(true);
     try {
-      // First get the user's clinic
+      let clinicId: string | null = null;
+      
+      // Try to get user's clinic if authenticated
       const { data: userData } = await supabase.auth.getUser();
       const user = userData?.user;
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch patient's clinic_id using RPC or simpler query
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: patientsData, error: patientError } = await (supabase as any)
-        .from("patients")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .limit(1);
       
-      const patientData = patientsData?.[0] as { clinic_id: string } | undefined;
-
-      if (!patientData?.clinic_id) {
-        setIsLoading(false);
-        return;
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: patientsData } = await (supabase as any)
+          .from("patients")
+          .select("clinic_id")
+          .eq("user_id", user.id)
+          .limit(1);
+        
+        clinicId = patientsData?.[0]?.clinic_id;
       }
 
-      // Fetch help content
+      // Fetch help content - with or without clinic filter
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("union_app_content")
         .select("*")
-        .eq("clinic_id", patientData.clinic_id)
         .eq("content_type", "ajuda")
-        .eq("is_active", true)
-        .limit(1);
+        .eq("is_active", true);
+      
+      if (clinicId) {
+        query = query.eq("clinic_id", clinicId);
+      }
+
+      const { data, error } = await query.limit(1);
 
       if (error) throw error;
       const contentData = data?.[0] as { metadata: Record<string, unknown> } | undefined;
