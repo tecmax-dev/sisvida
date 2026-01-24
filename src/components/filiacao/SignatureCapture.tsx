@@ -154,7 +154,7 @@ export function SignatureCapture({
                 </p>
                 <p className="text-xs text-amber-700 mt-1">
                   Ao assinar abaixo, autorizo o desconto da contribuição sindical correspondente a{" "}
-                  <strong>{contributionInfo}</strong>, conforme previsto na legislação vigente.
+                  <strong>{contributionInfo}</strong>, conforme Convenção Coletiva de Trabalho vigente.
                   Esta autorização é válida enquanto durar meu vínculo com a categoria.
                 </p>
               </div>
