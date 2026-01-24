@@ -348,28 +348,8 @@ export function UnionSidebar() {
         );
       })}
 
-      {/* Quick access cards */}
-      <div className="mt-4 pt-4 border-t border-sidebar-border/50 space-y-2">
-        {/* Módulo Sindical */}
-        <Link
-          to="/union"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-            location.pathname.startsWith("/union") 
-              ? "bg-gradient-to-r from-amber-500/30 to-orange-500/30 border border-amber-400/50 text-amber-100"
-              : "bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-400/30 text-amber-100 hover:text-white"
-          )}
-        >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
-            <Building2 className="h-4 w-4 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium">Módulo Sindical</span>
-            <span className="text-xs text-amber-200/70">Acesso rápido</span>
-          </div>
-        </Link>
-
-        {/* Módulo Clínica */}
+      {/* Quick access card - only Módulo Clínica since we're already in Sindical */}
+      <div className="mt-4 pt-4 border-t border-sidebar-border/50">
         <Link
           to="/dashboard"
           className={cn(
@@ -383,25 +363,7 @@ export function UnionSidebar() {
           </div>
           <div className="flex flex-col">
             <span className="font-medium">Módulo Clínica</span>
-            <span className="text-xs text-cyan-200/70">Acesso rápido</span>
-          </div>
-        </Link>
-
-        {/* Administrativo */}
-        <Link
-          to="/admin"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-            "bg-gradient-to-r from-slate-500/20 to-gray-500/20 hover:from-slate-500/30 hover:to-gray-500/30",
-            "border border-slate-400/30 text-slate-100 hover:text-white"
-          )}
-        >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shadow-sm">
-            <Settings className="h-4 w-4 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium">Administrativo</span>
-            <span className="text-xs text-slate-200/70">Acesso rápido</span>
+            <span className="text-xs text-cyan-200/70">Ir para Clínica</span>
           </div>
         </Link>
       </div>
