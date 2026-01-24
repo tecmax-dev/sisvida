@@ -183,14 +183,27 @@ export default function MobileHelpPage() {
         {/* Location Card */}
         <Card className="border shadow-sm overflow-hidden">
           <CardContent className="p-0">
-            <div className="h-40 bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-emerald-600 mx-auto mb-2" />
-                  <p className="text-sm text-emerald-800 font-medium">{content.organization_name}</p>
+            {content.street_view_url ? (
+              <div className="h-48 w-full">
+                <iframe
+                  src={content.street_view_url}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Street View"
+                />
+              </div>
+            ) : (
+              <div className="h-40 bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <MapPin className="h-12 w-12 text-emerald-600 mx-auto mb-2" />
+                    <p className="text-sm text-emerald-800 font-medium">{content.organization_name}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             <div className="p-4">
               <h3 className="font-semibold text-base mb-2">Como chegar até nós</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -203,7 +216,7 @@ export default function MobileHelpPage() {
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
                 <Navigation className="h-4 w-4 mr-2" />
-                {content.street_view_url ? "Ver no Street View" : "Ver no mapa"}
+                {content.street_view_url ? "Abrir em tela cheia" : "Ver no mapa"}
               </Button>
             </div>
           </CardContent>
