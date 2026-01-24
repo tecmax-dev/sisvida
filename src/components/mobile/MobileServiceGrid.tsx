@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useMobileAppTabs } from "@/hooks/useMobileAppTabs";
+import { useMobileAuth, PUBLIC_TAB_KEYS } from "@/hooks/useMobileAuth";
 import illustrationAgendamentos from "@/assets/mobile/illustration-agendamentos.png";
 import illustrationConvencoes from "@/assets/mobile/illustration-convencoes.png";
 import illustrationDeclaracoes from "@/assets/mobile/illustration-declaracoes.png";
@@ -16,6 +17,7 @@ import illustrationAtualizarCarteirinha from "@/assets/mobile/illustration-atual
 export function MobileServiceGrid() {
   const navigate = useNavigate();
   const { isTabActive, loading } = useMobileAppTabs();
+  const { isLoggedIn } = useMobileAuth();
 
   const allServices = [
     { 
@@ -92,8 +94,17 @@ export function MobileServiceGrid() {
     },
   ];
 
-  // Filter out inactive tabs
-  const services = allServices.filter(service => isTabActive(service.key));
+  // Filter out inactive tabs and respect login status
+  const services = allServices.filter(service => {
+    // First check if tab is active in config
+    if (!isTabActive(service.key)) return false;
+    
+    // If user is logged in, show all active tabs
+    if (isLoggedIn) return true;
+    
+    // If not logged in, only show public tabs
+    return PUBLIC_TAB_KEYS.includes(service.key);
+  });
 
   if (loading || services.length === 0) {
     return null;

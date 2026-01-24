@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useMobileAppTabs } from "@/hooks/useMobileAppTabs";
+import { useMobileAuth } from "@/hooks/useMobileAuth";
 import illustrationDependentes from "@/assets/mobile/illustration-dependentes.png";
 import illustrationAlterarSenha from "@/assets/mobile/illustration-alterar-senha.png";
 import illustrationCarteirinha from "@/assets/mobile/illustration-carteirinha.png";
@@ -12,6 +13,7 @@ interface Props {
 export function MobileFeaturedServices({ dependentsCount, registrationNumber }: Props) {
   const navigate = useNavigate();
   const { isTabActive, loading } = useMobileAppTabs();
+  const { isLoggedIn } = useMobileAuth();
 
   const allServices = [
     { 
@@ -34,10 +36,11 @@ export function MobileFeaturedServices({ dependentsCount, registrationNumber }: 
     },
   ];
 
-  // Filter out inactive tabs
+  // Filter out inactive tabs - Featured services require login
   const services = allServices.filter(service => isTabActive(service.key));
 
-  if (loading || services.length === 0) {
+  // Featured services are only shown when logged in
+  if (loading || services.length === 0 || !isLoggedIn) {
     return null;
   }
 

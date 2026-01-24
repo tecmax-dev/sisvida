@@ -5,69 +5,20 @@ import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicat
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
 import { 
-  Calendar, 
-  Info, 
-  HelpCircle, 
-  MessageCircle, 
   LogIn,
   UserPlus,
-  Stethoscope,
-  Building,
-  Phone
+  Info,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import illustrationDiretoria from "@/assets/mobile/illustration-diretoria.png";
 
 // ID do sindicato comerciários (hardcoded para este app)
 const TARGET_UNION_ENTITY_ID = "74f74e75-6b09-43d5-bf75-41225e085e28";
 
 export default function MobilePublicHomePage() {
   const navigate = useNavigate();
-
-  const publicServices = [
-    {
-      icon: Calendar,
-      title: "Agendar Consulta",
-      description: "Agende sua consulta",
-      onClick: () => navigate("/app/agendar"),
-      color: "bg-blue-500"
-    },
-    {
-      icon: Stethoscope,
-      title: "Serviços",
-      description: "Conheça nossos serviços",
-      onClick: () => navigate("/app/servicos"),
-      color: "bg-emerald-500"
-    },
-    {
-      icon: Building,
-      title: "Sobre",
-      description: "Conheça o sindicato",
-      onClick: () => navigate("/app/sobre"),
-      color: "bg-purple-500"
-    },
-    {
-      icon: HelpCircle,
-      title: "FAQ",
-      description: "Perguntas frequentes",
-      onClick: () => navigate("/app/faq"),
-      color: "bg-orange-500"
-    },
-    {
-      icon: Phone,
-      title: "Contato",
-      description: "Fale conosco",
-      onClick: () => navigate("/app/ajuda"),
-      color: "bg-teal-500"
-    },
-    {
-      icon: MessageCircle,
-      title: "Comunicação",
-      description: "Notícias e avisos",
-      onClick: () => navigate("/app/comunicacao"),
-      color: "bg-pink-500"
-    }
-  ];
 
   return (
     <MobileLayout showBottomNav={false}>
@@ -106,7 +57,7 @@ export default function MobilePublicHomePage() {
                 Acesso limitado
               </p>
               <p className="text-xs text-amber-700 mt-1">
-                Para acessar Dependentes, Carteirinha, Agendamentos e Boletos, faça login ou cadastre-se.
+                Para acessar todos os serviços, faça login ou cadastre-se.
               </p>
             </div>
           </CardContent>
@@ -116,32 +67,31 @@ export default function MobilePublicHomePage() {
       {/* Carousel Banners */}
       <MobileCarousel />
 
-      {/* Public Services Grid */}
-      <div className="px-4 py-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Serviços Disponíveis</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {publicServices.map((service, index) => (
-            <Card 
-              key={index}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={service.onClick}
-            >
-              <CardContent className="p-4 flex flex-col items-center text-center">
-                <div className={`w-12 h-12 ${service.color} rounded-xl flex items-center justify-center mb-3`}>
-                  <service.icon className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-gray-800 text-sm">{service.title}</h3>
-                <p className="text-xs text-gray-500 mt-1">{service.description}</p>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Public Services - Only Diretoria */}
+      <section className="px-4 py-4">
+        <h3 className="text-sm font-bold text-gray-800 tracking-wide mb-3">NOSSOS SERVIÇOS</h3>
+        
+        <div className="grid grid-cols-3 gap-3">
+          <button 
+            onClick={() => navigate("/app/servicos/diretoria")}
+            className="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2 shadow-sm transition-all duration-200 active:scale-95"
+          >
+            <div className="w-20 h-16 flex items-center justify-center">
+              <img 
+                src={illustrationDiretoria} 
+                alt="Diretoria"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center leading-tight">Diretoria</span>
+          </button>
         </div>
-      </div>
+      </section>
 
-      {/* Communication Section */}
+      {/* Communication Section - All public (Galeria, Jornais, Rádios, Vídeos) */}
       <MobileCommunicationSection />
 
-      {/* Help Section */}
+      {/* Help Section - Public */}
       <MobileHelpSection />
 
       {/* Footer */}

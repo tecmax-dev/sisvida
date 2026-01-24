@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { Image, Newspaper, Radio, Play, LucideIcon } from "lucide-react";
 import { useMobileAppTabs } from "@/hooks/useMobileAppTabs";
+import { useMobileAuth, PUBLIC_TAB_KEYS } from "@/hooks/useMobileAuth";
 
 export function MobileCommunicationSection() {
   const navigate = useNavigate();
   const { isTabActive, loading } = useMobileAppTabs();
+  const { isLoggedIn } = useMobileAuth();
 
   const allItems: { 
     key: string;
@@ -43,8 +45,13 @@ export function MobileCommunicationSection() {
     },
   ];
 
-  // Filter out inactive tabs
-  const items = allItems.filter(item => isTabActive(item.key));
+  // Filter out inactive tabs and respect login status
+  // Communication items (galeria, jornais, radios, videos) are all public
+  const items = allItems.filter(item => {
+    if (!isTabActive(item.key)) return false;
+    if (isLoggedIn) return true;
+    return PUBLIC_TAB_KEYS.includes(item.key);
+  });
 
   if (loading || items.length === 0) {
     return null;
