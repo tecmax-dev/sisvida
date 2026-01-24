@@ -49,23 +49,85 @@ serve(async (req) => {
 
     console.log(`[extract-url-metadata] Fetching: ${url}`);
 
-    // Fetch the page with a browser-like user agent
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-      },
-    });
+    const scoreHtml = (htmlToScore: string): number => {
+      let score = 0;
+      if (/<h1[^>]*>/i.test(htmlToScore)) score += 10;
+      if (/<article[^>]*>/i.test(htmlToScore)) score += 10;
+      if (/\bprose\b|ql-editor/i.test(htmlToScore)) score += 10;
+      if (/news-images|\/storage\/v1\/object\/public\/news-images/i.test(htmlToScore)) score += 15;
+      if (/<meta[^>]*property=["']og:title["']/i.test(htmlToScore)) score += 3;
+      const pCount = (htmlToScore.match(/<p\b/gi) || []).length;
+      score += Math.min(20, pCount);
+      return score;
+    };
 
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: `Erro ao acessar URL: ${response.status}` }), {
+    const variants: Array<{ label: string; init: RequestInit }> = [
+      {
+        label: "plain",
+        init: {},
+      },
+      {
+        label: "browser",
+        init: {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+          },
+        },
+      },
+      {
+        label: "bot",
+        init: {
+          headers: {
+            "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+          },
+        },
+      },
+    ];
+
+    let best:
+      | { response: Response; html: string; score: number; label: string }
+      | null = null;
+
+    for (const v of variants) {
+      try {
+        const res = await fetch(url, v.init);
+        const body = await res.text();
+        const score = scoreHtml(body);
+        console.log(
+          `[extract-url-metadata] Fetch ${v.label}: status=${res.status} score=${score} final=${res.url}`
+        );
+
+        if (res.ok && (!best || score > best.score)) {
+          best = { response: res, html: body, score, label: v.label };
+        }
+      } catch (e) {
+        console.warn(`[extract-url-metadata] Fetch ${v.label} failed:`, e);
+      }
+    }
+
+    if (!best) {
+      return new Response(JSON.stringify({ error: `Erro ao acessar URL` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const html = await response.text();
+    const response = best.response;
+    let html = best.html;
+
+    // If the request was redirected, update base URL to keep relative URLs correct
+    if (response.url) {
+      try {
+        parsedUrl = new URL(response.url);
+      } catch {
+        // ignore
+      }
+    }
 
     // Extract metadata using regex (Deno edge functions don't have DOMParser)
     const metadata: ExtractedMetadata = {
@@ -97,11 +159,24 @@ serve(async (req) => {
       return null;
     };
 
-    // Extract title - prefer h1 in main content for SPAs, then og:title, then title tag
-    const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-    metadata.title = h1Match?.[1]?.trim() 
-      || extractMeta('title') 
-      || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() 
+    // Extract title - prefer the most "article-like" H1 (longest), then og:title, then title tag
+    const stripTags = (input: string): string =>
+      input
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const h1Candidates = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)]
+      .map((m) => stripTags(m[1] || ''))
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+
+    metadata.title = h1Candidates[0]
+      || extractMeta('title')
+      || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim()
       || null;
 
     // Extract description (og:description > description meta > first paragraph)
@@ -129,7 +204,8 @@ serve(async (req) => {
     if (!image || isLikelyLogo) {
       // Try to find a large content image from the page body
       // Look for images with common article image patterns
-      const imgMatches = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+      // (support lazy-loading attributes and srcset)
+      const imgMatches = html.matchAll(/<img[^>]*(?:src|data-src|data-lazy-src)=["']([^"']+)["'][^>]*>/gi);
       
       for (const match of imgMatches) {
         const imgSrc = match[1];
@@ -147,6 +223,19 @@ serve(async (req) => {
         // Keep first non-skip image as fallback
         if (!image || isLikelyLogo) {
           image = imgSrc;
+        }
+      }
+
+      // If we still don't have an image, try srcset
+      if (!image) {
+        const srcsetMatch = html.match(/<img[^>]*srcset=["']([^"']+)["'][^>]*>/i);
+        const srcset = srcsetMatch?.[1];
+        if (srcset) {
+          const first = srcset.split(',')[0]?.trim();
+          const firstUrl = first?.split(' ')[0];
+          if (firstUrl && !/logo|icon|favicon/i.test(firstUrl)) {
+            image = firstUrl;
+          }
         }
       }
     }
