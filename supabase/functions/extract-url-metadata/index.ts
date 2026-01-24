@@ -97,26 +97,63 @@ serve(async (req) => {
       return null;
     };
 
-    // Extract title (og:title > twitter:title > title tag)
-    metadata.title = extractMeta('title') 
+    // Extract title - prefer h1 in main content for SPAs, then og:title, then title tag
+    const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    metadata.title = h1Match?.[1]?.trim() 
+      || extractMeta('title') 
       || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() 
       || null;
 
-    // Extract description (og:description > description meta > twitter:description)
+    // Extract description (og:description > description meta > first paragraph)
     metadata.description = extractMeta('description') || null;
 
-    // Extract image (og:image > twitter:image)
+    // Helper to make image URL absolute
+    const makeAbsolute = (imgUrl: string): string => {
+      if (!imgUrl) return imgUrl;
+      if (imgUrl.startsWith('http')) return imgUrl;
+      if (imgUrl.startsWith('//')) return parsedUrl.protocol + imgUrl;
+      if (imgUrl.startsWith('/')) return parsedUrl.origin + imgUrl;
+      return parsedUrl.origin + '/' + imgUrl;
+    };
+
+    // Extract image - try multiple strategies
     let image = extractMeta('image');
     
-    // If image URL is relative, make it absolute
-    if (image && !image.startsWith('http')) {
-      if (image.startsWith('//')) {
-        image = parsedUrl.protocol + image;
-      } else if (image.startsWith('/')) {
-        image = parsedUrl.origin + image;
-      } else {
-        image = parsedUrl.origin + '/' + image;
+    // If og:image looks like a logo/icon, try to find a content image instead
+    const isLikelyLogo = image && (
+      image.toLowerCase().includes('logo') ||
+      image.toLowerCase().includes('icon') ||
+      image.toLowerCase().includes('favicon')
+    );
+
+    if (!image || isLikelyLogo) {
+      // Try to find a large content image from the page body
+      // Look for images with common article image patterns
+      const imgMatches = html.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi);
+      
+      for (const match of imgMatches) {
+        const imgSrc = match[1];
+        // Skip small images, icons, logos, avatars
+        const skipPatterns = /logo|icon|avatar|favicon|sprite|thumb-\d{2}|_\d{2}x\d{2}\.|pixel|tracking|badge/i;
+        if (skipPatterns.test(imgSrc)) continue;
+        
+        // Prefer images from storage/CDN or with news/article in path
+        const goodPatterns = /supabase|storage|news|article|content|upload|media|image/i;
+        if (goodPatterns.test(imgSrc)) {
+          image = imgSrc;
+          break;
+        }
+        
+        // Keep first non-skip image as fallback
+        if (!image || isLikelyLogo) {
+          image = imgSrc;
+        }
       }
+    }
+    
+    // Make image URL absolute
+    if (image) {
+      image = makeAbsolute(image);
     }
     metadata.image = image;
 
