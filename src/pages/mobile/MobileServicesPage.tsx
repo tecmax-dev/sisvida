@@ -738,73 +738,60 @@ function BoletosContent() {
 
       const patientCpfClean = normalizeAndCleanCpf(patientData?.cpf);
       
+      if (!patientCpfClean) {
+        setLoading(false);
+        return;
+      }
+      
       // We'll collect contributions from multiple sources
       const allContributions: any[] = [];
 
-      // 2. First, try to find member contributions (via members table with matching CPF)
-      if (patientCpfClean) {
-        const { data: membersData } = await supabase
-          .from('members')
-          .select('id, cpf')
-          .eq('clinic_id', clinicId);
+      // 2. Find ALL patients with this same CPF (across all clinics)
+      // This allows us to find contributions linked to patient records in other clinics
+      const { data: allPatientsWithCpf } = await supabase
+        .from('patients')
+        .select('id, cpf');
 
-        // Find matching member by normalized CPF
-        const matchingMember = membersData?.find(
-          (m) => normalizeAndCleanCpf(m.cpf) === patientCpfClean
-        );
+      const matchingPatientIds = (allPatientsWithCpf || [])
+        .filter(p => normalizeAndCleanCpf(p.cpf) === patientCpfClean)
+        .map(p => p.id);
 
-        if (matchingMember) {
-          const { data: memberContributions } = await supabase
-            .from('employer_contributions')
-            .select(`
-              id,
-              competence_month,
-              competence_year,
-              value,
-              due_date,
-              status,
-              paid_at,
-              lytex_invoice_url,
-              lytex_boleto_digitable_line,
-              lytex_pix_code,
-              contribution_types:contribution_type_id (name)
-            `)
-            .eq('member_id', matchingMember.id)
-            .in('status', ['pending', 'paid', 'overdue']);
+      // 3. Also find members with this CPF (across all clinics)
+      const { data: allMembersWithCpf } = await supabase
+        .from('members')
+        .select('id, cpf');
 
-          if (memberContributions) {
-            allContributions.push(...memberContributions);
-          }
-        }
-      }
+      const matchingMemberIds = (allMembersWithCpf || [])
+        .filter(m => normalizeAndCleanCpf(m.cpf) === patientCpfClean)
+        .map(m => m.id);
 
-      // 3. Also fetch PF contributions where member_id = patient_id directly
-      // (This covers contribuições PF where member_id references patients table)
-      const { data: pfContributions } = await supabase
-        .from('employer_contributions')
-        .select(`
-          id,
-          competence_month,
-          competence_year,
-          value,
-          due_date,
-          status,
-          paid_at,
-          lytex_invoice_url,
-          lytex_boleto_digitable_line,
-          lytex_pix_code,
-          contribution_types:contribution_type_id (name)
-        `)
-        .eq('member_id', patientId)
-        .in('status', ['pending', 'paid', 'overdue']);
+      // Combine all possible member_ids that could have contributions for this CPF
+      const allPossibleMemberIds = [...new Set([...matchingPatientIds, ...matchingMemberIds])];
 
-      if (pfContributions) {
-        // Avoid duplicates by checking IDs
-        const existingIds = new Set(allContributions.map(c => c.id));
-        for (const contrib of pfContributions) {
-          if (!existingIds.has(contrib.id)) {
-            allContributions.push(contrib);
-          }
+      if (allPossibleMemberIds.length > 0) {
+        // 4. Fetch contributions for all matching member_ids
+        const { data: contributions, error: contribError } = await supabase
+          .from('employer_contributions')
+          .select(`
+            id,
+            competence_month,
+            competence_year,
+            value,
+            due_date,
+            status,
+            paid_at,
+            lytex_invoice_url,
+            lytex_boleto_digitable_line,
+            lytex_pix_code,
+            contribution_types:contribution_type_id (name)
+          `)
+          .in('member_id', allPossibleMemberIds)
+          .in('status', ['pending', 'paid', 'overdue']);
+
+        if (contribError) {
+          console.error('Error fetching contributions:', contribError);
+        } else if (contributions) {
+          allContributions.push(...contributions);
         }
       }
 
