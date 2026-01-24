@@ -633,7 +633,7 @@ function VideosContent() {
         .eq("clinic_id", clinicId)
         .eq("content_type", "video")
         .eq("is_active", true)
-        .order("order_index", { ascending: true });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setVideos(data || []);
