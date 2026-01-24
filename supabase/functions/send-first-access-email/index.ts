@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,19 +18,27 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
+    // SMTP Configuration (Locaweb)
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPassword = Deno.env.get("SMTP_PASSWORD");
+    const smtpFrom = Deno.env.get("SMTP_FROM");
+
+    if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
+      console.error("SMTP not configured. Missing:", {
+        host: !smtpHost,
+        user: !smtpUser,
+        password: !smtpPassword,
+        from: !smtpFrom
+      });
       return new Response(JSON.stringify({ error: "Serviço de email não configurado" }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const resendFrom = Deno.env.get("RESEND_FROM") || "SECMI <onboarding@resend.dev>";
-    console.log("RESEND_FROM value:", JSON.stringify(resendFrom));
-
-    const resend = new Resend(resendApiKey);
+    console.log("Using SMTP:", smtpHost, "port:", smtpPort, "from:", smtpFrom);
 
     const { cpf, email }: FirstAccessRequest = await req.json();
 
@@ -87,84 +95,101 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Envia email com o código
+    // Envia email com o código via SMTP
     const firstName = patient.patient_name.split(' ')[0];
     
-    const emailResponse = await resend.emails.send({
-      from: resendFrom,
-      to: [email],
-      subject: "Código de Primeiro Acesso - App SECMI",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <tr>
-              <td style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 30px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">
-                  SECMI
-                </h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">
-                  Sindicato dos Comerciários
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">
+                SECMI
+              </h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">
+                Sindicato dos Comerciários
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px;">
+                Olá, ${firstName}!
+              </h2>
+              <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                Você solicitou o cadastro de senha para primeiro acesso ao aplicativo SECMI.
+              </p>
+              <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 0 0 30px 0;">
+                <p style="color: #065f46; font-size: 14px; margin: 0 0 15px 0; font-weight: 500;">
+                  Seu código de verificação:
                 </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 40px 30px;">
-                <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px;">
-                  Olá, ${firstName}!
-                </h2>
-                <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                  Você solicitou o cadastro de senha para primeiro acesso ao aplicativo SECMI.
-                </p>
-                <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 0 0 30px 0;">
-                  <p style="color: #065f46; font-size: 14px; margin: 0 0 15px 0; font-weight: 500;">
-                    Seu código de verificação:
-                  </p>
-                  <div style="background: #ffffff; border-radius: 8px; padding: 20px; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <span style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: 8px;">
-                      ${token}
-                    </span>
-                  </div>
+                <div style="background: #ffffff; border-radius: 8px; padding: 20px; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <span style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: 8px;">
+                    ${token}
+                  </span>
                 </div>
-                <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
-                  ⏰ Este código é válido por <strong>30 minutos</strong>.
-                </p>
-                <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
-                  Se você não solicitou este código, por favor ignore este email.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                  © 2026 SECMI - Sindicato dos Comerciários<br>
-                  Este é um email automático, não responda.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `,
+              </div>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+                ⏰ Este código é válido por <strong>30 minutos</strong>.
+              </p>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                Se você não solicitou este código, por favor ignore este email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © 2026 SECMI - Sindicato dos Comerciários<br>
+                Este é um email automático, não responda.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // Initialize SMTP client
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: smtpPort,
+        tls: smtpPort === 465,
+        auth: {
+          username: smtpUser,
+          password: smtpPassword,
+        },
+      },
     });
 
-    if (emailResponse?.error) {
-      console.error("Resend error:", emailResponse);
+    try {
+      await client.send({
+        from: smtpFrom,
+        to: email,
+        subject: "Código de Primeiro Acesso - App SECMI",
+        content: "auto",
+        html: emailHtml,
+      });
+
+      await client.close();
+      console.log("Email sent successfully via SMTP to:", email);
+    } catch (smtpError: any) {
+      console.error("SMTP error:", smtpError);
+      await client.close();
       return new Response(
         JSON.stringify({
-          error:
-            "Não foi possível enviar o email agora. Se persistir, contate o suporte (configuração de domínio de email pendente).",
+          error: "Não foi possível enviar o email. Verifique as configurações SMTP.",
         }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    console.log("Email sent:", emailResponse);
 
     return new Response(JSON.stringify({ success: true, message: "Código enviado para seu email" }), {
       status: 200,
