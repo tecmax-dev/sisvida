@@ -81,6 +81,7 @@ import { MobileAppTabsManagement } from "@/components/union/MobileAppTabsManagem
 import { CctCategoriesManagement } from "@/components/union/CctCategoriesManagement";
 import { UnionContentList } from "@/components/union/UnionContentList";
 import { AlbumManagementTab } from "@/components/union/AlbumManagementTab";
+import { ImportUrlButton } from "@/components/union/ImportUrlButton";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployerCategory {
@@ -457,6 +458,21 @@ export default function UnionAppContentPage() {
 
           <ScrollArea className="max-h-[60vh] pr-4">
             <div className="space-y-4">
+              {/* Import from URL - only for jornal type */}
+              {formData.content_type === "jornal" && !editingContent && (
+                <ImportUrlButton
+                  onImport={(data) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      title: data.title || prev.title,
+                      description: data.description || prev.description,
+                      image_url: data.image_url || prev.image_url,
+                      external_link: data.external_link || prev.external_link,
+                    }));
+                  }}
+                />
+              )}
+
               {/* Content Type */}
               {!editingContent && (
                 <div className="space-y-2">
