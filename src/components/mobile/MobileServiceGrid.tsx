@@ -11,6 +11,7 @@ import illustrationAtendimentos from "@/assets/mobile/illustration-atendimentos.
 import illustrationOuvidoria from "@/assets/mobile/illustration-ouvidoria.png";
 import illustrationJuridico from "@/assets/mobile/illustration-juridico.png";
 import illustrationAutorizacoes from "@/assets/mobile/illustration-autorizacoes.png";
+import illustrationAtualizarCarteirinha from "@/assets/mobile/illustration-atualizar-carteirinha.png";
 
 export function MobileServiceGrid() {
   const navigate = useNavigate();
@@ -28,6 +29,12 @@ export function MobileServiceGrid() {
       image: illustrationJuridico, 
       label: "Agend. Jurídico",
       onClick: () => navigate("/app/agendar-juridico") 
+    },
+    { 
+      key: "atualizar-carteirinha",
+      image: illustrationAtualizarCarteirinha, 
+      label: "Atualizar Carteirinha",
+      onClick: () => navigate("/app/atualizar-carteirinha") 
     },
     { 
       key: "convencoes",
