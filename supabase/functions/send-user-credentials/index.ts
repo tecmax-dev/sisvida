@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,41 +123,70 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      console.error("[send-user-credentials] RESEND_API_KEY not configured");
+    // SMTP Configuration (Locaweb)
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPassword = Deno.env.get("SMTP_PASSWORD");
+    const smtpFrom = Deno.env.get("SMTP_FROM");
+
+    if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
+      console.error("[send-user-credentials] SMTP not configured");
       return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY não configurada" }),
+        JSON.stringify({ error: "SMTP não configurado" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    const resend = new Resend(resendApiKey);
+    console.log("Using SMTP:", smtpHost, "port:", smtpPort, "from:", smtpFrom);
 
     const baseUrl = Deno.env.get("SITE_URL") || "https://eclini.lovable.app";
     const loginUrl = `${baseUrl}/auth`;
 
     const htmlContent = getCredentialsEmailTemplate(userName, userEmail, tempPassword, clinicName || "", loginUrl);
 
-    const { data, error } = await resend.emails.send({
-      from: "Eclini <noreply@eclini.com.br>",
-      to: [userEmail],
-      subject: "🔐 Suas credenciais de acesso - Eclini",
-      html: htmlContent,
+    // Initialize SMTP client
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: smtpPort,
+        tls: smtpPort === 465,
+        auth: {
+          username: smtpUser,
+          password: smtpPassword,
+        },
+      },
     });
 
-    if (error) {
-      console.error("[send-user-credentials] Resend error:", error);
+    try {
+      // Remove extra whitespace/newlines from HTML to prevent encoding issues
+      const cleanHtml = htmlContent.replace(/\n\s*/g, '').replace(/\s{2,}/g, ' ');
+
+      await client.send({
+        from: smtpFrom,
+        to: userEmail,
+        subject: "🔐 Suas credenciais de acesso - Eclini",
+        content: "Visualize este email em um cliente que suporte HTML.",
+        html: cleanHtml,
+        headers: {
+          "Content-Type": "text/html; charset=UTF-8",
+          "Content-Transfer-Encoding": "base64",
+        },
+      });
+
+      await client.close();
+      console.log(`[send-user-credentials] Email sent successfully to ${userEmail}`);
+    } catch (smtpError: any) {
+      console.error("[send-user-credentials] SMTP error:", smtpError);
+      try { await client.close(); } catch (_) {}
       return new Response(
-        JSON.stringify({ error: "Erro ao enviar email", details: error.message }),
+        JSON.stringify({ error: "Erro ao enviar email", details: smtpError.message }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    console.log(`[send-user-credentials] Email sent successfully to ${userEmail}`, data);
-
     return new Response(
-      JSON.stringify({ success: true, message: "Email com credenciais enviado com sucesso", id: data?.id }),
+      JSON.stringify({ success: true, message: "Email com credenciais enviado com sucesso" }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   } catch (error: any) {

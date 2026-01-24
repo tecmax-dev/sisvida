@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,28 +18,16 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    // SMTP Configuration (Locaweb)
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPassword = Deno.env.get("SMTP_PASSWORD");
-    const smtpFrom = Deno.env.get("SMTP_FROM");
-
-    if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
-      console.error("SMTP not configured. Missing:", {
-        host: !smtpHost,
-        user: !smtpUser,
-        password: !smtpPassword,
-        from: !smtpFrom
-      });
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not configured");
       return new Response(JSON.stringify({ error: "Serviço de email não configurado" }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    console.log("Using SMTP:", smtpHost, "port:", smtpPort, "from:", smtpFrom);
-
+    const resend = new Resend(resendApiKey);
     const { cpf, email }: FirstAccessRequest = await req.json();
 
     if (!cpf || !email) {
@@ -95,7 +83,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Envia email com o código via SMTP
+    // Envia email com o código via Resend
     const firstName = patient.patient_name.split(' ')[0];
     
     const emailHtml = `
@@ -156,44 +144,27 @@ serve(async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Initialize SMTP client
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpHost,
-        port: smtpPort,
-        tls: smtpPort === 465,
-        auth: {
-          username: smtpUser,
-          password: smtpPassword,
-        },
-      },
-    });
-
     try {
-      // Remove extra whitespace/newlines from HTML to prevent quoted-printable encoding issues
-      const cleanHtml = emailHtml.replace(/\n\s*/g, '').replace(/\s{2,}/g, ' ');
-      
-      await client.send({
-        from: smtpFrom,
-        to: email,
+      const { data, error } = await resend.emails.send({
+        from: "SECMI <onboarding@resend.dev>",
+        to: [email],
         subject: "Código de Primeiro Acesso - App SECMI",
-        content: "Visualize este email em um cliente que suporte HTML.",
-        html: cleanHtml,
-        headers: {
-          "Content-Type": "text/html; charset=UTF-8",
-          "Content-Transfer-Encoding": "base64",
-        },
+        html: emailHtml,
       });
 
-      await client.close();
-      console.log("Email sent successfully via SMTP to:", email);
-    } catch (smtpError: any) {
-      console.error("SMTP error:", smtpError);
-      await client.close();
+      if (error) {
+        console.error("Resend error:", error);
+        return new Response(
+          JSON.stringify({ error: "Não foi possível enviar o email" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      console.log("Email sent successfully via Resend to:", email, data);
+    } catch (sendError: any) {
+      console.error("Email send error:", sendError);
       return new Response(
-        JSON.stringify({
-          error: "Não foi possível enviar o email. Verifique as configurações SMTP.",
-        }),
+        JSON.stringify({ error: "Erro ao enviar email" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
