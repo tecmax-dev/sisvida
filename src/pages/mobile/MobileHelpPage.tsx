@@ -309,19 +309,6 @@ export default function MobileHelpPage() {
           </CardContent>
         </Card>
 
-        {/* FAQ Quick Access */}
-        <Card className="border shadow-sm bg-gradient-to-r from-amber-50 to-orange-50">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-base mb-2">Dúvidas Frequentes</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              Acesse nossa seção de perguntas frequentes para resolver suas dúvidas rapidamente.
-            </p>
-            <Button variant="outline" className="w-full" onClick={() => navigate("/app/servicos/atendimentos")}>
-              Ver perguntas frequentes
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Report Problem */}
         <Card className="border shadow-sm">
           <CardContent className="p-4">
