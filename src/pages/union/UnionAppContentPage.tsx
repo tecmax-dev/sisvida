@@ -220,7 +220,14 @@ export default function UnionAppContentPage() {
     Object.prototype.hasOwnProperty.call(CONTENT_TYPE_LABELS, tab);
 
   const filteredContent = isContentTab(activeTab)
-    ? allContent?.filter((c) => c.content_type === activeTab) || []
+    ? (allContent?.filter((c) => c.content_type === activeTab) || [])
+        .sort((a, b) => {
+          // Pinned items always come first
+          if (a.is_pinned && !b.is_pinned) return -1;
+          if (!a.is_pinned && b.is_pinned) return 1;
+          // Then sort by order_index
+          return a.order_index - b.order_index;
+        })
     : [];
 
   const handleOpenCreate = () => {
