@@ -12,6 +12,8 @@ import {
   File,
   Image as ImageIcon,
   FileText,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { UnionAppContent, CONTENT_TYPE_LABELS, ContentType } from "@/hooks/useUnionAppContent";
 
@@ -22,6 +24,7 @@ interface UnionContentListProps {
   onOpenEdit: (content: UnionAppContent) => void;
   onDelete: (id: string) => void;
   onToggleActive: (content: UnionAppContent) => void;
+  onTogglePinned: (content: UnionAppContent) => void;
   onMoveUp: (content: UnionAppContent, index: number) => void;
   onMoveDown: (content: UnionAppContent, index: number) => void;
   cctCategories?: { id: string; name: string; color: string }[];
@@ -51,6 +54,7 @@ export function UnionContentList({
   onOpenEdit,
   onDelete,
   onToggleActive,
+  onTogglePinned,
   onMoveUp,
   onMoveDown,
   cctCategories = [],
@@ -112,6 +116,12 @@ export function UnionContentList({
               
               {/* Status Badge Overlay */}
               <div className="absolute top-3 left-3 flex gap-2">
+                {item.is_pinned && (
+                  <Badge className="bg-amber-500 text-white shadow-sm">
+                    <Pin className="h-3 w-3 mr-1" />
+                    Fixado
+                  </Badge>
+                )}
                 <Badge
                   variant={item.is_active ? "default" : "secondary"}
                   className="shadow-sm"
@@ -195,6 +205,15 @@ export function UnionContentList({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant={item.is_pinned ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => onTogglePinned(item)}
+                      className={`h-8 w-8 p-0 ${item.is_pinned ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
+                      title={item.is_pinned ? "Desafixar" : "Fixar"}
+                    >
+                      {item.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                    </Button>
                     <Switch
                       checked={item.is_active}
                       onCheckedChange={() => onToggleActive(item)}

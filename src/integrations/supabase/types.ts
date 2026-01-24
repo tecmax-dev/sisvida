@@ -10421,6 +10421,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_pinned: boolean | null
           metadata: Json | null
           order_index: number
           title: string
@@ -10439,6 +10440,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_pinned?: boolean | null
           metadata?: Json | null
           order_index?: number
           title: string
@@ -10457,6 +10459,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_pinned?: boolean | null
           metadata?: Json | null
           order_index?: number
           title?: string
