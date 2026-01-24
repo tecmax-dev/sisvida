@@ -263,34 +263,36 @@ export function HelpContentManagement() {
           <div className="space-y-4">
             <h3 className="font-medium flex items-center gap-2">
               <Map className="h-4 w-4" />
-              Link do Street View
+              Embed do Mapa/Street View
             </h3>
             <p className="text-sm text-muted-foreground">
-              Cole o link do Google Street View para que os usuários possam visualizar a localização
+              Cole o código de incorporação (iframe) do Google Maps ou Street View
             </p>
             <div className="space-y-2">
-              <Label>URL do Street View</Label>
+              <Label>Código do Iframe (src)</Label>
               <Textarea
                 value={content.street_view_url}
                 onChange={(e) => setContent({ ...content, street_view_url: e.target.value })}
-                placeholder="Ex: https://www.google.com/maps/@-23.5505,-46.6333,3a,75y..."
+                placeholder="Ex: https://www.google.com/maps/embed?pb=!4v1..."
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                Para obter a URL: Abra o Google Maps → Ative o Street View → Copie o link da barra de endereço
+                Para obter: Google Maps → Clique em "Compartilhar" → "Incorporar um mapa" → Copie apenas a URL do src=""
               </p>
             </div>
             {content.street_view_url && (
-              <div className="rounded-lg border p-3 bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-2">Link configurado:</p>
-                <a 
-                  href={content.street_view_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline break-all"
-                >
-                  {content.street_view_url}
-                </a>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Pré-visualização:</p>
+                <div className="rounded-lg border overflow-hidden h-48">
+                  <iframe
+                    src={content.street_view_url}
+                    className="w-full h-full border-0"
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Pré-visualização do Mapa"
+                  />
+                </div>
               </div>
             )}
           </div>
