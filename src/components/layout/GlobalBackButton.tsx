@@ -101,7 +101,7 @@ export function GlobalBackButton() {
 
   return (
     <div 
-      className="fixed top-4 right-4 lg:right-6 z-50 transition-all"
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all"
     >
       <Button
         variant="outline"
