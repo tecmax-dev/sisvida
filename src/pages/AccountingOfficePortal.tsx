@@ -573,7 +573,7 @@ export default function AccountingOfficePortal() {
           />
 
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <PortalConventionsSection clinicId={clinic?.id} />
+            {clinic?.id && <PortalConventionsSection clinicId={clinic.id} />}
           </div>
 
           <div className="mt-6">
