@@ -62,7 +62,7 @@ export function MobileFooter() {
       {/* Copyright bar */}
       <div className="bg-gray-800 text-center py-3">
         <p className="text-[10px] text-gray-400">
-          © 2026 I & B Tecnologia. Todos os Direitos Reservados
+          © 2026 Tecmax Tecnologia. Todos os Direitos Reservados
         </p>
       </div>
       
