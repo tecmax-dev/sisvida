@@ -134,10 +134,10 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
 };
 
 const navCategories: NavCategory[] = [
-  // CLÍNICA - Cyan/Teal (moved to top, Módulo Sindical moved to bottom and controlled by union_module_access)
+  // CLÍNICA - Cyan/Teal
   {
     id: "clinica",
-    label: "Clínica",
+    label: "Módulo Clínica",
     icon: HeartPulse,
     color: "clinica",
     items: [
@@ -527,6 +527,47 @@ export function DashboardLayout() {
           )}
 
           <nav className={cn("flex-1 p-3 space-y-1 overflow-y-auto", sidebarCollapsed && "p-2 space-y-2")}>
+            {/* Módulo Sindical - FIRST in list (quick access card) */}
+            {!sidebarCollapsed && hasUnionEntity && (
+              <Link
+                to="/union"
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mb-2",
+                  "bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
+                  "border border-amber-400/30 text-amber-100 hover:text-white"
+                )}
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+                  <Building2 className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">Módulo Sindical</span>
+                  <span className="text-xs text-amber-200/70">Acesso rápido</span>
+                </div>
+              </Link>
+            )}
+
+            {/* Collapsed Módulo Sindical icon - FIRST */}
+            {sidebarCollapsed && hasUnionEntity && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Link
+                    to="/union"
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center justify-center p-2 rounded-lg transition-colors mb-2",
+                      "bg-gradient-to-br from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
+                      "border border-amber-400/30"
+                    )}
+                  >
+                    <Building2 className="h-5 w-5 text-amber-200" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Módulo Sindical</TooltipContent>
+              </Tooltip>
+            )}
+
             {filteredCategories.map((category) => (
               <CategoryGroup key={category.id} category={category} />
             ))}
@@ -537,51 +578,6 @@ export function DashboardLayout() {
                 {filteredAdminNavItems.map((item) => (
                   <NavItemLink key={item.href} item={item} />
                 ))}
-              </div>
-            )}
-
-            {/* Quick access card - only Módulo Sindical since Clínica and Admin are already in nav */}
-            {!sidebarCollapsed && hasUnionEntity && (
-              <div className="mt-4 pt-4 border-t border-sidebar-border/50">
-                <Link
-                  to="/union"
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-                    "bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                    "border border-amber-400/30 text-amber-100 hover:text-white"
-                  )}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
-                    <Building2 className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Módulo Sindical</span>
-                    <span className="text-xs text-amber-200/70">Acesso rápido</span>
-                  </div>
-                </Link>
-              </div>
-            )}
-
-            {/* Collapsed quick access icon - only Módulo Sindical */}
-            {sidebarCollapsed && hasUnionEntity && (
-              <div className="mt-2 pt-2 border-t border-sidebar-border/50">
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      to="/union"
-                      onClick={() => setSidebarOpen(false)}
-                      className={cn(
-                        "flex items-center justify-center p-2 rounded-lg transition-colors",
-                        "bg-gradient-to-br from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                        "border border-amber-400/30"
-                      )}
-                    >
-                      <Building2 className="h-5 w-5 text-amber-200" />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Módulo Sindical</TooltipContent>
-                </Tooltip>
               </div>
             )}
           </nav>
