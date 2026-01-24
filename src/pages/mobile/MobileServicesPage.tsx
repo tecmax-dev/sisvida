@@ -901,6 +901,11 @@ function BoletosContent() {
             <p className="text-xs text-muted-foreground">
               Vencimento: {format(new Date(boleto.due_date), "dd/MM/yyyy")}
             </p>
+            {boleto.status === "paid" && boleto.paid_at && (
+              <p className="text-xs text-emerald-600 font-medium">
+                Pago em: {format(new Date(boleto.paid_at), "dd/MM/yyyy")}
+              </p>
+            )}
           </div>
           {getStatusBadge(boleto.status, boleto.due_date)}
         </div>
@@ -909,12 +914,6 @@ function BoletosContent() {
           <span className="text-lg font-bold text-emerald-600">
             {formatCurrency(boleto.value)}
           </span>
-          
-          {boleto.status === "paid" && boleto.paid_at && (
-            <span className="text-xs text-muted-foreground">
-              Pago em {format(new Date(boleto.paid_at), "dd/MM/yyyy")}
-            </span>
-          )}
         </div>
         
         {/* Action buttons for pending/overdue */}
