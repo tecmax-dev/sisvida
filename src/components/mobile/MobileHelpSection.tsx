@@ -26,26 +26,33 @@ export function MobileHelpSection() {
 
   const loadContent = async () => {
     try {
-      // First get user's clinic_id
+      let clinicId: string | null = null;
+      
+      // Try to get user's clinic_id if logged in
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: patientData } = await (supabase as any)
-        .from("patients")
-        .select("clinic_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!patientData?.clinic_id) return;
-
-      // Fetch help content
-      const { data: helpData } = await supabase
+      if (user) {
+        const { data: patientData } = await (supabase as any)
+          .from("patients")
+          .select("clinic_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        clinicId = patientData?.clinic_id;
+      }
+      
+      // If no clinic_id from patient, fetch any active help content
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let query = (supabase as any)
         .from("union_app_content")
         .select("metadata")
-        .eq("clinic_id", patientData.clinic_id)
         .eq("content_type", "ajuda")
-        .eq("is_active", true)
-        .maybeSingle();
+        .eq("is_active", true);
+      
+      if (clinicId) {
+        query = query.eq("clinic_id", clinicId);
+      }
+      
+      const { data: helpData } = await query.limit(1).maybeSingle();
 
       if (helpData?.metadata) {
         const metadata = helpData.metadata as Record<string, unknown>;
