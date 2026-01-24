@@ -43,7 +43,7 @@ ${logoSection}
 <span style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: 8px;">${token}</span>
 </div>
 </div>
-<p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">Este codigo e valido por 30 minutos.</p>
+<p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">Este codigo e valido por 60 minutos.</p>
 <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">Se voce nao solicitou este codigo, por favor ignore este email.</p>
 </td>
 </tr>
