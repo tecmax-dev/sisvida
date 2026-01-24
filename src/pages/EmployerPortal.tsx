@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
+import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 
 interface Clinic {
   id: string;
@@ -1037,12 +1038,12 @@ export default function EmployerPortal() {
               <p className="text-slate-500">Listagem de documentos coletivos disponíveis.</p>
             </div>
 
-            <Card className="bg-white border-0 shadow-sm rounded-xl">
-              <CardContent className="p-12 text-center">
-                <FileStack className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-                <p className="text-slate-500">Nenhum documento coletivo disponível no momento.</p>
-              </CardContent>
-            </Card>
+            {clinic?.id && (
+              <PortalConventionsSection 
+                clinicId={clinic.id} 
+                employerCategoryId={employer?.category_id}
+              />
+            )}
 
             <div className="flex gap-3 mt-6">
               <Button 
