@@ -170,12 +170,19 @@ serve(async (req: Request): Promise<Response> => {
     });
 
     try {
+      // Remove extra whitespace/newlines from HTML to prevent quoted-printable encoding issues
+      const cleanHtml = emailHtml.replace(/\n\s*/g, '').replace(/\s{2,}/g, ' ');
+      
       await client.send({
         from: smtpFrom,
         to: email,
         subject: "Código de Primeiro Acesso - App SECMI",
-        content: "auto",
-        html: emailHtml,
+        content: "Visualize este email em um cliente que suporte HTML.",
+        html: cleanHtml,
+        headers: {
+          "Content-Type": "text/html; charset=UTF-8",
+          "Content-Transfer-Encoding": "base64",
+        },
       });
 
       await client.close();
