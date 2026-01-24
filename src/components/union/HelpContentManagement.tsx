@@ -268,7 +268,7 @@ export function HelpContentManagement() {
               Embed do Mapa/Street View
             </h3>
             <p className="text-sm text-muted-foreground">
-              Cole a URL de incorporação do Google Maps (deve começar com https://www.google.com/maps/embed)
+              Cole a URL de incorporação do Google Maps ou o código iframe completo
             </p>
             <div className="space-y-2">
               <Label>URL do Iframe (src)</Label>
@@ -281,17 +281,12 @@ export function HelpContentManagement() {
                   const cleanUrl = srcMatch ? srcMatch[1] : value;
                   setContent({ ...content, street_view_url: cleanUrl });
                 }}
-                placeholder="Ex: https://www.google.com/maps/embed?pb=!1m18..."
+                placeholder="Ex: https://www.google.com/maps/embed?pb=!1m18... ou https://www.google.com/maps?q=endereco&output=embed"
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                <strong>Como obter:</strong> Google Maps → Compartilhar → Incorporar um mapa → Copie o código e cole aqui (o sistema extrairá a URL automaticamente)
+                <strong>Como obter:</strong> Google Maps → Compartilhar → Incorporar um mapa → Copie o código e cole aqui
               </p>
-              {content.street_view_url && !content.street_view_url.includes('/embed') && (
-                <p className="text-xs text-amber-600">
-                  ⚠️ A URL deve ser de incorporação (conter "/embed"). URLs normais do Google Maps são bloqueadas.
-                </p>
-              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -300,11 +295,19 @@ export function HelpContentManagement() {
                 size="sm"
                 onClick={() => {
                   if (content.street_view_url) {
-                    setPreviewUrl(content.street_view_url);
+                    // Convert to embeddable URL if needed
+                    let embedUrl = content.street_view_url;
+                    if (!embedUrl.includes('output=embed') && !embedUrl.includes('/embed')) {
+                      // Add output=embed for standard Google Maps URLs
+                      embedUrl = embedUrl.includes('?') 
+                        ? `${embedUrl}&output=embed`
+                        : `${embedUrl}?output=embed`;
+                    }
+                    setPreviewUrl(embedUrl);
                     setShowPreview(true);
                   }
                 }}
-                disabled={!content.street_view_url || !content.street_view_url.includes('/embed')}
+                disabled={!content.street_view_url}
               >
                 <Map className="h-4 w-4 mr-2" />
                 Pré-visualizar
@@ -333,7 +336,7 @@ export function HelpContentManagement() {
                 </Button>
               )}
             </div>
-            {showPreview && previewUrl && previewUrl.includes('/embed') && (
+            {showPreview && previewUrl && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">Pré-visualização:</p>
                 <div className="rounded-lg border overflow-hidden h-48">
