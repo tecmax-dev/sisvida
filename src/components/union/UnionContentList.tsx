@@ -41,6 +41,7 @@ const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   faq: <FileText className="h-5 w-5" />,
   atendimento: <FileText className="h-5 w-5" />,
   sobre: <FileText className="h-5 w-5" />,
+  ajuda: <FileText className="h-5 w-5" />,
 };
 
 export function UnionContentList({

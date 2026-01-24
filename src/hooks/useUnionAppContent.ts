@@ -24,7 +24,7 @@ function getErrorMessage(err: unknown): string {
   return parts.join(" • ") || "Erro desconhecido";
 }
 
-export type ContentType = 'banner' | 'convenio' | 'convencao' | 'declaracao' | 'diretoria' | 'documento' | 'galeria' | 'jornal' | 'radio' | 'video' | 'faq' | 'atendimento' | 'sobre';
+export type ContentType = 'banner' | 'convenio' | 'convencao' | 'declaracao' | 'diretoria' | 'documento' | 'galeria' | 'jornal' | 'radio' | 'video' | 'faq' | 'atendimento' | 'sobre' | 'ajuda';
 
 export interface UnionAppContent {
   id: string;
@@ -59,6 +59,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   faq: 'Perguntas Frequentes',
   atendimento: 'Atendimentos',
   sobre: 'Sobre',
+  ajuda: 'Ajuda',
 };
 
 export const CONTENT_TYPE_ICONS: Record<ContentType, string> = {
@@ -75,6 +76,7 @@ export const CONTENT_TYPE_ICONS: Record<ContentType, string> = {
   faq: 'HelpCircle',
   atendimento: 'Headphones',
   sobre: 'Info',
+  ajuda: 'LifeBuoy',
 };
 
 export function useUnionAppContent(contentType?: ContentType) {
