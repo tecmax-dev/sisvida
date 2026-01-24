@@ -112,9 +112,16 @@ export default function MobileHelpPage() {
     }
   };
 
+  const normalizeUrl = (url: string): string => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return 'https://www.' + url;
+    }
+    return url;
+  };
+
   const handleOpenStreetView = () => {
     if (content.street_view_url) {
-      window.open(content.street_view_url, "_blank");
+      window.open(normalizeUrl(content.street_view_url), "_blank");
     } else {
       const address = encodeURIComponent(`${content.address}, ${content.city_state}, ${content.cep}`);
       window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, "_blank");
@@ -184,7 +191,7 @@ export default function MobileHelpPage() {
             {content.street_view_url ? (
               <div className="h-48 w-full">
                 <iframe
-                  src={content.street_view_url}
+                  src={normalizeUrl(content.street_view_url)}
                   className="w-full h-full border-0"
                   allowFullScreen
                   loading="lazy"
