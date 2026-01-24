@@ -76,6 +76,8 @@ export function HelpContentManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [content, setContent] = useState<HelpContent>(defaultContent);
   const [existingId, setExistingId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     loadContent();
@@ -280,12 +282,39 @@ export function HelpContentManagement() {
                 Para obter: Google Maps → Clique em "Compartilhar" → "Incorporar um mapa" → Copie apenas a URL do src=""
               </p>
             </div>
-            {content.street_view_url && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (content.street_view_url) {
+                    setPreviewUrl(content.street_view_url);
+                    setShowPreview(true);
+                  }
+                }}
+                disabled={!content.street_view_url}
+              >
+                <Map className="h-4 w-4 mr-2" />
+                Pré-visualizar Mapa
+              </Button>
+              {showPreview && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPreview(false)}
+                >
+                  Ocultar
+                </Button>
+              )}
+            </div>
+            {showPreview && previewUrl && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">Pré-visualização:</p>
                 <div className="rounded-lg border overflow-hidden h-48">
                   <iframe
-                    src={content.street_view_url}
+                    src={previewUrl}
                     className="w-full h-full border-0"
                     allowFullScreen
                     loading="lazy"
