@@ -143,8 +143,8 @@ const navCategories: NavCategory[] = [
     icon: HeartPulse,
     color: "clinica",
     items: [
-      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients", highlight: true },
       { href: "/dashboard", icon: LayoutDashboard, label: "Visão Geral", permission: "view_dashboard" },
+      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients", highlight: true },
       { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
       { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
       { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_queue" },
