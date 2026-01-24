@@ -13,6 +13,8 @@ import {
   User,
   AlertTriangle,
   Check,
+  CreditCard,
+  Upload,
 } from "lucide-react";
 import {
   Select,
@@ -21,9 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, getDay } from "date-fns";
+import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, getDay, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
+import { Badge } from "@/components/ui/badge";
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
 const dayMap: Record<number, string> = {
@@ -81,6 +84,8 @@ export default function MobileBookingPage() {
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [cardExpired, setCardExpired] = useState(false);
+  const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -133,6 +138,24 @@ export default function MobileBookingPage() {
 
       if (!patientData?.is_active) {
         setBlockedMessage("Sua conta está inativa. Entre em contato com o sindicato.");
+      }
+
+      // Check if patient has valid (non-expired) card
+      const { data: cardData } = await supabase
+        .from("patient_cards")
+        .select("id, expires_at")
+        .eq("patient_id", patientId)
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (cardData?.expires_at && isPast(new Date(cardData.expires_at))) {
+        setCardExpired(true);
+        setCardExpiryDate(cardData.expires_at);
+        setLoading(false);
+        return;
       }
 
       // Load professionals with schedule
@@ -352,6 +375,47 @@ export default function MobileBookingPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  // Card expired - show friendly update prompt
+  if (cardExpired) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate("/app/home")} className="p-1">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendar Consulta</h1>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="p-4 bg-amber-100 rounded-full mb-6">
+            <CreditCard className="h-16 w-16 text-amber-600" />
+          </div>
+          <Badge variant="destructive" className="mb-4">Carteirinha Vencida</Badge>
+          <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Sua carteirinha precisa ser renovada</h2>
+          <p className="text-muted-foreground text-center mb-2">
+            {cardExpiryDate ? `Venceu em ${format(new Date(cardExpiryDate), "dd/MM/yyyy", { locale: ptBR })}` : "Sua carteirinha está vencida."}
+          </p>
+          <p className="text-sm text-muted-foreground text-center mb-6">
+            Para agendar consultas, atualize sua carteirinha enviando seu contracheque mais recente.
+          </p>
+          <Button 
+            className="w-full max-w-xs bg-emerald-600 hover:bg-emerald-700 mb-3"
+            onClick={() => navigate("/app/atualizar-carteirinha")}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Atualizar Agora
+          </Button>
+          <Button 
+            variant="outline"
+            className="w-full max-w-xs"
+            onClick={() => navigate("/app/home")}
+          >
+            Voltar ao início
+          </Button>
+        </div>
       </div>
     );
   }
