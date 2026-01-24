@@ -37,6 +37,7 @@ export interface UnionAppContent {
   external_link: string | null;
   order_index: number;
   is_active: boolean;
+  is_pinned: boolean;
   metadata: Record<string, unknown> | null;
   cct_category_id: string | null;
   created_at: string;
@@ -91,6 +92,7 @@ export function useUnionAppContent(contentType?: ContentType) {
         .from("union_app_content")
         .select("*")
         .eq("clinic_id", currentClinic.id)
+        .order("is_pinned", { ascending: false })
         .order("order_index", { ascending: true });
 
       if (contentType) {
@@ -181,6 +183,7 @@ export function useUpdateUnionAppContent() {
       if (updates.external_link !== undefined) updateData.external_link = updates.external_link;
       if (updates.order_index !== undefined) updateData.order_index = updates.order_index;
       if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+      if (updates.is_pinned !== undefined) updateData.is_pinned = updates.is_pinned;
       if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
       if (updates.cct_category_id !== undefined) updateData.cct_category_id = updates.cct_category_id;
 

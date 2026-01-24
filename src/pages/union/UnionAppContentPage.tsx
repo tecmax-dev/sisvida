@@ -122,6 +122,7 @@ interface FormData {
   external_link: string;
   order_index: number;
   is_active: boolean;
+  is_pinned: boolean;
   metadata: Record<string, unknown>;
   cct_category_id: string | null;
 }
@@ -135,6 +136,7 @@ const defaultFormData: FormData = {
   external_link: "",
   order_index: 0,
   is_active: true,
+  is_pinned: false,
   metadata: {},
   cct_category_id: null,
 };
@@ -243,6 +245,7 @@ export default function UnionAppContentPage() {
       external_link: content.external_link || "",
       order_index: content.order_index,
       is_active: content.is_active,
+      is_pinned: content.is_pinned || false,
       metadata: (content.metadata as Record<string, unknown>) || {},
       cct_category_id: content.cct_category_id || null,
     });
@@ -300,6 +303,13 @@ export default function UnionAppContentPage() {
     await updateContent.mutateAsync({
       id: content.id,
       is_active: !content.is_active,
+    });
+  };
+
+  const handleTogglePinned = async (content: UnionAppContent) => {
+    await updateContent.mutateAsync({
+      id: content.id,
+      is_pinned: !content.is_pinned,
     });
   };
 
@@ -424,6 +434,7 @@ export default function UnionAppContentPage() {
                   setIsDeleteDialogOpen(true);
                 }}
                 onToggleActive={handleToggleActive}
+                onTogglePinned={handleTogglePinned}
                 onMoveUp={handleMoveUp}
                 onMoveDown={handleMoveDown}
                 cctCategories={cctCategories}
