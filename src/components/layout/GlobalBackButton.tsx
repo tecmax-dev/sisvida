@@ -101,11 +101,7 @@ export function GlobalBackButton() {
 
   return (
     <div 
-      className={`fixed top-4 z-50 transition-all ${
-        hasSidebar 
-          ? "left-[72px] lg:left-[270px]" // Após sidebar collapsed/expanded
-          : "left-4 lg:left-6"
-      }`}
+      className="fixed top-4 right-4 lg:right-6 z-50 transition-all"
     >
       <Button
         variant="outline"
