@@ -702,6 +702,7 @@ function BoletosContent() {
   const [boletos, setBoletos] = useState<BoletoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'pending' | 'paid'>('pending');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -747,7 +748,6 @@ function BoletosContent() {
       const allContributions: any[] = [];
 
       // 2. Find ALL patients with this same CPF (across all clinics)
-      // This allows us to find contributions linked to patient records in other clinics
       const { data: allPatientsWithCpf } = await supabase
         .from('patients')
         .select('id, cpf');
@@ -847,7 +847,6 @@ function BoletosContent() {
   };
 
   const getStatusBadge = (status: string, dueDate: string) => {
-    // Check if actually overdue
     const isOverdue = new Date(dueDate) < new Date() && status !== 'paid';
     const displayStatus = isOverdue ? 'overdue' : status;
     
@@ -862,6 +861,10 @@ function BoletosContent() {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  // Filter boletos by tab
+  const pendingBoletos = boletos.filter(b => b.status !== 'paid');
+  const paidBoletos = boletos.filter(b => b.status === 'paid');
 
   if (loading) {
     return (
@@ -882,93 +885,143 @@ function BoletosContent() {
     );
   }
 
+  const renderBoletoCard = (boleto: BoletoItem) => (
+    <Card key={boleto.id} className="border shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h4 className="font-semibold text-sm">
+              {getCompetencia(boleto.competence_month, boleto.competence_year)}
+            </h4>
+            {boleto.contribution_type_name && (
+              <p className="text-xs text-muted-foreground">
+                {boleto.contribution_type_name}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Vencimento: {format(new Date(boleto.due_date), "dd/MM/yyyy")}
+            </p>
+          </div>
+          {getStatusBadge(boleto.status, boleto.due_date)}
+        </div>
+        
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-lg font-bold text-emerald-600">
+            {formatCurrency(boleto.value)}
+          </span>
+          
+          {boleto.status === "paid" && boleto.paid_at && (
+            <span className="text-xs text-muted-foreground">
+              Pago em {format(new Date(boleto.paid_at), "dd/MM/yyyy")}
+            </span>
+          )}
+        </div>
+        
+        {/* Action buttons for pending/overdue */}
+        {boleto.status !== "paid" && (
+          <div className="flex flex-wrap gap-2">
+            {boleto.lytex_invoice_url && (
+              <Button
+                size="sm"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => window.open(boleto.lytex_invoice_url!, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Pagar
+              </Button>
+            )}
+            
+            {boleto.lytex_boleto_digitable_line && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCopyCode(boleto, 'digitable')}
+                className="text-xs"
+              >
+                {copiedId === `${boleto.id}-digitable` ? (
+                  <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
+                ) : (
+                  <><Copy className="h-4 w-4 mr-1" /> Boleto</>
+                )}
+              </Button>
+            )}
+            
+            {boleto.lytex_pix_code && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCopyCode(boleto, 'pix')}
+                className="text-xs"
+              >
+                {copiedId === `${boleto.id}-pix` ? (
+                  <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
+                ) : (
+                  <><Copy className="h-4 w-4 mr-1" /> PIX</>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Visualize suas contribuições sindicais e realize pagamentos de forma prática.
       </p>
       
+      {/* Tabs for Pending and Paid */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pending'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Pendentes {pendingBoletos.length > 0 && `(${pendingBoletos.length})`}
+        </button>
+        <button
+          onClick={() => setActiveTab('paid')}
+          className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'paid'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Pagos {paidBoletos.length > 0 && `(${paidBoletos.length})`}
+        </button>
+      </div>
+      
       <div className="space-y-3">
-        {boletos.map((boleto) => (
-          <Card key={boleto.id} className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h4 className="font-semibold text-sm">
-                    {getCompetencia(boleto.competence_month, boleto.competence_year)}
-                  </h4>
-                  {boleto.contribution_type_name && (
-                    <p className="text-xs text-muted-foreground">
-                      {boleto.contribution_type_name}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Vencimento: {format(new Date(boleto.due_date), "dd/MM/yyyy")}
-                  </p>
-                </div>
-                {getStatusBadge(boleto.status, boleto.due_date)}
-              </div>
-              
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-lg font-bold text-emerald-600">
-                  {formatCurrency(boleto.value)}
-                </span>
-                
-                {boleto.status === "paid" && boleto.paid_at && (
-                  <span className="text-xs text-muted-foreground">
-                    Pago em {format(new Date(boleto.paid_at), "dd/MM/yyyy")}
-                  </span>
-                )}
-              </div>
-              
-              {/* Action buttons for pending/overdue */}
-              {boleto.status !== "paid" && (
-                <div className="flex flex-wrap gap-2">
-                  {boleto.lytex_invoice_url && (
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => window.open(boleto.lytex_invoice_url!, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      Pagar
-                    </Button>
-                  )}
-                  
-                  {boleto.lytex_boleto_digitable_line && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCopyCode(boleto, 'digitable')}
-                      className="text-xs"
-                    >
-                      {copiedId === `${boleto.id}-digitable` ? (
-                        <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
-                      ) : (
-                        <><Copy className="h-4 w-4 mr-1" /> Boleto</>
-                      )}
-                    </Button>
-                  )}
-                  
-                  {boleto.lytex_pix_code && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCopyCode(boleto, 'pix')}
-                      className="text-xs"
-                    >
-                      {copiedId === `${boleto.id}-pix` ? (
-                        <><CheckCircle2 className="h-4 w-4 mr-1" /> Copiado</>
-                      ) : (
-                        <><Copy className="h-4 w-4 mr-1" /> PIX</>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {activeTab === 'pending' && (
+          pendingBoletos.length > 0 ? (
+            pendingBoletos.map(renderBoletoCard)
+          ) : (
+            <div className="text-center py-6">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Nenhum boleto pendente!
+              </p>
+            </div>
+          )
+        )}
+        
+        {activeTab === 'paid' && (
+          paidBoletos.length > 0 ? (
+            paidBoletos.map(renderBoletoCard)
+          ) : (
+            <div className="text-center py-6">
+              <Receipt className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Nenhum boleto pago encontrado.
+              </p>
+            </div>
+          )
+        )}
       </div>
     </div>
   );
