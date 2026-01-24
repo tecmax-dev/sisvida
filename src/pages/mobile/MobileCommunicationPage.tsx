@@ -576,8 +576,16 @@ function RadiosContent() {
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`w-14 h-14 ${idx === 0 ? 'bg-white/20' : 'bg-emerald-100'} rounded-full flex items-center justify-center`}>
-                  <Radio className={`h-7 w-7 ${idx === 0 ? 'text-white' : 'text-emerald-600'}`} />
+                <div className={`w-14 h-14 ${idx === 0 ? 'bg-white/20' : 'bg-emerald-100'} rounded-full flex items-center justify-center overflow-hidden flex-shrink-0`}>
+                  {radio.image_url ? (
+                    <img 
+                      src={radio.image_url} 
+                      alt={radio.title} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Radio className={`h-7 w-7 ${idx === 0 ? 'text-white' : 'text-emerald-600'}`} />
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
