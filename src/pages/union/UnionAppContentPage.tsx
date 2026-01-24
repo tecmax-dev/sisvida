@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   Dialog,
   DialogContent,
@@ -73,7 +73,7 @@ import {
   Headphones,
   Info,
 } from "lucide-react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 import { PushNotificationsTab } from "@/components/union/PushNotificationsTab";
 import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTab";
@@ -335,129 +335,186 @@ export default function UnionAppContentPage() {
     );
   }
 
+  const renderContent = () => {
+    if (activeTab === "cct-categories") {
+      return <CctCategoriesManagement />;
+    }
+    if (activeTab === "ouvidoria") {
+      return <OuvidoriaMessagesTab />;
+    }
+    if (activeTab === "push") {
+      return <PushNotificationsTab />;
+    }
+    if (activeTab === "tabs") {
+      return <MobileAppTabsManagement />;
+    }
+    if (isContentTab(activeTab)) {
+      if (activeTab === "convenio") {
+        return <ConveniosManagementTab />;
+      }
+      if (activeTab === "galeria") {
+        return <AlbumManagementTab />;
+      }
+      if (activeTab === "ajuda") {
+        return <HelpContentManagement />;
+      }
+      return (
+        <UnionContentList
+          content={filteredContent}
+          contentType={activeTab}
+          onOpenCreate={handleOpenCreate}
+          onOpenEdit={handleOpenEdit}
+          onDelete={(id) => {
+            setDeletingContentId(id);
+            setIsDeleteDialogOpen(true);
+          }}
+          onToggleActive={handleToggleActive}
+          onTogglePinned={handleTogglePinned}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+          cctCategories={cctCategories}
+        />
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Smartphone className="h-6 w-6 text-primary" />
-            Gestão de Conteúdo do App
+    <div className="flex min-h-[calc(100vh-4rem)]">
+      {/* Sidebar */}
+      <aside className="w-64 border-r bg-muted/30 flex-shrink-0 overflow-y-auto">
+        <div className="p-4 border-b">
+          <h1 className="text-lg font-bold flex items-center gap-2">
+            <Smartphone className="h-5 w-5 text-primary" />
+            Conteúdo do App
           </h1>
-          <p className="text-muted-foreground">
-          Gerencie banners, convênios, convenções, declarações, diretoria, documentos e interações da ouvidoria
-          </p>
         </div>
-        {isContentTab(activeTab) && (
-          <Button onClick={handleOpenCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo {CONTENT_TYPE_LABELS[activeTab].slice(0, -1)}
-          </Button>
-        )}
-      </div>
+        
+        <nav className="p-2 space-y-1">
+          {/* Content Types */}
+          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Conteúdo
+          </div>
+          {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+            <button
+              key={type}
+              onClick={() => setActiveTab(type)}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+                activeTab === type
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {contentTypeIcons[type]}
+              <span className="flex-1 text-left truncate">{CONTENT_TYPE_LABELS[type]}</span>
+              <Badge 
+                variant={activeTab === type ? "secondary" : "outline"} 
+                className={`ml-auto h-5 min-w-5 px-1.5 text-xs ${
+                  activeTab === type ? "bg-primary-foreground/20 text-primary-foreground" : ""
+                }`}
+              >
+                {allContent?.filter(c => c.content_type === type).length || 0}
+              </Badge>
+            </button>
+          ))}
+          
+          {/* Separator */}
+          <div className="my-3 border-t" />
+          
+          {/* System Tabs */}
+          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Sistema
+          </div>
+          <button
+            onClick={() => setActiveTab("ouvidoria")}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+              activeTab === "ouvidoria"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="flex-1 text-left">Ouvidoria</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("push")}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+              activeTab === "push"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Bell className="h-4 w-4" />
+            <span className="flex-1 text-left">Push Notifications</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("tabs")}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+              activeTab === "tabs"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Smartphone className="h-4 w-4" />
+            <span className="flex-1 text-left">Abas do App</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("cct-categories")}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+              activeTab === "cct-categories"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            <span className="flex-1 text-left">Categorias CCT</span>
+          </button>
+        </nav>
+      </aside>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-        <div className="relative">
-          <ScrollArea className="w-full pb-3">
-            <TabsList className="inline-flex h-auto min-h-[44px] items-center justify-start gap-1 bg-muted/50 p-1.5 rounded-lg flex-nowrap">
-              {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
-                <TabsTrigger
-                  key={type}
-                  value={type}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-                >
-                  {contentTypeIcons[type]}
-                  <span className="hidden sm:inline">{CONTENT_TYPE_LABELS[type]}</span>
-                  <span className="sm:hidden">{CONTENT_TYPE_LABELS[type].split(' ')[0]}</span>
-                  <Badge variant="secondary" className="ml-0.5 h-5 min-w-5 px-1 text-xs">
-                    {allContent?.filter(c => c.content_type === type).length || 0}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-              <div className="w-px h-6 bg-border mx-1.5 shrink-0" />
-              <TabsTrigger
-                value="ouvidoria"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>Ouvidoria</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="push"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <Bell className="h-4 w-4" />
-                <span>Push</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="tabs"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <Smartphone className="h-4 w-4" />
-                <span>Abas</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="cct-categories"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md shrink-0"
-              >
-                <FileText className="h-4 w-4" />
-                <span>Cat. CCT</span>
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" className="h-2" />
-          </ScrollArea>
-          {/* Gradient fade indicator for more tabs */}
-          <div className="absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-        </div>
-
-        <TabsContent value="cct-categories" className="mt-6">
-          <CctCategoriesManagement />
-        </TabsContent>
-
-        {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
-          <TabsContent key={type} value={type} className="mt-6">
-            {type === "convenio" ? (
-              <ConveniosManagementTab />
-            ) : type === "galeria" ? (
-              <AlbumManagementTab />
-            ) : type === "ajuda" ? (
-              <HelpContentManagement />
-            ) : (
-              <UnionContentList
-                content={filteredContent}
-                contentType={type}
-                onOpenCreate={handleOpenCreate}
-                onOpenEdit={handleOpenEdit}
-                onDelete={(id) => {
-                  setDeletingContentId(id);
-                  setIsDeleteDialogOpen(true);
-                }}
-                onToggleActive={handleToggleActive}
-                onTogglePinned={handleTogglePinned}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-                cctCategories={cctCategories}
-              />
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {isContentTab(activeTab) 
+                  ? CONTENT_TYPE_LABELS[activeTab]
+                  : activeTab === "ouvidoria" 
+                    ? "Ouvidoria" 
+                    : activeTab === "push" 
+                      ? "Push Notifications"
+                      : activeTab === "tabs"
+                        ? "Abas do App"
+                        : "Categorias CCT"
+                }
+              </h2>
+              <p className="text-muted-foreground">
+                {isContentTab(activeTab) 
+                  ? `Gerencie os ${CONTENT_TYPE_LABELS[activeTab].toLowerCase()} do aplicativo`
+                  : activeTab === "ouvidoria" 
+                    ? "Visualize e responda mensagens da ouvidoria" 
+                    : activeTab === "push" 
+                      ? "Envie notificações push para os usuários"
+                      : activeTab === "tabs"
+                        ? "Configure as abas visíveis no aplicativo"
+                        : "Organize as categorias de CCT"
+                }
+              </p>
+            </div>
+            {isContentTab(activeTab) && activeTab !== "convenio" && activeTab !== "galeria" && activeTab !== "ajuda" && (
+              <Button onClick={handleOpenCreate} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo {CONTENT_TYPE_LABELS[activeTab].slice(0, -1)}
+              </Button>
             )}
-          </TabsContent>
-        ))}
+          </div>
 
-        {/* Ouvidoria Tab */}
-        <TabsContent value="ouvidoria" className="mt-6">
-          <OuvidoriaMessagesTab />
-        </TabsContent>
-
-        {/* Push Notifications Tab */}
-        <TabsContent value="push" className="mt-6">
-          <PushNotificationsTab />
-        </TabsContent>
-
-        {/* App Tabs Management */}
-        <TabsContent value="tabs" className="mt-6">
-          <MobileAppTabsManagement />
-        </TabsContent>
-      </Tabs>
+          {/* Content */}
+          {renderContent()}
+        </div>
+      </main>
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
