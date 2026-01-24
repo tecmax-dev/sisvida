@@ -101,7 +101,6 @@ serve(async (req) => {
       from: smtpFrom,
       to: email,
       subject: `Ficha de Filiacao - ${sindicatoName}`,
-      content: "Visualize este email em um cliente que suporte HTML",
       html: htmlContent,
       attachments: [
         {
@@ -111,9 +110,6 @@ serve(async (req) => {
           contentType: "application/pdf",
         },
       ],
-      headers: {
-        "Content-Transfer-Encoding": "base64",
-      },
     });
 
     await client.close();

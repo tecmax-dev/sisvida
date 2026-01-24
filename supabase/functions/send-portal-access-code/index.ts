@@ -257,12 +257,7 @@ const handler = async (req: Request): Promise<Response> => {
         from: smtpFrom,
         to: data.recipientEmail,
         subject: subject,
-        content: "Veja este email em um cliente que suporte HTML.",
         html: html,
-        headers: {
-          "Content-Type": "text/html; charset=UTF-8",
-          "Content-Transfer-Encoding": "base64",
-        },
       });
 
       await client.close();

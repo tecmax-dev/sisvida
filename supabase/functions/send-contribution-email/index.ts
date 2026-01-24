@@ -126,12 +126,7 @@ ${htmlMessage}
         from: smtpFrom,
         to: to,
         subject: subject,
-        content: "Visualize este email em um cliente que suporte HTML.",
         html: emailHtml,
-        headers: {
-          "Content-Type": "text/html; charset=UTF-8",
-          "Content-Transfer-Encoding": "base64",
-        },
       });
 
       await client.close();

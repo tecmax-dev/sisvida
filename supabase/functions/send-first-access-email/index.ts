@@ -164,12 +164,7 @@ serve(async (req: Request): Promise<Response> => {
         from: smtpFrom,
         to: email,
         subject: "Codigo de Primeiro Acesso - App SECMI",
-        content: "Visualize este email em um cliente que suporte HTML.",
         html: emailHtml,
-        headers: {
-          "Content-Type": "text/html; charset=UTF-8",
-          "Content-Transfer-Encoding": "base64",
-        },
       });
 
       await client.close();
