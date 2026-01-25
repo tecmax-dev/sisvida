@@ -32,7 +32,7 @@ import {
   Hash,
   Calendar,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
@@ -179,7 +179,7 @@ export function UnionManualReconciliationDialog({
                 <div>
                   <p className="text-xs text-muted-foreground">Data</p>
                   <p className="font-medium">
-                    {format(new Date(bankTransaction.transaction_date), "dd/MM/yyyy", {
+                    {format(parseISO(bankTransaction.transaction_date), "dd/MM/yyyy", {
                       locale: ptBR,
                     })}
                   </p>

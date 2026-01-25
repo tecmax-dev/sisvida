@@ -28,7 +28,7 @@ import {
   XCircle,
   AlertCircle,
 } from "lucide-react";
-import { format, differenceInDays, isPast } from "date-fns";
+import { format, differenceInDays, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { toast } from "sonner";
@@ -185,7 +185,7 @@ export function PackageDetailsDialog({
             <div>
               <p className="text-sm text-muted-foreground">Data da Compra</p>
               <p className="font-medium">
-                {format(new Date(patientPackage.purchase_date), "dd/MM/yyyy", { locale: ptBR })}
+                {format(parseISO(patientPackage.purchase_date), "dd/MM/yyyy", { locale: ptBR })}
               </p>
             </div>
           </div>
@@ -195,7 +195,7 @@ export function PackageDetailsDialog({
               <p className="text-sm text-muted-foreground">Validade</p>
               <p className="font-medium">
                 {patientPackage.expiry_date
-                  ? format(new Date(patientPackage.expiry_date), "dd/MM/yyyy", { locale: ptBR })
+                  ? format(parseISO(patientPackage.expiry_date), "dd/MM/yyyy", { locale: ptBR })
                   : "Sem limite"}
               </p>
             </div>
@@ -267,7 +267,7 @@ export function PackageDetailsDialog({
                         </div>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(session.session_date), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(parseISO(session.session_date), "dd/MM/yyyy", { locale: ptBR })}
                         {session.appointment && (
                           <span className="text-muted-foreground ml-1">
                             às {session.appointment.start_time.slice(0, 5)}
@@ -353,7 +353,7 @@ export function PackageDetailsDialog({
                           )}
                           {payment.status === "paid" && payment.paid_date && (
                             <span className="text-xs text-muted-foreground">
-                              Pago em {format(new Date(payment.paid_date), "dd/MM", { locale: ptBR })}
+                              Pago em {format(parseISO(payment.paid_date), "dd/MM", { locale: ptBR })}
                             </span>
                           )}
                         </TableCell>

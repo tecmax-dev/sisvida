@@ -34,7 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Globe, Building2, Loader2, UserSearch, X, FlaskConical, Send, Printer, Check } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Exam {
@@ -530,7 +530,7 @@ export default function ExamsPage() {
                             </div>
                             {patient.birth_date && (
                               <span className="text-xs text-muted-foreground">
-                                {format(new Date(patient.birth_date), "dd/MM/yyyy")}
+                                {format(parseISO(patient.birth_date), "dd/MM/yyyy")}
                               </span>
                             )}
                           </button>

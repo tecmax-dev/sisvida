@@ -176,10 +176,10 @@ export function AppointmentAuditDialog({
         if (messages) {
           messages.forEach((msg: any) => {
             const msgDate = new Date(msg.sent_at);
-            const appointmentDate = new Date(appointment.appointment_date);
+            const appointmentDateForFilter = parseISO(appointment.appointment_date);
             
             // Filtrar mensagens próximas à data do agendamento (7 dias antes/depois)
-            const diffDays = Math.abs((msgDate.getTime() - appointmentDate.getTime()) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.abs((msgDate.getTime() - appointmentDateForFilter.getTime()) / (1000 * 60 * 60 * 24));
             if (diffDays <= 7) {
               const typeLabel = getMessageTypeLabel(msg.message_type);
               auditEvents.push({

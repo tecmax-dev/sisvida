@@ -33,7 +33,7 @@ import {
   Eye,
   Search,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BankStatementTransaction } from "@/hooks/useUnionReconciliation";
 
@@ -192,7 +192,7 @@ export function UnionReconciliationTable({
                   }
                 >
                   <TableCell>
-                    {format(new Date(tx.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
+                    {format(parseISO(tx.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate font-medium">
                     {tx.description || "—"}

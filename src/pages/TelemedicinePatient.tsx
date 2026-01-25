@@ -19,7 +19,7 @@ import {
   Building2,
 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface TelemedicineSession {
@@ -302,7 +302,7 @@ export default function TelemedicinePatient() {
                 <div>
                   <p className="font-medium">
                     {session.appointment?.appointment_date && 
-                      format(new Date(session.appointment.appointment_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                      format(parseISO(session.appointment.appointment_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                     }
                   </p>
                   <p className="text-sm text-muted-foreground">

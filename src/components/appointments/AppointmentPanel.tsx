@@ -54,7 +54,7 @@ import { VideoCall } from "@/components/telemedicine/VideoCall";
 import { sendWhatsAppDocument, sendWhatsAppMessage, formatTelemedicineInvite, formatExamRequest } from "@/lib/whatsapp";
 import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
 import { generateExamRequestPDF } from "@/lib/examRequestExportUtils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Odontogram } from "@/components/medical/Odontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
@@ -802,7 +802,7 @@ export function AppointmentPanel({
       const message = formatTelemedicineInvite(
         displayName,
         clinic?.name || "Clínica",
-        format(new Date(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR }),
+        format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR }),
         appointment.start_time.substring(0, 5),
         professional?.name || "Profissional",
         telemedicineLink

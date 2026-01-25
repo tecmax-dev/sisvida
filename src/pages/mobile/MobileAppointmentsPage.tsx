@@ -156,7 +156,7 @@ export default function MobileAppointmentsPage() {
     const date = parseISO(apt.appointment_date);
     return (isFuture(date) || isToday(date)) && 
            !['cancelled', 'no_show', 'attended', 'completed'].includes(apt.status);
-  }).sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime());
+  }).sort((a, b) => parseISO(a.appointment_date).getTime() - parseISO(b.appointment_date).getTime());
 
   const historyAppointments = allAppointments.filter(apt => {
     const date = parseISO(apt.appointment_date);

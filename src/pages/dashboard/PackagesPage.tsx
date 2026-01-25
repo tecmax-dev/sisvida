@@ -44,7 +44,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInDays, isPast, isToday } from "date-fns";
+import { format, differenceInDays, isPast, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { PackageTemplateDialog } from "@/components/packages/PackageTemplateDialog";
@@ -395,11 +395,11 @@ export default function PackagesPage() {
                             {pkg.expiry_date ? (
                               <div>
                                 <p className="text-sm">
-                                  {format(new Date(pkg.expiry_date), "dd/MM/yyyy", { locale: ptBR })}
+                                  {format(parseISO(pkg.expiry_date), "dd/MM/yyyy", { locale: ptBR })}
                                 </p>
-                                {pkg.status === "active" && !isPast(new Date(pkg.expiry_date)) && (
+                                {pkg.status === "active" && !isPast(parseISO(pkg.expiry_date)) && (
                                   <p className="text-xs text-muted-foreground">
-                                    {differenceInDays(new Date(pkg.expiry_date), new Date())} dias restantes
+                                    {differenceInDays(parseISO(pkg.expiry_date), new Date())} dias restantes
                                   </p>
                                 )}
                               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, FileText, Loader2 } from "lucide-react";
 import {
@@ -215,7 +215,7 @@ export function PatientRecordsModal({
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-3 text-left">
                       <span className="text-sm font-medium">
-                        {format(new Date(record.record_date), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(parseISO(record.record_date), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {record.professionals?.name || "Profissional não informado"}
