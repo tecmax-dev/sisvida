@@ -5,7 +5,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -31,18 +31,8 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [clinic, setClinic] = useState<ClinicData | null>(null);
 
-  const [patientId, setPatientId] = useState<string | null>(null);
-  const [clinicId, setClinicId] = useState<string | null>(null);
-
-  // Restore session from robust storage on mount
-  useEffect(() => {
-    const init = async () => {
-      const session = await restoreSession();
-      setPatientId(session.patientId);
-      setClinicId(session.clinicId);
-    };
-    init();
-  }, []);
+  // Usar hook de autenticação com sessão JWT persistente
+  const { patientId, clinicId, isLoggedIn, initialized } = useMobileAuthSession();
 
   // Initialize push notifications
   usePushNotifications({ patientId, clinicId });

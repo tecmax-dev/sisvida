@@ -14809,6 +14809,10 @@ export type Database = {
       }
     }
     Functions: {
+      authenticate_patient_hybrid: {
+        Args: { p_cpf: string; p_password: string }
+        Returns: Json
+      }
       can_mobile_cancel_homologacao: {
         Args: { p_appointment_id: string; p_employee_cpf: string }
         Returns: boolean
