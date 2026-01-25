@@ -95,7 +95,7 @@ Você recebeu acesso ao sistema da *${clinicName}*.
 • Senha temporária: ${tempPassword}
 
 🔗 *Acesse agora:*
-https://sisvida.lovable.app
+https://app.eclini.com.br
 
 ⚠️ *Importante:* Por segurança, recomendamos que você altere sua senha no primeiro acesso.
 
