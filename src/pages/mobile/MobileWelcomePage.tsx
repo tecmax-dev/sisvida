@@ -5,33 +5,37 @@ import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { MobileFiliacaoForm } from "@/components/mobile/MobileFiliacaoForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
   const [showFiliacao, setShowFiliacao] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   
   // Apply PWA branding (favicon, manifest, meta tags) for the clinic
   useDynamicPWA();
 
-  // Check if user already has a valid session (using robust restoration)
+  // Use centralized auth hook that checks Supabase JWT + localStorage backup
+  const { isLoggedIn, initialized, loading } = useMobileAuthSession();
+
+  // Check if user already has a valid session
   useEffect(() => {
-    const checkSession = async () => {
-      const session = await restoreSession();
-      if (session.isLoggedIn) {
-        // User is already logged in, redirect to home
-        navigate("/app/home", { replace: true });
-      } else {
-        // User is not logged in, redirect to public home
-        navigate("/app", { replace: true });
-      }
-    };
-    checkSession();
-  }, [navigate]);
+    // Wait for auth initialization to complete
+    if (!initialized || loading) {
+      return;
+    }
+
+    // Redirect based on auth status
+    if (isLoggedIn) {
+      console.log("[MobileWelcome] User authenticated, redirecting to home");
+      navigate("/app/home", { replace: true });
+    } else {
+      console.log("[MobileWelcome] User not authenticated, redirecting to public home");
+      navigate("/app", { replace: true });
+    }
+  }, [initialized, loading, isLoggedIn, navigate]);
 
   // Show loading while checking session
-  if (checkingSession) {
+  if (!initialized || loading) {
     return (
       <div className="min-h-screen bg-emerald-600 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-white" />
