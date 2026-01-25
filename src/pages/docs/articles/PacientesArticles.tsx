@@ -1,11 +1,13 @@
 import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, CheckCircle2 } from "lucide-react";
-import pacientesCadastro from "@/assets/docs/pacientes-cadastro.png";
-import prontuarioEletronico from "@/assets/docs/prontuario-eletronico.png";
-import anexosDocumentos from "@/assets/docs/anexos-documentos.png";
-import agendaCalendar from "@/assets/docs/agenda-calendar.png";
+import { ArrowLeft, ArrowRight, Clock, FileText, FolderOpen, History, User } from "lucide-react";
+import { TutorialImage } from "@/components/docs/TutorialImage";
+import { TutorialStep, TutorialChecklist } from "@/components/docs/TutorialStep";
+import { TutorialTip, TutorialCard } from "@/components/docs/TutorialCard";
+
+// Import images
+import tutorialPacientes from "@/assets/docs/tutorial-pacientes-pt.png";
+import tutorialProntuario from "@/assets/docs/tutorial-prontuario-pt.png";
 
 const articles: Record<string, {
   title: string;
@@ -17,92 +19,76 @@ const articles: Record<string, {
 }> = {
   "cadastrando-pacientes": {
     title: "Cadastrando Pacientes",
-    description: "Aprenda a cadastrar novos pacientes no sistema de forma rápida e completa.",
+    description: "Aprenda a cadastrar novos pacientes no sistema de forma rápida e completa",
     readTime: "4 min",
     content: (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Acesso ao Cadastro</h2>
-          <p className="text-muted-foreground mb-4">
-            Para cadastrar um novo paciente, acesse o menu <strong>Cadastros → Pacientes</strong> e clique no botão <strong>"Novo Paciente"</strong>.
+          <h2 className="text-xl font-semibold text-foreground mb-4">Cadastro de Pacientes</h2>
+          <p className="text-muted-foreground">
+            Para cadastrar um novo paciente, acesse o menu <strong>Cadastros → Pacientes</strong> e 
+            clique no botão <strong>"Novo Paciente"</strong>.
           </p>
-          <div className="bg-muted/50 rounded-lg p-4 border">
-            <img 
-              src={pacientesCadastro} 
-              alt="Tela de cadastro de pacientes do Eclini" 
-              className="rounded-lg w-full shadow-lg"
+        </section>
+
+        <TutorialImage 
+          src={tutorialPacientes} 
+          alt="Tela de cadastro de pacientes" 
+          caption="Interface de cadastro de pacientes do Eclini"
+        />
+
+        <section>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Dados Obrigatórios</h3>
+          <p className="text-muted-foreground mb-4">Os campos essenciais para o cadastro são:</p>
+          <TutorialChecklist items={[
+            "Nome completo do paciente",
+            "CPF (documento de identificação)",
+            "Data de nascimento (para cálculo de idade)",
+            "Telefone/WhatsApp (para contato e lembretes)",
+            "E-mail (opcional, para comunicações)"
+          ]} />
+        </section>
+
+        <TutorialTip type="tip">
+          Ao digitar o CEP, o sistema preenche automaticamente o endereço completo do paciente!
+        </TutorialTip>
+
+        <section>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Cadastro Rápido</h3>
+          <p className="text-muted-foreground mb-4">
+            Para agilizar o atendimento, você pode usar o <strong>Cadastro Rápido</strong> diretamente 
+            na tela de agendamento. Basta clicar em "Novo Paciente" e preencher apenas os dados essenciais.
+          </p>
+        </section>
+
+        <section>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Informações Adicionais</h3>
+          <p className="text-muted-foreground mb-4">Além dos dados básicos, você pode registrar:</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <TutorialCard 
+              icon={User} 
+              title="Convênio" 
+              description="Plano de saúde e número da carteira"
+              color="blue"
             />
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              Interface de cadastro de pacientes
-            </p>
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Dados Obrigatórios</h2>
-          <p className="text-muted-foreground mb-4">
-            Os campos essenciais para o cadastro são:
-          </p>
-          <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-            <li><strong>Nome completo</strong> - Nome do paciente</li>
-            <li><strong>CPF</strong> - Documento de identificação</li>
-            <li><strong>Data de nascimento</strong> - Para cálculo de idade</li>
-            <li><strong>Telefone/WhatsApp</strong> - Para contato e lembretes</li>
-            <li><strong>E-mail</strong> - Para comunicações (opcional)</li>
-          </ul>
-        </section>
-
-        <Alert className="border-primary/20 bg-primary/5">
-          <Lightbulb className="h-4 w-4 text-primary" />
-          <AlertDescription>
-            <strong>Dica:</strong> Ao digitar o CEP, o sistema preenche automaticamente o endereço completo!
-          </AlertDescription>
-        </Alert>
-
-        <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Cadastro Rápido</h2>
-          <p className="text-muted-foreground mb-4">
-            Para agilizar o atendimento, você pode usar o <strong>Cadastro Rápido</strong> diretamente na tela de agendamento. 
-            Basta clicar em "Novo Paciente" e preencher apenas os dados essenciais.
-          </p>
-          <div className="bg-muted/50 rounded-lg p-4 border">
-            <img 
-              src={pacientesCadastro} 
-              alt="Cadastro rápido de paciente no Eclini" 
-              className="rounded-lg w-full shadow-lg"
+            <TutorialCard 
+              icon={User} 
+              title="Responsável" 
+              description="Para pacientes menores de idade"
+              color="violet"
             />
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              Formulário de cadastro rápido integrado à agenda
-            </p>
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Informações Adicionais</h2>
-          <p className="text-muted-foreground mb-4">
-            Além dos dados básicos, você pode registrar:
-          </p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div className="p-3 bg-muted/50 rounded-lg border">
-              <CheckCircle2 className="h-5 w-5 text-green-500 mb-2" />
-              <h4 className="font-medium text-foreground">Convênio</h4>
-              <p className="text-sm text-muted-foreground">Plano de saúde e número da carteira</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg border">
-              <CheckCircle2 className="h-5 w-5 text-green-500 mb-2" />
-              <h4 className="font-medium text-foreground">Responsável</h4>
-              <p className="text-sm text-muted-foreground">Para pacientes menores de idade</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg border">
-              <CheckCircle2 className="h-5 w-5 text-green-500 mb-2" />
-              <h4 className="font-medium text-foreground">Foto</h4>
-              <p className="text-sm text-muted-foreground">Foto para identificação visual</p>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg border">
-              <CheckCircle2 className="h-5 w-5 text-green-500 mb-2" />
-              <h4 className="font-medium text-foreground">Observações</h4>
-              <p className="text-sm text-muted-foreground">Notas importantes sobre o paciente</p>
-            </div>
+            <TutorialCard 
+              icon={User} 
+              title="Foto" 
+              description="Foto para identificação visual"
+              color="emerald"
+            />
+            <TutorialCard 
+              icon={FileText} 
+              title="Observações" 
+              description="Notas importantes sobre o paciente"
+              color="amber"
+            />
           </div>
         </section>
       </div>
@@ -111,65 +97,72 @@ const articles: Record<string, {
   },
   "prontuario-eletronico": {
     title: "Prontuário Eletrônico",
-    description: "Como acessar e gerenciar o prontuário eletrônico dos pacientes.",
+    description: "Como acessar e gerenciar o prontuário eletrônico dos pacientes de forma completa",
     readTime: "5 min",
     content: (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Acessando o Prontuário</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Acessando o Prontuário</h2>
           <p className="text-muted-foreground mb-4">
             O prontuário eletrônico pode ser acessado de duas formas:
           </p>
-          <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-4">
-            <li>Na lista de pacientes, clique no ícone de prontuário ao lado do nome</li>
-            <li>Durante o atendimento, acesse a aba "Prontuário" no painel do paciente</li>
-          </ol>
-          <div className="bg-muted/50 rounded-lg p-4 border mt-4">
-            <img 
-              src={prontuarioEletronico} 
-              alt="Prontuário eletrônico do Eclini" 
-              className="rounded-lg w-full shadow-lg"
-            />
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              Prontuário eletrônico com histórico completo do paciente
-            </p>
-          </div>
+          <TutorialChecklist items={[
+            "Na lista de pacientes, clique no ícone de prontuário ao lado do nome",
+            "Durante o atendimento, acesse a aba 'Prontuário' no painel do paciente"
+          ]} />
         </section>
 
+        <TutorialImage 
+          src={tutorialProntuario} 
+          alt="Prontuário eletrônico" 
+          caption="Prontuário eletrônico com histórico completo do paciente"
+        />
+
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Estrutura do Prontuário</h2>
-          <p className="text-muted-foreground mb-4">
-            O prontuário é organizado em seções:
-          </p>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Estrutura do Prontuário</h3>
+          <p className="text-muted-foreground mb-4">O prontuário é organizado em seções:</p>
           <div className="space-y-3">
-            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <h4 className="font-medium text-foreground">📋 Anamnese</h4>
-              <p className="text-sm text-muted-foreground">Histórico médico, alergias e medicamentos em uso</p>
+            <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+              <h4 className="font-medium text-foreground flex items-center gap-2">
+                <span className="text-xl">📋</span> Anamnese
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Histórico médico, alergias e medicamentos em uso
+              </p>
             </div>
-            <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-              <h4 className="font-medium text-foreground">📝 Evoluções</h4>
-              <p className="text-sm text-muted-foreground">Registros de cada consulta realizada</p>
+            <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20">
+              <h4 className="font-medium text-foreground flex items-center gap-2">
+                <span className="text-xl">📝</span> Evoluções
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Registros de cada consulta realizada
+              </p>
             </div>
-            <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
-              <h4 className="font-medium text-foreground">💊 Prescrições</h4>
-              <p className="text-sm text-muted-foreground">Receitas e orientações médicas</p>
+            <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
+              <h4 className="font-medium text-foreground flex items-center gap-2">
+                <span className="text-xl">💊</span> Prescrições
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Receitas e orientações médicas
+              </p>
             </div>
-            <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
-              <h4 className="font-medium text-foreground">📎 Anexos</h4>
-              <p className="text-sm text-muted-foreground">Exames, laudos e documentos</p>
+            <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
+              <h4 className="font-medium text-foreground flex items-center gap-2">
+                <span className="text-xl">📎</span> Anexos
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Exames, laudos e documentos
+              </p>
             </div>
           </div>
         </section>
 
-        <Alert className="border-amber-500/20 bg-amber-500/5">
-          <AlertCircle className="h-4 w-4 text-amber-600" />
-          <AlertDescription>
-            <strong>Importante:</strong> Todas as alterações no prontuário são registradas com data, hora e usuário responsável para auditoria.
-          </AlertDescription>
-        </Alert>
+        <TutorialTip type="warning">
+          Todas as alterações no prontuário são registradas com data, hora e usuário responsável para auditoria completa.
+        </TutorialTip>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Adicionando Evoluções</h2>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Adicionando Evoluções</h3>
           <p className="text-muted-foreground mb-4">
             Durante o atendimento, você pode adicionar evoluções clicando no botão <strong>"Nova Evolução"</strong>.
             O sistema permite usar templates personalizados para agilizar o registro.
@@ -182,71 +175,73 @@ const articles: Record<string, {
   },
   "anexos-documentos": {
     title: "Anexos e Documentos",
-    description: "Gerencie exames, laudos e documentos dos pacientes de forma organizada.",
+    description: "Gerencie exames, laudos e documentos dos pacientes de forma organizada",
     readTime: "4 min",
     content: (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Enviando Anexos</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Enviando Anexos</h2>
           <p className="text-muted-foreground mb-4">
-            Para anexar documentos ao prontuário do paciente:
+            Para anexar documentos ao prontuário do paciente, siga os passos:
           </p>
-          <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-4">
-            <li>Acesse o cadastro do paciente</li>
-            <li>Clique na aba <strong>"Anexos"</strong></li>
-            <li>Clique em <strong>"Enviar Arquivo"</strong></li>
-            <li>Selecione o arquivo e escolha a pasta de destino</li>
-          </ol>
-          <div className="bg-muted/50 rounded-lg p-4 border mt-4">
-            <img 
-              src={anexosDocumentos} 
-              alt="Gerenciamento de anexos no Eclini" 
-              className="rounded-lg w-full shadow-lg"
-            />
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              Sistema de anexos organizado em pastas
-            </p>
-          </div>
         </section>
 
+        <section className="space-y-6">
+          <TutorialStep number={1} title="Acesse o Cadastro do Paciente">
+            <p>Vá em <strong>Cadastros → Pacientes</strong> e selecione o paciente</p>
+          </TutorialStep>
+
+          <TutorialStep number={2} title="Abra a Aba Anexos">
+            <p>Clique na aba <strong>"Anexos"</strong></p>
+          </TutorialStep>
+
+          <TutorialStep number={3} title="Envie o Arquivo">
+            <p>Clique em <strong>"Enviar Arquivo"</strong> e selecione o documento</p>
+          </TutorialStep>
+
+          <TutorialStep number={4} title="Organize em Pastas">
+            <p>Escolha a pasta de destino para manter tudo organizado</p>
+          </TutorialStep>
+        </section>
+
+        <TutorialImage 
+          src={tutorialProntuario} 
+          alt="Gerenciamento de anexos" 
+          caption="Sistema de anexos organizado em pastas"
+        />
+
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Organizando em Pastas</h2>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Organizando em Pastas</h3>
           <p className="text-muted-foreground mb-4">
             O sistema permite organizar os anexos em pastas personalizadas:
           </p>
           <div className="grid sm:grid-cols-3 gap-3">
-            <div className="p-3 bg-muted/50 rounded-lg border text-center">
-              <span className="text-2xl">🔬</span>
-              <p className="text-sm font-medium mt-1">Exames</p>
+            <div className="p-4 bg-muted/50 rounded-xl border text-center">
+              <span className="text-3xl">🔬</span>
+              <p className="font-medium mt-2">Exames</p>
             </div>
-            <div className="p-3 bg-muted/50 rounded-lg border text-center">
-              <span className="text-2xl">📄</span>
-              <p className="text-sm font-medium mt-1">Laudos</p>
+            <div className="p-4 bg-muted/50 rounded-xl border text-center">
+              <span className="text-3xl">📄</span>
+              <p className="font-medium mt-2">Laudos</p>
             </div>
-            <div className="p-3 bg-muted/50 rounded-lg border text-center">
-              <span className="text-2xl">📸</span>
-              <p className="text-sm font-medium mt-1">Imagens</p>
+            <div className="p-4 bg-muted/50 rounded-xl border text-center">
+              <span className="text-3xl">📸</span>
+              <p className="font-medium mt-2">Imagens</p>
             </div>
           </div>
         </section>
 
-        <Alert className="border-primary/20 bg-primary/5">
-          <Lightbulb className="h-4 w-4 text-primary" />
-          <AlertDescription>
-            <strong>Dica:</strong> Você pode criar pastas personalizadas clicando em "Nova Pasta" para organizar os documentos da forma que preferir.
-          </AlertDescription>
-        </Alert>
+        <TutorialTip type="tip">
+          Você pode criar pastas personalizadas clicando em "Nova Pasta" para organizar os documentos da forma que preferir.
+        </TutorialTip>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Formatos Suportados</h2>
-          <p className="text-muted-foreground mb-4">
-            O sistema aceita os seguintes formatos de arquivo:
-          </p>
-          <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-            <li>Imagens: JPG, PNG, GIF, WEBP</li>
-            <li>Documentos: PDF, DOC, DOCX</li>
-            <li>Tamanho máximo: 10MB por arquivo</li>
-          </ul>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Formatos Suportados</h3>
+          <TutorialChecklist items={[
+            "Imagens: JPG, PNG, GIF, WEBP",
+            "Documentos: PDF, DOC, DOCX",
+            "Tamanho máximo: 10MB por arquivo"
+          ]} />
         </section>
       </div>
     ),
@@ -255,57 +250,51 @@ const articles: Record<string, {
   },
   "historico-atendimentos": {
     title: "Histórico de Atendimentos",
-    description: "Visualize todo o histórico de consultas e procedimentos do paciente.",
+    description: "Visualize todo o histórico de consultas e procedimentos do paciente",
     readTime: "3 min",
     content: (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Visualizando o Histórico</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Visualizando o Histórico</h2>
           <p className="text-muted-foreground mb-4">
             O histórico completo de atendimentos pode ser acessado no cadastro do paciente, 
             na aba <strong>"Agendamentos"</strong>.
           </p>
-          <div className="bg-muted/50 rounded-lg p-4 border">
-            <img 
-              src={agendaCalendar} 
-              alt="Histórico de atendimentos no Eclini" 
-              className="rounded-lg w-full shadow-lg"
-            />
-            <p className="text-sm text-muted-foreground text-center mt-2">
-              Timeline de atendimentos do paciente
-            </p>
-          </div>
         </section>
 
+        <TutorialImage 
+          src={tutorialPacientes} 
+          alt="Histórico de atendimentos" 
+          caption="Timeline de atendimentos do paciente com todos os detalhes"
+        />
+
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Informações Exibidas</h2>
-          <p className="text-muted-foreground mb-4">
-            Para cada atendimento, você pode visualizar:
-          </p>
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <span className="text-xl">📅</span>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Informações Exibidas</h3>
+          <p className="text-muted-foreground mb-4">Para cada atendimento, você pode visualizar:</p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+              <span className="text-2xl">📅</span>
               <div>
                 <p className="font-medium text-foreground">Data e Horário</p>
                 <p className="text-sm text-muted-foreground">Quando a consulta ocorreu</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <span className="text-xl">👨‍⚕️</span>
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+              <span className="text-2xl">👨‍⚕️</span>
               <div>
                 <p className="font-medium text-foreground">Profissional</p>
                 <p className="text-sm text-muted-foreground">Quem realizou o atendimento</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <span className="text-xl">🏥</span>
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+              <span className="text-2xl">🏥</span>
               <div>
                 <p className="font-medium text-foreground">Procedimento</p>
                 <p className="text-sm text-muted-foreground">Tipo de consulta ou procedimento</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <span className="text-xl">✅</span>
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+              <span className="text-2xl">✅</span>
               <div>
                 <p className="font-medium text-foreground">Status</p>
                 <p className="text-sm text-muted-foreground">Se foi realizado, cancelado ou faltou</p>
@@ -315,10 +304,16 @@ const articles: Record<string, {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Filtros e Busca</h2>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Filtros e Busca</h3>
           <p className="text-muted-foreground mb-4">
-            Utilize os filtros para encontrar atendimentos específicos por período, profissional ou status.
+            Utilize os filtros para encontrar atendimentos específicos:
           </p>
+          <TutorialChecklist items={[
+            "Filtrar por período (data inicial e final)",
+            "Filtrar por profissional específico",
+            "Filtrar por status do agendamento",
+            "Buscar por procedimento realizado"
+          ]} />
         </section>
       </div>
     ),
