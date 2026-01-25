@@ -5,7 +5,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
-import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -32,7 +32,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   const [clinic, setClinic] = useState<ClinicData | null>(null);
 
   // Usar hook de autenticação com sessão JWT persistente
-  const { patientId, clinicId, isLoggedIn, initialized } = useMobileAuthSession();
+  const { patientId, clinicId, isLoggedIn, initialized } = useMobileAuth();
 
   // Initialize push notifications
   usePushNotifications({ patientId, clinicId });

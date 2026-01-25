@@ -5,7 +5,7 @@ import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { MobileFiliacaoForm } from "@/components/mobile/MobileFiliacaoForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export default function MobileWelcomePage() {
   useDynamicPWA();
 
   // Use centralized auth hook that checks Supabase JWT + localStorage backup
-  const { isLoggedIn, initialized, loading } = useMobileAuthSession();
+  const { isLoggedIn, initialized, loading } = useMobileAuth();
 
   // Check if user already has a valid session
   useEffect(() => {

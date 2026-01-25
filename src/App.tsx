@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoadingFallback } from "@/components/ui/loading-fallback";
@@ -570,7 +571,7 @@ const App = () => (
                   <Route path="configuracoes" element={<UnionConfigPage />} />
                 </Route>
                 {/* Mobile App Routes - sempre modo claro */}
-                <Route path="/app" element={<MobileAppLayout />}>
+                <Route path="/app" element={<MobileAuthProvider><MobileAppLayout /></MobileAuthProvider>}>
                   <Route index element={<MobilePublicHomePage />} />
                   <Route path="welcome" element={<MobileWelcomePage />} />
                   <Route path="login" element={<MobileAuthPage />} />
