@@ -51,6 +51,17 @@ const isValidCPF = (cpf: string) => {
 // Target clinic for this mobile app
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
+/**
+ * TELA DE LOGIN - APENAS FORMULÁRIO
+ * 
+ * Esta tela NÃO deve:
+ * - Verificar sessão
+ * - Redirecionar automaticamente
+ * - Fazer login automático
+ * 
+ * Se o usuário chegar aqui com sessão válida, 
+ * é porque a SplashScreen decidiu assim (não deveria acontecer).
+ */
 export default function MobileAuthPage() {
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
@@ -61,22 +72,20 @@ export default function MobileAuthPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Hook de autenticação com sessão JWT persistente
-  const { login: authLogin, isLoggedIn, initialized } = useMobileAuth();
+  // Hook de autenticação - usado APENAS para login manual
+  const { login: authLogin } = useMobileAuth();
   
   // Apply PWA branding for the clinic
   useDynamicPWA();
 
-  // Load clinic data for branding
+  // Load clinic data for branding (visual apenas)
   useEffect(() => {
     const loadClinicData = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("clinics")
         .select("name, logo_url")
         .eq("id", TARGET_CLINIC_ID)
         .single();
-      
-      console.log("[MobileAuth] Clinic data:", data, "Error:", error);
       
       if (data) {
         setClinicData(data);
@@ -85,27 +94,7 @@ export default function MobileAuthPage() {
     loadClinicData();
   }, []);
 
-  // Redirect if already logged in (SOMENTE após initialized=true)
-  useEffect(() => {
-    // CRÍTICO: Aguardar initialized antes de qualquer redirect
-    if (!initialized) {
-      return;
-    }
-    
-    if (initialized && isLoggedIn) {
-      console.log("[MobileAuthPage] Já logado, redirecionando para /app/home");
-      navigate("/app/home", { replace: true });
-    }
-  }, [initialized, isLoggedIn, navigate]);
-
-  // Mostrar loading enquanto verifica sessão
-  if (!initialized) {
-    return (
-      <div className="min-h-screen bg-emerald-600 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
-      </div>
-    );
-  }
+  // REMOVIDO: Não há mais verificação de sessão ou redirect automático
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCPF(e.target.value);

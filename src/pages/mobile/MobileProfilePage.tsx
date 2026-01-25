@@ -43,6 +43,13 @@ interface PatientData {
   complement: string | null;
 }
 
+/**
+ * PROFILE PAGE - SEM VERIFICAÇÃO DE SESSÃO
+ * 
+ * A SplashScreen já decidiu que o usuário está logado.
+ * Esta página apenas carrega e exibe os dados.
+ * O logout é o ÚNICO local que encerra sessão.
+ */
 export default function MobileProfilePage() {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [dependentsCount, setDependentsCount] = useState(0);
@@ -50,25 +57,17 @@ export default function MobileProfilePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Hook de autenticação com sessão JWT persistente
-  const { isLoggedIn, patientId, initialized, logout } = useMobileAuth();
+  // Hook de autenticação - usado para obter IDs e logout
+  const { patientId, logout } = useMobileAuth();
 
   const APP_VERSION = "2.0.4";
 
-  // Aguardar inicialização do auth antes de qualquer ação
+  // Carregar dados quando patientId estiver disponível
   useEffect(() => {
-    if (!initialized) {
-      return; // Aguardar inicialização
+    if (patientId) {
+      loadPatientData(patientId);
     }
-    
-    if (!isLoggedIn || !patientId) {
-      console.log("[MobileProfile] Não autenticado, redirecionando para login");
-      navigate("/app/login", { replace: true });
-      return;
-    }
-    
-    loadPatientData(patientId);
-  }, [initialized, isLoggedIn, patientId, navigate]);
+  }, [patientId]);
 
   const loadPatientData = async (id: string) => {
     try {
@@ -100,9 +99,13 @@ export default function MobileProfilePage() {
     }
   };
 
+  /**
+   * LOGOUT EXPLÍCITO - Único ponto de encerramento de sessão
+   * Limpa Supabase JWT + localStorage + IndexedDB
+   * Redireciona para Login
+   */
   const handleSignOut = async () => {
-    console.log("[MobileProfile] Executando logout...");
-    // Usar logout do hook que limpa Supabase JWT + localStorage + IndexedDB
+    console.log("[MobileProfile] Executando logout explícito...");
     await logout();
     navigate("/app/login", { replace: true });
   };

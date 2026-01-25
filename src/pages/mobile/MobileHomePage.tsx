@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
@@ -23,30 +22,27 @@ interface PatientData {
   no_show_blocked_until: string | null;
 }
 
+/**
+ * HOME PAGE - SEM VERIFICAÇÃO DE SESSÃO
+ * 
+ * A SplashScreen já decidiu que o usuário está logado.
+ * Esta página apenas carrega e exibe os dados.
+ */
 export default function MobileHomePage() {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [dependentsCount, setDependentsCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Hook de autenticação com sessão JWT persistente
-  const { isLoggedIn, patientId, initialized, loading: authLoading } = useMobileAuth();
+  // Hook de autenticação - usado apenas para obter IDs
+  const { patientId } = useMobileAuth();
 
-  // Aguardar inicialização do auth antes de qualquer ação
+  // Carregar dados do paciente quando disponível
   useEffect(() => {
-    if (!initialized || authLoading) {
-      return; // Aguardar inicialização
+    if (patientId) {
+      loadPatientData(patientId);
     }
-    
-    if (!isLoggedIn || !patientId) {
-      console.log("[MobileHome] Não autenticado, redirecionando para login");
-      navigate("/app/login", { replace: true });
-      return;
-    }
-    
-    loadPatientData(patientId);
-  }, [initialized, authLoading, isLoggedIn, patientId, navigate]);
+  }, [patientId]);
 
   const loadPatientData = async (id: string) => {
     try {
@@ -86,8 +82,8 @@ export default function MobileHomePage() {
     }
   };
 
-  // Mostrar loading enquanto auth inicializa
-  if (!initialized || authLoading || loading) {
+  // Mostrar loading enquanto carrega dados
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
