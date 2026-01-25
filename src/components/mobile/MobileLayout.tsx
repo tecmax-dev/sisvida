@@ -118,7 +118,6 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">{clinic?.name || "SECMI"}</h1>
-            <p className="text-[10px] font-medium opacity-80">{clinic?.entity_nomenclature || "SINDICATO DOS COMERCIÁRIOS"}</p>
           </div>
         </div>
         
