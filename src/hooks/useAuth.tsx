@@ -67,6 +67,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  /**
+   * SISTEMA DE PERSISTÊNCIA DE SESSÃO
+   * 
+   * Este sistema foi projetado para manter a sessão ativa indefinidamente
+   * até que o usuário faça logout manual ou o backend revogue a sessão.
+   * 
+   * Características:
+   * - Supabase autoRefreshToken gerencia renovação automática de tokens
+   * - Sem timeout de sessão ou inatividade
+   * - Sessão persiste entre fechamentos/recargas do app
+   * - Validação de sessão confia no sistema de refresh do Supabase
+   * 
+   * IMPORTANTE: Não adicione validações agressivas que possam limpar
+   * a sessão automaticamente. A única forma de logout deve ser explícita.
+   */
+
   // Função de logout robusta - local-first para garantir deslog mesmo offline
   const handleSignOut = async () => {
     // 1. Marcar lock de deslogado ANTES de tudo (proteção contra race conditions)
@@ -102,10 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Detectar se é PWA instalado (mais robusto)
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                (window.navigator as any).standalone === true ||
+                document.referrer.includes('android-app://');
+  
   // Verifica se está no app mobile - desabilita timeout para manter sessão persistente
-  const isMobileApp = location.pathname.startsWith('/app');
+  const isMobileApp = location.pathname.startsWith('/app') || location.pathname.startsWith('/m') || isPWA;
 
-  // Hook de timeout de sessão (desabilitado para mobile app)
+  // Hook de timeout de sessão (DESABILITADO COMPLETAMENTE - sessão só expira por logout manual)
   const {
     saveLoginTime,
     clearSessionData,
@@ -117,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     inactivityTimeout: 30,   // 30 minutos
     warningTime: 5,          // 5 minutos de aviso
     onExpire: handleSignOut,
-    enabled: !!user && !isMobileApp // Desabilitado para mobile app
+    enabled: false // DESABILITADO PERMANENTEMENTE - sessão persiste até logout manual
   });
 
   // Função de renovar sessão com redirecionamento para o dashboard
@@ -348,11 +369,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Salvar tempo de login quando faz login
-          if (event === 'SIGNED_IN') {
-            saveLoginTime();
-          }
-          
           setLoading(true);
           setRolesLoaded(false);
           // Defer data fetching to avoid deadlock
@@ -360,11 +376,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loadUserData(session.user.id);
           }, 0);
         } else {
-          // Limpar dados de sessão ao deslogar
-          if (event === 'SIGNED_OUT') {
-            clearSessionData();
-          }
-          
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
@@ -397,35 +408,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // VALIDAÇÃO CRÍTICA: verificar se a sessão é válida no servidor
-      const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !validatedUser) {
-        console.warn('[Auth] Sessão local inválida no servidor:', userError?.message || 'usuário não encontrado');
-        console.warn('[Auth] Forçando logout local para limpar sessão fantasma');
-        
-        // Sessão fantasma detectada - limpar tudo
-        await supabase.auth.signOut({ scope: 'local' });
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setUserRoles([]);
-        setCurrentClinic(null);
-        setIsSuperAdmin(false);
-        setRolesLoaded(false);
-        setLoading(false);
-        return;
-      }
-      
-      // Sessão válida - prosseguir
+      // Sessão existe localmente - confiar no autoRefreshToken do Supabase
+      // O Supabase já gerencia renovação automática, não validar agressivamente
       setSession(session);
       setUser(session.user);
       
       // Garantir que o tempo de login existe (para sessões restauradas)
-      const loginTime = localStorage.getItem('eclini_session_login_time');
-      if (!loginTime) {
-        saveLoginTime();
-      }
+      // Removido: não precisamos mais de controle manual de tempo de sessão
       
       loadUserData(session.user.id);
     };
@@ -436,7 +425,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [saveLoginTime, clearSessionData]);
 
   const signOut = async () => {
-    clearSessionData();
     await handleSignOut();
   };
 
