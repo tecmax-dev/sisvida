@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { X, Users, CreditCard, Lock, HelpCircle, Info, Star, Share2, LogOut, ChevronRight, Sparkles, UserCircle } from "lucide-react";
+import { X, Users, CreditCard, Lock, HelpCircle, Info, Star, Share2, LogOut, ChevronRight, Sparkles, UserCircle, Send } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 
@@ -64,6 +64,14 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     onOpenChange(false);
   };
 
+  const handleNotifyCard = () => {
+    toast({
+      title: "Notificação enviada!",
+      description: "Você receberá uma notificação sobre sua carteirinha.",
+    });
+    onOpenChange(false);
+  };
+
   const menuItems = [
     { 
       icon: Users, 
@@ -78,6 +86,13 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
       description: "Sua identificação digital",
       gradient: "from-emerald-500 to-teal-600",
       onClick: () => handleNavigate("/app/carteirinha") 
+    },
+    { 
+      icon: Send, 
+      label: "Notificar Carteirinha", 
+      description: "Receber lembrete da carteirinha",
+      gradient: "from-sky-500 to-blue-600",
+      onClick: handleNotifyCard 
     },
     { 
       icon: Lock, 
