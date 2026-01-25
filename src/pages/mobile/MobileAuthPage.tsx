@@ -67,13 +67,27 @@ export default function MobileAuthPage() {
   // Apply PWA branding for the clinic
   useDynamicPWA();
 
-  // Redirect if already logged in
+  // Redirect if already logged in (SOMENTE após initialized=true)
   useEffect(() => {
+    // CRÍTICO: Aguardar initialized antes de qualquer redirect
+    if (!initialized) {
+      return;
+    }
+    
     if (initialized && isLoggedIn) {
       console.log("[MobileAuthPage] Já logado, redirecionando para /app/home");
       navigate("/app/home", { replace: true });
     }
   }, [initialized, isLoggedIn, navigate]);
+
+  // Mostrar loading enquanto verifica sessão
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-emerald-600 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   // Load clinic data for branding
   useEffect(() => {

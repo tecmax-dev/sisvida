@@ -8,9 +8,13 @@
  * 
  * A sessão JWT do Supabase é automaticamente renovada pelo autoRefreshToken,
  * garantindo que o usuário permaneça logado indefinidamente até logout manual.
+ * 
+ * CRÍTICO: O estado só é marcado como initialized=true APÓS o listener
+ * onAuthStateChange processar o primeiro evento, garantindo que a sessão
+ * esteja completamente hidratada antes de qualquer redirect.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { persistSession, restoreSession, clearSession } from "./useMobileSession";
 
@@ -48,11 +52,20 @@ export function useMobileAuthSession() {
     initialized: false,
   });
 
+  // Refs para controlar inicialização única e confirmação do listener
+  const initializationAttempted = useRef(false);
+  const authListenerReady = useRef(false);
+
   /**
-   * Inicialização: tenta restaurar sessão existente
-   * Prioridade: Supabase JWT > localStorage > IndexedDB
+   * Inicialização: prepara estado mas AGUARDA onAuthStateChange confirmar
+   * NÃO marca initialized=true até que o listener processe o estado real
    */
   const initialize = useCallback(async () => {
+    if (initializationAttempted.current) {
+      return; // Evitar múltiplas inicializações
+    }
+    initializationAttempted.current = true;
+    
     console.log("[MobileAuth] Inicializando...");
     
     try {
@@ -74,13 +87,15 @@ export function useMobileAuthSession() {
           // Sincronizar com localStorage/IndexedDB
           await persistSession(patientId, clinicId, patientName);
           
+          // CRÍTICO: NÃO marcar initialized=true ainda
+          // O listener onAuthStateChange vai confirmar após processar
           setState({
             isLoggedIn: true,
             patientId,
             clinicId,
             patientName,
-            loading: false,
-            initialized: true,
+            loading: true,      // Mantém loading até listener confirmar
+            initialized: false, // Aguarda confirmação do listener
           });
           return;
         }
@@ -97,26 +112,19 @@ export function useMobileAuthSession() {
           patientId: localSession.patientId,
           clinicId: localSession.clinicId,
           patientName: localSession.patientName,
-          loading: false,
-          initialized: true,
+          loading: true,      // Mantém loading até listener confirmar
+          initialized: false, // Aguarda confirmação do listener
         });
         return;
       }
       
-      // 3. Nenhuma sessão encontrada
-      console.log("[MobileAuth] Nenhuma sessão encontrada");
-      setState({
-        isLoggedIn: false,
-        patientId: null,
-        clinicId: null,
-        patientName: null,
-        loading: false,
-        initialized: true,
-      });
+      // 3. Nenhuma sessão imediata - aguardar listener decidir
+      console.log("[MobileAuth] Nenhuma sessão imediata, aguardando listener...");
+      // O listener onAuthStateChange vai processar e marcar initialized
       
     } catch (err) {
       console.error("[MobileAuth] Erro na inicialização:", err);
-      setState(prev => ({ ...prev, loading: false, initialized: true }));
+      // Mesmo em erro, aguardar listener confirmar
     }
   }, []);
 
@@ -286,6 +294,12 @@ export function useMobileAuthSession() {
       async (event, session) => {
         console.log("[MobileAuth] Auth state change:", event);
         
+        // Marcar que o listener processou pelo menos um evento
+        if (!authListenerReady.current) {
+          authListenerReady.current = true;
+          console.log("[MobileAuth] Listener pronto");
+        }
+        
         if (event === 'SIGNED_OUT') {
           // Logout detectado - limpar tudo
           await clearSession();
@@ -297,9 +311,61 @@ export function useMobileAuthSession() {
             loading: false,
             initialized: true,
           });
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          // Token renovado - manter sessão
-          console.log("[MobileAuth] Token renovado automaticamente");
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          // Sessão válida confirmada pelo listener
+          if (session?.user) {
+            const metadata = session.user.user_metadata;
+            const appMetadata = session.user.app_metadata;
+            
+            const patientId = metadata?.patient_id || appMetadata?.patient_id;
+            const clinicId = metadata?.clinic_id || appMetadata?.clinic_id || TARGET_CLINIC_ID;
+            const patientName = metadata?.name || session.user.email?.split('@')[0] || 'Paciente';
+            
+            if (patientId) {
+              console.log("[MobileAuth] Sessão confirmada:", patientName, "Evento:", event);
+              await persistSession(patientId, clinicId, patientName);
+              
+              // AGORA SIM marcar como inicializado - sessão confirmada
+              setState({
+                isLoggedIn: true,
+                patientId,
+                clinicId,
+                patientName,
+                loading: false,
+                initialized: true, // ✅ Sessão hidratada e confirmada
+              });
+            } else {
+              setState({
+                isLoggedIn: false,
+                patientId: null,
+                clinicId: null,
+                patientName: null,
+                loading: false,
+                initialized: true,
+              });
+            }
+          } else {
+            setState({
+              isLoggedIn: false,
+              patientId: null,
+              clinicId: null,
+              patientName: null,
+              loading: false,
+              initialized: true,
+            });
+          }
+        } else {
+          // Outros eventos ou sem sessão
+          if (authListenerReady.current && !session) {
+            setState({
+              isLoggedIn: false,
+              patientId: null,
+              clinicId: null,
+              patientName: null,
+              loading: false,
+              initialized: true,
+            });
+          }
         }
       }
     );
