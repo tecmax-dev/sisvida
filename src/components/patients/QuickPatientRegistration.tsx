@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { addDays } from "date-fns";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, AlertCircle, Phone } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -73,6 +74,9 @@ export function QuickPatientRegistration({
   initialCpf = "",
 }: QuickPatientRegistrationProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [cpfChecking, setCpfChecking] = useState(false);
+  const [cpfExists, setCpfExists] = useState(false);
+  const [cpfExistsType, setCpfExistsType] = useState<'associado' | 'paciente' | null>(null);
   const { currentClinic } = useAuth();
 
   const form = useForm<QuickRegistrationForm>({
@@ -85,6 +89,73 @@ export function QuickPatientRegistration({
       employer_cnpj: "",
     },
   });
+
+  // Reset cpf check state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setCpfExists(false);
+      setCpfExistsType(null);
+    }
+  }, [open]);
+
+  // Check CPF in both sindical_associados and patients tables
+  const checkCpf = async (cpfValue: string) => {
+    if (!currentClinic) return;
+    
+    const cleanCpf = cpfValue.replace(/\D/g, "");
+    if (cleanCpf.length !== 11) return;
+
+    setCpfChecking(true);
+    setCpfExists(false);
+    setCpfExistsType(null);
+    
+    try {
+      // Get sindicato linked to this clinic
+      const { data: sindicato } = await supabase
+        .from("union_entities")
+        .select("id")
+        .eq("clinic_id", currentClinic.id)
+        .eq("status", "ativa")
+        .maybeSingle();
+
+      // Check in sindical_associados (pending applications)
+      if (sindicato) {
+        const { data: associadoData } = await supabase
+          .from("sindical_associados")
+          .select("id")
+          .eq("sindicato_id", sindicato.id)
+          .eq("cpf", cleanCpf)
+          .maybeSingle();
+
+        if (associadoData) {
+          setCpfExists(true);
+          setCpfExistsType('associado');
+          return;
+        }
+      }
+
+      // Check in patients table (already registered members)
+      const formattedCpf = cleanCpf
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        
+      const { data: patientData } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("clinic_id", currentClinic.id)
+        .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
+        .maybeSingle();
+
+      if (patientData) {
+        setCpfExists(true);
+        setCpfExistsType('paciente');
+        return;
+      }
+    } finally {
+      setCpfChecking(false);
+    }
+  };
 
   const formatCPF = (value: string) => {
     const cleaned = value.replace(/\D/g, "").slice(0, 11);
@@ -113,6 +184,19 @@ export function QuickPatientRegistration({
   const onSubmit = async (data: QuickRegistrationForm) => {
     if (!currentClinic) {
       toast.error("Clínica não encontrada");
+      return;
+    }
+
+    // Block submission if CPF already exists
+    if (cpfExists) {
+      toast.error(
+        cpfExistsType === 'paciente' ? "CPF já cadastrado" : "Solicitação já existe",
+        {
+          description: cpfExistsType === 'paciente'
+            ? "Este CPF já possui cadastro ativo. Verifique na lista de pacientes."
+            : "Este CPF já possui uma solicitação de filiação pendente.",
+        }
+      );
       return;
     }
 
@@ -232,15 +316,41 @@ export function QuickPatientRegistration({
                   <FormControl>
                     <CpfInputCard
                       value={field.value}
-                      onChange={field.onChange}
-                      error={form.formState.errors.cpf?.message}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        if (value.replace(/\D/g, "").length === 11) {
+                          checkCpf(value);
+                        } else {
+                          setCpfExists(false);
+                          setCpfExistsType(null);
+                        }
+                      }}
+                      error={cpfExists ? "CPF já cadastrado" : form.formState.errors.cpf?.message}
                       required
                       showValidation
+                      loading={cpfChecking}
                     />
                   </FormControl>
                 </FormItem>
               )}
             />
+
+            {/* Alert for existing CPF */}
+            {cpfExists && (
+              <Alert className="border-amber-300 bg-amber-50">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm text-amber-700">
+                  <strong className="block mb-1">
+                    {cpfExistsType === 'paciente' 
+                      ? "CPF já cadastrado" 
+                      : "Solicitação de filiação pendente"}
+                  </strong>
+                  {cpfExistsType === 'paciente' 
+                    ? "Este CPF já possui cadastro ativo. Verifique na lista de pacientes."
+                    : "Este CPF já possui uma solicitação de filiação em análise. Aprove ou rejeite antes de cadastrar."}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <FormField
               control={form.control}
