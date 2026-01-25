@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, Building2 } from "lucide-react";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
-import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
@@ -62,7 +62,7 @@ export default function MobileAuthPage() {
   const { toast } = useToast();
   
   // Hook de autenticação com sessão JWT persistente
-  const { login: authLogin, isLoggedIn, initialized } = useMobileAuthSession();
+  const { login: authLogin, isLoggedIn, initialized } = useMobileAuth();
   
   // Apply PWA branding for the clinic
   useDynamicPWA();

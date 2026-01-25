@@ -10,7 +10,7 @@ import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicat
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
 import { Loader2 } from "lucide-react";
-import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface PatientData {
   id: string;
@@ -31,7 +31,7 @@ export default function MobileHomePage() {
   const { toast } = useToast();
   
   // Hook de autenticação com sessão JWT persistente
-  const { isLoggedIn, patientId, initialized, loading: authLoading } = useMobileAuthSession();
+  const { isLoggedIn, patientId, initialized, loading: authLoading } = useMobileAuth();
 
   // Aguardar inicialização do auth antes de qualquer ação
   useEffect(() => {

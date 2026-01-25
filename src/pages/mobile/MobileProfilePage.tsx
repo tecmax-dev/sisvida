@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface PatientData {
   id: string;
@@ -51,7 +51,7 @@ export default function MobileProfilePage() {
   const { toast } = useToast();
   
   // Hook de autenticação com sessão JWT persistente
-  const { isLoggedIn, patientId, initialized, logout } = useMobileAuthSession();
+  const { isLoggedIn, patientId, initialized, logout } = useMobileAuth();
 
   const APP_VERSION = "2.0.4";
 
