@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, Building2 } from "lucide-react";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
-import { persistSession } from "@/hooks/useMobileSession";
+import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
+
 // Função para formatar CPF
 const formatCPF = (value: string) => {
   const numbers = value.replace(/\D/g, '');
@@ -60,8 +61,19 @@ export default function MobileAuthPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // Hook de autenticação com sessão JWT persistente
+  const { login: authLogin, isLoggedIn, initialized } = useMobileAuthSession();
+  
   // Apply PWA branding for the clinic
   useDynamicPWA();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (initialized && isLoggedIn) {
+      console.log("[MobileAuthPage] Já logado, redirecionando para /app/home");
+      navigate("/app/home", { replace: true });
+    }
+  }, [initialized, isLoggedIn, navigate]);
 
   // Load clinic data for branding
   useEffect(() => {
@@ -112,62 +124,24 @@ export default function MobileAuthPage() {
     setLoading(true);
     
     try {
-      // Normaliza CPF removendo formatação
-      const normalizedCpf = cpf.replace(/\D/g, '');
+      // Usar o hook de autenticação que cria sessão JWT
+      const result = await authLogin(cpf, password);
       
-      // Verifica credenciais via função RPC
-      const { data: patientData, error } = await supabase
-        .rpc('verify_patient_password', {
-          p_cpf: normalizedCpf,
-          p_password: password
-        });
-
-      if (error) {
-        console.error("Login error:", error);
+      if (!result.success) {
         toast({
           title: "Credenciais inválidas",
-          description: "CPF ou senha incorretos. Verifique seus dados.",
+          description: result.error || "CPF ou senha incorretos.",
           variant: "destructive",
         });
         return;
       }
-
-      if (!patientData || patientData.length === 0) {
-        toast({
-          title: "Credenciais inválidas",
-          description: "CPF ou senha incorretos. Caso seja seu primeiro acesso, entre em contato com o sindicato.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // In some environments the same CPF may exist in multiple clinics (historical imports).
-      // This mobile app must operate on the intended clinic dataset.
-
-      const patient =
-        patientData.find((p: any) => p.clinic_id === TARGET_CLINIC_ID) ?? patientData[0];
-
-      console.log("[MobileAuth] verify_patient_password candidates:", patientData);
-      console.log("[MobileAuth] selected patient:", patient);
-
-      if (!patient?.is_active) {
-        toast({
-          title: "Conta inativa",
-          description: "Sua conta está inativa. Entre em contato com o sindicato.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Store patient info with redundant persistence (localStorage + IndexedDB)
-      await persistSession(patient.patient_id, patient.clinic_id, patient.patient_name);
       
       toast({
         title: "Bem-vindo!",
-        description: `Olá, ${patient.patient_name.split(' ')[0]}!`,
+        description: `Olá, ${result.patientName?.split(' ')[0]}!`,
       });
       
-      navigate("/app/home");
+      navigate("/app/home", { replace: true });
     } catch (err) {
       console.error("Login error:", err);
       toast({

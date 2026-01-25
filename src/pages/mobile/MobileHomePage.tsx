@@ -10,7 +10,7 @@ import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicat
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
 import { Loader2 } from "lucide-react";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
 
 interface PatientData {
   id: string;
@@ -29,37 +29,43 @@ export default function MobileHomePage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Hook de autenticação com sessão JWT persistente
+  const { isLoggedIn, patientId, initialized, loading: authLoading } = useMobileAuthSession();
 
+  // Aguardar inicialização do auth antes de qualquer ação
   useEffect(() => {
-    loadPatientData();
-  }, []);
+    if (!initialized || authLoading) {
+      return; // Aguardar inicialização
+    }
+    
+    if (!isLoggedIn || !patientId) {
+      console.log("[MobileHome] Não autenticado, redirecionando para login");
+      navigate("/app/login", { replace: true });
+      return;
+    }
+    
+    loadPatientData(patientId);
+  }, [initialized, authLoading, isLoggedIn, patientId, navigate]);
 
-  const loadPatientData = async () => {
+  const loadPatientData = async (id: string) => {
     try {
-      // Use robust session restoration from multiple storage layers
-      const session = await restoreSession();
-      const patientId = session.patientId;
+      console.log("[MobileHome] Carregando dados do paciente:", id);
       
-      if (!patientId) {
-        console.log("[MobileHome] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       // Fetch patient data
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("id, name, email, phone, photo_url, registration_number, is_active, no_show_blocked_until")
-        .eq("id", patientId)
+        .eq("id", id)
         .single();
 
       if (patientError || !patientData) {
+        console.error("[MobileHome] Erro ao carregar paciente:", patientError);
         toast({
           title: "Erro",
           description: "Não foi possível carregar seus dados.",
           variant: "destructive",
         });
-        navigate("/app/login");
         return;
       }
 
@@ -69,7 +75,7 @@ export default function MobileHomePage() {
       const { count } = await supabase
         .from("patient_dependents")
         .select("*", { count: "exact", head: true })
-        .eq("patient_id", patientId)
+        .eq("patient_id", id)
         .eq("is_active", true);
 
       setDependentsCount(count || 0);
@@ -80,7 +86,8 @@ export default function MobileHomePage() {
     }
   };
 
-  if (loading) {
+  // Mostrar loading enquanto auth inicializa
+  if (!initialized || authLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

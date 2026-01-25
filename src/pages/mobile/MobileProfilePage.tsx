@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { clearSession, restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuthSession } from "@/hooks/useMobileAuthSession";
 
 interface PatientData {
   id: string;
@@ -49,32 +49,37 @@ export default function MobileProfilePage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Hook de autenticação com sessão JWT persistente
+  const { isLoggedIn, patientId, initialized, logout } = useMobileAuthSession();
 
-  const APP_VERSION = "2.0.3";
+  const APP_VERSION = "2.0.4";
 
+  // Aguardar inicialização do auth antes de qualquer ação
   useEffect(() => {
-    loadPatientData();
-  }, []);
+    if (!initialized) {
+      return; // Aguardar inicialização
+    }
+    
+    if (!isLoggedIn || !patientId) {
+      console.log("[MobileProfile] Não autenticado, redirecionando para login");
+      navigate("/app/login", { replace: true });
+      return;
+    }
+    
+    loadPatientData(patientId);
+  }, [initialized, isLoggedIn, patientId, navigate]);
 
-  const loadPatientData = async () => {
+  const loadPatientData = async (id: string) => {
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-
-      if (!patientId) {
-        console.log("[MobileProfile] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       const { data: patientData, error } = await supabase
         .from("patients")
         .select("id, name, email, phone, photo_url, registration_number, address, city, state, neighborhood, complement")
-        .eq("id", patientId)
+        .eq("id", id)
         .single();
 
       if (error || !patientData) {
-        navigate("/app/login");
+        console.error("[MobileProfile] Erro ao carregar paciente:", error);
         return;
       }
 
@@ -84,7 +89,7 @@ export default function MobileProfilePage() {
       const { count } = await supabase
         .from("patient_dependents")
         .select("*", { count: "exact", head: true })
-        .eq("patient_id", patientId)
+        .eq("patient_id", id)
         .eq("is_active", true);
 
       setDependentsCount(count || 0);
@@ -96,9 +101,10 @@ export default function MobileProfilePage() {
   };
 
   const handleSignOut = async () => {
-    // Use robust session clearing that removes from all storage layers
-    await clearSession();
-    navigate("/app/login");
+    console.log("[MobileProfile] Executando logout...");
+    // Usar logout do hook que limpa Supabase JWT + localStorage + IndexedDB
+    await logout();
+    navigate("/app/login", { replace: true });
   };
 
   const handleDeleteAccountRequest = () => {
