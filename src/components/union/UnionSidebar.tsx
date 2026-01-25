@@ -31,6 +31,7 @@ import {
   FileCheck2,
   HeartPulse,
   Smartphone,
+  Send,
 } from "lucide-react";
 import {
   Collapsible,
@@ -193,6 +194,7 @@ const unionNavTree: NavCategory[] = [
     color: "conteudoapp",
     items: [
       { href: "/union/conteudo-app", icon: Smartphone, label: "Conteúdo do App", permission: "union_module_access" },
+      { href: "/union/notificar-app", icon: Send, label: "Notificar Atualização", permission: "union_module_access" },
     ]
   },
   {

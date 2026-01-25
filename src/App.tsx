@@ -169,6 +169,7 @@ import UnionConfigPage from "./pages/union/UnionConfigPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
+import UnionNotifyAppPage from "./pages/union/UnionNotifyAppPage";
 // Legal Module pages
 import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
 import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
@@ -552,6 +553,7 @@ const App = () => (
                   <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
                   <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
+                  <Route path="notificar-app" element={<UnionNotifyAppPage />} />
                   <Route path="beneficios" element={<UnionBenefitsPage />} />
                   <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />
                   {/* Legal Module routes */}
