@@ -232,6 +232,7 @@ export default function SindicalFiliacaoPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [cpfChecking, setCpfChecking] = useState(false);
   const [cpfExists, setCpfExists] = useState(false);
+  const [cpfExistsType, setCpfExistsType] = useState<'associado' | 'paciente' | null>(null);
   const [existingPatient, setExistingPatient] = useState<{
     id: string;
     name: string;
@@ -356,18 +357,29 @@ export default function SindicalFiliacaoPage() {
     if (cleanCpf.length !== 11) return;
 
     setCpfChecking(true);
+    setCpfExists(false);
+    setCpfExistsType(null);
     setExistingPatient(null);
     
     try {
       // 1. Verifica se já existe solicitação de filiação pendente/ativa
-      const { data: associadoData } = await supabase
-        .from("sindical_associados")
-        .select("id, status")
-        .eq("sindicato_id", sindicato.id)
-        .eq("cpf", cleanCpf)
-        .maybeSingle();
+      const { data: associadoCheck, error: associadoError } = await supabase.functions.invoke(
+        "check-sindical-associado-by-cpf",
+        {
+          body: { sindicatoId: sindicato.id, cpf: cleanCpf },
+        }
+      );
 
-      setCpfExists(!!associadoData);
+      if (!associadoError && associadoCheck?.exists) {
+        setCpfExists(true);
+        setCpfExistsType('associado');
+        toast({
+          title: "CPF já possui solicitação",
+          description: "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3231-1784.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // 2. Busca na base interna de pacientes (patients) usando edge function
       if (sindicato.clinic_id) {
@@ -378,38 +390,15 @@ export default function SindicalFiliacaoPage() {
           }
         );
 
-        if (!searchError && patientSearchResult?.patient) {
-          const patient = patientSearchResult.patient;
-          const cardExpiresAt = patient.union_card_expires_at ? new Date(patient.union_card_expires_at) : null;
-          const isExpired = cardExpiresAt ? cardExpiresAt < new Date() : false;
-
-          setExistingPatient({
-            id: patient.id,
-            name: patient.name,
-            email: patient.email,
-            phone: patient.phone,
-            birth_date: patient.birth_date,
-            union_status: patient.union_status,
-            union_card_expires_at: patient.union_card_expires_at,
-            is_expired: isExpired,
-          });
-
-          // Preenche o formulário com os dados existentes
-          if (patient.name) form.setValue("nome", patient.name);
-          if (patient.email) form.setValue("email", patient.email);
-          if (patient.phone) {
-            const formattedPhone = formatPhone(patient.phone.replace(/\D/g, ""));
-            form.setValue("celular", formattedPhone);
-          }
-          if (patient.birth_date) form.setValue("data_nascimento", patient.birth_date);
-          if (patient.gender) form.setValue("sexo", patient.gender);
-
+        if (!searchError && patientSearchResult?.patient?.id) {
+          setCpfExists(true);
+          setCpfExistsType('paciente');
           toast({
-            title: "Cadastro encontrado",
-            description: isExpired 
-              ? "Identificamos seu cadastro com carteira vencida. Renove sua filiação."
-              : "Seus dados foram preenchidos automaticamente.",
+            title: "Você já possui cadastro",
+            description: "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784.",
+            variant: "destructive",
           });
+          return;
         }
       }
     } catch (error) {
@@ -439,8 +428,11 @@ export default function SindicalFiliacaoPage() {
 
     if (cpfExists) {
       toast({
-        title: "CPF já cadastrado",
-        description: "Este CPF já possui uma solicitação de filiação neste sindicato.",
+        title: cpfExistsType === 'paciente' ? "Você já possui cadastro" : "CPF já possui solicitação",
+        description:
+          cpfExistsType === 'paciente'
+            ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784."
+            : "Este CPF já possui uma solicitação de filiação neste sindicato. Entre em contato pelo (73) 3231-1784.",
         variant: "destructive",
       });
       return;
@@ -717,6 +709,10 @@ export default function SindicalFiliacaoPage() {
                           field.onChange(value);
                           if (value.replace(/\D/g, "").length === 11) {
                             checkCpf(value);
+                            } else {
+                              setCpfExists(false);
+                              setCpfExistsType(null);
+                              setExistingPatient(null);
                           }
                         }}
                         label="Digite seu CPF para começar"
@@ -1374,7 +1370,7 @@ export default function SindicalFiliacaoPage() {
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg md:static md:p-0 md:bg-transparent md:border-0 md:shadow-none">
               <Button
                 type="submit"
-                disabled={submitting || cpfExists}
+                disabled={submitting || cpfChecking || cpfExists}
                 className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 transition-all duration-300"
               >
                 {submitting ? (
