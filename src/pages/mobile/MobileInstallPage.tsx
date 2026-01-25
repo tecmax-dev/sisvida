@@ -1,19 +1,24 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Smartphone, 
   Share, 
   Plus, 
   MoreVertical, 
-  Home, 
   ArrowLeft, 
   Download, 
   CheckCircle2, 
   RefreshCw,
   AlertTriangle,
-  ExternalLink,
-  Copy
+  Copy,
+  Apple,
+  Chrome,
+  Zap,
+  Shield,
+  Wifi,
+  Clock
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -24,7 +29,6 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-// Target clinic for the mobile app
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 export default function MobileInstallPage() {
@@ -32,29 +36,31 @@ export default function MobileInstallPage() {
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [clinicName, setClinicName] = useState("Sindicato");
+  const [clinicName, setClinicName] = useState("Sindicato dos Comerciários");
   const [clinicLogo, setClinicLogo] = useState<string | null>(null);
   
-  // Device detection
   const [isIOS, setIsIOS] = useState(false);
   const [isSafari, setIsSafari] = useState(false);
-  const [isChrome, setIsChrome] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("ios");
 
   useEffect(() => {
-    // Detect device and browser
     const ua = navigator.userAgent;
     const isIOSDevice = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     const isSafariBrowser = /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua);
-    const isChromeBrowser = /Chrome/.test(ua) || /CriOS/.test(ua);
     const isAndroidDevice = /Android/.test(ua);
     
     setIsIOS(isIOSDevice);
     setIsSafari(isSafariBrowser);
-    setIsChrome(isChromeBrowser);
     setIsAndroid(isAndroidDevice);
+    
+    // Set default tab based on device
+    if (isAndroidDevice) {
+      setActiveTab("android");
+    } else {
+      setActiveTab("ios");
+    }
 
-    // Check if already installed as PWA
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
@@ -74,7 +80,6 @@ export default function MobileInstallPage() {
     };
     window.addEventListener('appinstalled', installedHandler);
 
-    // Load clinic data
     loadClinicData();
 
     return () => {
@@ -152,283 +157,339 @@ export default function MobileInstallPage() {
     toast.success('Link copiado! Cole no Safari para instalar.');
   };
 
-  const appUrl = window.location.origin + '/app';
+  const StepItem = ({ number, title, description, icon: Icon }: { 
+    number: number; 
+    title: string; 
+    description: string;
+    icon?: React.ElementType;
+  }) => (
+    <div className="flex gap-4 items-start">
+      <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shrink-0 shadow-md">
+        {number}
+      </div>
+      <div className="flex-1 pt-1">
+        <p className="font-semibold text-foreground flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-primary" />}
+          {title}
+        </p>
+        <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 to-background">
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground px-4 py-6 pb-12">
-        <Link to="/app" className="inline-flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground mb-4">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Link>
-        
-        <div className="text-center">
-          {clinicLogo ? (
-            <img 
-              src={clinicLogo} 
-              alt={clinicName} 
-              className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-white p-2 object-contain"
-            />
-          ) : (
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Smartphone className="h-10 w-10" />
-            </div>
-          )}
-          <h1 className="text-2xl font-bold mb-2">
-            Instale o App
-          </h1>
-          <p className="text-primary-foreground/80 text-sm">
-            {clinicName} - App do Associado
-          </p>
+    <div className="min-h-screen bg-background">
+      {/* Header com identidade visual */}
+      <header className="bg-primary text-primary-foreground">
+        <div className="px-4 py-3">
+          <Link 
+            to="/app" 
+            className="inline-flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground text-sm font-medium"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao App
+          </Link>
         </div>
-      </div>
-
-      <div className="px-4 -mt-6 pb-8 space-y-4">
-        {/* iOS Safari Warning */}
-        {isIOS && !isSafari && (
-          <Card className="bg-amber-50 border-amber-300">
-            <CardContent className="py-4">
-              <div className="flex gap-3">
-                <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-semibold text-amber-800">Abra no Safari</p>
-                    <p className="text-sm text-amber-700">
-                      No iPhone/iPad, a instalação de apps só funciona pelo <strong>Safari</strong>. 
-                      O Chrome, Firefox e outros navegadores não permitem instalar apps no iOS.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full border-amber-400 text-amber-700 hover:bg-amber-100"
-                      onClick={handleCopyLink}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copiar link para Safari
-                    </Button>
-                    <p className="text-xs text-amber-600 text-center">
-                      Copie e cole o link no Safari
-                    </p>
-                  </div>
-                </div>
+        
+        <div className="px-6 pb-8 pt-2">
+          <div className="flex items-center gap-4">
+            {clinicLogo ? (
+              <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-lg">
+                <img 
+                  src={clinicLogo} 
+                  alt={clinicName} 
+                  className="w-full h-full object-contain"
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
+                <Smartphone className="h-8 w-8" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold">Instalar Aplicativo</h1>
+              <p className="text-primary-foreground/80 text-sm">{clinicName}</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
-        {/* Installation Status */}
+      <main className="px-4 py-6 space-y-6 max-w-lg mx-auto">
+        {/* Status de instalação */}
         {isInstalled ? (
-          <Card className="bg-green-50 border-green-300">
-            <CardContent className="flex items-center justify-center gap-3 py-6">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-              <span className="text-lg font-medium text-green-700">App instalado!</span>
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="flex items-center gap-4 py-5">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-green-800">App Instalado!</p>
+                <p className="text-sm text-green-600">Acesse pela sua tela inicial</p>
+              </div>
             </CardContent>
           </Card>
         ) : canInstall ? (
-          <Card className="bg-primary/10 border-primary/30">
-            <CardContent className="py-6">
-              <div className="text-center space-y-4">
-                <p className="text-foreground font-medium">
-                  Pronto para instalar!
-                </p>
-                <Button onClick={handleInstall} size="lg" className="gap-2 w-full">
-                  <Download className="h-5 w-5" />
-                  Instalar Agora
-                </Button>
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-5 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Download className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Pronto para instalar!</p>
+                  <p className="text-sm text-muted-foreground">Clique no botão abaixo</p>
+                </div>
               </div>
+              <Button onClick={handleInstall} size="lg" className="w-full gap-2">
+                <Download className="h-5 w-5" />
+                Instalar Agora
+              </Button>
             </CardContent>
           </Card>
         ) : null}
 
-        {/* Android Instructions */}
-        {(isAndroid || (!isIOS && !isInstalled)) && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <span className="text-green-600 font-bold text-sm">A</span>
-                </div>
-                Android (Chrome)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">1</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">Toque nos 3 pontos</p>
-                  <p className="text-xs text-muted-foreground">
-                    <MoreVertical className="inline h-3 w-3" /> no canto superior direito
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">2</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">"Adicionar à tela inicial"</p>
-                  <p className="text-xs text-muted-foreground">
-                    Ou "Instalar aplicativo"
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">3</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">Confirme a instalação</p>
-                  <p className="text-xs text-muted-foreground">
-                    O app aparecerá na sua tela inicial
-                  </p>
+        {/* Aviso iOS fora do Safari */}
+        {isIOS && !isSafari && (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="py-5">
+              <div className="flex gap-4">
+                <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-semibold text-amber-800">Use o Safari</p>
+                    <p className="text-sm text-amber-700">
+                      No iPhone e iPad, a instalação só funciona pelo navegador Safari.
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-amber-400 text-amber-700 hover:bg-amber-100"
+                    onClick={handleCopyLink}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar Link
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* iOS Instructions */}
-        {(isIOS || (!isAndroid && !isInstalled)) && (
-          <Card className={isIOS && isSafari ? 'ring-2 ring-primary' : ''}>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <span className="text-lg">🍎</span>
-                </div>
-                iPhone / iPad
-                {isIOS && isSafari && (
-                  <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full">
-                    Use agora
-                  </span>
-                )}
-              </CardTitle>
-              {isIOS && !isSafari && (
-                <CardDescription className="text-amber-600 font-medium">
-                  ⚠️ Abra esta página no Safari primeiro
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">1</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">Abra no Safari</p>
-                  <p className="text-xs text-muted-foreground">
-                    Obrigatório - outros navegadores não funcionam
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">2</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">Toque em Compartilhar</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Share className="h-3 w-3" /> na barra inferior do Safari
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">3</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">"Adicionar à Tela de Início"</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Plus className="h-3 w-3" /> Role para baixo se necessário
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-primary font-semibold text-xs">4</span>
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">Toque em "Adicionar"</p>
-                  <p className="text-xs text-muted-foreground">
-                    Pronto! O app estará na tela inicial
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Instruções por plataforma */}
+        {!isInstalled && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              Como instalar
+            </h2>
+            
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsTrigger 
+                  value="ios" 
+                  className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <Apple className="h-4 w-4" />
+                  iPhone / iPad
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="android" 
+                  className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <Chrome className="h-4 w-4" />
+                  Android
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="ios" className="mt-4">
+                <Card>
+                  <CardContent className="py-6 space-y-6">
+                    {isIOS && isSafari && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="font-medium">Você está no Safari! Siga os passos:</span>
+                      </div>
+                    )}
+                    
+                    <StepItem 
+                      number={1}
+                      title="Abra no Safari"
+                      description="Este é o navegador padrão da Apple, com ícone de bússola azul."
+                      icon={Apple}
+                    />
+                    
+                    <StepItem 
+                      number={2}
+                      title="Toque em Compartilhar"
+                      description="Ícone de quadrado com seta para cima, na barra inferior."
+                      icon={Share}
+                    />
+                    
+                    <StepItem 
+                      number={3}
+                      title="Adicionar à Tela de Início"
+                      description="Role as opções e encontre esta opção com ícone de +"
+                      icon={Plus}
+                    />
+                    
+                    <StepItem 
+                      number={4}
+                      title="Confirme em 'Adicionar'"
+                      description="Pronto! O app aparecerá na sua tela inicial."
+                      icon={CheckCircle2}
+                    />
+
+                    {isIOS && !isSafari && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full mt-4"
+                        onClick={handleCopyLink}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar link para o Safari
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="android" className="mt-4">
+                <Card>
+                  <CardContent className="py-6 space-y-6">
+                    {isAndroid && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="font-medium">Você está no Android! Siga os passos:</span>
+                      </div>
+                    )}
+                    
+                    <StepItem 
+                      number={1}
+                      title="Abra no Chrome"
+                      description="Use o navegador Google Chrome para melhor experiência."
+                      icon={Chrome}
+                    />
+                    
+                    <StepItem 
+                      number={2}
+                      title="Toque no menu"
+                      description="Ícone de três pontos verticais no canto superior direito."
+                      icon={MoreVertical}
+                    />
+                    
+                    <StepItem 
+                      number={3}
+                      title="Adicionar à tela inicial"
+                      description="Ou 'Instalar aplicativo' se aparecer esta opção."
+                      icon={Plus}
+                    />
+                    
+                    <StepItem 
+                      number={4}
+                      title="Confirme a instalação"
+                      description="Pronto! O app aparecerá na sua tela inicial."
+                      icon={CheckCircle2}
+                    />
+
+                    {canInstall && (
+                      <Button onClick={handleInstall} className="w-full mt-4 gap-2">
+                        <Download className="h-4 w-4" />
+                        Instalar Automaticamente
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
 
-        {/* Benefits */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-primary text-base">
-              <Home className="h-4 w-4" />
-              Por que instalar?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1.5 text-sm text-foreground">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                Acesso rápido pela tela inicial
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                Funciona sem internet (offline)
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                Tela cheia, como app nativo
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                Carregamento mais rápido
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Force Update */}
-        {isInstalled && (
-          <Card className="border-orange-200 bg-orange-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-orange-700 text-base">
-                <RefreshCw className="h-4 w-4" />
-                Atualizar App
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={handleForceUpdate} 
-                variant="outline" 
-                className="w-full gap-2 border-orange-300 text-orange-700 hover:bg-orange-100"
-                disabled={isUpdating}
-              >
-                <RefreshCw className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
-                {isUpdating ? 'Atualizando...' : 'Forçar Atualização'}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Back to App */}
-        <div className="pt-2">
-          <Button asChild className="w-full" size="lg">
-            <Link to="/app">
-              Acessar o App
-            </Link>
-          </Button>
+        {/* Benefícios */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">
+            Vantagens do App
+          </h2>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="bg-card">
+              <CardContent className="py-4 flex flex-col items-center text-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Acesso Rápido</p>
+                <p className="text-xs text-muted-foreground">Direto da tela inicial</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card">
+              <CardContent className="py-4 flex flex-col items-center text-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wifi className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Offline</p>
+                <p className="text-xs text-muted-foreground">Funciona sem internet</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card">
+              <CardContent className="py-4 flex flex-col items-center text-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Mais Rápido</p>
+                <p className="text-xs text-muted-foreground">Carrega instantâneo</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card">
+              <CardContent className="py-4 flex flex-col items-center text-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Seguro</p>
+                <p className="text-xs text-muted-foreground">Conexão protegida</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
+        {/* Atualização forçada */}
+        {isInstalled && (
+          <Card className="border-muted">
+            <CardContent className="py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Atualizar App</p>
+                  <p className="text-sm text-muted-foreground">Força download da versão mais recente</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleForceUpdate}
+                  disabled={isUpdating}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
+                  {isUpdating ? 'Atualizando...' : 'Atualizar'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Botão voltar */}
+        <Button asChild variant="outline" className="w-full" size="lg">
+          <Link to="/app">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao App
+          </Link>
+        </Button>
+
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground pt-4">
-          Desenvolvido por Tecmax Tecnologia
+        <p className="text-center text-xs text-muted-foreground pt-2 pb-4">
+          © {new Date().getFullYear()} {clinicName} • Tecmax Tecnologia
         </p>
-      </div>
+      </main>
     </div>
   );
 }
