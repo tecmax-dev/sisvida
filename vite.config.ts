@@ -22,15 +22,15 @@ export default defineConfig(({ mode }) => ({
         "favicon.ico",
       ],
       manifest: {
-        name: "Eclini - Sistema para Clínicas",
-        short_name: "Eclini",
-        description: "Sistema de gestão para clínicas médicas e consultórios. Agendamento online, prontuário eletrônico, controle financeiro.",
+        name: "Sindicato - App do Associado",
+        short_name: "Sindicato",
+        description: "Aplicativo do associado para acesso a serviços, carteirinha digital, boletos e muito mais.",
         theme_color: "#16a394",
         background_color: "#16a394",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
-        start_url: "/",
+        start_url: "/app",
         icons: [
           {
             src: "favicon-eclini.png",
@@ -51,6 +51,9 @@ export default defineConfig(({ mode }) => ({
             purpose: "maskable",
           },
         ],
+        categories: ["business", "utilities"],
+        lang: "pt-BR",
+        dir: "ltr"
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
