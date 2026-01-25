@@ -198,7 +198,7 @@ export function useDynamicPWA() {
   const updateManifest = async (name: string, logoUrl: string | null) => {
     try {
       // Use the isolated Sindicato manifest from public folder
-      const sindicatoManifestUrl = "/manifest.webmanifest";
+      const sindicatoManifestUrl = "/manifest-sindicato.webmanifest";
       
       // Fetch the Sindicato-specific manifest
       const response = await fetch(sindicatoManifestUrl);
