@@ -5,6 +5,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -30,9 +31,18 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [clinic, setClinic] = useState<ClinicData | null>(null);
 
-  // Get session data for push notifications
-  const patientId = localStorage.getItem('mobile_patient_id');
-  const clinicId = localStorage.getItem('mobile_clinic_id');
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [clinicId, setClinicId] = useState<string | null>(null);
+
+  // Restore session from robust storage on mount
+  useEffect(() => {
+    const init = async () => {
+      const session = await restoreSession();
+      setPatientId(session.patientId);
+      setClinicId(session.clinicId);
+    };
+    init();
+  }, []);
 
   // Initialize push notifications
   usePushNotifications({ patientId, clinicId });
@@ -41,18 +51,22 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   useDynamicPWA();
 
   useEffect(() => {
-    loadPatientData();
-    loadClinicData();
-  }, []);
+    if (patientId) {
+      loadPatientData(patientId);
+    }
+  }, [patientId]);
 
-  const loadPatientData = async () => {
-    const patientId = localStorage.getItem('mobile_patient_id');
-    if (!patientId) return;
+  useEffect(() => {
+    if (clinicId) {
+      loadClinicData(clinicId);
+    }
+  }, [clinicId]);
 
+  const loadPatientData = async (id: string) => {
     const { data } = await supabase
       .from("patients")
       .select("name, email, photo_url")
-      .eq("id", patientId)
+      .eq("id", id)
       .single();
 
     if (data) {
@@ -60,14 +74,11 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
     }
   };
 
-  const loadClinicData = async () => {
-    const clinicId = localStorage.getItem('mobile_clinic_id');
-    if (!clinicId) return;
-
+  const loadClinicData = async (id: string) => {
     const { data } = await supabase
       .from("clinics")
       .select("name, logo_url, entity_nomenclature")
-      .eq("id", clinicId)
+      .eq("id", id)
       .single();
 
     if (data) {
