@@ -145,6 +145,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [cpfChecking, setCpfChecking] = useState(false);
   const [cpfExists, setCpfExists] = useState(false);
+  const [cpfExistsType, setCpfExistsType] = useState<'associado' | 'paciente' | null>(null);
   
   const [employerData, setEmployerData] = useState<EmployerData | null>(null);
   const [dependents, setDependents] = useState<Dependent[]>([]);
@@ -223,15 +224,39 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     if (cleanCpf.length !== 11) return;
 
     setCpfChecking(true);
+    setCpfExists(false);
+    setCpfExistsType(null);
+    
     try {
-      const { data } = await supabase
+      // Check in sindical_associados (pending/rejected applications)
+      const { data: associadoData } = await supabase
         .from("sindical_associados")
         .select("id, status")
         .eq("sindicato_id", sindicato.id)
         .eq("cpf", cleanCpf)
         .maybeSingle();
 
-      setCpfExists(!!data);
+      if (associadoData) {
+        setCpfExists(true);
+        setCpfExistsType('associado');
+        return;
+      }
+
+      // Check in patients table (approved members) using clinic_id from sindicato
+      if (sindicato.clinic_id) {
+        const { data: patientData } = await supabase
+          .from("patients")
+          .select("id")
+          .eq("clinic_id", sindicato.clinic_id)
+          .or(`cpf.eq.${cleanCpf},cpf.eq.${formatCpf(cleanCpf)}`)
+          .maybeSingle();
+
+        if (patientData) {
+          setCpfExists(true);
+          setCpfExistsType('paciente');
+          return;
+        }
+      }
     } finally {
       setCpfChecking(false);
     }
@@ -257,8 +282,10 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
 
     if (cpfExists) {
       toast({
-        title: "CPF já cadastrado",
-        description: "Este CPF já possui uma solicitação de filiação.",
+        title: cpfExistsType === 'paciente' ? "Você já é associado(a)" : "CPF já cadastrado",
+        description: cpfExistsType === 'paciente' 
+          ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784."
+          : "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3231-1784.",
         variant: "destructive",
       });
       return;
@@ -363,6 +390,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     setDocVersoUrl(null);
     setSignatureUrl(null);
     setCpfExists(false);
+    setCpfExistsType(null);
   };
 
   if (loading) {
@@ -463,17 +491,50 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                     field.onChange(value);
                     if (value.replace(/\D/g, "").length === 11) {
                       checkCpf(value);
+                    } else {
+                      setCpfExists(false);
+                      setCpfExistsType(null);
                     }
                   }}
                   label="Digite seu CPF para começar"
                   required
                   loading={cpfChecking}
-                  error={cpfExists ? "CPF já possui cadastro" : undefined}
+                  error={cpfExists ? "CPF já cadastrado" : undefined}
                   className="border-emerald-400 bg-emerald-50/80"
                 />
               </FormItem>
             )}
           />
+
+          {/* Alert for existing CPF */}
+          {cpfExists && (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-amber-800 text-sm mb-1">
+                      {cpfExistsType === 'paciente' 
+                        ? "Você já é associado(a)!" 
+                        : "Solicitação já existe"}
+                    </h4>
+                    <p className="text-xs text-amber-700 mb-3">
+                      {cpfExistsType === 'paciente' 
+                        ? "Este CPF já possui cadastro ativo no sindicato. Se você não consegue acessar o aplicativo, entre em contato conosco."
+                        : "Este CPF já possui uma solicitação de filiação em análise. Entre em contato com o sindicato para mais informações."}
+                    </p>
+                    <a 
+                      href="tel:7332311784"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-amber-800 hover:text-amber-900"
+                    >
+                      <Phone className="h-4 w-4" />
+                      (73) 3231-1784
+                    </a>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="shadow-sm">
             <CardContent className="p-4 space-y-6">
