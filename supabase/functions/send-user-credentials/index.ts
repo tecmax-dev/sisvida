@@ -140,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Using SMTP:", smtpHost, "port:", smtpPort, "from:", smtpFrom);
 
-    const baseUrl = Deno.env.get("SITE_URL") || "https://eclini.lovable.app";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://sisvida.lovable.app";
     const loginUrl = `${baseUrl}/auth`;
 
     const htmlContent = getCredentialsEmailTemplate(userName, userEmail, tempPassword, clinicName || "", loginUrl);
