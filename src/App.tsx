@@ -206,6 +206,7 @@ import UnionEntitiesPage from "./pages/admin/UnionEntitiesPage";
 const UnionEntityLoginPage = lazy(() => import("./pages/UnionEntityLoginPage"));
 
 // Mobile App Pages
+const MobileSplashScreen = lazy(() => import("./pages/mobile/MobileSplashScreen"));
 const MobileWelcomePage = lazy(() => import("./pages/mobile/MobileWelcomePage"));
 const MobileAuthPage = lazy(() => import("./pages/mobile/MobileAuthPage"));
 const MobileHomePage = lazy(() => import("./pages/mobile/MobileHomePage"));
@@ -572,7 +573,9 @@ const App = () => (
                 </Route>
                 {/* Mobile App Routes - sempre modo claro */}
                 <Route path="/app" element={<MobileAuthProvider><MobileAppLayout /></MobileAuthProvider>}>
-                  <Route index element={<MobilePublicHomePage />} />
+                  {/* SplashScreen é o ponto de entrada - decide para onde navegar */}
+                  <Route index element={<MobileSplashScreen />} />
+                  <Route path="splash" element={<MobileSplashScreen />} />
                   <Route path="welcome" element={<MobileWelcomePage />} />
                   <Route path="login" element={<MobileAuthPage />} />
                   <Route path="home" element={<MobileHomePage />} />

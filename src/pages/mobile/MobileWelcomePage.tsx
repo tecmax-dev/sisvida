@@ -1,47 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { MobileFiliacaoForm } from "@/components/mobile/MobileFiliacaoForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
-import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
+/**
+ * WELCOME PAGE - SEM VERIFICAÇÃO DE SESSÃO
+ * 
+ * Esta é uma página de apresentação para novos usuários.
+ * Não deve verificar sessão ou redirecionar automaticamente.
+ */
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
   const [showFiliacao, setShowFiliacao] = useState(false);
   
   // Apply PWA branding (favicon, manifest, meta tags) for the clinic
   useDynamicPWA();
-
-  // Use centralized auth hook that checks Supabase JWT + localStorage backup
-  const { isLoggedIn, initialized, loading } = useMobileAuth();
-
-  // Check if user already has a valid session
-  useEffect(() => {
-    // Wait for auth initialization to complete
-    if (!initialized || loading) {
-      return;
-    }
-
-    // Redirect based on auth status
-    if (isLoggedIn) {
-      console.log("[MobileWelcome] User authenticated, redirecting to home");
-      navigate("/app/home", { replace: true });
-    } else {
-      console.log("[MobileWelcome] User not authenticated, redirecting to public home");
-      navigate("/app", { replace: true });
-    }
-  }, [initialized, loading, isLoggedIn, navigate]);
-
-  // Show loading while checking session
-  if (!initialized || loading) {
-    return (
-      <div className="min-h-screen bg-emerald-600 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
-      </div>
-    );
-  }
 
   if (showFiliacao) {
     return (
