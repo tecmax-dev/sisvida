@@ -230,7 +230,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       // PRIMEIRO: Verificar se é paciente ATIVO (já é membro do sindicato)
       // Prioridade maior pois significa que já foi aprovado no sistema
       if (sindicato.clinic_id) {
-        console.log("[checkCpf] 1. Verificando patients (membros ativos) para clinic:", sindicato.clinic_id);
+        console.log("[checkCpf] 1. Verificando patients (membros ativos)");
         
         const { data: patientSearchResult, error: searchError } = await supabase.functions.invoke(
           "search-patient-by-cpf",
@@ -239,12 +239,12 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           }
         );
 
-        console.log("[checkCpf] patientSearchResult:", JSON.stringify(patientSearchResult), "error:", searchError);
+        console.log("[checkCpf] patientSearchResult received:", !!patientSearchResult, "error:", !!searchError);
 
         // Check if patient exists and is active
         if (!searchError && patientSearchResult?.success && patientSearchResult?.patient) {
           const patient = patientSearchResult.patient;
-          console.log("[checkCpf] Paciente encontrado:", patient.name, "is_active:", patient.is_active);
+          console.log("[checkCpf] Paciente encontrado. is_active:", patient.is_active);
           
           if (patient.id && patient.is_active) {
             console.log("[checkCpf] CPF é PACIENTE ATIVO - BLOQUEANDO (já é membro)");
