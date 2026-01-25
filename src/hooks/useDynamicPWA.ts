@@ -94,7 +94,22 @@ export function useDynamicPWA() {
     updateMetaProperty("twitter:title", DEFAULT_BRANDING.name);
     updateMetaProperty("twitter:description", DEFAULT_BRANDING.description);
 
+    // Restore default manifest (Eclini)
+    restoreDefaultManifest();
+
     setClinic(null);
+  };
+
+  const restoreDefaultManifest = () => {
+    const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (manifestLink && !manifestLink.href.includes("manifest.webmanifest")) {
+      // Already using default or VitePWA manifest
+      return;
+    }
+    // VitePWA generates manifest automatically, just remove custom one if exists
+    if (manifestLink && manifestLink.href.includes("blob:")) {
+      manifestLink.remove();
+    }
   };
 
   const applyBranding = (clinicData: ClinicBranding) => {
@@ -182,18 +197,17 @@ export function useDynamicPWA() {
 
   const updateManifest = async (name: string, logoUrl: string | null) => {
     try {
-      const manifestLink =
-        document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-      if (!manifestLink) return;
-
-      // Fetch the current manifest
-      const response = await fetch(manifestLink.href);
+      // Use the isolated Sindicato manifest from public folder
+      const sindicatoManifestUrl = "/manifest.webmanifest";
+      
+      // Fetch the Sindicato-specific manifest
+      const response = await fetch(sindicatoManifestUrl);
       const manifest = await response.json();
 
-      // Update the name
-      manifest.name = name;
+      // Update the name dynamically based on clinic
+      manifest.name = `${name} - App do Associado`;
       manifest.short_name = name.length > 12 ? name.substring(0, 12) : name;
-      manifest.description = `App oficial do ${name}`;
+      manifest.description = `Aplicativo do associado ${name}`;
 
       // Update all icon sources if we have a logo
       if (logoUrl && manifest.icons) {
@@ -211,13 +225,16 @@ export function useDynamicPWA() {
       });
       const newManifestUrl = URL.createObjectURL(blob);
 
-      // Create a new manifest link to replace the old one
+      // Remove existing manifest link
+      const existingManifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+      if (existingManifest) {
+        existingManifest.remove();
+      }
+
+      // Create a new manifest link
       const newManifestLink = document.createElement("link");
       newManifestLink.rel = "manifest";
       newManifestLink.href = newManifestUrl;
-
-      // Remove old and add new
-      manifestLink.remove();
       document.head.appendChild(newManifestLink);
     } catch (error) {
       console.log("Could not update manifest dynamically:", error);
