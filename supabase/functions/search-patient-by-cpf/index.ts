@@ -71,12 +71,16 @@ Deno.serve(async (req) => {
     );
 
     // Search patient - support both formatted (XXX.XXX.XXX-XX) and unformatted CPF
+    // IMPORTANT: Check for is_active = true to validate only active patients
     const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    
+    console.log('Searching for CPF:', { cleanCpf, formattedCpf, clinicId });
     
     const { data, error } = await supabase
       .from('patients')
       .select('id, name, phone, email, birth_date, gender, is_active, inactivation_reason')
       .eq('clinic_id', clinicId)
+      .eq('is_active', true) // Only check ACTIVE patients
       .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
       .maybeSingle();
 

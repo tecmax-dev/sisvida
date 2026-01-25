@@ -245,8 +245,11 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
         return;
       }
 
-      // Check in patients table (approved members) using clinic_id from sindicato
+      // ALWAYS check patients table regardless of associado check result
+      // This ensures we validate BOTH pending affiliations AND active members
       if (sindicato.clinic_id) {
+        console.log("[checkCpf] Checking patients table for clinic:", sindicato.clinic_id);
+        
         const { data: patientSearchResult, error: searchError } = await supabase.functions.invoke(
           "search-patient-by-cpf",
           {
@@ -254,22 +257,23 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           }
         );
 
-        console.log(
-          "[checkCpf] patientSearchResult:",
-          patientSearchResult,
-          "error:",
-          searchError,
-          "clinic_id:",
-          sindicato.clinic_id
-        );
+        console.log("[checkCpf] patientSearchResult:", JSON.stringify(patientSearchResult), "error:", searchError);
 
-        if (!searchError && patientSearchResult?.patient?.id) {
-          console.log("[checkCpf] CPF found in patients (edge fn) - blocking");
-          setCpfExists(true);
-          setCpfExistsType('paciente');
-          setCpfChecking(false);
-          return;
+        // Check if patient exists and is active
+        if (!searchError && patientSearchResult?.success && patientSearchResult?.patient) {
+          const patient = patientSearchResult.patient;
+          console.log("[checkCpf] Patient found:", patient.name, "is_active:", patient.is_active);
+          
+          if (patient.id && patient.is_active) {
+            console.log("[checkCpf] CPF found as ACTIVE patient - BLOCKING form submission");
+            setCpfExists(true);
+            setCpfExistsType('paciente');
+            setCpfChecking(false);
+            return;
+          }
         }
+      } else {
+        console.log("[checkCpf] No clinic_id found for sindicato - skipping patient check");
       }
 
       // If we get here, CPF doesn't exist
