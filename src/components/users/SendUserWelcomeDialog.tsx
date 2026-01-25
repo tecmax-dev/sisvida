@@ -220,18 +220,25 @@ export function SendUserWelcomeDialog({
       // Enviar por WhatsApp
       if (sendWhatsApp) {
         try {
-          console.log("[SendUserWelcome] Enviando WhatsApp para:", cleanPhone);
+          // Normalizar telefone: garantir que tem DDI 55
+          let phoneToSend = cleanPhone;
+          if (!phoneToSend.startsWith("55")) {
+            phoneToSend = `55${phoneToSend}`;
+          }
+          console.log("[SendUserWelcome] Enviando WhatsApp para:", phoneToSend, "(original:", cleanPhone, ")");
+          
           const whatsappResult = await sendWhatsAppMessage({
-            phone: cleanPhone,
+            phone: phoneToSend,
             message: whatsappMessage,
             clinicId,
             type: "custom",
           });
 
-          console.log("[SendUserWelcome] Resultado WhatsApp:", whatsappResult);
+          console.log("[SendUserWelcome] Resultado WhatsApp completo:", JSON.stringify(whatsappResult, null, 2));
 
           if (whatsappResult.success) {
             results.whatsapp = true;
+            console.log("[SendUserWelcome] WhatsApp enviado com sucesso!");
           } else {
             console.error("[SendUserWelcome] Erro ao enviar WhatsApp:", whatsappResult.error);
             toast.error(`Erro WhatsApp: ${whatsappResult.error || "Falha no envio"}`);
