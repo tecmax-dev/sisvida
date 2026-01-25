@@ -21,7 +21,8 @@ export default function MobileWelcomePage() {
       // User is already logged in, redirect to home
       navigate("/app/home", { replace: true });
     } else {
-      setCheckingSession(false);
+      // User is not logged in, redirect to public home
+      navigate("/app", { replace: true });
     }
   }, [navigate]);
 

@@ -567,7 +567,8 @@ const App = () => (
                 </Route>
                 {/* Mobile App Routes - sempre modo claro */}
                 <Route path="/app" element={<MobileAppLayout />}>
-                  <Route index element={<MobileWelcomePage />} />
+                  <Route index element={<MobilePublicHomePage />} />
+                  <Route path="welcome" element={<MobileWelcomePage />} />
                   <Route path="login" element={<MobileAuthPage />} />
                   <Route path="home" element={<MobileHomePage />} />
                   <Route path="home-publico" element={<MobilePublicHomePage />} />
