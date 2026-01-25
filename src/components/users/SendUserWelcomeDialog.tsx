@@ -193,17 +193,27 @@ export function SendUserWelcomeDialog({
 
       // Enviar por WhatsApp
       if (sendWhatsApp) {
-        const whatsappResult = await sendWhatsAppMessage({
-          phone: cleanPhone,
-          message: whatsappMessage,
-          clinicId,
-          type: "custom",
-        });
+        try {
+          console.log("[SendUserWelcome] Enviando WhatsApp para:", cleanPhone);
+          const whatsappResult = await sendWhatsAppMessage({
+            phone: cleanPhone,
+            message: whatsappMessage,
+            clinicId,
+            type: "custom",
+          });
 
-        if (whatsappResult.success) {
-          results.whatsapp = true;
-        } else {
-          console.error("Erro ao enviar WhatsApp:", whatsappResult.error);
+          console.log("[SendUserWelcome] Resultado WhatsApp:", whatsappResult);
+
+          if (whatsappResult.success) {
+            results.whatsapp = true;
+          } else {
+            console.error("[SendUserWelcome] Erro ao enviar WhatsApp:", whatsappResult.error);
+            toast.error(`Erro WhatsApp: ${whatsappResult.error || "Falha no envio"}`);
+            results.whatsapp = false;
+          }
+        } catch (whatsappError: any) {
+          console.error("[SendUserWelcome] Exceção ao enviar WhatsApp:", whatsappError);
+          toast.error(`Erro WhatsApp: ${whatsappError.message || "Erro inesperado"}`);
           results.whatsapp = false;
         }
       }
@@ -214,17 +224,24 @@ export function SendUserWelcomeDialog({
 
       if (emailSuccess && whatsappSuccess) {
         const methods = [];
-        if (sendEmail) methods.push("email");
-        if (sendWhatsApp) methods.push("WhatsApp");
-        toast.success(`Boas-vindas enviadas com sucesso por ${methods.join(" e ")}!`);
+        if (sendEmail && results.email) methods.push("email");
+        if (sendWhatsApp && results.whatsapp) methods.push("WhatsApp");
+        if (methods.length > 0) {
+          toast.success(`Boas-vindas enviadas com sucesso por ${methods.join(" e ")}!`);
+        }
         handleClose();
       } else if (emailSuccess || whatsappSuccess) {
-        const successMethod = emailSuccess ? "email" : "WhatsApp";
-        const failedMethod = !emailSuccess ? "email" : "WhatsApp";
-        toast.warning(`Enviado por ${successMethod}, mas falhou por ${failedMethod}`);
+        // Pelo menos um funcionou
+        if (sendEmail && results.email) {
+          toast.success("Email enviado com sucesso!");
+        }
+        if (sendWhatsApp && results.whatsapp) {
+          toast.success("WhatsApp enviado com sucesso!");
+        }
         handleClose();
       } else {
-        toast.error("Falha ao enviar por ambos os métodos");
+        // Ambos falharam - toasts de erro já foram mostrados acima
+        console.error("[SendUserWelcome] Todos os métodos falharam");
       }
     } catch (error: any) {
       console.error("Erro ao enviar boas-vindas:", error);
