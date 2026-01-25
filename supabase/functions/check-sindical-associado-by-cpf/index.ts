@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
       .from('sindical_associados')
       .select('id, status')
       .eq('sindicato_id', sindicatoId)
+      // IMPORTANT: Only treat as "existing application" when it's still pending approval
+      .eq('status', 'pendente')
       .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
       .maybeSingle()
 

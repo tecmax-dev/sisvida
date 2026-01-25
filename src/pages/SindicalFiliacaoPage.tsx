@@ -362,26 +362,8 @@ export default function SindicalFiliacaoPage() {
     setExistingPatient(null);
     
     try {
-      // 1. Verifica se já existe solicitação de filiação pendente/ativa
-      const { data: associadoCheck, error: associadoError } = await supabase.functions.invoke(
-        "check-sindical-associado-by-cpf",
-        {
-          body: { sindicatoId: sindicato.id, cpf: cleanCpf },
-        }
-      );
-
-      if (!associadoError && associadoCheck?.exists) {
-        setCpfExists(true);
-        setCpfExistsType('associado');
-        toast({
-          title: "CPF já possui solicitação",
-          description: "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3231-1784.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // 2. Busca na base interna de pacientes (patients) usando edge function
+      // 1. PRIORIDADE: Busca na base interna de pacientes ATIVOS (já cadastrado no sistema)
+      // Se for paciente ativo, a mensagem correta NÃO é de solicitação pendente.
       if (sindicato.clinic_id) {
         const { data: patientSearchResult, error: searchError } = await supabase.functions.invoke(
           "search-patient-by-cpf",
@@ -400,6 +382,25 @@ export default function SindicalFiliacaoPage() {
           });
           return;
         }
+      }
+
+      // 2. SEGUNDO: Verifica se já existe solicitação de filiação PENDENTE (aguardando aprovação)
+      const { data: associadoCheck, error: associadoError } = await supabase.functions.invoke(
+        "check-sindical-associado-by-cpf",
+        {
+          body: { sindicatoId: sindicato.id, cpf: cleanCpf },
+        }
+      );
+
+      if (!associadoError && associadoCheck?.exists) {
+        setCpfExists(true);
+        setCpfExistsType('associado');
+        toast({
+          title: "CPF já possui solicitação",
+          description: "Este CPF já possui uma solicitação de filiação pendente. Entre em contato com o sindicato pelo (73) 3231-1784.",
+          variant: "destructive",
+        });
+        return;
       }
     } catch (error) {
       console.error("Erro ao verificar CPF:", error);
