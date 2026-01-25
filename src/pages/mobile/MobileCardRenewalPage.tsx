@@ -180,21 +180,21 @@ export default function MobileCardRenewalPage() {
         throw new Error("Sessão inválida");
       }
 
-      // Generate unique file path
-      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'pdf';
-      const fileName = `${patientId}/${Date.now()}_contracheque.${fileExt}`;
+      // Generate unique file path - use contra-cheques bucket with correct path structure
+      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${clinicId}/${patientId}/${Date.now()}.${fileExt}`;
 
-      // Upload file to storage
+      // Upload file to contra-cheques storage bucket
       const { error: uploadError } = await supabase.storage
-        .from('patient-attachments')
+        .from('contra-cheques')
         .upload(fileName, selectedFile, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true
         });
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        throw new Error("Erro ao fazer upload do arquivo");
+        throw new Error(`Erro ao fazer upload do arquivo: ${uploadError.message}`);
       }
 
       // Create payslip request record
