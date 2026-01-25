@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useMobileAuth, PUBLIC_TAB_KEYS } from "@/hooks/useMobileAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -1396,7 +1397,18 @@ function OuvidoriaContent() {
 export default function MobileServicesPage() {
   const navigate = useNavigate();
   const { serviceId } = useParams<{ serviceId?: string }>();
+  const { isLoggedIn } = useMobileAuth();
   const [selectedService, setSelectedService] = useState<ServiceConfig | null>(null);
+
+  // Determine the correct back navigation based on login status
+  const getBackRoute = () => {
+    // If user is logged in, go to authenticated home
+    if (isLoggedIn) return "/app/home";
+    // If viewing a public tab and not logged in, go to public home
+    if (serviceId && PUBLIC_TAB_KEYS.includes(serviceId)) return "/app";
+    // Default to public home for non-logged users
+    return "/app";
+  };
 
   useEffect(() => {
     if (serviceId) {
@@ -1442,7 +1454,7 @@ export default function MobileServicesPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/app/home")}
+              onClick={() => navigate(getBackRoute())}
               className="text-white hover:bg-white/20"
             >
               <ArrowLeft className="h-6 w-6" />
@@ -1473,7 +1485,7 @@ export default function MobileServicesPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/app/home")}
+            onClick={() => navigate(getBackRoute())}
             className="text-white hover:bg-white/20"
           >
             <ArrowLeft className="h-6 w-6" />

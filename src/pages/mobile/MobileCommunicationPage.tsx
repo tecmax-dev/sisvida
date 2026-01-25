@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useMobileAuth, PUBLIC_TAB_KEYS } from "@/hooks/useMobileAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -744,7 +745,17 @@ function VideosContent() {
 export default function MobileCommunicationPage() {
   const navigate = useNavigate();
   const { mediaType } = useParams<{ mediaType?: string }>();
+  const { isLoggedIn } = useMobileAuth();
   const [selectedMedia, setSelectedMedia] = useState<MediaConfig | null>(null);
+
+  // Determine the correct back navigation based on login status
+  // All media types (galeria, jornais, radios, videos) are public tabs
+  const getBackRoute = () => {
+    // If user is logged in, go to authenticated home
+    if (isLoggedIn) return "/app/home";
+    // For non-logged users viewing public media, go to public home
+    return "/app";
+  };
 
   useEffect(() => {
     if (mediaType) {
@@ -782,7 +793,7 @@ export default function MobileCommunicationPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/app/home")}
+              onClick={() => navigate(getBackRoute())}
               className="text-white hover:bg-white/20"
             >
               <ArrowLeft className="h-6 w-6" />
@@ -813,7 +824,7 @@ export default function MobileCommunicationPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/app/home")}
+            onClick={() => navigate(getBackRoute())}
             className="text-white hover:bg-white/20"
           >
             <ArrowLeft className="h-6 w-6" />

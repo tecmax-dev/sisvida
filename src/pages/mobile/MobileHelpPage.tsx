@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -45,8 +46,12 @@ const defaultContent: HelpContentData = {
 
 export default function MobileHelpPage() {
   const navigate = useNavigate();
+  const { isLoggedIn } = useMobileAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [content, setContent] = useState<HelpContentData>(defaultContent);
+
+  // Help is a public page, so back navigation depends on login status
+  const getBackRoute = () => isLoggedIn ? "/app/home" : "/app";
 
   useEffect(() => {
     loadContent();
@@ -160,10 +165,10 @@ export default function MobileHelpPage() {
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
           <div className="flex items-center gap-3">
-            <Button
+          <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/app/home")}
+              onClick={() => navigate(getBackRoute())}
               className="text-white hover:bg-white/20"
             >
               <ArrowLeft className="h-6 w-6" />
@@ -186,7 +191,7 @@ export default function MobileHelpPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/app/home")}
+            onClick={() => navigate(getBackRoute())}
             className="text-white hover:bg-white/20"
           >
             <ArrowLeft className="h-6 w-6" />

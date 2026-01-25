@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import {
   Accordion,
@@ -44,12 +45,16 @@ const faqItems = [
 
 export default function MobileFAQPage() {
   const navigate = useNavigate();
+  const { isLoggedIn } = useMobileAuth();
+
+  // FAQ is accessible to all, so back navigation depends on login status
+  const getBackRoute = () => isLoggedIn ? "/app/home" : "/app";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50">
-        <button onClick={() => navigate(-1)} className="p-1">
+        <button onClick={() => navigate(getBackRoute())} className="p-1">
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-lg font-semibold">Dúvidas Frequentes</h1>

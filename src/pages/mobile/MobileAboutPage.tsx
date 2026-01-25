@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { ArrowLeft, Target, Eye, Award, Phone, Mail, MapPin, Globe, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +8,10 @@ const APP_VERSION = "1.0.0";
 
 export default function MobileAboutPage() {
   const navigate = useNavigate();
+  const { isLoggedIn } = useMobileAuth();
+
+  // About page is accessible to all, so back navigation depends on login status
+  const getBackRoute = () => isLoggedIn ? "/app/home" : "/app";
 
   const principles = [
     {
@@ -36,7 +41,7 @@ export default function MobileAboutPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50">
-        <button onClick={() => navigate(-1)} className="p-1">
+        <button onClick={() => navigate(getBackRoute())} className="p-1">
           <ArrowLeft className="h-6 w-6" />
         </button>
         <h1 className="text-lg font-semibold">Sobre Nós</h1>
