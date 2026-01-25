@@ -65,6 +65,20 @@ export default function MobileCardRenewalPage() {
         return;
       }
 
+      // Check for any pending payslip request FIRST (regardless of card)
+      const { data: pendingRequests } = await supabase
+        .from("payslip_requests")
+        .select("id, status, requested_at, received_at, reviewed_at")
+        .eq("patient_id", patientId)
+        .eq("clinic_id", clinicId)
+        .in("status", ["pending", "received"])
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (pendingRequests && pendingRequests.length > 0) {
+        setPendingRequest(pendingRequests[0]);
+      }
+
       // Get card data
       const { data: card } = await supabase
         .from("patient_cards")
@@ -74,25 +88,10 @@ export default function MobileCardRenewalPage() {
         .eq("is_active", true)
         .order("expires_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (card) {
         setCardData(card);
-
-        // Check for pending payslip request
-        const { data: request } = await supabase
-          .from("payslip_requests")
-          .select("id, status, requested_at, received_at, reviewed_at")
-          .eq("patient_id", patientId)
-          .eq("card_id", card.id)
-          .in("status", ["pending", "received"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (request) {
-          setPendingRequest(request);
-        }
       }
     } catch (err) {
       console.error("Error loading data:", err);
