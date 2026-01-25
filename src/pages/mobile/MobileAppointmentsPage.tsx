@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, parseISO, isPast, isToday, isFuture, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface Appointment {
   id: string;
@@ -88,24 +88,20 @@ export default function MobileAppointmentsPage() {
   const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Usar contexto de autenticação (dados já disponíveis via bootstrap imperativo)
+  const { patientId, clinicId } = useMobileAuth();
 
   useEffect(() => {
-    loadAppointments();
-  }, []);
+    if (patientId && clinicId) {
+      loadAppointments(patientId, clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [patientId, clinicId]);
 
-  const loadAppointments = async () => {
+  const loadAppointments = async (patientId: string, clinicId: string) => {
     try {
-      // Use robust session restoration
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-
-      if (!patientId || !clinicId) {
-        console.log("[MobileAppointments] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       // Fetch all appointments (titular)
       const { data: myAppointments, error: myError } = await supabase
         .from("appointments")
@@ -225,7 +221,7 @@ export default function MobileAppointmentsPage() {
 
       setShowCancelDialog(false);
       setSelectedAppointment(null);
-      loadAppointments();
+      if (patientId && clinicId) loadAppointments(patientId, clinicId);
     } catch (error) {
       console.error("Error cancelling appointment:", error);
       toast({
