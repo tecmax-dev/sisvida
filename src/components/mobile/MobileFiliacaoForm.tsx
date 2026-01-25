@@ -227,17 +227,17 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     // DON'T reset cpfExists here - wait for query result
     
     try {
-      // Check in sindical_associados (pending/rejected applications)
-      const { data: associadoData, error: associadoError } = await supabase
-        .from("sindical_associados")
-        .select("id, status")
-        .eq("sindicato_id", sindicato.id)
-        .eq("cpf", cleanCpf)
-        .maybeSingle();
+      // Check in sindical_associados via backend function (avoid RLS issues on public flows)
+      const { data: associadoCheck, error: associadoError } = await supabase.functions.invoke(
+        "check-sindical-associado-by-cpf",
+        {
+          body: { sindicatoId: sindicato.id, cpf: cleanCpf },
+        }
+      );
 
-      console.log("[checkCpf] associadoData:", associadoData, "error:", associadoError);
+      console.log("[checkCpf] associadoCheck:", associadoCheck, "error:", associadoError);
 
-      if (associadoData) {
+      if (!associadoError && associadoCheck?.exists) {
         console.log("[checkCpf] CPF found in sindical_associados - blocking");
         setCpfExists(true);
         setCpfExistsType('associado');
@@ -247,20 +247,24 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
 
       // Check in patients table (approved members) using clinic_id from sindicato
       if (sindicato.clinic_id) {
-        const formattedCpf = formatCpf(cleanCpf);
-        
-        // Query for both raw and formatted CPF
-        const { data: patientData, error: patientError } = await supabase
-          .from("patients")
-          .select("id")
-          .eq("clinic_id", sindicato.clinic_id)
-          .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
-          .maybeSingle();
+        const { data: patientSearchResult, error: searchError } = await supabase.functions.invoke(
+          "search-patient-by-cpf",
+          {
+            body: { clinicId: sindicato.clinic_id, cpf: cleanCpf },
+          }
+        );
 
-        console.log("[checkCpf] patientData:", patientData, "error:", patientError, "clinic_id:", sindicato.clinic_id);
+        console.log(
+          "[checkCpf] patientSearchResult:",
+          patientSearchResult,
+          "error:",
+          searchError,
+          "clinic_id:",
+          sindicato.clinic_id
+        );
 
-        if (patientData) {
-          console.log("[checkCpf] CPF found in patients - blocking");
+        if (!searchError && patientSearchResult?.patient?.id) {
+          console.log("[checkCpf] CPF found in patients (edge fn) - blocking");
           setCpfExists(true);
           setCpfExistsType('paciente');
           setCpfChecking(false);
@@ -968,7 +972,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
 
               <Button
                 type="submit"
-                disabled={submitting || cpfExists}
+                disabled={submitting || cpfChecking || cpfExists}
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
               >
                 {submitting ? (

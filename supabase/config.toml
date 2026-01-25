@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.boleto-whatsapp-flow]
 verify_jwt = false
+
+[functions.search-patient-by-cpf]
+verify_jwt = false
+
+[functions.check-sindical-associado-by-cpf]
+verify_jwt = false
