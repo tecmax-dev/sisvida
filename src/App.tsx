@@ -324,6 +324,7 @@ const App = () => (
                 <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
                 <Route path="/sindical/filiacao/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
+                <Route path="/sindicato/instalar" element={<MobileInstallPage />} />
                 <Route path="/entidade-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/acessos" element={<PortalAccessPage />} />
