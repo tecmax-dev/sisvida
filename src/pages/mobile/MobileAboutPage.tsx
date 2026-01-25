@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useMobileAuth } from "@/hooks/useMobileAuth";
-import { ArrowLeft, Target, Eye, Award, Phone, Mail, MapPin, Globe, Users } from "lucide-react";
+import { ArrowLeft, Target, Eye, Award, Phone, Mail, MapPin, Globe, Users, Download } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const APP_VERSION = "1.0.0";
 
@@ -137,6 +138,29 @@ export default function MobileAboutPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <Separator className="mx-4" />
+
+        {/* Install App Section */}
+        <section className="p-4">
+          <Card className="bg-emerald-50 border-emerald-200">
+            <CardContent className="p-4 text-center space-y-3">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                <Download className="h-6 w-6 text-emerald-600" />
+              </div>
+              <h3 className="font-semibold text-foreground">Instale o App</h3>
+              <p className="text-sm text-muted-foreground">
+                Adicione o app à sua tela inicial para acesso rápido
+              </p>
+              <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
+                <Link to="/app/instalar">
+                  <Download className="h-4 w-4 mr-2" />
+                  Como Instalar
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </section>
 
         <Separator className="mx-4" />

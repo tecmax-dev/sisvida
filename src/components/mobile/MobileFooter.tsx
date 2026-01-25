@@ -1,5 +1,6 @@
-import { Instagram, Facebook, Youtube, Globe, MessageCircle } from "lucide-react";
+import { Instagram, Facebook, Youtube, Globe, MessageCircle, Download } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ClinicData {
@@ -56,6 +57,15 @@ export function MobileFooter() {
               </a>
             ))}
           </div>
+
+          {/* Install App Link */}
+          <Link 
+            to="/app/instalar"
+            className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm mt-2 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Instalar o App
+          </Link>
         </div>
       </footer>
 
