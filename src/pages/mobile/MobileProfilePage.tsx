@@ -92,16 +92,12 @@ export default function MobileProfilePage() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      localStorage.removeItem('mobile_patient_id');
-      localStorage.removeItem('mobile_clinic_id');
-      localStorage.removeItem('mobile_patient_name');
-      navigate("/app/login");
-    } catch (err) {
-      console.error("Error signing out:", err);
-    }
+  const handleSignOut = () => {
+    // Sessão permanente no PWA - logout apenas por ação explícita do usuário
+    localStorage.removeItem('mobile_patient_id');
+    localStorage.removeItem('mobile_clinic_id');
+    localStorage.removeItem('mobile_patient_name');
+    navigate("/app/login");
   };
 
   const handleDeleteAccountRequest = () => {
