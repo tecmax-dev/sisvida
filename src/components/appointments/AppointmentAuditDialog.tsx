@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Dialog,
@@ -82,12 +82,15 @@ export function AppointmentAuditDialog({
       setAppointmentDetails(appointment);
 
       // Evento de criação
+      // Usar parseISO para datas no formato YYYY-MM-DD para evitar timezone shift
+      const appointmentDateParsed = parseISO(appointment.appointment_date);
+      
       auditEvents.push({
         id: `creation-${appointment.id}`,
         timestamp: new Date(appointment.created_at),
         type: 'creation',
         title: 'Agendamento Criado',
-        description: `Consulta agendada para ${format(new Date(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às ${appointment.start_time?.substring(0, 5)} com ${appointment.professional?.name || 'Profissional'}`,
+        description: `Consulta agendada para ${format(appointmentDateParsed, "dd/MM/yyyy", { locale: ptBR })} às ${appointment.start_time?.substring(0, 5)} com ${appointment.professional?.name || 'Profissional'}`,
         icon: <Calendar className="h-4 w-4" />,
         color: 'bg-blue-500',
       });
@@ -273,7 +276,7 @@ export function AppointmentAuditDialog({
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {format(new Date(appointmentDetails.appointment_date), "dd/MM/yyyy", { locale: ptBR })}
+                {format(parseISO(appointmentDetails.appointment_date), "dd/MM/yyyy", { locale: ptBR })}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
