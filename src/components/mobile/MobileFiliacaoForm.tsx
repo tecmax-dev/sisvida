@@ -224,39 +224,58 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     if (cleanCpf.length !== 11) return;
 
     setCpfChecking(true);
-    setCpfExists(false);
-    setCpfExistsType(null);
+    // DON'T reset cpfExists here - wait for query result
     
     try {
       // Check in sindical_associados (pending/rejected applications)
-      const { data: associadoData } = await supabase
+      const { data: associadoData, error: associadoError } = await supabase
         .from("sindical_associados")
         .select("id, status")
         .eq("sindicato_id", sindicato.id)
         .eq("cpf", cleanCpf)
         .maybeSingle();
 
+      console.log("[checkCpf] associadoData:", associadoData, "error:", associadoError);
+
       if (associadoData) {
+        console.log("[checkCpf] CPF found in sindical_associados - blocking");
         setCpfExists(true);
         setCpfExistsType('associado');
+        setCpfChecking(false);
         return;
       }
 
       // Check in patients table (approved members) using clinic_id from sindicato
       if (sindicato.clinic_id) {
-        const { data: patientData } = await supabase
+        const formattedCpf = formatCpf(cleanCpf);
+        
+        // Query for both raw and formatted CPF
+        const { data: patientData, error: patientError } = await supabase
           .from("patients")
           .select("id")
           .eq("clinic_id", sindicato.clinic_id)
-          .or(`cpf.eq.${cleanCpf},cpf.eq.${formatCpf(cleanCpf)}`)
+          .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
           .maybeSingle();
 
+        console.log("[checkCpf] patientData:", patientData, "error:", patientError, "clinic_id:", sindicato.clinic_id);
+
         if (patientData) {
+          console.log("[checkCpf] CPF found in patients - blocking");
           setCpfExists(true);
           setCpfExistsType('paciente');
+          setCpfChecking(false);
           return;
         }
       }
+
+      // If we get here, CPF doesn't exist
+      console.log("[checkCpf] CPF not found - allowing");
+      setCpfExists(false);
+      setCpfExistsType(null);
+    } catch (error) {
+      console.error("[checkCpf] Error:", error);
+      setCpfExists(false);
+      setCpfExistsType(null);
     } finally {
       setCpfChecking(false);
     }
@@ -536,6 +555,8 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
             </Card>
           )}
 
+          {/* Only show the rest of the form if CPF doesn't exist */}
+          {!cpfExists && (
           <Card className="shadow-sm">
             <CardContent className="p-4 space-y-6">
               
@@ -961,6 +982,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
               </Button>
             </CardContent>
           </Card>
+          )}
         </form>
       </Form>
     </div>
