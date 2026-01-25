@@ -23,7 +23,7 @@ const EXCLUDED_ROUTES = [
 
 // Prefixos de rotas públicas que não devem exibir o botão
 const EXCLUDED_PREFIXES = [
-  "/app/",  // Mobile app - has its own navigation
+  "/app",  // Mobile app - has its own navigation (catch /app and /app/*)
   "/agendamento/",
   "/anamnese/",
   "/nps/",
@@ -60,11 +60,6 @@ export function GlobalBackButton() {
 
   // Não exibir em rotas com prefixos excluídos (páginas públicas)
   if (EXCLUDED_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
-    return null;
-  }
-
-  // Não exibir na raiz do mobile app autenticado
-  if (pathname === "/app/home") {
     return null;
   }
 
