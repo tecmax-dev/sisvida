@@ -65,7 +65,23 @@ interface Professional {
 interface Dependent {
   id: string;
   name: string;
+  birth_date: string | null;
 }
+
+// Age limit for dependents (in years)
+const DEPENDENT_MAX_AGE = 21;
+
+// Calculate age from birth date
+const calculateAge = (birthDate: string): number => {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 interface TimeSlot {
   time: string;
@@ -505,13 +521,55 @@ export default function MobileBookingPage() {
                       <SelectValue placeholder="Escolha o dependente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dependents.map((dep) => (
-                        <SelectItem key={dep.id} value={dep.id}>
-                          {dep.name}
-                        </SelectItem>
-                      ))}
+                      {dependents.map((dep) => {
+                        const age = dep.birth_date ? calculateAge(dep.birth_date) : null;
+                        const isOverAge = age !== null && age > DEPENDENT_MAX_AGE;
+                        
+                        return (
+                          <SelectItem 
+                            key={dep.id} 
+                            value={dep.id}
+                            disabled={isOverAge}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{dep.name}</span>
+                              {isOverAge && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Acima de {DEPENDENT_MAX_AGE} anos
+                                </Badge>
+                              )}
+                              {age !== null && !isOverAge && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({age} anos)
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
+                  
+                  {/* Show warning if selected dependent is over age limit */}
+                  {selectedDependentId && (() => {
+                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
+                    if (selectedDep?.birth_date) {
+                      const age = calculateAge(selectedDep.birth_date);
+                      if (age > DEPENDENT_MAX_AGE) {
+                        return (
+                          <Card className="border-amber-200 bg-amber-50">
+                            <CardContent className="p-3 flex items-center gap-2">
+                              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                              <p className="text-sm text-amber-800">
+                                Dependentes acima de {DEPENDENT_MAX_AGE} anos não podem agendar consultas.
+                              </p>
+                            </CardContent>
+                          </Card>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
 
@@ -525,6 +583,23 @@ export default function MobileBookingPage() {
                     });
                     return;
                   }
+                  
+                  // Validate age limit for dependents
+                  if (patientType === "dependent" && selectedDependentId) {
+                    const selectedDep = dependents.find(d => d.id === selectedDependentId);
+                    if (selectedDep?.birth_date) {
+                      const age = calculateAge(selectedDep.birth_date);
+                      if (age > DEPENDENT_MAX_AGE) {
+                        toast({
+                          title: "Limite de idade excedido",
+                          description: `Dependentes acima de ${DEPENDENT_MAX_AGE} anos não podem agendar consultas.`,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                    }
+                  }
+                  
                   setStep(2);
                 }}
               >
