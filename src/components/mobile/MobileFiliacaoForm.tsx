@@ -227,28 +227,10 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     // DON'T reset cpfExists here - wait for query result
     
     try {
-      // Check in sindical_associados via backend function (avoid RLS issues on public flows)
-      const { data: associadoCheck, error: associadoError } = await supabase.functions.invoke(
-        "check-sindical-associado-by-cpf",
-        {
-          body: { sindicatoId: sindicato.id, cpf: cleanCpf },
-        }
-      );
-
-      console.log("[checkCpf] associadoCheck:", associadoCheck, "error:", associadoError);
-
-      if (!associadoError && associadoCheck?.exists) {
-        console.log("[checkCpf] CPF found in sindical_associados - blocking");
-        setCpfExists(true);
-        setCpfExistsType('associado');
-        setCpfChecking(false);
-        return;
-      }
-
-      // ALWAYS check patients table regardless of associado check result
-      // This ensures we validate BOTH pending affiliations AND active members
+      // PRIMEIRO: Verificar se é paciente ATIVO (já é membro do sindicato)
+      // Prioridade maior pois significa que já foi aprovado no sistema
       if (sindicato.clinic_id) {
-        console.log("[checkCpf] Checking patients table for clinic:", sindicato.clinic_id);
+        console.log("[checkCpf] 1. Verificando patients (membros ativos) para clinic:", sindicato.clinic_id);
         
         const { data: patientSearchResult, error: searchError } = await supabase.functions.invoke(
           "search-patient-by-cpf",
@@ -262,10 +244,10 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
         // Check if patient exists and is active
         if (!searchError && patientSearchResult?.success && patientSearchResult?.patient) {
           const patient = patientSearchResult.patient;
-          console.log("[checkCpf] Patient found:", patient.name, "is_active:", patient.is_active);
+          console.log("[checkCpf] Paciente encontrado:", patient.name, "is_active:", patient.is_active);
           
           if (patient.id && patient.is_active) {
-            console.log("[checkCpf] CPF found as ACTIVE patient - BLOCKING form submission");
+            console.log("[checkCpf] CPF é PACIENTE ATIVO - BLOQUEANDO (já é membro)");
             setCpfExists(true);
             setCpfExistsType('paciente');
             setCpfChecking(false);
@@ -273,11 +255,31 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           }
         }
       } else {
-        console.log("[checkCpf] No clinic_id found for sindicato - skipping patient check");
+        console.log("[checkCpf] Sem clinic_id para sindicato - pulando verificação de patients");
       }
 
-      // If we get here, CPF doesn't exist
-      console.log("[checkCpf] CPF not found - allowing");
+      // SEGUNDO: Verificar solicitações pendentes em sindical_associados
+      // Só chega aqui se NÃO for paciente ativo
+      console.log("[checkCpf] 2. Verificando sindical_associados (solicitações pendentes)");
+      const { data: associadoCheck, error: associadoError } = await supabase.functions.invoke(
+        "check-sindical-associado-by-cpf",
+        {
+          body: { sindicatoId: sindicato.id, cpf: cleanCpf },
+        }
+      );
+
+      console.log("[checkCpf] associadoCheck:", associadoCheck, "error:", associadoError);
+
+      if (!associadoError && associadoCheck?.exists) {
+        console.log("[checkCpf] CPF encontrado em sindical_associados - BLOQUEANDO (solicitação pendente)");
+        setCpfExists(true);
+        setCpfExistsType('associado');
+        setCpfChecking(false);
+        return;
+      }
+
+      // Se chegou aqui, CPF não existe em nenhuma tabela
+      console.log("[checkCpf] CPF não encontrado - liberando formulário");
       setCpfExists(false);
       setCpfExistsType(null);
     } catch (error) {
