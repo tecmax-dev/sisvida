@@ -22,10 +22,12 @@ import {
   Users,
   UserX,
   Briefcase,
-  Phone
+  Phone,
+  Send,
 } from "lucide-react";
 import { UserDialog } from "@/components/users/UserDialog";
 import { UserAvatar } from "@/components/users/UserAvatar";
+import { SendUserWelcomeDialog } from "@/components/users/SendUserWelcomeDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -89,6 +91,8 @@ export default function UsersManagementPage() {
   const [selectedUser, setSelectedUser] = useState<ClinicUserWithStatus | null>(null);
   const [confirmingUserId, setConfirmingUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
+  const [welcomeUser, setWelcomeUser] = useState<ClinicUserWithStatus | null>(null);
 
   // Check if current user is admin of the clinic
   const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
@@ -180,6 +184,11 @@ export default function UsersManagementPage() {
     if (success) {
       fetchUsers();
     }
+  };
+
+  const handleSendWelcome = (clinicUser: ClinicUserWithStatus) => {
+    setWelcomeUser(clinicUser);
+    setWelcomeDialogOpen(true);
   };
 
   const filteredUsers = users.filter(u => 
@@ -495,6 +504,13 @@ export default function UsersManagementPage() {
                                 Confirmar e-mail
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem 
+                              onClick={() => handleSendWelcome(clinicUser)}
+                              className="text-primary"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Enviar Boas-Vindas
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -520,6 +536,22 @@ export default function UsersManagementPage() {
           profile: selectedUser.profile
         } : null}
         clinicId={currentClinic?.id || ''}
+      />
+
+      <SendUserWelcomeDialog
+        open={welcomeDialogOpen}
+        onClose={() => {
+          setWelcomeDialogOpen(false);
+          setWelcomeUser(null);
+        }}
+        user={welcomeUser ? {
+          user_id: welcomeUser.user_id,
+          email: welcomeUser.email || null,
+          name: welcomeUser.profile?.name || null,
+          phone: welcomeUser.profile?.phone || null,
+        } : null}
+        clinicId={currentClinic?.id || ''}
+        clinicName={currentClinic?.name || ''}
       />
     </div>
   );
