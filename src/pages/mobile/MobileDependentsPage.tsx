@@ -33,6 +33,10 @@ import {
 import { format, differenceInYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DependentInclusionForm } from "@/components/mobile/DependentInclusionForm";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Age limit for dependents (in years) - dependents over this age are automatically deactivated
+const DEPENDENT_MAX_AGE = 21;
 
 interface Dependent {
   id: string;
@@ -136,6 +140,20 @@ export default function MobileDependentsPage() {
     }
   };
 
+  const getAgeNumber = (birthDate: string | null): number | null => {
+    if (!birthDate) return null;
+    try {
+      return differenceInYears(new Date(), parseISO(birthDate));
+    } catch {
+      return null;
+    }
+  };
+
+  const isOverAgeLimit = (birthDate: string | null): boolean => {
+    const age = getAgeNumber(birthDate);
+    return age !== null && age > DEPENDENT_MAX_AGE;
+  };
+
   const isCardExpired = (expiresAt: string | null): boolean => {
     if (!expiresAt) return true;
     try {
@@ -159,6 +177,18 @@ export default function MobileDependentsPage() {
   };
 
   const getStatusBadge = (dependent: Dependent) => {
+    // Check if dependent is over age limit
+    const overAge = isOverAgeLimit(dependent.birth_date);
+    
+    if (overAge) {
+      return (
+        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Acima de {DEPENDENT_MAX_AGE} anos
+        </Badge>
+      );
+    }
+    
     if (!dependent.is_active) {
       return (
         <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
@@ -274,47 +304,64 @@ export default function MobileDependentsPage() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {dependents.map((dependent) => (
-                <Card
-                  key={dependent.id}
-                  className="overflow-hidden active:scale-[0.98] transition-transform"
-                  onClick={() => handleViewDependent(dependent)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                          <span className="text-emerald-700 font-semibold text-lg">
-                            {dependent.name.charAt(0)}
-                          </span>
+              {dependents.map((dependent) => {
+                const overAge = isOverAgeLimit(dependent.birth_date);
+                
+                return (
+                  <Card
+                    key={dependent.id}
+                    className={`overflow-hidden active:scale-[0.98] transition-transform ${overAge ? 'opacity-70 border-amber-200' : ''}`}
+                    onClick={() => handleViewDependent(dependent)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${overAge ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                            <span className={`font-semibold text-lg ${overAge ? 'text-amber-700' : 'text-emerald-700'}`}>
+                              {dependent.name.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className={`font-medium ${overAge ? 'text-muted-foreground' : 'text-foreground'}`}>
+                              {dependent.name}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {getRelationshipLabel(dependent.relationship)} •{" "}
+                              {getAge(dependent.birth_date)}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium text-foreground">{dependent.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {getRelationshipLabel(dependent.relationship)} •{" "}
-                            {getAge(dependent.birth_date)}
-                          </p>
-                        </div>
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </div>
 
-                    <div className="mt-3 flex items-center justify-between">
-                      {getStatusBadge(dependent)}
+                      <div className="mt-3 flex items-center justify-between">
+                        {getStatusBadge(dependent)}
 
-                      {dependent.card_number && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <CreditCard className="h-3 w-3" />
-                          <span>
-                            Carteira{" "}
-                            {isCardExpired(dependent.card_expires_at) ? "vencida" : "válida"}
-                          </span>
-                        </div>
+                        {dependent.card_number && !overAge && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <CreditCard className="h-3 w-3" />
+                            <span>
+                              Carteira{" "}
+                              {isCardExpired(dependent.card_expires_at) ? "vencida" : "válida"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Warning message for dependents over age limit */}
+                      {overAge && (
+                        <Alert className="mt-3 bg-amber-50 border-amber-200">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription className="text-xs text-amber-700">
+                            Dependente desativado automaticamente por ter mais de {DEPENDENT_MAX_AGE} anos de idade. 
+                            Não é permitido agendar consultas.
+                          </AlertDescription>
+                        </Alert>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -354,6 +401,18 @@ export default function MobileDependentsPage() {
 
           {selectedDependent && (
             <div className="space-y-4">
+              {/* Warning for dependents over age limit */}
+              {isOverAgeLimit(selectedDependent.birth_date) && (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-sm text-amber-700">
+                    <strong>Dependente desativado</strong><br />
+                    Este dependente possui mais de {DEPENDENT_MAX_AGE} anos de idade e foi desativado 
+                    automaticamente. Não é permitido agendar consultas.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Parentesco</p>
@@ -363,7 +422,9 @@ export default function MobileDependentsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Idade</p>
-                  <p className="font-medium">{getAge(selectedDependent.birth_date)}</p>
+                  <p className={`font-medium ${isOverAgeLimit(selectedDependent.birth_date) ? 'text-amber-700' : ''}`}>
+                    {getAge(selectedDependent.birth_date)}
+                  </p>
                 </div>
               </div>
 
