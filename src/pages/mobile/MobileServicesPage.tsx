@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useMobileAuth, PUBLIC_TAB_KEYS } from "@/hooks/useMobileAuth";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
+import { PUBLIC_TAB_KEYS } from "@/hooks/useMobileAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -44,16 +45,17 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { restoreSession, STORAGE_KEYS } from "@/hooks/useMobileSession";
 
-// Helper function to get session data synchronously from localStorage (fallback)
-// This is used in components that can't easily await for async session restoration
-function getSessionSync() {
-  return {
-    patientId: localStorage.getItem(STORAGE_KEYS.patientId) || localStorage.getItem(STORAGE_KEYS.backupPatientId),
-    clinicId: localStorage.getItem(STORAGE_KEYS.clinicId) || localStorage.getItem(STORAGE_KEYS.backupClinicId),
-    patientName: localStorage.getItem(STORAGE_KEYS.patientName) || localStorage.getItem(STORAGE_KEYS.backupPatientName),
-  };
+// Contexto interno para compartilhar session entre componentes filhos
+interface SessionContextType {
+  clinicId: string | null;
+  patientId: string | null;
+}
+
+const SessionContext = createContext<SessionContextType>({ clinicId: null, patientId: null });
+
+function useSession() {
+  return useContext(SessionContext);
 }
 
 // Service type definitions
@@ -86,23 +88,22 @@ interface CctCategory {
 }
 
 function ConvencoesContent() {
+  const { clinicId } = useSession();
   const [convencoes, setConvencoes] = useState<any[]>([]);
   const [categories, setCategories] = useState<CctCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (clinicId) {
+      loadData(clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [clinicId]);
 
-  const loadData = async () => {
+  const loadData = async (clinicId: string) => {
     try {
-      const session = getSessionSync();
-      const clinicId = session.clinicId;
-      if (!clinicId) {
-        setLoading(false);
-        return;
-      }
 
       // Fetch CCT categories
       const { data: catData } = await supabase
@@ -270,6 +271,7 @@ function ConvencoesContent() {
 // ============ DECLARAÇÕES - BASEADO EM BENEFÍCIOS DO SINDICATO ============
 function DeclaracoesContent() {
   const navigate = useNavigate();
+  const { clinicId, patientId } = useSession();
   const [benefits, setBenefits] = useState<any[]>([]);
   const [activeAuthorizations, setActiveAuthorizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -277,19 +279,15 @@ function DeclaracoesContent() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (clinicId && patientId) {
+      loadData(clinicId, patientId);
+    } else {
+      setLoading(false);
+    }
+  }, [clinicId, patientId]);
 
-  const loadData = async () => {
+  const loadData = async (clinicId: string, patientId: string) => {
     try {
-      const session = getSessionSync();
-      const clinicId = session.clinicId;
-      const patientId = session.patientId;
-      
-      if (!clinicId || !patientId) {
-        setLoading(false);
-        return;
-      }
 
       // Fetch benefits from union_benefits
       const { data: benefitsData, error: benefitsError } = await supabase
@@ -476,6 +474,7 @@ const iconMap: Record<string, any> = {
 };
 
 function ConveniosContent() {
+  const { clinicId } = useSession();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [categorias, setCategorias] = useState<ConvenioCategory[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
@@ -483,22 +482,19 @@ function ConveniosContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (clinicId) {
+      fetchData(clinicId);
+    } else {
+      setCategorias([]);
+      setConvenios([]);
+      setAppConvenios([]);
+      setLoading(false);
+    }
+  }, [clinicId]);
 
-  const fetchData = async () => {
+  const fetchData = async (clinicId: string) => {
     try {
       setLoading(true);
-      
-      const session = getSessionSync();
-      const clinicId = session.clinicId;
-      if (!clinicId) {
-        // Sem clínica selecionada no app mobile, não conseguimos filtrar os convênios.
-        setCategorias([]);
-        setConvenios([]);
-        setAppConvenios([]);
-        return;
-      }
       
       // Fetch categories
       const { data: catData, error: catError } = await supabase
@@ -714,6 +710,7 @@ const MONTH_NAMES = [
 ];
 
 function BoletosContent() {
+  const { patientId, clinicId } = useSession();
   const [boletos, setBoletos] = useState<BoletoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -721,24 +718,20 @@ function BoletosContent() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchBoletos();
-  }, []);
+    if (patientId && clinicId) {
+      fetchBoletos(patientId, clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [patientId, clinicId]);
 
   const normalizeAndCleanCpf = (cpf: string | null | undefined): string => {
     if (!cpf) return '';
     return cpf.replace(/\D/g, '');
   };
 
-  const fetchBoletos = async () => {
+  const fetchBoletos = async (patientId: string, clinicId: string) => {
     try {
-      const session = getSessionSync();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-      
-      if (!patientId || !clinicId) {
-        setLoading(false);
-        return;
-      }
 
       // 1. Get patient's CPF
       const { data: patientData, error: patientError } = await supabase
@@ -1044,21 +1037,20 @@ function BoletosContent() {
 
 // ============ DIRETORIA - DINÂMICO ============
 function DiretoriaContent() {
+  const { clinicId } = useSession();
   const [diretores, setDiretores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDiretoria();
-  }, []);
+    if (clinicId) {
+      loadDiretoria(clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [clinicId]);
 
-  const loadDiretoria = async () => {
+  const loadDiretoria = async (clinicId: string) => {
     try {
-      const session = getSessionSync();
-      const clinicId = session.clinicId;
-      if (!clinicId) {
-        setLoading(false);
-        return;
-      }
 
       const { data, error } = await supabase
         .from("union_app_content")
@@ -1131,21 +1123,20 @@ function DiretoriaContent() {
 
 // ============ DOCUMENTOS - DINÂMICO ============
 function DocumentosContent() {
+  const { clinicId } = useSession();
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDocumentos();
-  }, []);
+    if (clinicId) {
+      loadDocumentos(clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [clinicId]);
 
-  const loadDocumentos = async () => {
+  const loadDocumentos = async (clinicId: string) => {
     try {
-      const session = getSessionSync();
-      const clinicId = session.clinicId;
-      if (!clinicId) {
-        setLoading(false);
-        return;
-      }
 
       const { data, error } = await supabase
         .from("union_app_content")
@@ -1263,6 +1254,7 @@ function AtendimentosContent() {
 
 // ============ OUVIDORIA ============
 function OuvidoriaContent() {
+  const { clinicId, patientId } = useSession();
   const [mensagem, setMensagem] = useState("");
   const [tipo, setTipo] = useState("sugestao");
   const [enviando, setEnviando] = useState(false);
@@ -1275,22 +1267,18 @@ function OuvidoriaContent() {
       return;
     }
 
+    if (!clinicId) {
+      toast({ 
+        title: "Erro", 
+        description: "Sessão expirada. Faça login novamente.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setEnviando(true);
     
     try {
-      const session = getSessionSync();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-      const patientName = session.patientName;
-
-      if (!clinicId) {
-        toast({ 
-          title: "Erro", 
-          description: "Sessão expirada. Faça login novamente.",
-          variant: "destructive" 
-        });
-        return;
-      }
 
       // Buscar dados do paciente se não for anônimo
       let patientData = null;
@@ -1308,7 +1296,7 @@ function OuvidoriaContent() {
         .insert({
           clinic_id: clinicId,
           patient_id: isAnonimo ? null : patientId,
-          patient_name: isAnonimo ? null : (patientData?.name || patientName),
+          patient_name: isAnonimo ? null : patientData?.name,
           patient_cpf: isAnonimo ? null : patientData?.cpf,
           patient_phone: isAnonimo ? null : patientData?.phone,
           patient_email: isAnonimo ? null : patientData?.email,
@@ -1415,8 +1403,11 @@ function OuvidoriaContent() {
 export default function MobileServicesPage() {
   const navigate = useNavigate();
   const { serviceId } = useParams<{ serviceId?: string }>();
-  const { isLoggedIn } = useMobileAuth();
+  const { isLoggedIn, clinicId, patientId } = useMobileAuth();
   const [selectedService, setSelectedService] = useState<ServiceConfig | null>(null);
+
+  // Prover dados de sessão para componentes filhos via Context
+  const sessionValue = { clinicId, patientId };
 
   // Determine the correct back navigation based on login status
   const getBackRoute = () => {
@@ -1465,9 +1456,43 @@ export default function MobileServicesPage() {
   // Service detail view
   if (selectedService) {
     return (
+      <SessionContext.Provider value={sessionValue}>
+        <div className="min-h-screen bg-muted flex flex-col">
+          {/* Header */}
+          <header className={`${selectedService.color} text-white p-4 sticky top-0 z-50`}>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(getBackRoute())}
+                className="text-white hover:bg-white/20"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <selectedService.icon className="h-6 w-6" />
+                <h1 className="text-xl font-bold">{selectedService.title}</h1>
+              </div>
+            </div>
+          </header>
+
+          {/* Content */}
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="p-4">
+              {renderServiceContent()}
+            </div>
+          </ScrollArea>
+        </div>
+      </SessionContext.Provider>
+    );
+  }
+
+  // Services list view
+  return (
+    <SessionContext.Provider value={sessionValue}>
       <div className="min-h-screen bg-muted flex flex-col">
         {/* Header */}
-        <header className={`${selectedService.color} text-white p-4 sticky top-0 z-50`}>
+        <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -1477,61 +1502,31 @@ export default function MobileServicesPage() {
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
-            <div className="flex items-center gap-3">
-              <selectedService.icon className="h-6 w-6" />
-              <h1 className="text-xl font-bold">{selectedService.title}</h1>
-            </div>
+            <h1 className="text-xl font-bold">Nossos Serviços</h1>
           </div>
         </header>
 
-        {/* Content */}
-        <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="p-4">
-            {renderServiceContent()}
+        {/* Services Grid */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-2 gap-3">
+            {services.map((service) => (
+              <Card
+                key={service.id}
+                className="border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/app/servicos/${service.id}`)}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className={`w-14 h-14 mx-auto ${service.color} rounded-xl flex items-center justify-center mb-3`}>
+                    <service.icon className="h-7 w-7 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-sm">{service.title}</h4>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </ScrollArea>
-      </div>
-    );
-  }
-
-  // Services list view
-  return (
-    <div className="min-h-screen bg-muted flex flex-col">
-      {/* Header */}
-      <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(getBackRoute())}
-            className="text-white hover:bg-white/20"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
-          <h1 className="text-xl font-bold">Nossos Serviços</h1>
-        </div>
-      </header>
-
-      {/* Services Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-2 gap-3">
-          {services.map((service) => (
-            <Card
-              key={service.id}
-              className="border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/app/servicos/${service.id}`)}
-            >
-              <CardContent className="p-4 text-center">
-                <div className={`w-14 h-14 mx-auto ${service.color} rounded-xl flex items-center justify-center mb-3`}>
-                  <service.icon className="h-7 w-7 text-white" />
-                </div>
-                <h4 className="font-semibold text-sm">{service.title}</h4>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </div>
-    </div>
+    </SessionContext.Provider>
   );
 }
