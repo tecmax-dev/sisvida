@@ -67,6 +67,24 @@ export default function MobileAuthPage() {
   // Apply PWA branding for the clinic
   useDynamicPWA();
 
+  // Load clinic data for branding
+  useEffect(() => {
+    const loadClinicData = async () => {
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("name, logo_url")
+        .eq("id", TARGET_CLINIC_ID)
+        .single();
+      
+      console.log("[MobileAuth] Clinic data:", data, "Error:", error);
+      
+      if (data) {
+        setClinicData(data);
+      }
+    };
+    loadClinicData();
+  }, []);
+
   // Redirect if already logged in (SOMENTE após initialized=true)
   useEffect(() => {
     // CRÍTICO: Aguardar initialized antes de qualquer redirect
@@ -88,24 +106,6 @@ export default function MobileAuthPage() {
       </div>
     );
   }
-
-  // Load clinic data for branding
-  useEffect(() => {
-    const loadClinicData = async () => {
-      const { data, error } = await supabase
-        .from("clinics")
-        .select("name, logo_url")
-        .eq("id", TARGET_CLINIC_ID)
-        .single();
-      
-      console.log("[MobileAuth] Clinic data:", data, "Error:", error);
-      
-      if (data) {
-        setClinicData(data);
-      }
-    };
-    loadClinicData();
-  }, []);
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCPF(e.target.value);
