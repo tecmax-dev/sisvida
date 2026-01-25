@@ -8,11 +8,11 @@
  * A decisão já foi feita ANTES do React renderizar.
  */
 
-import { Suspense, lazy, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
 import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
-import { mobileBootstrap, getBootstrapResult, BootstrapResult } from "@/mobileBootstrap";
+import { getBootstrapResult } from "@/mobileBootstrap";
 import { Loader2 } from "lucide-react";
 
 // Lazy load mobile pages
@@ -50,41 +50,15 @@ function BootstrapLoading() {
 }
 
 /**
- * Componente que aplica a rota inicial do bootstrap
+ * Componente que renderiza rotas - Bootstrap já foi executado no main.tsx
+ * Não há loading aqui pois a decisão já foi tomada ANTES do React
  */
 function MobileRouterContent() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [ready, setReady] = useState(false);
-  const [bootstrapData, setBootstrapData] = useState<BootstrapResult | null>(null);
-
-  useEffect(() => {
-    // Verificar se já temos resultado do bootstrap
-    const cached = getBootstrapResult();
-    if (cached) {
-      console.log("[MobileRouter] Usando bootstrap em cache:", cached.initialRoute);
-      setBootstrapData(cached);
-      setReady(true);
-      return;
-    }
-    
-    // Executar bootstrap se necessário
-    mobileBootstrap().then((result) => {
-      console.log("[MobileRouter] Bootstrap completo:", result.initialRoute);
-      setBootstrapData(result);
-      setReady(true);
-      
-      // Se estamos na raiz /app, navegar para a rota inicial
-      if (location.pathname === "/app" || location.pathname === "/app/") {
-        navigate(result.initialRoute, { replace: true });
-      }
-    });
-  }, []);
-
-  // Aguardar bootstrap completar
-  if (!ready || !bootstrapData) {
-    return <BootstrapLoading />;
-  }
+  // Bootstrap já foi executado em main.tsx - apenas pegar resultado do cache
+  const bootstrapData = getBootstrapResult();
+  
+  // Se não temos dados do bootstrap (caso raro), usar fallback seguro
+  const initialRoute = bootstrapData?.initialRoute || "/app/login";
 
   return (
     <Suspense fallback={<BootstrapLoading />}>
@@ -92,7 +66,7 @@ function MobileRouterContent() {
         {/* Rota index redireciona baseado no bootstrap */}
         <Route 
           index 
-          element={<Navigate to={bootstrapData.initialRoute} replace />} 
+          element={<Navigate to={initialRoute} replace />} 
         />
         
         {/* Rotas públicas (não requerem autenticação) */}
@@ -127,7 +101,7 @@ function MobileRouterContent() {
         <Route path="servicos/declaracoes" element={<MobileAuthorizationsPage />} />
         
         {/* Aliases e redirects */}
-        <Route path="splash" element={<Navigate to={bootstrapData.initialRoute} replace />} />
+        <Route path="splash" element={<Navigate to={initialRoute} replace />} />
         <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
       </Routes>
     </Suspense>
