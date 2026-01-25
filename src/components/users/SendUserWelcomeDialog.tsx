@@ -54,9 +54,28 @@ function generateTempPassword(): string {
 
 function formatPhoneInput(value: string): string {
   const digits = value.replace(/\D/g, "");
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+
+  // Suporta números armazenados/colados com DDI 55 (ex.: 55 + DDD + número)
+  // Regra: considerar DDI apenas quando houver mais de 11 dígitos totais.
+  const hasCountryCode = digits.startsWith("55") && digits.length > 11;
+  const national = (hasCountryCode ? digits.slice(2) : digits).slice(0, 11); // 10/11 dígitos (DDD+8/9)
+
+  if (national.length === 0) return "";
+  if (national.length <= 2) return hasCountryCode ? `+55 ${national}` : national;
+
+  const ddd = national.slice(0, 2);
+  const number = national.slice(2);
+
+  if (number.length === 0) return hasCountryCode ? `+55 (${ddd})` : `(${ddd})`;
+  if (number.length <= 4) {
+    const partial = `(${ddd}) ${number}`;
+    return hasCountryCode ? `+55 ${partial}` : partial;
+  }
+
+  const head = number.slice(0, -4);
+  const tail = number.slice(-4);
+  const formatted = `(${ddd}) ${head}-${tail}`;
+  return hasCountryCode ? `+55 ${formatted}` : formatted;
 }
 
 function formatWelcomeMessage(
@@ -102,6 +121,13 @@ export function SendUserWelcomeDialog({
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [activeTab, setActiveTab] = useState("email");
+
+  const whatsappPhoneDigits = phone.replace(/\D/g, "");
+  const whatsappPhoneE164Preview = whatsappPhoneDigits
+    ? whatsappPhoneDigits.startsWith("55")
+      ? `+${whatsappPhoneDigits}`
+      : `+55${whatsappPhoneDigits}`
+    : "";
 
   useEffect(() => {
     if (open && user) {
@@ -348,6 +374,11 @@ export function SendUserWelcomeDialog({
                     disabled={isSending}
                   />
                 </div>
+                {whatsappPhoneE164Preview ? (
+                  <p className="text-xs text-muted-foreground">
+                    Será enviado para: <span className="font-mono">{whatsappPhoneE164Preview}</span>
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
