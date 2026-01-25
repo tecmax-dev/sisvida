@@ -1,12 +1,11 @@
 /**
  * SPLASH SCREEN - PONTO ÚNICO DE DECISÃO DE AUTENTICAÇÃO
  * 
- * Esta é a ÚNICA tela autorizada a:
- * 1. Verificar sessão (getSession + onAuthStateChange)
- * 2. Decidir navegação (Home ou Login)
- * 3. Redirecionar usuário
- * 
- * NENHUMA outra tela pode executar essa lógica.
+ * GARANTIAS:
+ * 1. Sempre finaliza o loading (timeout de 5s como fallback)
+ * 2. Navega apenas UMA vez
+ * 3. Não depende de onAuthStateChange para decisão inicial
+ * 4. getSession() é chamado uma única vez
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -16,77 +15,105 @@ import { restoreSession } from "@/hooks/useMobileSession";
 import { Loader2 } from "lucide-react";
 
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+const MAX_INIT_TIMEOUT = 5000; // 5 segundos máximo
 
 export default function MobileSplashScreen() {
   const navigate = useNavigate();
-  const hasDecided = useRef(false);
+  const hasNavigated = useRef(false);
+  const initStarted = useRef(false);
   const [clinicLogo, setClinicLogo] = useState<string | null>(null);
 
+  // Função de navegação única - só executa uma vez
+  const navigateTo = (path: string) => {
+    if (hasNavigated.current) {
+      console.log("[SplashScreen] Navegação já realizada, ignorando:", path);
+      return;
+    }
+    hasNavigated.current = true;
+    console.log("[SplashScreen] Navegando para:", path);
+    navigate(path, { replace: true });
+  };
+
   useEffect(() => {
-    // Carregar logo da clínica para exibir no splash
-    const loadClinicLogo = async () => {
-      const { data } = await supabase
-        .from("clinics")
-        .select("logo_url")
-        .eq("id", TARGET_CLINIC_ID)
-        .single();
-      
-      if (data?.logo_url) {
-        setClinicLogo(data.logo_url);
+    // Prevenir execução dupla
+    if (initStarted.current) return;
+    initStarted.current = true;
+
+    console.log("[SplashScreen] Iniciando verificação de sessão...");
+
+    // Carregar logo da clínica (não bloqueia navegação)
+    supabase
+      .from("clinics")
+      .select("logo_url")
+      .eq("id", TARGET_CLINIC_ID)
+      .single()
+      .then(({ data }) => {
+        if (data?.logo_url) setClinicLogo(data.logo_url);
+      });
+
+    // Timeout de segurança - SEMPRE finaliza após 5s
+    const timeoutId = setTimeout(() => {
+      if (!hasNavigated.current) {
+        console.warn("[SplashScreen] TIMEOUT: Forçando navegação para login");
+        navigateTo("/app/login");
       }
-    };
-    loadClinicLogo();
-  }, []);
+    }, MAX_INIT_TIMEOUT);
 
-  useEffect(() => {
-    // Função única de decisão - só executa uma vez
+    // Função principal de decisão
     const decideNavigation = async () => {
-      if (hasDecided.current) return;
-      
-      console.log("[SplashScreen] Iniciando verificação de sessão...");
-
       try {
-        // 1. Tentar restaurar sessão Supabase JWT
-        const { data: { session } } = await supabase.auth.getSession();
+        // 1. Verificar sessão Supabase JWT (única chamada)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
+        if (sessionError) {
+          console.error("[SplashScreen] Erro ao obter sessão:", sessionError);
+          // Continuar para fallback local
+        }
+
         if (session?.user) {
           const metadata = session.user.user_metadata;
           const appMetadata = session.user.app_metadata;
           const patientId = metadata?.patient_id || appMetadata?.patient_id;
           
           if (patientId) {
-            console.log("[SplashScreen] Sessão JWT válida encontrada, navegando para Home");
-            hasDecided.current = true;
-            navigate("/app/home", { replace: true });
+            console.log("[SplashScreen] Sessão JWT válida, patient_id:", patientId);
+            clearTimeout(timeoutId);
+            navigateTo("/app/home");
             return;
           }
+          console.log("[SplashScreen] Sessão JWT sem patient_id, verificando local...");
         }
 
         // 2. Fallback: verificar localStorage/IndexedDB
         const localSession = await restoreSession();
         
         if (localSession.isLoggedIn && localSession.patientId) {
-          console.log("[SplashScreen] Sessão local válida encontrada, navegando para Home");
-          hasDecided.current = true;
-          navigate("/app/home", { replace: true });
+          console.log("[SplashScreen] Sessão local válida:", localSession.patientName);
+          clearTimeout(timeoutId);
+          navigateTo("/app/home");
           return;
         }
 
-        // 3. Nenhuma sessão encontrada - navegar para Login
-        console.log("[SplashScreen] Nenhuma sessão válida, navegando para Login");
-        hasDecided.current = true;
-        navigate("/app/login", { replace: true });
+        // 3. Nenhuma sessão encontrada
+        console.log("[SplashScreen] Nenhuma sessão válida encontrada");
+        clearTimeout(timeoutId);
+        navigateTo("/app/login");
 
       } catch (error) {
-        console.error("[SplashScreen] Erro ao verificar sessão:", error);
-        // Em caso de erro, ir para Login como fallback seguro
-        hasDecided.current = true;
-        navigate("/app/login", { replace: true });
+        console.error("[SplashScreen] Erro durante verificação:", error);
+        clearTimeout(timeoutId);
+        // Em caso de erro, ir para login como fallback seguro
+        navigateTo("/app/login");
       }
     };
 
-    // Executar verificação
+    // Executar verificação imediatamente
     decideNavigation();
+
+    // Cleanup
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [navigate]);
 
   // Renderizar splash enquanto verifica sessão
