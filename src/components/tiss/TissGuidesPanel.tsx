@@ -30,7 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, FileText, Eye, Trash2, Search } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface TissGuidesPanelProps {
@@ -331,7 +331,7 @@ export function TissGuidesPanel({ clinicId }: TissGuidesPanelProps) {
                     <TableCell>{guide.insurance_plan?.name || "-"}</TableCell>
                     <TableCell>
                       {guide.execution_date
-                        ? format(new Date(guide.execution_date), "dd/MM/yyyy", { locale: ptBR })
+                        ? format(parseISO(guide.execution_date), "dd/MM/yyyy", { locale: ptBR })
                         : "-"}
                     </TableCell>
                     <TableCell className="font-mono">

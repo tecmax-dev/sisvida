@@ -127,7 +127,7 @@ export default function MobileLegalAppointmentsPage() {
         const isFinished = ["cancelled", "attended", "completed", "no_show"].includes(apt.status);
         return isUpcoming && !isFinished;
       })
-      .sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime());
+      .sort((a, b) => parseISO(a.appointment_date).getTime() - parseISO(b.appointment_date).getTime());
   }, [appointments]);
 
   const historyAppointments = useMemo(() => {

@@ -42,7 +42,7 @@ import {
   AlertTriangle,
   FileCheck,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 // Service type definitions
@@ -900,7 +900,7 @@ function BoletosContent() {
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              Vencimento: {format(new Date(boleto.due_date), "dd/MM/yyyy")}
+              Vencimento: {format(parseISO(boleto.due_date), "dd/MM/yyyy")}
             </p>
             {boleto.status === "paid" && boleto.paid_at && (
               <p className="text-xs text-emerald-600 font-medium">

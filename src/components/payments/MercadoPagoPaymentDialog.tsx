@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Copy, Check, QrCode, FileText, ExternalLink } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { parseISO, format } from "date-fns";
 
 interface MercadoPagoPaymentDialogProps {
   open: boolean;
@@ -277,7 +278,7 @@ export function MercadoPagoPaymentDialog({
                 )}
 
                 <p className="text-sm text-muted-foreground text-center">
-                  Vencimento: {new Date(paymentResult.boleto_due_date).toLocaleDateString('pt-BR')}
+                  Vencimento: {format(parseISO(paymentResult.boleto_due_date), "dd/MM/yyyy")}
                 </p>
               </>
             )}
