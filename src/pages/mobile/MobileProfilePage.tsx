@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { 
   ArrowLeft, 
@@ -12,9 +11,6 @@ import {
   Trash2,
   HelpCircle,
   Loader2,
-  Users,
-  CreditCard,
-  Settings,
 } from "lucide-react";
 import {
   AlertDialog,
