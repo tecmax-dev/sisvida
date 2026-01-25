@@ -1,12 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { Outlet } from "react-router-dom";
+
+interface MobileAppLayoutProps {
+  children?: ReactNode;
+}
 
 /**
  * Layout wrapper que força o modo claro para todas as rotas do app mobile,
  * independente da preferência do usuário no painel administrativo
  */
-export function MobileAppLayout() {
+export function MobileAppLayout({ children }: MobileAppLayoutProps) {
   const { setTheme, resolvedTheme } = useTheme();
 
   useEffect(() => {
@@ -24,5 +28,6 @@ export function MobileAppLayout() {
     // Cleanup: não restaura automaticamente para não conflitar com preferência do usuário
   }, [resolvedTheme, setTheme]);
 
-  return <Outlet />;
+  // Se children foi passado, renderiza children; senão usa Outlet para nested routes
+  return children ? <>{children}</> : <Outlet />;
 }

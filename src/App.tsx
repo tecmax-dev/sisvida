@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoadingFallback } from "@/components/ui/loading-fallback";
@@ -14,6 +13,7 @@ import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDash
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { UnionBudgetLegacyRedirect } from "@/components/routing/UnionBudgetLegacyRedirect";
 import { GlobalBackButton } from "@/components/layout/GlobalBackButton";
+import { MobileRouter } from "@/components/mobile/MobileRouter";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -137,8 +137,6 @@ import HomologacaoBloqueiosPage from "./pages/dashboard/homologacao/HomologacaoB
 import HomologacaoConfigPage from "./pages/dashboard/homologacao/HomologacaoConfigPage";
 // Union Module pages
 import { UnionModuleLayout } from "./components/union/UnionModuleLayout";
-// Mobile App Layout (força modo claro)
-import { MobileAppLayout } from "./components/mobile/MobileAppLayout";
 import UnionDashboard from "./pages/union/UnionDashboard";
 import UnionBudgetPage from "./pages/union/budget/UnionBudgetPage";
 import UnionBudgetDetailPage from "./pages/union/budget/UnionBudgetDetailPage";
@@ -205,31 +203,7 @@ import UnionEntitiesPage from "./pages/admin/UnionEntitiesPage";
 // Login exclusivo para entidades sindicais
 const UnionEntityLoginPage = lazy(() => import("./pages/UnionEntityLoginPage"));
 
-// Mobile App Pages
-const MobileSplashScreen = lazy(() => import("./pages/mobile/MobileSplashScreen"));
-const MobileWelcomePage = lazy(() => import("./pages/mobile/MobileWelcomePage"));
-const MobileAuthPage = lazy(() => import("./pages/mobile/MobileAuthPage"));
-const MobileHomePage = lazy(() => import("./pages/mobile/MobileHomePage"));
-const MobilePublicHomePage = lazy(() => import("./pages/mobile/MobilePublicHomePage"));
-const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointmentsPage"));
-const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
-const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
-const MobilePasswordResetPage = lazy(() => import("./pages/mobile/MobilePasswordResetPage"));
-const MobileDependentsPage = lazy(() => import("./pages/mobile/MobileDependentsPage"));
-const MobileChangePasswordPage = lazy(() => import("./pages/mobile/MobileChangePasswordPage"));
-const MobileCardPage = lazy(() => import("./pages/mobile/MobileCardPage"));
-const MobileServicesPage = lazy(() => import("./pages/mobile/MobileServicesPage"));
-const MobileCommunicationPage = lazy(() => import("./pages/mobile/MobileCommunicationPage"));
-const MobileHelpPage = lazy(() => import("./pages/mobile/MobileHelpPage"));
-const MobileFirstAccessPage = lazy(() => import("./pages/mobile/MobileFirstAccessPage"));
-const MobileFAQPage = lazy(() => import("./pages/mobile/MobileFAQPage"));
-const MobileAboutPage = lazy(() => import("./pages/mobile/MobileAboutPage"));
-const MobileFiliacaoPage = lazy(() => import("./pages/mobile/MobileFiliacaoPage"));
-const MobileLegalBookingPage = lazy(() => import("./pages/mobile/MobileLegalBookingPage"));
-const MobileLegalAppointmentsPage = lazy(() => import("./pages/mobile/MobileLegalAppointmentsPage"));
-const MobileAuthorizationsPage = lazy(() => import("./pages/mobile/MobileAuthorizationsPage"));
-const MobileCardRenewalPage = lazy(() => import("./pages/mobile/MobileCardRenewalPage"));
-const MobileInstallPage = lazy(() => import("./pages/mobile/MobileInstallPage"));
+// Mobile App Pages - agora gerenciado pelo MobileRouter
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -327,7 +301,7 @@ const App = () => (
                 <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
                 <Route path="/sindical/filiacao/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
-                <Route path="/sindicato/instalar" element={<MobileInstallPage />} />
+                <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
                 <Route path="/entidade-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/acessos" element={<PortalAccessPage />} />
@@ -571,41 +545,8 @@ const App = () => (
                   <Route path="juridico/despesas" element={<UnionLegalExpensesPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
                 </Route>
-                {/* Mobile App Routes - sempre modo claro */}
-                <Route path="/app" element={<MobileAuthProvider><MobileAppLayout /></MobileAuthProvider>}>
-                  {/* SplashScreen é o ponto de entrada - decide para onde navegar */}
-                  <Route index element={<MobileSplashScreen />} />
-                  <Route path="splash" element={<MobileSplashScreen />} />
-                  <Route path="welcome" element={<MobileWelcomePage />} />
-                  <Route path="login" element={<MobileAuthPage />} />
-                  <Route path="home" element={<MobileHomePage />} />
-                  <Route path="home-publico" element={<MobilePublicHomePage />} />
-                  <Route path="agendamentos" element={<MobileAppointmentsPage />} />
-                  <Route path="agendamentos-juridicos" element={<MobileLegalAppointmentsPage />} />
-                  <Route path="agendar" element={<MobileBookingPage />} />
-                  <Route path="perfil" element={<MobileProfilePage />} />
-                  <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
-                  <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
-                  <Route path="dependentes" element={<MobileDependentsPage />} />
-                  <Route path="alterar-senha" element={<MobileChangePasswordPage />} />
-                  <Route path="carteirinha" element={<MobileCardPage />} />
-                  <Route path="servicos" element={<MobileServicesPage />} />
-                  <Route path="servicos/:serviceId" element={<MobileServicesPage />} />
-                  <Route path="comunicacao" element={<MobileCommunicationPage />} />
-                  <Route path="comunicacao/:mediaType" element={<MobileCommunicationPage />} />
-                  <Route path="ajuda" element={<MobileHelpPage />} />
-                  <Route path="faq" element={<MobileFAQPage />} />
-                  <Route path="sobre" element={<MobileAboutPage />} />
-                  <Route path="filiacao" element={<MobileFiliacaoPage />} />
-                  <Route path="agendar-juridico" element={<MobileLegalBookingPage />} />
-                  <Route path="autorizacoes" element={<MobileAuthorizationsPage />} />
-                  <Route path="atualizar-carteirinha" element={<MobileCardRenewalPage />} />
-                  <Route path="servicos/autorizacoes" element={<MobileAuthorizationsPage />} />
-                  <Route path="servicos/declaracoes" element={<MobileAuthorizationsPage />} />
-                  <Route path="instalar" element={<MobileInstallPage />} />
-                  {/* Alias para evitar 404 por diferença de nomenclatura */}
-                  <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
-                </Route>
+                {/* Mobile App Routes - gerenciado pelo MobileRouter com bootstrap imperativo */}
+                <Route path="/app/*" element={<MobileRouter />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>

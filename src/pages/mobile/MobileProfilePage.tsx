@@ -24,6 +24,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
+import { clearBootstrapCache } from "@/mobileBootstrap";
+import { clearSession } from "@/hooks/useMobileSession";
 
 interface PatientData {
   id: string;
@@ -97,13 +99,28 @@ export default function MobileProfilePage() {
 
   /**
    * LOGOUT EXPLÍCITO - Único ponto de encerramento de sessão
-   * Limpa Supabase JWT + localStorage + IndexedDB
-   * Redireciona para Login
+   * Limpa Supabase JWT + localStorage + IndexedDB + bootstrap cache
+   * Faz HARD RELOAD para garantir estado limpo
    */
   const handleSignOut = async () => {
-    console.log("[MobileProfile] Executando logout explícito...");
-    await logout();
-    navigate("/app/login", { replace: true });
+    console.log("[MobileProfile] Executando logout explícito com hard reload...");
+    
+    try {
+      // 1. Limpar sessão Supabase
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (err) {
+      console.warn("[MobileProfile] Erro no signOut Supabase:", err);
+    }
+    
+    // 2. Limpar localStorage/IndexedDB
+    await clearSession();
+    
+    // 3. Limpar cache do bootstrap
+    clearBootstrapCache();
+    
+    // 4. Hard reload para login - garante estado completamente limpo
+    console.log("[MobileProfile] Redirecionando para login com hard reload...");
+    window.location.href = "/app/login";
   };
 
   const handleDeleteAccountRequest = () => {
