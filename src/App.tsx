@@ -13,7 +13,8 @@ import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDash
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { UnionBudgetLegacyRedirect } from "@/components/routing/UnionBudgetLegacyRedirect";
 import { GlobalBackButton } from "@/components/layout/GlobalBackButton";
-import { MobileRouter } from "@/components/mobile/MobileRouter";
+import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
+import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -74,6 +75,31 @@ const ApresentacaoEcliniPage = lazy(() => import("./pages/ApresentacaoEcliniPage
 const TutorialSindicatoPage = lazy(() => import("./pages/TutorialSindicatoPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
+
+// Mobile App Pages - lazy load
+const MobileWelcomePage = lazy(() => import("./pages/mobile/MobileWelcomePage"));
+const MobileAuthPage = lazy(() => import("./pages/mobile/MobileAuthPage"));
+const MobileHomePage = lazy(() => import("./pages/mobile/MobileHomePage"));
+const MobilePublicHomePage = lazy(() => import("./pages/mobile/MobilePublicHomePage"));
+const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointmentsPage"));
+const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
+const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
+const MobilePasswordResetPage = lazy(() => import("./pages/mobile/MobilePasswordResetPage"));
+const MobileDependentsPage = lazy(() => import("./pages/mobile/MobileDependentsPage"));
+const MobileChangePasswordPage = lazy(() => import("./pages/mobile/MobileChangePasswordPage"));
+const MobileCardPage = lazy(() => import("./pages/mobile/MobileCardPage"));
+const MobileServicesPage = lazy(() => import("./pages/mobile/MobileServicesPage"));
+const MobileCommunicationPage = lazy(() => import("./pages/mobile/MobileCommunicationPage"));
+const MobileHelpPage = lazy(() => import("./pages/mobile/MobileHelpPage"));
+const MobileFirstAccessPage = lazy(() => import("./pages/mobile/MobileFirstAccessPage"));
+const MobileFAQPage = lazy(() => import("./pages/mobile/MobileFAQPage"));
+const MobileAboutPage = lazy(() => import("./pages/mobile/MobileAboutPage"));
+const MobileFiliacaoPage = lazy(() => import("./pages/mobile/MobileFiliacaoPage"));
+const MobileLegalBookingPage = lazy(() => import("./pages/mobile/MobileLegalBookingPage"));
+const MobileLegalAppointmentsPage = lazy(() => import("./pages/mobile/MobileLegalAppointmentsPage"));
+const MobileAuthorizationsPage = lazy(() => import("./pages/mobile/MobileAuthorizationsPage"));
+const MobileCardRenewalPage = lazy(() => import("./pages/mobile/MobileCardRenewalPage"));
+const MobileInstallPage = lazy(() => import("./pages/mobile/MobileInstallPage"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -545,8 +571,50 @@ const App = () => (
                   <Route path="juridico/despesas" element={<UnionLegalExpensesPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
                 </Route>
-                {/* Mobile App Routes - gerenciado pelo MobileRouter com bootstrap imperativo */}
-                <Route path="/app/*" element={<MobileRouter />} />
+                {/* Mobile App Routes - Rotas fixas declarativas (decisão de navegação feita no bootstrap imperativo) */}
+                <Route
+                  path="/app"
+                  element={
+                    <MobileAuthProvider>
+                      <MobileAppLayout />
+                    </MobileAuthProvider>
+                  }
+                >
+                  {/* Rotas públicas (não requerem autenticação) */}
+                  <Route index element={<MobilePublicHomePage />} />
+                  <Route path="welcome" element={<MobileWelcomePage />} />
+                  <Route path="login" element={<MobileAuthPage />} />
+                  <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
+                  <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
+                  <Route path="home-publico" element={<MobilePublicHomePage />} />
+                  <Route path="instalar" element={<MobileInstallPage />} />
+                  <Route path="faq" element={<MobileFAQPage />} />
+                  <Route path="sobre" element={<MobileAboutPage />} />
+                  <Route path="filiacao" element={<MobileFiliacaoPage />} />
+                  
+                  {/* Rotas autenticadas */}
+                  <Route path="home" element={<MobileHomePage />} />
+                  <Route path="agendamentos" element={<MobileAppointmentsPage />} />
+                  <Route path="agendamentos-juridicos" element={<MobileLegalAppointmentsPage />} />
+                  <Route path="agendar" element={<MobileBookingPage />} />
+                  <Route path="perfil" element={<MobileProfilePage />} />
+                  <Route path="dependentes" element={<MobileDependentsPage />} />
+                  <Route path="alterar-senha" element={<MobileChangePasswordPage />} />
+                  <Route path="carteirinha" element={<MobileCardPage />} />
+                  <Route path="servicos" element={<MobileServicesPage />} />
+                  <Route path="servicos/:serviceId" element={<MobileServicesPage />} />
+                  <Route path="comunicacao" element={<MobileCommunicationPage />} />
+                  <Route path="comunicacao/:mediaType" element={<MobileCommunicationPage />} />
+                  <Route path="ajuda" element={<MobileHelpPage />} />
+                  <Route path="agendar-juridico" element={<MobileLegalBookingPage />} />
+                  <Route path="autorizacoes" element={<MobileAuthorizationsPage />} />
+                  <Route path="atualizar-carteirinha" element={<MobileCardRenewalPage />} />
+                  <Route path="servicos/autorizacoes" element={<MobileAuthorizationsPage />} />
+                  <Route path="servicos/declaracoes" element={<MobileAuthorizationsPage />} />
+                  
+                  {/* Aliases e redirects */}
+                  <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>
