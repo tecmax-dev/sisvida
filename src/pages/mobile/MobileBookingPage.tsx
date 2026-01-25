@@ -27,6 +27,7 @@ import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, getDay, 
 import { ptBR } from "date-fns/locale";
 import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 import { Badge } from "@/components/ui/badge";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
 const dayMap: Record<number, string> = {
@@ -121,10 +122,12 @@ export default function MobileBookingPage() {
 
   const loadInitialData = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = await restoreSession();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
 
       if (!patientId || !clinicId) {
+        console.log("[MobileBooking] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }
@@ -337,8 +340,9 @@ export default function MobileBookingPage() {
     setSubmitting(true);
 
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = await restoreSession();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
       const professional = professionals.find(p => p.id === selectedProfessionalId);
       
       // Get the duration from the applicable block for this date

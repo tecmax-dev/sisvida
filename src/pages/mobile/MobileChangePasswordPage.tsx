@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   AlertTriangle,
 } from "lucide-react";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 export default function MobileChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -64,9 +65,12 @@ export default function MobileChangePasswordPage() {
     setLoading(true);
 
     try {
-      const patientId = localStorage.getItem("mobile_patient_id");
+      // Use robust session restoration
+      const session = await restoreSession();
+      const patientId = session.patientId;
 
       if (!patientId) {
+        console.log("[MobileChangePassword] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

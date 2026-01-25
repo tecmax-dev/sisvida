@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, parseISO, isPast, isToday, isFuture, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface Appointment {
   id: string;
@@ -94,10 +95,13 @@ export default function MobileAppointmentsPage() {
 
   const loadAppointments = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      // Use robust session restoration
+      const session = await restoreSession();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
 
       if (!patientId || !clinicId) {
+        console.log("[MobileAppointments] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

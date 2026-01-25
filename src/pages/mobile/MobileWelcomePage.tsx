@@ -5,6 +5,7 @@ import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { MobileFiliacaoForm } from "@/components/mobile/MobileFiliacaoForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
@@ -14,16 +15,19 @@ export default function MobileWelcomePage() {
   // Apply PWA branding (favicon, manifest, meta tags) for the clinic
   useDynamicPWA();
 
-  // Check if user already has a valid session
+  // Check if user already has a valid session (using robust restoration)
   useEffect(() => {
-    const patientId = localStorage.getItem('mobile_patient_id');
-    if (patientId) {
-      // User is already logged in, redirect to home
-      navigate("/app/home", { replace: true });
-    } else {
-      // User is not logged in, redirect to public home
-      navigate("/app", { replace: true });
-    }
+    const checkSession = async () => {
+      const session = await restoreSession();
+      if (session.isLoggedIn) {
+        // User is already logged in, redirect to home
+        navigate("/app/home", { replace: true });
+      } else {
+        // User is not logged in, redirect to public home
+        navigate("/app", { replace: true });
+      }
+    };
+    checkSession();
   }, [navigate]);
 
   // Show loading while checking session

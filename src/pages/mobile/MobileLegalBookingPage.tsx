@@ -27,6 +27,7 @@ import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, addDays,
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface LegalProfessional {
   id: string;

@@ -24,6 +24,7 @@ import {
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface PatientData {
   id: string;
@@ -65,9 +66,12 @@ export default function MobileCardPage() {
 
   const loadData = async () => {
     try {
-      const patientId = localStorage.getItem("mobile_patient_id");
+      // Use robust session restoration
+      const session = await restoreSession();
+      const patientId = session.patientId;
 
       if (!patientId) {
+        console.log("[MobileCard] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

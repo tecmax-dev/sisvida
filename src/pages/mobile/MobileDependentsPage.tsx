@@ -34,6 +34,7 @@ import { format, differenceInYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DependentInclusionForm } from "@/components/mobile/DependentInclusionForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 // Age limit for dependents (in years) - dependents over this age are automatically deactivated
 const DEPENDENT_MAX_AGE = 21;
@@ -78,9 +79,12 @@ export default function MobileDependentsPage() {
 
   const loadData = async () => {
     try {
-      const storedPatientId = localStorage.getItem("mobile_patient_id");
+      // Use robust session restoration
+      const session = await restoreSession();
+      const storedPatientId = session.patientId;
 
       if (!storedPatientId) {
+        console.log("[MobileDependents] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

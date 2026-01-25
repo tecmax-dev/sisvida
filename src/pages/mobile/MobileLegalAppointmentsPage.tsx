@@ -20,6 +20,7 @@ import {
 import { ArrowLeft, Calendar, Clock, History, Loader2, Plus, User, XCircle } from "lucide-react";
 import { format, isFuture, isPast, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface LegalAppointment {
   id: string;
@@ -59,10 +60,12 @@ export default function MobileLegalAppointmentsPage() {
 
   const loadAppointments = async () => {
     try {
-      const patientId = localStorage.getItem("mobile_patient_id");
-      const clinicId = localStorage.getItem("mobile_clinic_id");
+      const session = await restoreSession();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
 
       if (!patientId || !clinicId) {
+        console.log("[MobileLegalAppointments] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

@@ -28,6 +28,7 @@ import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
 import { MobileCreateDeclarationDialog } from "@/components/mobile/MobileCreateDeclarationDialog";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface Authorization {
   id: string;
@@ -67,18 +68,22 @@ export default function MobileAuthorizationsPage() {
   const [clinicId, setClinicId] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedPatientId = localStorage.getItem('mobile_patient_id');
-    const storedClinicId = localStorage.getItem('mobile_clinic_id');
-    setPatientId(storedPatientId);
-    setClinicId(storedClinicId);
-    loadAuthorizations();
+    const init = async () => {
+      const session = await restoreSession();
+      setPatientId(session.patientId);
+      setClinicId(session.clinicId);
+      loadAuthorizations();
+    };
+    init();
   }, []);
 
   const loadAuthorizations = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
+      const session = await restoreSession();
+      const patientId = session.patientId;
       
       if (!patientId) {
+        console.log("[MobileAuthorizations] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

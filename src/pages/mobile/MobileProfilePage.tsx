@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { clearSession, restoreSession } from "@/hooks/useMobileSession";
 
 interface PatientData {
   id: string;
@@ -57,9 +58,11 @@ export default function MobileProfilePage() {
 
   const loadPatientData = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
+      const session = await restoreSession();
+      const patientId = session.patientId;
 
       if (!patientId) {
+        console.log("[MobileProfile] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }
@@ -92,11 +95,9 @@ export default function MobileProfilePage() {
     }
   };
 
-  const handleSignOut = () => {
-    // Sessão permanente no PWA - logout apenas por ação explícita do usuário
-    localStorage.removeItem('mobile_patient_id');
-    localStorage.removeItem('mobile_clinic_id');
-    localStorage.removeItem('mobile_patient_name');
+  const handleSignOut = async () => {
+    // Use robust session clearing that removes from all storage layers
+    await clearSession();
     navigate("/app/login");
   };
 

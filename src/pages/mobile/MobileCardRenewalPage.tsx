@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { format, isPast, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface CardData {
   id: string;
@@ -57,10 +58,12 @@ export default function MobileCardRenewalPage() {
 
   const loadData = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = await restoreSession();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
 
       if (!patientId || !clinicId) {
+        console.log("[MobileCardRenewal] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }
@@ -172,8 +175,9 @@ export default function MobileCardRenewalPage() {
     setUploading(true);
 
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = await restoreSession();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
 
       if (!patientId || !clinicId) {
         throw new Error("Sessão inválida");

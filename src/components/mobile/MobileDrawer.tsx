@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { X, Users, CreditCard, Lock, HelpCircle, Info, Star, Share2, LogOut, ChevronRight, Sparkles, UserCircle, Send } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { clearSession } from "@/hooks/useMobileSession";
 
 interface MobileDrawerProps {
   open: boolean;
@@ -24,10 +25,9 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     navigate(path);
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem("mobile_patient_id");
-    localStorage.removeItem("mobile_clinic_id");
-    localStorage.removeItem("mobile_patient_name");
+  const handleSignOut = async () => {
+    // Use robust session clearing that removes from all storage layers
+    await clearSession();
     onOpenChange(false);
     navigate("/app/login");
     toast({

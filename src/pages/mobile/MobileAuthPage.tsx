@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, Building2 } from "lucide-react";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
-
+import { persistSession } from "@/hooks/useMobileSession";
 // Função para formatar CPF
 const formatCPF = (value: string) => {
   const numbers = value.replace(/\D/g, '');
@@ -159,10 +159,9 @@ export default function MobileAuthPage() {
         return;
       }
 
-      // Store patient info for the mobile app (localStorage for session persistence)
-      localStorage.setItem('mobile_patient_id', patient.patient_id);
-      localStorage.setItem('mobile_clinic_id', patient.clinic_id);
-      localStorage.setItem('mobile_patient_name', patient.patient_name);
+      // Store patient info with redundant persistence (localStorage + IndexedDB)
+      await persistSession(patient.patient_id, patient.clinic_id, patient.patient_name);
+      
       toast({
         title: "Bem-vindo!",
         description: `Olá, ${patient.patient_name.split(' ')[0]}!`,

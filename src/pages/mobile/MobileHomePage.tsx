@@ -10,6 +10,7 @@ import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicat
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
 import { Loader2 } from "lucide-react";
+import { restoreSession } from "@/hooks/useMobileSession";
 
 interface PatientData {
   id: string;
@@ -35,9 +36,12 @@ export default function MobileHomePage() {
 
   const loadPatientData = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
+      // Use robust session restoration from multiple storage layers
+      const session = await restoreSession();
+      const patientId = session.patientId;
       
       if (!patientId) {
+        console.log("[MobileHome] No session found, redirecting to login");
         navigate("/app/login");
         return;
       }

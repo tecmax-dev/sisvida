@@ -44,6 +44,17 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { restoreSession, STORAGE_KEYS } from "@/hooks/useMobileSession";
+
+// Helper function to get session data synchronously from localStorage (fallback)
+// This is used in components that can't easily await for async session restoration
+function getSessionSync() {
+  return {
+    patientId: localStorage.getItem(STORAGE_KEYS.patientId) || localStorage.getItem(STORAGE_KEYS.backupPatientId),
+    clinicId: localStorage.getItem(STORAGE_KEYS.clinicId) || localStorage.getItem(STORAGE_KEYS.backupClinicId),
+    patientName: localStorage.getItem(STORAGE_KEYS.patientName) || localStorage.getItem(STORAGE_KEYS.backupPatientName),
+  };
+}
 
 // Service type definitions
 type ServiceId = "convencoes" | "declaracoes" | "convenios" | "boletos" | "diretoria" | "documentos" | "atendimentos" | "ouvidoria";
@@ -86,7 +97,8 @@ function ConvencoesContent() {
 
   const loadData = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = getSessionSync();
+      const clinicId = session.clinicId;
       if (!clinicId) {
         setLoading(false);
         return;
@@ -270,8 +282,9 @@ function DeclaracoesContent() {
 
   const loadData = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
-      const patientId = localStorage.getItem('mobile_patient_id');
+      const session = getSessionSync();
+      const clinicId = session.clinicId;
+      const patientId = session.patientId;
       
       if (!clinicId || !patientId) {
         setLoading(false);
@@ -477,7 +490,8 @@ function ConveniosContent() {
     try {
       setLoading(true);
       
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = getSessionSync();
+      const clinicId = session.clinicId;
       if (!clinicId) {
         // Sem clínica selecionada no app mobile, não conseguimos filtrar os convênios.
         setCategorias([]);
@@ -717,8 +731,9 @@ function BoletosContent() {
 
   const fetchBoletos = async () => {
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = getSessionSync();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
       
       if (!patientId || !clinicId) {
         setLoading(false);
@@ -1038,7 +1053,8 @@ function DiretoriaContent() {
 
   const loadDiretoria = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = getSessionSync();
+      const clinicId = session.clinicId;
       if (!clinicId) {
         setLoading(false);
         return;
@@ -1124,7 +1140,8 @@ function DocumentosContent() {
 
   const loadDocumentos = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const session = getSessionSync();
+      const clinicId = session.clinicId;
       if (!clinicId) {
         setLoading(false);
         return;
@@ -1261,9 +1278,10 @@ function OuvidoriaContent() {
     setEnviando(true);
     
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
-      const patientName = localStorage.getItem('mobile_patient_name');
+      const session = getSessionSync();
+      const patientId = session.patientId;
+      const clinicId = session.clinicId;
+      const patientName = session.patientName;
 
       if (!clinicId) {
         toast({ 
