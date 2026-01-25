@@ -44,6 +44,71 @@ export default function MobileInstallPage() {
   const [isAndroid, setIsAndroid] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ios");
 
+  // CRITICAL: Apply iOS PWA icon immediately on mount (before any async operations)
+  // iOS captures the apple-touch-icon at the moment of "Add to Home Screen"
+  // so we need to set it synchronously as early as possible
+  useEffect(() => {
+    // Immediately set the Sindicato icon for iOS PWA installation
+    const sindicatoLogoUrl = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
+    
+    // Update apple-touch-icon immediately (critical for iOS PWA icon)
+    const updateAppleTouchIcon = (href: string) => {
+      // Remove all existing apple-touch-icon links to prevent conflicts
+      const existingIcons = document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]');
+      existingIcons.forEach(icon => icon.remove());
+      
+      // Create new apple-touch-icon with highest priority
+      const sizes = ['180x180', '152x152', '144x144', '120x120', '114x114', '76x76', '72x72', '60x60', '57x57'];
+      sizes.forEach(size => {
+        const link = document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.setAttribute('sizes', size);
+        link.href = href;
+        document.head.insertBefore(link, document.head.firstChild);
+      });
+      
+      // Also add one without sizes attribute (fallback)
+      const fallbackLink = document.createElement('link');
+      fallbackLink.rel = 'apple-touch-icon';
+      fallbackLink.href = href;
+      document.head.insertBefore(fallbackLink, document.head.firstChild);
+      
+      // Add precomposed version (prevents iOS from adding effects)
+      const precomposedLink = document.createElement('link');
+      precomposedLink.rel = 'apple-touch-icon-precomposed';
+      precomposedLink.href = href;
+      document.head.insertBefore(precomposedLink, document.head.firstChild);
+    };
+    
+    // Apply immediately with known Sindicato logo
+    updateAppleTouchIcon(sindicatoLogoUrl);
+    
+    // Also update regular favicon
+    const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (faviconLink) {
+      faviconLink.href = sindicatoLogoUrl;
+    }
+    
+    // Update document title for PWA name
+    document.title = "Sindicato - Instalar App";
+    
+    // Update meta tags for iOS
+    const updateMeta = (name: string, content: string) => {
+      let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      if (meta) {
+        meta.content = content;
+      } else {
+        meta = document.createElement('meta');
+        meta.name = name;
+        meta.content = content;
+        document.head.appendChild(meta);
+      }
+    };
+    
+    updateMeta('apple-mobile-web-app-title', 'Sindicato');
+    updateMeta('application-name', 'Sindicato');
+  }, []);
+
   useEffect(() => {
     const ua = navigator.userAgent;
     const isIOSDevice = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
