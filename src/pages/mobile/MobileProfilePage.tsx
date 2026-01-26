@@ -101,25 +101,35 @@ export default function MobileProfilePage() {
    * LOGOUT EXPLÍCITO - Único ponto de encerramento de sessão
    * Limpa Supabase JWT + localStorage + IndexedDB + bootstrap cache
    * Faz HARD RELOAD para garantir estado limpo
+   * 
+   * INSTRUMENTADO: Log detalhado com stack trace
    */
   const handleSignOut = async () => {
-    console.log("[MobileProfile] Executando logout explícito com hard reload...");
+    // AUDITORIA: Este é o ÚNICO logout legítimo do app mobile
+    console.warn("[MobileProfile] LOGOUT EXPLÍCITO INICIADO", {
+      timestamp: new Date().toISOString(),
+      patientId,
+      trigger: "Botão 'Sair da conta' clicado pelo usuário",
+    });
     
     try {
       // 1. Limpar sessão Supabase
       await supabase.auth.signOut({ scope: 'local' });
+      console.warn("[MobileProfile] supabase.auth.signOut() executado");
     } catch (err) {
       console.warn("[MobileProfile] Erro no signOut Supabase:", err);
     }
     
     // 2. Limpar localStorage/IndexedDB
     await clearSession();
+    console.warn("[MobileProfile] clearSession() executado");
     
     // 3. Limpar cache do bootstrap
     clearBootstrapCache();
+    console.warn("[MobileProfile] clearBootstrapCache() executado");
     
     // 4. Hard reload para login - garante estado completamente limpo
-    console.log("[MobileProfile] Redirecionando para login com hard reload...");
+    console.warn("[MobileProfile] Redirecionando para login com hard reload...");
     window.location.href = "/app/login";
   };
 

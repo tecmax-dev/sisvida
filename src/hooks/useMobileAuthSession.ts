@@ -226,13 +226,21 @@ export function useMobileAuthSession() {
 
   /**
    * Logout: limpa todas as sessões (Supabase + local)
+   * INSTRUMENTADO: Log detalhado para auditoria
    */
   const logout = useCallback(async () => {
-    console.log("[MobileAuth] Executando logout...");
+    // AUDITORIA: Logar TODA chamada de logout com stack trace
+    const stack = new Error().stack;
+    console.warn("[MobileAuth] LOGOUT CHAMADO", {
+      timestamp: new Date().toISOString(),
+      currentState: { isLoggedIn: state.isLoggedIn, patientId: state.patientId },
+      stack: stack?.split('\n').slice(1, 6).join('\n'),
+    });
     
     try {
       // 1. Logout do Supabase (limpa JWT)
       await supabase.auth.signOut({ scope: 'local' });
+      console.warn("[MobileAuth] supabase.auth.signOut() executado");
     } catch (err) {
       console.warn("[MobileAuth] Erro no signOut Supabase:", err);
     }
@@ -250,8 +258,8 @@ export function useMobileAuthSession() {
       initialized: true,
     });
     
-    console.log("[MobileAuth] Logout completo");
-  }, []);
+    console.warn("[MobileAuth] Logout COMPLETO - sessão destruída");
+  }, [state.isLoggedIn, state.patientId]);
 
   /**
    * Verificar sessão: apenas retorna o estado atual

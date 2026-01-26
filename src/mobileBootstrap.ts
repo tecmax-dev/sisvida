@@ -161,9 +161,17 @@ export function getBootstrapResult(): BootstrapResult | null {
 
 /**
  * Limpa o cache do bootstrap (usado no logout)
+ * INSTRUMENTADO: Log de auditoria
  */
 export function clearBootstrapCache(): void {
+  const stack = new Error().stack;
+  console.warn("[MobileBootstrap] clearBootstrapCache() CHAMADO", {
+    timestamp: new Date().toISOString(),
+    previousResult: bootstrapResult,
+    stack: stack?.split('\n').slice(1, 4).join('\n'),
+  });
+  
   bootstrapResult = null;
   bootstrapPromise = null;
-  console.log("[MobileBootstrap] Cache limpo");
+  console.warn("[MobileBootstrap] Cache LIMPO");
 }

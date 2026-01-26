@@ -129,8 +129,16 @@ async function persistSession(patientId: string, clinicId: string, patientName: 
 
 /**
  * Clears session from all storage layers
+ * INSTRUMENTADO: Log de auditoria para rastrear chamadas
  */
 async function clearSession(): Promise<void> {
+  // LOG DE AUDITORIA - rastrear quem está chamando clearSession
+  const stack = new Error().stack;
+  console.warn("[MobileSession] clearSession() CHAMADO", {
+    timestamp: new Date().toISOString(),
+    stack: stack?.split('\n').slice(1, 5).join('\n'),
+  });
+  
   // Layer 1: Primary localStorage
   try {
     localStorage.removeItem(STORAGE_KEYS.patientId);
@@ -156,7 +164,7 @@ async function clearSession(): Promise<void> {
   await saveToIDB("patientName", null);
   await saveToIDB("sessionTimestamp", null);
   
-  console.log("[MobileSession] Session cleared successfully");
+  console.warn("[MobileSession] Session CLEARED - stack:", stack?.split('\n')[2]);
 }
 
 /**
