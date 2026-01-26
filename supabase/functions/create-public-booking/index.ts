@@ -219,17 +219,25 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Validate dependent exists and is active if provided
+    // CRITICAL: Also check pending_approval to block dependents awaiting approval
     let dependentData: { name: string; card_expires_at: string | null } | null = null;
     if (dependentId) {
       const { data: dependent, error: depError } = await supabase
         .from('patient_dependents')
-        .select('id, name, card_expires_at, is_active')
+        .select('id, name, card_expires_at, is_active, pending_approval')
         .eq('id', dependentId)
         .single();
 
       if (depError || !dependent) {
         return errorResponse('Dependente não encontrado');
       }
+      
+      // CRITICAL: Block dependents with pending_approval
+      if (dependent.pending_approval === true) {
+        console.log(`[create-public-booking] Dependent ${dependentId} blocked: pending_approval=true`);
+        return errorResponse(`O cadastro de ${dependent.name} ainda está aguardando aprovação. Você será notificado quando for aprovado.`);
+      }
+      
       if (!dependent.is_active) {
         return errorResponse('Dependente não está ativo');
       }
