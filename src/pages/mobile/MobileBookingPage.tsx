@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -109,8 +109,10 @@ export default function MobileBookingPage() {
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const [cardExpired, setCardExpired] = useState(false);
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
-  const [resolvedClinicId, setResolvedClinicId] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
+  
+  // useRef para clinicId - evita race condition e garante valor consistente no submit
+  const clinicIdRef = useRef<string | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -167,7 +169,7 @@ export default function MobileBookingPage() {
       }
 
       const clinicId = cardData.clinic_id;
-      setResolvedClinicId(clinicId);
+      clinicIdRef.current = clinicId;
       console.log("[MobileBooking] clinicId resolvido via patient_cards:", clinicId);
 
       // Verificar expiração do cartão
@@ -381,7 +383,7 @@ export default function MobileBookingPage() {
       const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), blockDuration), "HH:mm");
 
       const appointmentData = {
-        clinic_id: resolvedClinicId,
+        clinic_id: clinicIdRef.current,
         patient_id: patientId,
         professional_id: selectedProfessionalId,
         dependent_id: patientType === "dependent" && selectedDependentId ? selectedDependentId : null,
