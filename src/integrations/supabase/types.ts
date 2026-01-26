@@ -14864,6 +14864,10 @@ export type Database = {
         Args: { p_appointment_id: string; p_employee_cpf: string }
         Returns: boolean
       }
+      can_patient_create_authorization: {
+        Args: { p_clinic_id: string; p_patient_id: string }
+        Returns: boolean
+      }
       cancel_expired_negotiations: { Args: never; Returns: number }
       check_patient_first_access: {
         Args: { p_cpf: string; p_email: string }
