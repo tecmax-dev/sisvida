@@ -62,11 +62,21 @@ serve(async (req) => {
           noActiveCard: true,
           professionals: [], 
           dependents: [],
-          clinicId: null
+          clinicId: null,
+          bookingMonthsAhead: 1
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // 1.5 Buscar configuração de meses da clínica
+    const { data: clinicConfig } = await supabase
+      .from("clinics")
+      .select("booking_months_ahead")
+      .eq("id", card.clinic_id)
+      .single();
+    
+    const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 1;
 
     // Cartão expirado
     if (card.expires_at && new Date(card.expires_at) < new Date()) {
@@ -76,7 +86,8 @@ serve(async (req) => {
           cardExpiryDate: card.expires_at,
           professionals: [], 
           dependents: [],
-          clinicId: card.clinic_id
+          clinicId: card.clinic_id,
+          bookingMonthsAhead
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -134,6 +145,7 @@ serve(async (req) => {
         blockedMessage,
         noActiveCard: false,
         cardExpired: false,
+        bookingMonthsAhead,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

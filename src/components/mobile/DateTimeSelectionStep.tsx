@@ -8,7 +8,7 @@ import {
   Clock,
   Check,
 } from "lucide-react";
-import { format, addDays, isBefore, startOfDay } from "date-fns";
+import { format, addDays, isBefore, startOfDay, endOfMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Professional {
@@ -35,6 +35,7 @@ interface DateTimeSelectionStepProps {
   isDateEnabled: (date: Date, professional: Professional | undefined) => boolean;
   submitting: boolean;
   onSubmit: () => void;
+  bookingMonthsAhead?: number;
 }
 
 export function DateTimeSelectionStep({
@@ -48,23 +49,34 @@ export function DateTimeSelectionStep({
   isDateEnabled,
   submitting,
   onSubmit,
+  bookingMonthsAhead = 1,
 }: DateTimeSelectionStepProps) {
   const professional = professionals.find(p => p.id === selectedProfessionalId);
 
-  // Generate available dates for the next 60 days
+  // Generate available dates limited by bookingMonthsAhead
   const availableDates = useMemo(() => {
     const dates: Date[] = [];
     const today = startOfDay(new Date());
     
-    for (let i = 0; i < 60; i++) {
+    // Calculate the last allowed date based on bookingMonthsAhead
+    // bookingMonthsAhead = 1 means only current month
+    // bookingMonthsAhead = 2 means current month + next month, etc.
+    const lastAllowedDate = endOfMonth(addMonths(today, bookingMonthsAhead - 1));
+    
+    // Loop through days until we hit the limit
+    for (let i = 0; i < 365; i++) { // Max 1 year to avoid infinite loops
       const date = addDays(today, i);
+      
+      // Stop if we're past the allowed months
+      if (date > lastAllowedDate) break;
+      
       if (isDateEnabled(date, professional)) {
         dates.push(date);
       }
     }
     
     return dates;
-  }, [professional, isDateEnabled]);
+  }, [professional, isDateEnabled, bookingMonthsAhead]);
 
   const availableTimeSlots = availableSlots.filter(s => s.available);
 
