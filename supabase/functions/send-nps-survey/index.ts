@@ -62,7 +62,7 @@ serve(async (req) => {
     }
 
     // Build survey link
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovableproject.com") || "https://eclini.com.br";
+    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovableproject.com") || "https://app.eclini.com.br";
     const surveyLink = `${baseUrl}/nps/${survey.response_token}`;
 
     // Format phone number

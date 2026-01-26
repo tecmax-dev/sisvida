@@ -137,7 +137,7 @@ const getWelcomeEmailTemplate = (userName: string, trialDays: number): string =>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 25px auto;">
                 <tr>
                   <td style="background: #6366f1; border-radius: 8px;">
-                    <a href="https://eclini.lovable.app/dashboard" 
+                    <a href="https://app.eclini.com.br/dashboard" 
                        style="display: inline-block; padding: 14px 32px; color: white; text-decoration: none; font-weight: 600; font-size: 16px;">
                       Acessar minha conta →
                     </a>

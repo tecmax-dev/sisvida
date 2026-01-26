@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Logo padrão do sistema Eclini para cabeçalho de mensagens WhatsApp
-const DEFAULT_SYSTEM_LOGO = 'https://eclini.lovable.app/birthday-header.webp';
+const DEFAULT_SYSTEM_LOGO = 'https://app.eclini.com.br/birthday-header.webp';
 
 interface EvolutionConfig {
   api_url: string;

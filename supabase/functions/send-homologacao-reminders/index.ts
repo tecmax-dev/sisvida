@@ -182,9 +182,9 @@ serve(async (req) => {
         .eq('clinic_id', clinic.id)
         .maybeSingle();
 
-      // Prioridade: 1) Logo das settings, 2) Logo da union entity, 3) Header WhatsApp, 4) Logo da clínica, 5) Default
+// Prioridade: 1) Logo das settings, 2) Logo da union entity, 3) Header WhatsApp, 4) Logo da clínica, 5) Default
       const unionEntity = (clinic as any).union_entities?.[0];
-      const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || 'https://eclini.lovable.app/eclini-whatsapp-header.jpg';
+      const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || 'https://app.eclini.com.br/eclini-whatsapp-header.jpg';
 
       // Get appointments in target window that haven't received reminders
       const { data: appointments, error } = await supabase

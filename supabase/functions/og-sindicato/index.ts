@@ -41,7 +41,7 @@ serve(async (req) => {
     
     const url = new URL(req.url);
     const path = url.searchParams.get("path") || "/sindicato";
-    const baseUrl = "https://sisvida.lovable.app";
+    const baseUrl = "https://app.eclini.com.br";
 
     // Determine page-specific content
     let title = `${entityName} - App do Associado`;
@@ -144,7 +144,7 @@ serve(async (req) => {
   <title>SECMI - App do Associado</title>
   <meta property="og:title" content="SECMI - App do Associado">
   <meta property="og:description" content="Aplicativo oficial do Sindicato">
-  <script>window.location.replace('https://sisvida.lovable.app/app/instalar');</script>
+  <script>window.location.replace('https://app.eclini.com.br/app/instalar');</script>
 </head>
 <body>Redirecionando...</body>
 </html>`, {

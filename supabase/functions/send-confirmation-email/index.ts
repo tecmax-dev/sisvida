@@ -128,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Using SMTP:", smtpHost, "port:", smtpPort, "from:", smtpFrom);
 
-    const baseUrl = Deno.env.get("SITE_URL") || "https://eclini.lovable.app";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://app.eclini.com.br";
     const confirmationUrl = `${baseUrl}/confirm-email?token=${confirmationToken}`;
 
     const htmlContent = getConfirmationEmailTemplate(userName, confirmationUrl);
