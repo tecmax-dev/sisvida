@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useMobileAuth } from "@/hooks/useMobileAuth";
 import illustrationAjuda from "@/assets/mobile/illustration-ajuda.png";
 
 interface HelpCardContent {
@@ -18,28 +19,15 @@ const defaultContent: HelpCardContent = {
 
 export function MobileHelpSection() {
   const navigate = useNavigate();
+  const { clinicId: userClinicId } = useMobileAuth();
   const [content, setContent] = useState<HelpCardContent>(defaultContent);
 
   useEffect(() => {
     loadContent();
-  }, []);
+  }, [userClinicId]);
 
   const loadContent = async () => {
     try {
-      let clinicId: string | null = null;
-      
-      // Try to get user's clinic_id if logged in
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: patientData } = await (supabase as any)
-          .from("patients")
-          .select("clinic_id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        
-        clinicId = patientData?.clinic_id;
-      }
-      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query = (supabase as any)
         .from("union_app_content")
@@ -47,8 +35,8 @@ export function MobileHelpSection() {
         .eq("content_type", "ajuda")
         .eq("is_active", true);
       
-      if (clinicId) {
-        query = query.eq("clinic_id", clinicId);
+      if (userClinicId) {
+        query = query.eq("clinic_id", userClinicId);
       }
       
       const { data: helpDataArray, error } = await query.limit(1);
