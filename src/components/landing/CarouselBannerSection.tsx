@@ -46,76 +46,105 @@ export default function CarouselBannerSection() {
     >
       {/* Slides */}
       <div className="relative h-full">
-        {banners.map((banner, index) => (
-          <div
-            key={banner.id}
-            className={cn(
-              "absolute inset-0 transition-opacity duration-700 ease-in-out",
-              index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
-            )}
-          >
-            {/* Background Image */}
-            <div 
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${banner.image_url})` }}
-            />
-            
-            {/* Overlay */}
-            <div 
-              className="absolute inset-0"
-              style={{ 
-                backgroundColor: banner.background_color || '#0f172a',
-                opacity: banner.overlay_opacity ?? 0.6
-              }}
-            />
+        {banners.map((banner, index) => {
+          const isActive = index === currentIndex;
+          return (
+            <div
+              key={banner.id}
+              className={cn(
+                "absolute inset-0 transition-all duration-1000 ease-out",
+                isActive 
+                  ? "opacity-100 z-10 scale-100" 
+                  : "opacity-0 z-0 scale-105"
+              )}
+            >
+              {/* Background Image with Ken Burns effect */}
+              <div 
+                className={cn(
+                  "absolute inset-0 bg-cover bg-center transition-transform duration-[8000ms] ease-out",
+                  isActive ? "scale-110" : "scale-100"
+                )}
+                style={{ backgroundImage: `url(${banner.image_url})` }}
+              />
+              
+              {/* Overlay with gradient */}
+              <div 
+                className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"
+                style={{ 
+                  backgroundColor: banner.background_color || 'transparent',
+                  opacity: banner.overlay_opacity ?? 0.6
+                }}
+              />
 
-            {/* Content */}
-            <div className="relative h-full flex items-center z-20">
-              <div className="container mx-auto px-4 md:px-8">
-                <div className="max-w-2xl space-y-6">
-                  {banner.subtitle && (
-                    <p 
-                      className="text-sm md:text-base font-medium tracking-wide uppercase"
-                      style={{ color: banner.text_color || '#ffffff' }}
-                    >
-                      {banner.subtitle}
-                    </p>
-                  )}
-                  
-                  {banner.title && (
-                    <h2 
-                      className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight"
-                      style={{ color: banner.text_color || '#ffffff' }}
-                    >
-                      {banner.title}
-                    </h2>
-                  )}
-                  
-                  {banner.description && (
-                    <p 
-                      className="text-base md:text-lg opacity-90 max-w-xl"
-                      style={{ color: banner.text_color || '#ffffff' }}
-                    >
-                      {banner.description}
-                    </p>
-                  )}
-                  
-                  {banner.button_text && banner.button_link && (
-                    <div className="pt-4">
-                      <Button
-                        size="lg"
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
-                        asChild
+              {/* Content with staggered animation */}
+              <div className="relative h-full flex items-center z-20">
+                <div className="container mx-auto px-4 md:px-8">
+                  <div 
+                    className={cn(
+                      "max-w-2xl space-y-6 transition-all duration-700 delay-200",
+                      isActive 
+                        ? "opacity-100 translate-y-0" 
+                        : "opacity-0 translate-y-8"
+                    )}
+                  >
+                    {banner.subtitle && (
+                      <p 
+                        className={cn(
+                          "text-sm md:text-base font-medium tracking-wide uppercase transition-all duration-500 delay-300",
+                          isActive ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+                        )}
+                        style={{ color: banner.text_color || '#ffffff' }}
                       >
-                        <a href={banner.button_link}>{banner.button_text}</a>
-                      </Button>
-                    </div>
-                  )}
+                        {banner.subtitle}
+                      </p>
+                    )}
+                    
+                    {banner.title && (
+                      <h2 
+                        className={cn(
+                          "text-3xl md:text-5xl lg:text-6xl font-bold leading-tight transition-all duration-500 delay-400",
+                          isActive ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+                        )}
+                        style={{ color: banner.text_color || '#ffffff' }}
+                      >
+                        {banner.title}
+                      </h2>
+                    )}
+                    
+                    {banner.description && (
+                      <p 
+                        className={cn(
+                          "text-base md:text-lg max-w-xl transition-all duration-500 delay-500",
+                          isActive ? "opacity-90 translate-x-0" : "opacity-0 -translate-x-4"
+                        )}
+                        style={{ color: banner.text_color || '#ffffff' }}
+                      >
+                        {banner.description}
+                      </p>
+                    )}
+                    
+                    {banner.button_text && banner.button_link && (
+                      <div 
+                        className={cn(
+                          "pt-4 transition-all duration-500 delay-600",
+                          isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                        )}
+                      >
+                        <Button
+                          size="lg"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 shadow-lg hover:shadow-xl transition-shadow"
+                          asChild
+                        >
+                          <a href={banner.button_link}>{banner.button_text}</a>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Navigation Arrows */}
