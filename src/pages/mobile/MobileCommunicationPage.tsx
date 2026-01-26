@@ -48,7 +48,7 @@ const mediaTypes: MediaConfig[] = [
 ];
 
 // ============ GALERIA - ÁLBUNS DINÂMICOS ============
-function GaleriaContent() {
+function GaleriaContent({ clinicId }: { clinicId: string | null }) {
   const [albums, setAlbums] = useState<any[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
   const [photos, setPhotos] = useState<any[]>([]);
@@ -126,7 +126,6 @@ function GaleriaContent() {
 
   const loadAlbums = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) {
         setLoading(false);
         return;
@@ -420,7 +419,7 @@ function GaleriaContent() {
 }
 
 // ============ JORNAIS - DINÂMICO ============
-function JornaisContent() {
+function JornaisContent({ clinicId }: { clinicId: string | null }) {
   const [jornais, setJornais] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -430,7 +429,6 @@ function JornaisContent() {
 
   const loadJornais = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) {
         setLoading(false);
         return;
@@ -527,7 +525,7 @@ function JornaisContent() {
 }
 
 // ============ RÁDIOS - DINÂMICO ============
-function RadiosContent() {
+function RadiosContent({ clinicId }: { clinicId: string | null }) {
   const [radios, setRadios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -537,7 +535,6 @@ function RadiosContent() {
 
   const loadRadios = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) {
         setLoading(false);
         return;
@@ -636,7 +633,7 @@ function RadiosContent() {
 }
 
 // ============ VÍDEOS - DINÂMICO ============
-function VideosContent() {
+function VideosContent({ clinicId }: { clinicId: string | null }) {
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -646,7 +643,6 @@ function VideosContent() {
 
   const loadVideos = async () => {
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) {
         setLoading(false);
         return;
@@ -743,6 +739,7 @@ function VideosContent() {
 
 // ============ MAIN PAGE ============
 export default function MobileCommunicationPage() {
+  const { clinicId } = useMobileAuth();
   const navigate = useNavigate();
   const { mediaType } = useParams<{ mediaType?: string }>();
   const { isLoggedIn } = useMobileAuth();
@@ -771,13 +768,13 @@ export default function MobileCommunicationPage() {
 
     switch (selectedMedia.id) {
       case "galeria":
-        return <GaleriaContent />;
+        return <GaleriaContent clinicId={clinicId} />;
       case "jornais":
-        return <JornaisContent />;
+        return <JornaisContent clinicId={clinicId} />;
       case "radios":
-        return <RadiosContent />;
+        return <RadiosContent clinicId={clinicId} />;
       case "videos":
-        return <VideosContent />;
+        return <VideosContent clinicId={clinicId} />;
       default:
         return null;
     }
