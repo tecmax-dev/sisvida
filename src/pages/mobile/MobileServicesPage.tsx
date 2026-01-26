@@ -539,32 +539,30 @@ function ConveniosContent() {
 
   const filteredConvenios = activeCategory 
     ? convenios.filter(c => c.category_id === activeCategory)
-    : [];
-
-  // Convênios sem categoria
-  const uncategorizedConvenios = convenios.filter(c => !c.category_id);
+    : convenios; // Show all if no category selected
 
   const getCategoryInfo = (catId: string) => categorias.find(c => c.id === catId);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
       </div>
     );
   }
 
-  // Se há convênios sem categoria, mostrar lista direta primeiro
-  const allUncategorized = [...uncategorizedConvenios, ...appConvenios];
-  
-  if (allUncategorized.length > 0 && !activeCategory) {
+  // Combine all convenios sources for display
+  const allConvenios = [...convenios, ...appConvenios];
+
+  // If there are no categories, show all convenios in a simple list
+  if (categorias.length === 0 && allConvenios.length > 0) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Aproveite descontos exclusivos em nossos parceiros conveniados.
         </p>
         <div className="space-y-3">
-          {allUncategorized.map((conv) => (
+          {allConvenios.map((conv) => (
             <Card key={conv.id} className="border shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
