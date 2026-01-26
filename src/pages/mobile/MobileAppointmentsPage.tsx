@@ -313,7 +313,7 @@ function MobileAppointmentsPageContent() {
     navigate("/app/agendar", { 
       state: { 
         rescheduleFrom: selectedAppointment.id,
-        professionalId: selectedAppointment.professional.id,
+        professionalId: selectedAppointment.professional?.id,
         procedureId: selectedAppointment.procedure?.id,
       } 
     });
@@ -409,8 +409,8 @@ function MobileAppointmentsPageContent() {
             <div className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span>
-                {appointment.professional.name}
-                {appointment.professional.specialty && ` • ${appointment.professional.specialty}`}
+                {appointment.professional?.name || "Profissional não informado"}
+                {appointment.professional?.specialty && ` • ${appointment.professional.specialty}`}
               </span>
             </div>
           </div>
@@ -617,8 +617,8 @@ function MobileAppointmentsPageContent() {
               <div>
                 <span className="text-sm text-muted-foreground">Profissional</span>
                 <p className="font-medium">
-                  {selectedAppointment.professional.name}
-                  {selectedAppointment.professional.specialty && (
+                  {selectedAppointment.professional?.name || "Profissional não informado"}
+                  {selectedAppointment.professional?.specialty && (
                     <span className="text-muted-foreground"> • {selectedAppointment.professional.specialty}</span>
                   )}
                 </p>
