@@ -69,12 +69,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get all clinics with active inactivity automations
+    // Get all clinics with active inactivity automations (including union entity logo)
     const { data: automations, error: automationsError } = await supabase
       .from("automation_flows")
       .select(`
         id, clinic_id, name, message_template, trigger_config, execution_count,
-        clinic:clinics(id, name, logo_url, whatsapp_header_image_url)
+        clinic:clinics(id, name, logo_url, whatsapp_header_image_url, union_entities!union_entities_clinic_id_fkey(logo_url))
       `)
       .eq("trigger_type", "inactivity")
       .eq("is_active", true)
@@ -183,7 +183,9 @@ serve(async (req) => {
         message = message.replace(/\{\{patient_name\}\}/g, patient.name || '');
         message = message.replace(/\{\{clinic_name\}\}/g, clinic?.name || '');
 
-        const logoUrl = clinic?.whatsapp_header_image_url || clinic?.logo_url;
+        // Prioridade: 1) Logo da union entity, 2) Header WhatsApp, 3) Logo da clínica
+        const unionEntity = clinic?.union_entities?.[0];
+        const logoUrl = unionEntity?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url;
 
         // Send message
         const sendResult = await sendWhatsAppMessage(

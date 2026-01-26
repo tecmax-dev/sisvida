@@ -150,10 +150,13 @@ serve(async (req) => {
 
     console.log(`Looking for appointments on ${targetDate} between ${targetStartTime} and ${targetEndTime}`);
 
-    // Get all active clinics with Evolution API connected
+    // Get all active clinics with Evolution API connected (including union entity logo)
     const { data: clinics } = await supabase
       .from('clinics')
-      .select('id, name, logo_url, whatsapp_header_image_url');
+      .select(`
+        id, name, logo_url, whatsapp_header_image_url,
+        union_entities!union_entities_clinic_id_fkey(logo_url)
+      `);
 
     let sentCount = 0;
     let errorCount = 0;
@@ -179,7 +182,9 @@ serve(async (req) => {
         .eq('clinic_id', clinic.id)
         .maybeSingle();
 
-      const logoUrl = settings?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || 'https://eclini.lovable.app/eclini-whatsapp-header.jpg';
+      // Prioridade: 1) Logo das settings, 2) Logo da union entity, 3) Header WhatsApp, 4) Logo da clínica, 5) Default
+      const unionEntity = (clinic as any).union_entities?.[0];
+      const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || 'https://eclini.lovable.app/eclini-whatsapp-header.jpg';
 
       // Get appointments in target window that haven't received reminders
       const { data: appointments, error } = await supabase
