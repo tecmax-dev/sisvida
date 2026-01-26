@@ -23,8 +23,7 @@ import {
   CreditCard
 } from "lucide-react";
 
-const APP_URL_SINDICATO = "https://sisvida.lovable.app/sindicato/instalar";
-const APP_URL_GERAL = "https://sisvida.lovable.app/app/instalar";
+const APP_URL_SINDICATO = "https://app.eclini.com.br/sindicato/instalar";
 
 function generateAppUpdateMessage(): string {
   return `📲 *NOVIDADES NO APP DO SINDICATO!*
@@ -57,11 +56,8 @@ Fique conectado sem precisar fazer login toda vez!
 
 📥 *INSTALE AGORA:*
 
-📱 *Versão Sindicato (Principal):*
+📱 *Link de Instalação:*
 ${APP_URL_SINDICATO}
-
-📱 *Versão Geral:*
-${APP_URL_GERAL}
 
 ━━━━━━━━━━━━━━━━━━━━
 
@@ -288,12 +284,12 @@ export default function UnionNotifyAppPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Link2 className="h-4 w-4 text-primary" />
-                  Links de Instalação
+                  Link de Instalação
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Versão Sindicato</Label>
+                  <Label className="text-xs text-muted-foreground">App do Sindicato</Label>
                   <div className="flex gap-2">
                     <Input 
                       value={APP_URL_SINDICATO} 
@@ -307,29 +303,6 @@ export default function UnionNotifyAppPage() {
                       className="shrink-0"
                     >
                       {copiedLink === APP_URL_SINDICATO ? (
-                        <Check className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Versão Geral</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      value={APP_URL_GERAL} 
-                      readOnly 
-                      className="text-xs h-9"
-                    />
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleCopyLink(APP_URL_GERAL)}
-                      className="shrink-0"
-                    >
-                      {copiedLink === APP_URL_GERAL ? (
                         <Check className="h-4 w-4 text-green-600" />
                       ) : (
                         <Copy className="h-4 w-4" />
