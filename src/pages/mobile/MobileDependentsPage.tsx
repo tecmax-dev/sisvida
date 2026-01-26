@@ -84,8 +84,8 @@ export default function MobileDependentsPage() {
       const storedPatientId = session.patientId;
 
       if (!storedPatientId) {
-        console.log("[MobileDependents] No session found, redirecting to login");
-        navigate("/app/login");
+        console.error("[MobileDependents] ERRO: Sessão inválida após bootstrap");
+        setLoading(false);
         return;
       }
       

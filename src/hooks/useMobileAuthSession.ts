@@ -266,54 +266,10 @@ export function useMobileAuthSession() {
     initialize();
   }, [initialize]);
 
-  // Escutar mudanças de autenticação do Supabase (reativo, não ativo)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("[MobileAuth] Auth state change:", event);
-        
-        if (event === 'SIGNED_OUT') {
-          // Logout detectado - limpar tudo
-          await clearSession();
-          setState({
-            isLoggedIn: false,
-            patientId: null,
-            clinicId: null,
-            patientName: null,
-            loading: false,
-            initialized: true,
-          });
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Sessão válida - extrair dados e atualizar estado
-          if (session?.user) {
-            const metadata = session.user.user_metadata;
-            const appMetadata = session.user.app_metadata;
-            
-            const patientId = metadata?.patient_id || appMetadata?.patient_id;
-            const clinicId = metadata?.clinic_id || appMetadata?.clinic_id || TARGET_CLINIC_ID;
-            const patientName = metadata?.name || session.user.email?.split('@')[0] || 'Paciente';
-            
-            if (patientId) {
-              console.log("[MobileAuth] Sessão atualizada:", patientName);
-              await persistSession(patientId, clinicId, patientName);
-              
-              setState({
-                isLoggedIn: true,
-                patientId,
-                clinicId,
-                patientName,
-                loading: false,
-                initialized: true,
-              });
-            }
-          }
-        }
-        // INITIAL_SESSION é ignorado - o bootstrap já tratou isso
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+  // REMOVIDO: onAuthStateChange
+  // App mobile usa autenticação customizada (localStorage/IndexedDB), não Supabase Auth.
+  // Manter onAuthStateChange causava logout involuntário ao navegar entre abas,
+  // pois eventos SIGNED_OUT destruíam a sessão local mesmo sem logout real do usuário.
 
   return {
     ...state,
