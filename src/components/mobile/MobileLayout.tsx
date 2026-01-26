@@ -118,7 +118,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
             )}
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">{clinic?.name || "SECMI"}</h1>
+            <h1 className="font-bold text-lg leading-tight">SECMI</h1>
           </div>
         </div>
         
