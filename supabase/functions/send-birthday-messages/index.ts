@@ -151,10 +151,13 @@ serve(async (req) => {
 
     console.log(`[Brazil time: ${now.toISOString()}] Checking birthdays for ${todayMonthDay}`);
 
-    // Get clinics with birthday messages enabled
+    // Get clinics with birthday messages enabled (including union entity logo for priority)
     const { data: clinics, error: clinicsError } = await supabase
       .from('clinics')
-      .select('id, name, birthday_enabled, birthday_message, logo_url, whatsapp_header_image_url')
+      .select(`
+        id, name, birthday_enabled, birthday_message, logo_url, whatsapp_header_image_url,
+        union_entities!union_entities_clinic_id_fkey(logo_url)
+      `)
       .eq('birthday_enabled', true);
 
     if (clinicsError) {
@@ -200,10 +203,11 @@ serve(async (req) => {
         continue;
       }
 
-      // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
-      const headerImageUrl = clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+      // Prioridade: 1) Logo da union entity, 2) Header WhatsApp personalizado, 3) Logo da clínica, 4) Logo padrão
+      const unionEntity = (clinic as any).union_entities?.[0];
+      const headerImageUrl = unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
 
-      console.log(`[Clinic ${clinic.name}] Header image: ${clinic.whatsapp_header_image_url ? 'custom' : clinic.logo_url ? 'logo' : 'system default'}`);
+      console.log(`[Clinic ${clinic.name}] Header image: ${unionEntity?.logo_url ? 'union' : clinic.whatsapp_header_image_url ? 'custom' : clinic.logo_url ? 'logo' : 'system default'}`);
 
       // Check if we already sent birthday messages today for this clinic
       const { data: existingSent } = await supabase

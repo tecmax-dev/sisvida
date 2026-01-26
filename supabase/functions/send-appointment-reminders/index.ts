@@ -212,10 +212,13 @@ serve(async (req) => {
     const nowUTC = new Date();
     console.log(`[UTC: ${nowUTC.toISOString()}] [Brasil/Bahia: ${formatDateBrazil(now)}] Starting automatic reminder check`);
 
-    // Get clinics with reminders enabled
+    // Get clinics with reminders enabled (including union entity logo for priority)
     const { data: clinics, error: clinicsError } = await supabase
       .from('clinics')
-      .select('id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url')
+      .select(`
+        id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url,
+        union_entities!union_entities_clinic_id_fkey(logo_url)
+      `)
       .eq('reminder_enabled', true);
 
     if (clinicsError) {
@@ -382,8 +385,9 @@ serve(async (req) => {
 
         let success = false;
         
-        // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
-        const logoUrl = clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+        // Prioridade: 1) Logo da union entity, 2) Header WhatsApp personalizado, 3) Logo da clínica, 4) Logo padrão
+        const unionEntity = (clinic as any).union_entities?.[0];
+        const logoUrl = unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
         success = await sendWhatsAppWithImage(
           evolutionConfig as EvolutionConfig,
           phoneToUse,
