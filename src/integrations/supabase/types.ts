@@ -14916,6 +14916,17 @@ export type Database = {
           permission_name: string
         }[]
       }
+      get_available_professionals_for_patient: {
+        Args: { p_patient_id: string }
+        Returns: {
+          appointment_duration: number
+          avatar_url: string
+          clinic_id: string
+          id: string
+          name: string
+          specialty: string
+        }[]
+      }
       get_clinic_message_usage: {
         Args: { _clinic_id: string; _month_year?: string }
         Returns: {

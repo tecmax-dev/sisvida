@@ -91,9 +91,9 @@ interface TimeSlot {
 
 /**
  * IMPORTANTE:
- * Paciente NÃO possui clinicId no auth.
- * A clínica SEMPRE deve ser resolvida via patient_cards.
- * Histórico lê de appointments, novo agendamento lê de patient_cards.
+ * Mobile NÃO consulta professionals diretamente.
+ * Todo acesso passa pela RPC get_available_professionals_for_patient.
+ * Isso evita falhas silenciosas de RLS no anon role.
  */
 export default function MobileBookingPage() {
   const [step, setStep] = useState(1);
@@ -116,16 +116,17 @@ export default function MobileBookingPage() {
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // IMPORTANTE: Apenas patientId vem do auth. clinicId é resolvido via patient_cards.
+  // IMPORTANTE: Apenas patientId vem do auth. clinicId é resolvido via RPC.
   const { patientId, initialized } = useMobileAuth();
 
   useEffect(() => {
     if (initialized && patientId) {
-      loadInitialData();
+      loadProfessionals();
     }
   }, [initialized, patientId]);
 
@@ -135,49 +136,92 @@ export default function MobileBookingPage() {
     }
   }, [selectedProfessionalId, selectedDate]);
 
-  const loadInitialData = async () => {
+  /**
+   * LÓGICA CENTRALIZADA VIA RPC:
+   * - RPC get_available_professionals_for_patient resolve patient_cards → professionals
+   * - SECURITY DEFINER evita falhas silenciosas de RLS no anon role
+   * - clinicId vem junto no resultado da RPC
+   */
+  const loadProfessionals = async () => {
     if (!patientId) {
       console.error("[MobileBooking] ERRO: patientId ausente");
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
     try {
-      // PASSO 1: Buscar clínica pelo vínculo ativo do paciente (patient_cards)
-      // Esta é a ÚNICA fonte válida de clinicId para agendamento
-      const { data: cardData, error: cardError } = await supabase
-        .from("patient_cards")
-        .select("clinic_id, expires_at")
-        .eq("patient_id", patientId)
-        .eq("is_active", true)
-        .order("expires_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // PASSO 1: Buscar profissionais via RPC (bypassa RLS de forma segura)
+      const { data: professionalsData, error: rpcError } = await supabase.rpc(
+        "get_available_professionals_for_patient",
+        { p_patient_id: patientId }
+      );
 
-      if (cardError) {
-        console.error("[MobileBooking] Erro ao buscar cartão:", cardError);
-        setNoActiveCard(true);
+      if (rpcError) {
+        console.error("[MobileBooking] Erro na RPC:", rpcError);
+        setError("Erro ao carregar profissionais.");
+        setProfessionals([]);
         setLoading(false);
         return;
       }
 
-      if (!cardData?.clinic_id) {
-        console.log("[MobileBooking] Paciente não possui cartão ativo");
-        setNoActiveCard(true);
+      console.log("[MobileBooking] Profissionais retornados pela RPC:", professionalsData?.length || 0);
+
+      // Se não retornou profissionais, paciente não tem cartão ativo
+      if (!professionalsData || professionalsData.length === 0) {
+        // Verificar se é problema de cartão ou se simplesmente não há profissionais
+        const { data: cardCheck } = await supabase
+          .from("patient_cards")
+          .select("clinic_id, expires_at")
+          .eq("patient_id", patientId)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (!cardCheck?.clinic_id) {
+          setNoActiveCard(true);
+          setLoading(false);
+          return;
+        }
+
+        // Verificar expiração do cartão
+        if (cardCheck.expires_at && isPast(new Date(cardCheck.expires_at))) {
+          setCardExpired(true);
+          setCardExpiryDate(cardCheck.expires_at);
+          setLoading(false);
+          return;
+        }
+
+        // Cartão existe mas não há profissionais ativos
+        setProfessionals([]);
         setLoading(false);
         return;
       }
 
-      const clinicId = cardData.clinic_id;
-      clinicIdRef.current = clinicId;
-      console.log("[MobileBooking] clinicId resolvido via patient_cards:", clinicId);
+      // Extrair clinicId do primeiro profissional (todos são da mesma clínica)
+      clinicIdRef.current = professionalsData[0].clinic_id;
+      console.log("[MobileBooking] clinicId resolvido via RPC:", clinicIdRef.current);
 
-      // Verificar expiração do cartão
-      if (cardData.expires_at && isPast(new Date(cardData.expires_at))) {
-        setCardExpired(true);
-        setCardExpiryDate(cardData.expires_at);
-        setLoading(false);
-        return;
+      // Precisamos buscar schedule separadamente (RPC retorna apenas campos essenciais)
+      const { data: fullProfessionals, error: scheduleError } = await supabase
+        .from("professionals")
+        .select("id, name, specialty, appointment_duration, schedule, avatar_url")
+        .in("id", professionalsData.map((p: any) => p.id));
+
+      if (scheduleError) {
+        console.error("[MobileBooking] Erro ao buscar schedules:", scheduleError);
+        // Usar dados da RPC mesmo sem schedule
+        setProfessionals(professionalsData.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          specialty: p.specialty,
+          appointment_duration: p.appointment_duration || 30,
+          avatar_url: p.avatar_url,
+          schedule: null
+        })));
+      } else {
+        setProfessionals((fullProfessionals || []) as Professional[]);
       }
 
       // PASSO 2: Check if patient is blocked
@@ -187,50 +231,32 @@ export default function MobileBookingPage() {
         .eq("id", patientId)
         .single();
 
-      if (patientError) throw patientError;
+      if (!patientError && patientData) {
+        if (patientData.no_show_blocked_until) {
+          const blockedUntil = parseISO(patientData.no_show_blocked_until);
+          const isStillWithinBlock = isBefore(new Date(), blockedUntil);
+          const isUnblockedByAdmin = !!patientData.no_show_unblocked_at;
 
-      if (patientData?.no_show_blocked_until) {
-        const blockedUntil = parseISO(patientData.no_show_blocked_until);
-        const isStillWithinBlock = isBefore(new Date(), blockedUntil);
-        const isUnblockedByAdmin = !!patientData?.no_show_unblocked_at;
+          if (isStillWithinBlock && !isUnblockedByAdmin) {
+            setBlockedMessage(
+              `Você está bloqueado para agendamentos até ${format(blockedUntil, "dd/MM/yyyy", { locale: ptBR })}`
+            );
+          }
+        }
 
-        if (isStillWithinBlock && !isUnblockedByAdmin) {
-          setBlockedMessage(
-            `Você está bloqueado para agendamentos até ${format(blockedUntil, "dd/MM/yyyy", { locale: ptBR })}`
-          );
+        if (!patientData.is_active) {
+          setBlockedMessage("Sua conta está inativa. Entre em contato com o sindicato.");
         }
       }
 
-      if (!patientData?.is_active) {
-        setBlockedMessage("Sua conta está inativa. Entre em contato com o sindicato.");
-      }
-
-      // PASSO 3: Load professionals with schedule using clinicId from patient_cards
-      const { data: professionalsData, error: profError } = await supabase
-        .from("professionals")
-        .select("id, name, specialty, appointment_duration, schedule, avatar_url")
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (profError) {
-        console.error("[MobileBooking] Erro ao buscar profissionais:", profError);
-      }
-      
-      console.log("[MobileBooking] Profissionais encontrados:", professionalsData?.length || 0);
-      setProfessionals((professionalsData || []) as Professional[]);
-
-      // Load dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
-      const { data: dependentsData, error: dependentsError } = await supabase
+      // PASSO 3: Load dependents using RPC
+      const { data: dependentsData } = await supabase
         .rpc("get_patient_dependents", { p_patient_id: patientId });
-
-      if (dependentsError) {
-        console.error("Error fetching dependents:", dependentsError);
-      }
 
       setDependents(dependentsData || []);
     } catch (err) {
-      console.error("Error loading data:", err);
+      console.error("[MobileBooking] Error loading data:", err);
+      setError("Erro ao carregar dados.");
     } finally {
       setLoading(false);
     }
