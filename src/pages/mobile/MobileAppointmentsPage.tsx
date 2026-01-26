@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -77,7 +77,59 @@ interface Appointment {
   } | null;
 }
 
-export default function MobileAppointmentsPage() {
+// ErrorBoundary específico para debugging
+class AppointmentsErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("[AppointmentsErrorBoundary] Erro capturado:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+          <div className="text-center max-w-md">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-foreground mb-2">
+              Erro na página de agendamentos
+            </h2>
+            <details className="text-left mb-6 rounded-md border bg-card p-4">
+              <summary className="cursor-pointer text-sm font-medium text-foreground mb-2">
+                Ver detalhes do erro
+              </summary>
+              <pre className="mt-2 text-xs text-muted-foreground overflow-auto max-h-64">
+                {this.state.error?.message}
+                {'\n\n'}
+                {this.state.error?.stack}
+              </pre>
+            </details>
+            <Button 
+              onClick={() => window.location.href = "/app/home"}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Voltar ao início
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function MobileAppointmentsPageContent() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [dependentAppointments, setDependentAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +142,18 @@ export default function MobileAppointmentsPage() {
   const { toast } = useToast();
   
   // Usar contexto de autenticação (dados já disponíveis via bootstrap imperativo)
-  const { patientId, clinicId, initialized, loading: authLoading } = useMobileAuth();
+  const { patientId, clinicId, initialized, loading: authLoading, isLoggedIn } = useMobileAuth();
+
+  // Debug logs
+  useEffect(() => {
+    console.log('[MobileAppointments] Estado do auth:', {
+      initialized,
+      authLoading,
+      isLoggedIn,
+      patientId,
+      clinicId,
+    });
+  }, [initialized, authLoading, isLoggedIn, patientId, clinicId]);
 
   useEffect(() => {
     // Aguardar contexto de auth inicializar
@@ -623,5 +686,14 @@ export default function MobileAppointmentsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// Exportar com ErrorBoundary
+export default function MobileAppointmentsPage() {
+  return (
+    <AppointmentsErrorBoundary>
+      <MobileAppointmentsPageContent />
+    </AppointmentsErrorBoundary>
   );
 }
