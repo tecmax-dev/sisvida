@@ -102,11 +102,12 @@ export function MobileCarousel() {
                 {banner.title && (
                   <h3 
                     className={cn(
-                      "text-white font-bold text-xl drop-shadow-lg leading-tight mb-1 transition-all duration-500",
+                      "text-white font-bold text-xl drop-shadow-lg leading-tight mb-1 transition-all duration-500 ease-out",
                       isActive 
-                        ? "opacity-100 translate-y-0 delay-200" 
+                        ? "opacity-100 translate-y-0" 
                         : "opacity-0 translate-y-4"
                     )}
+                    style={{ transitionDelay: isActive ? '200ms' : '0ms' }}
                   >
                     {banner.title}
                   </h3>
@@ -114,11 +115,12 @@ export function MobileCarousel() {
                 {banner.description && (
                   <p 
                     className={cn(
-                      "text-white/90 text-sm drop-shadow-md line-clamp-2 transition-all duration-500",
+                      "text-white/90 text-sm drop-shadow-md line-clamp-2 transition-all duration-500 ease-out",
                       isActive 
-                        ? "opacity-100 translate-y-0 delay-300" 
+                        ? "opacity-100 translate-y-0" 
                         : "opacity-0 translate-y-4"
                     )}
+                    style={{ transitionDelay: isActive ? '350ms' : '0ms' }}
                   >
                     {banner.description}
                   </p>
