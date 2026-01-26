@@ -30,6 +30,20 @@ import { QRCodeSVG } from "qrcode.react";
 import { MobileCreateDeclarationDialog } from "@/components/mobile/MobileCreateDeclarationDialog";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
+interface UnionEntityBranding {
+  razao_social: string;
+  nome_fantasia: string | null;
+  logo_url: string | null;
+  president_name: string | null;
+  president_signature_url: string | null;
+}
+
+interface PresidentSignature {
+  signature_data: string | null;
+  president_name: string | null;
+  president_title: string | null;
+}
+
 interface Authorization {
   id: string;
   authorization_number: string;
@@ -65,12 +79,57 @@ export default function MobileAuthorizationsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAuth, setSelectedAuth] = useState<Authorization | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [unionEntityBranding, setUnionEntityBranding] = useState<UnionEntityBranding | null>(null);
+  const [presidentSignature, setPresidentSignature] = useState<PresidentSignature | null>(null);
 
   useEffect(() => {
     if (initialized && patientId) {
       loadAuthorizations();
     }
   }, [initialized, patientId]);
+
+  useEffect(() => {
+    if (initialized && clinicId) {
+      loadUnionBranding();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, clinicId]);
+
+  const loadUnionBranding = async () => {
+    if (!clinicId) return;
+
+    // 1) Union entity branding/signature saved in admin panel
+    const { data: entity, error: entityError } = await supabase
+      .from("union_entities")
+      .select("razao_social, nome_fantasia, logo_url, president_name, president_signature_url")
+      .eq("clinic_id", clinicId)
+      .eq("status", "ativa")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (entityError) {
+      console.warn("[MobileAuthorizations] Unable to fetch union entity branding:", entityError);
+    }
+
+    setUnionEntityBranding((entity as UnionEntityBranding | null) ?? null);
+
+    // 2) Optional: drawn signature (if configured). If RLS blocks, ignore gracefully.
+    const { data: sig, error: sigError } = await supabase
+      .from("union_president_signatures")
+      .select("signature_data, president_name, president_title")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (sigError) {
+      console.warn("[MobileAuthorizations] Unable to fetch president signature:", sigError);
+    }
+
+    setPresidentSignature((sig as PresidentSignature | null) ?? null);
+  };
 
   const loadAuthorizations = async () => {
     if (!patientId) {
@@ -267,6 +326,8 @@ export default function MobileAuthorizationsPage() {
           {selectedAuth && (
             <AuthorizationDetail
               authorization={selectedAuth}
+              unionEntityBranding={unionEntityBranding}
+              presidentSignature={presidentSignature}
             />
           )}
         </DialogContent>
@@ -355,12 +416,18 @@ function AuthorizationCard({ authorization, onClick, disabled }: AuthorizationCa
 
 interface AuthorizationDetailProps {
   authorization: Authorization;
+  unionEntityBranding: UnionEntityBranding | null;
+  presidentSignature: PresidentSignature | null;
 }
 
-function AuthorizationDetail({ authorization }: AuthorizationDetailProps) {
+function AuthorizationDetail({ authorization, unionEntityBranding, presidentSignature }: AuthorizationDetailProps) {
   const status = getStatusInfo(authorization);
   const StatusIcon = status.icon;
   const validationUrl = getValidationUrlForAuth(authorization);
+
+  const signatureData = presidentSignature?.signature_data || unionEntityBranding?.president_signature_url;
+  const presidentName = presidentSignature?.president_name || unionEntityBranding?.president_name;
+  const presidentTitle = presidentSignature?.president_title || "Presidente";
 
   return (
     <div className="space-y-4">
@@ -392,6 +459,26 @@ function AuthorizationDetail({ authorization }: AuthorizationDetailProps) {
           marginSize={4}
         />
       </div>
+
+      {/* Signature (same data as desktop/admin) */}
+      {(signatureData || presidentName) && (
+        <div className="pt-2">
+          {signatureData && (
+            <img
+              src={signatureData}
+              alt="Assinatura da Presidente"
+              className="h-10 w-auto mx-auto object-contain"
+              loading="lazy"
+            />
+          )}
+          <div className="mt-2 w-56 mx-auto border-t border-gray-300 pt-2 text-center">
+            {presidentName && (
+              <p className="text-sm font-medium text-gray-900">{presidentName}</p>
+            )}
+            <p className="text-xs text-gray-500">{presidentTitle}</p>
+          </div>
+        </div>
+      )}
 
       {/* Details */}
       <div className="space-y-3 text-sm">
