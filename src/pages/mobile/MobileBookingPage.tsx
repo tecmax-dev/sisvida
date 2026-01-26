@@ -113,6 +113,7 @@ export default function MobileBookingPage() {
   const [cardExpired, setCardExpired] = useState(false);
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
+  const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
   
   // useRef para clinicId - evita race condition e garante valor consistente no submit
   const clinicIdRef = useRef<string | null>(null);
@@ -205,6 +206,11 @@ export default function MobileBookingPage() {
 
       // Setar dependentes
       setDependents(data.dependents || []);
+
+      // Setar configuração de meses
+      if (data.bookingMonthsAhead) {
+        setBookingMonthsAhead(data.bookingMonthsAhead);
+      }
 
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
@@ -733,6 +739,7 @@ export default function MobileBookingPage() {
               isDateEnabled={isDateEnabled}
               submitting={submitting}
               onSubmit={handleSubmit}
+              bookingMonthsAhead={bookingMonthsAhead}
             />
           )}
         </div>

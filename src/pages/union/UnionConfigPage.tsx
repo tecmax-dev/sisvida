@@ -2,13 +2,32 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, Image, Loader2 } from "lucide-react";
+import { Settings, CreditCard, FileText, Image, Loader2, Calendar } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
+import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function UnionConfigPage() {
   const { currentClinic } = useAuth();
   const { entity, loading: entityLoading } = useUnionEntity();
+
+  // Fetch clinic booking settings
+  const { data: clinicSettings, refetch: refetchSettings } = useQuery({
+    queryKey: ["clinic-booking-settings", currentClinic?.id],
+    queryFn: async () => {
+      if (!currentClinic?.id) return null;
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("booking_months_ahead")
+        .eq("id", currentClinic.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentClinic?.id,
+  });
 
   if (entityLoading) {
     return (
@@ -40,8 +59,12 @@ export default function UnionConfigPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="branding" className="space-y-6">
+      <Tabs defaultValue="booking" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="booking" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Agendamento
+          </TabsTrigger>
           <TabsTrigger value="branding" className="gap-2">
             <Image className="h-4 w-4" />
             Identidade Visual
@@ -55,6 +78,24 @@ export default function UnionConfigPage() {
             Documentos
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="booking">
+          {currentClinic?.id ? (
+            <BookingMonthsSettings
+              clinicId={currentClinic.id}
+              currentValue={clinicSettings?.booking_months_ahead ?? 1}
+              onUpdate={() => refetchSettings()}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Configure uma entidade sindical para gerenciar agendamentos.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         <TabsContent value="branding">
           {sindicatoId ? (

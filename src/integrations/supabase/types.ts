@@ -1860,6 +1860,7 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          booking_months_ahead: number | null
           city: string | null
           closing_time: string | null
           cnpj: string | null
@@ -1899,6 +1900,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          booking_months_ahead?: number | null
           city?: string | null
           closing_time?: string | null
           cnpj?: string | null
@@ -1938,6 +1940,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          booking_months_ahead?: number | null
           city?: string | null
           closing_time?: string | null
           cnpj?: string | null
