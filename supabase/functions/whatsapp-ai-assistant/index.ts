@@ -683,9 +683,7 @@ serve(async (req) => {
       if (!bookingEnabled) {
         console.log('[ai-assistant] Booking is disabled, sending app update notification');
         return new Response(JSON.stringify({ 
-          response: `📲 *NOVIDADE: Agende pelo App!*
-
-Olá! 👋
+          response: `Olá! 👋
 
 O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
 
@@ -980,9 +978,7 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
       if (!isBookingEnabled) {
         console.log('[ai-assistant] Booking disabled - redirecting to app');
         return new Response(JSON.stringify({ 
-          response: `📲 *NOVIDADE: Agende pelo App!*
-
-Olá! 👋
+          response: `Olá! 👋
 
 O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
 

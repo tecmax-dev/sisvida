@@ -841,10 +841,8 @@ _Digite o número da opção desejada._`,
 
 _Digite o número da opção desejada._`,
 
-  // Booking maintenance message - promotes new app
-  bookingMaintenance: `📲 *NOVIDADE: Agende pelo App!*
-
-Olá! 👋
+  // Booking maintenance message - promotes new app (plain text, no logo)
+  bookingMaintenance: `Olá! 👋
 
 O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
 
