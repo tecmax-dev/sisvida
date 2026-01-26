@@ -89,6 +89,12 @@ interface TimeSlot {
   available: boolean;
 }
 
+/**
+ * IMPORTANTE:
+ * Paciente NÃO possui clinicId no auth.
+ * A clínica SEMPRE deve ser resolvida via patient_cards.
+ * Histórico lê de appointments, novo agendamento lê de patient_cards.
+ */
 export default function MobileBookingPage() {
   const [step, setStep] = useState(1);
   const [patientType, setPatientType] = useState<"titular" | "dependent">("titular");
@@ -103,19 +109,23 @@ export default function MobileBookingPage() {
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const [cardExpired, setCardExpired] = useState(false);
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
+  const [resolvedClinicId, setResolvedClinicId] = useState<string | null>(null);
+  const [noActiveCard, setNoActiveCard] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { patientId, clinicId, initialized } = useMobileAuth();
+  
+  // IMPORTANTE: Apenas patientId vem do auth. clinicId é resolvido via patient_cards.
+  const { patientId, initialized } = useMobileAuth();
 
   useEffect(() => {
-    if (initialized && patientId && clinicId) {
+    if (initialized && patientId) {
       loadInitialData();
     }
-  }, [initialized, patientId, clinicId]);
+  }, [initialized, patientId]);
 
   useEffect(() => {
     if (selectedProfessionalId && selectedDate) {
@@ -124,16 +134,51 @@ export default function MobileBookingPage() {
   }, [selectedProfessionalId, selectedDate]);
 
   const loadInitialData = async () => {
-    if (!patientId || !clinicId) {
-      console.error("[MobileBooking] ERRO: Sessão inválida - patientId ou clinicId ausente", { patientId, clinicId });
+    if (!patientId) {
+      console.error("[MobileBooking] ERRO: patientId ausente");
       setLoading(false);
       return;
     }
-    
-    console.log("[MobileBooking] Carregando dados com clinicId:", clinicId);
 
     try {
-      // Check if patient is blocked
+      // PASSO 1: Buscar clínica pelo vínculo ativo do paciente (patient_cards)
+      // Esta é a ÚNICA fonte válida de clinicId para agendamento
+      const { data: cardData, error: cardError } = await supabase
+        .from("patient_cards")
+        .select("clinic_id, expires_at")
+        .eq("patient_id", patientId)
+        .eq("is_active", true)
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cardError) {
+        console.error("[MobileBooking] Erro ao buscar cartão:", cardError);
+        setNoActiveCard(true);
+        setLoading(false);
+        return;
+      }
+
+      if (!cardData?.clinic_id) {
+        console.log("[MobileBooking] Paciente não possui cartão ativo");
+        setNoActiveCard(true);
+        setLoading(false);
+        return;
+      }
+
+      const clinicId = cardData.clinic_id;
+      setResolvedClinicId(clinicId);
+      console.log("[MobileBooking] clinicId resolvido via patient_cards:", clinicId);
+
+      // Verificar expiração do cartão
+      if (cardData.expires_at && isPast(new Date(cardData.expires_at))) {
+        setCardExpired(true);
+        setCardExpiryDate(cardData.expires_at);
+        setLoading(false);
+        return;
+      }
+
+      // PASSO 2: Check if patient is blocked
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("no_show_blocked_until, no_show_unblocked_at, is_active")
@@ -142,8 +187,6 @@ export default function MobileBookingPage() {
 
       if (patientError) throw patientError;
 
-      // If the patient was blocked due to no-show, admins can unblock by setting no_show_unblocked_at.
-      // The mobile app must respect this to avoid keeping the user blocked incorrectly.
       if (patientData?.no_show_blocked_until) {
         const blockedUntil = parseISO(patientData.no_show_blocked_until);
         const isStillWithinBlock = isBefore(new Date(), blockedUntil);
@@ -160,36 +203,19 @@ export default function MobileBookingPage() {
         setBlockedMessage("Sua conta está inativa. Entre em contato com o sindicato.");
       }
 
-      // Check if patient has valid (non-expired) card
-      // IMPORTANTE: Usar maybeSingle() pois paciente pode não ter cartão
-      // NÃO abortar o fluxo aqui - permitir carregar profissionais primeiro
-      const { data: cardData } = await supabase
-        .from("patient_cards")
-        .select("id, expires_at")
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("expires_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // Verificar expiração APÓS carregar profissionais (não abortar aqui)
-      const isCardExpired = cardData?.expires_at && isPast(new Date(cardData.expires_at));
-      if (isCardExpired) {
-        setCardExpired(true);
-        setCardExpiryDate(cardData.expires_at);
-        // NÃO retornar aqui - continuar carregando profissionais
-        // A validação de cartão será tratada na UI, não bloqueando a listagem
-      }
-
-      // Load professionals with schedule
-      const { data: professionalsData } = await supabase
+      // PASSO 3: Load professionals with schedule using clinicId from patient_cards
+      const { data: professionalsData, error: profError } = await supabase
         .from("professionals")
         .select("id, name, specialty, appointment_duration, schedule, avatar_url")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("name");
 
+      if (profError) {
+        console.error("[MobileBooking] Erro ao buscar profissionais:", profError);
+      }
+      
+      console.log("[MobileBooking] Profissionais encontrados:", professionalsData?.length || 0);
       setProfessionals((professionalsData || []) as Professional[]);
 
       // Load dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
@@ -355,7 +381,7 @@ export default function MobileBookingPage() {
       const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), blockDuration), "HH:mm");
 
       const appointmentData = {
-        clinic_id: clinicId,
+        clinic_id: resolvedClinicId,
         patient_id: patientId,
         professional_id: selectedProfessionalId,
         dependent_id: patientType === "dependent" && selectedDependentId ? selectedDependentId : null,
@@ -397,6 +423,44 @@ export default function MobileBookingPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  // No active card - prompt to get one
+  if (noActiveCard) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate("/app/home")} className="p-1">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendar Consulta</h1>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="p-4 bg-amber-100 rounded-full mb-6">
+            <CreditCard className="h-16 w-16 text-amber-600" />
+          </div>
+          <Badge variant="outline" className="mb-4">Sem Carteirinha</Badge>
+          <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Você ainda não possui carteirinha</h2>
+          <p className="text-muted-foreground text-center mb-6">
+            Para agendar consultas, você precisa solicitar sua carteirinha enviando seu contracheque.
+          </p>
+          <Button 
+            className="w-full max-w-xs bg-emerald-600 hover:bg-emerald-700 mb-3"
+            onClick={() => navigate("/app/atualizar-carteirinha")}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Solicitar Carteirinha
+          </Button>
+          <Button 
+            variant="outline"
+            className="w-full max-w-xs"
+            onClick={() => navigate("/app/home")}
+          >
+            Voltar ao início
+          </Button>
+        </div>
       </div>
     );
   }
