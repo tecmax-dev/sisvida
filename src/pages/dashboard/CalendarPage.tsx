@@ -397,6 +397,7 @@ interface Appointment {
   dependent?: {
     id: string;
     name: string;
+    birth_date: string | null;
   } | null;
 }
 
@@ -803,7 +804,7 @@ export default function CalendarPage() {
           procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date, no_show_blocked_until, no_show_unblocked_at, insurance_plan:insurance_plans (id, name, color)),
           professional:professionals (id, name, specialty, avatar_url),
-          dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
+          dependent:patient_dependents!appointments_dependent_id_fkey (id, name, birth_date)
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
@@ -2716,9 +2717,16 @@ const updateData: Record<string, any> = {
           )}>
             {getAppointmentDisplayName(appointment)}
           </span>
-          {/* Idade do paciente para lei de prioridade */}
-          {appointment.patient?.birth_date && (() => {
-            const age = calculateAge(appointment.patient.birth_date);
+          {/* Idade do paciente/dependente para lei de prioridade */}
+          {(() => {
+            // Se é dependente, usar a idade do dependente; senão, do titular
+            const birthDate = appointment.dependent_id && appointment.dependent?.birth_date
+              ? appointment.dependent.birth_date
+              : appointment.patient?.birth_date;
+            
+            if (!birthDate) return null;
+            
+            const age = calculateAge(birthDate);
             if (age !== null) {
               const isPriority = age >= 60;
               return (
@@ -2730,7 +2738,7 @@ const updateData: Record<string, any> = {
                       ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
                       : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
                   )}
-                  title={isPriority ? "Paciente com prioridade legal (60+ anos)" : "Idade do paciente"}
+                  title={isPriority ? "Prioridade legal (60+ anos)" : appointment.dependent_id ? "Idade do dependente" : "Idade do paciente"}
                 >
                   {age}a
                 </Badge>
@@ -3177,9 +3185,16 @@ const updateData: Record<string, any> = {
                                     <span className="text-xs font-medium text-gray-800 truncate">
                                       {displayName}
                                     </span>
-                                    {/* Idade do paciente para lei de prioridade */}
-                                    {apt.patient?.birth_date && (() => {
-                                      const age = calculateAge(apt.patient.birth_date);
+                                    {/* Idade do paciente/dependente para lei de prioridade */}
+                                    {(() => {
+                                      // Se é dependente, usar a idade do dependente; senão, do titular
+                                      const birthDate = apt.dependent_id && apt.dependent?.birth_date
+                                        ? apt.dependent.birth_date
+                                        : apt.patient?.birth_date;
+                                      
+                                      if (!birthDate) return null;
+                                      
+                                      const age = calculateAge(birthDate);
                                       if (age !== null) {
                                         const isPriority = age >= 60;
                                         return (
@@ -3190,7 +3205,7 @@ const updateData: Record<string, any> = {
                                                 ? "bg-amber-400 text-amber-900" 
                                                 : "bg-sky-300 text-sky-900"
                                             )}
-                                            title={isPriority ? "Prioridade legal (60+ anos)" : "Idade"}
+                                            title={isPriority ? "Prioridade legal (60+ anos)" : apt.dependent_id ? "Idade do dependente" : "Idade"}
                                           >
                                             {age}a
                                           </span>
