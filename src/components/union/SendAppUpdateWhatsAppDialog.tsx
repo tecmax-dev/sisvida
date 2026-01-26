@@ -21,8 +21,7 @@ interface SendAppUpdateWhatsAppDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const APP_URL_SINDICATO = "https://sisvida.lovable.app/sindicato/instalar";
-const APP_URL_GERAL = "https://sisvida.lovable.app/app/instalar";
+const APP_URL_SINDICATO = "https://app.eclini.com.br/sindicato/instalar";
 
 function generateAppUpdateMessage(): string {
   return `📲 *NOVIDADES NO APP DO SINDICATO!*
@@ -55,11 +54,8 @@ Fique conectado sem precisar fazer login toda vez!
 
 📥 *INSTALE AGORA:*
 
-📱 *Versão Sindicato (Principal):*
+📱 *Link de Instalação:*
 ${APP_URL_SINDICATO}
-
-📱 *Versão Geral:*
-${APP_URL_GERAL}
 
 ━━━━━━━━━━━━━━━━━━━━
 
@@ -200,15 +196,8 @@ export function SendAppUpdateWhatsAppDialog({
               <Link2 className="h-4 w-4 text-primary" />
               Links de Instalação
             </div>
-            <div className="grid gap-1.5 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Sindicato:</span>
-                <code className="bg-background px-1.5 py-0.5 rounded text-[10px]">{APP_URL_SINDICATO}</code>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Geral:</span>
-                <code className="bg-background px-1.5 py-0.5 rounded text-[10px]">{APP_URL_GERAL}</code>
-              </div>
+            <div className="text-xs text-muted-foreground">
+              <code className="bg-background px-1.5 py-0.5 rounded text-[10px]">{APP_URL_SINDICATO}</code>
             </div>
           </div>
 
