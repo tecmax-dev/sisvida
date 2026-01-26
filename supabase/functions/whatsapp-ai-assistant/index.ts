@@ -701,7 +701,7 @@ Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com a
 • Funciona offline após instalado
 
 📥 *Instale agora:*
-https://app.eclini.com.br/sindicato/instalar
+https://czmnkrurkzuerrcjzbkp.supabase.co/functions/v1/og-sindicato?path=/sindicato/instalar
 
 ⚠️ *Dica de instalação:*
 • iPhone: abra pelo *Safari*
