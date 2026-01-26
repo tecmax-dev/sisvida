@@ -966,7 +966,53 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
 
     // Check if AI wants to handoff to booking system
     if (finalResponse.includes('HANDOFF_BOOKING')) {
-      console.log('[ai-assistant] AI requested handoff to booking flow');
+      console.log('[ai-assistant] AI requested handoff to booking flow - checking booking_enabled');
+      
+      // Check if booking is enabled for this clinic
+      const { data: evolutionConfig } = await supabase
+        .from('evolution_configs')
+        .select('booking_enabled')
+        .eq('clinic_id', clinic_id)
+        .maybeSingle();
+      
+      const isBookingEnabled = evolutionConfig?.booking_enabled !== false;
+      
+      if (!isBookingEnabled) {
+        console.log('[ai-assistant] Booking disabled - redirecting to app');
+        return new Response(JSON.stringify({ 
+          response: `📲 *NOVIDADE: Agende pelo App!*
+
+Olá! 👋
+
+O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
+
+✨ *NOVO APP DO SINDICATO* ✨
+
+Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com ainda mais praticidade:
+
+📱 *Benefícios do App:*
+• Agendamento rápido em poucos toques
+• Carteirinha digital sempre à mão
+• Gestão de dependentes
+• Notificações de consultas
+• Funciona offline após instalado
+
+📥 *Instale agora:*
+https://app.eclini.com.br/sindicato/instalar
+
+⚠️ *Dica de instalação:*
+• iPhone: abra pelo *Safari*
+• Android: abra pelo *Chrome*
+• Toque em "Adicionar à Tela Inicial"
+
+Aproveite essa novidade! 🎉`,
+          handoff_to_booking: false
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      console.log('[ai-assistant] Booking enabled - proceeding with handoff');
       return new Response(JSON.stringify({ 
         response: null,
         handoff_to_booking: true,
