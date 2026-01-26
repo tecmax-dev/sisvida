@@ -114,7 +114,8 @@ export default function MobileLegalBookingPage() {
       const clinicId = localStorage.getItem('mobile_clinic_id');
 
       if (!patientId || !clinicId) {
-        navigate("/app/login");
+        console.error("[MobileLegalBooking] ERRO: Sessão inválida após bootstrap");
+        setLoading(false);
         return;
       }
 

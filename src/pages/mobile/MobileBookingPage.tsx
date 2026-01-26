@@ -127,8 +127,8 @@ export default function MobileBookingPage() {
       const clinicId = session.clinicId;
 
       if (!patientId || !clinicId) {
-        console.log("[MobileBooking] No session found, redirecting to login");
-        navigate("/app/login");
+        console.error("[MobileBooking] ERRO: Sessão inválida após bootstrap");
+        setLoading(false);
         return;
       }
 

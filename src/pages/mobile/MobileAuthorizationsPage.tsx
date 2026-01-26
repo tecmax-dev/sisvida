@@ -83,8 +83,8 @@ export default function MobileAuthorizationsPage() {
       const patientId = session.patientId;
       
       if (!patientId) {
-        console.log("[MobileAuthorizations] No session found, redirecting to login");
-        navigate("/app/login");
+        console.error("[MobileAuthorizations] ERRO: Sessão inválida após bootstrap");
+        setLoading(false);
         return;
       }
 
