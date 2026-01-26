@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Logo padrão do sistema Eclini para cabeçalho de mensagens WhatsApp
-const DEFAULT_SYSTEM_LOGO = 'https://eclini.lovable.app/eclini-whatsapp-header.jpg';
+const DEFAULT_SYSTEM_LOGO = 'https://app.eclini.com.br/eclini-whatsapp-header.jpg';
 
 interface WhatsAppRequest {
   phone: string;
