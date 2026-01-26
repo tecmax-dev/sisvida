@@ -42,12 +42,20 @@ export default function AuthorizationValidationPage() {
       // If union_entity is null, try to fetch by clinic_id
       let unionEntityData = data.union_entity;
       if (!unionEntityData && data.clinic_id) {
-        const { data: entityByClinic } = await supabase
+        // IMPORTANT: avoid `.single()` here because the clinic may (incorrectly) have multiple active entities
+        // which would cause the signature/logo not to load on the public validation page.
+        const { data: entityByClinic, error: entityByClinicError } = await supabase
           .from("union_entities")
           .select("razao_social, nome_fantasia, logo_url, president_name, president_signature_url")
           .eq("clinic_id", data.clinic_id)
           .eq("status", "ativa")
-          .single();
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (entityByClinicError) {
+          console.warn("[AuthorizationValidation] Unable to fetch union entity by clinic:", entityByClinicError);
+        }
         unionEntityData = entityByClinic;
       }
 
