@@ -157,10 +157,25 @@ serve(async (req) => {
       .eq('id', clinicId)
       .single();
 
-    const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
-    const logoUrl = clinicProviderData?.whatsapp_header_image_url || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
+    // 9.1 Check for union entity logo (takes priority for sindicatos)
+    let unionLogo: string | null = null;
+    const { data: unionEntity } = await supabase
+      .from('union_entities')
+      .select('logo_url')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'ativa')
+      .maybeSingle();
+    
+    if (unionEntity?.logo_url) {
+      unionLogo = unionEntity.logo_url;
+      console.log(`[Clinic ${clinicId}] Using union entity logo: ${unionLogo}`);
+    }
 
-    console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}`);
+    const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
+    // Priority: whatsapp_header_image_url > union_entity logo > clinic logo > default
+    const logoUrl = clinicProviderData?.whatsapp_header_image_url || unionLogo || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
+
+    console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}, logo: ${logoUrl}`);
 
     // ========== TWILIO PROVIDER ==========
     if (whatsappProvider === 'twilio') {
