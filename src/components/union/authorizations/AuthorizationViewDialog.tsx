@@ -60,12 +60,18 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
     queryKey: ["union-entity", currentClinic?.id],
     queryFn: async () => {
       if (!currentClinic?.id) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("union_entities")
         .select("*")
         .eq("clinic_id", currentClinic.id)
         .eq("status", "ativa")
-        .single();
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("[AuthorizationViewDialog] Unable to fetch union entity:", error);
+      }
       return data;
     },
     enabled: !!currentClinic?.id && open,
@@ -81,7 +87,7 @@ export function AuthorizationViewDialog({ open, onOpenChange, authorization }: P
         .select("*")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: !!currentClinic?.id && open,
