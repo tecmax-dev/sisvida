@@ -77,12 +77,27 @@ export function MobileCarousel() {
         {/* All slides layered */}
         {banners.map((banner, index) => {
           const isActive = index === currentIndex;
+          const hasLink = !!banner.external_link;
+          
+          const handleClick = () => {
+            if (hasLink) {
+              // Ensure URL has protocol
+              let url = banner.external_link!;
+              if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+              }
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }
+          };
+          
           return (
             <div
               key={banner.id}
+              onClick={handleClick}
               className={cn(
                 "absolute inset-0 transition-opacity duration-700 ease-out",
-                isActive ? "opacity-100 z-10" : "opacity-0 z-0"
+                isActive ? "opacity-100 z-10" : "opacity-0 z-0",
+                hasLink && "cursor-pointer"
               )}
             >
               {/* Background image with Ken Burns effect */}
