@@ -841,14 +841,33 @@ _Digite o número da opção desejada._`,
 
 _Digite o número da opção desejada._`,
 
-  // Booking maintenance message
-  bookingMaintenance: `⚠️ *Agendamento em Manutenção*
+  // Booking maintenance message - promotes new app
+  bookingMaintenance: `📲 *NOVIDADE: Agende pelo App!*
 
-O agendamento de consultas pelo WhatsApp está temporariamente indisponível.
+Olá! 👋
 
-Estamos trabalhando para restabelecer o serviço em breve. Por favor, tente novamente mais tarde.
+O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
 
-Agradecemos sua compreensão! 🙏`,
+✨ *NOVO APP DO SINDICATO* ✨
+
+Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com ainda mais praticidade:
+
+📱 *Benefícios do App:*
+• Agendamento rápido em poucos toques
+• Carteirinha digital sempre à mão
+• Gestão de dependentes
+• Notificações de consultas
+• Funciona offline após instalado
+
+📥 *Instale agora:*
+https://app.eclini.com.br/sindicato/instalar
+
+⚠️ *Dica de instalação:*
+• iPhone: abra pelo *Safari*
+• Android: abra pelo *Chrome*
+• Toque em "Adicionar à Tela Inicial"
+
+Aproveite essa novidade! 🎉`,
 
   // Helper function to get the appropriate menu based on booking_enabled
   getMainMenu: (bookingEnabled: boolean) => bookingEnabled 

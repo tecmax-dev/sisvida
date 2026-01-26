@@ -681,9 +681,34 @@ serve(async (req) => {
       const bookingEnabled = evolutionConfig?.booking_enabled !== false;
       
       if (!bookingEnabled) {
-        console.log('[ai-assistant] Booking is disabled, sending maintenance message');
+        console.log('[ai-assistant] Booking is disabled, sending app update notification');
         return new Response(JSON.stringify({ 
-          response: `⚠️ *Agendamento em Manutenção*\n\nO agendamento de consultas pelo WhatsApp está temporariamente indisponível.\n\nEstamos trabalhando para restabelecer o serviço em breve. Por favor, tente novamente mais tarde.\n\nAgradecemos sua compreensão! 🙏`,
+          response: `📲 *NOVIDADE: Agende pelo App!*
+
+Olá! 👋
+
+O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
+
+✨ *NOVO APP DO SINDICATO* ✨
+
+Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com ainda mais praticidade:
+
+📱 *Benefícios do App:*
+• Agendamento rápido em poucos toques
+• Carteirinha digital sempre à mão
+• Gestão de dependentes
+• Notificações de consultas
+• Funciona offline após instalado
+
+📥 *Instale agora:*
+https://app.eclini.com.br/sindicato/instalar
+
+⚠️ *Dica de instalação:*
+• iPhone: abra pelo *Safari*
+• Android: abra pelo *Chrome*
+• Toque em "Adicionar à Tela Inicial"
+
+Aproveite essa novidade! 🎉`,
           handoff_to_booking: false
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
