@@ -1,17 +1,51 @@
+import { useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { CheckCircle, XCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Loader2, Share2, Printer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AuthorizationValidationPage() {
   const { slug, hash } = useParams<{ slug: string; hash: string }>();
+  const { toast } = useToast();
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const currentUrl = window.location.href;
+
+  const handleShare = async () => {
+    const shareData = {
+      title: "Autorização de Benefício",
+      text: "Verifique esta autorização de benefício sindical",
+      url: currentUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(currentUrl);
+        toast({ title: "Link copiado para a área de transferência!" });
+      }
+    } catch (err) {
+      // User cancelled or error
+      if ((err as Error).name !== "AbortError") {
+        await navigator.clipboard.writeText(currentUrl);
+        toast({ title: "Link copiado!" });
+      }
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["authorization-validation", hash],
@@ -119,8 +153,20 @@ export default function AuthorizationValidationPage() {
           ? "bg-gradient-to-br from-emerald-50 to-teal-100"
           : "bg-gradient-to-br from-red-50 to-orange-100"
       }`}>
-        <Card className="w-full max-w-lg bg-white">
-          <CardContent className="pt-6 space-y-6">
+        <Card className="w-full max-w-lg bg-white print:shadow-none print:border-none">
+          <CardContent className="pt-6 space-y-6" ref={printRef}>
+          {/* Action Buttons - hidden on print */}
+          <div className="flex justify-center gap-2 print:hidden">
+            <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
+              <Share2 className="h-4 w-4" />
+              Compartilhar
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+              <Printer className="h-4 w-4" />
+              Imprimir
+            </Button>
+          </div>
+
           {/* Logo */}
           {logoUrl && (
             <div className="flex justify-center">
