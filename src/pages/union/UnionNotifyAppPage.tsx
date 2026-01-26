@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
@@ -20,7 +22,17 @@ import {
   Bell,
   Users,
   Calendar,
-  CreditCard
+  CreditCard,
+  Globe,
+  QrCode,
+  Apple,
+  Chrome,
+  Info,
+  FileText,
+  ExternalLink,
+  Zap,
+  Shield,
+  RefreshCw
 } from "lucide-react";
 
 const APP_URL_SINDICATO = "https://app.eclini.com.br/sindicato/instalar";
@@ -73,12 +85,26 @@ Atenciosamente,
 }
 
 const features = [
-  { icon: Download, label: "Instalação PWA", description: "Instale direto no celular" },
-  { icon: Bell, label: "Notificações", description: "Lembretes de carteirinha" },
-  { icon: CreditCard, label: "Carteirinha Digital", description: "Acesso rápido" },
-  { icon: Calendar, label: "Agendamento Online", description: "Consultas pelo app" },
-  { icon: Users, label: "Dependentes", description: "Gestão simplificada" },
+  { icon: Download, label: "Instalação PWA", description: "Sem loja de apps" },
+  { icon: Bell, label: "Notificações", description: "Lembretes automáticos" },
+  { icon: CreditCard, label: "Carteirinha", description: "Acesso digital" },
+  { icon: Calendar, label: "Agendamento", description: "Online 24h" },
+  { icon: Users, label: "Dependentes", description: "Gestão completa" },
+  { icon: Shield, label: "Sessão", description: "Login permanente" },
 ];
+
+const installSteps = {
+  ios: [
+    { step: 1, text: "Abra o link no Safari", icon: Globe },
+    { step: 2, text: "Toque no ícone de compartilhar", icon: ExternalLink },
+    { step: 3, text: "Selecione 'Adicionar à Tela Inicial'", icon: Smartphone },
+  ],
+  android: [
+    { step: 1, text: "Abra o link no Chrome", icon: Chrome },
+    { step: 2, text: "Toque no menu (⋮)", icon: Info },
+    { step: 3, text: "Selecione 'Instalar aplicativo'", icon: Download },
+  ],
+};
 
 export default function UnionNotifyAppPage() {
   const { toast } = useToast();
@@ -86,9 +112,9 @@ export default function UnionNotifyAppPage() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState(generateAppUpdateMessage());
   const [sending, setSending] = useState(false);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [activeTab, setActiveTab] = useState("enviar");
 
-  // Format phone number for display
   const formatPhoneInput = (value: string): string => {
     const digits = value.replace(/\D/g, "");
     if (digits.length <= 2) return digits;
@@ -96,7 +122,6 @@ export default function UnionNotifyAppPage() {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
   };
 
-  // Get clean phone for preview
   const getCleanPhone = (): string => {
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 10) return "";
@@ -104,12 +129,12 @@ export default function UnionNotifyAppPage() {
     return `+${withCountry}`;
   };
 
-  const handleCopyLink = async (link: string) => {
+  const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(link);
-      setCopiedLink(link);
+      await navigator.clipboard.writeText(APP_URL_SINDICATO);
+      setCopiedLink(true);
       toast({ title: "Link copiado!", description: "Cole onde preferir." });
-      setTimeout(() => setCopiedLink(null), 2000);
+      setTimeout(() => setCopiedLink(false), 2000);
     } catch {
       toast({ title: "Erro", description: "Não foi possível copiar.", variant: "destructive" });
     }
@@ -117,40 +142,24 @@ export default function UnionNotifyAppPage() {
 
   const handleSend = async () => {
     if (!currentClinic?.id) {
-      toast({
-        title: "Erro",
-        description: "Clínica não encontrada.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Clínica não encontrada.", variant: "destructive" });
       return;
     }
 
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length < 10) {
-      toast({
-        title: "Telefone inválido",
-        description: "Por favor, informe um número de telefone válido com DDD.",
-        variant: "destructive",
-      });
+      toast({ title: "Telefone inválido", description: "Informe um número válido com DDD.", variant: "destructive" });
       return;
     }
 
     if (!message.trim()) {
-      toast({
-        title: "Mensagem vazia",
-        description: "Por favor, digite uma mensagem.",
-        variant: "destructive",
-      });
+      toast({ title: "Mensagem vazia", description: "Digite uma mensagem.", variant: "destructive" });
       return;
     }
 
     setSending(true);
     try {
-      // Normalize phone - ensure 55 prefix
       const normalizedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
-      
-      console.log("[SendAppUpdate] Sending to:", normalizedPhone);
-      
       const result = await sendWhatsAppMessage({
         phone: normalizedPhone,
         message,
@@ -159,25 +168,14 @@ export default function UnionNotifyAppPage() {
       });
 
       if (result.success) {
-        toast({
-          title: "Mensagem enviada!",
-          description: `Atualização do app enviada para ${formatPhoneInput(phone)}`,
-        });
+        toast({ title: "Enviado!", description: `Mensagem enviada para ${formatPhoneInput(phone)}` });
         setPhone("");
       } else {
-        toast({
-          title: "Erro ao enviar",
-          description: result.error || "Não foi possível enviar a mensagem.",
-          variant: "destructive",
-        });
+        toast({ title: "Erro ao enviar", description: result.error || "Tente novamente.", variant: "destructive" });
       }
     } catch (error) {
-      console.error("Error sending app update message:", error);
-      toast({
-        title: "Erro ao enviar",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error("Error sending:", error);
+      toast({ title: "Erro", description: "Erro inesperado. Tente novamente.", variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -185,42 +183,81 @@ export default function UnionNotifyAppPage() {
 
   const handleResetMessage = () => {
     setMessage(generateAppUpdateMessage());
-    toast({ title: "Mensagem restaurada", description: "Texto padrão restaurado." });
+    toast({ title: "Restaurado", description: "Texto padrão restaurado." });
   };
 
   const cleanPhonePreview = getCleanPhone();
 
   return (
-    <div className="space-y-6">
-        {/* Header */}
+    <div className="space-y-4">
+      {/* Header Compacto */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg">
-            <Smartphone className="h-6 w-6 text-white" />
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+            <Smartphone className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Notificar Atualização do App</h1>
-            <p className="text-muted-foreground">
-              Envie mensagens sobre as novidades do aplicativo via WhatsApp
+            <h1 className="text-xl font-bold">Notificar Atualização do App</h1>
+            <p className="text-sm text-muted-foreground">
+              Envie instruções de instalação via WhatsApp
             </p>
           </div>
         </div>
+        <Badge variant="outline" className="gap-1">
+          <Zap className="h-3 w-3" />
+          PWA
+        </Badge>
+      </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Card - Message Composer */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-green-600" />
-                  Enviar Notificação
+      {/* Link Rápido */}
+      <Card className="border-dashed">
+        <CardContent className="py-3">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+              <Link2 className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">Link de Instalação</p>
+              <p className="text-sm font-mono truncate">{APP_URL_SINDICATO}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleCopyLink} className="shrink-0">
+              {copiedLink ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              <span className="ml-1.5 hidden sm:inline">{copiedLink ? "Copiado" : "Copiar"}</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 h-9">
+          <TabsTrigger value="enviar" className="text-xs">
+            <Send className="h-3.5 w-3.5 mr-1.5" />
+            Enviar
+          </TabsTrigger>
+          <TabsTrigger value="recursos" className="text-xs">
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            Recursos
+          </TabsTrigger>
+          <TabsTrigger value="instalacao" className="text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Instalação
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab: Enviar Notificação */}
+        <TabsContent value="enviar" className="space-y-4 mt-4">
+          <div className="grid gap-4 lg:grid-cols-5">
+            {/* Form */}
+            <Card className="lg:col-span-3">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-green-600" />
+                  Enviar via WhatsApp
                 </CardTitle>
-                <CardDescription>
-                  Digite o número do associado e personalize a mensagem
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Número do WhatsApp</Label>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs">Número do WhatsApp</Label>
                   <div className="relative">
                     <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -228,112 +265,190 @@ export default function UnionNotifyAppPage() {
                       value={phone}
                       onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
                       placeholder="(73) 99999-9999"
-                      className="pl-10 text-lg"
+                      className="pl-10 h-9"
                       autoComplete="off"
                     />
                   </div>
                   {cleanPhonePreview && (
-                    <p className="text-sm text-muted-foreground">
-                      Será enviado para: <strong className="text-foreground">{cleanPhonePreview}</strong>
+                    <p className="text-xs text-muted-foreground">
+                      Enviar para: <span className="font-medium text-foreground">{cleanPhonePreview}</span>
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="message">Mensagem</Label>
-                    <Button variant="ghost" size="sm" onClick={handleResetMessage}>
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      Restaurar Padrão
+                    <Label htmlFor="message" className="text-xs">Mensagem</Label>
+                    <Button variant="ghost" size="sm" onClick={handleResetMessage} className="h-6 text-xs px-2">
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Restaurar
                     </Button>
                   </div>
                   <Textarea
                     id="message"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    rows={20}
-                    className="text-sm font-mono resize-none"
+                    rows={14}
+                    className="text-xs font-mono resize-none"
                   />
                 </div>
 
                 <Button
                   onClick={handleSend}
                   disabled={sending || !phone.trim()}
-                  className="w-full bg-green-600 hover:bg-green-700 h-12 text-base"
+                  className="w-full bg-green-600 hover:bg-green-700 h-10"
                 >
                   {sending ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Enviando...
                     </>
                   ) : (
                     <>
-                      <Send className="h-5 w-5 mr-2" />
-                      Enviar via WhatsApp
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar Notificação
                     </>
                   )}
                 </Button>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Sidebar - Links and Features */}
-          <div className="space-y-4">
-            {/* Installation Links */}
+            {/* Quick Info */}
+            <div className="lg:col-span-2 space-y-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    Modelo de Mensagem
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    A mensagem inclui automaticamente:
+                  </p>
+                  <ul className="text-xs space-y-1">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" />
+                      Lista de novos recursos
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" />
+                      Link de instalação
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" />
+                      Instruções por plataforma
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" />
+                      Formatação WhatsApp
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Info className="h-4 w-4 text-amber-500" />
+                    Dicas de Envio
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-xs text-muted-foreground space-y-1.5">
+                    <li>• Confirme o número antes de enviar</li>
+                    <li>• Personalize a mensagem se necessário</li>
+                    <li>• Aguarde confirmação de envio</li>
+                    <li>• Use para novos associados</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Tab: Recursos do App */}
+        <TabsContent value="recursos" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Recursos Disponíveis</CardTitle>
+              <CardDescription className="text-xs">
+                Funcionalidades incluídas no aplicativo do associado
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {features.map((feature, index) => (
+                  <div 
+                    key={index}
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-center"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <feature.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium">{feature.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{feature.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Instruções de Instalação */}
+        <TabsContent value="instalacao" className="mt-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* iOS */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Link2 className="h-4 w-4 text-primary" />
-                  Link de Instalação
+                  <Apple className="h-5 w-5" />
+                  iPhone / iPad
                 </CardTitle>
+                <CardDescription className="text-xs">
+                  Instalação via Safari
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">App do Sindicato</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      value={APP_URL_SINDICATO} 
-                      readOnly 
-                      className="text-xs h-9"
-                    />
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleCopyLink(APP_URL_SINDICATO)}
-                      className="shrink-0"
-                    >
-                      {copiedLink === APP_URL_SINDICATO ? (
-                        <Check className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                  {installSteps.ios.map((item) => (
+                    <div key={item.step} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
+                      <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
+                        {item.step}
+                      </div>
+                      <div className="flex items-center gap-2 flex-1">
+                        <item.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm">{item.text}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Features Highlight */}
+            {/* Android */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  Novidades do App
+                  <Chrome className="h-5 w-5 text-green-600" />
+                  Android
                 </CardTitle>
+                <CardDescription className="text-xs">
+                  Instalação via Chrome
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {features.map((feature, index) => (
-                    <div 
-                      key={index}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <feature.icon className="h-4 w-4 text-primary" />
+                  {installSteps.android.map((item) => (
+                    <div key={item.step} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
+                      <div className="h-6 w-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                        {item.step}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{feature.label}</p>
-                        <p className="text-xs text-muted-foreground">{feature.description}</p>
+                      <div className="flex items-center gap-2 flex-1">
+                        <item.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm">{item.text}</span>
                       </div>
                     </div>
                   ))}
@@ -341,7 +456,26 @@ export default function UnionNotifyAppPage() {
               </CardContent>
             </Card>
           </div>
-      </div>
+
+          {/* Info Extra */}
+          <Card className="mt-4 border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30">
+            <CardContent className="py-3">
+              <div className="flex gap-3">
+                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-900 dark:text-blue-100">
+                    O que é PWA?
+                  </p>
+                  <p className="text-blue-700 dark:text-blue-300 text-xs mt-1">
+                    Progressive Web App é uma tecnologia que permite instalar o site como um aplicativo, 
+                    sem precisar baixar da loja. Funciona offline e recebe atualizações automáticas.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
