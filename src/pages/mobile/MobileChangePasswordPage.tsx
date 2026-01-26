@@ -17,8 +17,14 @@ import {
   ShieldCheck,
   AlertTriangle,
 } from "lucide-react";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
+/**
+ * MOBILE CHANGE PASSWORD PAGE - Arquitetura Bootstrap Imperativo
+ * 
+ * ❌ PROIBIDO: restoreSession, getSessionSync, navigate("/app/login")
+ * ✅ PERMITIDO: useMobileAuth() para consumir dados já validados
+ */
 export default function MobileChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -30,6 +36,9 @@ export default function MobileChangePasswordPage() {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Consumir dados do contexto de autenticação (já validado pelo bootstrap)
+  const { patientId } = useMobileAuth();
 
   // Password validation rules
   const hasMinLength = newPassword.length >= 8;
@@ -61,20 +70,19 @@ export default function MobileChangePasswordPage() {
       });
       return;
     }
+    
+    if (!patientId) {
+      toast({
+        title: "Erro",
+        description: "Sessão não encontrada.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
 
     try {
-      // Use robust session restoration
-      const session = await restoreSession();
-      const patientId = session.patientId;
-
-      if (!patientId) {
-        console.log("[MobileChangePassword] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       // Fetch patient CPF first
       const { data: patientData } = await supabase
         .from("patients")

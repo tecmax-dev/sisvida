@@ -17,7 +17,7 @@ interface MobileAuthContextType {
   }>;
   logout: () => Promise<void>;
   verifySession: () => Promise<boolean>;
-  refresh: () => Promise<void>;
+  refresh: () => void;
 }
 
 const MobileAuthContext = createContext<MobileAuthContextType | null>(null);

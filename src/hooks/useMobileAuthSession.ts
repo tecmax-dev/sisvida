@@ -1,22 +1,21 @@
 /**
- * SISTEMA DE AUTENTICAÇÃO MÓVEL COM SESSÃO JWT PERSISTENTE
+ * SISTEMA DE AUTENTICAÇÃO MÓVEL - Arquitetura Bootstrap Imperativo
  * 
- * Este hook gerencia autenticação de pacientes no app mobile usando:
- * 1. Verificação customizada de senha via RPC (verify_patient_password)
- * 2. Sessão JWT real do Supabase (para persistência robusta)
- * 3. Backup em localStorage/IndexedDB (redundância)
+ * Este hook apenas CONSOME e DISPONIBILIZA os dados de sessão já validados.
+ * A verificação de sessão acontece ANTES do React no bootstrap imperativo.
  * 
- * A sessão JWT do Supabase é automaticamente renovada pelo autoRefreshToken,
- * garantindo que o usuário permaneça logado indefinidamente até logout manual.
+ * ❌ PROIBIDO: supabase.auth.getSession(), restoreSession(), navigate("/app/login")
+ * ✅ PERMITIDO: onAuthStateChange para manter estado sincronizado
  * 
- * CRÍTICO: O estado só é marcado como initialized=true APÓS o listener
- * onAuthStateChange processar o primeiro evento, garantindo que a sessão
- * esteja completamente hidratada antes de qualquer redirect.
+ * GARANTIAS:
+ * 1. NÃO decide autenticação (bootstrap já decidiu)
+ * 2. NÃO redireciona (páginas mostram estado vazio se sem dados)
+ * 3. Apenas reage a eventos de auth para manter estado atualizado
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { persistSession, restoreSession, clearSession } from "./useMobileSession";
+import { persistSession, clearSession, STORAGE_KEYS } from "./useMobileSession";
 
 interface MobileAuthState {
   isLoggedIn: boolean;
@@ -40,7 +39,14 @@ const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 /**
  * Hook principal de autenticação mobile
- * Combina autenticação customizada com sessão JWT do Supabase
+ * 
+ * IMPORTANTE: Este hook NÃO verifica sessão ativamente.
+ * O bootstrap imperativo já fez isso ANTES do React montar.
+ * 
+ * Este hook apenas:
+ * 1. Lê dados do localStorage (já validados pelo bootstrap)
+ * 2. Escuta onAuthStateChange para manter sincronizado
+ * 3. Fornece funções de login/logout
  */
 export function useMobileAuthSession() {
   const [state, setState] = useState<MobileAuthState>({
@@ -52,84 +58,62 @@ export function useMobileAuthSession() {
     initialized: false,
   });
 
-  // Refs para controlar inicialização única e confirmação do listener
-  const initializationAttempted = useRef(false);
-  const authListenerReady = useRef(false);
+  // Ref para evitar múltiplas inicializações
+  const initializationDone = useRef(false);
 
   /**
-   * Inicialização: prepara estado mas AGUARDA onAuthStateChange confirmar
-   * NÃO marca initialized=true até que o listener processe o estado real
+   * Inicialização: Apenas lê dados do localStorage
+   * NÃO faz verificação ativa de sessão (bootstrap já fez)
    */
-  const initialize = useCallback(async () => {
-    if (initializationAttempted.current) {
-      return; // Evitar múltiplas inicializações
-    }
-    initializationAttempted.current = true;
+  const initialize = useCallback(() => {
+    if (initializationDone.current) return;
+    initializationDone.current = true;
     
-    console.log("[MobileAuth] Inicializando...");
+    console.log("[MobileAuth] Inicializando a partir do localStorage...");
     
     try {
-      // 1. Verificar sessão Supabase (mais confiável - tem refresh token)
-      const { data: { session } } = await supabase.auth.getSession();
+      // Apenas ler dados que o bootstrap já validou e persistiu
+      const patientId = localStorage.getItem(STORAGE_KEYS.patientId);
+      const clinicId = localStorage.getItem(STORAGE_KEYS.clinicId);
+      const patientName = localStorage.getItem(STORAGE_KEYS.patientName);
       
-      if (session?.user) {
-        // Extrair dados do paciente da metadata do usuário
-        const metadata = session.user.user_metadata;
-        const appMetadata = session.user.app_metadata;
-        
-        const patientId = metadata?.patient_id || appMetadata?.patient_id;
-        const clinicId = metadata?.clinic_id || appMetadata?.clinic_id || TARGET_CLINIC_ID;
-        const patientName = metadata?.name || session.user.email?.split('@')[0] || 'Paciente';
-        
-        if (patientId) {
-          console.log("[MobileAuth] Sessão Supabase restaurada:", patientName);
-          
-          // Sincronizar com localStorage/IndexedDB
-          await persistSession(patientId, clinicId, patientName);
-          
-          // CRÍTICO: NÃO marcar initialized=true ainda
-          // O listener onAuthStateChange vai confirmar após processar
-          setState({
-            isLoggedIn: true,
-            patientId,
-            clinicId,
-            patientName,
-            loading: true,      // Mantém loading até listener confirmar
-            initialized: false, // Aguarda confirmação do listener
-          });
-          return;
-        }
-      }
-      
-      // 2. Fallback: restaurar de localStorage/IndexedDB
-      const localSession = await restoreSession();
-      
-      if (localSession.isLoggedIn && localSession.patientId) {
-        console.log("[MobileAuth] Sessão local restaurada:", localSession.patientName);
-        
+      if (patientId) {
+        console.log("[MobileAuth] Dados encontrados:", patientName);
         setState({
           isLoggedIn: true,
-          patientId: localSession.patientId,
-          clinicId: localSession.clinicId,
-          patientName: localSession.patientName,
-          loading: true,      // Mantém loading até listener confirmar
-          initialized: false, // Aguarda confirmação do listener
+          patientId,
+          clinicId: clinicId || TARGET_CLINIC_ID,
+          patientName,
+          loading: false,
+          initialized: true,
         });
-        return;
+      } else {
+        console.log("[MobileAuth] Nenhum dado no localStorage");
+        setState({
+          isLoggedIn: false,
+          patientId: null,
+          clinicId: null,
+          patientName: null,
+          loading: false,
+          initialized: true,
+        });
       }
-      
-      // 3. Nenhuma sessão imediata - aguardar listener decidir
-      console.log("[MobileAuth] Nenhuma sessão imediata, aguardando listener...");
-      // O listener onAuthStateChange vai processar e marcar initialized
-      
     } catch (err) {
-      console.error("[MobileAuth] Erro na inicialização:", err);
-      // Mesmo em erro, aguardar listener confirmar
+      console.error("[MobileAuth] Erro ao ler localStorage:", err);
+      setState({
+        isLoggedIn: false,
+        patientId: null,
+        clinicId: null,
+        patientName: null,
+        loading: false,
+        initialized: true,
+      });
     }
   }, []);
 
   /**
    * Login: verifica senha customizada e cria sessão JWT do Supabase
+   * Este é o ÚNICO local onde podemos fazer verificações ativas
    */
   const login = useCallback(async (cpf: string, password: string): Promise<LoginResult> => {
     console.log("[MobileAuth] Iniciando login...");
@@ -270,35 +254,23 @@ export function useMobileAuthSession() {
   }, []);
 
   /**
-   * Verificar sessão: revalida se a sessão ainda é válida
+   * Verificar sessão: apenas retorna o estado atual
+   * NÃO faz verificação ativa (bootstrap já fez)
    */
   const verifySession = useCallback(async (): Promise<boolean> => {
-    // Se já está logado localmente, confiar
-    if (state.isLoggedIn && state.patientId) {
-      return true;
-    }
-    
-    // Tentar restaurar
-    await initialize();
-    return state.isLoggedIn;
-  }, [state.isLoggedIn, state.patientId, initialize]);
+    return state.isLoggedIn && !!state.patientId;
+  }, [state.isLoggedIn, state.patientId]);
 
-  // Inicializar ao montar
+  // Inicializar ao montar (leitura passiva do localStorage)
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  // Escutar mudanças de autenticação do Supabase
+  // Escutar mudanças de autenticação do Supabase (reativo, não ativo)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("[MobileAuth] Auth state change:", event);
-        
-        // Marcar que o listener processou pelo menos um evento
-        if (!authListenerReady.current) {
-          authListenerReady.current = true;
-          console.log("[MobileAuth] Listener pronto");
-        }
         
         if (event === 'SIGNED_OUT') {
           // Logout detectado - limpar tudo
@@ -311,8 +283,8 @@ export function useMobileAuthSession() {
             loading: false,
             initialized: true,
           });
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-          // Sessão válida confirmada pelo listener
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Sessão válida - extrair dados e atualizar estado
           if (session?.user) {
             const metadata = session.user.user_metadata;
             const appMetadata = session.user.app_metadata;
@@ -322,51 +294,21 @@ export function useMobileAuthSession() {
             const patientName = metadata?.name || session.user.email?.split('@')[0] || 'Paciente';
             
             if (patientId) {
-              console.log("[MobileAuth] Sessão confirmada:", patientName, "Evento:", event);
+              console.log("[MobileAuth] Sessão atualizada:", patientName);
               await persistSession(patientId, clinicId, patientName);
               
-              // AGORA SIM marcar como inicializado - sessão confirmada
               setState({
                 isLoggedIn: true,
                 patientId,
                 clinicId,
                 patientName,
                 loading: false,
-                initialized: true, // ✅ Sessão hidratada e confirmada
-              });
-            } else {
-              setState({
-                isLoggedIn: false,
-                patientId: null,
-                clinicId: null,
-                patientName: null,
-                loading: false,
                 initialized: true,
               });
             }
-          } else {
-            setState({
-              isLoggedIn: false,
-              patientId: null,
-              clinicId: null,
-              patientName: null,
-              loading: false,
-              initialized: true,
-            });
-          }
-        } else {
-          // Outros eventos ou sem sessão
-          if (authListenerReady.current && !session) {
-            setState({
-              isLoggedIn: false,
-              patientId: null,
-              clinicId: null,
-              patientName: null,
-              loading: false,
-              initialized: true,
-            });
           }
         }
+        // INITIAL_SESSION é ignorado - o bootstrap já tratou isso
       }
     );
 

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { format, isPast, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface CardData {
   id: string;
@@ -37,6 +37,12 @@ interface PayslipRequest {
   reviewed_at: string | null;
 }
 
+/**
+ * MOBILE CARD RENEWAL PAGE - Arquitetura Bootstrap Imperativo
+ * 
+ * ❌ PROIBIDO: restoreSession, getSessionSync, navigate("/app/login")
+ * ✅ PERMITIDO: useMobileAuth() para consumir dados já validados
+ */
 export default function MobileCardRenewalPage() {
   const [loading, setLoading] = useState(true);
   const [cardData, setCardData] = useState<CardData | null>(null);
@@ -51,29 +57,26 @@ export default function MobileCardRenewalPage() {
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Consumir dados do contexto de autenticação (já validado pelo bootstrap)
+  const { patientId, clinicId } = useMobileAuth();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (patientId && clinicId) {
+      loadData(patientId, clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [patientId, clinicId]);
 
-  const loadData = async () => {
+  const loadData = async (pid: string, cid: string) => {
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-
-      if (!patientId || !clinicId) {
-        console.log("[MobileCardRenewal] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       // Check for any pending payslip request FIRST (regardless of card)
       const { data: pendingRequests } = await supabase
         .from("payslip_requests")
         .select("id, status, requested_at, received_at, reviewed_at")
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
+        .eq("patient_id", pid)
+        .eq("clinic_id", cid)
         .in("status", ["pending", "received"])
         .order("created_at", { ascending: false })
         .limit(1);
@@ -86,8 +89,8 @@ export default function MobileCardRenewalPage() {
       const { data: card } = await supabase
         .from("patient_cards")
         .select("id, card_number, expires_at, is_active")
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
+        .eq("patient_id", pid)
+        .eq("clinic_id", cid)
         .eq("is_active", true)
         .order("expires_at", { ascending: false })
         .limit(1)
@@ -170,19 +173,11 @@ export default function MobileCardRenewalPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile || !cardData) return;
+    if (!selectedFile || !cardData || !patientId || !clinicId) return;
 
     setUploading(true);
 
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-
-      if (!patientId || !clinicId) {
-        throw new Error("Sessão inválida");
-      }
-
       // Generate unique file path - use contra-cheques bucket with correct path structure
       const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `${clinicId}/${patientId}/${Date.now()}.${fileExt}`;
