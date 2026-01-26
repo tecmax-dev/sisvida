@@ -24,7 +24,7 @@ import {
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface PatientData {
   id: string;
@@ -51,6 +51,12 @@ interface ClinicData {
   logo_url: string | null;
 }
 
+/**
+ * MOBILE CARD PAGE - Arquitetura Bootstrap Imperativo
+ * 
+ * ❌ PROIBIDO: restoreSession, getSessionSync, navigate("/app/login")
+ * ✅ PERMITIDO: useMobileAuth() para consumir dados já validados
+ */
 export default function MobileCardPage() {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [cardData, setCardData] = useState<CardData | null>(null);
@@ -59,28 +65,25 @@ export default function MobileCardPage() {
   const cardRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Consumir dados do contexto de autenticação (já validado pelo bootstrap)
+  const { patientId } = useMobileAuth();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (patientId) {
+      loadData(patientId);
+    } else {
+      setLoading(false);
+    }
+  }, [patientId]);
 
-  const loadData = async () => {
+  const loadData = async (pid: string) => {
     try {
-      // Use robust session restoration
-      const session = await restoreSession();
-      const patientId = session.patientId;
-
-      if (!patientId) {
-        console.log("[MobileCard] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       // Fetch patient data
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("id, name, cpf, photo_url, registration_number, tag, clinic_id")
-        .eq("id", patientId)
+        .eq("id", pid)
         .single();
 
       if (patientError || !patientData) {
@@ -89,7 +92,6 @@ export default function MobileCardPage() {
           description: "Não foi possível carregar seus dados.",
           variant: "destructive",
         });
-        navigate("/app/login");
         return;
       }
 
@@ -99,7 +101,7 @@ export default function MobileCardPage() {
       const { data: cardInfo, error: cardError } = await supabase
         .from("patient_cards")
         .select("id, card_number, qr_code_token, issued_at, expires_at, is_active, notes")
-        .eq("patient_id", patientId)
+        .eq("patient_id", pid)
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(1)

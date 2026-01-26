@@ -1,5 +1,16 @@
+/**
+ * HOOK LEGADO - Mantido para compatibilidade
+ * 
+ * ❌ DEPRECATED: Use useMobileAuth() do MobileAuthContext em vez disso
+ * 
+ * Este hook existe apenas para não quebrar código existente.
+ * Novas implementações devem usar o contexto MobileAuthContext.
+ */
+
 import { useState, useEffect, useCallback } from "react";
-import { restoreSession, clearSession, STORAGE_KEYS } from "./useMobileSession";
+import { STORAGE_KEYS } from "./useMobileSession";
+
+const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 export function useMobileAuth() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -9,31 +20,30 @@ export function useMobileAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const init = async () => {
-      // Use robust session restoration that checks multiple storage layers
-      const session = await restoreSession();
+    // Apenas leitura passiva do localStorage (bootstrap já validou)
+    try {
+      const pid = localStorage.getItem(STORAGE_KEYS.patientId);
+      const cid = localStorage.getItem(STORAGE_KEYS.clinicId);
+      const pname = localStorage.getItem(STORAGE_KEYS.patientName);
       
-      setPatientId(session.patientId);
-      setClinicId(session.clinicId);
-      setPatientName(session.patientName);
-      setIsLoggedIn(session.isLoggedIn);
-      setLoading(false);
+      setPatientId(pid);
+      setClinicId(cid || TARGET_CLINIC_ID);
+      setPatientName(pname);
+      setIsLoggedIn(!!pid);
       
-      if (session.isLoggedIn) {
-        console.log("[MobileAuth] Session restored for:", session.patientName);
+      if (pid) {
+        console.log("[MobileAuth Legacy] Dados carregados:", pname);
       }
-    };
-    
-    init();
+    } catch (err) {
+      console.warn("[MobileAuth Legacy] Erro ao ler localStorage:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Logout function that clears all storage layers
+  // Logout não deve ser usado aqui - use MobileAuthContext
   const logout = useCallback(async () => {
-    await clearSession();
-    setPatientId(null);
-    setClinicId(null);
-    setPatientName(null);
-    setIsLoggedIn(false);
+    console.warn("[MobileAuth Legacy] Use useMobileAuth() do MobileAuthContext para logout");
   }, []);
 
   return {
@@ -46,7 +56,7 @@ export function useMobileAuth() {
   };
 }
 
-// Tabs that are accessible without login
+// Tabs que são acessíveis sem login
 export const PUBLIC_TAB_KEYS = [
   "diretoria",
   "galeria",

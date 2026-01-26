@@ -20,7 +20,7 @@ import {
 import { ArrowLeft, Calendar, Clock, History, Loader2, Plus, User, XCircle } from "lucide-react";
 import { format, isFuture, isPast, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface LegalAppointment {
   id: string;
@@ -42,6 +42,12 @@ interface LegalAppointment {
   } | null;
 }
 
+/**
+ * MOBILE LEGAL APPOINTMENTS PAGE - Arquitetura Bootstrap Imperativo
+ * 
+ * ❌ PROIBIDO: restoreSession, getSessionSync, navigate("/app/login")
+ * ✅ PERMITIDO: useMobileAuth() para consumir dados já validados
+ */
 export default function MobileLegalAppointmentsPage() {
   const [appointments, setAppointments] = useState<LegalAppointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,29 +58,25 @@ export default function MobileLegalAppointmentsPage() {
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Consumir dados do contexto de autenticação (já validado pelo bootstrap)
+  const { patientId, clinicId } = useMobileAuth();
 
   useEffect(() => {
-    loadAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (patientId && clinicId) {
+      loadAppointments(patientId, clinicId);
+    } else {
+      setLoading(false);
+    }
+  }, [patientId, clinicId]);
 
-  const loadAppointments = async () => {
+  const loadAppointments = async (pid: string, cid: string) => {
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-
-      if (!patientId || !clinicId) {
-        console.log("[MobileLegalAppointments] No session found, redirecting to login");
-        navigate("/app/login");
-        return;
-      }
-
       const { data: patient, error: patientError } = await supabase
         .from("patients")
         .select("cpf")
-        .eq("id", patientId)
-        .eq("clinic_id", clinicId)
+        .eq("id", pid)
+        .eq("clinic_id", cid)
         .maybeSingle();
 
       if (patientError || !patient?.cpf) {
@@ -83,7 +85,6 @@ export default function MobileLegalAppointmentsPage() {
           description: "Não foi possível identificar seu CPF para buscar os agendamentos jurídicos.",
           variant: "destructive",
         });
-        navigate("/app/home");
         return;
       }
 
@@ -101,7 +102,7 @@ export default function MobileLegalAppointmentsPage() {
           service_type:homologacao_service_types(id, name, duration_minutes)
         `
         )
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", cid)
         .or(`employee_cpf.eq.${normalizedCpf},employee_cpf.eq.${formattedCpf}`)
         .order("appointment_date", { ascending: false })
         .order("start_time", { ascending: false });
@@ -161,17 +162,12 @@ export default function MobileLegalAppointmentsPage() {
   };
 
   const handleCancel = async () => {
-    if (!selectedAppointment) return;
+    if (!selectedAppointment || !clinicId) return;
 
     setCancelling(true);
     try {
-      const clinicId = localStorage.getItem("mobile_clinic_id");
-      if (!clinicId) throw new Error("Sessão inválida");
-
       const { error } = await (supabase.from("homologacao_appointments") as any)
         .update({
-          // RLS para app móvel permite apenas a transição de status para 'cancelled'
-          // Campos como cancelled_at/updated_at são preenchidos por triggers no backend
           status: "cancelled",
         })
         .eq("id", selectedAppointment.id)
@@ -186,7 +182,11 @@ export default function MobileLegalAppointmentsPage() {
 
       setShowCancelDialog(false);
       setSelectedAppointment(null);
-      await loadAppointments();
+      
+      // Reload appointments
+      if (patientId && clinicId) {
+        await loadAppointments(patientId, clinicId);
+      }
     } catch (err: any) {
       console.error("Error cancelling legal appointment:", err);
       toast({
