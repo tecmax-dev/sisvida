@@ -160,6 +160,8 @@ export default function MobileBookingPage() {
       }
 
       // Check if patient has valid (non-expired) card
+      // IMPORTANTE: Usar maybeSingle() pois paciente pode não ter cartão
+      // NÃO abortar o fluxo aqui - permitir carregar profissionais primeiro
       const { data: cardData } = await supabase
         .from("patient_cards")
         .select("id, expires_at")
@@ -168,13 +170,15 @@ export default function MobileBookingPage() {
         .eq("is_active", true)
         .order("expires_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (cardData?.expires_at && isPast(new Date(cardData.expires_at))) {
+      // Verificar expiração APÓS carregar profissionais (não abortar aqui)
+      const isCardExpired = cardData?.expires_at && isPast(new Date(cardData.expires_at));
+      if (isCardExpired) {
         setCardExpired(true);
         setCardExpiryDate(cardData.expires_at);
-        setLoading(false);
-        return;
+        // NÃO retornar aqui - continuar carregando profissionais
+        // A validação de cartão será tratada na UI, não bloqueando a listagem
       }
 
       // Load professionals with schedule
