@@ -100,26 +100,19 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
           <Menu className="h-6 w-6" />
         </button>
         
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
-            {clinic?.logo_url ? (
-              <img 
-                src={clinic.logo_url} 
-                alt={clinic.name} 
-                className="w-full h-full object-cover" 
-                onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
-              />
-            ) : (
-              <img 
-                src="/placeholder.svg" 
-                alt="Logo" 
-                className="w-7 h-7 object-contain opacity-50" 
-              />
-            )}
-          </div>
-          <div>
-            <h1 className="font-bold text-lg leading-tight">SECMI</h1>
-          </div>
+        <div className="flex items-center gap-2">
+          {clinic?.logo_url ? (
+            <img 
+              src={clinic.logo_url} 
+              alt={clinic.name} 
+              className="h-10 w-auto object-contain" 
+              onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
+            />
+          ) : (
+            <div className="h-10 w-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">APP</span>
+            </div>
+          )}
         </div>
         
         <button className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 active:scale-95">
