@@ -95,14 +95,27 @@ export default function MobileAuthorizationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, clinicId]);
 
-  const loadUnionBranding = async () => {
-    if (!clinicId) return;
+  const loadUnionBranding = async (clinicIdOverride?: string) => {
+    const targetClinicId = clinicIdOverride || clinicId;
+    if (!targetClinicId) {
+      console.warn("[MobileAuthorizations] Cannot load branding: missing clinicId", {
+        clinicId,
+        clinicIdOverride,
+      });
+      return;
+    }
+
+    console.debug("[MobileAuthorizations] Loading branding", {
+      clinicIdFromAuth: clinicId,
+      clinicIdOverride,
+      targetClinicId,
+    });
 
     // 1) Union entity branding/signature saved in admin panel
     const { data: entity, error: entityError } = await supabase
       .from("union_entities")
       .select("razao_social, nome_fantasia, logo_url, president_name, president_signature_url")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", targetClinicId)
       .eq("status", "ativa")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -114,11 +127,17 @@ export default function MobileAuthorizationsPage() {
 
     setUnionEntityBranding((entity as UnionEntityBranding | null) ?? null);
 
+    if (!entity && !entityError) {
+      console.warn("[MobileAuthorizations] No union entity found for clinic", {
+        targetClinicId,
+      });
+    }
+
     // 2) Optional: drawn signature (if configured). If RLS blocks, ignore gracefully.
     const { data: sig, error: sigError } = await supabase
       .from("union_president_signatures")
       .select("signature_data, president_name, president_title")
-      .eq("clinic_id", clinicId)
+      .eq("clinic_id", targetClinicId)
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -178,6 +197,17 @@ export default function MobileAuthorizationsPage() {
       }
 
       setAuthorizations(data || []);
+
+      // IMPORTANT: clinicId do MobileAuth pode vir vazio/inconsistente dependendo do fluxo.
+      // Para garantir a assinatura no detalhe da declaração, derivamos o clinicId da própria autorização.
+      const derivedClinicId = (data as Authorization[] | null)?.[0]?.clinic?.id || null;
+      if (derivedClinicId && derivedClinicId !== clinicId) {
+        console.debug("[MobileAuthorizations] Derived clinicId from authorizations", {
+          clinicIdFromAuth: clinicId,
+          derivedClinicId,
+        });
+        await loadUnionBranding(derivedClinicId);
+      }
     } catch (err) {
       console.error("Error loading authorizations:", err);
       toast({
@@ -271,7 +301,12 @@ export default function MobileAuthorizationsPage() {
                   <AuthorizationCard
                     key={auth.id}
                     authorization={auth}
-                    onClick={() => setSelectedAuth(auth)}
+                      onClick={() => {
+                        setSelectedAuth(auth);
+                        // Garantir que a assinatura carregue mesmo se clinicId do contexto estiver ausente
+                        const cid = clinicId || auth.clinic?.id;
+                        if (cid) loadUnionBranding(cid);
+                      }}
                     disabled={false}
                   />
                 ))}
@@ -291,7 +326,11 @@ export default function MobileAuthorizationsPage() {
                   <AuthorizationCard
                     key={auth.id}
                     authorization={auth}
-                    onClick={() => setSelectedAuth(auth)}
+                      onClick={() => {
+                        setSelectedAuth(auth);
+                        const cid = clinicId || auth.clinic?.id;
+                        if (cid) loadUnionBranding(cid);
+                      }}
                     disabled={true}
                   />
                 ))}
