@@ -23,7 +23,7 @@ interface ClinicBranding {
  * Hook to dynamically update the PWA branding (favicon, manifest, meta tags)
  * based on the clinic's data for the mobile app.
  * 
- * IMPORTANT: This hook ONLY applies custom branding on /app/* routes.
+ * IMPORTANT: This hook applies custom branding on /app/*, /m/*, and /sindicato/* routes.
  * On all other routes, it restores the default Eclini branding.
  */
 export function useDynamicPWA() {
@@ -31,18 +31,21 @@ export function useDynamicPWA() {
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
-  // Check if current route is a mobile app route
-  const isMobileAppRoute = location.pathname.startsWith("/app");
+  // Check if current route is a mobile/sindicato app route that needs custom branding
+  const isBrandedRoute = 
+    location.pathname.startsWith("/app") || 
+    location.pathname.startsWith("/m") || 
+    location.pathname.startsWith("/sindicato");
 
   useEffect(() => {
-    if (isMobileAppRoute) {
+    if (isBrandedRoute) {
       loadClinicBranding();
     } else {
-      // Restore default branding when NOT on mobile app routes
+      // Restore default branding when NOT on branded routes
       restoreDefaultBranding();
       setIsLoading(false);
     }
-  }, [isMobileAppRoute]);
+  }, [isBrandedRoute]);
 
   const loadClinicBranding = async () => {
     // Get clinic ID from localStorage or use target clinic
