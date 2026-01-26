@@ -34,7 +34,7 @@ import { format, differenceInYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DependentInclusionForm } from "@/components/mobile/DependentInclusionForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 // Age limit for dependents (in years) - dependents over this age are automatically deactivated
 const DEPENDENT_MAX_AGE = 21;
@@ -61,6 +61,7 @@ interface DependentRequest {
 }
 
 export default function MobileDependentsPage() {
+  const { patientId: authPatientId, clinicId, initialized } = useMobileAuth();
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [requests, setRequests] = useState<DependentRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,43 +69,26 @@ export default function MobileDependentsPage() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
-  const [patientClinicId, setPatientClinicId] = useState<string | null>(null);
-  const [patientId, setPatientId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (initialized && authPatientId) {
+      loadData();
+    }
+  }, [initialized, authPatientId]);
 
   const loadData = async () => {
+    if (!authPatientId) {
+      console.error("[MobileDependents] Sessão inválida - patientId ausente");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      // Use robust session restoration
-      const session = await restoreSession();
-      const storedPatientId = session.patientId;
-
-      if (!storedPatientId) {
-        console.error("[MobileDependents] ERRO: Sessão inválida após bootstrap");
-        setLoading(false);
-        return;
-      }
-      
-      setPatientId(storedPatientId);
-      
-      // Get clinic_id from patient
-      const { data: patientData } = await supabase
-        .from("patients")
-        .select("clinic_id")
-        .eq("id", storedPatientId)
-        .single();
-      
-      if (patientData?.clinic_id) {
-        setPatientClinicId(patientData.clinic_id);
-      }
-
-      // Fetch dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
+      // Load dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
       const { data: dependentsData, error: dependentsError } = await supabase
-        .rpc("get_patient_dependents", { p_patient_id: storedPatientId });
+        .rpc("get_patient_dependents", { p_patient_id: authPatientId });
 
       if (dependentsError) {
         console.error("Error fetching dependents:", dependentsError);
@@ -578,12 +562,12 @@ export default function MobileDependentsPage() {
       </Dialog>
 
       {/* Request Inclusion Form */}
-      {patientId && patientClinicId && (
+      {authPatientId && clinicId && (
         <DependentInclusionForm
           open={showRequestDialog}
           onOpenChange={setShowRequestDialog}
-          patientId={patientId}
-          clinicId={patientClinicId}
+          patientId={authPatientId}
+          clinicId={clinicId}
           onSuccess={loadData}
         />
       )}

@@ -27,7 +27,7 @@ import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, addDays,
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface LegalProfessional {
   id: string;
@@ -70,6 +70,7 @@ interface TimeSlot {
 }
 
 export default function MobileLegalBookingPage() {
+  const { patientId: authPatientId, clinicId: authClinicId, initialized } = useMobileAuth();
   const [step, setStep] = useState(1);
   const [professionals, setProfessionals] = useState<LegalProfessional[]>([]);
   const [schedules, setSchedules] = useState<LegalSchedule[]>([]);
@@ -99,8 +100,10 @@ export default function MobileLegalBookingPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (initialized && authPatientId && authClinicId) {
+      loadInitialData();
+    }
+  }, [initialized, authPatientId, authClinicId]);
 
   useEffect(() => {
     if (selectedProfessionalId && selectedDate) {
@@ -109,21 +112,18 @@ export default function MobileLegalBookingPage() {
   }, [selectedProfessionalId, selectedDate, selectedServiceTypeId]);
 
   const loadInitialData = async () => {
+    if (!authPatientId || !authClinicId) {
+      console.error("[MobileLegalBooking] Sessão inválida - patientId/clinicId ausente");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
-
-      if (!patientId || !clinicId) {
-        console.error("[MobileLegalBooking] ERRO: Sessão inválida após bootstrap");
-        setLoading(false);
-        return;
-      }
-
       // Check if patient is active
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("id, is_active, cpf")
-        .eq("id", patientId)
+        .eq("id", authPatientId)
         .single();
 
       if (patientError || !patientData?.is_active) {
@@ -137,7 +137,7 @@ export default function MobileLegalBookingPage() {
       const { data: dependentCheck } = await supabase
         .from("patient_dependents")
         .select("id")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", authClinicId)
         .eq("cpf", patientData.cpf)
         .eq("is_active", true)
         .limit(1);
@@ -149,7 +149,7 @@ export default function MobileLegalBookingPage() {
         .from("patients")
         .select("id")
         .eq("cpf", patientData.cpf)
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", authClinicId)
         .eq("is_active", true)
         .single();
 
@@ -169,7 +169,7 @@ export default function MobileLegalBookingPage() {
       const { data: monthlyAppts, error: monthlyError } = await (supabase
         .from("homologacao_appointments") as any)
         .select("id")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", authClinicId)
         .eq("employee_cpf", patientData.cpf)
         .gte("appointment_date", firstDayOfMonth)
         .lte("appointment_date", lastDayOfMonth)
@@ -185,8 +185,8 @@ export default function MobileLegalBookingPage() {
       const { data: cardData } = await supabase
         .from("patient_cards")
         .select("id, expires_at, card_number")
-        .eq("patient_id", patientId)
-        .eq("clinic_id", clinicId)
+        .eq("patient_id", authPatientId)
+        .eq("clinic_id", authClinicId)
         .eq("is_active", true)
         .order("expires_at", { ascending: false })
         .limit(1)
@@ -203,7 +203,7 @@ export default function MobileLegalBookingPage() {
           const { data: pendingRequest } = await supabase
             .from("payslip_requests")
             .select("id, status")
-            .eq("patient_id", patientId)
+            .eq("patient_id", authPatientId)
             .eq("card_id", cardData.id)
             .in("status", ["pending", "received"])
             .limit(1);
@@ -221,7 +221,7 @@ export default function MobileLegalBookingPage() {
       const { data: professionalsData } = await supabase
         .from("homologacao_professionals")
         .select("id, name, function, avatar_url, phone, email")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", authClinicId)
         .eq("is_active", true)
         .order("name");
 
@@ -231,7 +231,7 @@ export default function MobileLegalBookingPage() {
       const { data: schedulesData } = await supabase
         .from("homologacao_schedules")
         .select("*")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", authClinicId)
         .eq("is_active", true);
 
       setSchedules((schedulesData || []) as LegalSchedule[]);
@@ -240,7 +240,7 @@ export default function MobileLegalBookingPage() {
       const { data: serviceTypesData } = await supabase
         .from("homologacao_service_types")
         .select("id, name, duration_minutes, description")
-        .eq("clinic_id", clinicId)
+        .eq("clinic_id", authClinicId)
         .eq("is_active", true)
         .order("order_index");
 
@@ -299,7 +299,6 @@ export default function MobileLegalBookingPage() {
     if (!selectedProfessionalId || !selectedDate) return;
 
     try {
-      const clinicId = localStorage.getItem('mobile_clinic_id');
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const dayOfWeek = selectedDate.getDay();
 
@@ -381,14 +380,11 @@ export default function MobileLegalBookingPage() {
     setSubmitting(true);
 
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
-
       // Get patient data
       const { data: patientData } = await supabase
         .from("patients")
         .select("name, cpf, phone, email")
-        .eq("id", patientId)
+        .eq("id", authPatientId)
         .single();
 
       if (!patientData) {
@@ -403,7 +399,7 @@ export default function MobileLegalBookingPage() {
       const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), duration), "HH:mm");
 
       const appointmentData = {
-        clinic_id: clinicId,
+        clinic_id: authClinicId,
         professional_id: selectedProfessionalId,
         service_type_id: selectedServiceTypeId || null,
         appointment_date: format(selectedDate, "yyyy-MM-dd"),
@@ -459,16 +455,13 @@ export default function MobileLegalBookingPage() {
     setUploadingPayslip(true);
 
     try {
-      const patientId = localStorage.getItem('mobile_patient_id');
-      const clinicId = localStorage.getItem('mobile_clinic_id');
-
-      if (!patientId || !clinicId) {
+      if (!authPatientId || !authClinicId) {
         throw new Error("Sessão inválida");
       }
 
       // Generate unique file path
       const fileExt = payslipFile.name.split('.').pop()?.toLowerCase() || 'pdf';
-      const fileName = `${patientId}/${Date.now()}_contracheque.${fileExt}`;
+      const fileName = `${authPatientId}/${Date.now()}_contracheque.${fileExt}`;
 
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
@@ -487,8 +480,8 @@ export default function MobileLegalBookingPage() {
       const { error: requestError } = await supabase
         .from('payslip_requests')
         .insert({
-          clinic_id: clinicId,
-          patient_id: patientId,
+          clinic_id: authClinicId,
+          patient_id: authPatientId,
           card_id: cardInfo.id,
           status: 'received',
           received_at: new Date().toISOString(),

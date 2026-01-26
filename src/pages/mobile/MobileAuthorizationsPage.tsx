@@ -28,7 +28,7 @@ import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
 import { MobileCreateDeclarationDialog } from "@/components/mobile/MobileCreateDeclarationDialog";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 interface Authorization {
   id: string;
@@ -60,33 +60,26 @@ interface Authorization {
 export default function MobileAuthorizationsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { patientId, clinicId, initialized } = useMobileAuth();
   const [authorizations, setAuthorizations] = useState<Authorization[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuth, setSelectedAuth] = useState<Authorization | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [patientId, setPatientId] = useState<string | null>(null);
-  const [clinicId, setClinicId] = useState<string | null>(null);
 
   useEffect(() => {
-    const init = async () => {
-      const session = await restoreSession();
-      setPatientId(session.patientId);
-      setClinicId(session.clinicId);
+    if (initialized && patientId) {
       loadAuthorizations();
-    };
-    init();
-  }, []);
+    }
+  }, [initialized, patientId]);
 
   const loadAuthorizations = async () => {
+    if (!patientId) {
+      console.error("[MobileAuthorizations] Sessão inválida - patientId ausente");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      
-      if (!patientId) {
-        console.error("[MobileAuthorizations] ERRO: Sessão inválida após bootstrap");
-        setLoading(false);
-        return;
-      }
 
       // Fetch authorizations for the patient (as holder)
       const { data, error } = await supabase
