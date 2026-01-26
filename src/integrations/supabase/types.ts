@@ -8288,6 +8288,53 @@ export type Database = {
           },
         ]
       }
+      pwa_installations: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          device_info: Json | null
+          id: string
+          installed_at: string
+          ip_address: string | null
+          platform: string | null
+          referrer: string | null
+          standalone: boolean | null
+          user_agent: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          installed_at?: string
+          ip_address?: string | null
+          platform?: string | null
+          referrer?: string | null
+          standalone?: boolean | null
+          user_agent?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          installed_at?: string
+          ip_address?: string | null
+          platform?: string | null
+          referrer?: string | null
+          standalone?: boolean | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pwa_installations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       queue_calls: {
         Row: {
           appointment_id: string | null

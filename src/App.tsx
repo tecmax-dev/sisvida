@@ -189,6 +189,7 @@ import UnionChartOfAccountsPage from "./pages/union/UnionChartOfAccountsPage";
 import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
 import UnionPaymentHistoryPage from "./pages/union/UnionPaymentHistoryPage";
 import UnionAppContentPage from "./pages/union/UnionAppContentPage";
+import UnionPWAInstallationsPage from "./pages/union/UnionPWAInstallationsPage";
 import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
@@ -555,6 +556,7 @@ const App = () => (
                   <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
                   <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
+                  <Route path="instalacoes-app" element={<UnionPWAInstallationsPage />} />
                   <Route path="notificar-app" element={<UnionNotifyAppPage />} />
                   <Route path="beneficios" element={<UnionBenefitsPage />} />
                   <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />
