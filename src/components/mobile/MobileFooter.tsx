@@ -58,14 +58,6 @@ export function MobileFooter() {
             ))}
           </div>
 
-          {/* Install App Link */}
-          <Link 
-            to="/app/instalar"
-            className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm mt-2 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Instalar o App
-          </Link>
         </div>
       </footer>
 
