@@ -59,8 +59,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
         cleanupOutdatedCaches: true, // Limpar caches antigos automaticamente
-        skipWaiting: false, // NÃO ativar novo SW imediatamente - evita reload inesperado
-        clientsClaim: false, // NÃO tomar controle imediatamente - evita remount do App
+        skipWaiting: true, // Ativar novo SW imediatamente
+        clientsClaim: true, // Tomar controle imediatamente - atualizações mais rápidas
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => ({
               cacheName: "supabase-cache",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24,
+                maxAgeSeconds: 60 * 5, // 5 minutos (reduzido de 24h)
               },
             },
           },
