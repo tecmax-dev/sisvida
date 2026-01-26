@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, CheckCircle2, X, FileText, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -29,11 +29,21 @@ export function DocumentUpload({
   className,
 }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
   const { toast } = useToast();
 
-  const handleFileUpload = async (file: File) => {
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const handleFileUpload = useCallback(async (file: File) => {
     if (!file) return;
 
     // Validar tamanho (max 10MB)
@@ -47,6 +57,7 @@ export function DocumentUpload({
     }
 
     setUploading(true);
+    setCameraActive(false);
 
     try {
       const fileExt = file.name.split(".").pop() || "jpg";
@@ -62,28 +73,53 @@ export function DocumentUpload({
         .from("sindical-documentos")
         .getPublicUrl(fileName);
 
-      onUpload(publicUrl);
-      toast({
-        title: "Documento enviado",
-        description: "Arquivo enviado com sucesso.",
-      });
+      if (mountedRef.current) {
+        onUpload(publicUrl);
+        toast({
+          title: "Documento enviado",
+          description: "Arquivo enviado com sucesso.",
+        });
+      }
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast({
-        title: "Erro no upload",
-        description: error.message || "Não foi possível enviar o arquivo.",
-        variant: "destructive",
-      });
+      if (mountedRef.current) {
+        toast({
+          title: "Erro no upload",
+          description: error.message || "Não foi possível enviar o arquivo.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setUploading(false);
+      if (mountedRef.current) {
+        setUploading(false);
+      }
     }
-  };
+  }, [sindicatoId, type, onUpload, toast]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     onClear?.();
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
-  };
+  }, [onClear]);
+
+  const handleCameraClick = useCallback(() => {
+    console.log('[DocumentUpload] Camera button clicked');
+    setCameraActive(true);
+    // Use setTimeout to ensure state is saved before camera opens
+    setTimeout(() => {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      }
+    }, 100);
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[DocumentUpload] File input changed');
+    setCameraActive(false);
+    if (e.target.files?.[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  }, [handleFileUpload]);
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -137,10 +173,15 @@ export function DocumentUpload({
                   type="button"
                   variant="default"
                   size="sm"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={handleCameraClick}
+                  disabled={cameraActive || uploading}
                   className="h-7 text-xs bg-blue-600 hover:bg-blue-700 px-2"
                 >
-                  <Camera className="h-3 w-3 mr-1" />
+                  {cameraActive ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Camera className="h-3 w-3 mr-1" />
+                  )}
                   Câmera
                 </Button>
               )}
@@ -149,6 +190,7 @@ export function DocumentUpload({
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
                 className="h-7 text-xs px-2"
               >
                 <Upload className="h-3 w-3 mr-1" />
@@ -165,7 +207,7 @@ export function DocumentUpload({
         type="file"
         accept={accept}
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+        onChange={handleFileChange}
         disabled={uploading}
       />
 
@@ -174,10 +216,11 @@ export function DocumentUpload({
         <input
           ref={cameraInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           capture="environment"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+          onChange={handleFileChange}
+          onClick={() => console.log('[DocumentUpload] Camera input clicked')}
           disabled={uploading}
         />
       )}

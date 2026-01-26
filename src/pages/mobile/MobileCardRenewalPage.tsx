@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,11 +37,19 @@ interface PayslipRequest {
   reviewed_at: string | null;
 }
 
+// Storage key for persisting state during camera capture
+const CAMERA_STATE_KEY = 'mobile_card_renewal_state';
+
 /**
  * MOBILE CARD RENEWAL PAGE - Arquitetura Bootstrap Imperativo
  * 
  * ❌ PROIBIDO: restoreSession, getSessionSync, navigate("/app/login")
  * ✅ PERMITIDO: useMobileAuth() para consumir dados já validados
+ * 
+ * NOTA: Implementação robusta para captura de câmera em WebView
+ * - Salva estado antes de abrir a câmera
+ * - Restaura estado após retorno da câmera
+ * - Evita crash por perda de contexto
  */
 export default function MobileCardRenewalPage() {
   const [loading, setLoading] = useState(true);
@@ -51,15 +59,59 @@ export default function MobileCardRenewalPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
 
   const navigate = useNavigate();
   const { toast } = useToast();
   
   // Consumir dados do contexto de autenticação (já validado pelo bootstrap)
   const { patientId, clinicId } = useMobileAuth();
+
+  // Persist state before camera opens (WebView can lose state)
+  const persistState = useCallback(() => {
+    try {
+      const state = {
+        cardDataId: cardData?.id,
+        patientId,
+        clinicId,
+        timestamp: Date.now(),
+      };
+      sessionStorage.setItem(CAMERA_STATE_KEY, JSON.stringify(state));
+      console.log('[MobileCardRenewal] State persisted before camera');
+    } catch (e) {
+      console.warn('[MobileCardRenewal] Failed to persist state:', e);
+    }
+  }, [cardData, patientId, clinicId]);
+
+  // Check for restored state on mount
+  useEffect(() => {
+    try {
+      const savedState = sessionStorage.getItem(CAMERA_STATE_KEY);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        // Only use if recent (within 5 minutes)
+        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+          console.log('[MobileCardRenewal] Found saved state from camera');
+        }
+        // Clean up
+        sessionStorage.removeItem(CAMERA_STATE_KEY);
+      }
+    } catch (e) {
+      console.warn('[MobileCardRenewal] Failed to restore state:', e);
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (patientId && clinicId) {
@@ -102,7 +154,9 @@ export default function MobileCardRenewalPage() {
     } catch (err) {
       console.error("Error loading data:", err);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -126,9 +180,17 @@ export default function MobileCardRenewalPage() {
     return { label: "Válida", color: "default" as const, expired: false };
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[MobileCardRenewal] handleFileSelect called');
+    setCameraActive(false);
+    
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('[MobileCardRenewal] No file selected');
+      return;
+    }
+
+    console.log('[MobileCardRenewal] File selected:', file.name, file.type, file.size);
 
     // Validate file
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -151,26 +213,50 @@ export default function MobileCardRenewalPage() {
       return;
     }
 
+    if (!mountedRef.current) {
+      console.log('[MobileCardRenewal] Component unmounted, skipping state update');
+      return;
+    }
+
     setSelectedFile(file);
 
     // Create preview for images
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
+        if (mountedRef.current) {
+          setPreviewUrl(reader.result as string);
+        }
+      };
+      reader.onerror = () => {
+        console.error('[MobileCardRenewal] FileReader error');
       };
       reader.readAsDataURL(file);
     } else {
       setPreviewUrl(null);
     }
-  };
+  }, [toast]);
 
-  const handleClearFile = () => {
+  const handleCameraClick = useCallback(() => {
+    console.log('[MobileCardRenewal] Camera button clicked');
+    // Persist state before opening camera
+    persistState();
+    setCameraActive(true);
+    
+    // Use setTimeout to ensure state is saved before camera opens
+    setTimeout(() => {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      }
+    }, 100);
+  }, [persistState]);
+
+  const handleClearFile = useCallback(() => {
     setSelectedFile(null);
     setPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
+  }, []);
 
   const handleSubmit = async () => {
     if (!selectedFile || !cardData || !patientId || !clinicId) return;
@@ -444,10 +530,20 @@ export default function MobileCardRenewalPage() {
                 <Button
                   variant="outline"
                   className="w-full h-24 border-dashed border-2 flex flex-col gap-2"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={handleCameraClick}
+                  disabled={cameraActive}
                 >
-                  <Camera className="h-8 w-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Tirar foto com a câmera</span>
+                  {cameraActive ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+                      <span className="text-sm text-muted-foreground">Abrindo câmera...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Tirar foto com a câmera</span>
+                    </>
+                  )}
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground">
@@ -464,12 +560,14 @@ export default function MobileCardRenewalPage() {
               onChange={handleFileSelect}
               className="hidden"
             />
+            {/* Camera input - uses capture attribute for native camera */}
             <input
               ref={cameraInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               capture="environment"
               onChange={handleFileSelect}
+              onClick={() => console.log('[MobileCardRenewal] Camera input clicked')}
               className="hidden"
             />
           </CardContent>

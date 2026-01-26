@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Upload, Loader2, CheckCircle2, X, User } from "lucide-react";
@@ -25,11 +25,21 @@ export function PhotoUploadWithCamera({
   className,
 }: PhotoUploadWithCameraProps) {
   const [uploading, setUploading] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
   const { toast } = useToast();
 
-  const handleFileUpload = async (file: File) => {
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const handleFileUpload = useCallback(async (file: File) => {
     if (!file) return;
 
     // Validar tamanho (max 5MB)
@@ -53,6 +63,7 @@ export function PhotoUploadWithCamera({
     }
 
     setUploading(true);
+    setCameraActive(false);
 
     try {
       const fileExt = file.name.split(".").pop() || "jpg";
@@ -68,28 +79,53 @@ export function PhotoUploadWithCamera({
         .from("sindical-documentos")
         .getPublicUrl(fileName);
 
-      onUpload(publicUrl);
-      toast({
-        title: "Foto enviada",
-        description: "Sua foto foi enviada com sucesso.",
-      });
+      if (mountedRef.current) {
+        onUpload(publicUrl);
+        toast({
+          title: "Foto enviada",
+          description: "Sua foto foi enviada com sucesso.",
+        });
+      }
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast({
-        title: "Erro no upload",
-        description: error.message || "Não foi possível enviar a foto.",
-        variant: "destructive",
-      });
+      if (mountedRef.current) {
+        toast({
+          title: "Erro no upload",
+          description: error.message || "Não foi possível enviar a foto.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setUploading(false);
+      if (mountedRef.current) {
+        setUploading(false);
+      }
     }
-  };
+  }, [sindicatoId, onUpload, toast]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     onClear?.();
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
-  };
+  }, [onClear]);
+
+  const handleCameraClick = useCallback(() => {
+    console.log('[PhotoUploadWithCamera] Camera button clicked');
+    setCameraActive(true);
+    // Use setTimeout to ensure state is saved before camera opens
+    setTimeout(() => {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      }
+    }, 100);
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[PhotoUploadWithCamera] File input changed');
+    setCameraActive(false);
+    if (e.target.files?.[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  }, [handleFileUpload]);
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -147,10 +183,15 @@ export function PhotoUploadWithCamera({
                   type="button"
                   variant="default"
                   size="sm"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={handleCameraClick}
+                  disabled={cameraActive || uploading}
                   className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
                 >
-                  <Camera className="h-3.5 w-3.5 mr-1.5" />
+                  {cameraActive ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5 mr-1.5" />
+                  )}
                   Câmera
                 </Button>
               )}
@@ -159,6 +200,7 @@ export function PhotoUploadWithCamera({
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
                 className="w-full h-8 text-xs"
               >
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
@@ -175,7 +217,7 @@ export function PhotoUploadWithCamera({
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+        onChange={handleFileChange}
         disabled={uploading}
       />
 
@@ -183,10 +225,11 @@ export function PhotoUploadWithCamera({
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         capture="user"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+        onChange={handleFileChange}
+        onClick={() => console.log('[PhotoUploadWithCamera] Camera input clicked')}
         disabled={uploading}
       />
     </div>
