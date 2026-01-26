@@ -101,6 +101,13 @@ export default function MobileAppointmentsPage() {
   }, [patientId, clinicId]);
 
   const loadAppointments = async (patientId: string, clinicId: string) => {
+    // Garantir que temos IDs válidos antes de fazer query
+    if (!patientId || !clinicId) {
+      console.warn("[MobileAppointments] IDs inválidos, abortando query");
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Fetch all appointments (titular)
       const { data: myAppointments, error: myError } = await supabase
@@ -385,6 +392,29 @@ export default function MobileAppointmentsPage() {
       )}
     </div>
   );
+
+  // Se não está logado, redirecionar para login
+  if (!loading && !patientId) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            Login necessário
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Você precisa estar logado para acessar seus agendamentos.
+          </p>
+          <Button 
+            onClick={() => navigate("/app/login")}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            Fazer Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
