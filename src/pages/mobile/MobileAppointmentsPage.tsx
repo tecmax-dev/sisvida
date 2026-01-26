@@ -468,23 +468,25 @@ function MobileAppointmentsPageContent() {
     );
   }
 
-  // Se não está logado após inicialização, mostrar tela de login
+  // Se não está logado após inicialização, mostrar tela vazia (não redirecionar!)
+  // O bootstrap imperativo já decidiu a rota inicial - não devemos forçar navegação aqui
   if (!patientId) {
+    console.warn("[MobileAppointments] Sem patientId após inicialização - exibindo estado vazio");
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="text-center max-w-md">
           <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-foreground mb-2">
-            Login necessário
+            Dados não disponíveis
           </h2>
           <p className="text-muted-foreground mb-6">
-            Você precisa estar logado para acessar seus agendamentos.
+            Não foi possível carregar seus agendamentos. Volte à tela inicial.
           </p>
           <Button 
-            onClick={() => navigate("/app/login")}
+            onClick={() => navigate("/app/home")}
             className="bg-emerald-600 hover:bg-emerald-700"
           >
-            Fazer Login
+            Voltar ao início
           </Button>
         </div>
       </div>

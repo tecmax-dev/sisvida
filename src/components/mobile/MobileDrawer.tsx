@@ -26,10 +26,16 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
   };
 
   const handleSignOut = async () => {
+    console.warn("[MobileDrawer] LOGOUT EXPLÍCITO - usuário clicou em 'Sair'");
+    
     // Use robust session clearing that removes from all storage layers
     await clearSession();
     onOpenChange(false);
-    navigate("/app/login");
+    
+    // Hard reload para garantir estado completamente limpo
+    // Usar window.location.href ao invés de navigate para evitar estados inconsistentes
+    window.location.href = "/app/login";
+    
     toast({
       title: "Até logo!",
       description: "Você saiu do aplicativo.",
