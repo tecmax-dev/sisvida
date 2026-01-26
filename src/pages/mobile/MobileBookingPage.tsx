@@ -27,7 +27,7 @@ import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, getDay, 
 import { ptBR } from "date-fns/locale";
 import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 import { Badge } from "@/components/ui/badge";
-import { restoreSession } from "@/hooks/useMobileSession";
+import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
 const dayMap: Record<number, string> = {
@@ -109,10 +109,13 @@ export default function MobileBookingPage() {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { patientId, clinicId, initialized } = useMobileAuth();
 
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (initialized && patientId && clinicId) {
+      loadInitialData();
+    }
+  }, [initialized, patientId, clinicId]);
 
   useEffect(() => {
     if (selectedProfessionalId && selectedDate) {
@@ -121,17 +124,15 @@ export default function MobileBookingPage() {
   }, [selectedProfessionalId, selectedDate]);
 
   const loadInitialData = async () => {
+    if (!patientId || !clinicId) {
+      console.error("[MobileBooking] ERRO: Sessão inválida - patientId ou clinicId ausente", { patientId, clinicId });
+      setLoading(false);
+      return;
+    }
+    
+    console.log("[MobileBooking] Carregando dados com clinicId:", clinicId);
+
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
-
-      if (!patientId || !clinicId) {
-        console.error("[MobileBooking] ERRO: Sessão inválida após bootstrap");
-        setLoading(false);
-        return;
-      }
-
       // Check if patient is blocked
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
@@ -344,9 +345,6 @@ export default function MobileBookingPage() {
     setSubmitting(true);
 
     try {
-      const session = await restoreSession();
-      const patientId = session.patientId;
-      const clinicId = session.clinicId;
       const professional = professionals.find(p => p.id === selectedProfessionalId);
       
       // Get the duration from the applicable block for this date
