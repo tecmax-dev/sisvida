@@ -90,15 +90,18 @@ export default function MobileAppointmentsPage() {
   const { toast } = useToast();
   
   // Usar contexto de autenticação (dados já disponíveis via bootstrap imperativo)
-  const { patientId, clinicId } = useMobileAuth();
+  const { patientId, clinicId, initialized, loading: authLoading } = useMobileAuth();
 
   useEffect(() => {
+    // Aguardar contexto de auth inicializar
+    if (!initialized) return;
+    
     if (patientId && clinicId) {
       loadAppointments(patientId, clinicId);
     } else {
       setLoading(false);
     }
-  }, [patientId, clinicId]);
+  }, [patientId, clinicId, initialized]);
 
   const loadAppointments = async (patientId: string, clinicId: string) => {
     // Garantir que temos IDs válidos antes de fazer query
@@ -393,8 +396,17 @@ export default function MobileAppointmentsPage() {
     </div>
   );
 
-  // Se não está logado, redirecionar para login
-  if (!loading && !patientId) {
+  // Aguardar inicialização do contexto de auth
+  if (!initialized || authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  // Se não está logado após inicialização, mostrar tela de login
+  if (!patientId) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="text-center max-w-md">
