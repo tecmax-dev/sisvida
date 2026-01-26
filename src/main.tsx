@@ -9,6 +9,13 @@ import "./index.css";
  * Para rotas mobile (/app/*), verifica sessão e decide rota inicial
  * ANTES de renderizar qualquer componente React.
  */
+/**
+ * BOOTSTRAP IMPERATIVO - Executa ANTES do React
+ * 
+ * IMPORTANTE: A rota /app é PÚBLICA por padrão (MobilePublicHomePage).
+ * O bootstrap NÃO redireciona para login - apenas verifica se há sessão
+ * para redirecionar para /app/home se o usuário já estiver logado.
+ */
 async function bootstrapApp() {
   const isMobileRoute = window.location.pathname.startsWith('/app');
   
@@ -19,9 +26,13 @@ async function bootstrapApp() {
     
     console.log('[Main] Bootstrap mobile completo:', result.initialRoute);
     
-    // Se estamos na raiz /app, redirecionar ANTES do React montar
+    // APENAS redirecionar para /app/home se estiver logado e na raiz /app
+    // Se NÃO estiver logado, deixar na rota pública /app (index = MobilePublicHomePage)
     if (window.location.pathname === '/app' || window.location.pathname === '/app/') {
-      window.history.replaceState(null, '', result.initialRoute);
+      if (result.isAuthenticated) {
+        window.history.replaceState(null, '', '/app/home');
+      }
+      // Se não autenticado, NÃO redireciona - fica na página pública
     }
   }
   
