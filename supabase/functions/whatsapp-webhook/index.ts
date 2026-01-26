@@ -1339,10 +1339,53 @@ async function handleBookingFlow(
     'WAITING_REGISTRATION_RELATIONSHIP',
     'WAITING_REGISTRATION_CNPJ',
     'CONFIRM_COMPANY',
-    'CONFIRM_REGISTRATION'
+    'CONFIRM_REGISTRATION',
+    'WAITING_DEPENDENT_CPF_PHOTO'
+  ];
+  
+  // States that are purely registration (not booking) - allow even when booking disabled
+  const pureRegistrationStates: BookingState[] = [
+    'OFFER_REGISTRATION',
+    'SELECT_REGISTRATION_TYPE', 
+    'WAITING_REGISTRATION_DEPENDENT_CPF',
+    'WAITING_REGISTRATION_TITULAR_CPF',
+    'SELECT_INSURANCE_PLAN',
+    'WAITING_REGISTRATION_NAME',
+    'WAITING_REGISTRATION_BIRTHDATE',
+    'WAITING_REGISTRATION_RELATIONSHIP',
+    'WAITING_REGISTRATION_CNPJ',
+    'CONFIRM_COMPANY',
+    'CONFIRM_REGISTRATION',
+    'WAITING_DEPENDENT_CPF_PHOTO'
+  ];
+  
+  // States that involve actual booking - block when booking disabled
+  const bookingStates: BookingState[] = [
+    'SELECT_BOOKING_FOR',
+    'SELECT_PROFESSIONAL',
+    'SELECT_PROCEDURE',
+    'SELECT_DATE',
+    'SELECT_TIME',
+    'CONFIRM_APPOINTMENT',
+    'RESCHEDULE_SELECT_DATE',
+    'RESCHEDULE_SELECT_TIME',
+    'CONFIRM_RESCHEDULE'
   ];
   
   const isInRegistrationFlow = session && registrationStates.includes(session.state as BookingState);
+  const isInBookingFlow = session && bookingStates.includes(session.state as BookingState);
+  const isInPureRegistration = session && pureRegistrationStates.includes(session.state as BookingState);
+  
+  // CRITICAL: Check if booking is disabled GLOBALLY - block all booking-related flows
+  if (config.booking_enabled === false && isInBookingFlow) {
+    console.log(`[booking] GLOBAL BLOCK: booking_enabled=false, blocking state ${session?.state} for clinic ${config.clinic_id}`);
+    await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
+    // Reset to WAITING_CPF to prevent further booking attempts
+    if (session) {
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+    }
+    return { handled: true, newState: 'FINISHED' };
+  }
 
   // Check for global commands - BUT block MENU during registration to prevent skipping steps
   if (MENU_REGEX.test(messageText)) {
@@ -6411,7 +6454,7 @@ serve(async (req) => {
       if (activeSession?.clinic_id) {
         const { data: configByClinic, error: configByClinicError } = await supabase
           .from('evolution_configs')
-          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
+          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
           .eq('clinic_id', activeSession.clinic_id)
           .eq('is_connected', true)
           .eq('direct_reply_enabled', true)
@@ -6429,7 +6472,7 @@ serve(async (req) => {
       if (!configData) {
         const { data: configByInstance, error: configError } = await supabase
           .from('evolution_configs')
-          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
+          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
           .eq('instance_name', payload.instance)
           .eq('is_connected', true)
           .eq('direct_reply_enabled', true);
