@@ -2217,16 +2217,29 @@ async function handleWaitingCpf(
   // If no patient found by CPF, check if it's a dependent's CPF
   if (!patientData) {
     // Support both formatted and unformatted CPF for dependents
+    // CRITICAL: Also check pending_approval to block dependents awaiting approval
     const { data: dependentByCpf } = await supabase
       .from('patient_dependents')
-      .select('id, name, cpf, patient_id, card_expires_at, relationship')
+      .select('id, name, cpf, patient_id, card_expires_at, relationship, is_active, pending_approval')
       .eq('clinic_id', config.clinic_id)
       .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
-      .eq('is_active', true)
       .maybeSingle();
 
     if (dependentByCpf) {
-      console.log(`[booking] Found dependent by CPF: ${dependentByCpf.name} (${dependentByCpf.id})`);
+      console.log(`[booking] Found dependent by CPF: ${dependentByCpf.name} (${dependentByCpf.id}), is_active=${dependentByCpf.is_active}, pending_approval=${dependentByCpf.pending_approval}`);
+      
+      // CRITICAL: Block dependents with pending_approval or inactive status
+      if (dependentByCpf.pending_approval === true || dependentByCpf.is_active === false) {
+        console.log(`[booking] Dependent ${dependentByCpf.id} blocked: pending_approval=${dependentByCpf.pending_approval}, is_active=${dependentByCpf.is_active}`);
+        await sendWhatsAppMessage(config, phone, 
+          `⏳ *Cadastro Pendente de Aprovação*\n\n` +
+          `Olá! O cadastro de *${dependentByCpf.name}* ainda está *aguardando aprovação* pela nossa equipe.\n\n` +
+          `📋 Você será notificado assim que o cadastro for aprovado.\n\n` +
+          `Enquanto isso, não é possível realizar agendamentos.\n\n` +
+          `Em caso de dúvidas, entre em contato com o sindicato.`
+        );
+        return { handled: true, newState: 'FINISHED' };
+      }
       
       // Check if dependent's card is expired
       if (dependentByCpf.card_expires_at) {
@@ -2327,15 +2340,17 @@ async function handleWaitingCpf(
   }
 
   // Fetch patient's dependents (for titular flow)
+  // CRITICAL: Filter out dependents with pending_approval to prevent booking
   const { data: dependents } = await supabase
     .from('patient_dependents')
-    .select('id, name, relationship, card_expires_at')
+    .select('id, name, relationship, card_expires_at, pending_approval')
     .eq('patient_id', patientData.id)
     .eq('is_active', true)
+    .or('pending_approval.is.null,pending_approval.eq.false')
     .order('name');
 
   const dependentsData = (dependents || []) as Array<{ id: string; name: string; relationship: string | null; card_expires_at: string | null }>;
-  console.log(`[booking] Found ${dependentsData.length} dependents for patient ${patientData.id}`);
+  console.log(`[booking] Found ${dependentsData.length} approved dependents for patient ${patientData.id}`);
 
   await updateSession(supabase, session.id, {
     state: 'CONFIRM_IDENTITY',
@@ -2674,6 +2689,32 @@ async function proceedToSelectProfessional(
   dependentId: string | null,
   dependentName: string | null
 ): Promise<{ handled: boolean; newState?: BookingState }> {
+  // CRITICAL: Check if booking is enabled BEFORE proceeding to any booking flow
+  if (config.booking_enabled === false) {
+    console.log(`[booking] Booking disabled for clinic ${config.clinic_id} - blocking at proceedToSelectProfessional`);
+    await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
+    return { handled: true, newState: 'FINISHED' };
+  }
+
+  // CRITICAL: If booking for dependent, verify dependent is approved and active
+  if (bookingFor === 'dependent' && dependentId) {
+    const { data: dependentCheck } = await supabase
+      .from('patient_dependents')
+      .select('id, name, is_active, pending_approval')
+      .eq('id', dependentId)
+      .single();
+    
+    if (dependentCheck?.pending_approval === true || dependentCheck?.is_active === false) {
+      console.log(`[booking] Dependent ${dependentId} blocked at proceedToSelectProfessional: pending_approval=${dependentCheck?.pending_approval}, is_active=${dependentCheck?.is_active}`);
+      await sendWhatsAppMessage(config, phone, 
+        `⏳ *Cadastro Pendente de Aprovação*\n\n` +
+        `O cadastro de *${dependentName || 'dependente'}* ainda está *aguardando aprovação*.\n\n` +
+        `Você será notificado quando o cadastro for aprovado.`
+      );
+      return { handled: true, newState: 'FINISHED' };
+    }
+  }
+
   const { data: professionals, error } = await supabase
     .from('professionals')
     .select('id, name, specialty, is_active')
