@@ -1,6 +1,7 @@
 import { useEffect, ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { Outlet } from "react-router-dom";
+import { usePWAInstallTracking } from "@/hooks/usePWAInstallTracking";
 
 interface MobileAppLayoutProps {
   children?: ReactNode;
@@ -12,6 +13,9 @@ interface MobileAppLayoutProps {
  */
 export function MobileAppLayout({ children }: MobileAppLayoutProps) {
   const { setTheme, resolvedTheme } = useTheme();
+  
+  // Rastrear instalação do PWA
+  usePWAInstallTracking();
 
   useEffect(() => {
     // Salva o tema atual para restaurar depois (se necessário)
