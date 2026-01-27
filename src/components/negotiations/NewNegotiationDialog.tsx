@@ -108,6 +108,9 @@ export default function NewNegotiationDialog({
   const [customInstallmentDates, setCustomInstallmentDates] = useState<Record<number, Date>>({});
   const [validityDays, setValidityDays] = useState(30);
 
+  // Prevent double-submit/race conditions from multiple rapid clicks
+  const saveLockRef = useRef(false);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
@@ -306,42 +309,64 @@ export default function NewNegotiationDialog({
 
   const handleSave = async () => {
     if (!selectedEmployer || !settings) return;
+
+    // Hard guard against double-submit (state updates may not have rendered yet)
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     
     setSaving(true);
     try {
-      // Generate negotiation code
-      const { data: codeData, error: codeError } = await supabase
-        .rpc("generate_negotiation_code", { p_clinic_id: clinicId });
+      // Create negotiation with safe retry on negotiation_code collisions (unique constraint)
+      const createNegotiation = async () => {
+        const MAX_ATTEMPTS = 5;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          // Generate negotiation code
+          const { data: codeData, error: codeError } = await supabase.rpc(
+            "generate_negotiation_code",
+            { p_clinic_id: clinicId }
+          );
 
-      if (codeError) throw codeError;
+          if (codeError) throw codeError;
 
-      // Create negotiation
-      const { data: negotiation, error: negError } = await supabase
-        .from("debt_negotiations")
-        .insert({
-          clinic_id: clinicId,
-          employer_id: selectedEmployer.id,
-          negotiation_code: codeData,
-          status: "simulation",
-          total_original_value: totals.originalValue,
-          total_interest: totals.totalInterest,
-          total_monetary_correction: totals.totalCorrection,
-          total_late_fee: totals.totalLateFee,
-          total_negotiated_value: totals.totalNegotiated,
-          down_payment_value: downPayment,
-          installments_count: installmentsCount,
-          installment_value: totals.installmentValue,
-          first_due_date: firstDueDate.toISOString().split("T")[0],
-          applied_interest_rate: settings.interest_rate_monthly,
-          applied_correction_rate: settings.monetary_correction_monthly,
-          applied_late_fee_rate: settings.late_fee_percentage,
-          created_by: userId,
-          validity_expires_at: addDays(new Date(), validityDays).toISOString(),
-        })
-        .select()
-        .single();
+          const { data: negotiation, error: negError } = await supabase
+            .from("debt_negotiations")
+            .insert({
+              clinic_id: clinicId,
+              employer_id: selectedEmployer.id,
+              negotiation_code: codeData,
+              status: "simulation",
+              total_original_value: totals.originalValue,
+              total_interest: totals.totalInterest,
+              total_monetary_correction: totals.totalCorrection,
+              total_late_fee: totals.totalLateFee,
+              total_negotiated_value: totals.totalNegotiated,
+              down_payment_value: downPayment,
+              installments_count: installmentsCount,
+              installment_value: totals.installmentValue,
+              first_due_date: firstDueDate.toISOString().split("T")[0],
+              applied_interest_rate: settings.interest_rate_monthly,
+              applied_correction_rate: settings.monetary_correction_monthly,
+              applied_late_fee_rate: settings.late_fee_percentage,
+              created_by: userId,
+              validity_expires_at: addDays(new Date(), validityDays).toISOString(),
+            })
+            .select()
+            .single();
 
-      if (negError) throw negError;
+          if (!negError) return negotiation;
+
+          // Unique violation (postgres 23505) -> retry
+          if (negError.code === "23505") continue;
+
+          throw negError;
+        }
+
+        throw new Error(
+          "Não foi possível gerar um código de negociação único. Tente novamente."
+        );
+      };
+
+      const negotiation = await createNegotiation();
 
       // Create negotiation items
       const items = calculatedItems.map((item) => ({
@@ -444,6 +469,7 @@ export default function NewNegotiationDialog({
       toast.error("Erro ao criar negociação");
     } finally {
       setSaving(false);
+      saveLockRef.current = false;
     }
   };
 
