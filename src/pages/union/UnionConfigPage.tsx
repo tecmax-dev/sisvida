@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, CreditCard, FileText, Image, Loader2, Calendar } from "lucide-react";
@@ -12,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 export default function UnionConfigPage() {
   const { currentClinic } = useAuth();
   const { entity, loading: entityLoading } = useUnionEntity();
+  const { isAdmin } = usePermissions();
 
   // Fetch clinic booking settings
   const { data: clinicSettings, refetch: refetchSettings } = useQuery({
@@ -85,6 +87,7 @@ export default function UnionConfigPage() {
               clinicId={currentClinic.id}
               currentValue={clinicSettings?.booking_months_ahead ?? 1}
               onUpdate={() => refetchSettings()}
+              isAdmin={isAdmin}
             />
           ) : (
             <Card>
