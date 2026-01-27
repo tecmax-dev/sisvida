@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,15 +160,13 @@ export default function AccountingOfficesPage() {
       if (officesError) throw officesError;
       setOffices(officesData || []);
 
-      // Carregar empresas
-      const { data: employersData, error: employersError } = await supabase
-        .from("employers")
-        .select("id, name, cnpj, registration_number")
-        .eq("clinic_id", currentClinic!.id)
-        .order("name");
-
-      if (employersError) throw employersError;
-      setEmployers(employersData || []);
+      // Carregar empresas - using pagination to avoid 1000 limit
+      const employersResult = await fetchAllEmployers<Employer>(currentClinic!.id, {
+        select: "id, name, cnpj, registration_number",
+        activeOnly: false
+      });
+      if (employersResult.error) throw employersResult.error;
+      setEmployers(employersResult.data);
 
       // Carregar vínculos
       const { data: linksData, error: linksError } = await supabase

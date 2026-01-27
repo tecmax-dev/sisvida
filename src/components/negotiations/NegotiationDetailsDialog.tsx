@@ -71,7 +71,7 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name: string | null;
-  lytex_client_id: string | null;
+  lytex_client_id?: string | null;
   registration_number?: string | null;
 }
 

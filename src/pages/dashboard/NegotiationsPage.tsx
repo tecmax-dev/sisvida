@@ -12,15 +12,6 @@ import NegotiationsListTab from "@/components/negotiations/NegotiationsListTab";
 import NegotiationSettingsTab from "@/components/negotiations/NegotiationSettingsTab";
 import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
 
-interface Employer {
-  id: string;
-  name: string;
-  cnpj: string;
-  trade_name: string | null;
-  lytex_client_id: string | null;
-  registration_number?: string | null;
-}
-
 interface Negotiation {
   id: string;
   negotiation_code: string;
@@ -49,13 +40,19 @@ interface Negotiation {
   cancelled_by: string | null;
   cancellation_reason: string | null;
   created_at: string;
-  employers?: Employer;
+  employers?: {
+    id: string;
+    name: string;
+    cnpj: string;
+    trade_name: string | null;
+    lytex_client_id?: string | null;
+    registration_number?: string | null;
+  };
 }
 
 function NegotiationsContent() {
   const { currentClinic, user } = useAuth();
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
-  const [employers, setEmployers] = useState<Employer[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("list");
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
@@ -72,7 +69,7 @@ function NegotiationsContent() {
     setLoading(true);
     
     try {
-      // Fetch negotiations
+      // Fetch negotiations only - employers are searched server-side in the wizard
       const { data: negotiationsData, error: negotiationsError } = await supabase
         .from("debt_negotiations")
         .select(`
@@ -84,18 +81,6 @@ function NegotiationsContent() {
 
       if (negotiationsError) throw negotiationsError;
       setNegotiations((negotiationsData || []) as unknown as Negotiation[]);
-
-      // Fetch employers - using limit to get all (default Supabase limit is 1000)
-      const { data: employersData, error: employersError } = await supabase
-        .from("employers")
-        .select("id, name, cnpj, trade_name, lytex_client_id, registration_number")
-        .eq("clinic_id", currentClinic.id)
-        .eq("is_active", true)
-        .order("name")
-        .limit(5000);
-
-      if (employersError) throw employersError;
-      setEmployers(employersData || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados");
@@ -171,7 +156,7 @@ function NegotiationsContent() {
       <NewNegotiationDialog
         open={isNewDialogOpen}
         onOpenChange={setIsNewDialogOpen}
-        employers={employers}
+        employers={[]}
         clinicId={currentClinic?.id || ""}
         userId={user?.id || ""}
         onSuccess={() => {
