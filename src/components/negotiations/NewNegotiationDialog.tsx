@@ -498,6 +498,7 @@ export default function NewNegotiationDialog({
           {currentStep === "employer" && (
             <NegotiationStepEmployer
               employers={employers}
+              clinicId={clinicId}
               selectedEmployer={selectedEmployer}
               onSelectEmployer={setSelectedEmployer}
             />
