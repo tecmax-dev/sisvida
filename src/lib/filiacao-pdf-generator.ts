@@ -1,16 +1,14 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Brand Colors
+// Brand Colors matching the model
 const COLORS = {
-  primary: [15, 23, 42] as [number, number, number],
-  accent: [16, 185, 129] as [number, number, number],
-  purple: [147, 51, 234] as [number, number, number],
-  muted: [100, 116, 139] as [number, number, number],
-  light: [248, 250, 252] as [number, number, number],
-  white: [255, 255, 255] as [number, number, number],
+  red: [139, 0, 0] as [number, number, number], // Dark red for header bar
+  gold: [218, 165, 32] as [number, number, number], // Gold accent line
+  black: [0, 0, 0] as [number, number, number],
+  gray: [100, 100, 100] as [number, number, number],
+  lightGray: [200, 200, 200] as [number, number, number],
 };
 
 interface Filiacao {
@@ -43,17 +41,21 @@ interface Filiacao {
   matricula?: string | null;
   created_at: string;
   aprovado_at?: string | null;
-}
-
-interface Dependent {
-  nome: string;
-  grau_parentesco: string;
-  data_nascimento?: string | null;
+  cns?: string | null;
+  empresa_segmento?: string | null;
+  empresa_endereco?: string | null;
+  empresa_bairro?: string | null;
+  empresa_cidade?: string | null;
+  empresa_uf?: string | null;
+  empresa_telefone?: string | null;
 }
 
 interface Sindicato {
   razao_social: string;
   logo_url?: string | null;
+  cnpj?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
 }
 
 interface GenerationOptions {
@@ -65,11 +67,34 @@ const formatCPF = (cpf: string) => {
   return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
 
-const paymentMethodLabels: Record<string, string> = {
-  desconto_folha: "Desconto em Folha",
-  boleto: "Boleto Bancário",
-  pix: "PIX",
-  debito_automatico: "Débito Automático",
+const formatPhone = (phone: string) => {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 11) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  }
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+  }
+  return phone;
+};
+
+const formatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  try {
+    return format(new Date(dateStr + "T12:00:00"), "dd/MM/yyyy");
+  } catch {
+    return "";
+  }
+};
+
+const formatDateLong = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  try {
+    return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  } catch {
+    return "";
+  }
 };
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
@@ -89,311 +114,318 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 
 async function buildFiliacaoPDF(
   filiacao: Filiacao,
-  dependents: Dependent[],
+  _dependents: unknown[],
   sindicato?: Sindicato | null,
-  options?: GenerationOptions
+  _options?: GenerationOptions
 ): Promise<jsPDF> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
 
-  // Header with gradient effect
-  doc.setFillColor(...COLORS.primary);
-  doc.rect(0, 0, pageWidth, 40, "F");
+  // ========== HEADER WITH RED BAR AND GOLD ACCENT ==========
+  // Draw red gradient bar at top
+  doc.setFillColor(...COLORS.red);
+  doc.rect(0, 0, pageWidth, 28, "F");
 
-  // Accent line
-  doc.setFillColor(...COLORS.accent);
-  doc.rect(0, 40, pageWidth, 3, "F");
+  // Gold accent line below
+  doc.setFillColor(...COLORS.gold);
+  doc.rect(0, 28, pageWidth, 3, "F");
 
-  // Logo
+  // Logo on left
   if (sindicato?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", 10, 6, 28, 28);
+        doc.addImage(logoBase64, "PNG", 8, 3, 22, 22);
       }
     } catch (e) {
       console.warn("Failed to load logo:", e);
     }
   }
 
-  // Title
-  doc.setFontSize(18);
-  doc.setTextColor(...COLORS.white);
-  doc.setFont("helvetica", "bold");
-  doc.text("FICHA DE FILIAÇÃO", pageWidth / 2, 18, { align: "center" });
-
-  // Sindicato name
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(sindicato?.razao_social || "Sindicato", pageWidth / 2, 28, { align: "center" });
-
-  // Matricula badge
-  if (filiacao.matricula) {
-    doc.setFontSize(9);
-    doc.setTextColor(200, 200, 200);
-    doc.text(`Matrícula: ${filiacao.matricula}`, pageWidth / 2, 36, { align: "center" });
-  }
-
-  let yPos = 52;
-
-  // CPF Highlight Card - FIRST AND PROMINENT
-  doc.setFillColor(239, 246, 255); // Light blue background
-  doc.roundedRect(14, yPos, pageWidth - 28, 16, 2, 2, "F");
-  doc.setFillColor(59, 130, 246); // Blue accent
-  doc.rect(14, yPos, 4, 16, "F");
-  
-  doc.setFontSize(10);
-  doc.setTextColor(30, 64, 175); // Dark blue
-  doc.setFont("helvetica", "bold");
-  doc.text("CPF:", 22, yPos + 10);
+  // Sindicato name in header (white text, centered)
   doc.setFontSize(14);
-  doc.text(formatCPF(filiacao.cpf), 40, yPos + 10);
-  
-  yPos += 22;
-
-  // Member name card
-  doc.setFillColor(...COLORS.light);
-  doc.roundedRect(14, yPos, pageWidth - 28, 18, 2, 2, "F");
-  doc.setFillColor(...COLORS.accent);
-  doc.rect(14, yPos, 3, 18, "F");
-
-  doc.setFontSize(14);
-  doc.setTextColor(...COLORS.primary);
+  doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.text(filiacao.nome, 22, yPos + 12);
+  const sindicatoName = sindicato?.razao_social?.toUpperCase() || "SINDICATO";
+  doc.text(sindicatoName, pageWidth / 2, 14, { align: "center" });
 
-  yPos += 26;
-
-  // Filiação date highlight (if approved)
-  if (filiacao.aprovado_at) {
-    doc.setFillColor(236, 253, 245); // Light green background
-    doc.roundedRect(14, yPos, pageWidth - 28, 14, 2, 2, "F");
-    doc.setFillColor(16, 185, 129); // Green accent
-    doc.rect(14, yPos, 4, 14, "F");
-    
-    doc.setFontSize(9);
-    doc.setTextColor(6, 95, 70); // Dark green
-    doc.setFont("helvetica", "bold");
-    doc.text("DATA DE FILIAÇÃO:", 22, yPos + 9);
-    doc.setFontSize(11);
-    doc.text(format(new Date(filiacao.aprovado_at), "dd/MM/yyyy", { locale: ptBR }), 80, yPos + 9);
-    
-    yPos += 20;
+  // CNPJ below (smaller, white)
+  if (sindicato?.cnpj) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(sindicato.cnpj, pageWidth / 2, 22, { align: "center" });
   }
 
-  // Card Expiration highlight (if provided)
-  if (options?.cardExpiresAt) {
-    doc.setFillColor(239, 246, 255); // Light blue background
-    doc.roundedRect(14, yPos, pageWidth - 28, 14, 2, 2, "F");
-    doc.setFillColor(59, 130, 246); // Blue accent
-    doc.rect(14, yPos, 4, 14, "F");
-    
-    doc.setFontSize(9);
-    doc.setTextColor(30, 64, 175); // Dark blue
-    doc.setFont("helvetica", "bold");
-    doc.text("VALIDADE DA CARTEIRINHA:", 22, yPos + 9);
-    doc.setFontSize(11);
-    doc.text(format(new Date(options.cardExpiresAt), "dd/MM/yyyy", { locale: ptBR }), 95, yPos + 9);
-    
-    yPos += 20;
-  }
+  let yPos = 40;
 
-  // Personal Data Section
+  // ========== TITLE: FICHA DE SÓCIO ==========
+  doc.setFontSize(22);
+  doc.setTextColor(...COLORS.black);
+  doc.setFont("helvetica", "bold");
+  doc.text("FICHA DE SÓCIO", pageWidth / 2, yPos, { align: "center" });
+
+  yPos += 10;
+
+  // "Filiado desde" date
+  const filiadoDesde = filiacao.aprovado_at
+    ? formatDate(filiacao.aprovado_at)
+    : formatDate(filiacao.created_at);
   doc.setFontSize(11);
-  doc.setTextColor(...COLORS.primary);
-  doc.setFont("helvetica", "bold");
-  doc.text("DADOS PESSOAIS", 14, yPos);
-  yPos += 6;
-
-  const personalData = [
-    ["RG", filiacao.rg || "-"],
-    ["Data de Nascimento", filiacao.data_nascimento ? format(new Date(filiacao.data_nascimento + "T12:00:00"), "dd/MM/yyyy") : "-"],
-    ["Sexo", filiacao.sexo || "-"],
-    ["Estado Civil", filiacao.estado_civil || "-"],
-    ["Nome do Pai", filiacao.nome_pai || "-"],
-    ["Nome da Mãe", filiacao.nome_mae || "-"],
-    ["E-mail", filiacao.email],
-    ["Telefone", filiacao.telefone],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    body: personalData,
-    theme: "plain",
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 45, textColor: COLORS.muted },
-      1: { cellWidth: 90 },
-    },
-  });
-
-  yPos = (doc as any).lastAutoTable.finalY + 8;
-
-  // Address Section
-  doc.setFontSize(11);
-  doc.setTextColor(...COLORS.primary);
-  doc.setFont("helvetica", "bold");
-  doc.text("ENDEREÇO", 14, yPos);
-  yPos += 6;
-
-  const fullAddress = [
-    filiacao.logradouro,
-    filiacao.numero ? `nº ${filiacao.numero}` : null,
-    filiacao.complemento,
-  ].filter(Boolean).join(", ");
-
-  const cityState = [filiacao.bairro, filiacao.cidade, filiacao.uf].filter(Boolean).join(" - ");
-
-  const addressData = [
-    ["Endereço", fullAddress || "-"],
-    ["Bairro/Cidade/UF", cityState || "-"],
-    ["CEP", filiacao.cep || "-"],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    body: addressData,
-    theme: "plain",
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 45, textColor: COLORS.muted },
-      1: { cellWidth: 90 },
-    },
-  });
-
-  yPos = (doc as any).lastAutoTable.finalY + 8;
-
-  // Company Section
-  doc.setFontSize(11);
-  doc.setTextColor(...COLORS.primary);
-  doc.setFont("helvetica", "bold");
-  doc.text("DADOS PROFISSIONAIS", 14, yPos);
-  yPos += 6;
-
-  const companyData = [
-    ["Empresa", filiacao.empresa_razao_social || "-"],
-    ["CNPJ", filiacao.empresa_cnpj || "-"],
-    ["Cargo/Função", filiacao.cargo || "-"],
-    ["Data de Admissão", filiacao.data_admissao ? format(new Date(filiacao.data_admissao + "T12:00:00"), "dd/MM/yyyy") : "-"],
-    ["Forma de Pagamento", filiacao.forma_pagamento ? paymentMethodLabels[filiacao.forma_pagamento] || filiacao.forma_pagamento : "-"],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    body: companyData,
-    theme: "plain",
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { fontStyle: "bold", cellWidth: 45, textColor: COLORS.muted },
-      1: { cellWidth: 90 },
-    },
-  });
-
-  yPos = (doc as any).lastAutoTable.finalY + 8;
-
-  // Dependents Section (if any)
-  if (dependents.length > 0) {
-    doc.setFontSize(11);
-    doc.setTextColor(...COLORS.primary);
-    doc.setFont("helvetica", "bold");
-    doc.text("DEPENDENTES", 14, yPos);
-    yPos += 6;
-
-    const depsTableData = dependents.map((d) => [
-      d.nome,
-      d.grau_parentesco,
-      d.data_nascimento ? format(new Date(d.data_nascimento + "T12:00:00"), "dd/MM/yyyy") : "-",
-    ]);
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Nome", "Parentesco", "Data Nasc."]],
-      body: depsTableData,
-      theme: "plain",
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: {
-        fillColor: COLORS.accent,
-        textColor: COLORS.white,
-        fontStyle: "bold",
-      },
-    });
-
-    yPos = (doc as any).lastAutoTable.finalY + 8;
-  }
-
-  // Authorization Section
-  doc.setFillColor(...COLORS.light);
-  doc.roundedRect(14, yPos, pageWidth - 28, 35, 2, 2, "F");
-
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.primary);
-  doc.setFont("helvetica", "bold");
-  doc.text("AUTORIZAÇÃO DE DESCONTO", 20, yPos + 8);
-
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...COLORS.muted);
+  doc.text(`Filiado desde ${filiadoDesde}`, pageWidth / 2, yPos, { align: "center" });
 
-  const authText = `Autorizo o desconto mensal da contribuição sindical equivalente a 2% do menor piso salarial da categoria, conforme estabelecido em convenção coletiva de trabalho, a ser efetuado diretamente em folha de pagamento ou pela forma de pagamento escolhida acima.`;
+  yPos += 14;
 
-  const lines = doc.splitTextToSize(authText, pageWidth - 48);
-  doc.text(lines, 20, yPos + 15);
+  // ========== DADOS DO SÓCIO SECTION ==========
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bolditalic");
+  doc.setTextColor(...COLORS.black);
+  doc.text("Dados do Sócio", margin, yPos);
 
-  // Signature
-  yPos += 42;
+  // Underline
+  doc.setDrawColor(...COLORS.lightGray);
+  doc.setLineWidth(0.5);
+  doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
 
+  yPos += 10;
+
+  // Grid layout for member data (3 columns)
+  const col1X = margin;
+  const col2X = margin + 62;
+  const col3X = margin + 124;
+  const lineHeight = 6;
+
+  const drawField = (label: string, value: string, x: number, y: number) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(`${label}:`, x, y);
+    doc.setFont("helvetica", "normal");
+    const labelWidth = doc.getTextWidth(`${label}: `);
+    doc.text(value || "", x + labelWidth, y);
+  };
+
+  // Row 1
+  drawField("Nome Completo", filiacao.nome, col1X, yPos);
+  yPos += lineHeight;
+
+  // Row 2 (spread across columns)
+  drawField("Nascimento", formatDate(filiacao.data_nascimento), col1X, yPos);
+  drawField("Matrícula", filiacao.matricula || "", col2X, yPos);
+  drawField("Telefone", formatPhone(filiacao.telefone) || "", col3X, yPos);
+  yPos += lineHeight;
+
+  // Row 3
+  drawField("E-mail", filiacao.email || "", col1X, yPos);
+  drawField("Celular", formatPhone(filiacao.telefone), col2X, yPos);
+  drawField("RG", filiacao.rg || "", col3X, yPos);
+  yPos += lineHeight;
+
+  // Row 4
+  const endereco = [filiacao.logradouro, filiacao.numero].filter(Boolean).join(", ");
+  drawField("Endereço", endereco, col1X, yPos);
+  drawField("CPF", formatCPF(filiacao.cpf), col2X, yPos);
+  drawField("Cidade", `${filiacao.cidade || ""} - ${filiacao.uf || ""}`, col3X, yPos);
+  yPos += lineHeight;
+
+  // Row 5
+  drawField("CNS", (filiacao as any).cns || "", col1X, yPos);
+  drawField("Bairro", filiacao.bairro || "", col2X, yPos);
+  drawField("Nome do pai", filiacao.nome_pai || "", col3X, yPos);
+  yPos += lineHeight;
+
+  // Row 6
+  drawField("Nome da mãe", filiacao.nome_mae || "", col2X, yPos);
+  doc.setFont("helvetica", "bold");
+  doc.text("Filiado:", col3X, yPos);
+  doc.setFont("helvetica", "normal");
+  doc.text(" Sim", col3X + doc.getTextWidth("Filiado: "), yPos);
+  yPos += 12;
+
+  // ========== DADOS PROFISSIONAIS SECTION ==========
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bolditalic");
+  doc.text("Dados profissionais", margin, yPos);
+  doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+
+  yPos += 10;
+
+  // Company data
+  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos);
+  yPos += lineHeight;
+
+  drawField("Segmento", (filiacao as any).empresa_segmento || "Comércio Varejista", col1X, yPos);
+  drawField("Bairro", (filiacao as any).empresa_bairro || filiacao.bairro || "", col3X, yPos);
+  yPos += lineHeight;
+
+  drawField("Endereço", (filiacao as any).empresa_endereco || "", col1X, yPos);
+  drawField("Telefone", (filiacao as any).empresa_telefone || "", col3X, yPos);
+  yPos += lineHeight;
+
+  const empresaCidade = (filiacao as any).empresa_cidade || filiacao.cidade || "";
+  const empresaUf = (filiacao as any).empresa_uf || filiacao.uf || "";
+  drawField("Cidade", `${empresaCidade} - ${empresaUf}`, col1X, yPos);
+  drawField("Admissão", filiacao.data_admissao ? formatDate(filiacao.data_admissao) : "Não informado", col3X, yPos);
+  yPos += lineHeight;
+
+  drawField("Funções", filiacao.cargo || "", col1X, yPos);
+  yPos += 20;
+
+  // ========== WATERMARK (Logo in center, faded) ==========
+  if (sindicato?.logo_url) {
+    try {
+      const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
+      if (logoBase64) {
+        // Draw semi-transparent logo in the center background
+        doc.saveGraphicsState();
+        // @ts-ignore - setGState exists in jsPDF
+        doc.setGState(new doc.GState({ opacity: 0.15 }));
+        doc.addImage(logoBase64, "PNG", pageWidth / 2 - 50, yPos - 20, 100, 100);
+        doc.restoreGraphicsState();
+      }
+    } catch (e) {
+      console.warn("Failed to load watermark:", e);
+    }
+  }
+
+  // ========== DATE AND SIGNATURE ==========
+  const cidade = sindicato?.cidade || filiacao.cidade || "";
+  const dataFormatada = filiacao.aprovado_at
+    ? formatDateLong(filiacao.aprovado_at)
+    : formatDateLong(new Date().toISOString());
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${cidade.toUpperCase()}, ${dataFormatada}`, pageWidth / 2, yPos + 50, { align: "center" });
+
+  yPos += 75;
+
+  // Signature line
+  doc.setDrawColor(...COLORS.black);
+  doc.setLineWidth(0.3);
+  doc.line(pageWidth / 2 - 50, yPos, pageWidth / 2 + 50, yPos);
+
+  doc.setFontSize(10);
+  doc.text("Assinatura do Sócio", pageWidth / 2, yPos + 6, { align: "center" });
+
+  // Add digital signature if exists
   if (filiacao.assinatura_digital_url) {
     try {
       const sigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url);
       if (sigBase64) {
-        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 30, yPos, 60, 20);
-        yPos += 22;
+        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 30, yPos - 25, 60, 20);
       }
     } catch (e) {
       console.warn("Failed to load signature:", e);
     }
   }
 
-  // Signature line
-  doc.setDrawColor(...COLORS.muted);
-  doc.setLineWidth(0.3);
-  doc.line(pageWidth / 2 - 40, yPos, pageWidth / 2 + 40, yPos);
+  // ========== BOTTOM STUB (VIA EMPRESA) ==========
+  const stubY = pageHeight - 55;
 
+  // Dashed line separator
+  doc.setDrawColor(...COLORS.gray);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(margin, stubY, pageWidth - margin, stubY);
+  doc.setLineDashPattern([], 0);
+
+  const stubStartY = stubY + 8;
+
+  // Small logo on left
+  if (sindicato?.logo_url) {
+    try {
+      const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
+      if (logoBase64) {
+        doc.addImage(logoBase64, "PNG", margin, stubStartY - 2, 12, 12);
+      }
+    } catch (e) {
+      console.warn("Failed to load stub logo:", e);
+    }
+  }
+
+  // "Autorização de Desconto" title
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Autorização de Desconto", margin + 16, stubStartY + 4);
+
+  // Desconto em Folha checkbox
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const descontoFolha = filiacao.forma_pagamento === "desconto_folha";
+  doc.text("Desconto em Folha:", margin + 75, stubStartY + 4);
+
+  // Sim checkbox
+  doc.rect(margin + 115, stubStartY, 4, 4);
+  if (descontoFolha) {
+    doc.setFillColor(...COLORS.black);
+    doc.rect(margin + 115.5, stubStartY + 0.5, 3, 3, "F");
+  }
+  doc.text("Sim", margin + 121, stubStartY + 4);
+
+  // Não checkbox
+  doc.rect(margin + 135, stubStartY, 4, 4);
+  if (!descontoFolha) {
+    doc.setFillColor(...COLORS.black);
+    doc.rect(margin + 135.5, stubStartY + 0.5, 3, 3, "F");
+  }
+  doc.text("Não", margin + 141, stubStartY + 4);
+
+  // Matrícula on right
+  doc.setFont("helvetica", "bold");
+  doc.text("Matrícula:", pageWidth - margin - 35, stubStartY);
+  doc.setFont("helvetica", "normal");
+  doc.text(filiacao.matricula || "", pageWidth - margin - 35, stubStartY + 6);
+
+  // Second row
+  const row2Y = stubStartY + 12;
+
+  // Nome completo
   doc.setFontSize(8);
-  doc.setTextColor(...COLORS.muted);
-  doc.text("Assinatura do Associado", pageWidth / 2, yPos + 5, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.text("Nome completo:", margin, row2Y);
+  doc.setFont("helvetica", "normal");
+  doc.text(filiacao.nome, margin, row2Y + 4);
 
-  if (filiacao.assinatura_aceite_at) {
-    doc.text(
-      `Assinado digitalmente em ${format(new Date(filiacao.assinatura_aceite_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
-      pageWidth / 2,
-      yPos + 10,
-      { align: "center" }
-    );
-  }
+  // Assinatura on right
+  doc.setFont("helvetica", "bold");
+  doc.text("Assinatura:", pageWidth - margin - 35, row2Y);
+  doc.line(pageWidth - margin - 35, row2Y + 8, pageWidth - margin, row2Y + 8);
 
-  // Footer
-  const pageHeight = doc.internal.pageSize.getHeight();
-  doc.setDrawColor(...COLORS.accent);
-  doc.setLineWidth(0.5);
-  doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+  // Third row - company info
+  const row3Y = row2Y + 14;
 
-  doc.setFontSize(7);
-  doc.setTextColor(...COLORS.muted);
-  doc.text(
-    `Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
-    14,
-    pageHeight - 8
-  );
+  doc.setFont("helvetica", "bold");
+  doc.text("Empresa onde trabalha:", margin, row3Y);
+  doc.setFont("helvetica", "normal");
+  doc.text(filiacao.empresa_razao_social || "", margin, row3Y + 4);
 
-  if (filiacao.aprovado_at) {
-    doc.text(
-      `Filiação aprovada em ${format(new Date(filiacao.aprovado_at), "dd/MM/yyyy", { locale: ptBR })}`,
-      pageWidth - 14,
-      pageHeight - 8,
-      { align: "right" }
-    );
-  }
+  // Nº Registro, Local, Inscrição table
+  const tableStartX = margin + 60;
+  doc.setFont("helvetica", "bold");
+  doc.text("Nº Registro:", tableStartX, row3Y);
+  doc.setFont("helvetica", "normal");
+  doc.text("...", tableStartX, row3Y + 4);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Local:", tableStartX + 35, row3Y);
+  doc.setFont("helvetica", "normal");
+  doc.text(filiacao.cidade?.toUpperCase() || "", tableStartX + 35, row3Y + 4);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Inscrição:", tableStartX + 70, row3Y);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatDate(filiacao.aprovado_at || filiacao.created_at), tableStartX + 70, row3Y + 4);
+
+  // VIA EMPRESA footer bar
+  const footerY = pageHeight - 8;
+  doc.setFillColor(...COLORS.red);
+  doc.rect(margin, footerY - 5, pageWidth - margin * 2, 8, "F");
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("VIA EMPRESA", pageWidth / 2, footerY, { align: "center" });
 
   return doc;
 }
@@ -403,7 +435,7 @@ async function buildFiliacaoPDF(
  */
 export async function generateFiliacaoPDFBlob(
   filiacao: Filiacao,
-  dependents: Dependent[],
+  dependents: unknown[],
   sindicato?: Sindicato | null,
   cardExpiresAt?: string | null
 ): Promise<Blob> {
@@ -416,7 +448,7 @@ export async function generateFiliacaoPDFBlob(
  */
 export async function generateFichaFiliacaoPDF(
   filiacao: Filiacao,
-  dependents: Dependent[],
+  dependents: unknown[],
   sindicato?: Sindicato | null
 ): Promise<void> {
   const doc = await buildFiliacaoPDF(filiacao, dependents, sindicato);
