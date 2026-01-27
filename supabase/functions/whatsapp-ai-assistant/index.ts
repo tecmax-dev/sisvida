@@ -237,7 +237,9 @@ async function executeTool(
           .eq('id', clinicId)
           .single();
         
-        const bookingMonthsAhead = clinicConfigData?.booking_months_ahead ?? 1;
+        // Only apply restriction if explicitly configured (union clinics)
+        // Default to 12 months (no practical restriction) for regular clinics
+        const bookingMonthsAhead = clinicConfigData?.booking_months_ahead ?? 12;
         
         // Calculate the last allowed date based on booking_months_ahead
         const todayForLimit = new Date();
