@@ -108,7 +108,9 @@ export default function NegotiationInstallmentsTab({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [internalYearFilter, setInternalYearFilter] = useState(yearFilter);
+  // Start with null to auto-detect best year from data
+  const [internalYearFilter, setInternalYearFilter] = useState<number | null>(null);
+  const [yearAutoDetected, setYearAutoDetected] = useState(false);
   const [generatingBoleto, setGeneratingBoleto] = useState<string | null>(null);
 
   useEffect(() => {
@@ -215,10 +217,33 @@ export default function NegotiationInstallmentsTab({
     return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
   };
 
+  // Get available years from data
+  const years = useMemo(() => {
+    const uniqueYears = new Set(installments.map(i => parseDateOnlyToLocalNoon(i.due_date).getFullYear()));
+    return Array.from(uniqueYears).sort((a, b) => b - a);
+  }, [installments]);
+
+  // Auto-detect best year when installments are loaded (only once)
+  useEffect(() => {
+    if (!yearAutoDetected && installments.length > 0 && years.length > 0) {
+      // Check if the prop yearFilter exists in data, otherwise use most recent year
+      if (years.includes(yearFilter)) {
+        setInternalYearFilter(yearFilter);
+      } else {
+        // Use the most recent year with data
+        setInternalYearFilter(years[0]);
+      }
+      setYearAutoDetected(true);
+    }
+  }, [installments, years, yearFilter, yearAutoDetected]);
+
+  // Effective year filter (use prop fallback if not auto-detected yet)
+  const effectiveYearFilter = internalYearFilter ?? yearFilter ?? new Date().getFullYear();
+
   const filteredInstallments = useMemo(() => {
     return installments.filter((inst) => {
       const dueYear = parseDateOnlyToLocalNoon(inst.due_date).getFullYear();
-      const matchesYear = dueYear === internalYearFilter;
+      const matchesYear = dueYear === effectiveYearFilter;
       
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = 
@@ -231,7 +256,7 @@ export default function NegotiationInstallmentsTab({
 
       return matchesYear && matchesSearch && matchesStatus;
     });
-  }, [installments, searchTerm, statusFilter, internalYearFilter]);
+  }, [installments, searchTerm, statusFilter, effectiveYearFilter]);
 
   const totalPages = Math.ceil(filteredInstallments.length / ITEMS_PER_PAGE);
   const paginatedInstallments = useMemo(() => {
@@ -252,11 +277,6 @@ export default function NegotiationInstallmentsTab({
     };
   }, [filteredInstallments]);
 
-  const years = useMemo(() => {
-    const uniqueYears = new Set(installments.map(i => parseDateOnlyToLocalNoon(i.due_date).getFullYear()));
-    return Array.from(uniqueYears).sort((a, b) => b - a);
-  }, [installments]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -271,7 +291,7 @@ export default function NegotiationInstallmentsTab({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border-l-4 border-l-primary">
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Total {internalYearFilter}</p>
+            <p className="text-xs text-muted-foreground">Total {effectiveYearFilter}</p>
             <p className="text-xl font-bold">{stats.total}</p>
             <p className="text-xs text-muted-foreground">{formatCurrency(stats.totalValue)}</p>
           </CardContent>
@@ -325,7 +345,7 @@ export default function NegotiationInstallmentsTab({
                 <SelectItem value="cancelled">Cancelados</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={String(internalYearFilter)} onValueChange={(v) => { setInternalYearFilter(Number(v)); setCurrentPage(1); }}>
+            <Select value={String(effectiveYearFilter)} onValueChange={(v) => { setInternalYearFilter(Number(v)); setCurrentPage(1); }}>
               <SelectTrigger className="w-[100px]">
                 <SelectValue />
               </SelectTrigger>
