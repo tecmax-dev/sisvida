@@ -7,14 +7,18 @@ import { useHeroSettings } from "@/hooks/useHeroSettings";
 export function HeroSection() {
   const { data: settings, isLoading } = useHeroSettings();
 
-  const title = settings?.title || "Gestão automatizada";
-  const subtitle = settings?.subtitle || "para clínicas";
-  const description = settings?.description || "Elimine processos manuais e veja os resultados crescerem";
-  const primaryButtonText = settings?.primary_button_text || "Começar agora";
+  const title = settings?.title || "O software que resolve a gestão da clínica";
+  const subtitle = settings?.subtitle || "";
+  const description = settings?.description || "O Eclini é um sistema para clínicas com prontuário eletrônico, agenda médica online, controle financeiro e mais de 200 outros recursos.";
+  const primaryButtonText = settings?.primary_button_text || "Solicite uma demonstração";
   const primaryButtonLink = settings?.primary_button_link || "/cadastro";
   const heroImage = settings?.hero_image_url || heroMockupScreens;
-  const showSocialProof = settings?.show_social_proof ?? true;
-  const socialProofUsers = settings?.social_proof_users || 70000;
+
+  const benefits = [
+    "Reduza em até 50% a falta de pacientes",
+    "Aumente em até 20% a receita com agendamentos online",
+    "Mais de 70 mil profissionais"
+  ];
 
   if (isLoading) {
     return (
@@ -25,51 +29,48 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative min-h-[90vh] flex items-center pt-20 lg:pt-24 pb-16 bg-background overflow-hidden">
+    <section className="relative min-h-[85vh] flex items-center pt-24 lg:pt-28 pb-16 bg-background overflow-hidden">
       <div className="container relative z-10">
-        {/* Social proof badge */}
-        {showSocialProof && (
-          <div className="flex justify-center mb-8 animate-fade-in">
-            <div className="section-badge">
-              <div className="flex -space-x-2 mr-2">
-                <div className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center">
-                  <span className="text-xs">👩‍⚕️</span>
-                </div>
-                <div className="w-7 h-7 rounded-full bg-cta/20 border-2 border-card flex items-center justify-center">
-                  <span className="text-xs">👨‍⚕️</span>
-                </div>
-                <div className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center">
-                  <span className="text-xs">👩‍⚕️</span>
-                </div>
-              </div>
-              <span className="text-sm font-medium">
-                Junte-se a <span className="font-bold">{socialProofUsers.toLocaleString('pt-BR')}+</span> profissionais da saúde
-              </span>
-            </div>
-          </div>
-        )}
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          {/* Left Column - Content */}
+          <div className="text-left">
+            {/* Badge */}
+            <span className="text-muted-foreground text-sm font-medium tracking-wide mb-4 block">
+              Sistema para clínicas
+            </span>
 
-        {/* Main headline */}
-        <div className="text-center max-w-4xl mx-auto mb-8">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.1] text-foreground animate-fade-in">
-            {title}
-            {subtitle && (
-              <>
-                <br />
-                <span className="gradient-text">{subtitle}</span>
-              </>
-            )}
-          </h1>
-          
-          <p className="mt-6 text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '100ms' }}>
-            {description}
-          </p>
+            {/* Main headline - Clinica nas Nuvens style */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] mb-6">
+              <span className="gradient-text">{title}</span>
+              {subtitle && (
+                <>
+                  <br />
+                  <span className="text-foreground">{subtitle}</span>
+                </>
+              )}
+            </h1>
+            
+            <p className="text-lg text-muted-foreground max-w-xl mb-8 leading-relaxed">
+              {description}
+            </p>
 
-          {/* CTA Button */}
-          <div className="mt-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            {/* Benefits List */}
+            <ul className="space-y-3 mb-8">
+              {benefits.map((benefit, index) => (
+                <li key={index} className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-3 w-3 text-primary" />
+                  </div>
+                  <span className="text-foreground">{benefit}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA Button - Outlined style like Clinica nas Nuvens */}
             <Button 
               size="lg" 
-              className="btn-eclini px-10 h-14 text-base shadow-lg"
+              variant="outline"
+              className="btn-eclini-outline px-8 h-14 text-base"
               asChild
             >
               <Link to={primaryButtonLink}>
@@ -77,55 +78,85 @@ export function HeroSection() {
               </Link>
             </Button>
           </div>
-        </div>
 
-        {/* Hero Mockup */}
-        <div className="relative mt-12 lg:mt-16 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <div className="relative max-w-6xl mx-auto">
-            {/* Main mockup image */}
+          {/* Right Column - Hero Image with floating cards */}
+          <div className="relative flex justify-center lg:justify-end">
+            {/* Background decorative circle */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-primary/5 via-transparent to-cta/5 blur-3xl" />
+            
+            {/* Main image container */}
             <div className="relative">
               <img 
                 src={heroImage}
-                alt="Múltiplas telas do sistema Eclini - Dashboard, agenda, teleconsulta e prontuário"
-                className="w-full h-auto object-contain drop-shadow-2xl"
+                alt="Múltiplas telas do sistema Eclini - Dashboard, agenda e prontuário"
+                className="w-full max-w-lg h-auto object-contain drop-shadow-xl animate-fade-in"
               />
               
-              {/* Floating cards overlay - left side */}
-              <div className="absolute left-0 top-1/4 -translate-x-1/2 hidden xl:block animate-float">
-                <div className="bg-card border border-border rounded-2xl p-4 shadow-xl w-48">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="feature-card-icon w-8 h-8 rounded-lg">
-                      <span>💰</span>
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">Controle financeiro</span>
+              {/* Floating Card - Agendamentos */}
+              <div className="absolute -left-4 top-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block">
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Agendamentos</p>
+                    <p className="text-lg font-bold text-foreground">450</p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between py-2 px-3 bg-success/10 rounded-lg">
-                      <span className="text-xs">Convênio</span>
-                      <span className="text-xs font-semibold text-success">R$ 500,00</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2 px-3 bg-primary/10 rounded-lg">
-                      <span className="text-xs">Particular</span>
-                      <span className="text-xs font-semibold text-primary">R$ 450,00</span>
-                    </div>
+                  <div className="w-12 h-8 flex items-end gap-0.5">
+                    <div className="w-2 h-4 bg-primary/40 rounded-t" />
+                    <div className="w-2 h-6 bg-primary/60 rounded-t" />
+                    <div className="w-2 h-5 bg-primary/50 rounded-t" />
+                    <div className="w-2 h-8 bg-primary rounded-t" />
                   </div>
                 </div>
               </div>
 
-              {/* Floating cards overlay - right side */}
-              <div className="absolute right-0 top-1/3 translate-x-1/3 hidden xl:block animate-float" style={{ animationDelay: '1s' }}>
-                <div className="bg-card border border-border rounded-2xl p-4 shadow-xl w-56">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full bg-success flex items-center justify-center">
-                      <Check className="h-3 w-3 text-success-foreground" />
-                    </div>
-                    <span className="text-xs font-medium">Integração com WhatsApp</span>
+              {/* Floating Card - Resumo financeiro */}
+              <div className="absolute -left-8 top-1/2 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '0.5s' }}>
+                <p className="text-xs text-muted-foreground mb-2">Resumo financeiro</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-muted-foreground">Total a receber</span>
+                    <span className="text-xs font-semibold text-success">R$ 2.000,00</span>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Eclini</span>: Olá! Lembramos que você possui um agendamento...
-                    </p>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-muted-foreground">A vencer</span>
+                    <span className="text-xs font-medium">R$ 1.000,00</span>
                   </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-muted-foreground">Vencidos</span>
+                    <span className="text-xs font-medium text-destructive">R$ 1.000,00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Card - Atendimentos */}
+              <div className="absolute right-0 top-1/3 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '1s' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs text-muted-foreground">Atendimentos</span>
+                  <span className="text-xs text-primary">→</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="text-sm font-bold">Total</p>
+                    <p className="text-lg font-bold gradient-text">1500</p>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <span className="text-xs">Particular</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Card - Últimos 12 meses */}
+              <div className="absolute right-4 bottom-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '1.5s' }}>
+                <p className="text-xs text-muted-foreground mb-2">Atendimentos últ. 12 meses</p>
+                <div className="w-24 h-10">
+                  <svg viewBox="0 0 100 40" className="w-full h-full">
+                    <polyline
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth="2"
+                      points="0,35 15,30 30,20 45,25 60,15 75,10 90,5 100,8"
+                    />
+                  </svg>
                 </div>
               </div>
             </div>
