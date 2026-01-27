@@ -36,6 +36,15 @@ interface MemberData {
   email: string | null;
   phone: string;
   cpf: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  address?: string | null;
+  address_number?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
+  registration_number?: string | null;
 }
 
 interface FiliacaoData {
@@ -105,23 +114,99 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
     setLoading(true);
     try {
       // First try to find by CPF in sindical_associados
-      const { data: filiacao } = await supabase
-        .from("sindical_associados")
-        .select("*")
-        .eq("cpf", member.cpf)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (filiacao) {
-        setFiliacaoData(filiacao);
-
-        // Fetch dependents
-        const { data: deps } = await supabase
-          .from("sindical_associado_dependentes")
+      if (member.cpf) {
+        const { data: filiacao } = await supabase
+          .from("sindical_associados")
           .select("*")
-          .eq("associado_id", filiacao.id);
-        setDependents(deps || []);
+          .eq("cpf", member.cpf)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (filiacao) {
+          setFiliacaoData(filiacao);
+
+          // Fetch dependents from sindical_associado_dependentes
+          const { data: deps } = await supabase
+            .from("sindical_associado_dependentes")
+            .select("*")
+            .eq("associado_id", filiacao.id);
+          setDependents(deps || []);
+        } else {
+          // No sindical_associados record found - create filiacao data from patient record
+          // Also fetch dependents from patient_dependents
+          const { data: patientDeps } = await supabase
+            .from("patient_dependents")
+            .select("id, name, relationship, birth_date, cpf")
+            .eq("patient_id", member.id)
+            .eq("is_active", true);
+          
+          const mappedDeps: DependentData[] = (patientDeps || []).map(d => ({
+            id: d.id,
+            nome: d.name,
+            grau_parentesco: d.relationship || "Dependente",
+            data_nascimento: d.birth_date,
+            cpf: d.cpf,
+          }));
+          setDependents(mappedDeps);
+
+          // Build filiacao data from patient record
+          const filiacaoFromPatient: FiliacaoData = {
+            id: member.id,
+            nome: member.name,
+            cpf: member.cpf,
+            data_nascimento: member.birth_date || "",
+            sexo: member.gender,
+            email: member.email || "",
+            telefone: member.phone,
+            cep: member.zip_code,
+            logradouro: member.address,
+            numero: member.address_number,
+            bairro: member.neighborhood,
+            cidade: member.city,
+            uf: member.state,
+            matricula: member.registration_number,
+            created_at: new Date().toISOString(),
+            aprovado_at: new Date().toISOString(), // Assume filiado se está na base
+          };
+          setFiliacaoData(filiacaoFromPatient);
+        }
+      } else {
+        // No CPF - build from patient data anyway
+        const { data: patientDeps } = await supabase
+          .from("patient_dependents")
+          .select("id, name, relationship, birth_date, cpf")
+          .eq("patient_id", member.id)
+          .eq("is_active", true);
+        
+        const mappedDeps: DependentData[] = (patientDeps || []).map(d => ({
+          id: d.id,
+          nome: d.name,
+          grau_parentesco: d.relationship || "Dependente",
+          data_nascimento: d.birth_date,
+          cpf: d.cpf,
+        }));
+        setDependents(mappedDeps);
+
+        const filiacaoFromPatient: FiliacaoData = {
+          id: member.id,
+          nome: member.name,
+          cpf: member.cpf || "",
+          data_nascimento: member.birth_date || "",
+          sexo: member.gender,
+          email: member.email || "",
+          telefone: member.phone,
+          cep: member.zip_code,
+          logradouro: member.address,
+          numero: member.address_number,
+          bairro: member.neighborhood,
+          cidade: member.city,
+          uf: member.state,
+          matricula: member.registration_number,
+          created_at: new Date().toISOString(),
+          aprovado_at: new Date().toISOString(),
+        };
+        setFiliacaoData(filiacaoFromPatient);
       }
 
       // Fetch sindicato info
@@ -129,7 +214,9 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
         .from("union_entities")
         .select("razao_social, clinic_id, logo_url")
         .eq("clinic_id", clinicId)
-        .single();
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (sind) {
         // Also fetch clinic logo as fallback
@@ -137,7 +224,7 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
           .from("clinics")
           .select("logo_url")
           .eq("id", clinicId)
-          .single();
+          .maybeSingle();
         
         setSindicato({
           ...sind,
