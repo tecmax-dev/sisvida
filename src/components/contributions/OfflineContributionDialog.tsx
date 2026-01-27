@@ -369,8 +369,8 @@ export default function OfflineContributionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileX className="h-5 w-5 text-orange-500" />
             Lançar Débitos Retroativos (Offline)
@@ -382,7 +382,7 @@ export default function OfflineContributionDialog({
 
         {step === "config" && (
           <>
-            <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
+            <ScrollArea className="flex-1 min-h-0 pr-4">
               <div className="space-y-4">
                 {/* Aviso */}
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2">
@@ -767,7 +767,7 @@ export default function OfflineContributionDialog({
               </div>
             </ScrollArea>
 
-            <DialogFooter>
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
