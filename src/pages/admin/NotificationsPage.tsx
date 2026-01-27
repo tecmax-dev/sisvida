@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Bell, Wrench, CreditCard, Sparkles, AlertTriangle, Info, Eye, EyeOff } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import NotificationDialog from "@/components/admin/NotificationDialog";
 
@@ -174,12 +174,12 @@ export default function NotificationsPage() {
 
   const isExpired = (notification: SystemNotification) => {
     if (!notification.expires_at) return false;
-    return new Date(notification.expires_at) < new Date();
+    return parseISO(notification.expires_at) < new Date();
   };
 
   const isScheduled = (notification: SystemNotification) => {
     if (!notification.scheduled_at) return false;
-    return new Date(notification.scheduled_at) > new Date();
+    return parseISO(notification.scheduled_at) > new Date();
   };
 
   return (
@@ -307,7 +307,7 @@ export default function NotificationsPage() {
                       <TableCell>
                         {notification.expires_at ? (
                           <span className={expired ? "text-red-600" : ""}>
-                            {format(new Date(notification.expires_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {format(parseISO(notification.expires_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                           </span>
                         ) : (
                           "Sem expiração"

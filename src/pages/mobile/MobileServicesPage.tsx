@@ -327,7 +327,7 @@ function DeclaracoesContent() {
         .limit(1)
         .maybeSingle();
 
-      if (!cardData || (cardData.expires_at && new Date(cardData.expires_at) < now)) {
+      if (!cardData || (cardData.expires_at && parseISO(cardData.expires_at) < now)) {
         setCardExpired(true);
       }
 

@@ -196,7 +196,7 @@ export default function MobileLegalBookingPage() {
         setCardInfo(cardData);
         
         // Check if card is expired
-        if (cardData.expires_at && isPast(new Date(cardData.expires_at))) {
+        if (cardData.expires_at && isPast(parseISO(cardData.expires_at))) {
           setCardExpired(true);
           
           // Check if there's already a pending payslip request
@@ -678,7 +678,7 @@ export default function MobileLegalBookingPage() {
             <CreditCard className="h-16 w-16 text-amber-500 mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Carteira Vencida</h2>
             <p className="text-muted-foreground text-center">
-              Sua carteira venceu em {cardInfo?.expires_at ? format(new Date(cardInfo.expires_at), "dd/MM/yyyy", { locale: ptBR }) : "data não informada"}.
+              Sua carteira venceu em {cardInfo?.expires_at ? format(parseISO(cardInfo.expires_at), "dd/MM/yyyy", { locale: ptBR }) : "data não informada"}.
             </p>
           </div>
 

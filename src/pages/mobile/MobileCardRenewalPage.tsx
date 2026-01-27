@@ -18,7 +18,7 @@ import {
   X,
   Image as ImageIcon,
 } from "lucide-react";
-import { format, isPast, differenceInDays } from "date-fns";
+import { format, isPast, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
 
@@ -168,7 +168,7 @@ export default function MobileCardRenewalPage() {
       return { label: "Inativa", color: "destructive" as const, expired: false };
     }
     if (cardData.expires_at) {
-      const expiryDate = new Date(cardData.expires_at);
+      const expiryDate = parseISO(cardData.expires_at);
       if (isPast(expiryDate)) {
         return { label: "Vencida", color: "destructive" as const, expired: true };
       }
@@ -441,7 +441,7 @@ export default function MobileCardRenewalPage() {
                 <p className="font-semibold">{cardData.card_number}</p>
                 {cardData.expires_at && (
                   <p className="text-xs text-muted-foreground">
-                    Validade: {format(new Date(cardData.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                    Validade: {format(parseISO(cardData.expires_at), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
                 )}
               </div>
