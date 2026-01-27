@@ -83,7 +83,14 @@ interface UnionMember {
   phone: string;
   cpf: string | null;
   birth_date: string | null;
+  gender: string | null;
   address: string | null;
+  address_number: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  registration_number: string | null;
   is_active: boolean;
   insurance_plan_id: string | null;
   insurance_plan?: { name: string } | null;
@@ -248,7 +255,14 @@ export default function UnionMembersListPage() {
           email,
           phone,
           cpf,
+          gender,
           address,
+          address_number,
+          neighborhood,
+          city,
+          state,
+          zip_code,
+          registration_number,
           birth_date,
           is_active,
           inactivation_reason,
@@ -1114,6 +1128,15 @@ export default function UnionMembersListPage() {
             email: selectedMemberForFiliacao.email,
             phone: selectedMemberForFiliacao.phone,
             cpf: selectedMemberForFiliacao.cpf,
+            birth_date: selectedMemberForFiliacao.birth_date,
+            gender: selectedMemberForFiliacao.gender,
+            address: selectedMemberForFiliacao.address,
+            address_number: selectedMemberForFiliacao.address_number,
+            neighborhood: selectedMemberForFiliacao.neighborhood,
+            city: selectedMemberForFiliacao.city,
+            state: selectedMemberForFiliacao.state,
+            zip_code: selectedMemberForFiliacao.zip_code,
+            registration_number: selectedMemberForFiliacao.registration_number,
           }}
           clinicId={currentClinic?.id || ""}
         />
