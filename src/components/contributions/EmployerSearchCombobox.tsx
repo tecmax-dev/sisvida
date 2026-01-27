@@ -57,6 +57,7 @@ export function EmployerSearchCombobox({
     
     const searchLower = search.toLowerCase().trim();
     const searchClean = search.replace(/\D/g, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
     
     return employers.filter((e) => {
       // Name match
@@ -65,9 +66,13 @@ export function EmployerSearchCombobox({
       // Trade name match
       if (e.trade_name?.toLowerCase().includes(searchLower)) return true;
       
-      // CNPJ match (both sides normalized)
+      // CNPJ match (both sides normalized, handle leading zeros)
       const cnpjClean = e.cnpj?.replace(/\D/g, "") || "";
       if (searchClean.length >= 3 && cnpjClean.includes(searchClean)) return true;
+      if (searchNoLeadingZeros.length >= 3 && cnpjClean.includes(searchNoLeadingZeros)) return true;
+      
+      // Also check if CNPJ starts with the search term
+      if (searchClean.length >= 2 && cnpjClean.startsWith(searchClean)) return true;
       
       // Registration number match
       if (e.registration_number?.toLowerCase().includes(searchLower)) return true;
