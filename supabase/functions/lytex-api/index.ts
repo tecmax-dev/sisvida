@@ -198,6 +198,7 @@ interface CreateInvoiceRequest {
     phone?: string;
   };
   value: number; // em centavos
+  valueIsInCents?: boolean; // Se true, valor já está em centavos (não aplicar normalização)
   dueDate: string; // YYYY-MM-DD
   description: string;
   enableBoleto: boolean;
@@ -398,9 +399,14 @@ async function listInvoicesWithToken(token: string, page = 1, limit = 100, statu
   return response.json();
 }
 
-function normalizeMoneyToCents(value: number): number {
+function normalizeMoneyToCents(value: number, alreadyInCents: boolean = false): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
     throw new Error("Valor inválido para emissão");
+  }
+
+  // If caller explicitly indicates value is already in cents, trust it
+  if (alreadyInCents) {
+    return Math.round(value);
   }
 
   // A API Lytex exige inteiro em centavos e mínimo de 200.
@@ -409,6 +415,8 @@ function normalizeMoneyToCents(value: number): number {
   // - Se tiver casas decimais, assume reais e converte.
   // - Se for inteiro < 200, assume reais e converte (pois em centavos seria inválido de qualquer forma).
   // - Caso contrário, assume que já está em centavos.
+  // NOTA: Esta heurística pode falhar para valores como 976 (é R$ 9,76 ou R$ 976,00?)
+  // Por isso, sempre que possível, use alreadyInCents=true
   const hasDecimals = Math.round(value) !== value;
   const isLikelyReais = hasDecimals || value < 200;
   const cents = isLikelyReais ? Math.round(value * 100) : Math.round(value);
@@ -430,7 +438,8 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
   const clientPhone = isPF ? params.member!.phone : params.employer!.phone;
 
   // Converter valor para centavos (inteiro) - a API Lytex exige isso
-  const valueInCents = normalizeMoneyToCents(params.value);
+  // Se valueIsInCents=true, o valor já está em centavos e não precisa de normalização
+  const valueInCents = normalizeMoneyToCents(params.value, params.valueIsInCents === true);
 
   // Regras conhecidas da Lytex: inteiro em centavos e mínimo de 200 (R$ 2,00)
   if (valueInCents < 200) {
@@ -768,6 +777,7 @@ Deno.serve(async (req) => {
           contributionId: params.installmentId || params.clientId || "",
           clinicId: "",
           value: Number(params.value),
+          valueIsInCents: params.valueIsInCents === true, // Pass through the flag from frontend
           dueDate: dueDateOnly,
           description: params.description || "Negociação",
           enableBoleto: true,

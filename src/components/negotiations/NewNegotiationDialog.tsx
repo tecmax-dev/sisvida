@@ -367,11 +367,30 @@ export default function NewNegotiationDialog({
 
       // Create installments
       const installments = [];
-      const baseDueDate = new Date(`${firstDueDate.toISOString().split("T")[0]}T12:00:00`);
       
-      // Determine down payment date
-      const downPaymentDate = downPayment > 0
-        ? (customInstallmentDates[0] || addDays(new Date(), 2)) // Default: 2 days from now
+      // Helper function to format date without timezone shift
+      // Normalizes to midday local time to prevent date shifts when formatting
+      const formatDateSafe = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+      
+      // Normalize baseDueDate to midday to prevent timezone issues
+      const baseDueDate = new Date(
+        firstDueDate.getFullYear(),
+        firstDueDate.getMonth(),
+        firstDueDate.getDate(),
+        12, 0, 0, 0
+      );
+      
+      // Determine down payment date (normalized to midday)
+      const rawDownPaymentDate = downPayment > 0
+        ? (customInstallmentDates[0] || addDays(new Date(), 2))
+        : null;
+      const downPaymentDate = rawDownPaymentDate
+        ? new Date(rawDownPaymentDate.getFullYear(), rawDownPaymentDate.getMonth(), rawDownPaymentDate.getDate(), 12, 0, 0, 0)
         : null;
       
       // Add down payment as installment 0 if exists
@@ -380,7 +399,7 @@ export default function NewNegotiationDialog({
           negotiation_id: negotiation.id,
           installment_number: 0,
           value: downPayment,
-          due_date: format(downPaymentDate, "yyyy-MM-dd"),
+          due_date: formatDateSafe(downPaymentDate),
           status: "pending",
         });
       }
@@ -391,8 +410,9 @@ export default function NewNegotiationDialog({
         let dueDate: Date;
         
         if (customInstallmentDates[i]) {
-          // Use custom date if available
-          dueDate = customInstallmentDates[i];
+          // Use custom date if available - normalize to midday to avoid timezone shift
+          const customDate = customInstallmentDates[i];
+          dueDate = new Date(customDate.getFullYear(), customDate.getMonth(), customDate.getDate(), 12, 0, 0, 0);
         } else if (downPayment > 0 && downPaymentDate) {
           // When there's a down payment, first installment is 30 days after down payment
           // Subsequent installments are monthly from the first installment date
@@ -406,7 +426,7 @@ export default function NewNegotiationDialog({
           negotiation_id: negotiation.id,
           installment_number: i,
           value: totals.installmentValue,
-          due_date: format(dueDate, "yyyy-MM-dd"),
+          due_date: formatDateSafe(dueDate),
           status: "pending",
         });
       }
