@@ -21,8 +21,11 @@ import {
   AlertCircle,
   Users,
   FileArchive,
+  CreditCard,
 } from "lucide-react";
 import { generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Props {
   open: boolean;
@@ -34,7 +37,8 @@ interface MemberStatus {
   id: string;
   name: string;
   cpf: string | null;
-  status: "pending" | "generating" | "success" | "error" | "no_filiacao";
+  cardExpiresAt: string | null;
+  status: "pending" | "generating" | "success" | "error" | "no_filiacao" | "no_card";
   error?: string;
 }
 
@@ -49,7 +53,7 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
 
   useEffect(() => {
     if (open) {
-      loadMembers();
+      loadMembersWithActiveCards();
       loadSindicato();
     }
   }, [open, clinicId]);
@@ -72,28 +76,54 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
     }
   };
 
-  const loadMembers = async () => {
+  // Load only members with active cards that have valid expiration dates
+  const loadMembersWithActiveCards = async () => {
     setLoading(true);
     try {
+      // Fetch patients with their active cards
       const { data, error } = await supabase
-        .from("patients")
-        .select("id, name, cpf")
+        .from("patient_cards")
+        .select(`
+          id,
+          expires_at,
+          is_active,
+          patient:patients!inner(
+            id,
+            name,
+            cpf,
+            is_active
+          )
+        `)
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
-        .order("name");
+        .eq("patients.is_active", true)
+        .gte("expires_at", new Date().toISOString())
+        .order("expires_at", { ascending: false });
 
       if (error) throw error;
 
-      setMembers(
-        (data || []).map((m) => ({
-          id: m.id,
-          name: m.name,
-          cpf: m.cpf,
-          status: "pending" as const,
-        }))
+      // Deduplicate by patient_id (keep most recent card)
+      const patientMap = new Map<string, MemberStatus>();
+      (data || []).forEach((card: any) => {
+        const patientId = card.patient.id;
+        if (!patientMap.has(patientId)) {
+          patientMap.set(patientId, {
+            id: patientId,
+            name: card.patient.name,
+            cpf: card.patient.cpf,
+            cardExpiresAt: card.expires_at,
+            status: "pending" as const,
+          });
+        }
+      });
+
+      const membersWithCards = Array.from(patientMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
       );
+
+      setMembers(membersWithCards);
     } catch (error) {
-      console.error("Error loading members:", error);
+      console.error("Error loading members with cards:", error);
       toast({ title: "Erro ao carregar sócios", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -104,7 +134,7 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
     return cpf.replace(/\D/g, "");
   };
 
-  const generatePDFForMember = async (cpf: string): Promise<Blob | null> => {
+  const generatePDFForMember = async (cpf: string, cardExpiresAt: string | null): Promise<Blob | null> => {
     const normalizedCPF = normalizeCPF(cpf);
     
     // Fetch filiacao data - search by normalized CPF
@@ -131,11 +161,12 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
       .select("*")
       .eq("associado_id", filiacao.id);
 
-    // Generate PDF using the dedicated function
+    // Generate PDF using the dedicated function with card expiration
     return generateFiliacaoPDFBlob(
       filiacao,
       dependents || [],
-      sindicato
+      sindicato,
+      cardExpiresAt
     );
   };
 
@@ -168,7 +199,7 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
           continue;
         }
 
-        const pdfBlob = await generatePDFForMember(member.cpf);
+        const pdfBlob = await generatePDFForMember(member.cpf, member.cardExpiresAt);
 
         if (pdfBlob) {
           pdfs.push({
@@ -255,9 +286,17 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
             Gerar Fichas de Filiação em Lote
           </DialogTitle>
           <DialogDescription>
-            Gere fichas de filiação em PDF para todos os sócios cadastrados que possuem ficha de filiação.
+            Gere fichas de filiação em PDF para sócios com carteirinhas válidas, incluindo a data de vencimento atualizada.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Info banner */}
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800">
+          <CreditCard className="h-4 w-4 text-blue-600 flex-shrink-0" />
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            Listando apenas sócios com carteirinhas ativas e válidas. A validade será incluída nas fichas.
+          </p>
+        </div>
 
         <div className="space-y-4">
           {/* Stats */}
@@ -300,8 +339,9 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
                 </div>
               ) : members.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">Nenhum sócio cadastrado</p>
+                  <CreditCard className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">Nenhum sócio com carteirinha válida encontrado</p>
+                  <p className="text-xs text-muted-foreground mt-1">Apenas sócios com carteirinhas ativas aparecem aqui</p>
                 </div>
               ) : (
                 members.map((member) => (
@@ -325,7 +365,14 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
                       {member.status === "error" && (
                         <XCircle className="h-4 w-4 text-red-500" />
                       )}
-                      <span className="text-sm font-medium">{member.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{member.name}</span>
+                        {member.cardExpiresAt && (
+                          <span className="text-xs text-muted-foreground">
+                            Validade: {format(parseISO(member.cardExpiresAt), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {member.status === "no_filiacao" && (
