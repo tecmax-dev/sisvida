@@ -1363,7 +1363,7 @@ export default function PublicBooking() {
                         options={[
                           { value: "titular", label: `${patientName} (Titular)` },
                           ...dependents.map((dep) => {
-                            const isExpired = dep.card_expires_at && new Date(dep.card_expires_at) < new Date();
+                            const isExpired = dep.card_expires_at && new Date(dep.card_expires_at.split('T')[0] + 'T12:00:00') < new Date();
                             return {
                               value: dep.id,
                               label: `${dep.name}${dep.relationship ? ` (${dep.relationship})` : ''}${isExpired ? ' - Carteirinha vencida' : ''}`,

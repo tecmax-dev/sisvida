@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { format, formatDistanceToNow, addYears } from "date-fns";
+import { format, formatDistanceToNow, addYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { useToast } from "@/hooks/use-toast";
@@ -447,7 +447,7 @@ export default function PendingPayslipReviews() {
                   </div>
                   {selectedRequest.card?.expires_at && (
                     <Badge variant="outline">
-                      Expira: {format(new Date(selectedRequest.card.expires_at), "dd/MM/yyyy")}
+                      Expira: {format(parseISO(selectedRequest.card.expires_at), "dd/MM/yyyy")}
                     </Badge>
                   )}
                 </div>

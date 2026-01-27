@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AlertTriangle, Clock } from "lucide-react";
-import { format, addMonths } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { formatCompetence } from "@/lib/competence-format";
@@ -97,7 +97,7 @@ export default function NegotiationPreviewPage() {
       }
 
       // Check if expired
-      if (new Date(data.expires_at) < new Date()) {
+      if (parseISO(data.expires_at) < new Date()) {
         setUnavailableReason("expired");
         setError("Este espelho de negociação expirou.");
         setLoading(false);
@@ -271,10 +271,10 @@ export default function NegotiationPreviewPage() {
           </div>
           
           <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 text-xs text-gray-500">
-            <span>Emitido em: {format(new Date(preview.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+            <span>Emitido em: {format(parseISO(preview.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Condições válidas até {format(new Date(preview.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+              Condições válidas até {format(parseISO(preview.expires_at), "dd/MM/yyyy", { locale: ptBR })}
             </span>
           </div>
         </header>

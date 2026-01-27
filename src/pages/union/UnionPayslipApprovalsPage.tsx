@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   FileImage, 
@@ -579,7 +579,7 @@ export default function UnionPayslipApprovalsPage() {
               <p><strong>Sócio:</strong> {selectedRequest?.patients?.name}</p>
               <p><strong>Carteirinha:</strong> {selectedRequest?.patient_cards?.card_number}</p>
               <p><strong>Validade atual:</strong> {selectedRequest?.patient_cards?.expires_at 
-                ? format(new Date(selectedRequest.patient_cards.expires_at), "dd/MM/yyyy", { locale: ptBR })
+                ? format(parseISO(selectedRequest.patient_cards.expires_at), "dd/MM/yyyy", { locale: ptBR })
                 : 'N/A'}</p>
             </div>
 

@@ -145,7 +145,7 @@ export default function MobileDependentsPage() {
   const isCardExpired = (expiresAt: string | null): boolean => {
     if (!expiresAt) return true;
     try {
-      return new Date(expiresAt) < new Date();
+      return parseISO(expiresAt) < new Date();
     } catch {
       return true;
     }

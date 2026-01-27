@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
@@ -139,7 +139,7 @@ export function PatientAlertsPanel() {
       if (error) throw error;
 
       const mapped = (data || []).map((c: any) => {
-        const expiresDate = new Date(c.expires_at);
+        const expiresDate = parseISO(c.expires_at);
         const todayDate = new Date();
         const diffTime = todayDate.getTime() - expiresDate.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

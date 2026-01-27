@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { format, isPast, differenceInDays } from 'date-fns';
+import { format, isPast, differenceInDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   CheckCircle, 
@@ -122,7 +122,7 @@ export default function CardValidation() {
     );
   }
 
-  const expiresAt = new Date(card.expires_at);
+  const expiresAt = parseISO(card.expires_at);
   const isExpired = isPast(expiresAt);
   const daysUntilExpiry = differenceInDays(expiresAt, new Date());
   const isExpiringSoon = !isExpired && daysUntilExpiry <= 30;

@@ -1,4 +1,4 @@
-import { format, isPast, differenceInDays } from 'date-fns';
+import { format, isPast, differenceInDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
@@ -52,7 +52,7 @@ export function PatientCardView({
   onPrint,
   showActions = true,
 }: PatientCardViewProps) {
-  const expiresAt = new Date(card.expires_at);
+  const expiresAt = parseISO(card.expires_at);
   const isExpired = isPast(expiresAt);
   const daysUntilExpiry = differenceInDays(expiresAt, new Date());
   const isExpiringSoon = !isExpired && daysUntilExpiry <= 30;

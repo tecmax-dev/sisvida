@@ -738,7 +738,7 @@ export default function SindicalFiliacaoPage() {
                                 {existingPatient.name}
                                 {existingPatient.is_expired && existingPatient.union_card_expires_at && (
                                   <span className="block text-amber-700">
-                                    Vencida em: {new Date(existingPatient.union_card_expires_at).toLocaleDateString('pt-BR')}
+                                    Vencida em: {new Date(existingPatient.union_card_expires_at.split('T')[0] + 'T12:00:00').toLocaleDateString('pt-BR')}
                                   </span>
                                 )}
                               </p>
