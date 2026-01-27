@@ -172,7 +172,10 @@ export default function NegotiationStepEmployer({
         <RadioGroup
           value={selectedEmployer?.id || ""}
           onValueChange={(value) => {
-            const employer = employers.find((e) => e.id === value);
+            // Search in BOTH arrays: server-side results AND local list
+            const employer =
+              remoteEmployers.find((e) => e.id === value) ||
+              employers.find((e) => e.id === value);
             if (employer) onSelectEmployer(employer);
           }}
         >
