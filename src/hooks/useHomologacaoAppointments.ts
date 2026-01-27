@@ -117,11 +117,11 @@ export function useHomologacaoAppointments() {
       const appointment = appointments?.find(a => a.id === id);
       if (!appointment) throw new Error("Agendamento não encontrado");
 
-      // Use status 'attended' to trigger automatic protocol generation via database trigger
+      // Use status 'completed' which is valid per homologacao_appointments_status_check constraint
       const { data, error } = await supabase
         .from("homologacao_appointments")
         .update({
-          status: "attended",
+          status: "completed",
           confirmed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
