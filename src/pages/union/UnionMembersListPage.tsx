@@ -73,6 +73,7 @@ import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import MemberContributionsTab from "@/components/union/MemberContributionsTab";
 import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAppDialog";
 import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
+import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -173,6 +174,9 @@ export default function UnionMembersListPage() {
   // Filiacao actions dialog state
   const [filiacaoDialogOpen, setFiliacaoDialogOpen] = useState(false);
   const [selectedMemberForFiliacao, setSelectedMemberForFiliacao] = useState<UnionMember | null>(null);
+
+  // Batch filiacao dialog state
+  const [batchFiliacaoDialogOpen, setBatchFiliacaoDialogOpen] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -495,13 +499,23 @@ export default function UnionMembersListPage() {
           <RealtimeIndicator className="mt-1" />
         </div>
         {canManageMembers() && (
-          <Button
-            className="bg-primary hover:bg-primary/90"
-            onClick={() => navigate("/union/socios/novo")}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Sócio
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setBatchFiliacaoDialogOpen(true)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Fichas em Lote
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => navigate("/union/socios/novo")}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Sócio
+            </Button>
+          </div>
         )}
       </div>
 
@@ -1139,6 +1153,15 @@ export default function UnionMembersListPage() {
             registration_number: selectedMemberForFiliacao.registration_number,
           }}
           clinicId={currentClinic?.id || ""}
+        />
+      )}
+
+      {/* Batch Filiacao Dialog */}
+      {currentClinic?.id && (
+        <BatchFiliacaoDialog
+          open={batchFiliacaoDialogOpen}
+          onOpenChange={setBatchFiliacaoDialogOpen}
+          clinicId={currentClinic.id}
         />
       )}
     </div>
