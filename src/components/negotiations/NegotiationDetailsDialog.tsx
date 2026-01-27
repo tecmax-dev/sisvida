@@ -512,6 +512,7 @@ export default function NegotiationDetailsDialog({
   };
 
   const handleExportPDF = async () => {
+    try {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -820,6 +821,10 @@ export default function NegotiationDetailsDialog({
 
     doc.save(`espelho-negociacao-${negotiation.negotiation_code}-${format(new Date(), "yyyyMMdd")}.pdf`);
     toast.success("PDF exportado com sucesso!");
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      toast.error("Erro ao gerar PDF. Tente novamente.");
+    }
   };
 
   const handlePrint = async () => {

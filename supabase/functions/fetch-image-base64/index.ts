@@ -57,12 +57,37 @@ serve(async (req) => {
       });
     }
 
-    // SSRF guard: only allow same backend host (covers storage/public files)
+    // SSRF guard: allow backend host and common trusted image hosts
     const backendUrl = Deno.env.get("SUPABASE_URL");
     if (!backendUrl) throw new Error("Missing SUPABASE_URL");
-    const allowedHost = new URL(backendUrl).host;
+    const backendHost = new URL(backendUrl).host;
 
-    if (parsed.host !== allowedHost) {
+    // Allowed hosts for images: Supabase storage + common CDNs/storage services
+    const allowedHosts = [
+      backendHost,
+      // Common image hosting services
+      "storage.googleapis.com",
+      "firebasestorage.googleapis.com",
+      "s3.amazonaws.com",
+      "s3.us-east-1.amazonaws.com",
+      "s3.us-west-2.amazonaws.com",
+      "s3.sa-east-1.amazonaws.com",
+      "blob.core.windows.net",
+      "res.cloudinary.com",
+      "images.unsplash.com",
+      "i.imgur.com",
+      "lh3.googleusercontent.com",
+      // Custom domains that may host logos
+      "app.eclini.com.br",
+      "eclini.com.br",
+    ];
+
+    // Also allow any *.supabase.co host
+    const isSupabaseHost = parsed.host.endsWith(".supabase.co");
+    const isAllowedHost = allowedHosts.includes(parsed.host) || isSupabaseHost;
+
+    if (!isAllowedHost) {
+      console.warn(`[fetch-image-base64] Blocked host: ${parsed.host}`);
       return new Response(JSON.stringify({ error: "Host não permitido" } satisfies ResponseBody), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
