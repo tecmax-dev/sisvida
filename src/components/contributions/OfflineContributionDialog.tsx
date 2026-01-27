@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,7 +17,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -369,26 +367,29 @@ export default function OfflineContributionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <FileX className="h-5 w-5 text-orange-500" />
-            Lançar Débitos Retroativos (Offline)
-          </DialogTitle>
-          <DialogDescription>
-            Crie contribuições históricas sem integração Lytex. Ideal para débitos antigos que serão negociados.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 flex flex-col">
+        {/* Header fixo */}
+        <div className="sticky top-0 z-10 bg-background p-6 border-b">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileX className="h-5 w-5 text-orange-500" />
+              Débitos Retroativos
+            </DialogTitle>
+            <DialogDescription>
+              Crie contribuições históricas sem integração Lytex. Ideal para débitos antigos que serão negociados.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
         {step === "config" && (
           <>
-            <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(85vh - 200px)' }}>
-              <div className="space-y-4">
-                {/* Aviso */}
+            {/* Corpo rolável */}
+            <div className="flex-1 p-6 space-y-4">
+              {/* Aviso */}
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2">
                 <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
                 <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Estas contribuições serão criadas <strong>sem boleto</strong> e com status <strong>vencido</strong>. 
+                  Estas contribuições serão criadas <strong>sem boleto</strong> e com status <strong>vencido</strong>.
                   Use para registrar débitos históricos que serão incluídos em negociações de acordo.
                 </p>
               </div>
@@ -454,9 +455,9 @@ export default function OfflineContributionDialog({
                     {selectAll ? "Desmarcar todas" : "Selecionar todas"}
                   </Button>
                 </div>
-                <ScrollArea className="h-[180px] border rounded-md p-2">
+                <div className="border rounded-md p-2">
                   <div className="space-y-1">
-                    {filteredEmployers.map(employer => (
+                    {filteredEmployers.map((employer) => (
                       <label
                         key={employer.id}
                         className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
@@ -475,19 +476,15 @@ export default function OfflineContributionDialog({
                               </Badge>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {formatCNPJ(employer.cnpj)}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{formatCNPJ(employer.cnpj)}</span>
                         </div>
                       </label>
                     ))}
                     {filteredEmployers.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhuma empresa encontrada
-                      </p>
+                      <p className="text-sm text-muted-foreground text-center py-4">Nenhuma empresa encontrada</p>
                     )}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {/* Tipo de Contribuição */}
@@ -763,86 +760,93 @@ export default function OfflineContributionDialog({
                   rows={2}
                 />
               </div>
-
-              </div>
             </div>
 
-            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            {/* Footer fixo */}
+            <div className="sticky bottom-0 z-10 bg-background p-6 border-t flex justify-end gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleGenerate}
                 disabled={!typeId || selectedEmployers.length === 0 || competenceList.length === 0}
               >
                 <FileX className="h-4 w-4 mr-2" />
                 Lançar {selectedEmployers.length * competenceList.length} Débito(s)
               </Button>
-            </DialogFooter>
+            </div>
           </>
         )}
 
         {step === "processing" && (
-          <div className="flex-1 flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg font-medium">Lançando débitos...</p>
-            <p className="text-sm text-muted-foreground">
-              {progress.current} de {progress.total}
-            </p>
-            <div className="w-full max-w-xs bg-muted rounded-full h-2">
-              <div 
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${(progress.current / progress.total) * 100}%` }}
-              />
+          <>
+            {/* Corpo rolável */}
+            <div className="flex-1 p-6 flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-lg font-medium">Lançando débitos...</p>
+              <p className="text-sm text-muted-foreground">
+                {progress.current} de {progress.total}
+              </p>
+              <div className="w-full max-w-xs bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                />
+              </div>
             </div>
-          </div>
+
+            {/* Footer fixo (vazio, mantém estrutura) */}
+            <div className="sticky bottom-0 z-10 bg-background p-6 border-t" />
+          </>
         )}
 
         {step === "result" && (
-          <div className="flex-1 space-y-4 py-4">
-            <div className="flex items-center justify-center gap-2 text-lg font-medium">
-              <CheckCircle2 className="h-6 w-6 text-green-500" />
-              Processo concluído
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-3 bg-green-500/10 rounded-lg">
-                <p className="text-xl font-bold text-green-600">{results.success}</p>
-                <p className="text-xs text-muted-foreground">Criados</p>
+          <>
+            {/* Corpo rolável */}
+            <div className="flex-1 p-6 space-y-4">
+              <div className="flex items-center justify-center gap-2 text-lg font-medium">
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
+                Processo concluído
               </div>
-              <div className="p-3 bg-blue-500/10 rounded-lg">
-                <p className="text-xl font-bold text-blue-600">{results.replaced}</p>
-                <p className="text-xs text-muted-foreground">Substituídos</p>
-              </div>
-              <div className="p-3 bg-yellow-500/10 rounded-lg">
-                <p className="text-xl font-bold text-yellow-600">{results.skipped}</p>
-                <p className="text-xs text-muted-foreground">Ignorados</p>
-              </div>
-              <div className="p-3 bg-red-500/10 rounded-lg">
-                <p className="text-xl font-bold text-red-600">{results.failed}</p>
-                <p className="text-xs text-muted-foreground">Erros</p>
-              </div>
-            </div>
 
-            {results.errors.length > 0 && (
-              <div className="bg-destructive/10 rounded-lg p-3">
-                <p className="text-sm font-medium text-destructive mb-2">Erros:</p>
-                <ScrollArea className="h-32">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-3 bg-green-500/10 rounded-lg">
+                  <p className="text-xl font-bold text-green-600">{results.success}</p>
+                  <p className="text-xs text-muted-foreground">Criados</p>
+                </div>
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <p className="text-xl font-bold text-blue-600">{results.replaced}</p>
+                  <p className="text-xs text-muted-foreground">Substituídos</p>
+                </div>
+                <div className="p-3 bg-yellow-500/10 rounded-lg">
+                  <p className="text-xl font-bold text-yellow-600">{results.skipped}</p>
+                  <p className="text-xs text-muted-foreground">Ignorados</p>
+                </div>
+                <div className="p-3 bg-red-500/10 rounded-lg">
+                  <p className="text-xl font-bold text-red-600">{results.failed}</p>
+                  <p className="text-xs text-muted-foreground">Erros</p>
+                </div>
+              </div>
+
+              {results.errors.length > 0 && (
+                <div className="bg-destructive/10 rounded-lg p-3">
+                  <p className="text-sm font-medium text-destructive mb-2">Erros:</p>
                   <ul className="text-xs space-y-1">
                     {results.errors.map((error, i) => (
-                      <li key={i} className="text-destructive/80">{error}</li>
+                      <li key={i} className="text-destructive/80">
+                        {error}
+                      </li>
                     ))}
                   </ul>
-                </ScrollArea>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
-            <DialogFooter>
-              <Button onClick={() => onOpenChange(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
-          </div>
+            {/* Footer fixo */}
+            <div className="sticky bottom-0 z-10 bg-background p-6 border-t flex justify-end gap-2">
+              <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+            </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
