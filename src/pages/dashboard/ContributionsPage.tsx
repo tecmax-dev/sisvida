@@ -909,7 +909,6 @@ export default function ContributionsPage() {
       <OfflineContributionDialog
         open={offlineDialogOpen}
         onOpenChange={setOfflineDialogOpen}
-        employers={employers}
         contributionTypes={contributionTypes}
         clinicId={currentClinic?.id || ""}
         userId={session?.user.id || ""}
