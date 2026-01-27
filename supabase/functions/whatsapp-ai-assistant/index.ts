@@ -262,7 +262,7 @@ async function executeTool(
             console.log(`[ai-assistant] Date ${checkDate.toISOString().split('T')[0]} exceeds lastAllowedDate, stopping search`);
             break;
           }
-          checkDate.setDate(today.getDate() + i);
+          
           const dayKey = dayNames[checkDate.getDay()];
           const daySchedule = professional.schedule[dayKey];
           
