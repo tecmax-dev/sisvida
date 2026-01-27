@@ -176,6 +176,7 @@ export default function NegotiationInstallmentsTab({
           clientName: employer.name,
           clientDocument: employer.cnpj,
           value: valueInCents,
+          valueIsInCents: true, // Explicit flag to indicate value is already in cents
           dueDate: installment.due_date,
           description,
         },
