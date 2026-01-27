@@ -35,14 +35,17 @@ export default function NegotiationStepEmployer({
     const searchClean = searchTerm.replace(/\D/g, "");
     
     // Name match
-    if (emp.name.toLowerCase().includes(searchLower)) return true;
+    if (emp.name?.toLowerCase().includes(searchLower)) return true;
     
     // Trade name match
     if (emp.trade_name?.toLowerCase().includes(searchLower)) return true;
     
-    // CNPJ match (both sides normalized)
+    // CNPJ match (both sides normalized) - match from any position
     const cnpjClean = emp.cnpj?.replace(/\D/g, "") || "";
     if (searchClean.length >= 3 && cnpjClean.includes(searchClean)) return true;
+    
+    // Also check if the search term starts the CNPJ (user typing from beginning)
+    if (searchClean.length >= 2 && cnpjClean.startsWith(searchClean)) return true;
     
     // Registration number match
     if (emp.registration_number?.toLowerCase().includes(searchLower)) return true;
