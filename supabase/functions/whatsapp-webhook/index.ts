@@ -5387,7 +5387,9 @@ async function getAvailableDates(
     .eq('id', clinicId)
     .single();
   
-  const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 1;
+  // Only apply restriction if explicitly configured (union clinics)
+  // Default to 12 months (no practical restriction) for regular clinics
+  const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 12;
 
   // Calculate the last allowed date based on booking_months_ahead
   const brazilNowForLimit = getBrazilNow();

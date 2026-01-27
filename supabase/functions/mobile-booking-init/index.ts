@@ -76,7 +76,9 @@ serve(async (req) => {
       .eq("id", card.clinic_id)
       .single();
     
-    const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 1;
+    // Only apply restriction if explicitly configured (union clinics)
+    // Default to 12 months (no practical restriction) for regular clinics
+    const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 12;
 
     // Cartão expirado
     if (card.expires_at && new Date(card.expires_at) < new Date()) {
