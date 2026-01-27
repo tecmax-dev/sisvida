@@ -369,7 +369,7 @@ export default function OfflineContributionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileX className="h-5 w-5 text-orange-500" />
@@ -382,7 +382,7 @@ export default function OfflineContributionDialog({
 
         {step === "config" && (
           <>
-            <ScrollArea className="flex-1 min-h-0 pr-4">
+            <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(85vh - 200px)' }}>
               <div className="space-y-4">
                 {/* Aviso */}
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2">
@@ -765,7 +765,7 @@ export default function OfflineContributionDialog({
               </div>
 
               </div>
-            </ScrollArea>
+            </div>
 
             <DialogFooter className="flex-shrink-0 pt-4 border-t">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
