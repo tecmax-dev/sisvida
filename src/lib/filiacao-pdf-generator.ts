@@ -159,6 +159,23 @@ async function buildFiliacaoPDF(
 
   yPos += 26;
 
+  // Filiação date highlight (if approved)
+  if (filiacao.aprovado_at) {
+    doc.setFillColor(236, 253, 245); // Light green background
+    doc.roundedRect(14, yPos, pageWidth - 28, 14, 2, 2, "F");
+    doc.setFillColor(16, 185, 129); // Green accent
+    doc.rect(14, yPos, 4, 14, "F");
+    
+    doc.setFontSize(9);
+    doc.setTextColor(6, 95, 70); // Dark green
+    doc.setFont("helvetica", "bold");
+    doc.text("DATA DE FILIAÇÃO:", 22, yPos + 9);
+    doc.setFontSize(11);
+    doc.text(format(new Date(filiacao.aprovado_at), "dd/MM/yyyy", { locale: ptBR }), 80, yPos + 9);
+    
+    yPos += 20;
+  }
+
   // Personal Data Section
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.primary);

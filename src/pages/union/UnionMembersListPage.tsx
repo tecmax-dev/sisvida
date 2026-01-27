@@ -72,6 +72,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import MemberContributionsTab from "@/components/union/MemberContributionsTab";
 import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAppDialog";
+import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -161,6 +162,10 @@ export default function UnionMembersListPage() {
   // Welcome message dialog state
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
   const [selectedMemberForWelcome, setSelectedMemberForWelcome] = useState<UnionMember | null>(null);
+
+  // Filiacao actions dialog state
+  const [filiacaoDialogOpen, setFiliacaoDialogOpen] = useState(false);
+  const [selectedMemberForFiliacao, setSelectedMemberForFiliacao] = useState<UnionMember | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -822,6 +827,16 @@ export default function UnionMembersListPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
+                                setSelectedMemberForFiliacao(member);
+                                setFiliacaoDialogOpen(true);
+                              }}
+                              className="text-primary"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Ficha de Filiação
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
                                 setSelectedMemberForWelcome(member);
                                 setWelcomeDialogOpen(true);
                               }}
@@ -1084,6 +1099,25 @@ export default function UnionMembersListPage() {
         entityName={currentClinic?.name || "Sindicato"}
         appUrl="https://sisvida.lovable.app/m"
       />
+
+      {/* Filiacao Actions Dialog */}
+      {selectedMemberForFiliacao && (
+        <MemberFiliacaoActionsDialog
+          open={filiacaoDialogOpen}
+          onOpenChange={(open) => {
+            setFiliacaoDialogOpen(open);
+            if (!open) setSelectedMemberForFiliacao(null);
+          }}
+          member={{
+            id: selectedMemberForFiliacao.id,
+            name: selectedMemberForFiliacao.name,
+            email: selectedMemberForFiliacao.email,
+            phone: selectedMemberForFiliacao.phone,
+            cpf: selectedMemberForFiliacao.cpf,
+          }}
+          clinicId={currentClinic?.id || ""}
+        />
+      )}
     </div>
   );
 }
