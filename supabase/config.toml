@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.mobile-booking-init]
 verify_jwt = false
+
+[functions.send-homologacao-email]
+verify_jwt = false
+
+[functions.send-homologacao-reminders]
+verify_jwt = false
