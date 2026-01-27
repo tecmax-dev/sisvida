@@ -1252,6 +1252,18 @@ serve(async (req) => {
             );
           }
 
+          // Check for booking window exceeded (sindicato restriction)
+          if (errMsg.includes("booking_window_exceeded") || errMsg.includes("Agendamento indisponível")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Agendamento indisponível para este período. A data selecionada está fora do período permitido.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
           // Generic error
           return new Response(
             JSON.stringify({

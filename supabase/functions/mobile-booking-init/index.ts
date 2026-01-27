@@ -69,15 +69,17 @@ serve(async (req) => {
       );
     }
 
-    // 1.5 Buscar configuração de meses da clínica
+    // 1.5 Buscar configuração de meses da clínica via RPC server-side
+    // NULL = sem restrição prática (usa 12 meses)
+    // Valor explícito = restrição configurada pelo sindicato
     const { data: clinicConfig } = await supabase
       .from("clinics")
       .select("booking_months_ahead")
       .eq("id", card.clinic_id)
       .single();
     
-    // Only apply restriction if explicitly configured (union clinics)
-    // Default to 12 months (no practical restriction) for regular clinics
+    // Se booking_months_ahead está configurado, usar esse valor
+    // Se NULL, significa que a clínica não tem restrição (padrão 12 meses)
     const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 12;
 
     // Cartão expirado

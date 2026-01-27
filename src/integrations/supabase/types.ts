@@ -14981,6 +14981,10 @@ export type Database = {
           specialty: string
         }[]
       }
+      get_booking_window_end_date: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
       get_clinic_message_usage: {
         Args: { _clinic_id: string; _month_year?: string }
         Returns: {
@@ -15111,6 +15115,10 @@ export type Database = {
       reverse_transaction: {
         Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
         Returns: Json
+      }
+      set_clinic_booking_months_ahead: {
+        Args: { p_clinic_id: string; p_months_ahead: number }
+        Returns: undefined
       }
       set_patient_password: {
         Args: { p_password: string; p_patient_id: string }

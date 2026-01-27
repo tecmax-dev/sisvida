@@ -5317,6 +5317,15 @@ async function handleConfirmAppointment(
       return { handled: true, newState: 'FINISHED' };
     }
 
+    // Check for booking window exceeded (sindicato restriction)
+    if (appointmentError.message?.includes('booking_window_exceeded') || appointmentError.message?.includes('Agendamento indisponível')) {
+      await sendWhatsAppMessage(config, phone, 
+        `❌ *Agendamento indisponível para este período*\n\nA data selecionada está fora do período permitido para agendamentos.\n\nEscolha outra data disponível.`
+      );
+      await updateSession(supabase, session.id, { state: 'SELECT_DATE' });
+      return { handled: true, newState: 'SELECT_DATE' };
+    }
+
     await sendWhatsAppMessage(config, phone, MESSAGES.error);
     return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
   }
