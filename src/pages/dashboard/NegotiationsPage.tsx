@@ -85,13 +85,14 @@ function NegotiationsContent() {
       if (negotiationsError) throw negotiationsError;
       setNegotiations((negotiationsData || []) as unknown as Negotiation[]);
 
-      // Fetch employers
+      // Fetch employers - using limit to get all (default Supabase limit is 1000)
       const { data: employersData, error: employersError } = await supabase
         .from("employers")
         .select("id, name, cnpj, trade_name, lytex_client_id, registration_number")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
-        .order("name");
+        .order("name")
+        .limit(5000);
 
       if (employersError) throw employersError;
       setEmployers(employersData || []);
