@@ -56,7 +56,6 @@ interface ContributionType {
 interface OfflineContributionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  employers: Employer[];
   contributionTypes: ContributionType[];
   clinicId: string;
   userId: string;
@@ -72,7 +71,6 @@ const MONTHS = [
 export default function OfflineContributionDialog({
   open,
   onOpenChange,
-  employers,
   contributionTypes,
   clinicId,
   userId,
@@ -117,11 +115,66 @@ export default function OfflineContributionDialog({
     errors: [] 
   });
 
-  // Filter employers
+  // Filter employers - SERVER-SIDE SEARCH
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchResults, setSearchResults] = useState<Employer[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedEmployerDetails, setSelectedEmployerDetails] = useState<Map<string, Employer>>(new Map());
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Server-side search for employers
+  const searchEmployers = useCallback(async (term: string, category: string) => {
+    if (!clinicId) return;
+    
+    setIsSearching(true);
+    try {
+      let query = supabase
+        .from("employers")
+        .select("id, name, cnpj, category_id, registration_number")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("name")
+        .limit(100);
+
+      // Apply category filter
+      if (category && category !== "all") {
+        query = query.eq("category_id", category);
+      }
+
+      // Apply search filter
+      if (term.trim()) {
+        const termLower = term.toLowerCase().trim();
+        const termDigits = term.replace(/\D/g, "");
+        const termNoLeadingZeros = termDigits.replace(/^0+/, "");
+        
+        const orParts: string[] = [
+          `name.ilike.%${termLower}%`,
+        ];
+        
+        if (termDigits) {
+          orParts.push(`cnpj.ilike.%${termDigits}%`);
+          // Also search without leading zeros for CNPJs like 02349294000197
+          if (termNoLeadingZeros !== termDigits) {
+            orParts.push(`cnpj.ilike.%${termNoLeadingZeros}%`);
+          }
+        }
+        
+        query = query.or(orParts.join(","));
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error("Error searching employers:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [clinicId]);
 
   // Debounced search handler
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,8 +186,15 @@ export default function OfflineContributionDialog({
     
     debounceRef.current = setTimeout(() => {
       setSearchTerm(value);
+      searchEmployers(value, categoryFilter);
     }, 300);
-  }, []);
+  }, [categoryFilter, searchEmployers]);
+
+  // Handle category filter change
+  const handleCategoryChange = useCallback((value: string) => {
+    setCategoryFilter(value);
+    searchEmployers(searchTerm, value);
+  }, [searchTerm, searchEmployers]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -144,6 +204,13 @@ export default function OfflineContributionDialog({
       }
     };
   }, []);
+
+  // Initial search when dialog opens
+  useEffect(() => {
+    if (open && clinicId) {
+      searchEmployers("", "all");
+    }
+  }, [open, clinicId, searchEmployers]);
   
   // Gerar lista de competências
   const competenceList = useMemo(() => {
@@ -159,20 +226,12 @@ export default function OfflineContributionDialog({
     return list;
   }, [startMonth, startYear, endMonth, endYear]);
 
-  const filteredEmployers = useMemo(() => {
-    return employers.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           emp.cnpj.includes(searchTerm.replace(/\D/g, ""));
-      const matchesCategory = categoryFilter === "all" || emp.category_id === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-  }, [employers, searchTerm, categoryFilter]);
-
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       setStep("config");
       setSelectedEmployers([]);
+      setSelectedEmployerDetails(new Map());
       setSelectAll(false);
       setTypeId("");
       const defaultStart = subMonths(new Date(), 12);
@@ -190,23 +249,33 @@ export default function OfflineContributionDialog({
       setSequentialStartDate(undefined);
       setSearchTerm("");
       setCategoryFilter("all");
+      setSearchResults([]);
       setResults({ success: 0, failed: 0, skipped: 0, replaced: 0, errors: [] });
     }
   }, [open]);
 
-  const handleToggleEmployer = (id: string) => {
-    setSelectedEmployers(prev => 
-      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
-    );
-  };
 
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedEmployers([]);
     } else {
-      setSelectedEmployers(filteredEmployers.map(e => e.id));
+      setSelectedEmployers(searchResults.map(e => e.id));
+      // Store selected employer details for processing
+      const newDetails = new Map(selectedEmployerDetails);
+      searchResults.forEach(emp => newDetails.set(emp.id, emp));
+      setSelectedEmployerDetails(newDetails);
     }
     setSelectAll(!selectAll);
+  };
+
+  // Also track employer details when toggling individual employers
+  const handleToggleEmployerWithDetails = (employer: Employer) => {
+    if (selectedEmployers.includes(employer.id)) {
+      setSelectedEmployers(prev => prev.filter(e => e !== employer.id));
+    } else {
+      setSelectedEmployers(prev => [...prev, employer.id]);
+      setSelectedEmployerDetails(prev => new Map(prev).set(employer.id, employer));
+    }
   };
 
   const formatCNPJ = (cnpj: string) => {
@@ -255,7 +324,7 @@ export default function OfflineContributionDialog({
     const errors: string[] = [];
 
     for (const employerId of selectedEmployers) {
-      const employer = employers.find(e => e.id === employerId);
+      const employer = selectedEmployerDetails.get(employerId);
       
       for (let compIndex = 0; compIndex < competenceList.length; compIndex++) {
         const competence = competenceList[compIndex];
@@ -416,7 +485,7 @@ export default function OfflineContributionDialog({
                   </div>
                   
                   {categories.length > 0 && (
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                       <SelectTrigger className="w-48 border-blue-300 dark:border-blue-700">
                         <SelectValue placeholder="Categoria" />
                       </SelectTrigger>
@@ -439,7 +508,7 @@ export default function OfflineContributionDialog({
                 </div>
                 
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  {filteredEmployers.length} empresa(s) encontrada(s)
+                  {isSearching ? "Buscando..." : `${searchResults.length} empresa(s) encontrada(s)`}
                 </p>
               </div>
 
@@ -457,31 +526,38 @@ export default function OfflineContributionDialog({
                 </div>
                 <div className="border rounded-md p-2">
                   <div className="space-y-1">
-                    {filteredEmployers.map((employer) => (
-                      <label
-                        key={employer.id}
-                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={selectedEmployers.includes(employer.id)}
-                          onCheckedChange={() => handleToggleEmployer(employer.id)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium truncate">{employer.name}</span>
-                            {employer.registration_number && (
-                              <Badge variant="outline" className="shrink-0 text-xs">
-                                {employer.registration_number}
-                              </Badge>
-                            )}
+                    {isSearching ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((employer) => (
+                        <label
+                          key={employer.id}
+                          className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedEmployers.includes(employer.id)}
+                            onCheckedChange={() => handleToggleEmployerWithDetails(employer)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="font-medium truncate">{employer.name}</span>
+                              {employer.registration_number && (
+                                <Badge variant="outline" className="shrink-0 text-xs">
+                                  {employer.registration_number}
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{formatCNPJ(employer.cnpj)}</span>
                           </div>
-                          <span className="text-xs text-muted-foreground">{formatCNPJ(employer.cnpj)}</span>
-                        </div>
-                      </label>
-                    ))}
-                    {filteredEmployers.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhuma empresa encontrada</p>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        {searchTerm ? "Nenhuma empresa encontrada" : "Digite para buscar empresas"}
+                      </p>
                     )}
                   </div>
                 </div>
