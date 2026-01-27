@@ -56,6 +56,10 @@ interface Sindicato {
   logo_url?: string | null;
 }
 
+interface GenerationOptions {
+  cardExpiresAt?: string | null;
+}
+
 const formatCPF = (cpf: string) => {
   const cleaned = cpf.replace(/\D/g, "");
   return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
@@ -86,7 +90,8 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 async function buildFiliacaoPDF(
   filiacao: Filiacao,
   dependents: Dependent[],
-  sindicato?: Sindicato | null
+  sindicato?: Sindicato | null,
+  options?: GenerationOptions
 ): Promise<jsPDF> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -172,6 +177,23 @@ async function buildFiliacaoPDF(
     doc.text("DATA DE FILIAÇÃO:", 22, yPos + 9);
     doc.setFontSize(11);
     doc.text(format(new Date(filiacao.aprovado_at), "dd/MM/yyyy", { locale: ptBR }), 80, yPos + 9);
+    
+    yPos += 20;
+  }
+
+  // Card Expiration highlight (if provided)
+  if (options?.cardExpiresAt) {
+    doc.setFillColor(239, 246, 255); // Light blue background
+    doc.roundedRect(14, yPos, pageWidth - 28, 14, 2, 2, "F");
+    doc.setFillColor(59, 130, 246); // Blue accent
+    doc.rect(14, yPos, 4, 14, "F");
+    
+    doc.setFontSize(9);
+    doc.setTextColor(30, 64, 175); // Dark blue
+    doc.setFont("helvetica", "bold");
+    doc.text("VALIDADE DA CARTEIRINHA:", 22, yPos + 9);
+    doc.setFontSize(11);
+    doc.text(format(new Date(options.cardExpiresAt), "dd/MM/yyyy", { locale: ptBR }), 95, yPos + 9);
     
     yPos += 20;
   }
@@ -382,9 +404,10 @@ async function buildFiliacaoPDF(
 export async function generateFiliacaoPDFBlob(
   filiacao: Filiacao,
   dependents: Dependent[],
-  sindicato?: Sindicato | null
+  sindicato?: Sindicato | null,
+  cardExpiresAt?: string | null
 ): Promise<Blob> {
-  const doc = await buildFiliacaoPDF(filiacao, dependents, sindicato);
+  const doc = await buildFiliacaoPDF(filiacao, dependents, sindicato, { cardExpiresAt });
   return doc.output("blob");
 }
 
