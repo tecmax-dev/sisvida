@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, endOfWeek, addDays, isSameDay, addMonths, subMonths } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ import {
   XCircle,
   Send,
   Loader2,
-  Filter,
+  Bell,
 } from "lucide-react";
 import { NovoAgendamentoDialog } from "@/components/homologacao/NovoAgendamentoDialog";
 import { HomologacaoEditDialog } from "@/components/homologacao/HomologacaoEditDialog";
@@ -49,6 +49,8 @@ import {
   formatProtocolMessage,
   logHomologacaoNotification,
 } from "@/lib/homologacaoUtils";
+import { HomologacaoSendNotificationDialog } from "@/components/homologacao/HomologacaoSendNotificationDialog";
+import { HomologacaoNotificationHistory } from "@/components/homologacao/HomologacaoNotificationHistory";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 import { cn } from "@/lib/utils";
@@ -59,7 +61,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Pencil, Trash2, MessageCircle, FileText } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, MessageCircle, FileText, Mail, History } from "lucide-react";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -101,6 +103,11 @@ export default function HomologacaoAgendaPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<HomologacaoAppointment | null>(null);
+  
+  // Notification dialog states
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
+  const [notificationType, setNotificationType] = useState<"reminder" | "protocol">("reminder");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Data hooks
   const {
@@ -257,6 +264,20 @@ export default function HomologacaoAgendaPage() {
     setDeleteDialogOpen(true);
   };
 
+  // Opens the integrated notification dialog
+  const handleOpenNotificationDialog = (apt: HomologacaoAppointment, type: "reminder" | "protocol") => {
+    setSelectedAppointment(apt);
+    setNotificationType(type);
+    setNotificationDialogOpen(true);
+  };
+
+  // Opens the notification history
+  const handleOpenHistory = (apt: HomologacaoAppointment) => {
+    setSelectedAppointment(apt);
+    setHistoryOpen(true);
+  };
+
+  // Legacy quick WhatsApp send (for dropdown menu quick access)
   const handleSendReminder = async (apt: HomologacaoAppointment) => {
     const message = formatReminderMessage(apt);
     openWhatsAppChat(apt.company_phone, message);
@@ -395,13 +416,50 @@ export default function HomologacaoAgendaPage() {
           )}
         </div>
         
+        {/* Quick action buttons - visible on hover */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isActive && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={() => handleOpenNotificationDialog(apt, "reminder")}
+                title="Enviar Lembrete (Email + WhatsApp)"
+              >
+                <Bell className="h-4 w-4" />
+              </Button>
+              {apt.protocol_number && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => handleOpenNotificationDialog(apt, "protocol")}
+                  title="Enviar Protocolo (Email + WhatsApp)"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => handleOpenHistory(apt)}
+            title="Histórico de Envios"
+          >
+            <History className="h-4 w-4" />
+          </Button>
+        </div>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => handleEdit(apt)}>
               <Pencil className="w-4 h-4 mr-2" />
               Editar
@@ -410,16 +468,31 @@ export default function HomologacaoAgendaPage() {
             {isActive && (
               <>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleOpenNotificationDialog(apt, "reminder")}>
+                  <Bell className="w-4 h-4 mr-2 text-green-600" />
+                  Enviar Lembrete (Integrado)
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSendReminder(apt)}>
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Enviar Lembrete
+                  <MessageCircle className="w-4 h-4 mr-2 text-green-500" />
+                  WhatsApp Rápido
                 </DropdownMenuItem>
                 {apt.protocol_number && (
-                  <DropdownMenuItem onClick={() => handleSendProtocol(apt)}>
-                    <Send className="w-4 h-4 mr-2" />
-                    Enviar Protocolo
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => handleOpenNotificationDialog(apt, "protocol")}>
+                      <Send className="w-4 h-4 mr-2 text-blue-600" />
+                      Enviar Protocolo (Integrado)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSendProtocol(apt)}>
+                      <FileText className="w-4 h-4 mr-2 text-blue-500" />
+                      Protocolo WhatsApp Rápido
+                    </DropdownMenuItem>
+                  </>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleOpenHistory(apt)}>
+                  <History className="w-4 h-4 mr-2" />
+                  Ver Histórico de Envios
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleComplete(apt)} className="text-green-600">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -922,6 +995,26 @@ export default function HomologacaoAgendaPage() {
         onOpenChange={setCompleteDialogOpen}
         onConfirm={handleConfirmComplete}
         appointmentName={selectedAppointment?.employee_name}
+      />
+
+      {/* Notification Dialog - Integrated sending */}
+      <HomologacaoSendNotificationDialog
+        open={notificationDialogOpen}
+        onOpenChange={setNotificationDialogOpen}
+        appointment={selectedAppointment}
+        type={notificationType}
+      />
+
+      {/* Notification History */}
+      <HomologacaoNotificationHistory
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        appointmentId={selectedAppointment?.id || null}
+        appointmentInfo={selectedAppointment ? {
+          employee_name: selectedAppointment.employee_name,
+          company_name: selectedAppointment.company_name,
+          protocol_number: selectedAppointment.protocol_number,
+        } : undefined}
       />
     </div>
   );
