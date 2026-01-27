@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Calendar, Save, Info } from "lucide-react";
+import { Loader2, Calendar, Save, Info, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,12 +12,15 @@ interface BookingMonthsSettingsProps {
   clinicId: string;
   currentValue?: number;
   onUpdate?: () => void;
+  isAdmin?: boolean;
 }
 
-export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate }: BookingMonthsSettingsProps) {
+export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate, isAdmin = false }: BookingMonthsSettingsProps) {
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(currentValue.toString());
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  
+  const canEdit = isAdmin;
 
   const handleSave = async () => {
     setSaving(true);
@@ -66,18 +69,39 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate }: 
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Esta configuração afeta o calendário de agendamento no aplicativo mobile. 
-            Os associados só poderão ver e selecionar datas dentro do período configurado.
-          </AlertDescription>
-        </Alert>
+        {!canEdit && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
+            <Lock className="h-4 w-4" />
+            <AlertDescription className="font-medium">
+              Agendamento indisponível para edição. Apenas administradores podem alterar esta configuração.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {canEdit && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Esta configuração afeta o calendário de agendamento no aplicativo mobile. 
+              Os associados só poderão ver e selecionar datas dentro do período configurado.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-2">
-          <Label htmlFor="booking-months">Meses disponíveis para agendamento</Label>
-          <Select value={bookingMonthsAhead} onValueChange={setBookingMonthsAhead}>
-            <SelectTrigger id="booking-months" className="w-full">
+          <Label htmlFor="booking-months" className={!canEdit ? "text-muted-foreground" : ""}>
+            Meses disponíveis para agendamento
+          </Label>
+          <Select 
+            value={bookingMonthsAhead} 
+            onValueChange={setBookingMonthsAhead}
+            disabled={!canEdit}
+          >
+            <SelectTrigger 
+              id="booking-months" 
+              className={`w-full ${!canEdit ? "opacity-60 cursor-not-allowed bg-muted" : ""}`}
+              disabled={!canEdit}
+            >
               <SelectValue placeholder="Selecione o limite" />
             </SelectTrigger>
             <SelectContent>
@@ -93,7 +117,11 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate }: 
           </p>
         </div>
 
-        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+        <Button 
+          onClick={handleSave} 
+          disabled={saving || !canEdit} 
+          className={`w-full sm:w-auto ${!canEdit ? "opacity-60 cursor-not-allowed" : ""}`}
+        >
           {saving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
