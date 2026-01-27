@@ -76,21 +76,22 @@ export default function EmployerCategoryDialog({
 
       if (categoriesError) throw categoriesError;
 
-      // Fetch employer counts per category
-      const { data: employerCounts, error: countsError } = await supabase
-        .from("employers")
-        .select("category_id")
-        .eq("clinic_id", clinicId)
-        .not("category_id", "is", null);
-
-      if (countsError) throw countsError;
-
+      // Fetch employer counts per category using aggregation to avoid row limits
       const countMap: Record<string, number> = {};
-      employerCounts?.forEach((e) => {
-        if (e.category_id) {
-          countMap[e.category_id] = (countMap[e.category_id] || 0) + 1;
+      
+      // For each category, get the exact count using head: true which bypasses row limits
+      for (const cat of categoriesData || []) {
+        const { count, error: countError } = await supabase
+          .from("employers")
+          .select("*", { count: "exact", head: true })
+          .eq("clinic_id", clinicId)
+          .eq("category_id", cat.id)
+          .eq("is_active", true);
+        
+        if (!countError && count !== null) {
+          countMap[cat.id] = count;
         }
-      });
+      }
 
       const categoriesWithCount = (categoriesData || []).map((cat) => ({
         ...cat,

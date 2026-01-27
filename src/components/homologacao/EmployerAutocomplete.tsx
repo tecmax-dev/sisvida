@@ -54,15 +54,33 @@ export function EmployerAutocomplete({
 
     setLoading(true);
     try {
-      const searchTerm = term.replace(/\D/g, "") || term;
+      const termLower = term.toLowerCase().trim();
+      const termDigits = term.replace(/\D/g, "");
+      const termNoLeadingZeros = termDigits.replace(/^0+/, "");
+      
+      // Build OR conditions for comprehensive search
+      const orParts: string[] = [];
+      
+      // Text-based search (name, trade_name)
+      orParts.push(`name.ilike.%${termLower}%`);
+      orParts.push(`trade_name.ilike.%${termLower}%`);
+      
+      // CNPJ search (digits only, handle leading zeros)
+      if (termDigits.length >= 3) {
+        orParts.push(`cnpj.ilike.%${termDigits}%`);
+        if (termNoLeadingZeros && termNoLeadingZeros !== termDigits && termNoLeadingZeros.length >= 3) {
+          orParts.push(`cnpj.ilike.%${termNoLeadingZeros}%`);
+        }
+      }
       
       const { data, error } = await supabase
         .from("employers")
         .select("id, name, cnpj, trade_name, phone, email")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
-        .or(`cnpj.ilike.%${searchTerm}%,name.ilike.%${term}%,trade_name.ilike.%${term}%`)
-        .limit(8);
+        .or(orParts.join(","))
+        .order("name")
+        .limit(50);
 
       if (error) throw error;
       setSuggestions(data || []);

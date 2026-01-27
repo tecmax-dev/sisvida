@@ -55,7 +55,7 @@ export function CnpjEmployerSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Busca local na base de empregadores
+  // Busca local na base de empregadores (server-side, sem limite arbitrário)
   const searchLocalEmployers = useCallback(async (term: string) => {
     if (!clinicId || term.length < 3) {
       setSuggestions([]);
@@ -64,15 +64,33 @@ export function CnpjEmployerSearch({
 
     setLoading(true);
     try {
-      const searchTerm = term.replace(/\D/g, "") || term;
+      const termLower = term.toLowerCase().trim();
+      const termDigits = term.replace(/\D/g, "");
+      const termNoLeadingZeros = termDigits.replace(/^0+/, "");
+      
+      // Build OR conditions for comprehensive search
+      const orParts: string[] = [];
+      
+      // Text-based search
+      orParts.push(`name.ilike.%${termLower}%`);
+      orParts.push(`trade_name.ilike.%${termLower}%`);
+      
+      // CNPJ search (handle leading zeros)
+      if (termDigits.length >= 3) {
+        orParts.push(`cnpj.ilike.%${termDigits}%`);
+        if (termNoLeadingZeros && termNoLeadingZeros !== termDigits && termNoLeadingZeros.length >= 3) {
+          orParts.push(`cnpj.ilike.%${termNoLeadingZeros}%`);
+        }
+      }
       
       const { data, error } = await supabase
         .from("employers")
         .select("id, name, cnpj, trade_name, address")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
-        .or(`cnpj.ilike.%${searchTerm}%,name.ilike.%${term}%,trade_name.ilike.%${term}%`)
-        .limit(8);
+        .or(orParts.join(","))
+        .order("name")
+        .limit(50);
 
       if (error) throw error;
       setSuggestions(data || []);
@@ -162,15 +180,22 @@ export function CnpjEmployerSearch({
           // Primeiro busca local
           setLoading(true);
           try {
-            const searchTerm = cleanCnpj;
+            const cnpjNoLeadingZeros = cleanCnpj.replace(/^0+/, "");
+            
+            // Build comprehensive OR for CNPJ search
+            const orParts = [`cnpj.ilike.%${cleanCnpj}%`];
+            if (cnpjNoLeadingZeros && cnpjNoLeadingZeros !== cleanCnpj) {
+              orParts.push(`cnpj.ilike.%${cnpjNoLeadingZeros}%`);
+            }
             
             const { data, error } = await supabase
               .from("employers")
               .select("id, name, cnpj, trade_name, address")
               .eq("clinic_id", clinicId || "")
               .eq("is_active", true)
-              .or(`cnpj.ilike.%${searchTerm}%,name.ilike.%${value}%,trade_name.ilike.%${value}%`)
-              .limit(8);
+              .or(orParts.join(","))
+              .order("name")
+              .limit(50);
 
             if (!error && data && data.length > 0) {
               setSuggestions(data);
