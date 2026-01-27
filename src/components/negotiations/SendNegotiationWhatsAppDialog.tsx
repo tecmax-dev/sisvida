@@ -463,7 +463,14 @@ export function SendNegotiationWhatsAppDialog({
       setPhone("");
     } catch (error: any) {
       console.error("Erro ao enviar:", error);
-      toast.error(error.message || "Erro ao enviar via WhatsApp");
+      const errorMsg = error?.message || "";
+      if (errorMsg.includes("non-2xx") || errorMsg.includes("exists\":false")) {
+        toast.error("Número de WhatsApp inválido ou não existe no WhatsApp");
+      } else if (errorMsg.includes("Host não permitido")) {
+        toast.error("Erro ao carregar logo. Gerando PDF sem logo...");
+      } else {
+        toast.error(errorMsg || "Erro ao enviar via WhatsApp");
+      }
     } finally {
       setSending(false);
     }
