@@ -7,9 +7,11 @@ import {
   CalendarDays,
   Clock,
   Check,
+  AlertTriangle,
 } from "lucide-react";
-import { format, addDays, isBefore, startOfDay, endOfMonth, addMonths } from "date-fns";
+import { format, addDays, startOfDay, endOfMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Professional {
   id: string;
@@ -53,21 +55,24 @@ export function DateTimeSelectionStep({
 }: DateTimeSelectionStepProps) {
   const professional = professionals.find(p => p.id === selectedProfessionalId);
 
-  // Generate available dates limited by bookingMonthsAhead
+  // Calcular data limite baseada em bookingMonthsAhead
+  // bookingMonthsAhead = 1 significa apenas mês atual
+  // bookingMonthsAhead = 2 significa mês atual + próximo, etc.
+  const lastAllowedDate = useMemo(() => {
+    const today = startOfDay(new Date());
+    return endOfMonth(addMonths(today, bookingMonthsAhead - 1));
+  }, [bookingMonthsAhead]);
+
+  // Gerar datas disponíveis limitadas por bookingMonthsAhead
   const availableDates = useMemo(() => {
     const dates: Date[] = [];
     const today = startOfDay(new Date());
     
-    // Calculate the last allowed date based on bookingMonthsAhead
-    // bookingMonthsAhead = 1 means only current month
-    // bookingMonthsAhead = 2 means current month + next month, etc.
-    const lastAllowedDate = endOfMonth(addMonths(today, bookingMonthsAhead - 1));
-    
-    // Loop through days until we hit the limit
-    for (let i = 0; i < 365; i++) { // Max 1 year to avoid infinite loops
+    // Loop através dos dias até atingir o limite
+    for (let i = 0; i < 365; i++) { // Max 1 ano para evitar loops infinitos
       const date = addDays(today, i);
       
-      // Stop if we're past the allowed months
+      // Parar se ultrapassou os meses permitidos
       if (date > lastAllowedDate) break;
       
       if (isDateEnabled(date, professional)) {
@@ -76,12 +81,25 @@ export function DateTimeSelectionStep({
     }
     
     return dates;
-  }, [professional, isDateEnabled, bookingMonthsAhead]);
+  }, [professional, isDateEnabled, lastAllowedDate]);
 
   const availableTimeSlots = availableSlots.filter(s => s.available);
+  
+  // Verificar se há restrição de meses ativa (para exibir mensagem)
+  const hasMonthRestriction = bookingMonthsAhead < 12;
 
   return (
     <div className="space-y-6">
+      {/* Mensagem de restrição de período (se aplicável) */}
+      {hasMonthRestriction && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 text-sm">
+            Agendamentos disponíveis apenas até {format(lastAllowedDate, "dd/MM/yyyy", { locale: ptBR })}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Date Selection */}
       <div>
         <div className="flex items-center gap-2 mb-3">
@@ -126,7 +144,12 @@ export function DateTimeSelectionStep({
         ) : (
           <div className="text-center py-6 bg-muted/50 rounded-lg">
             <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground text-sm">Nenhuma data disponível para este profissional.</p>
+            <p className="text-muted-foreground text-sm">
+              {hasMonthRestriction 
+                ? "Agendamento indisponível para este período"
+                : "Nenhuma data disponível para este profissional."
+              }
+            </p>
           </div>
         )}
       </div>

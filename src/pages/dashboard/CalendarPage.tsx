@@ -1396,9 +1396,14 @@ export default function CalendarPage() {
       fetchAppointments();
     } catch (error: any) {
       const { isScheduleError, message } = handleScheduleValidationError(error);
+      
+      // Verificar erro de janela de agendamento (trigger server-side)
+      const isBookingWindowError = error.message?.includes('booking_window_exceeded') || 
+                                   error.message?.includes('Agendamento indisponível');
+      
       toast({
-        title: isScheduleError ? "Horário indisponível" : "Erro ao agendar",
-        description: message,
+        title: isBookingWindowError ? "Período indisponível" : (isScheduleError ? "Horário indisponível" : "Erro ao agendar"),
+        description: isBookingWindowError ? "Agendamento indisponível para este período" : message,
         variant: "destructive",
       });
     } finally {

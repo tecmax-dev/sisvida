@@ -389,6 +389,10 @@ export default function MobileBookingPage() {
         .insert([appointmentData]);
 
       if (error) {
+        // Tratar erro de janela de agendamento (trigger server-side)
+        if (error.message?.includes("booking_window_exceeded") || error.message?.includes("Agendamento indisponível")) {
+          throw new Error("Agendamento indisponível para este período");
+        }
         throw error;
       }
 

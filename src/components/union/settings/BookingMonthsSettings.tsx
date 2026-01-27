@@ -23,14 +23,30 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate, is
   const canEdit = isAdmin;
 
   const handleSave = async () => {
+    if (!canEdit) {
+      toast({
+        title: "Acesso negado",
+        description: "Agendamento indisponível para este período",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("clinics")
-        .update({ booking_months_ahead: parseInt(bookingMonthsAhead) })
-        .eq("id", clinicId);
+      // Usar RPC seguro com validação server-side de permissão
+      const { error } = await supabase.rpc("set_clinic_booking_months_ahead", {
+        p_clinic_id: clinicId,
+        p_months_ahead: parseInt(bookingMonthsAhead),
+      });
 
-      if (error) throw error;
+      if (error) {
+        // Tratar erros específicos da função
+        if (error.message?.includes("not_allowed")) {
+          throw new Error("Agendamento indisponível para este período");
+        }
+        throw error;
+      }
 
       toast({
         title: "Configuração salva",
@@ -73,7 +89,7 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate, is
           <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
             <Lock className="h-4 w-4" />
             <AlertDescription className="font-medium">
-              Agendamento indisponível para edição. Apenas administradores podem alterar esta configuração.
+              Agendamento indisponível para este período
             </AlertDescription>
           </Alert>
         )}
