@@ -11,6 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
+// Feature images
+import featureProntuario from "@/assets/feature-prontuario.jpg";
+import featureAgenda from "@/assets/feature-agenda.jpg";
+import featureTelemedicina from "@/assets/feature-telemedicina.jpg";
+import featureOdontologia from "@/assets/feature-odontologia.jpg";
+import featureFinanceiro from "@/assets/feature-financeiro.jpg";
+
 interface FeatureBlockProps {
   icon: React.ElementType;
   category: string;
@@ -19,6 +26,7 @@ interface FeatureBlockProps {
   features: string[];
   imagePosition: "left" | "right";
   bgColor?: string;
+  image?: string;
 }
 
 function FeatureBlock({ 
@@ -28,7 +36,8 @@ function FeatureBlock({
   description, 
   features, 
   imagePosition,
-  bgColor = "bg-background"
+  bgColor = "bg-background",
+  image
 }: FeatureBlockProps) {
   const content = (
     <div className="lg:w-1/2">
@@ -66,23 +75,31 @@ function FeatureBlock({
 
   const visual = (
     <div className="lg:w-1/2 flex justify-center">
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-lg">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-cta/10 rounded-3xl blur-xl" />
-        <div className="relative bg-card border border-border rounded-2xl p-8 shadow-lg">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 rounded-xl feature-card-icon">
-              <Icon className="h-7 w-7" />
+        <div className="relative bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+          <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
+            <div className="w-10 h-10 rounded-lg feature-card-icon">
+              <Icon className="h-5 w-5" />
             </div>
             <div>
               <span className="text-xs font-bold tracking-wider gradient-text uppercase">{category}</span>
-              <h4 className="font-bold text-foreground">{title.split(' ')[0]}</h4>
+              <h4 className="font-semibold text-foreground text-sm">{title.split(' ')[0]}</h4>
             </div>
           </div>
           
-          {/* Placeholder visual */}
-          <div className="aspect-video bg-muted/50 rounded-xl flex items-center justify-center">
-            <Icon className="h-16 w-16 text-primary/20" />
-          </div>
+          {image ? (
+            <img 
+              src={image} 
+              alt={title}
+              className="w-full aspect-video object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="aspect-video bg-muted/50 flex items-center justify-center">
+              <Icon className="h-16 w-16 text-primary/20" />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -117,7 +134,8 @@ const featuresData = [
       "Agilidade para criação de modelos de laudos e atestados"
     ],
     imagePosition: "right" as const,
-    bgColor: "bg-background"
+    bgColor: "bg-background",
+    image: featureProntuario
   },
   {
     icon: Calendar,
@@ -132,7 +150,8 @@ const featuresData = [
       "Alterações simultâneas para um grande número de dados"
     ],
     imagePosition: "left" as const,
-    bgColor: "bg-card"
+    bgColor: "bg-card",
+    image: featureAgenda
   },
   {
     icon: Video,
@@ -146,7 +165,8 @@ const featuresData = [
       "Tudo fica integrado ao prontuário eletrônico"
     ],
     imagePosition: "right" as const,
-    bgColor: "bg-background"
+    bgColor: "bg-background",
+    image: featureTelemedicina
   },
   {
     icon: Smile,
@@ -161,7 +181,8 @@ const featuresData = [
       "Gestão de franquias"
     ],
     imagePosition: "left" as const,
-    bgColor: "bg-card"
+    bgColor: "bg-card",
+    image: featureOdontologia
   },
   {
     icon: Wallet,
@@ -176,7 +197,8 @@ const featuresData = [
       "Conciliação de extrato bancário"
     ],
     imagePosition: "right" as const,
-    bgColor: "bg-background"
+    bgColor: "bg-background",
+    image: featureFinanceiro
   }
 ];
 
