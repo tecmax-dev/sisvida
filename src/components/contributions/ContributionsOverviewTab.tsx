@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   FileText,
   Building2,
@@ -13,6 +14,8 @@ import {
   BarChart3,
   Calendar,
   CalendarDays,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   BarChart,
@@ -97,6 +100,9 @@ export default function ContributionsOverviewTab({
   yearFilter,
 }: ContributionsOverviewTabProps) {
   const { currentClinic } = useAuth();
+
+  // Estado para ocultar/exibir valores financeiros - inicia oculto
+  const [showValues, setShowValues] = useState(false);
 
   // Estado para pagamentos do mês vigente (query independente)
   const [currentMonthPayments, setCurrentMonthPayments] = useState<{
@@ -327,69 +333,110 @@ export default function ContributionsOverviewTab({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground">Total {yearFilter}</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(stats.totalValue)}</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-2">
+        <div className="flex items-center justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowValues(!showValues)}
+            className="gap-2 text-muted-foreground hover:text-foreground"
+          >
+            {showValues ? (
+              <>
+                <EyeOff className="h-4 w-4" />
+                <span className="text-xs">Ocultar valores</span>
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4" />
+                <span className="text-xs">Exibir valores</span>
+              </>
+            )}
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-muted-foreground">Total {yearFilter}</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground mt-1">
+                {showValues ? stats.total : "•••"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {showValues ? formatCurrency(stats.totalValue) : "R$ •••••"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs font-medium text-muted-foreground">Recebido ({MONTHS_FULL[new Date().getMonth()]})</span>
-            </div>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{formatCurrency(currentMonthPayments.paidValue)}</p>
-            <p className="text-xs text-muted-foreground">{currentMonthPayments.paidCount} contribuições</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-emerald-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span className="text-xs font-medium text-muted-foreground">Recebido ({MONTHS_FULL[new Date().getMonth()]})</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">
+                {showValues ? formatCurrency(currentMonthPayments.paidValue) : "R$ •••••"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {showValues ? `${currentMonthPayments.paidCount} contribuições` : "••• contribuições"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
-              <span className="text-xs font-medium text-muted-foreground">A Receber</span>
-            </div>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{formatCurrency(stats.pendingValue)}</p>
-            <p className="text-xs text-muted-foreground">{stats.pending + stats.overdue} pendentes</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-amber-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <span className="text-xs font-medium text-muted-foreground">A Receber</span>
+              </div>
+              <p className="text-2xl font-bold text-amber-600 mt-1">
+                {showValues ? formatCurrency(stats.pendingValue) : "R$ •••••"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {showValues ? `${stats.pending + stats.overdue} pendentes` : "••• pendentes"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-rose-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-rose-500" />
-              <span className="text-xs font-medium text-muted-foreground">Vencidos</span>
-            </div>
-            <p className="text-2xl font-bold text-rose-600 mt-1">{stats.overdue}</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-rose-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-rose-500" />
+                <span className="text-xs font-medium text-muted-foreground">Vencidos</span>
+              </div>
+              <p className="text-2xl font-bold text-rose-600 mt-1">
+                {showValues ? stats.overdue : "•••"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-blue-500" />
-              <span className="text-xs font-medium text-muted-foreground">Empresas</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{employers.length}</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-blue-500" />
+                <span className="text-xs font-medium text-muted-foreground">Empresas</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-600 mt-1">
+                {showValues ? employers.length : "•••"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-violet-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-violet-500" />
-              <span className="text-xs font-medium text-muted-foreground">Taxa Recebimento</span>
-            </div>
-            <p className="text-2xl font-bold text-violet-600 mt-1">{collectRate}%</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-violet-500">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-violet-500" />
+                <span className="text-xs font-medium text-muted-foreground">Taxa Recebimento</span>
+              </div>
+              <p className="text-2xl font-bold text-violet-600 mt-1">
+                {showValues ? `${collectRate}%` : "•••%"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Charts Row */}
