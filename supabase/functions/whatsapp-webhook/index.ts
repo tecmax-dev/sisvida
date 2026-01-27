@@ -5380,6 +5380,22 @@ async function getAvailableDates(
     return new Date(now.getTime() + (utcOffset + brazilOffset) * 60000);
   };
 
+  // Fetch booking_months_ahead configuration from clinic
+  const { data: clinicConfig } = await supabase
+    .from('clinics')
+    .select('booking_months_ahead')
+    .eq('id', clinicId)
+    .single();
+  
+  const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 1;
+
+  // Calculate the last allowed date based on booking_months_ahead
+  const brazilNowForLimit = getBrazilNow();
+  const lastAllowedDate = new Date(brazilNowForLimit.getFullYear(), brazilNowForLimit.getMonth() + bookingMonthsAhead, 0);
+  lastAllowedDate.setHours(23, 59, 59, 999);
+
+  console.log(`[booking] getAvailableDates: bookingMonthsAhead=${bookingMonthsAhead}, lastAllowedDate=${lastAllowedDate.toISOString().split('T')[0]}`);
+
   const dayMap: Record<number, string> = {
     0: 'sunday',
     1: 'monday',
@@ -5484,10 +5500,19 @@ async function getAvailableDates(
   const today = new Date(brazilNow);
   today.setHours(0, 0, 0, 0);
 
+  // Calculate max days to search based on booking_months_ahead
+  const maxDaysToSearch = Math.min(90, bookingMonthsAhead * 31); // Cap at 90 days for performance
+
   // Start from today (i=0) to include same-day booking if there are available slots
-  for (let i = 0; i <= 14 && dates.length < 5; i++) {
+  for (let i = 0; i <= maxDaysToSearch && dates.length < 5; i++) {
     const dateObj = new Date(today);
     dateObj.setDate(dateObj.getDate() + i);
+
+    // Check if date exceeds the allowed booking window
+    if (dateObj > lastAllowedDate) {
+      console.log(`[booking] Date ${dateObj.toISOString().split('T')[0]} exceeds lastAllowedDate, stopping search`);
+      break;
+    }
 
     const dateStr = dateObj.toISOString().split('T')[0];
     const dayKey = dayMap[dateObj.getDay()];

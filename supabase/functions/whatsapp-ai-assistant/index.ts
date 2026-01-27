@@ -230,14 +230,38 @@ async function executeTool(
           });
         }
 
-        // Find next 30 days with available slots
+        // Fetch booking_months_ahead configuration from clinic
+        const { data: clinicConfigData } = await supabase
+          .from('clinics')
+          .select('booking_months_ahead')
+          .eq('id', clinicId)
+          .single();
+        
+        const bookingMonthsAhead = clinicConfigData?.booking_months_ahead ?? 1;
+        
+        // Calculate the last allowed date based on booking_months_ahead
+        const todayForLimit = new Date();
+        const lastAllowedDate = new Date(todayForLimit.getFullYear(), todayForLimit.getMonth() + bookingMonthsAhead, 0);
+        lastAllowedDate.setHours(23, 59, 59, 999);
+        
+        console.log(`[ai-assistant] bookingMonthsAhead=${bookingMonthsAhead}, lastAllowedDate=${lastAllowedDate.toISOString().split('T')[0]}`);
+
+        // Find available slots within allowed booking window
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const availableDates: { data: string; data_formatada: string; dia_semana: string; vagas: number }[] = [];
         const today = new Date();
         const duration = professional.appointment_duration || 30;
+        const maxDaysToSearch = Math.min(90, bookingMonthsAhead * 31);
 
-        for (let i = 0; i < 30 && availableDates.length < 5; i++) {
+        for (let i = 0; i < maxDaysToSearch && availableDates.length < 5; i++) {
           const checkDate = new Date(today);
+          checkDate.setDate(today.getDate() + i);
+          
+          // Check if date exceeds the allowed booking window
+          if (checkDate > lastAllowedDate) {
+            console.log(`[ai-assistant] Date ${checkDate.toISOString().split('T')[0]} exceeds lastAllowedDate, stopping search`);
+            break;
+          }
           checkDate.setDate(today.getDate() + i);
           const dayKey = dayNames[checkDate.getDay()];
           const daySchedule = professional.schedule[dayKey];
