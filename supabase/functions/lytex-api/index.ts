@@ -751,6 +751,8 @@ Deno.serve(async (req) => {
         const dueDate = String(params.dueDate || "");
         const dueDateOnly = dueDate.includes("T") ? dueDate.split("T")[0] : dueDate;
 
+        console.log(`[Lytex] createInvoice recebido - value: ${params.value}, valueIsInCents: ${params.valueIsInCents}, tipo: ${typeof params.value}`);
+
         if (!clientName || !cleanDocument || !dueDateOnly || params.value === undefined || params.value === null) {
           throw new Error("Dados insuficientes para emitir boleto (nome, documento, valor e vencimento são obrigatórios)");
         }
@@ -773,11 +775,18 @@ Deno.serve(async (req) => {
           }
         }
 
+        // CRITICAL: If valueIsInCents is true, the value is already in cents (e.g., 97600 for R$ 976.00)
+        // Do NOT apply any conversion - pass directly to createInvoice
+        const valueForInvoice = Number(params.value);
+        const isValueInCents = params.valueIsInCents === true;
+        
+        console.log(`[Lytex] Valor para fatura: ${valueForInvoice}, já em centavos: ${isValueInCents}`);
+
         const invoiceRequest: CreateInvoiceRequest & { registrationNumber?: string } = {
           contributionId: params.installmentId || params.clientId || "",
           clinicId: "",
-          value: Number(params.value),
-          valueIsInCents: params.valueIsInCents === true, // Pass through the flag from frontend
+          value: valueForInvoice,
+          valueIsInCents: isValueInCents,
           dueDate: dueDateOnly,
           description: params.description || "Negociação",
           enableBoleto: true,

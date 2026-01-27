@@ -163,23 +163,32 @@ export default function NegotiationInstallmentsTab({
     setGeneratingBoleto(installment.id);
     try {
       const employer = installment.negotiation.employers;
-      const valueInCents = Math.round(Number(installment.value) * 100);
+      // Value from DB is in BRL (e.g., 976.00), convert to cents for Lytex API
+      const valueInBRL = Number(installment.value);
+      const valueInCents = Math.round(valueInBRL * 100);
+      
+      console.log(`[Negotiation Boleto] Valor original: ${valueInBRL} BRL, Convertido: ${valueInCents} centavos`);
+      
       const description = installment.installment_number === 0 
         ? `Entrada - ${installment.negotiation.negotiation_code}`
         : `Parcela ${installment.installment_number} - ${installment.negotiation.negotiation_code}`;
 
+      const requestBody = {
+        action: "createInvoice",
+        installmentId: installment.id,
+        clientId: employer.id,
+        clientName: employer.name,
+        clientDocument: employer.cnpj,
+        value: valueInCents,
+        valueIsInCents: true, // Value is already in cents, do not multiply again
+        dueDate: installment.due_date,
+        description,
+      };
+      
+      console.log("[Negotiation Boleto] Request body:", JSON.stringify(requestBody));
+
       const { data, error } = await supabase.functions.invoke("lytex-api", {
-        body: {
-          action: "createInvoice",
-          installmentId: installment.id,
-          clientId: employer.id,
-          clientName: employer.name,
-          clientDocument: employer.cnpj,
-          value: valueInCents,
-          valueIsInCents: true, // Explicit flag to indicate value is already in cents
-          dueDate: installment.due_date,
-          description,
-        },
+        body: requestBody,
       });
 
       if (error) throw error;
