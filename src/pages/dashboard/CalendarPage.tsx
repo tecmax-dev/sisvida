@@ -404,7 +404,7 @@ interface Appointment {
 
 export default function CalendarPage() {
   const { currentClinic, user, userRoles } = useAuth();
-  const { isProfessionalOnly, hasPermission } = usePermissions();
+  const { isProfessionalOnly, hasPermission, isAdmin } = usePermissions();
   
   // Permissão para atender pacientes (requer acesso a prontuários médicos)
   const canAttendPatient = hasPermission('manage_medical_records');
@@ -619,13 +619,17 @@ export default function CalendarPage() {
 
   const isDateKeyOutsideBookingWindow = useCallback(
     (dateKey: string) => {
+      // Admins não têm restrição de janela
+      if (isAdmin) return false;
       return bookingWindowEndDateKey ? dateKey > bookingWindowEndDateKey : false;
     },
-    [bookingWindowEndDateKey]
+    [bookingWindowEndDateKey, isAdmin]
   );
 
   const guardBookingWindow = useCallback(
     (target: Date | string) => {
+      // Admins não têm restrição de janela
+      if (isAdmin) return false;
       if (!bookingWindowEndDateKey) return false;
       const targetKey = typeof target === "string" ? target : toDateKey(target);
 
@@ -640,7 +644,7 @@ export default function CalendarPage() {
 
       return false;
     },
-    [bookingWindowEndDateKey, toast]
+    [bookingWindowEndDateKey, toast, isAdmin]
   );
 
   const getDayKey = (date: Date) => {
