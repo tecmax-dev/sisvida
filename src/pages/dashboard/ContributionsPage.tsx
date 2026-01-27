@@ -8,6 +8,7 @@ import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { toast } from "sonner";
 import { extractFunctionsError } from "@/lib/functionsError";
+import { fetchAllEmployers } from "@/lib/supabase-helpers";
 
 import ContributionsOverviewTab from "@/components/contributions/ContributionsOverviewTab";
 import ContributionsListTab from "@/components/contributions/ContributionsListTab";
@@ -251,16 +252,12 @@ export default function ContributionsPage() {
       });
       setContributions(contribData || []);
 
-      // Fetch employers with category
-      const { data: empData, error: empError } = await supabase
-        .from("employers")
-        .select("id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number")
-        .eq("clinic_id", currentClinic.id)
-        .eq("is_active", true)
-        .order("name");
-
-      if (empError) throw empError;
-      setEmployers(empData || []);
+      // Fetch employers with category - using pagination to avoid 1000 limit
+      const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
+        select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number"
+      });
+      if (employersResult.error) throw employersResult.error;
+      setEmployers(employersResult.data);
 
       // Fetch contribution types
       const { data: typesData, error: typesError } = await supabase

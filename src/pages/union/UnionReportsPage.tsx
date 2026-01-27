@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { Loader2, FileBarChart, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -122,16 +123,12 @@ export default function UnionReportsPage() {
       if (contribError) throw contribError;
       setContributions(contribData || []);
 
-      // Fetch employers
-      const { data: empData, error: empError } = await supabase
-        .from("employers")
-        .select("id, name, cnpj, email, phone, address, city, state, category_id, registration_number")
-        .eq("clinic_id", currentClinic.id)
-        .eq("is_active", true)
-        .order("name");
-
-      if (empError) throw empError;
-      setEmployers(empData || []);
+      // Fetch employers - using pagination to avoid 1000 limit
+      const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
+        select: "id, name, cnpj, email, phone, address, city, state, category_id, registration_number"
+      });
+      if (employersResult.error) throw employersResult.error;
+      setEmployers(employersResult.data);
 
       // Fetch contribution types
       const { data: typesData, error: typesError } = await supabase
