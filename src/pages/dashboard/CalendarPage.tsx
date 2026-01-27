@@ -103,6 +103,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useClinicBookingWindowEndDate } from "@/hooks/useClinicBookingWindowEndDate";
 import { handleScheduleValidationError } from "@/lib/scheduleValidation";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
@@ -607,6 +608,40 @@ export default function CalendarPage() {
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
+
+  // === Booking window (UI deve respeitar a mesma regra do backend) ===
+  const { data: bookingWindowEndDate } = useClinicBookingWindowEndDate(currentClinic?.id);
+
+  const bookingWindowEndDateKey = useMemo(() => {
+    if (!bookingWindowEndDate) return null;
+    return toDateKey(bookingWindowEndDate);
+  }, [bookingWindowEndDate]);
+
+  const isDateKeyOutsideBookingWindow = useCallback(
+    (dateKey: string) => {
+      return bookingWindowEndDateKey ? dateKey > bookingWindowEndDateKey : false;
+    },
+    [bookingWindowEndDateKey]
+  );
+
+  const guardBookingWindow = useCallback(
+    (target: Date | string) => {
+      if (!bookingWindowEndDateKey) return false;
+      const targetKey = typeof target === "string" ? target : toDateKey(target);
+
+      if (targetKey > bookingWindowEndDateKey) {
+        toast({
+          title: "Período indisponível",
+          description: "Agendamento indisponível para este período",
+          variant: "destructive",
+        });
+        return true;
+      }
+
+      return false;
+    },
+    [bookingWindowEndDateKey, toast]
+  );
 
   const getDayKey = (date: Date) => {
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -1280,6 +1315,12 @@ export default function CalendarPage() {
     
     const recurrenceGroupId = recurrenceConfig.enabled ? generateId() : null;
     const dateStr = selectedDate.toISOString().split('T')[0];
+
+    // Regra de janela: bloquear antes de tentar gravar
+    if (guardBookingWindow(dateStr)) {
+      setSaving(false);
+      return;
+    }
     
     if (hasMultipleSlots) {
       // Modo com múltiplos horários selecionados - criar na mesma data
@@ -1329,6 +1370,23 @@ export default function CalendarPage() {
     } else {
       // Modo padrão - usar datas recorrentes calculadas
       const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
+
+      // Regra de janela: bloquear qualquer data recorrente fora do período
+      if (bookingWindowEndDateKey) {
+        const outOfWindow = recurringDates
+          .map((d) => d.toISOString().split('T')[0])
+          .some((k) => k > bookingWindowEndDateKey);
+
+        if (outOfWindow) {
+          toast({
+            title: "Período indisponível",
+            description: "Agendamento indisponível para este período",
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
       
       // Check for conflicts on all dates
       for (const date of recurringDates) {
@@ -1899,6 +1957,9 @@ const updateData: Record<string, any> = {
     // Check permission before opening dialog
     if (!hasPermission('manage_calendar')) return;
 
+    // Regra de janela: não abrir diálogo fora do período
+    if (guardBookingWindow(date ?? selectedDate)) return;
+
     resetForm();
     setFormTime(time);
     if (date) {
@@ -1941,6 +2002,9 @@ const updateData: Record<string, any> = {
     const [newDate, newTime] = overId.split('_');
 
     if (!newDate || !newTime) return;
+
+    // Regra de janela: bloquear drag/drop para mês futuro
+    if (guardBookingWindow(newDate)) return;
 
     // Check if the appointment was dropped in its original position
     const originalDate = active.data.current?.originalDate;
@@ -2051,9 +2115,16 @@ const updateData: Record<string, any> = {
       fetchAppointments();
     } catch (error: any) {
       const { isScheduleError, message } = handleScheduleValidationError(error);
+
+      const isBookingWindowError =
+        error.message?.includes('booking_window_exceeded') ||
+        error.message?.includes('Agendamento indisponível');
+
       toast({
-        title: isScheduleError ? "Horário indisponível" : "Erro ao reagendar",
-        description: message,
+        title: isBookingWindowError
+          ? "Período indisponível"
+          : (isScheduleError ? "Horário indisponível" : "Erro ao reagendar"),
+        description: isBookingWindowError ? "Agendamento indisponível para este período" : message,
         variant: "destructive",
       });
     }
@@ -2103,13 +2174,18 @@ const updateData: Record<string, any> = {
   };
 
   const navigateMonth = (direction: number) => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
+    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1);
+    if (direction > 0 && guardBookingWindow(next)) return;
+    setCurrentDate(next);
   };
 
   const navigateWeek = (direction: number) => {
     const newDate = normalizeCalendarDate(new Date(selectedDate));
     newDate.setDate(newDate.getDate() + (direction * 7));
     const normalized = normalizeCalendarDate(newDate);
+
+    if (direction > 0 && guardBookingWindow(normalized)) return;
+
     setSelectedDate(normalized);
     setCurrentDate(normalized);
   };
@@ -2132,6 +2208,7 @@ const updateData: Record<string, any> = {
   };
 
   const handleDayClick = (date: Date) => {
+    if (guardBookingWindow(date)) return;
     setSelectedDate(normalizeCalendarDate(date));
     if (viewMode === "month") {
       setViewMode("day");
@@ -2961,6 +3038,19 @@ const updateData: Record<string, any> = {
     const dateStr = toDateKey(forDate);
     const dayAppointments = getAppointmentsForDate(forDate);
     const holidayName = isHoliday(forDate);
+
+    if (isDateKeyOutsideBookingWindow(dateStr)) {
+      return (
+        <div className="p-3 rounded-lg border border-dashed border-border/50 bg-muted/20">
+          <p className="text-xs text-muted-foreground font-medium mb-1 text-center">
+            Período indisponível
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            Agendamento indisponível para este período
+          </p>
+        </div>
+      );
+    }
     
     if (holidayName) {
       return (
@@ -3120,6 +3210,7 @@ const updateData: Record<string, any> = {
                 {/* Células dos dias */}
                 {weekDaysData.map((date, dayIndex) => {
                   const dateStr = toDateKey(date);
+                  const isOutsideWindow = isDateKeyOutsideBookingWindow(dateStr);
                   const holidayName = isHoliday(date);
                   const slotAppointments = getAppointmentsForSlot(date, time);
 
@@ -3138,6 +3229,7 @@ const updateData: Record<string, any> = {
                       time={time}
                       showTime={false}
                       isOccupied={!!holidayName}
+                      disabled={isOutsideWindow}
                       className={cn(
                         "p-1 border-r border-border/20 relative min-h-[80px]",
                         holidayName && "bg-red-50/50 dark:bg-red-950/10",
@@ -3261,6 +3353,7 @@ const updateData: Record<string, any> = {
               const isTodayDate = isToday(item.date);
               const isSelectedDate = isSelected(item.date);
               const dateStr = toDateKey(item.date);
+              const isOutsideWindow = isDateKeyOutsideBookingWindow(dateStr);
               const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
               const holidayName = isHoliday(item.date);
               
@@ -3271,17 +3364,19 @@ const updateData: Record<string, any> = {
                   time="08:00"
                   showTime={false}
                   isOccupied={isOccupied || !!holidayName}
-                  disabled={!item.isCurrentMonth}
+                  disabled={!item.isCurrentMonth || isOutsideWindow}
                   className="p-0"
                 >
                   <button
                     onClick={() => handleDayClick(item.date)}
+                    disabled={!item.isCurrentMonth || isOutsideWindow}
                     title={holidayName || undefined}
                     className={cn(
                       "w-full aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
                       item.isCurrentMonth
                         ? "text-foreground hover:bg-muted"
                         : "text-muted-foreground/40",
+                      isOutsideWindow && "cursor-not-allowed opacity-50",
                       holidayName && item.isCurrentMonth && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
                       isTodayDate && !holidayName && "bg-primary/10 text-primary font-semibold",
                       isSelectedDate && item.isCurrentMonth && "ring-2 ring-primary"
@@ -3946,25 +4041,29 @@ const updateData: Record<string, any> = {
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {getDaysInMonth(currentDate).map((item, i) => {
-                  const dateStr = item.date.toISOString().split('T')[0];
+                  const dateKey = toDateKey(item.date);
                   const holidayName = isHoliday(item.date);
+                  const isDisabled = !item.isCurrentMonth || isDateKeyOutsideBookingWindow(dateKey);
                   return (
                     <DroppableTimeSlot
                       key={i}
-                      date={dateStr}
+                      date={dateKey}
                       time="08:00"
                       showTime={false}
                       isOccupied={!!holidayName}
+                      disabled={isDisabled}
                       className="p-0"
                     >
                       <button
                         onClick={() => handleDayClick(item.date)}
+                        disabled={isDisabled}
                         title={holidayName || undefined}
                         className={cn(
                           "w-full aspect-square flex items-center justify-center text-sm rounded-lg transition-colors",
                           item.isCurrentMonth
                             ? "text-foreground hover:bg-muted"
                             : "text-muted-foreground/40",
+                          isDisabled && "cursor-not-allowed opacity-50",
                           holidayName && item.isCurrentMonth && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
                           isToday(item.date) && !holidayName &&
                             "bg-primary/10 text-primary font-semibold",
@@ -4016,6 +4115,7 @@ const updateData: Record<string, any> = {
                       onClick={() => {
                         const next = normalizeCalendarDate(new Date(selectedDate));
                         next.setDate(next.getDate() + 1);
+                        if (guardBookingWindow(next)) return;
                         setSelectedDate(normalizeCalendarDate(next));
                       }}
                     >
