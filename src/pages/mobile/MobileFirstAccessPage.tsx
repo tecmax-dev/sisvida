@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, ArrowLeft, Check } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Check, Calendar } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
@@ -42,18 +44,59 @@ const isValidCPF = (cpf: string) => {
   return true;
 };
 
-type Step = 'cpf_email' | 'code' | 'password' | 'success';
+// Função para formatar data (DD/MM/YYYY)
+const formatDate = (value: string) => {
+  const numbers = value.replace(/\D/g, '');
+  if (numbers.length <= 2) return numbers;
+  if (numbers.length <= 4) return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
+  return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
+};
+
+// Função para validar data
+const isValidDate = (dateStr: string) => {
+  const numbers = dateStr.replace(/\D/g, '');
+  if (numbers.length !== 8) return false;
+  
+  const day = parseInt(numbers.slice(0, 2));
+  const month = parseInt(numbers.slice(2, 4));
+  const year = parseInt(numbers.slice(4, 8));
+  
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  if (year < 1900 || year > new Date().getFullYear()) return false;
+  
+  // Validação mais precisa
+  const date = new Date(year, month - 1, day);
+  return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
+};
+
+// Converter data DD/MM/YYYY para YYYY-MM-DD
+const convertToISODate = (dateStr: string) => {
+  const numbers = dateStr.replace(/\D/g, '');
+  const day = numbers.slice(0, 2);
+  const month = numbers.slice(2, 4);
+  const year = numbers.slice(4, 8);
+  return `${year}-${month}-${day}`;
+};
+
+type Step = 'cpf' | 'birthdate' | 'password' | 'success';
+
+interface PatientData {
+  id: string;
+  name: string;
+  birth_date: string;
+}
 
 export default function MobileFirstAccessPage() {
-  const [step, setStep] = useState<Step>('cpf_email');
+  const [step, setStep] = useState<Step>('cpf');
   const [cpf, setCpf] = useState("");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [patientData, setPatientData] = useState<PatientData | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,13 +107,20 @@ export default function MobileFirstAccessPage() {
     }
   };
 
-  const handleSendCode = async (e: React.FormEvent) => {
+  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDate(e.target.value);
+    if (formatted.length <= 10) {
+      setBirthDate(formatted);
+    }
+  };
+
+  const handleCheckCpf = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!cpf || !email) {
+    if (!cpf) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha CPF e email para continuar.",
+        title: "CPF obrigatório",
+        description: "Preencha seu CPF para continuar.",
         variant: "destructive",
       });
       return;
@@ -85,52 +135,63 @@ export default function MobileFirstAccessPage() {
       return;
     }
 
-    if (!email.includes('@')) {
-      toast({
-        title: "Email inválido",
-        description: "Por favor, insira um email válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('send-first-access-email', {
-        body: { cpf: cpf.replace(/\D/g, ''), email: email.toLowerCase().trim() }
-      });
+      const normalizedCpf = cpf.replace(/\D/g, '');
+      
+      // Buscar paciente pelo CPF que não tenha senha cadastrada
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select('id, name, birth_date, password_hash')
+        .or(`cpf.eq.${normalizedCpf},cpf.eq.${cpf}`)
+        .eq('is_active', true);
 
       if (error) throw error;
 
-      toast({
-        title: "Código enviado!",
-        description: "Verifique seu email e insira o código de 6 dígitos.",
-      });
-      setStep('code');
-    } catch (err: any) {
-      console.error("Error sending code:", err);
-
-      // Supabase Functions can return non-2xx with a JSON body.
-      // Try to extract a useful message for the user.
-      let errorMessage = "Ocorreu um erro ao enviar o código. Tente novamente.";
-      try {
-        const maybeContext = err?.context;
-        if (maybeContext?.json) {
-          const body = await maybeContext.json();
-          if (body?.error && typeof body.error === "string") {
-            errorMessage = body.error;
-          }
-        } else if (typeof err?.message === "string" && err.message.trim()) {
-          errorMessage = err.message;
-        }
-      } catch {
-        // ignore parsing errors
+      if (!patients || patients.length === 0) {
+        toast({
+          title: "CPF não encontrado",
+          description: "Este CPF não está cadastrado no sistema. Entre em contato com o sindicato.",
+          variant: "destructive",
+        });
+        return;
       }
 
+      const patient = patients[0];
+
+      // Verificar se já tem senha cadastrada
+      if (patient.password_hash) {
+        toast({
+          title: "Senha já cadastrada",
+          description: "Você já possui uma senha. Use a opção 'Entrar' para acessar ou 'Esqueci minha senha' para recuperá-la.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verificar se tem data de nascimento cadastrada
+      if (!patient.birth_date) {
+        toast({
+          title: "Dados incompletos",
+          description: "Seu cadastro está incompleto. Entre em contato com o sindicato para atualizar seus dados.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPatientData({
+        id: patient.id,
+        name: patient.name,
+        birth_date: patient.birth_date
+      });
+      setStep('birthdate');
+      
+    } catch (err: any) {
+      console.error("Error checking CPF:", err);
       toast({
         title: "Erro",
-        description: errorMessage,
+        description: "Ocorreu um erro ao verificar o CPF. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -138,20 +199,68 @@ export default function MobileFirstAccessPage() {
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
+  const handleVerifyBirthDate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (code.length !== 6) {
+    if (!birthDate) {
       toast({
-        title: "Código inválido",
-        description: "O código deve ter 6 dígitos.",
+        title: "Data obrigatória",
+        description: "Preencha sua data de nascimento para continuar.",
         variant: "destructive",
       });
       return;
     }
 
-    // Avança para a etapa de senha (a validação final será no submit)
-    setStep('password');
+    if (!isValidDate(birthDate)) {
+      toast({
+        title: "Data inválida",
+        description: "Por favor, insira uma data válida no formato DD/MM/AAAA.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!patientData) {
+      toast({
+        title: "Erro",
+        description: "Dados do paciente não encontrados. Volte e tente novamente.",
+        variant: "destructive",
+      });
+      setStep('cpf');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Converter a data informada para formato ISO
+      const inputDateISO = convertToISODate(birthDate);
+      
+      // Comparar com a data cadastrada (apenas a parte YYYY-MM-DD)
+      const storedDate = patientData.birth_date.split('T')[0];
+      
+      if (inputDateISO !== storedDate) {
+        toast({
+          title: "Data incorreta",
+          description: "A data de nascimento informada não confere com nossos registros.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Data correta - avançar para criação de senha
+      setStep('password');
+      
+    } catch (err: any) {
+      console.error("Error verifying birth date:", err);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao verificar a data. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSetPassword = async (e: React.FormEvent) => {
@@ -175,27 +284,26 @@ export default function MobileFirstAccessPage() {
       return;
     }
 
+    if (!patientData) {
+      toast({
+        title: "Erro",
+        description: "Dados do paciente não encontrados. Volte e tente novamente.",
+        variant: "destructive",
+      });
+      setStep('cpf');
+      return;
+    }
+
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.rpc('complete_first_access', {
-        p_token: code,
-        p_email: email.toLowerCase().trim(),
+      // Usar RPC para definir a senha diretamente (já que validamos a data de nascimento)
+      const { error } = await supabase.rpc('set_patient_password_direct', {
+        p_patient_id: patientData.id,
         p_password: password
       });
 
       if (error) throw error;
-
-      if (!data) {
-        toast({
-          title: "Código inválido ou expirado",
-          description: "O código informado é inválido ou já expirou. Solicite um novo código.",
-          variant: "destructive",
-        });
-        setStep('cpf_email');
-        setCode('');
-        return;
-      }
 
       setStep('success');
     } catch (err: any) {
@@ -210,11 +318,16 @@ export default function MobileFirstAccessPage() {
     }
   };
 
+  const getFirstName = () => {
+    if (!patientData?.name) return '';
+    return patientData.name.split(' ')[0];
+  };
+
   const renderStep = () => {
     switch (step) {
-      case 'cpf_email':
+      case 'cpf':
         return (
-          <form onSubmit={handleSendCode} className="space-y-6">
+          <form onSubmit={handleCheckCpf} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="cpf" className="text-foreground">CPF</Label>
               <Input
@@ -227,21 +340,8 @@ export default function MobileFirstAccessPage() {
                 className="h-12"
                 disabled={loading}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">Email cadastrado</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12"
-                disabled={loading}
-              />
               <p className="text-xs text-muted-foreground">
-                Use o mesmo email cadastrado no sindicato
+                Informe o CPF cadastrado no sindicato
               </p>
             </div>
 
@@ -253,57 +353,73 @@ export default function MobileFirstAccessPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
+                  Verificando...
                 </>
               ) : (
-                "Enviar código"
+                "Continuar"
               )}
             </Button>
           </form>
         );
 
-      case 'code':
+      case 'birthdate':
         return (
-          <form onSubmit={handleVerifyCode} className="space-y-6">
-            <div className="text-center mb-6">
+          <form onSubmit={handleVerifyBirthDate} className="space-y-6">
+            <div className="text-center mb-4">
               <p className="text-sm text-muted-foreground">
-                Enviamos um código de 6 dígitos para<br />
-                <strong className="text-foreground">{email}</strong>
+                Olá, <strong className="text-foreground">{getFirstName()}</strong>! 👋
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Para sua segurança, confirme sua identidade
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="code" className="text-foreground">Código de verificação</Label>
+              <Label htmlFor="birthDate" className="text-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Data de Nascimento
+              </Label>
               <Input
-                id="code"
+                id="birthDate"
                 type="text"
                 inputMode="numeric"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="h-14 text-center text-2xl tracking-widest font-mono"
+                placeholder="DD/MM/AAAA"
+                value={birthDate}
+                onChange={handleBirthDateChange}
+                className="h-12 text-center text-lg tracking-wider"
                 disabled={loading}
-                maxLength={6}
+                maxLength={10}
               />
+              <p className="text-xs text-muted-foreground text-center">
+                Informe sua data de nascimento para validar
+              </p>
             </div>
 
             <Button
               type="submit"
               className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={loading || code.length !== 6}
+              disabled={loading || birthDate.replace(/\D/g, '').length !== 8}
             >
-              Verificar código
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Validando...
+                </>
+              ) : (
+                "Validar"
+              )}
             </Button>
 
             <button
               type="button"
               className="w-full text-sm text-emerald-600 hover:underline"
               onClick={() => {
-                setStep('cpf_email');
-                setCode('');
+                setStep('cpf');
+                setBirthDate('');
+                setPatientData(null);
               }}
             >
-              Voltar e reenviar código
+              Voltar
             </button>
           </form>
         );
@@ -311,6 +427,15 @@ export default function MobileFirstAccessPage() {
       case 'password':
         return (
           <form onSubmit={handleSetPassword} className="space-y-6">
+            <div className="text-center mb-4">
+              <p className="text-sm text-muted-foreground">
+                Perfeito, <strong className="text-foreground">{getFirstName()}</strong>! ✅
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Agora crie sua senha de acesso
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-foreground">Nova senha</Label>
               <div className="relative">
@@ -401,10 +526,10 @@ export default function MobileFirstAccessPage() {
 
   const getStepTitle = () => {
     switch (step) {
-      case 'cpf_email':
+      case 'cpf':
         return 'Primeiro Acesso';
-      case 'code':
-        return 'Verificação';
+      case 'birthdate':
+        return 'Validação';
       case 'password':
         return 'Criar Senha';
       case 'success':
@@ -414,10 +539,10 @@ export default function MobileFirstAccessPage() {
 
   const getStepDescription = () => {
     switch (step) {
-      case 'cpf_email':
-        return 'Informe seu CPF e email cadastrados para receber o código de verificação';
-      case 'code':
-        return 'Digite o código que enviamos para seu email';
+      case 'cpf':
+        return 'Informe seu CPF para iniciar o cadastro de senha';
+      case 'birthdate':
+        return 'Confirme sua data de nascimento';
       case 'password':
         return 'Crie uma senha segura para acessar o aplicativo';
       case 'success':
@@ -430,7 +555,19 @@ export default function MobileFirstAccessPage() {
       {/* Header */}
       <div className="bg-emerald-600 text-white py-6 px-4">
         <button
-          onClick={() => step === 'cpf_email' ? navigate("/app") : setStep('cpf_email')}
+          onClick={() => {
+            if (step === 'cpf') {
+              navigate("/app");
+            } else if (step === 'birthdate') {
+              setStep('cpf');
+              setBirthDate('');
+              setPatientData(null);
+            } else if (step === 'password') {
+              setStep('birthdate');
+              setPassword('');
+              setConfirmPassword('');
+            }
+          }}
           className="flex items-center text-white/90 hover:text-white mb-4"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
@@ -469,11 +606,11 @@ export default function MobileFirstAccessPage() {
             {/* Progress indicator */}
             {step !== 'success' && (
               <div className="flex justify-center gap-2 mt-4">
-                {['cpf_email', 'code', 'password'].map((s, i) => (
+                {['cpf', 'birthdate', 'password'].map((s, i) => (
                   <div
                     key={s}
                     className={`h-2 w-8 rounded-full transition-colors ${
-                      ['cpf_email', 'code', 'password'].indexOf(step) >= i
+                      ['cpf', 'birthdate', 'password'].indexOf(step) >= i
                         ? 'bg-emerald-600'
                         : 'bg-gray-200'
                     }`}
