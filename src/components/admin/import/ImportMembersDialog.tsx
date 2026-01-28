@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Upload,
   FileText,
@@ -24,185 +24,88 @@ import {
   ArrowRight,
   Download,
   Loader2,
+  RefreshCw,
+  Eye,
+  Plus,
+  Pencil,
+  SkipForward,
 } from "lucide-react";
-import { useImportMembersEmployers } from "./useImportMembersEmployers";
+import { useImportPreview } from "./useImportPreview";
+import { useImportExecution } from "./useImportExecution";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ImportedMember } from "./types";
 
 interface ImportMembersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+type Step = "upload" | "preview" | "importing" | "result";
+
 export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogProps) {
   const { currentClinic } = useAuth();
-  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("upload");
   const [fileName, setFileName] = useState<string>("");
-  const [previewData, setPreviewData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { processImport, isProcessing, progress, result } = useImportMembersEmployers(currentClinic?.id);
-
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    generatePreview,
+    isLoading: isLoadingPreview,
+    progress: previewProgress,
+    previewData,
+    error: previewError,
+    reset: resetPreview,
+  } = useImportPreview(currentClinic?.id);
+  
+  const {
+    executeImport,
+    isProcessing,
+    progress: importProgress,
+    result,
+    reset: resetImport,
+  } = useImportExecution(currentClinic?.id);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setFileName(file.name);
-    setIsLoading(true);
-
-    try {
-      let textContent = "";
-
-      // Check file type
-      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-        // Parse PDF using pdfjs-dist with legacy build (no worker needed)
-        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        
-        // Disable worker to avoid CORS/loading issues
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-        
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ 
-          data: arrayBuffer,
-          useWorkerFetch: false,
-          isEvalSupported: false,
-          useSystemFonts: true,
-        });
-        
-        const pdf = await loadingTask.promise;
-        
-        const textParts: string[] = [];
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items
-            .map((item: any) => item.str)
-            .join(" ");
-          textParts.push(pageText);
-        }
-        
-        // Convert to markdown table format
-        textContent = convertPdfTextToMarkdown(textParts.join("\n"));
-        toast.info(`PDF processado: ${pdf.numPages} páginas`);
-      } else if (file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
-        textContent = await file.text();
-      } else {
-        toast.error("Por favor, selecione um arquivo PDF ou texto (.txt, .md)");
-        setIsLoading(false);
-        return;
-      }
-
-      setFileContent(textContent);
-      
-      // Parse preview
-      const { parsePdfTableData } = await import("./parsePdfData");
-      const records = parsePdfTableData(textContent);
-      setPreviewData(records.slice(0, 10));
-      
-      if (records.length > 0) {
-        toast.success(`${records.length} registros identificados`);
-      } else {
-        toast.warning("Nenhum registro válido encontrado. Verifique o formato do arquivo.");
-      }
-    } catch (error) {
-      console.error("Error parsing file:", error);
-      toast.error("Erro ao processar o arquivo. Verifique se o arquivo é válido.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Convert raw PDF text to markdown table format for parsing
-  const convertPdfTextToMarkdown = (rawText: string): string => {
-    // Split by lines and try to identify table rows
-    const lines = rawText.split(/[\n\r]+/).filter(line => line.trim());
-    const markdownLines: string[] = [];
-    
-    // Add header
-    markdownLines.push("| Nome Sócio | CPF | RG | Empresas | CNPJ | Função | Data inscrição | Data admissão |");
-    markdownLines.push("| --- | --- | --- | --- | --- | --- | --- | --- |");
-    
-    // Pattern to match CPF (XXX.XXX.XXX-XX or 11 digits)
-    const cpfPattern = /(\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s]?\d{2})/g;
-    // Pattern to match CNPJ (XX.XXX.XXX/XXXX-XX or 14 digits)
-    const cnpjPattern = /(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-.\s]?\d{2})/g;
-    // Pattern to match dates (DD/MM/YYYY)
-    const datePattern = /(\d{2}\/\d{2}\/\d{4})/g;
-
-    // Try to extract structured data from raw text
-    let currentLine = "";
-    for (const line of lines) {
-      currentLine += " " + line;
-      
-      // Check if line contains both CPF and CNPJ
-      const cpfMatches = currentLine.match(cpfPattern);
-      const cnpjMatches = currentLine.match(cnpjPattern);
-      const dateMatches = currentLine.match(datePattern);
-      
-      if (cpfMatches && cnpjMatches) {
-        // Try to extract name (text before CPF)
-        const cpfIndex = currentLine.indexOf(cpfMatches[0]);
-        const name = currentLine.substring(0, cpfIndex).trim();
-        
-        if (name && name.length > 2) {
-          // Extract other fields
-          const cpf = cpfMatches[0];
-          const cnpj = cnpjMatches[0];
-          const dates = dateMatches || [];
-          
-          // Find RG (between CPF and company name)
-          const afterCpf = currentLine.substring(cpfIndex + cpf.length);
-          const rgMatch = afterCpf.match(/^[\s]*(\d{7,12})/);
-          const rg = rgMatch ? rgMatch[1] : "";
-          
-          // Find company name (text between RG/CPF and CNPJ)
-          const cnpjIndex = currentLine.indexOf(cnpj);
-          let companyName = currentLine.substring(cpfIndex + cpf.length, cnpjIndex);
-          if (rg) companyName = companyName.replace(rg, "");
-          companyName = companyName.replace(/^\s+|\s+$/g, "").replace(/\s+/g, " ");
-          
-          // Find function (text after CNPJ before dates)
-          let afterCnpj = currentLine.substring(cnpjIndex + cnpj.length);
-          let funcao = "";
-          if (dates.length > 0) {
-            const dateIndex = afterCnpj.indexOf(dates[0]);
-            funcao = afterCnpj.substring(0, dateIndex).trim();
-          }
-          
-          const dataInscricao = dates[0] || "";
-          const dataAdmissao = dates[1] || "";
-          
-          markdownLines.push(`| ${name} | ${cpf} | ${rg} | ${companyName} | ${cnpj} | ${funcao} | ${dataInscricao} | ${dataAdmissao} |`);
-          currentLine = "";
-        }
-      }
-    }
-    
-    return markdownLines.join("\n");
-  };
-
-  const handleImport = async () => {
-    if (!fileContent) {
-      toast.error("Selecione um arquivo primeiro");
+    // Validate file type
+    if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Apenas arquivos PDF são aceitos");
       return;
     }
 
+    setFileName(file.name);
+    
+    const result = await generatePreview(file);
+    if (result) {
+      setStep("preview");
+      toast.success(`${result.summary.total} registros identificados`);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!previewData) return;
+
+    setStep("importing");
+    
     try {
-      const importResult = await processImport(fileContent);
+      const importResult = await executeImport(previewData);
+      setStep("result");
       
       if (importResult.errors.length === 0) {
         toast.success(
-          `Importação concluída! ${importResult.membersCreated} sócios criados, ${importResult.employersCreated} empresas criadas.`
+          `Importação concluída! ${importResult.membersCreated} sócios criados, ${importResult.membersUpdated} atualizados.`
         );
       } else {
         toast.warning(
-          `Importação com avisos: ${importResult.membersCreated} sócios criados, ${importResult.errors.length} erros.`
+          `Importação com avisos: ${importResult.membersCreated + importResult.membersUpdated} processados, ${importResult.errors.length} erros.`
         );
       }
     } catch (error) {
       toast.error(`Erro na importação: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+      setStep("preview");
     }
   };
 
@@ -210,13 +113,21 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
     if (!result?.errors.length) return;
     
     const csv = [
-      ["Linha", "Campo", "Mensagem", "Dados"],
-      ...result.errors.map(e => [e.row.toString(), e.field, e.message, JSON.stringify(e.data)]),
+      ["Linha", "Campo", "Mensagem", "Nome", "CPF", "Empresa", "CNPJ"],
+      ...result.errors.map(e => [
+        e.row.toString(),
+        e.field,
+        e.message,
+        e.data?.nome || "",
+        e.data?.cpf || "",
+        e.data?.empresa_nome || "",
+        e.data?.cnpj || "",
+      ]),
     ]
-      .map(row => row.join(";"))
+      .map(row => row.map(cell => `"${cell}"`).join(";"))
       .join("\n");
     
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -226,145 +137,224 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
   };
 
   const resetState = () => {
-    setFileContent(null);
+    setStep("upload");
     setFileName("");
-    setPreviewData([]);
+    resetPreview();
+    resetImport();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
+  const getActionBadge = (record: ImportedMember) => {
+    switch (record.status) {
+      case "will_create":
+        return <Badge className="bg-green-100 text-green-800"><Plus className="h-3 w-3 mr-1" />Criar</Badge>;
+      case "will_update":
+        return <Badge className="bg-blue-100 text-blue-800"><Pencil className="h-3 w-3 mr-1" />Atualizar</Badge>;
+      case "will_skip":
+        return <Badge className="bg-gray-100 text-gray-600"><SkipForward className="h-3 w-3 mr-1" />Ignorar</Badge>;
+      case "error":
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Erro</Badge>;
+      case "created":
+        return <Badge className="bg-green-500 text-white"><CheckCircle className="h-3 w-3 mr-1" />Criado</Badge>;
+      case "updated":
+        return <Badge className="bg-blue-500 text-white"><CheckCircle className="h-3 w-3 mr-1" />Atualizado</Badge>;
+      case "skipped":
+        return <Badge variant="secondary"><SkipForward className="h-3 w-3 mr-1" />Ignorado</Badge>;
+      default:
+        return <Badge variant="outline">Pendente</Badge>;
+    }
+  };
+
+  const canClose = !isLoadingPreview && !isProcessing;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!isProcessing) { onOpenChange(v); if (!v) resetState(); } }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={open} onOpenChange={(v) => { if (canClose) { onOpenChange(v); if (!v) resetState(); } }}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             Importar Sócios e Empresas
           </DialogTitle>
           <DialogDescription>
-            Importe dados de sócios e empresas a partir de arquivo parseado do PDF
+            Importe dados de sócios e empresas a partir de arquivo PDF
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-4">
           <div className="space-y-4">
-            {/* File Upload Section */}
-            {!result && (
-              <Card className="p-4">
-                <div className="flex flex-col items-center justify-center gap-4 py-6">
+            {/* Step 1: Upload */}
+            {step === "upload" && (
+              <Card className="p-6">
+                <div className="flex flex-col items-center justify-center gap-4 py-8">
                   <div className="p-4 rounded-full bg-muted">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
+                    <FileText className="h-10 w-10 text-muted-foreground" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Selecione o arquivo PDF ou texto com a lista de sócios
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Formato: tabela com Nome, CPF, RG, Empresa, CNPJ, Função, Datas
+                  <div className="text-center space-y-2">
+                    <h3 className="font-semibold text-lg">Selecione o arquivo PDF</h3>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      O arquivo deve conter uma tabela com: Nome do Sócio, CPF, RG, Empresa, CNPJ, Função, Data de Inscrição e Data de Admissão
                     </p>
                   </div>
                   
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.txt,.md"
+                    accept=".pdf,application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
-                    disabled={isProcessing || isLoading}
+                    disabled={isLoadingPreview}
                   />
                   
                   <Button
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isProcessing || isLoading}
-                    variant="outline"
+                    disabled={isLoadingPreview}
+                    size="lg"
                   >
-                    {isLoading ? (
+                    {isLoadingPreview ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processando...
+                        Processando PDF...
                       </>
                     ) : (
                       <>
                         <Upload className="h-4 w-4 mr-2" />
-                        Selecionar PDF ou Texto
+                        Selecionar PDF
                       </>
                     )}
                   </Button>
-                  
-                  {fileName && (
-                    <Badge variant="secondary" className="gap-2">
-                      <FileText className="h-3 w-3" />
-                      {fileName}
-                    </Badge>
+
+                  {isLoadingPreview && (
+                    <div className="w-full max-w-md space-y-2">
+                      <Progress value={previewProgress.current} />
+                      <p className="text-sm text-center text-muted-foreground">
+                        {previewProgress.message}
+                      </p>
+                    </div>
+                  )}
+
+                  {previewError && (
+                    <Alert variant="destructive" className="max-w-md">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Erro ao processar arquivo</AlertTitle>
+                      <AlertDescription>{previewError}</AlertDescription>
+                    </Alert>
                   )}
                 </div>
               </Card>
             )}
 
-            {/* Preview Section */}
-            {previewData.length > 0 && !result && (
-              <Card className="p-4">
-                <h3 className="font-medium mb-2">Prévia dos dados ({previewData.length} de muitos registros)</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-1 px-2">Nome</th>
-                        <th className="text-left py-1 px-2">CPF</th>
-                        <th className="text-left py-1 px-2">Empresa</th>
-                        <th className="text-left py-1 px-2">CNPJ</th>
-                        <th className="text-left py-1 px-2">Função</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.map((row, i) => (
-                        <tr key={i} className="border-b border-muted">
-                          <td className="py-1 px-2 truncate max-w-[150px]">{row.nome}</td>
-                          <td className="py-1 px-2">{row.cpf}</td>
-                          <td className="py-1 px-2 truncate max-w-[150px]">{row.empresa_nome}</td>
-                          <td className="py-1 px-2">{row.cnpj}</td>
-                          <td className="py-1 px-2 truncate max-w-[100px]">{row.funcao || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            )}
-
-            {/* Progress Section */}
-            {isProcessing && (
-              <Card className="p-4">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="font-medium">{progress.message}</span>
-                  </div>
-                  <Progress value={progress.current} max={progress.total} />
-                  <p className="text-sm text-muted-foreground">
-                    Fase: {progress.phase} ({progress.current}%)
-                  </p>
-                </div>
-              </Card>
-            )}
-
-            {/* Results Section */}
-            {result && (
+            {/* Step 2: Preview */}
+            {step === "preview" && previewData && (
               <div className="space-y-4">
-                <Alert className={result.errors.length > 0 ? "border-yellow-500" : "border-green-500"}>
-                  <div className="flex items-center gap-2">
-                    {result.errors.length > 0 ? (
-                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                <Alert>
+                  <Eye className="h-4 w-4" />
+                  <AlertTitle>Preview da Importação</AlertTitle>
+                  <AlertDescription>
+                    Revise os dados antes de confirmar. Arquivo: <strong>{fileName}</strong>
+                  </AlertDescription>
+                </Alert>
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{previewData.summary.total}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                  </Card>
+                  <Card className="p-3 text-center border-green-200 bg-green-50">
+                    <p className="text-2xl font-bold text-green-700">{previewData.summary.toCreate}</p>
+                    <p className="text-xs text-green-600">Criar</p>
+                  </Card>
+                  <Card className="p-3 text-center border-blue-200 bg-blue-50">
+                    <p className="text-2xl font-bold text-blue-700">{previewData.summary.toUpdate}</p>
+                    <p className="text-xs text-blue-600">Atualizar</p>
+                  </Card>
+                  <Card className="p-3 text-center border-gray-200 bg-gray-50">
+                    <p className="text-2xl font-bold text-gray-600">{previewData.summary.toSkip}</p>
+                    <p className="text-xs text-gray-500">Ignorar</p>
+                  </Card>
+                  <Card className="p-3 text-center border-red-200 bg-red-50">
+                    <p className="text-2xl font-bold text-red-700">{previewData.summary.errors}</p>
+                    <p className="text-xs text-red-600">Erros</p>
+                  </Card>
+                </div>
+
+                {/* Preview Table */}
+                <Card className="p-4">
+                  <h3 className="font-medium mb-3">Prévia dos registros</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-2 font-medium">Nome</th>
+                          <th className="text-left py-2 px-2 font-medium">CPF</th>
+                          <th className="text-left py-2 px-2 font-medium">Empresa</th>
+                          <th className="text-left py-2 px-2 font-medium">CNPJ</th>
+                          <th className="text-left py-2 px-2 font-medium">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.records.slice(0, 50).map((record, i) => (
+                          <tr key={i} className={`border-b border-muted ${record.status === "error" ? "bg-red-50" : ""}`}>
+                            <td className="py-2 px-2 truncate max-w-[180px]" title={record.nome}>
+                              {record.nome}
+                            </td>
+                            <td className="py-2 px-2 font-mono text-xs">{record.cpf}</td>
+                            <td className="py-2 px-2 truncate max-w-[180px]" title={record.empresa_nome}>
+                              {record.empresa_nome}
+                            </td>
+                            <td className="py-2 px-2 font-mono text-xs">{record.cnpj}</td>
+                            <td className="py-2 px-2">
+                              {getActionBadge(record)}
+                              {record.error_message && (
+                                <span className="block text-xs text-red-600 mt-1">{record.error_message}</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {previewData.records.length > 50 && (
+                      <p className="text-sm text-muted-foreground mt-2 text-center">
+                        Mostrando 50 de {previewData.records.length} registros
+                      </p>
                     )}
-                    <AlertDescription>
-                      {result.errors.length > 0
-                        ? `Importação concluída com ${result.errors.length} avisos/erros`
-                        : "Importação concluída com sucesso!"}
-                    </AlertDescription>
                   </div>
+                </Card>
+              </div>
+            )}
+
+            {/* Step 3: Importing */}
+            {step === "importing" && (
+              <Card className="p-6">
+                <div className="flex flex-col items-center justify-center gap-4 py-8">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <div className="text-center space-y-2">
+                    <h3 className="font-semibold text-lg">Importando dados...</h3>
+                    <p className="text-sm text-muted-foreground">{importProgress.message}</p>
+                  </div>
+                  <div className="w-full max-w-md">
+                    <Progress value={importProgress.current} />
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Step 4: Results */}
+            {step === "result" && result && (
+              <div className="space-y-4">
+                <Alert className={result.errors.length > 0 ? "border-yellow-500 bg-yellow-50" : "border-green-500 bg-green-50"}>
+                  {result.errors.length > 0 ? (
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
+                  <AlertTitle>
+                    {result.errors.length > 0 
+                      ? `Importação concluída com ${result.errors.length} avisos/erros`
+                      : "Importação concluída com sucesso!"}
+                  </AlertTitle>
                 </Alert>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -392,23 +382,24 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
 
                 {result.errors.length > 0 && (
                   <Card className="p-4">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <h3 className="font-medium text-red-600">Erros ({result.errors.length})</h3>
                       <Button size="sm" variant="outline" onClick={handleExportErrors}>
                         <Download className="h-4 w-4 mr-2" />
-                        Exportar Erros
+                        Exportar CSV
                       </Button>
                     </div>
-                    <ScrollArea className="h-40">
+                    <ScrollArea className="h-48">
                       <div className="space-y-2">
-                        {result.errors.slice(0, 20).map((error, i) => (
+                        {result.errors.slice(0, 30).map((error, i) => (
                           <div key={i} className="text-sm p-2 bg-red-50 rounded border border-red-200">
                             <span className="font-medium">Linha {error.row}:</span> {error.message}
+                            {error.data?.nome && <span className="text-muted-foreground ml-2">({error.data.nome})</span>}
                           </div>
                         ))}
-                        {result.errors.length > 20 && (
-                          <p className="text-sm text-muted-foreground">
-                            E mais {result.errors.length - 20} erros...
+                        {result.errors.length > 30 && (
+                          <p className="text-sm text-muted-foreground text-center">
+                            E mais {result.errors.length - 30} erros. Exporte o CSV para ver todos.
                           </p>
                         )}
                       </div>
@@ -423,30 +414,27 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
         <Separator />
 
         <div className="flex justify-between pt-4">
-          <Button
-            variant="outline"
-            onClick={() => { onOpenChange(false); resetState(); }}
-            disabled={isProcessing}
-          >
-            {result ? "Fechar" : "Cancelar"}
-          </Button>
-          
-          {!result && (
+          <div className="flex gap-2">
             <Button
-              onClick={handleImport}
-              disabled={!fileContent || isProcessing}
+              variant="outline"
+              onClick={() => { onOpenChange(false); resetState(); }}
+              disabled={!canClose}
             >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Importando...
-                </>
-              ) : (
-                <>
-                  <ArrowRight className="h-4 w-4 mr-2" />
-                  Iniciar Importação
-                </>
-              )}
+              {step === "result" ? "Fechar" : "Cancelar"}
+            </Button>
+            
+            {step === "preview" && (
+              <Button variant="ghost" onClick={resetState}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Novo Arquivo
+              </Button>
+            )}
+          </div>
+          
+          {step === "preview" && (
+            <Button onClick={handleConfirmImport} disabled={!previewData || previewData.summary.errors === previewData.summary.total}>
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Confirmar Importação ({previewData?.summary.toCreate || 0} criar, {previewData?.summary.toUpdate || 0} atualizar)
             </Button>
           )}
         </div>
