@@ -33,16 +33,19 @@ interface MemberWithCard {
   id: string;
   name: string;
   email: string | null;
-  phone: string;
+  phone: string | null;
   cpf: string | null;
   birth_date: string | null;
   gender: string | null;
+  // Address fields (DB columns)
   address: string | null;
-  address_number: string | null;
+  street: string | null;
+  street_number: string | null;
+  complement: string | null;
   neighborhood: string | null;
   city: string | null;
   state: string | null;
-  zip_code: string | null;
+  cep: string | null;
   registration_number: string | null;
   card_expires_at: string | null;
 }
@@ -85,8 +88,8 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      // Use date-only string for comparison (YYYY-MM-DD format)
-      const today = new Date().toISOString().split("T")[0];
+      // expires_at is timestamptz; compare using current timestamp
+      const nowIso = new Date().toISOString();
 
       const { data, error } = await supabase
         .from("patients")
@@ -99,18 +102,20 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
           birth_date,
           gender,
           address,
-          address_number,
+          street,
+          street_number,
+          complement,
           neighborhood,
           city,
           state,
-          zip_code,
+          cep,
           registration_number,
           patient_cards!inner(expires_at, is_active)
         `)
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .eq("patient_cards.is_active", true)
-        .gte("patient_cards.expires_at", today)
+        .gte("patient_cards.expires_at", nowIso)
         .order("name");
 
       if (error) throw error;
@@ -124,11 +129,13 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
         birth_date: m.birth_date,
         gender: m.gender,
         address: m.address,
-        address_number: m.address_number,
+        street: m.street,
+        street_number: m.street_number,
+        complement: m.complement,
         neighborhood: m.neighborhood,
         city: m.city,
         state: m.state,
-        zip_code: m.zip_code,
+        cep: m.cep,
         registration_number: m.registration_number,
         card_expires_at: m.patient_cards?.[0]?.expires_at || null,
       }));
@@ -244,10 +251,10 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
         data_nascimento: member.birth_date || "",
         sexo: member.gender,
         email: member.email || "",
-        telefone: member.phone,
-        cep: member.zip_code,
-        logradouro: member.address,
-        numero: member.address_number,
+        telefone: member.phone || "",
+        cep: member.cep,
+        logradouro: member.street || member.address,
+        numero: member.street_number || member.complement,
         bairro: member.neighborhood,
         cidade: member.city,
         uf: member.state,
