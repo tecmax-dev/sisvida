@@ -57,18 +57,27 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
 
       // Check file type
       if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-        // Parse PDF using pdfjs-dist
-        const pdfjsLib = await import("pdfjs-dist");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        // Parse PDF using pdfjs-dist with legacy build (no worker needed)
+        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        
+        // Disable worker to avoid CORS/loading issues
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "";
         
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const loadingTask = pdfjsLib.getDocument({ 
+          data: arrayBuffer,
+          useWorkerFetch: false,
+          isEvalSupported: false,
+          useSystemFonts: true,
+        });
+        
+        const pdf = await loadingTask.promise;
         
         const textParts: string[] = [];
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items
+          const content = await page.getTextContent();
+          const pageText = content.items
             .map((item: any) => item.str)
             .join(" ");
           textParts.push(pageText);
