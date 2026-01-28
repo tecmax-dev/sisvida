@@ -434,23 +434,30 @@ export function useImportExecution(clinicId: string | undefined) {
           }));
           
           try {
+            // Use upsert to handle duplicates gracefully
             const { data: created, error } = await supabase
               .from("patients")
-              .insert(insertBatch as any)
+              .upsert(insertBatch as any, {
+                onConflict: "cpf,clinic_id",
+                ignoreDuplicates: false
+              })
               .select("id, cpf");
             
             if (error) {
-              // Fall back to individual inserts for this batch
-              console.error(`Batch insert error, falling back to individual:`, error);
+              // Fall back to individual upserts for this batch
+              console.error(`Batch upsert error, falling back to individual:`, error);
               for (let j = 0; j < batch.length; j++) {
                 const { cpfKey, firstRecord, employerId } = batch[j];
                 const insertData = insertBatch[j];
                 
                 const { data: single, error: singleError } = await supabase
                   .from("patients")
-                  .insert(insertData as any)
+                  .upsert(insertData as any, {
+                    onConflict: "cpf,clinic_id",
+                    ignoreDuplicates: false
+                  })
                   .select("id")
-                  .single();
+                  .maybeSingle();
                 
                 if (singleError) {
                   importResult.errors.push({
