@@ -90,7 +90,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
       <CardContent>
         <Button 
           onClick={subscribeToWebPush} 
-          disabled={isWebPushLoading || !patientId || !clinicId}
+          disabled={isWebPushLoading || !clinicId}
           className="w-full"
         >
           {isWebPushLoading ? (
@@ -105,7 +105,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
             </>
           )}
         </Button>
-        {(!patientId || !clinicId) && (
+        {!clinicId && (
           <p className="mt-2 text-xs text-muted-foreground text-center">
             Faça login para ativar as notificações
           </p>

@@ -32,8 +32,8 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
   // Register token with backend
   const registerToken = useCallback(async (token: string) => {
-    if (!patientId || !clinicId) {
-      console.log('Web Push: Missing patientId or clinicId');
+    if (!clinicId) {
+      console.log('Web Push: Missing clinicId');
       return false;
     }
 
@@ -43,7 +43,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       const { error } = await supabase
         .from('push_notification_tokens')
         .upsert({
-          patient_id: patientId,
+          patient_id: patientId || null,
           clinic_id: clinicId,
           token: token,
           platform: 'web',
@@ -56,7 +56,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
           },
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: 'patient_id,token',
+          onConflict: 'clinic_id,token',
         });
 
       if (error) {
@@ -74,7 +74,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
   // Subscribe to Web Push
   const subscribe = useCallback(async () => {
-    if (!isSupported || !patientId || !clinicId) {
+    if (!isSupported || !clinicId) {
       return false;
     }
 
@@ -119,19 +119,23 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
   // Initialize and check existing subscription
   useEffect(() => {
-    if (!isSupported || !patientId || !clinicId) return;
+    if (!isSupported || !clinicId) return;
 
     const checkExistingSubscription = async () => {
       try {
-        // Check if already subscribed
-        const { data } = await supabase
+        // Check if already subscribed - for admin context, check by clinic only
+        let query = supabase
           .from('push_notification_tokens')
           .select('id')
-          .eq('patient_id', patientId)
           .eq('clinic_id', clinicId)
           .eq('platform', 'web')
-          .eq('is_active', true)
-          .maybeSingle();
+          .eq('is_active', true);
+        
+        if (patientId) {
+          query = query.eq('patient_id', patientId);
+        }
+        
+        const { data } = await query.maybeSingle();
 
         if (data) {
           setIsSubscribed(true);
