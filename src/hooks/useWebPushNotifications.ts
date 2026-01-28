@@ -74,27 +74,49 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
   // Subscribe to Web Push
   const subscribe = useCallback(async () => {
-    if (!isSupported || !clinicId) {
+    if (!isSupported) {
+      toast.error('Seu navegador não suporta notificações push');
+      return false;
+    }
+    
+    if (!clinicId) {
+      toast.error('Faça login para ativar notificações');
       return false;
     }
 
     setIsLoading(true);
 
     try {
+      // Check current permission state first
+      const currentPermission = Notification.permission;
+      console.log('Web Push: Current permission state:', currentPermission);
+      
+      if (currentPermission === 'denied') {
+        toast.error('Notificações bloqueadas. Acesse as configurações do navegador para permitir.');
+        setIsLoading(false);
+        return false;
+      }
+
       // Request permission
       const permission = await requestNotificationPermission();
+      console.log('Web Push: Permission after request:', permission);
       
       if (permission !== 'granted') {
-        toast.error('Permissão de notificação negada');
+        if (permission === 'denied') {
+          toast.error('Permissão negada. Habilite nas configurações do navegador.');
+        } else {
+          toast.error('Permissão de notificação não concedida');
+        }
         setIsLoading(false);
         return false;
       }
 
       // Get Web Push token
+      console.log('Web Push: Getting FCM token...');
       const token = await getWebPushToken();
       
       if (!token) {
-        toast.error('Erro ao obter token de notificação');
+        toast.error('Erro ao configurar notificações. Verifique a configuração do Firebase.');
         setIsLoading(false);
         return false;
       }
@@ -105,13 +127,16 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       if (success) {
         setIsSubscribed(true);
         toast.success('Notificações ativadas com sucesso!');
+      } else {
+        toast.error('Erro ao salvar configuração de notificações');
       }
 
       setIsLoading(false);
       return success;
     } catch (error) {
       console.error('Web Push: Error subscribing:', error);
-      toast.error('Erro ao ativar notificações');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao ativar notificações: ${errorMessage}`);
       setIsLoading(false);
       return false;
     }
