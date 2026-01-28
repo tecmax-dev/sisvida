@@ -1,11 +1,12 @@
 import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  requestNotificationPermission, 
-  getWebPushToken, 
-  onForegroundMessage,
-  initializeMessaging
-} from '@/lib/firebase';
+  initializeOneSignal,
+  subscribeToNotifications,
+  isSubscribed as checkIsSubscribed,
+  setExternalUserId,
+  addTags,
+} from '@/lib/onesignal';
 import { toast } from 'sonner';
 
 interface UseWebPushNotificationsOptions {
@@ -24,20 +25,21 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       const supported = 
         'serviceWorker' in navigator && 
         'PushManager' in window && 
-        'Notification' in window;
+        'Notification' in window &&
+        !!import.meta.env.VITE_ONESIGNAL_APP_ID;
       setIsSupported(supported);
     };
     checkSupport();
   }, []);
 
   // Register token with backend
-  const registerToken = useCallback(async (token: string) => {
+  const registerToken = useCallback(async (playerId: string) => {
     if (!clinicId) {
-      console.log('Web Push: Missing clinicId');
+      console.log('OneSignal: Missing clinicId');
       return false;
     }
 
-    console.log('Web Push: Registering token...', token.substring(0, 20) + '...');
+    console.log('OneSignal: Registering Player ID...', playerId.substring(0, 20) + '...');
 
     try {
       const { error } = await supabase
@@ -45,14 +47,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         .upsert({
           patient_id: patientId || null,
           clinic_id: clinicId,
-          token: token,
+          token: playerId,
           platform: 'web',
           is_active: true,
           device_info: {
             platform: 'web',
             isNative: false,
             userAgent: navigator.userAgent,
-            type: 'web-push'
+            type: 'onesignal-web'
           },
           updated_at: new Date().toISOString(),
         }, {
@@ -60,14 +62,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         });
 
       if (error) {
-        console.error('Web Push: Error registering token:', error);
+        console.error('OneSignal: Error registering token:', error);
         return false;
       }
       
-      console.log('Web Push: Token registered successfully');
+      console.log('OneSignal: Token registered successfully');
       return true;
     } catch (err) {
-      console.error('Web Push: Exception registering token:', err);
+      console.error('OneSignal: Exception registering token:', err);
       return false;
     }
   }, [patientId, clinicId]);
@@ -89,7 +91,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
     try {
       // Check current permission state first
       const currentPermission = Notification.permission;
-      console.log('Web Push: Current permission state:', currentPermission);
+      console.log('OneSignal: Current permission state:', currentPermission);
       
       if (currentPermission === 'denied') {
         toast.error('Notificações bloqueadas. Acesse as configurações do navegador para permitir.');
@@ -97,32 +99,43 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         return false;
       }
 
-      // Request permission
-      const permission = await requestNotificationPermission();
-      console.log('Web Push: Permission after request:', permission);
+      // Initialize OneSignal
+      const initialized = await initializeOneSignal();
+      if (!initialized) {
+        toast.error('Erro ao inicializar serviço de notificações');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Subscribe to push notifications
+      console.log('OneSignal: Subscribing to notifications...');
+      const playerId = await subscribeToNotifications();
       
-      if (permission !== 'granted') {
+      if (!playerId) {
+        const permission = Notification.permission;
         if (permission === 'denied') {
           toast.error('Permissão negada. Habilite nas configurações do navegador.');
         } else {
-          toast.error('Permissão de notificação não concedida');
+          toast.error('Erro ao ativar notificações. Tente novamente.');
         }
         setIsLoading(false);
         return false;
       }
 
-      // Get Web Push token
-      console.log('Web Push: Getting FCM token...');
-      const token = await getWebPushToken();
-      
-      if (!token) {
-        toast.error('Erro ao configurar notificações. Verifique a configuração do Firebase.');
-        setIsLoading(false);
-        return false;
+      // Set external user ID for targeting
+      if (patientId) {
+        await setExternalUserId(patientId);
       }
 
+      // Add tags for segmentation
+      await addTags({
+        clinic_id: clinicId,
+        ...(patientId && { patient_id: patientId }),
+        platform: 'web',
+      });
+
       // Register with backend
-      const success = await registerToken(token);
+      const success = await registerToken(playerId);
       
       if (success) {
         setIsSubscribed(true);
@@ -134,7 +147,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       setIsLoading(false);
       return success;
     } catch (error) {
-      console.error('Web Push: Error subscribing:', error);
+      console.error('OneSignal: Error subscribing:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast.error(`Erro ao ativar notificações: ${errorMessage}`);
       setIsLoading(false);
@@ -148,7 +161,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
     const checkExistingSubscription = async () => {
       try {
-        // Check if already subscribed - for admin context, check by clinic only
+        // First check in database
         let query = supabase
           .from('push_notification_tokens')
           .select('id')
@@ -163,7 +176,10 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         const { data } = await query.maybeSingle();
 
         if (data) {
-          setIsSubscribed(true);
+          // Also verify with OneSignal
+          await initializeOneSignal();
+          const subscribed = await checkIsSubscribed();
+          setIsSubscribed(subscribed || !!data);
         }
       } catch (error) {
         console.error('Error checking subscription:', error);
@@ -172,38 +188,6 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
     checkExistingSubscription();
   }, [isSupported, patientId, clinicId]);
-
-  // Set up foreground message handler
-  useEffect(() => {
-    if (!isSubscribed) return;
-
-    const initMessages = async () => {
-      await initializeMessaging();
-      
-      const unsubscribe = onForegroundMessage((payload) => {
-        // Show toast for foreground notifications
-        const title = payload.notification?.title || 'Nova notificação';
-        const body = payload.notification?.body || '';
-        
-        toast.info(title, {
-          description: body,
-          duration: 5000,
-        });
-      });
-
-      return unsubscribe;
-    };
-
-    let cleanup: (() => void) | null = null;
-    
-    initMessages().then(unsub => {
-      cleanup = unsub;
-    });
-
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, [isSubscribed]);
 
   return {
     isSupported,
