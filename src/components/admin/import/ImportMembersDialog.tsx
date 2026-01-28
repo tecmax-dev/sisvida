@@ -43,26 +43,135 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
   
   const { processImport, isProcessing, progress, result } = useImportMembersEmployers(currentClinic?.id);
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setFileName(file.name);
+    setIsLoading(true);
 
-    // Check file type
-    if (file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
-      const text = await file.text();
-      setFileContent(text);
+    try {
+      let textContent = "";
+
+      // Check file type
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        // Parse PDF using pdfjs-dist
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        
+        const textParts: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(" ");
+          textParts.push(pageText);
+        }
+        
+        // Convert to markdown table format
+        textContent = convertPdfTextToMarkdown(textParts.join("\n"));
+        toast.info(`PDF processado: ${pdf.numPages} páginas`);
+      } else if (file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
+        textContent = await file.text();
+      } else {
+        toast.error("Por favor, selecione um arquivo PDF ou texto (.txt, .md)");
+        setIsLoading(false);
+        return;
+      }
+
+      setFileContent(textContent);
       
       // Parse preview
       const { parsePdfTableData } = await import("./parsePdfData");
-      const records = parsePdfTableData(text);
+      const records = parsePdfTableData(textContent);
       setPreviewData(records.slice(0, 10));
       
-      toast.success(`${records.length} registros identificados`);
-    } else {
-      toast.error("Por favor, selecione um arquivo de texto (.txt ou .md) com os dados parseados do PDF");
+      if (records.length > 0) {
+        toast.success(`${records.length} registros identificados`);
+      } else {
+        toast.warning("Nenhum registro válido encontrado. Verifique o formato do arquivo.");
+      }
+    } catch (error) {
+      console.error("Error parsing file:", error);
+      toast.error("Erro ao processar o arquivo. Verifique se o arquivo é válido.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // Convert raw PDF text to markdown table format for parsing
+  const convertPdfTextToMarkdown = (rawText: string): string => {
+    // Split by lines and try to identify table rows
+    const lines = rawText.split(/[\n\r]+/).filter(line => line.trim());
+    const markdownLines: string[] = [];
+    
+    // Add header
+    markdownLines.push("| Nome Sócio | CPF | RG | Empresas | CNPJ | Função | Data inscrição | Data admissão |");
+    markdownLines.push("| --- | --- | --- | --- | --- | --- | --- | --- |");
+    
+    // Pattern to match CPF (XXX.XXX.XXX-XX or 11 digits)
+    const cpfPattern = /(\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s]?\d{2})/g;
+    // Pattern to match CNPJ (XX.XXX.XXX/XXXX-XX or 14 digits)
+    const cnpjPattern = /(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-.\s]?\d{2})/g;
+    // Pattern to match dates (DD/MM/YYYY)
+    const datePattern = /(\d{2}\/\d{2}\/\d{4})/g;
+
+    // Try to extract structured data from raw text
+    let currentLine = "";
+    for (const line of lines) {
+      currentLine += " " + line;
+      
+      // Check if line contains both CPF and CNPJ
+      const cpfMatches = currentLine.match(cpfPattern);
+      const cnpjMatches = currentLine.match(cnpjPattern);
+      const dateMatches = currentLine.match(datePattern);
+      
+      if (cpfMatches && cnpjMatches) {
+        // Try to extract name (text before CPF)
+        const cpfIndex = currentLine.indexOf(cpfMatches[0]);
+        const name = currentLine.substring(0, cpfIndex).trim();
+        
+        if (name && name.length > 2) {
+          // Extract other fields
+          const cpf = cpfMatches[0];
+          const cnpj = cnpjMatches[0];
+          const dates = dateMatches || [];
+          
+          // Find RG (between CPF and company name)
+          const afterCpf = currentLine.substring(cpfIndex + cpf.length);
+          const rgMatch = afterCpf.match(/^[\s]*(\d{7,12})/);
+          const rg = rgMatch ? rgMatch[1] : "";
+          
+          // Find company name (text between RG/CPF and CNPJ)
+          const cnpjIndex = currentLine.indexOf(cnpj);
+          let companyName = currentLine.substring(cpfIndex + cpf.length, cnpjIndex);
+          if (rg) companyName = companyName.replace(rg, "");
+          companyName = companyName.replace(/^\s+|\s+$/g, "").replace(/\s+/g, " ");
+          
+          // Find function (text after CNPJ before dates)
+          let afterCnpj = currentLine.substring(cnpjIndex + cnpj.length);
+          let funcao = "";
+          if (dates.length > 0) {
+            const dateIndex = afterCnpj.indexOf(dates[0]);
+            funcao = afterCnpj.substring(0, dateIndex).trim();
+          }
+          
+          const dataInscricao = dates[0] || "";
+          const dataAdmissao = dates[1] || "";
+          
+          markdownLines.push(`| ${name} | ${cpf} | ${rg} | ${companyName} | ${cnpj} | ${funcao} | ${dataInscricao} | ${dataAdmissao} |`);
+          currentLine = "";
+        }
+      }
+    }
+    
+    return markdownLines.join("\n");
   };
 
   const handleImport = async () => {
@@ -140,29 +249,38 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">
-                      Selecione o arquivo de texto com os dados parseados do PDF
+                      Selecione o arquivo PDF ou texto com a lista de sócios
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Formato esperado: tabela markdown com colunas Nome, CPF, RG, Empresa, CNPJ, Função, Data inscrição, Data admissão
+                      Formato: tabela com Nome, CPF, RG, Empresa, CNPJ, Função, Datas
                     </p>
                   </div>
                   
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".txt,.md"
+                    accept=".pdf,.txt,.md"
                     onChange={handleFileChange}
                     className="hidden"
-                    disabled={isProcessing}
+                    disabled={isProcessing || isLoading}
                   />
                   
                   <Button
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isProcessing}
+                    disabled={isProcessing || isLoading}
                     variant="outline"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Selecionar Arquivo
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Selecionar PDF ou Texto
+                      </>
+                    )}
                   </Button>
                   
                   {fileName && (
