@@ -19,6 +19,21 @@ interface CnpjLookupResult {
   cnae_fiscal_descricao?: string;
 }
 
+function normalizeDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function pickEmployerName(params: {
+  rfData?: CnpjLookupResult | null;
+  fallbackFromPdf?: string;
+  fallbackFromDb?: string | null;
+}): string {
+  const fromRf = params.rfData?.razao_social || params.rfData?.nome_fantasia || "";
+  const fromDb = params.fallbackFromDb || "";
+  const fromPdf = params.fallbackFromPdf || "";
+  return (fromRf || fromDb || fromPdf || "Empresa").trim();
+}
+
 async function lookupCnpjFromReceitaFederal(cnpj: string): Promise<CnpjLookupResult | null> {
   try {
     const { data, error } = await supabase.functions.invoke<CnpjLookupResult>('lookup-cnpj', {
@@ -86,20 +101,32 @@ export function useImportExecution(clinicId: string | undefined) {
       // Phase 1: Create missing employers (with Receita Federal lookup)
       setProgress({ current: 10, total: 100, phase: "importing_employers", message: "Criando empresas..." });
 
-      const uniqueCnpjs = [...new Set(recordsToProcess.map(r => r.cnpj.replace(/\D/g, "")))];
+      const uniqueCnpjs = [...new Set(recordsToProcess.map(r => normalizeDigits(r.cnpj)))];
       const employerIdMap = new Map<string, string>();
+      const employerNameByCnpj = new Map<string, string>();
+      const employerTradeNameByCnpj = new Map<string, string | null>();
+      const rfCache = new Map<string, CnpjLookupResult | null>();
+
+      const getRfData = async (cnpjDigits: string): Promise<CnpjLookupResult | null> => {
+        if (rfCache.has(cnpjDigits)) return rfCache.get(cnpjDigits) ?? null;
+        const data = await lookupCnpjFromReceitaFederal(cnpjDigits);
+        rfCache.set(cnpjDigits, data);
+        return data;
+      };
 
       // Get existing employers - fetch all and filter by normalized CNPJ
       const { data: allEmployers } = await supabase
         .from("employers")
-        .select("id, cnpj")
+        .select("id, cnpj, name, trade_name")
         .eq("clinic_id", clinicId);
 
       (allEmployers || []).forEach(e => {
         if (e.cnpj) {
-          const normalizedCnpj = e.cnpj.replace(/\D/g, "");
+          const normalizedCnpj = normalizeDigits(e.cnpj);
           if (uniqueCnpjs.includes(normalizedCnpj)) {
             employerIdMap.set(normalizedCnpj, e.id);
+            if (e.name) employerNameByCnpj.set(normalizedCnpj, e.name);
+            employerTradeNameByCnpj.set(normalizedCnpj, (e as any).trade_name ?? null);
             importResult.employersSkipped++;
           }
         }
@@ -110,7 +137,7 @@ export function useImportExecution(clinicId: string | undefined) {
       
       for (let i = 0; i < cnpjsToCreate.length; i++) {
         const cnpj = cnpjsToCreate[i];
-        const record = recordsToProcess.find(r => r.cnpj.replace(/\D/g, "") === cnpj);
+        const record = recordsToProcess.find(r => normalizeDigits(r.cnpj) === cnpj);
         
         if (!record) continue;
 
@@ -122,13 +149,17 @@ export function useImportExecution(clinicId: string | undefined) {
         });
 
         // Lookup CNPJ in Receita Federal
-        const rfData = await lookupCnpjFromReceitaFederal(cnpj);
+        const rfData = await getRfData(cnpj);
 
         // Build employer data - prioritize Receita Federal data, fallback to PDF data
+        const resolvedEmployerName = pickEmployerName({
+          rfData,
+          fallbackFromPdf: record.empresa_nome,
+        });
         const employerData = {
           clinic_id: clinicId,
           cnpj: cnpj,
-          name: rfData?.razao_social || record.empresa_nome,
+          name: resolvedEmployerName,
           trade_name: rfData?.nome_fantasia || null,
           is_active: true,
           cep: rfData?.cep ? rfData.cep.replace(/\D/g, "").replace(/^(\d{5})(\d{3})$/, "$1-$2") : null,
@@ -159,6 +190,8 @@ export function useImportExecution(clinicId: string | undefined) {
           });
         } else if (newEmployer) {
           employerIdMap.set(cnpj, newEmployer.id);
+          employerNameByCnpj.set(cnpj, resolvedEmployerName);
+          employerTradeNameByCnpj.set(cnpj, rfData?.nome_fantasia || null);
           importResult.employersCreated++;
         }
       }
@@ -189,8 +222,20 @@ export function useImportExecution(clinicId: string | undefined) {
           message: `Processando sócio ${i + 1}/${cpfEntries.length}...`,
         });
 
-        const cnpjKey = firstRecord.cnpj.replace(/\D/g, "");
+        const cnpjKey = normalizeDigits(firstRecord.cnpj);
         const employerId = employerIdMap.get(cnpjKey);
+
+        // Ensure we have a name to persist on the member record (patients.employer_name)
+        let employerName = employerNameByCnpj.get(cnpjKey);
+        if (!employerName) {
+          const rfData = await getRfData(cnpjKey);
+          employerName = pickEmployerName({
+            rfData,
+            fallbackFromDb: employerNameByCnpj.get(cnpjKey) ?? null,
+            fallbackFromPdf: firstRecord.empresa_nome,
+          });
+          if (employerName) employerNameByCnpj.set(cnpjKey, employerName);
+        }
 
         if (firstRecord.action === "skip" || firstRecord.status === "will_skip") {
           importResult.membersSkipped++;
@@ -205,6 +250,7 @@ export function useImportExecution(clinicId: string | undefined) {
             .from("patients")
             .update({
               employer_cnpj: cnpjKey,
+              employer_name: employerName || null,
               profession: firstRecord.funcao || undefined,
               is_union_member: true,
               union_joined_at: firstRecord.data_inscricao || undefined,
@@ -236,6 +282,7 @@ export function useImportExecution(clinicId: string | undefined) {
               rg: firstRecord.rg || undefined,
               phone: "00000000000", // Required field - placeholder
               employer_cnpj: cnpjKey,
+              employer_name: employerName || null,
               profession: firstRecord.funcao || undefined,
               is_active: true,
               is_union_member: true,

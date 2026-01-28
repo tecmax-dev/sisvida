@@ -60,10 +60,19 @@ export function useImportPreview(clinicId: string | undefined) {
       // This is necessary because CPFs might be stored with or without formatting
       const { data: allPatients } = await supabase
         .from("patients")
-        .select("id, cpf, name, employer_cnpj, is_union_member")
+        .select("id, cpf, name, employer_cnpj, employer_name, is_union_member")
         .eq("clinic_id", clinicId);
 
-      const patientMap = new Map<string, { id: string; name: string; employer_cnpj: string | null; is_union_member: boolean }>();
+      const patientMap = new Map<
+        string,
+        {
+          id: string;
+          name: string;
+          employer_cnpj: string | null;
+          employer_name: string | null;
+          is_union_member: boolean;
+        }
+      >();
       (allPatients || []).forEach(p => {
         if (p.cpf) {
           const normalizedCpf = p.cpf.replace(/\D/g, "");
@@ -72,6 +81,7 @@ export function useImportPreview(clinicId: string | undefined) {
               id: p.id, 
               name: p.name, 
               employer_cnpj: p.employer_cnpj,
+              employer_name: (p as any).employer_name || null,
               is_union_member: p.is_union_member || false,
             });
           }
@@ -124,12 +134,13 @@ export function useImportPreview(clinicId: string | undefined) {
           errorMessage = "Nome inválido";
         }
         // Determine action
-        else if (existingPatient) {
+          else if (existingPatient) {
           // Normalize stored employer_cnpj for comparison
           const storedEmployerCnpj = existingPatient.employer_cnpj?.replace(/\D/g, "") || "";
+            const hasEmployerName = !!existingPatient.employer_name && existingPatient.employer_name.trim().length > 0;
           
-          // Check if needs update: different employer OR not yet a union member
-          if (storedEmployerCnpj !== cnpjKey || !existingPatient.is_union_member) {
+            // Check if needs update: different employer OR not yet a union member OR employer name missing
+            if (storedEmployerCnpj !== cnpjKey || !existingPatient.is_union_member || !hasEmployerName) {
             status = "will_update";
             action = "update";
           } else {
