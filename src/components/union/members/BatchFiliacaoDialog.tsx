@@ -38,7 +38,6 @@ interface MemberWithCard {
   birth_date: string | null;
   gender: string | null;
   // Address fields (DB columns)
-  address: string | null;
   street: string | null;
   street_number: string | null;
   complement: string | null;
@@ -101,7 +100,6 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
           cpf,
           birth_date,
           gender,
-          address,
           street,
           street_number,
           complement,
@@ -128,7 +126,6 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
         cpf: m.cpf,
         birth_date: m.birth_date,
         gender: m.gender,
-        address: m.address,
         street: m.street,
         street_number: m.street_number,
         complement: m.complement,
@@ -253,8 +250,8 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
         email: member.email || "",
         telefone: member.phone || "",
         cep: member.cep,
-        logradouro: member.street || member.address,
-        numero: member.street_number || member.complement,
+        logradouro: member.street,
+        numero: member.street_number,
         bairro: member.neighborhood,
         cidade: member.city,
         uf: member.state,
