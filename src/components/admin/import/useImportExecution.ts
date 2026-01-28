@@ -2,6 +2,41 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImportedMember, ImportResult, ProcessingProgress, PreviewData } from "./types";
 
+interface CnpjLookupResult {
+  ok: boolean;
+  error?: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  municipio?: string;
+  uf?: string;
+  cep?: string;
+  telefone?: string;
+  email?: string;
+  cnae_fiscal?: number | null;
+  cnae_fiscal_descricao?: string;
+}
+
+async function lookupCnpjFromReceitaFederal(cnpj: string): Promise<CnpjLookupResult | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke<CnpjLookupResult>('lookup-cnpj', {
+      body: { cnpj }
+    });
+
+    if (error || !data?.ok) {
+      console.warn(`CNPJ lookup failed for ${cnpj}:`, data?.error || error?.message);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error(`Error looking up CNPJ ${cnpj}:`, err);
+    return null;
+  }
+}
+
 export function useImportExecution(clinicId: string | undefined) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<ProcessingProgress>({
@@ -48,14 +83,13 @@ export function useImportExecution(clinicId: string | undefined) {
         importResult.processedRecords.push(record);
       });
 
-      // Phase 1: Create missing employers
+      // Phase 1: Create missing employers (with Receita Federal lookup)
       setProgress({ current: 10, total: 100, phase: "importing_employers", message: "Criando empresas..." });
 
       const uniqueCnpjs = [...new Set(recordsToProcess.map(r => r.cnpj.replace(/\D/g, "")))];
       const employerIdMap = new Map<string, string>();
 
       // Get existing employers - fetch all and filter by normalized CNPJ
-      // This handles both formatted and unformatted CNPJs in the database
       const { data: allEmployers } = await supabase
         .from("employers")
         .select("id, cnpj")
@@ -71,7 +105,7 @@ export function useImportExecution(clinicId: string | undefined) {
         }
       });
 
-      // Create missing employers
+      // Create missing employers with Receita Federal data
       const cnpjsToCreate = uniqueCnpjs.filter(cnpj => !employerIdMap.has(cnpj));
       
       for (let i = 0; i < cnpjsToCreate.length; i++) {
@@ -84,17 +118,35 @@ export function useImportExecution(clinicId: string | undefined) {
           current: 10 + Math.floor((i / cnpjsToCreate.length) * 20),
           total: 100,
           phase: "importing_employers",
-          message: `Criando empresa ${i + 1}/${cnpjsToCreate.length}...`,
+          message: `Consultando CNPJ ${i + 1}/${cnpjsToCreate.length} na Receita Federal...`,
         });
+
+        // Lookup CNPJ in Receita Federal
+        const rfData = await lookupCnpjFromReceitaFederal(cnpj);
+
+        // Build employer data - prioritize Receita Federal data, fallback to PDF data
+        const employerData = {
+          clinic_id: clinicId,
+          cnpj: cnpj,
+          name: rfData?.razao_social || record.empresa_nome,
+          trade_name: rfData?.nome_fantasia || null,
+          is_active: true,
+          cep: rfData?.cep ? rfData.cep.replace(/\D/g, "").replace(/^(\d{5})(\d{3})$/, "$1-$2") : null,
+          address: rfData?.logradouro 
+            ? (rfData.numero ? `${rfData.logradouro}, ${rfData.numero}` : rfData.logradouro)
+            : null,
+          neighborhood: rfData?.bairro || null,
+          city: rfData?.municipio || null,
+          state: rfData?.uf || null,
+          phone: rfData?.telefone || null,
+          email: rfData?.email?.toLowerCase() || null,
+          cnae_code: rfData?.cnae_fiscal ? String(rfData.cnae_fiscal) : null,
+          cnae_description: rfData?.cnae_fiscal_descricao || null,
+        };
 
         const { data: newEmployer, error } = await supabase
           .from("employers")
-          .insert({
-            clinic_id: clinicId,
-            cnpj: cnpj,
-            name: record.empresa_nome,
-            is_active: true,
-          })
+          .insert(employerData)
           .select("id")
           .single();
 
