@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAllEmployers, fetchAllPatients } from "@/lib/supabase-helpers";
 import { ImportedMember, PreviewData, ProcessingProgress } from "./types";
 import { extractTextFromPdf, parseExtractedText } from "./pdfTextExtractor";
 import { parseXlsxFile, ParsedXlsxRecord } from "./xlsxParser";
@@ -106,12 +106,25 @@ export function useImportPreview(clinicId: string | undefined) {
       const uniqueCpfs = [...new Set(parsedRecords.map(r => r.cpf.replace(/\D/g, "")))];
       const uniqueCnpjs = [...new Set(parsedRecords.map(r => r.cnpj.replace(/\D/g, "")))];
 
-      // Check existing patients - fetch all patients and filter by normalized CPF
+      // Check existing patients - fetch ALL patients (no 1000-row truncation) and filter by normalized CPF
       // This is necessary because CPFs might be stored with or without formatting
-      const { data: allPatients } = await supabase
-        .from("patients")
-        .select("id, cpf, name, employer_cnpj, employer_name, is_union_member")
-        .eq("clinic_id", clinicId);
+      const patientsResult = await fetchAllPatients<{
+        id: string;
+        cpf: string | null;
+        name: string;
+        employer_cnpj: string | null;
+        employer_name: string | null;
+        is_union_member: boolean | null;
+      }>(clinicId, {
+        select: "id, cpf, name, employer_cnpj, employer_name, is_union_member",
+        activeOnly: false,
+      });
+
+      if (patientsResult.error) {
+        throw new Error("Erro ao carregar sócios existentes para validação");
+      }
+
+      const allPatients = patientsResult.data;
 
       const patientMap = new Map<
         string,
@@ -138,11 +151,21 @@ export function useImportPreview(clinicId: string | undefined) {
         }
       });
 
-      // Check existing employers - fetch all and filter by normalized CNPJ
-      const { data: allEmployers } = await supabase
-        .from("employers")
-        .select("id, cnpj, name")
-        .eq("clinic_id", clinicId);
+      // Check existing employers - fetch ALL (no 1000-row truncation) and filter by normalized CNPJ
+      const employersResult = await fetchAllEmployers<{
+        id: string;
+        cnpj: string;
+        name: string;
+      }>(clinicId, {
+        select: "id, cnpj, name",
+        activeOnly: false,
+      });
+
+      if (employersResult.error) {
+        throw new Error("Erro ao carregar empresas existentes para validação");
+      }
+
+      const allEmployers = employersResult.data;
 
       const employerMap = new Map<string, { id: string; name: string }>();
       (allEmployers || []).forEach(e => {
