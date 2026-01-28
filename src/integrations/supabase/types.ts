@@ -7072,7 +7072,7 @@ export type Database = {
           no_show_unblocked_by: string | null
           notes: string | null
           password_hash: string | null
-          phone: string
+          phone: string | null
           photo_url: string | null
           preferred_channel: string | null
           priority: string | null
@@ -7136,7 +7136,7 @@ export type Database = {
           no_show_unblocked_by?: string | null
           notes?: string | null
           password_hash?: string | null
-          phone: string
+          phone?: string | null
           photo_url?: string | null
           preferred_channel?: string | null
           priority?: string | null
@@ -7200,7 +7200,7 @@ export type Database = {
           no_show_unblocked_by?: string | null
           notes?: string | null
           password_hash?: string | null
-          phone?: string
+          phone?: string | null
           photo_url?: string | null
           preferred_channel?: string | null
           priority?: string | null
