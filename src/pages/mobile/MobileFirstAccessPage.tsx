@@ -298,7 +298,7 @@ export default function MobileFirstAccessPage() {
     
     try {
       // Usar RPC para definir a senha diretamente (já que validamos a data de nascimento)
-      const { error } = await supabase.rpc('set_patient_password_direct', {
+      const { error } = await supabase.rpc('set_patient_password_direct' as any, {
         p_patient_id: patientData.id,
         p_password: password
       });
