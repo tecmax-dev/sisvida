@@ -22,12 +22,36 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
   // Check if Web Push is supported
   useEffect(() => {
     const checkSupport = () => {
-      const supported = 
-        'serviceWorker' in navigator && 
-        'PushManager' in window && 
-        'Notification' in window &&
-        !!import.meta.env.VITE_ONESIGNAL_APP_ID;
-      setIsSupported(supported);
+      const hasServiceWorker = 'serviceWorker' in navigator;
+      const hasPushManager = 'PushManager' in window;
+      const hasNotification = 'Notification' in window;
+      const hasAppId = !!import.meta.env.VITE_ONESIGNAL_APP_ID;
+      
+      console.log('Web Push Support Check:', {
+        serviceWorker: hasServiceWorker,
+        pushManager: hasPushManager,
+        notification: hasNotification,
+        oneSignalAppId: hasAppId,
+        appIdValue: import.meta.env.VITE_ONESIGNAL_APP_ID ? 'configured' : 'missing'
+      });
+      
+      // Check browser support separately from OneSignal config
+      const browserSupported = hasServiceWorker && hasPushManager && hasNotification;
+      
+      if (!browserSupported) {
+        console.warn('Web Push: Browser does not support push notifications');
+        setIsSupported(false);
+        return;
+      }
+      
+      if (!hasAppId) {
+        console.warn('Web Push: VITE_ONESIGNAL_APP_ID not configured');
+        // Still mark as supported so we can show a better error message
+        setIsSupported(false);
+        return;
+      }
+      
+      setIsSupported(true);
     };
     checkSupport();
   }, []);
