@@ -19,6 +19,14 @@ interface CnpjLookupResult {
   cnae_fiscal_descricao?: string;
 }
 
+interface AuditLogEntry {
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  details: Record<string, unknown>;
+  timestamp: string;
+}
+
 function normalizeDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
@@ -75,6 +83,29 @@ async function lookupCnpjFromReceitaFederal(cnpj: string): Promise<CnpjLookupRes
   }
 }
 
+async function logAuditAction(
+  userId: string | null,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  details: Record<string, unknown>
+): Promise<void> {
+  if (!userId) return;
+  
+  try {
+    await supabase.from('audit_logs').insert({
+      user_id: userId,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details: JSON.parse(JSON.stringify(details)),
+      user_agent: navigator.userAgent,
+    });
+  } catch (error) {
+    console.error('Failed to log audit action:', error);
+  }
+}
+
 export function useImportExecution(clinicId: string | undefined) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<ProcessingProgress>({
@@ -84,14 +115,50 @@ export function useImportExecution(clinicId: string | undefined) {
     message: "",
   });
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+
+  const addAuditEntry = useCallback((entry: Omit<AuditLogEntry, 'timestamp'>) => {
+    const fullEntry: AuditLogEntry = {
+      ...entry,
+      timestamp: new Date().toISOString(),
+    };
+    setAuditLog(prev => [...prev, fullEntry]);
+    console.log(`[AUDIT] ${entry.action}:`, entry.details);
+    return fullEntry;
+  }, []);
 
   const executeImport = useCallback(async (previewData: PreviewData): Promise<ImportResult> => {
     if (!clinicId) {
       throw new Error("Clínica não identificada");
     }
 
+    // Get current user for audit logging
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
+
     setIsProcessing(true);
     setResult(null);
+    setAuditLog([]);
+
+    // Log import start
+    addAuditEntry({
+      action: 'import_started',
+      entity_type: 'bulk_import',
+      details: {
+        clinic_id: clinicId,
+        total_records: previewData.records.length,
+        to_create: previewData.summary.toCreate,
+        to_update: previewData.summary.toUpdate,
+        to_skip: previewData.summary.toSkip,
+        validation_errors: previewData.summary.errors,
+      },
+    });
+
+    // Log to database
+    await logAuditAction(userId, 'bulk_import_started', 'system', clinicId, {
+      total_records: previewData.records.length,
+      summary: previewData.summary,
+    });
 
     const importResult: ImportResult = {
       totalRecords: previewData.records.length,
@@ -212,6 +279,11 @@ export function useImportExecution(clinicId: string | undefined) {
 
           if (error) {
             console.error(`Error creating employer ${cnpj}:`, error);
+            addAuditEntry({
+              action: 'employer_create_failed',
+              entity_type: 'employer',
+              details: { cnpj, error: error.message, attempted_name: record.empresa_nome },
+            });
             importResult.errors.push({
               row: recordsToProcess.indexOf(record) + 1,
               field: "employer",
@@ -219,17 +291,29 @@ export function useImportExecution(clinicId: string | undefined) {
               data: { cnpj, name: record.empresa_nome },
             });
           } else if (newEmployer) {
+            addAuditEntry({
+              action: 'employer_created',
+              entity_type: 'employer',
+              entity_id: newEmployer.id,
+              details: { cnpj, name: resolvedEmployerName, rf_data_available: !!rfData },
+            });
             employerIdMap.set(cnpj, newEmployer.id);
             employerNameByCnpj.set(cnpj, resolvedEmployerName);
             employerTradeNameByCnpj.set(cnpj, rfData?.nome_fantasia || null);
             importResult.employersCreated++;
           }
         } catch (employerError) {
+          const errorMsg = employerError instanceof Error ? employerError.message : "Erro desconhecido";
           console.error(`Unhandled error processing employer ${cnpj}:`, employerError);
+          addAuditEntry({
+            action: 'employer_process_exception',
+            entity_type: 'employer',
+            details: { cnpj, error: errorMsg, stack: employerError instanceof Error ? employerError.stack : undefined },
+          });
           importResult.errors.push({
             row: recordsToProcess.indexOf(record) + 1,
             field: "employer",
-            message: `Erro inesperado: ${employerError instanceof Error ? employerError.message : "Erro desconhecido"}`,
+            message: `Erro inesperado: ${errorMsg}`,
             data: { cnpj, name: record.empresa_nome },
           });
           // Continue to next employer instead of stopping
@@ -318,6 +402,12 @@ export function useImportExecution(clinicId: string | undefined) {
 
             if (error) {
               console.error(`Error updating member ${cpfKey}:`, error);
+              addAuditEntry({
+                action: 'member_update_failed',
+                entity_type: 'patient',
+                entity_id: firstRecord.patient_id,
+                details: { cpf: cpfKey, error: error.message, attempted_update: updateData },
+              });
               importResult.errors.push({
                 row: i + 1,
                 field: "member",
@@ -327,6 +417,12 @@ export function useImportExecution(clinicId: string | undefined) {
               firstRecord.status = "error";
               firstRecord.error_message = error.message;
             } else {
+              addAuditEntry({
+                action: 'member_updated',
+                entity_type: 'patient',
+                entity_id: firstRecord.patient_id,
+                details: { cpf: cpfKey, name: firstRecord.nome, employer_cnpj: cnpjKey, fields_updated: Object.keys(updateData) },
+              });
               importResult.membersUpdated++;
               firstRecord.status = "updated";
               firstRecord.employer_id = employerId;
@@ -366,6 +462,11 @@ export function useImportExecution(clinicId: string | undefined) {
 
             if (error) {
               console.error(`Error creating member ${cpfKey}:`, error);
+              addAuditEntry({
+                action: 'member_create_failed',
+                entity_type: 'patient',
+                details: { cpf: cpfKey, name: firstRecord.nome, error: error.message },
+              });
               importResult.errors.push({
                 row: i + 1,
                 field: "member",
@@ -375,6 +476,12 @@ export function useImportExecution(clinicId: string | undefined) {
               firstRecord.status = "error";
               firstRecord.error_message = error.message;
             } else if (newPatient) {
+              addAuditEntry({
+                action: 'member_created',
+                entity_type: 'patient',
+                entity_id: newPatient.id,
+                details: { cpf: cpfKey, name: firstRecord.nome, employer_cnpj: cnpjKey },
+              });
               importResult.membersCreated++;
               firstRecord.status = "created";
               firstRecord.patient_id = newPatient.id;
@@ -384,27 +491,73 @@ export function useImportExecution(clinicId: string | undefined) {
 
           importResult.processedRecords.push(firstRecord);
         } catch (memberError) {
+          const errorMsg = memberError instanceof Error ? memberError.message : "Erro desconhecido";
           console.error(`Unhandled error processing member ${cpfKey}:`, memberError);
+          addAuditEntry({
+            action: 'member_process_exception',
+            entity_type: 'patient',
+            details: { cpf: cpfKey, name: firstRecord.nome, error: errorMsg, stack: memberError instanceof Error ? memberError.stack : undefined },
+          });
           importResult.errors.push({
             row: i + 1,
             field: "member",
-            message: `Erro inesperado: ${memberError instanceof Error ? memberError.message : "Erro desconhecido"}`,
+            message: `Erro inesperado: ${errorMsg}`,
             data: firstRecord,
           });
           firstRecord.status = "error";
-          firstRecord.error_message = memberError instanceof Error ? memberError.message : "Erro desconhecido";
+          firstRecord.error_message = errorMsg;
           importResult.processedRecords.push(firstRecord);
           // Continue to next member instead of stopping
         }
       }
 
       // Phase 3: Complete
+      addAuditEntry({
+        action: 'import_completed',
+        entity_type: 'bulk_import',
+        details: {
+          clinic_id: clinicId,
+          members_created: importResult.membersCreated,
+          members_updated: importResult.membersUpdated,
+          members_skipped: importResult.membersSkipped,
+          employers_created: importResult.employersCreated,
+          employers_skipped: importResult.employersSkipped,
+          total_errors: importResult.errors.length,
+        },
+      });
+
+      // Log completion to database
+      await logAuditAction(userId, 'bulk_import_completed', 'system', clinicId, {
+        members_created: importResult.membersCreated,
+        members_updated: importResult.membersUpdated,
+        members_skipped: importResult.membersSkipped,
+        employers_created: importResult.employersCreated,
+        employers_skipped: importResult.employersSkipped,
+        errors_count: importResult.errors.length,
+      });
       setProgress({ current: 100, total: 100, phase: "complete", message: "Importação concluída!" });
       setResult(importResult);
 
       return importResult;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      addAuditEntry({
+        action: 'import_fatal_error',
+        entity_type: 'bulk_import',
+        details: { clinic_id: clinicId, error: errorMessage, stack: error instanceof Error ? error.stack : undefined },
+      });
+      
+      // Log fatal error to database
+      const { data: { user } } = await supabase.auth.getUser();
+      await logAuditAction(user?.id || null, 'bulk_import_failed', 'system', clinicId, {
+        error: errorMessage,
+        partial_results: {
+          members_created: importResult.membersCreated,
+          members_updated: importResult.membersUpdated,
+          employers_created: importResult.employersCreated,
+        },
+      });
+
       importResult.errors.push({
         row: 0,
         field: "general",
@@ -420,6 +573,7 @@ export function useImportExecution(clinicId: string | undefined) {
 
   const reset = useCallback(() => {
     setResult(null);
+    setAuditLog([]);
     setProgress({ current: 0, total: 100, phase: "importing_employers", message: "" });
   }, []);
 
@@ -428,6 +582,7 @@ export function useImportExecution(clinicId: string | undefined) {
     isProcessing,
     progress,
     result,
+    auditLog,
     reset,
   };
 }

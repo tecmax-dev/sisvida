@@ -24,7 +24,10 @@ type AuditAction =
   | 'update_contribution'
   | 'delete_contribution'
   | 'generate_invoice'
-  | 'sync_contributions';
+  | 'sync_contributions'
+  | 'bulk_import_started'
+  | 'bulk_import_completed'
+  | 'bulk_import_failed';
 
 type EntityType = 'clinic' | 'user' | 'super_admin' | 'system' | 'subscription';
 
