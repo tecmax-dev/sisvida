@@ -123,7 +123,10 @@ export async function subscribeToNotifications(): Promise<string | null> {
       window.OneSignalDeferred.push(async (OneSignal: any) => {
         try {
           // Check current permission
+          console.log('OneSignal: Requesting notification permission...');
           const permission = await Notification.requestPermission();
+          console.log('OneSignal: Permission result:', permission);
+          
           if (permission !== 'granted') {
             console.log('OneSignal: Permission not granted:', permission);
             resolve(null);
@@ -131,20 +134,34 @@ export async function subscribeToNotifications(): Promise<string | null> {
           }
 
           // Opt in to push
+          console.log('OneSignal: Opting in to push notifications...');
           await OneSignal.User.PushSubscription.optIn();
           
-          // Wait a moment for subscription to propagate
-          await new Promise(r => setTimeout(r, 1000));
+          // Wait for subscription to propagate with retry logic
+          let playerId: string | null = null;
+          const maxRetries = 5;
           
-          // Get the subscription ID (Player ID)
-          const subscription = OneSignal.User.PushSubscription;
-          const playerId = subscription.id;
+          for (let i = 0; i < maxRetries; i++) {
+            await new Promise(r => setTimeout(r, 1000));
+            
+            const subscription = OneSignal.User.PushSubscription;
+            playerId = subscription?.id || null;
+            
+            console.log(`OneSignal: Attempt ${i + 1}/${maxRetries} - Player ID:`, playerId ? playerId.substring(0, 20) + '...' : 'null');
+            
+            if (playerId) {
+              break;
+            }
+          }
           
           if (playerId) {
-            console.log('OneSignal: Subscribed with Player ID:', playerId.substring(0, 20) + '...');
+            console.log('OneSignal: Successfully subscribed with Player ID:', playerId.substring(0, 20) + '...');
             resolve(playerId);
           } else {
-            console.warn('OneSignal: No Player ID available after subscription');
+            console.warn('OneSignal: No Player ID available after retries. Subscription state:', {
+              optedIn: OneSignal.User.PushSubscription?.optedIn,
+              token: OneSignal.User.PushSubscription?.token ? 'present' : 'missing',
+            });
             resolve(null);
           }
         } catch (error) {
