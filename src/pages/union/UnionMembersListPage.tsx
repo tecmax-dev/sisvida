@@ -260,10 +260,8 @@ export default function UnionMembersListPage() {
           phone,
           cpf,
           gender,
-          address,
           street,
           street_number,
-          complement,
           neighborhood,
           city,
           state,
@@ -325,8 +323,8 @@ export default function UnionMembersListPage() {
         return {
           ...p,
           // Normalize address fields to the app's expected names
-          address: p.address ?? p.street ?? null,
-          address_number: p.street_number ?? p.complement ?? null,
+          address: p.street ?? null,
+          address_number: p.street_number ?? null,
           zip_code: p.cep ?? null,
           dependents_count: Array.isArray(p.patient_dependents)
             ? p.patient_dependents.filter((d: any) => d.id).length
