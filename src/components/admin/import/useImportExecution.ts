@@ -67,9 +67,14 @@ function pickEmployerName(params: {
 
 async function lookupCnpjFromReceitaFederal(cnpj: string): Promise<CnpjLookupResult | null> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    
     const { data, error } = await supabase.functions.invoke<CnpjLookupResult>('lookup-cnpj', {
       body: { cnpj }
     });
+    
+    clearTimeout(timeoutId);
 
     if (error || !data?.ok) {
       console.warn(`CNPJ lookup failed for ${cnpj}:`, data?.error || error?.message);
@@ -81,6 +86,27 @@ async function lookupCnpjFromReceitaFederal(cnpj: string): Promise<CnpjLookupRes
     console.error(`Error looking up CNPJ ${cnpj}:`, err);
     return null;
   }
+}
+
+// Batch lookup CNPJs in parallel with concurrency limit
+async function batchLookupCnpjs(
+  cnpjs: string[], 
+  concurrency: number = 5
+): Promise<Map<string, CnpjLookupResult | null>> {
+  const results = new Map<string, CnpjLookupResult | null>();
+  
+  for (let i = 0; i < cnpjs.length; i += concurrency) {
+    const batch = cnpjs.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map(async (cnpj) => {
+        const result = await lookupCnpjFromReceitaFederal(cnpj);
+        return { cnpj, result };
+      })
+    );
+    batchResults.forEach(({ cnpj, result }) => results.set(cnpj, result));
+  }
+  
+  return results;
 }
 
 async function logAuditAction(
@@ -189,20 +215,13 @@ export function useImportExecution(clinicId: string | undefined) {
       });
 
       // Phase 1: Create missing employers (with Receita Federal lookup)
-      setProgress({ current: 10, total: 100, phase: "importing_employers", message: "Criando empresas..." });
+      setProgress({ current: 10, total: 100, phase: "importing_employers", message: "Identificando empresas..." });
 
       const uniqueCnpjs = [...new Set(recordsToProcess.map(r => normalizeDigits(r.cnpj)))];
       const employerIdMap = new Map<string, string>();
       const employerNameByCnpj = new Map<string, string>();
       const employerTradeNameByCnpj = new Map<string, string | null>();
       const rfCache = new Map<string, CnpjLookupResult | null>();
-
-      const getRfData = async (cnpjDigits: string): Promise<CnpjLookupResult | null> => {
-        if (rfCache.has(cnpjDigits)) return rfCache.get(cnpjDigits) ?? null;
-        const data = await lookupCnpjFromReceitaFederal(cnpjDigits);
-        rfCache.set(cnpjDigits, data);
-        return data;
-      };
 
       // Get existing employers - fetch all and filter by normalized CNPJ
       const { data: allEmployers } = await supabase
@@ -222,37 +241,35 @@ export function useImportExecution(clinicId: string | undefined) {
         }
       });
 
-      // Create missing employers with Receita Federal data
+      // Create missing employers with Receita Federal data - BATCH PARALLEL
       const cnpjsToCreate = uniqueCnpjs.filter(cnpj => !employerIdMap.has(cnpj));
       
-      for (let i = 0; i < cnpjsToCreate.length; i++) {
-        const cnpj = cnpjsToCreate[i];
-        const record = recordsToProcess.find(r => normalizeDigits(r.cnpj) === cnpj);
+      if (cnpjsToCreate.length > 0) {
+        setProgress({ current: 15, total: 100, phase: "importing_employers", message: `Consultando ${cnpjsToCreate.length} CNPJs na Receita Federal...` });
         
-        if (!record) continue;
-
-        try {
-          setProgress({
-            current: 10 + Math.floor((i / cnpjsToCreate.length) * 20),
-            total: 100,
-            phase: "importing_employers",
-            message: `Consultando CNPJ ${i + 1}/${cnpjsToCreate.length} na Receita Federal...`,
-          });
-
-          // Lookup CNPJ in Receita Federal (with timeout protection)
-          let rfData: CnpjLookupResult | null = null;
-          try {
-            rfData = await getRfData(cnpj);
-          } catch (rfError) {
-            console.warn(`RF lookup failed for ${cnpj}, continuing without RF data:`, rfError);
-          }
-
-          // Build employer data - prioritize Receita Federal data, fallback to PDF data
+        // Batch lookup all CNPJs in parallel (5 concurrent requests)
+        const rfResults = await batchLookupCnpjs(cnpjsToCreate, 5);
+        rfResults.forEach((data, cnpj) => rfCache.set(cnpj, data));
+        
+        setProgress({ current: 20, total: 100, phase: "importing_employers", message: `Criando ${cnpjsToCreate.length} empresas...` });
+        
+        // Build employer data for batch upsert
+        const employersToUpsert: any[] = [];
+        const cnpjToRecordMap = new Map<string, ImportedMember>();
+        
+        for (const cnpj of cnpjsToCreate) {
+          const record = recordsToProcess.find(r => normalizeDigits(r.cnpj) === cnpj);
+          if (!record) continue;
+          
+          cnpjToRecordMap.set(cnpj, record);
+          const rfData = rfCache.get(cnpj) ?? null;
+          
           const resolvedEmployerName = pickEmployerName({
             rfData,
             fallbackFromPdf: record.empresa_nome,
           });
-          const employerData = {
+          
+          employersToUpsert.push({
             clinic_id: clinicId,
             cnpj: cnpj,
             name: resolvedEmployerName,
@@ -269,63 +286,65 @@ export function useImportExecution(clinicId: string | undefined) {
             email: rfData?.email?.toLowerCase() || null,
             cnae_code: rfData?.cnae_fiscal ? String(rfData.cnae_fiscal) : null,
             cnae_description: rfData?.cnae_fiscal_descricao || null,
-          };
-
-          // Use upsert to handle race conditions and duplicates
-          const { data: upsertedEmployer, error } = await supabase
-            .from("employers")
-            .upsert(employerData, { 
-              onConflict: "clinic_id,cnpj",
-              ignoreDuplicates: false 
-            })
-            .select("id")
-            .single();
-
-          if (error) {
-            console.error(`Error creating employer ${cnpj}:`, error);
-            addAuditEntry({
-              action: 'employer_create_failed',
-              entity_type: 'employer',
-              details: { cnpj, error: error.message, attempted_name: record.empresa_nome },
-            });
-            importResult.errors.push({
-              row: recordsToProcess.indexOf(record) + 1,
-              field: "employer",
-              message: `Erro ao criar empresa: ${error.message}`,
-              data: { cnpj, name: record.empresa_nome },
-            });
-          } else if (upsertedEmployer) {
-            addAuditEntry({
-              action: 'employer_created',
-              entity_type: 'employer',
-              entity_id: upsertedEmployer.id,
-              details: { cnpj, name: resolvedEmployerName, rf_data_available: !!rfData },
-            });
-            employerIdMap.set(cnpj, upsertedEmployer.id);
-            employerNameByCnpj.set(cnpj, resolvedEmployerName);
-            employerTradeNameByCnpj.set(cnpj, rfData?.nome_fantasia || null);
-            importResult.employersCreated++;
+          });
+          
+          // Store resolved name for later use
+          employerNameByCnpj.set(cnpj, resolvedEmployerName);
+          employerTradeNameByCnpj.set(cnpj, rfData?.nome_fantasia || null);
+        }
+        
+        // Batch upsert employers (chunks of 50)
+        const EMPLOYER_BATCH_SIZE = 50;
+        for (let i = 0; i < employersToUpsert.length; i += EMPLOYER_BATCH_SIZE) {
+          const batch = employersToUpsert.slice(i, i + EMPLOYER_BATCH_SIZE);
+          
+          try {
+            const { data: upsertedEmployers, error } = await supabase
+              .from("employers")
+              .upsert(batch, { 
+                onConflict: "clinic_id,cnpj",
+                ignoreDuplicates: false 
+              })
+              .select("id, cnpj");
+            
+            if (error) {
+              console.error(`Batch employer upsert error:`, error);
+              // Fall back to individual upserts for this batch
+              for (const emp of batch) {
+                const { data: single, error: singleError } = await supabase
+                  .from("employers")
+                  .upsert(emp, { onConflict: "clinic_id,cnpj", ignoreDuplicates: false })
+                  .select("id")
+                  .single();
+                  
+                if (singleError) {
+                  const record = cnpjToRecordMap.get(emp.cnpj);
+                  importResult.errors.push({
+                    row: record ? recordsToProcess.indexOf(record) + 1 : 0,
+                    field: "employer",
+                    message: `Erro ao criar empresa: ${singleError.message}`,
+                    data: { cnpj: emp.cnpj, name: emp.name },
+                  });
+                } else if (single) {
+                  employerIdMap.set(emp.cnpj, single.id);
+                  importResult.employersCreated++;
+                }
+              }
+            } else if (upsertedEmployers) {
+              upsertedEmployers.forEach(emp => {
+                const normalizedCnpj = normalizeDigits(emp.cnpj);
+                employerIdMap.set(normalizedCnpj, emp.id);
+                importResult.employersCreated++;
+              });
+            }
+          } catch (batchError) {
+            console.error(`Batch employer error:`, batchError);
           }
-        } catch (employerError) {
-          const errorMsg = employerError instanceof Error ? employerError.message : "Erro desconhecido";
-          console.error(`Unhandled error processing employer ${cnpj}:`, employerError);
-          addAuditEntry({
-            action: 'employer_process_exception',
-            entity_type: 'employer',
-            details: { cnpj, error: errorMsg, stack: employerError instanceof Error ? employerError.stack : undefined },
-          });
-          importResult.errors.push({
-            row: recordsToProcess.indexOf(record) + 1,
-            field: "employer",
-            message: `Erro inesperado: ${errorMsg}`,
-            data: { cnpj, name: record.empresa_nome },
-          });
-          // Continue to next employer instead of stopping
         }
       }
 
-      // Phase 2: Process members
-      setProgress({ current: 30, total: 100, phase: "importing_members", message: "Processando sócios..." });
+      // Phase 2: Process members - BATCH OPTIMIZED
+      setProgress({ current: 30, total: 100, phase: "importing_members", message: "Preparando sócios..." });
 
       // Group by CPF to handle duplicates
       const membersByCpf = new Map<string, ImportedMember[]>();
@@ -339,54 +358,168 @@ export function useImportExecution(clinicId: string | undefined) {
 
       const cpfEntries = Array.from(membersByCpf.entries());
       
-      for (let i = 0; i < cpfEntries.length; i++) {
-        const [cpfKey, records] = cpfEntries[i];
+      // Separate into updates, creates, and skips
+      const toUpdate: { cpfKey: string; firstRecord: ImportedMember; cnpjKey: string; employerName: string; employerId?: string }[] = [];
+      const toCreate: { cpfKey: string; firstRecord: ImportedMember; cnpjKey: string; employerName: string; employerId?: string }[] = [];
+      
+      for (const [cpfKey, records] of cpfEntries) {
         const firstRecord = records[0];
-
-        try {
-          setProgress({
-            current: 30 + Math.floor((i / cpfEntries.length) * 60),
-            total: 100,
-            phase: "importing_members",
-            message: `Processando sócio ${i + 1}/${cpfEntries.length}...`,
+        const cnpjKey = normalizeDigits(firstRecord.cnpj);
+        const employerId = employerIdMap.get(cnpjKey);
+        
+        // Get employer name from cache
+        let employerName = employerNameByCnpj.get(cnpjKey);
+        if (!employerName) {
+          const rfData = rfCache.get(cnpjKey) ?? null;
+          employerName = pickEmployerName({
+            rfData,
+            fallbackFromDb: employerNameByCnpj.get(cnpjKey) ?? null,
+            fallbackFromPdf: firstRecord.empresa_nome,
           });
+          if (employerName) employerNameByCnpj.set(cnpjKey, employerName);
+        }
+        
+        if (firstRecord.action === "skip" || firstRecord.status === "will_skip") {
+          importResult.membersSkipped++;
+          firstRecord.status = "skipped";
+          importResult.processedRecords.push(firstRecord);
+        } else if ((firstRecord.action === "update" || firstRecord.status === "will_update") && firstRecord.patient_id) {
+          toUpdate.push({ cpfKey, firstRecord, cnpjKey, employerName: employerName || "Empresa", employerId });
+        } else if (firstRecord.action === "create" || firstRecord.status === "will_create") {
+          toCreate.push({ cpfKey, firstRecord, cnpjKey, employerName: employerName || "Empresa", employerId });
+        }
+      }
 
-          const cnpjKey = normalizeDigits(firstRecord.cnpj);
-          const employerId = employerIdMap.get(cnpjKey);
-
-          // Ensure we have a name to persist on the member record (patients.employer_name)
-          let employerName = employerNameByCnpj.get(cnpjKey);
-          if (!employerName) {
-            try {
-              const rfData = await getRfData(cnpjKey);
-              employerName = pickEmployerName({
-                rfData,
-                fallbackFromDb: employerNameByCnpj.get(cnpjKey) ?? null,
-                fallbackFromPdf: firstRecord.empresa_nome,
-              });
-              if (employerName) employerNameByCnpj.set(cnpjKey, employerName);
-            } catch (rfError) {
-              console.warn(`RF lookup failed for member ${cpfKey}, using fallback:`, rfError);
-              employerName = firstRecord.empresa_nome || "Empresa";
+      // Batch create new members (chunks of 50)
+      const MEMBER_BATCH_SIZE = 50;
+      const importDate = new Date().toLocaleDateString("pt-BR");
+      
+      if (toCreate.length > 0) {
+        setProgress({ current: 40, total: 100, phase: "importing_members", message: `Criando ${toCreate.length} novos sócios...` });
+        
+        for (let i = 0; i < toCreate.length; i += MEMBER_BATCH_SIZE) {
+          const batch = toCreate.slice(i, i + MEMBER_BATCH_SIZE);
+          
+          // Update progress every batch
+          if (i > 0) {
+            setProgress({ 
+              current: 40 + Math.floor((i / toCreate.length) * 25), 
+              total: 100, 
+              phase: "importing_members", 
+              message: `Criando sócios ${i + 1}-${Math.min(i + MEMBER_BATCH_SIZE, toCreate.length)}/${toCreate.length}...` 
+            });
+          }
+          
+          const insertBatch = batch.map(({ firstRecord, cnpjKey, employerName }) => ({
+            clinic_id: clinicId,
+            name: firstRecord.nome,
+            cpf: firstRecord.cpf.replace(/\D/g, ""),
+            phone: firstRecord.celular?.replace(/\D/g, "") || firstRecord.telefone?.replace(/\D/g, "") || "00000000000",
+            employer_cnpj: cnpjKey,
+            employer_name: employerName,
+            is_active: true,
+            is_union_member: true,
+            notes: `Importado em ${importDate}. Admissão: ${firstRecord.data_admissao || "-"}`,
+            rg: firstRecord.rg || null,
+            profession: firstRecord.funcao || null,
+            union_joined_at: parseDate(firstRecord.data_inscricao),
+            address: firstRecord.endereco || null,
+            cep: firstRecord.cep?.replace(/\D/g, "") || null,
+            city: firstRecord.cidade || null,
+            state: firstRecord.uf || null,
+            birth_date: parseDate(firstRecord.nascimento),
+            gender: normalizeGender(firstRecord.sexo),
+            marital_status: firstRecord.estado_civil || null,
+            mother_name: firstRecord.nome_mae || null,
+          }));
+          
+          try {
+            const { data: created, error } = await supabase
+              .from("patients")
+              .insert(insertBatch as any)
+              .select("id, cpf");
+            
+            if (error) {
+              // Fall back to individual inserts for this batch
+              console.error(`Batch insert error, falling back to individual:`, error);
+              for (let j = 0; j < batch.length; j++) {
+                const { cpfKey, firstRecord, employerId } = batch[j];
+                const insertData = insertBatch[j];
+                
+                const { data: single, error: singleError } = await supabase
+                  .from("patients")
+                  .insert(insertData as any)
+                  .select("id")
+                  .single();
+                
+                if (singleError) {
+                  importResult.errors.push({
+                    row: recordsToProcess.indexOf(firstRecord) + 1,
+                    field: "member",
+                    message: `Erro ao criar: ${singleError.message}`,
+                    data: firstRecord,
+                  });
+                  firstRecord.status = "error";
+                  firstRecord.error_message = singleError.message;
+                } else if (single) {
+                  importResult.membersCreated++;
+                  firstRecord.status = "created";
+                  firstRecord.patient_id = single.id;
+                  firstRecord.employer_id = employerId;
+                }
+                importResult.processedRecords.push(firstRecord);
+              }
+            } else if (created) {
+              // Map created IDs back to records
+              const cpfToIdMap = new Map(created.map(c => [normalizeDigits(c.cpf), c.id]));
+              for (const { cpfKey, firstRecord, employerId } of batch) {
+                const newId = cpfToIdMap.get(cpfKey);
+                if (newId) {
+                  importResult.membersCreated++;
+                  firstRecord.status = "created";
+                  firstRecord.patient_id = newId;
+                  firstRecord.employer_id = employerId;
+                }
+                importResult.processedRecords.push(firstRecord);
+              }
+            }
+          } catch (batchError) {
+            console.error(`Batch create exception:`, batchError);
+            // Mark all as error
+            for (const { firstRecord } of batch) {
+              firstRecord.status = "error";
+              firstRecord.error_message = "Erro em lote";
+              importResult.processedRecords.push(firstRecord);
             }
           }
+        }
+      }
 
-          if (firstRecord.action === "skip" || firstRecord.status === "will_skip") {
-            importResult.membersSkipped++;
-            firstRecord.status = "skipped";
-            importResult.processedRecords.push(firstRecord);
-            continue;
+      // Process updates (must be individual due to different IDs)
+      if (toUpdate.length > 0) {
+        setProgress({ current: 70, total: 100, phase: "importing_members", message: `Atualizando ${toUpdate.length} sócios existentes...` });
+        
+        // Process updates in parallel batches
+        const UPDATE_CONCURRENCY = 10;
+        for (let i = 0; i < toUpdate.length; i += UPDATE_CONCURRENCY) {
+          const batch = toUpdate.slice(i, i + UPDATE_CONCURRENCY);
+          
+          if (i > 0 && i % 50 === 0) {
+            setProgress({ 
+              current: 70 + Math.floor((i / toUpdate.length) * 20), 
+              total: 100, 
+              phase: "importing_members", 
+              message: `Atualizando sócios ${i + 1}/${toUpdate.length}...` 
+            });
           }
-
-          if ((firstRecord.action === "update" || firstRecord.status === "will_update") && firstRecord.patient_id) {
-            // Update existing patient with all available fields
+          
+          await Promise.all(batch.map(async ({ cpfKey, firstRecord, cnpjKey, employerName, employerId }) => {
             const updateData: Record<string, any> = {
               employer_cnpj: cnpjKey,
-              employer_name: employerName || null,
+              employer_name: employerName,
               is_union_member: true,
             };
             
-            // Add optional fields if present
             if (firstRecord.funcao) updateData.profession = firstRecord.funcao;
             if (firstRecord.data_inscricao) updateData.union_joined_at = parseDate(firstRecord.data_inscricao);
             if (firstRecord.endereco) updateData.address = firstRecord.endereco;
@@ -399,119 +532,39 @@ export function useImportExecution(clinicId: string | undefined) {
             if (firstRecord.estado_civil) updateData.marital_status = firstRecord.estado_civil;
             if (firstRecord.nome_mae) updateData.mother_name = firstRecord.nome_mae;
             
-            const { error } = await supabase
-              .from("patients")
-              .update(updateData)
-              .eq("id", firstRecord.patient_id);
-
-            if (error) {
-              console.error(`Error updating member ${cpfKey}:`, error);
-              addAuditEntry({
-                action: 'member_update_failed',
-                entity_type: 'patient',
-                entity_id: firstRecord.patient_id,
-                details: { cpf: cpfKey, error: error.message, attempted_update: updateData },
-              });
+            try {
+              const { error } = await supabase
+                .from("patients")
+                .update(updateData)
+                .eq("id", firstRecord.patient_id);
+              
+              if (error) {
+                importResult.errors.push({
+                  row: recordsToProcess.indexOf(firstRecord) + 1,
+                  field: "member",
+                  message: `Erro ao atualizar: ${error.message}`,
+                  data: firstRecord,
+                });
+                firstRecord.status = "error";
+                firstRecord.error_message = error.message;
+              } else {
+                importResult.membersUpdated++;
+                firstRecord.status = "updated";
+                firstRecord.employer_id = employerId;
+              }
+            } catch (err) {
+              const errMsg = err instanceof Error ? err.message : "Erro desconhecido";
+              firstRecord.status = "error";
+              firstRecord.error_message = errMsg;
               importResult.errors.push({
-                row: i + 1,
+                row: recordsToProcess.indexOf(firstRecord) + 1,
                 field: "member",
-                message: `Erro ao atualizar: ${error.message}`,
+                message: `Erro inesperado: ${errMsg}`,
                 data: firstRecord,
               });
-              firstRecord.status = "error";
-              firstRecord.error_message = error.message;
-            } else {
-              addAuditEntry({
-                action: 'member_updated',
-                entity_type: 'patient',
-                entity_id: firstRecord.patient_id,
-                details: { cpf: cpfKey, name: firstRecord.nome, employer_cnpj: cnpjKey, fields_updated: Object.keys(updateData) },
-              });
-              importResult.membersUpdated++;
-              firstRecord.status = "updated";
-              firstRecord.employer_id = employerId;
             }
-          } else if (firstRecord.action === "create" || firstRecord.status === "will_create") {
-            // Create new patient with all available fields
-            const insertData: Record<string, any> = {
-              clinic_id: clinicId,
-              name: firstRecord.nome,
-              cpf: cpfKey,
-              phone: firstRecord.celular?.replace(/\D/g, "") || firstRecord.telefone?.replace(/\D/g, "") || "00000000000",
-              employer_cnpj: cnpjKey,
-              employer_name: employerName || null,
-              is_active: true,
-              is_union_member: true,
-              notes: `Importado em ${new Date().toLocaleDateString("pt-BR")}. Admissão: ${firstRecord.data_admissao || "-"}`,
-            };
-            
-            // Add optional fields if present
-            if (firstRecord.rg) insertData.rg = firstRecord.rg;
-            if (firstRecord.funcao) insertData.profession = firstRecord.funcao;
-            if (firstRecord.data_inscricao) insertData.union_joined_at = parseDate(firstRecord.data_inscricao);
-            if (firstRecord.endereco) insertData.address = firstRecord.endereco;
-            if (firstRecord.cep) insertData.cep = firstRecord.cep.replace(/\D/g, "");
-            if (firstRecord.cidade) insertData.city = firstRecord.cidade;
-            if (firstRecord.uf) insertData.state = firstRecord.uf;
-            if (firstRecord.nascimento) insertData.birth_date = parseDate(firstRecord.nascimento);
-            if (firstRecord.sexo) insertData.gender = normalizeGender(firstRecord.sexo);
-            if (firstRecord.estado_civil) insertData.marital_status = firstRecord.estado_civil;
-            if (firstRecord.nome_mae) insertData.mother_name = firstRecord.nome_mae;
-            
-            const { data: newPatient, error } = await supabase
-              .from("patients")
-              .insert(insertData as any)
-              .select("id")
-              .single();
-
-            if (error) {
-              console.error(`Error creating member ${cpfKey}:`, error);
-              addAuditEntry({
-                action: 'member_create_failed',
-                entity_type: 'patient',
-                details: { cpf: cpfKey, name: firstRecord.nome, error: error.message },
-              });
-              importResult.errors.push({
-                row: i + 1,
-                field: "member",
-                message: `Erro ao criar: ${error.message}`,
-                data: firstRecord,
-              });
-              firstRecord.status = "error";
-              firstRecord.error_message = error.message;
-            } else if (newPatient) {
-              addAuditEntry({
-                action: 'member_created',
-                entity_type: 'patient',
-                entity_id: newPatient.id,
-                details: { cpf: cpfKey, name: firstRecord.nome, employer_cnpj: cnpjKey },
-              });
-              importResult.membersCreated++;
-              firstRecord.status = "created";
-              firstRecord.patient_id = newPatient.id;
-              firstRecord.employer_id = employerId;
-            }
-          }
-
-          importResult.processedRecords.push(firstRecord);
-        } catch (memberError) {
-          const errorMsg = memberError instanceof Error ? memberError.message : "Erro desconhecido";
-          console.error(`Unhandled error processing member ${cpfKey}:`, memberError);
-          addAuditEntry({
-            action: 'member_process_exception',
-            entity_type: 'patient',
-            details: { cpf: cpfKey, name: firstRecord.nome, error: errorMsg, stack: memberError instanceof Error ? memberError.stack : undefined },
-          });
-          importResult.errors.push({
-            row: i + 1,
-            field: "member",
-            message: `Erro inesperado: ${errorMsg}`,
-            data: firstRecord,
-          });
-          firstRecord.status = "error";
-          firstRecord.error_message = errorMsg;
-          importResult.processedRecords.push(firstRecord);
-          // Continue to next member instead of stopping
+            importResult.processedRecords.push(firstRecord);
+          }));
         }
       }
 
