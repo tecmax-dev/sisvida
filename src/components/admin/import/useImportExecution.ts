@@ -379,14 +379,16 @@ export function useImportExecution(clinicId: string | undefined) {
           if (employerName) employerNameByCnpj.set(cnpjKey, employerName);
         }
         
-        if (firstRecord.action === "skip" || firstRecord.status === "will_skip") {
-          importResult.membersSkipped++;
-          firstRecord.status = "skipped";
-          importResult.processedRecords.push(firstRecord);
-        } else if ((firstRecord.action === "update" || firstRecord.status === "will_update") && firstRecord.patient_id) {
+        // NÃO há mais skip - sempre atualizar ou criar
+        if ((firstRecord.action === "update" || firstRecord.status === "will_update") && firstRecord.patient_id) {
           toUpdate.push({ cpfKey, firstRecord, cnpjKey, employerName: employerName || "Empresa", employerId });
         } else if (firstRecord.action === "create" || firstRecord.status === "will_create") {
           toCreate.push({ cpfKey, firstRecord, cnpjKey, employerName: employerName || "Empresa", employerId });
+        } else if (firstRecord.action === "skip" || firstRecord.status === "will_skip") {
+          // Fallback legacy - não deve acontecer mais
+          importResult.membersSkipped++;
+          firstRecord.status = "skipped";
+          importResult.processedRecords.push(firstRecord);
         }
       }
 
@@ -521,23 +523,33 @@ export function useImportExecution(clinicId: string | undefined) {
           }
           
           await Promise.all(batch.map(async ({ cpfKey, firstRecord, cnpjKey, employerName, employerId }) => {
+            // ATUALIZAR TODOS OS CAMPOS DA PLANILHA - NÃO APENAS CONDICIONALMENTE
             const updateData: Record<string, any> = {
+              // Campos obrigatórios
+              name: firstRecord.nome,
+              cpf: firstRecord.cpf.replace(/\D/g, ""),
               employer_cnpj: cnpjKey,
               employer_name: employerName,
               is_union_member: true,
+              is_active: true,
+              // Campos de endereço
+              address: firstRecord.endereco || null,
+              cep: firstRecord.cep?.replace(/\D/g, "") || null,
+              city: firstRecord.cidade || null,
+              state: firstRecord.uf || null,
+              // Campos de contato
+              phone: firstRecord.celular?.replace(/\D/g, "") || firstRecord.telefone?.replace(/\D/g, "") || null,
+              // Documentos
+              rg: firstRecord.rg || null,
+              // Dados pessoais
+              birth_date: parseDate(firstRecord.nascimento),
+              gender: normalizeGender(firstRecord.sexo),
+              marital_status: firstRecord.estado_civil || null,
+              mother_name: firstRecord.nome_mae || null,
+              // Dados do sindicato
+              profession: firstRecord.funcao || null,
+              union_joined_at: parseDate(firstRecord.data_inscricao),
             };
-            
-            if (firstRecord.funcao) updateData.profession = firstRecord.funcao;
-            if (firstRecord.data_inscricao) updateData.union_joined_at = parseDate(firstRecord.data_inscricao);
-            if (firstRecord.endereco) updateData.address = firstRecord.endereco;
-            if (firstRecord.cep) updateData.cep = firstRecord.cep.replace(/\D/g, "");
-            if (firstRecord.cidade) updateData.city = firstRecord.cidade;
-            if (firstRecord.uf) updateData.state = firstRecord.uf;
-            if (firstRecord.celular) updateData.phone = firstRecord.celular.replace(/\D/g, "");
-            if (firstRecord.nascimento) updateData.birth_date = parseDate(firstRecord.nascimento);
-            if (firstRecord.sexo) updateData.gender = normalizeGender(firstRecord.sexo);
-            if (firstRecord.estado_civil) updateData.marital_status = firstRecord.estado_civil;
-            if (firstRecord.nome_mae) updateData.mother_name = firstRecord.nome_mae;
             
             try {
               const { error } = await supabase
