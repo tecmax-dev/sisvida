@@ -11,6 +11,17 @@ export interface ImportedMember {
   funcao: string | null;
   data_inscricao: string | null;
   data_admissao: string | null;
+  // Campos adicionais do XLSX
+  endereco?: string | null;
+  cep?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  telefone?: string | null;
+  celular?: string | null;
+  nascimento?: string | null;
+  sexo?: string | null;
+  estado_civil?: string | null;
+  nome_mae?: string | null;
   // Status after validation
   status: "pending" | "will_create" | "will_update" | "will_skip" | "error" | "created" | "updated" | "skipped";
   action?: "create" | "update" | "skip";
