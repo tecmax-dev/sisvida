@@ -22,6 +22,7 @@ import {
   HeartPulse,
   RefreshCw,
   Receipt,
+  Upload,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,7 @@ import MemberContributionsTab from "@/components/union/MemberContributionsTab";
 import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAppDialog";
 import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
+import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -177,6 +179,9 @@ export default function UnionMembersListPage() {
 
   // Batch filiacao dialog state
   const [batchFiliacaoDialogOpen, setBatchFiliacaoDialogOpen] = useState(false);
+
+  // Import members dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -504,6 +509,14 @@ export default function UnionMembersListPage() {
         </div>
         {canManageMembers() && (
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(true)}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Importar
+            </Button>
             <Button
               variant="outline"
               onClick={() => setBatchFiliacaoDialogOpen(true)}
@@ -1168,6 +1181,12 @@ export default function UnionMembersListPage() {
           clinicId={currentClinic.id}
         />
       )}
+
+      {/* Import Members Dialog */}
+      <ImportMembersDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+      />
     </div>
   );
 }
