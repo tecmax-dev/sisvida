@@ -52,38 +52,46 @@ export function useImportPreview(clinicId: string | undefined) {
       // Phase 3: Validate against database
       setProgress({ current: 50, total: 100, phase: "validating", message: "Validando dados..." });
 
-      // Get unique CPFs and CNPJs
+      // Get unique CPFs and CNPJs (normalized - digits only)
       const uniqueCpfs = [...new Set(parsedRecords.map(r => r.cpf.replace(/\D/g, "")))];
       const uniqueCnpjs = [...new Set(parsedRecords.map(r => r.cnpj.replace(/\D/g, "")))];
 
-      // Check existing patients
-      const { data: existingPatients } = await supabase
+      // Check existing patients - fetch all patients and filter by normalized CPF
+      // This is necessary because CPFs might be stored with or without formatting
+      const { data: allPatients } = await supabase
         .from("patients")
-        .select("id, cpf, name, employer_cnpj")
-        .eq("clinic_id", clinicId)
-        .in("cpf", uniqueCpfs);
+        .select("id, cpf, name, employer_cnpj, is_union_member")
+        .eq("clinic_id", clinicId);
 
-      const patientMap = new Map<string, { id: string; name: string; employer_cnpj: string | null }>();
-      (existingPatients || []).forEach(p => {
+      const patientMap = new Map<string, { id: string; name: string; employer_cnpj: string | null; is_union_member: boolean }>();
+      (allPatients || []).forEach(p => {
         if (p.cpf) {
-          patientMap.set(p.cpf.replace(/\D/g, ""), { 
-            id: p.id, 
-            name: p.name, 
-            employer_cnpj: p.employer_cnpj 
-          });
+          const normalizedCpf = p.cpf.replace(/\D/g, "");
+          if (uniqueCpfs.includes(normalizedCpf)) {
+            patientMap.set(normalizedCpf, { 
+              id: p.id, 
+              name: p.name, 
+              employer_cnpj: p.employer_cnpj,
+              is_union_member: p.is_union_member || false,
+            });
+          }
         }
       });
 
-      // Check existing employers
-      const { data: existingEmployers } = await supabase
+      // Check existing employers - fetch all and filter by normalized CNPJ
+      const { data: allEmployers } = await supabase
         .from("employers")
         .select("id, cnpj, name")
-        .eq("clinic_id", clinicId)
-        .in("cnpj", uniqueCnpjs);
+        .eq("clinic_id", clinicId);
 
       const employerMap = new Map<string, { id: string; name: string }>();
-      (existingEmployers || []).forEach(e => {
-        employerMap.set(e.cnpj.replace(/\D/g, ""), { id: e.id, name: e.name });
+      (allEmployers || []).forEach(e => {
+        if (e.cnpj) {
+          const normalizedCnpj = e.cnpj.replace(/\D/g, "");
+          if (uniqueCnpjs.includes(normalizedCnpj)) {
+            employerMap.set(normalizedCnpj, { id: e.id, name: e.name });
+          }
+        }
       });
 
       // Phase 4: Determine actions for each record
@@ -117,8 +125,11 @@ export function useImportPreview(clinicId: string | undefined) {
         }
         // Determine action
         else if (existingPatient) {
-          // Check if needs update (different employer)
-          if (existingPatient.employer_cnpj !== cnpjKey) {
+          // Normalize stored employer_cnpj for comparison
+          const storedEmployerCnpj = existingPatient.employer_cnpj?.replace(/\D/g, "") || "";
+          
+          // Check if needs update: different employer OR not yet a union member
+          if (storedEmployerCnpj !== cnpjKey || !existingPatient.is_union_member) {
             status = "will_update";
             action = "update";
           } else {
