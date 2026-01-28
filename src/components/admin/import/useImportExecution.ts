@@ -54,16 +54,21 @@ export function useImportExecution(clinicId: string | undefined) {
       const uniqueCnpjs = [...new Set(recordsToProcess.map(r => r.cnpj.replace(/\D/g, "")))];
       const employerIdMap = new Map<string, string>();
 
-      // Get existing employers
-      const { data: existingEmployers } = await supabase
+      // Get existing employers - fetch all and filter by normalized CNPJ
+      // This handles both formatted and unformatted CNPJs in the database
+      const { data: allEmployers } = await supabase
         .from("employers")
         .select("id, cnpj")
-        .eq("clinic_id", clinicId)
-        .in("cnpj", uniqueCnpjs);
+        .eq("clinic_id", clinicId);
 
-      (existingEmployers || []).forEach(e => {
-        employerIdMap.set(e.cnpj.replace(/\D/g, ""), e.id);
-        importResult.employersSkipped++;
+      (allEmployers || []).forEach(e => {
+        if (e.cnpj) {
+          const normalizedCnpj = e.cnpj.replace(/\D/g, "");
+          if (uniqueCnpjs.includes(normalizedCnpj)) {
+            employerIdMap.set(normalizedCnpj, e.id);
+            importResult.employersSkipped++;
+          }
+        }
       });
 
       // Create missing employers
