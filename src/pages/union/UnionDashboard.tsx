@@ -5,6 +5,7 @@ import { useUnionPermissions } from "@/hooks/useUnionPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Receipt, DollarSign, Handshake, TrendingUp, TrendingDown, Calendar, Loader2 } from "lucide-react";
+import { PushNotificationSetup } from "@/components/union/PushNotificationSetup";
 
 interface DashboardStats {
   totalEmployers: number;
@@ -324,6 +325,12 @@ export default function UnionDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Push Notifications Setup */}
+      <PushNotificationSetup 
+        patientId={null} 
+        clinicId={clinicId || null} 
+      />
     </div>
   );
 }
