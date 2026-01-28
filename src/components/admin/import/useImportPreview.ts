@@ -183,21 +183,14 @@ export function useImportPreview(clinicId: string | undefined) {
           status = "error";
           errorMessage = "Nome inválido";
         }
-        // Determine action
-          else if (existingPatient) {
-          // Normalize stored employer_cnpj for comparison
-          const storedEmployerCnpj = existingPatient.employer_cnpj?.replace(/\D/g, "") || "";
-            const hasEmployerName = !!existingPatient.employer_name && existingPatient.employer_name.trim().length > 0;
-          
-            // Check if needs update: different employer OR not yet a union member OR employer name missing
-            if (storedEmployerCnpj !== cnpjKey || !existingPatient.is_union_member || !hasEmployerName) {
-            status = "will_update";
-            action = "update";
-          } else {
-            status = "will_skip";
-            action = "skip";
-          }
+        // Determine action - SEMPRE atualizar sócios existentes para manter dados sincronizados
+        else if (existingPatient) {
+          // Se existe sócio com o mesmo CPF → SEMPRE ATUALIZAR
+          // Isso garante que os dados da planilha sobrescrevam os dados antigos
+          status = "will_update";
+          action = "update";
         } else {
+          // Sócio não existe → CRIAR
           status = "will_create";
           action = "create";
         }
@@ -214,12 +207,12 @@ export function useImportPreview(clinicId: string | undefined) {
         };
       });
 
-      // Calculate summary
+      // Calculate summary - sem skip pois sempre atualizamos sócios existentes
       const summary = {
         total: records.length,
         toCreate: records.filter(r => r.status === "will_create").length,
         toUpdate: records.filter(r => r.status === "will_update").length,
-        toSkip: records.filter(r => r.status === "will_skip").length,
+        toSkip: 0, // Não pulamos mais nenhum registro
         errors: records.filter(r => r.status === "error").length,
       };
 
