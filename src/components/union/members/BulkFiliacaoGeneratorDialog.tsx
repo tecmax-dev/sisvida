@@ -18,8 +18,6 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  Users,
   FileArchive,
   CreditCard,
 } from "lucide-react";
@@ -38,7 +36,7 @@ interface MemberStatus {
   name: string;
   cpf: string | null;
   cardExpiresAt: string | null;
-  status: "pending" | "generating" | "success" | "error" | "no_filiacao" | "no_card";
+  status: "pending" | "generating" | "success" | "error";
   error?: string;
 }
 
@@ -134,37 +132,90 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
     return cpf.replace(/\D/g, "");
   };
 
-  const generatePDFForMember = async (cpf: string, cardExpiresAt: string | null): Promise<Blob | null> => {
-    const normalizedCPF = normalizeCPF(cpf);
-    
-    // Fetch filiacao data - search by normalized CPF
-    const { data: filiacao, error: filiacaoError } = await supabase
-      .from("sindical_associados")
+  const generatePDFForMember = async (
+    member: MemberStatus,
+    cardExpiresAt: string | null
+  ): Promise<Blob | null> => {
+    // First try to find in sindical_associados
+    if (member.cpf) {
+      const normalizedCPF = normalizeCPF(member.cpf);
+      
+      const { data: filiacao, error: filiacaoError } = await supabase
+        .from("sindical_associados")
+        .select("*")
+        .or(`cpf.eq.${normalizedCPF},cpf.eq.${member.cpf}`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (filiacaoError) {
+        console.error("Error fetching filiacao:", filiacaoError);
+      }
+
+      if (filiacao) {
+        // Fetch dependents from sindical_associado_dependentes
+        const { data: dependents } = await supabase
+          .from("sindical_associado_dependentes")
+          .select("*")
+          .eq("associado_id", filiacao.id);
+
+        return generateFiliacaoPDFBlob(
+          filiacao,
+          dependents || [],
+          sindicato,
+          cardExpiresAt
+        );
+      }
+    }
+
+    // Build filiacao from member data (patient record)
+    const { data: patientDeps } = await supabase
+      .from("patient_dependents")
+      .select("id, name, relationship, birth_date, cpf")
+      .eq("patient_id", member.id)
+      .eq("is_active", true);
+
+    const mappedDeps = (patientDeps || []).map((d) => ({
+      id: d.id,
+      nome: d.name,
+      grau_parentesco: d.relationship || "Dependente",
+      data_nascimento: d.birth_date,
+      cpf: d.cpf,
+    }));
+
+    // We need to fetch complete patient data
+    const { data: patientData } = await supabase
+      .from("patients")
       .select("*")
-      .or(`cpf.eq.${normalizedCPF},cpf.eq.${cpf}`)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("id", member.id)
       .maybeSingle();
 
-    if (filiacaoError) {
-      console.error("Error fetching filiacao:", filiacaoError);
+    if (!patientData) {
       return null;
     }
 
-    if (!filiacao) {
-      return null;
-    }
+    const filiacaoFromPatient = {
+      id: patientData.id,
+      nome: patientData.name,
+      cpf: patientData.cpf || "",
+      data_nascimento: patientData.birth_date || "",
+      sexo: patientData.gender,
+      email: patientData.email || "",
+      telefone: patientData.phone,
+      cep: patientData.cep,
+      logradouro: patientData.address,
+      numero: patientData.complement, // Using complement as fallback since number field doesn't exist
+      bairro: patientData.neighborhood,
+      cidade: patientData.city,
+      uf: patientData.state,
+      matricula: patientData.registration_number,
+      created_at: new Date().toISOString(),
+      aprovado_at: new Date().toISOString(),
+    };
 
-    // Fetch dependents
-    const { data: dependents } = await supabase
-      .from("sindical_associado_dependentes")
-      .select("*")
-      .eq("associado_id", filiacao.id);
-
-    // Generate PDF using the dedicated function with card expiration
     return generateFiliacaoPDFBlob(
-      filiacao,
-      dependents || [],
+      filiacaoFromPatient,
+      mappedDeps,
       sindicato,
       cardExpiresAt
     );
@@ -188,18 +239,7 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
       );
 
       try {
-        if (!member.cpf) {
-          setMembers((prev) =>
-            prev.map((m) =>
-              m.id === member.id
-                ? { ...m, status: "error", error: "CPF não cadastrado" }
-                : m
-            )
-          );
-          continue;
-        }
-
-        const pdfBlob = await generatePDFForMember(member.cpf, member.cardExpiresAt);
+        const pdfBlob = await generatePDFForMember(member, member.cardExpiresAt);
 
         if (pdfBlob) {
           pdfs.push({
@@ -214,7 +254,7 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
         } else {
           setMembers((prev) =>
             prev.map((m) =>
-              m.id === member.id ? { ...m, status: "no_filiacao" } : m
+              m.id === member.id ? { ...m, status: "error", error: "Erro ao gerar PDF" } : m
             )
           );
         }
@@ -273,7 +313,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
   const stats = {
     total: members.length,
     success: members.filter((m) => m.status === "success").length,
-    noFiliacao: members.filter((m) => m.status === "no_filiacao").length,
     error: members.filter((m) => m.status === "error").length,
   };
 
@@ -300,7 +339,7 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
 
         <div className="space-y-4">
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div className="p-3 rounded-lg bg-muted/50 text-center">
               <p className="text-2xl font-bold">{stats.total}</p>
               <p className="text-xs text-muted-foreground">Total</p>
@@ -308,10 +347,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
             <div className="p-3 rounded-lg bg-emerald-500/10 text-center">
               <p className="text-2xl font-bold text-emerald-600">{stats.success}</p>
               <p className="text-xs text-muted-foreground">Geradas</p>
-            </div>
-            <div className="p-3 rounded-lg bg-amber-500/10 text-center">
-              <p className="text-2xl font-bold text-amber-600">{stats.noFiliacao}</p>
-              <p className="text-xs text-muted-foreground">Sem ficha</p>
             </div>
             <div className="p-3 rounded-lg bg-red-500/10 text-center">
               <p className="text-2xl font-bold text-red-600">{stats.error}</p>
@@ -359,9 +394,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
                       {member.status === "success" && (
                         <CheckCircle className="h-4 w-4 text-emerald-500" />
                       )}
-                      {member.status === "no_filiacao" && (
-                        <AlertCircle className="h-4 w-4 text-amber-500" />
-                      )}
                       {member.status === "error" && (
                         <XCircle className="h-4 w-4 text-red-500" />
                       )}
@@ -375,11 +407,6 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {member.status === "no_filiacao" && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-300">
-                          Sem ficha
-                        </Badge>
-                      )}
                       {member.status === "error" && (
                         <Badge variant="outline" className="text-red-600 border-red-300">
                           {member.error || "Erro"}
