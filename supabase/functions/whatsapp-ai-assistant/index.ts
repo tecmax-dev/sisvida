@@ -851,7 +851,7 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 - iPhone: https://l1nk.dev/ZiSCK
 
 ## HOMOLOGAÇÃO
-Link: https://homolog.comerciariosilheus.org.br/
+Link: https://app.eclini.com.br/homologacao/sindicato
 
 ## SEGUNDA VIA DE BOLETO
 Pergunte: CNPJ, tipo de contribuição (Mensalidade ou Taxa Negocial), mês/período, valor, se há mais boletos.
