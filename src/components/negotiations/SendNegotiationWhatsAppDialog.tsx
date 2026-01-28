@@ -440,6 +440,9 @@ export function SendNegotiationWhatsAppDialog({
       caption += `🏢 *Empresa:* ${negotiation.employers?.name || "N/A"}\n`;
       caption += `🔢 *Código:* ${negotiation.negotiation_code}\n\n`;
       caption += `💰 *Valor Negociado:* ${formatCurrency(negotiation.total_negotiated_value)}\n`;
+      if (negotiation.down_payment_value > 0) {
+        caption += `💵 *Entrada:* ${formatCurrency(negotiation.down_payment_value)}\n`;
+      }
       caption += `📅 *Parcelas:* ${negotiation.installments_count}x de ${formatCurrency(negotiation.installment_value)}\n`;
       caption += `📆 *1ª Parcela:* ${format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy")}\n\n`;
       caption += `_Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}_`;
