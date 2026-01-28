@@ -2,10 +2,10 @@ import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Brand Colors matching the model
+// Brand Colors matching the SECMI model exactly
 const COLORS = {
-  red: [139, 0, 0] as [number, number, number], // Dark red for header bar
-  gold: [218, 165, 32] as [number, number, number], // Gold accent line
+  red: [139, 26, 26] as [number, number, number], // Dark red/maroon
+  darkRed: [100, 20, 20] as [number, number, number],
   black: [0, 0, 0] as [number, number, number],
   gray: [100, 100, 100] as [number, number, number],
   lightGray: [200, 200, 200] as [number, number, number],
@@ -63,6 +63,7 @@ interface GenerationOptions {
 }
 
 const formatCPF = (cpf: string) => {
+  if (!cpf) return "";
   const cleaned = cpf.replace(/\D/g, "");
   return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
@@ -112,6 +113,32 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   }
 }
 
+// Draw curved red decoration in top-left corner
+function drawHeaderDecoration(doc: jsPDF) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Red curved shape on left side
+  doc.setFillColor(...COLORS.red);
+  doc.setDrawColor(...COLORS.red);
+  
+  // Draw curved shape using bezier-like approach with multiple arcs
+  // Main curve from top
+  doc.moveTo(0, 0);
+  doc.lineTo(60, 0);
+  // Create curve effect with triangles
+  doc.triangle(0, 0, 60, 0, 0, 80, "F");
+  
+  // Add secondary curve layer for depth
+  doc.setFillColor(...COLORS.darkRed);
+  doc.triangle(0, 0, 40, 0, 0, 55, "F");
+  
+  // Red line under title
+  doc.setFillColor(...COLORS.red);
+  doc.setDrawColor(...COLORS.red);
+  doc.setLineWidth(2);
+  doc.line(70, 28, pageWidth - 14, 28);
+}
+
 async function buildFiliacaoPDF(
   filiacao: Filiacao,
   _dependents: unknown[],
@@ -123,45 +150,40 @@ async function buildFiliacaoPDF(
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
 
-  // ========== HEADER WITH RED BAR AND GOLD ACCENT ==========
-  // Draw red gradient bar at top
-  doc.setFillColor(...COLORS.red);
-  doc.rect(0, 0, pageWidth, 28, "F");
+  // ========== HEADER DECORATION (curved red shape) ==========
+  drawHeaderDecoration(doc);
 
-  // Gold accent line below
-  doc.setFillColor(...COLORS.gold);
-  doc.rect(0, 28, pageWidth, 3, "F");
-
-  // Logo on left
+  // Logo on top-left (over the curve)
   if (sindicato?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", 8, 3, 22, 22);
+        doc.addImage(logoBase64, "PNG", 8, 5, 28, 28);
       }
     } catch (e) {
       console.warn("Failed to load logo:", e);
     }
   }
 
-  // Sindicato name in header (white text, centered)
+  // Sindicato name (right-aligned, bold, dark red)
   doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...COLORS.red);
   doc.setFont("helvetica", "bold");
   const sindicatoName = sindicato?.razao_social?.toUpperCase() || "SINDICATO";
-  doc.text(sindicatoName, pageWidth / 2, 14, { align: "center" });
+  doc.text(sindicatoName, pageWidth - margin, 18, { align: "right" });
 
-  // CNPJ below (smaller, white)
+  // CNPJ below title
   if (sindicato?.cnpj) {
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    doc.text(sindicato.cnpj, pageWidth / 2, 22, { align: "center" });
+    doc.setTextColor(...COLORS.gray);
+    doc.text(sindicato.cnpj, pageWidth / 2, 38, { align: "center" });
   }
 
-  let yPos = 40;
+  let yPos = 55;
 
   // ========== TITLE: FICHA DE SÓCIO ==========
-  doc.setFontSize(22);
+  doc.setFontSize(26);
   doc.setTextColor(...COLORS.black);
   doc.setFont("helvetica", "bold");
   doc.text("FICHA DE SÓCIO", pageWidth / 2, yPos, { align: "center" });
@@ -174,12 +196,13 @@ async function buildFiliacaoPDF(
     : formatDate(filiacao.created_at);
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
+  doc.setTextColor(...COLORS.gray);
   doc.text(`Filiado desde ${filiadoDesde}`, pageWidth / 2, yPos, { align: "center" });
 
-  yPos += 14;
+  yPos += 16;
 
   // ========== DADOS DO SÓCIO SECTION ==========
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bolditalic");
   doc.setTextColor(...COLORS.black);
   doc.text("Dados do Sócio", margin, yPos);
@@ -189,82 +212,87 @@ async function buildFiliacaoPDF(
   doc.setLineWidth(0.5);
   doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
 
-  yPos += 10;
+  yPos += 12;
 
-  // Grid layout for member data (3 columns)
+  // Grid layout for member data (3 columns like the model)
   const col1X = margin;
-  const col2X = margin + 62;
-  const col3X = margin + 124;
-  const lineHeight = 6;
+  const col2X = margin + 65;
+  const col3X = margin + 130;
+  const lineHeight = 7;
 
-  const drawField = (label: string, value: string, x: number, y: number) => {
+  const drawField = (label: string, value: string, x: number, y: number, maxWidth?: number) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
+    doc.setTextColor(...COLORS.black);
     doc.text(`${label}:`, x, y);
     doc.setFont("helvetica", "normal");
     const labelWidth = doc.getTextWidth(`${label}: `);
-    doc.text(value || "", x + labelWidth, y);
+    const displayValue = value || "";
+    if (maxWidth) {
+      doc.text(displayValue, x + labelWidth, y, { maxWidth: maxWidth - labelWidth });
+    } else {
+      doc.text(displayValue, x + labelWidth, y);
+    }
   };
 
-  // Row 1
-  drawField("Nome Completo", filiacao.nome, col1X, yPos);
-  yPos += lineHeight;
-
-  // Row 2 (spread across columns)
-  drawField("Nascimento", formatDate(filiacao.data_nascimento), col1X, yPos);
+  // Row 1 - Nome Completo (full width) + Matrícula + Telefone
+  drawField("Nome Completo", filiacao.nome, col1X, yPos, 60);
   drawField("Matrícula", filiacao.matricula || "", col2X, yPos);
-  drawField("Telefone", formatPhone(filiacao.telefone) || "", col3X, yPos);
+  drawField("Telefone", "", col3X, yPos);
   yPos += lineHeight;
 
-  // Row 3
-  drawField("E-mail", filiacao.email || "", col1X, yPos);
+  // Row 2
+  drawField("Nascimento", formatDate(filiacao.data_nascimento), col1X, yPos);
   drawField("Celular", formatPhone(filiacao.telefone), col2X, yPos);
   drawField("RG", filiacao.rg || "", col3X, yPos);
   yPos += lineHeight;
 
-  // Row 4
-  const endereco = [filiacao.logradouro, filiacao.numero].filter(Boolean).join(", ");
-  drawField("Endereço", endereco, col1X, yPos);
+  // Row 3
+  drawField("E-mail", filiacao.email || "", col1X, yPos, 60);
   drawField("CPF", formatCPF(filiacao.cpf), col2X, yPos);
   drawField("Cidade", `${filiacao.cidade || ""} - ${filiacao.uf || ""}`, col3X, yPos);
   yPos += lineHeight;
 
-  // Row 5
-  drawField("CNS", (filiacao as any).cns || "", col1X, yPos);
+  // Row 4
+  const endereco = [filiacao.logradouro, filiacao.numero].filter(Boolean).join(", ");
+  drawField("Endereço", endereco, col1X, yPos, 60);
   drawField("Bairro", filiacao.bairro || "", col2X, yPos);
   drawField("Nome do pai", filiacao.nome_pai || "", col3X, yPos);
   yPos += lineHeight;
 
-  // Row 6
+  // Row 5
+  drawField("CNS", filiacao.cns || "", col1X, yPos);
   drawField("Nome da mãe", filiacao.nome_mae || "", col2X, yPos);
   doc.setFont("helvetica", "bold");
   doc.text("Filiado:", col3X, yPos);
   doc.setFont("helvetica", "normal");
   doc.text(" Sim", col3X + doc.getTextWidth("Filiado: "), yPos);
-  yPos += 12;
+  yPos += 16;
 
   // ========== DADOS PROFISSIONAIS SECTION ==========
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bolditalic");
+  doc.setTextColor(...COLORS.black);
   doc.text("Dados profissionais", margin, yPos);
+  doc.setDrawColor(...COLORS.lightGray);
   doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
 
-  yPos += 10;
+  yPos += 12;
 
-  // Company data
-  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos);
+  // Company data (matching model layout)
+  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos, 120);
   yPos += lineHeight;
 
-  drawField("Segmento", (filiacao as any).empresa_segmento || "Comércio Varejista", col1X, yPos);
-  drawField("Bairro", (filiacao as any).empresa_bairro || filiacao.bairro || "", col3X, yPos);
+  drawField("Segmento", filiacao.empresa_segmento || "Comércio Varejista", col1X, yPos);
+  drawField("Bairro", filiacao.empresa_bairro || "", col3X, yPos);
   yPos += lineHeight;
 
-  drawField("Endereço", (filiacao as any).empresa_endereco || "", col1X, yPos);
-  drawField("Telefone", (filiacao as any).empresa_telefone || "", col3X, yPos);
+  drawField("Endereço", filiacao.empresa_endereco || "", col1X, yPos, 100);
+  drawField("Telefone", filiacao.empresa_telefone || "", col3X, yPos);
   yPos += lineHeight;
 
-  const empresaCidade = (filiacao as any).empresa_cidade || filiacao.cidade || "";
-  const empresaUf = (filiacao as any).empresa_uf || filiacao.uf || "";
+  const empresaCidade = filiacao.empresa_cidade || filiacao.cidade || "";
+  const empresaUf = filiacao.empresa_uf || filiacao.uf || "";
   drawField("Cidade", `${empresaCidade} - ${empresaUf}`, col1X, yPos);
   drawField("Admissão", filiacao.data_admissao ? formatDate(filiacao.data_admissao) : "Não informado", col3X, yPos);
   yPos += lineHeight;
@@ -272,16 +300,24 @@ async function buildFiliacaoPDF(
   drawField("Funções", filiacao.cargo || "", col1X, yPos);
   yPos += 20;
 
-  // ========== WATERMARK (Logo in center, faded) ==========
+  // ========== WATERMARK (Logo in center, faded) - Large like model ==========
   if (sindicato?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        // Draw semi-transparent logo in the center background
         doc.saveGraphicsState();
         // @ts-ignore - setGState exists in jsPDF
-        doc.setGState(new doc.GState({ opacity: 0.15 }));
-        doc.addImage(logoBase64, "PNG", pageWidth / 2 - 50, yPos - 20, 100, 100);
+        doc.setGState(new doc.GState({ opacity: 0.12 }));
+        // Large centered watermark like in the model
+        const watermarkSize = 130;
+        doc.addImage(
+          logoBase64,
+          "PNG",
+          pageWidth / 2 - watermarkSize / 2,
+          yPos - 30,
+          watermarkSize,
+          watermarkSize
+        );
         doc.restoreGraphicsState();
       }
     } catch (e) {
@@ -295,18 +331,20 @@ async function buildFiliacaoPDF(
     ? formatDateLong(filiacao.aprovado_at)
     : formatDateLong(new Date().toISOString());
 
-  doc.setFontSize(11);
+  yPos += 35;
+  doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text(`${cidade.toUpperCase()}, ${dataFormatada}`, pageWidth / 2, yPos + 50, { align: "center" });
+  doc.setTextColor(...COLORS.black);
+  doc.text(`${cidade.toUpperCase()}, ${dataFormatada}`, pageWidth / 2, yPos, { align: "center" });
 
-  yPos += 75;
+  yPos += 30;
 
   // Signature line
   doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.3);
-  doc.line(pageWidth / 2 - 50, yPos, pageWidth / 2 + 50, yPos);
+  doc.setLineWidth(0.4);
+  doc.line(pageWidth / 2 - 60, yPos, pageWidth / 2 + 60, yPos);
 
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.text("Assinatura do Sócio", pageWidth / 2, yPos + 6, { align: "center" });
 
   // Add digital signature if exists
@@ -314,118 +352,145 @@ async function buildFiliacaoPDF(
     try {
       const sigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url);
       if (sigBase64) {
-        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 30, yPos - 25, 60, 20);
+        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 35, yPos - 25, 70, 22);
       }
     } catch (e) {
       console.warn("Failed to load signature:", e);
     }
   }
 
-  // ========== BOTTOM STUB (VIA EMPRESA) ==========
-  const stubY = pageHeight - 55;
+  // ========== BOTTOM STUB (VIA EMPRESA) - Matching model exactly ==========
+  const stubY = pageHeight - 62;
 
   // Dashed line separator
   doc.setDrawColor(...COLORS.gray);
-  doc.setLineDashPattern([2, 2], 0);
+  doc.setLineDashPattern([3, 2], 0);
+  doc.setLineWidth(0.5);
   doc.line(margin, stubY, pageWidth - margin, stubY);
   doc.setLineDashPattern([], 0);
 
-  const stubStartY = stubY + 8;
+  // Stub content area with border
+  const stubStartY = stubY + 6;
+  const stubHeight = 52;
+  
+  // Draw border around stub content
+  doc.setDrawColor(...COLORS.lightGray);
+  doc.setLineWidth(0.3);
+  doc.rect(margin, stubStartY, pageWidth - margin * 2, stubHeight - 10);
 
-  // Small logo on left
+  // Row 1: Logo + Autorização + Checkboxes + Matrícula
+  const row1Y = stubStartY + 8;
+
+  // Small logo
   if (sindicato?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", margin, stubStartY - 2, 12, 12);
+        doc.addImage(logoBase64, "PNG", margin + 3, row1Y - 4, 14, 14);
       }
     } catch (e) {
       console.warn("Failed to load stub logo:", e);
     }
   }
 
-  // "Autorização de Desconto" title
-  doc.setFontSize(10);
+  // "Autorização de Desconto"
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Autorização de Desconto", margin + 16, stubStartY + 4);
+  doc.setTextColor(...COLORS.black);
+  doc.text("Autorização de Desconto", margin + 22, row1Y + 3);
 
-  // Desconto em Folha checkbox
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
+  // "Desconto em Folha:" with checkboxes
+  doc.setFontSize(10);
+  doc.text("Desconto em Folha:", margin + 85, row1Y + 3);
+  
   const descontoFolha = filiacao.forma_pagamento === "desconto_folha";
-  doc.text("Desconto em Folha:", margin + 75, stubStartY + 4);
-
+  
   // Sim checkbox
-  doc.rect(margin + 115, stubStartY, 4, 4);
+  doc.setLineWidth(0.4);
+  doc.setDrawColor(...COLORS.black);
+  doc.rect(margin + 130, row1Y - 2, 4, 4);
   if (descontoFolha) {
     doc.setFillColor(...COLORS.black);
-    doc.rect(margin + 115.5, stubStartY + 0.5, 3, 3, "F");
+    doc.rect(margin + 130.5, row1Y - 1.5, 3, 3, "F");
   }
-  doc.text("Sim", margin + 121, stubStartY + 4);
+  doc.setFont("helvetica", "normal");
+  doc.text("Sim", margin + 136, row1Y + 2);
 
   // Não checkbox
-  doc.rect(margin + 135, stubStartY, 4, 4);
+  doc.rect(margin + 150, row1Y - 2, 4, 4);
   if (!descontoFolha) {
     doc.setFillColor(...COLORS.black);
-    doc.rect(margin + 135.5, stubStartY + 0.5, 3, 3, "F");
+    doc.rect(margin + 150.5, row1Y - 1.5, 3, 3, "F");
   }
-  doc.text("Não", margin + 141, stubStartY + 4);
+  doc.text("Não", margin + 156, row1Y + 2);
 
-  // Matrícula on right
+  // Vertical separator
+  doc.setLineWidth(0.3);
+  doc.line(pageWidth - margin - 40, stubStartY + 2, pageWidth - margin - 40, row1Y + 12);
+
+  // Matrícula box on right
   doc.setFont("helvetica", "bold");
-  doc.text("Matrícula:", pageWidth - margin - 35, stubStartY);
+  doc.setFontSize(9);
+  doc.text("Matrícula:", pageWidth - margin - 35, row1Y - 1);
   doc.setFont("helvetica", "normal");
-  doc.text(filiacao.matricula || "", pageWidth - margin - 35, stubStartY + 6);
+  doc.setFontSize(10);
+  doc.text(filiacao.matricula || "", pageWidth - margin - 35, row1Y + 6);
 
-  // Second row
-  const row2Y = stubStartY + 12;
-
-  // Nome completo
-  doc.setFontSize(8);
+  // Assinatura label on far right
   doc.setFont("helvetica", "bold");
-  doc.text("Nome completo:", margin, row2Y);
+  doc.setFontSize(9);
+  doc.text("Assinatura:", pageWidth - margin - 35, row1Y + 14);
+  doc.setLineWidth(0.3);
+  doc.line(pageWidth - margin - 35, row1Y + 22, pageWidth - margin - 2, row1Y + 22);
+
+  // Row 2: Nome completo
+  const row2Y = row1Y + 14;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Nome completo:", margin + 3, row2Y);
   doc.setFont("helvetica", "normal");
-  doc.text(filiacao.nome, margin, row2Y + 4);
+  doc.text(filiacao.nome, margin + 3, row2Y + 5);
 
-  // Assinatura on right
-  doc.setFont("helvetica", "bold");
-  doc.text("Assinatura:", pageWidth - margin - 35, row2Y);
-  doc.line(pageWidth - margin - 35, row2Y + 8, pageWidth - margin, row2Y + 8);
-
-  // Third row - company info
+  // Row 3: Empresa onde trabalha + Nº Registro + Local + Inscrição
   const row3Y = row2Y + 14;
-
+  
   doc.setFont("helvetica", "bold");
-  doc.text("Empresa onde trabalha:", margin, row3Y);
+  doc.text("Empresa onde trabalha:", margin + 3, row3Y);
   doc.setFont("helvetica", "normal");
-  doc.text(filiacao.empresa_razao_social || "", margin, row3Y + 4);
+  doc.text(filiacao.empresa_razao_social || "", margin + 3, row3Y + 5);
 
-  // Nº Registro, Local, Inscrição table
-  const tableStartX = margin + 60;
-  doc.setFont("helvetica", "bold");
-  doc.text("Nº Registro:", tableStartX, row3Y);
-  doc.setFont("helvetica", "normal");
-  doc.text("...", tableStartX, row3Y + 4);
+  // Table for Nº Registro, Local, Inscrição
+  const tableX = margin + 65;
+  const cellWidth = 35;
+  
+  // Draw table borders
+  doc.setLineWidth(0.2);
+  doc.rect(tableX, row3Y - 4, cellWidth, 12);
+  doc.rect(tableX + cellWidth, row3Y - 4, cellWidth, 12);
+  doc.rect(tableX + cellWidth * 2, row3Y - 4, cellWidth, 12);
 
+  // Table headers
   doc.setFont("helvetica", "bold");
-  doc.text("Local:", tableStartX + 35, row3Y);
-  doc.setFont("helvetica", "normal");
-  doc.text(filiacao.cidade?.toUpperCase() || "", tableStartX + 35, row3Y + 4);
+  doc.setFontSize(8);
+  doc.text("Nº Registro:", tableX + 2, row3Y);
+  doc.text("Local:", tableX + cellWidth + 2, row3Y);
+  doc.text("Inscrição:", tableX + cellWidth * 2 + 2, row3Y);
 
-  doc.setFont("helvetica", "bold");
-  doc.text("Inscrição:", tableStartX + 70, row3Y);
+  // Table values
   doc.setFont("helvetica", "normal");
-  doc.text(formatDate(filiacao.aprovado_at || filiacao.created_at), tableStartX + 70, row3Y + 4);
+  doc.text("...", tableX + 2, row3Y + 5);
+  doc.text((filiacao.cidade || "").toUpperCase(), tableX + cellWidth + 2, row3Y + 5);
+  doc.text(formatDate(filiacao.aprovado_at || filiacao.created_at), tableX + cellWidth * 2 + 2, row3Y + 5);
 
   // VIA EMPRESA footer bar
   const footerY = pageHeight - 8;
   doc.setFillColor(...COLORS.red);
-  doc.rect(margin, footerY - 5, pageWidth - margin * 2, 8, "F");
+  doc.rect(margin, footerY - 6, pageWidth - margin * 2, 10, "F");
 
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text("VIA EMPRESA", pageWidth / 2, footerY, { align: "center" });
+  doc.text("VIA EMPRESA", pageWidth / 2, footerY + 1, { align: "center" });
 
   return doc;
 }
