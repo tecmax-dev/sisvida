@@ -70,9 +70,18 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
-      toast.error("Apenas arquivos PDF são aceitos");
+    // Validate file type (PDF, XLS, XLSX)
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    const validExtensions = [".pdf", ".xls", ".xlsx"];
+    const hasValidType = validTypes.some(t => file.type.includes(t) || file.type === t);
+    const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+    
+    if (!hasValidType && !hasValidExtension) {
+      toast.error("Formatos aceitos: PDF, XLS ou XLSX");
       return;
     }
 
@@ -178,7 +187,7 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
             Importar Sócios e Empresas
           </DialogTitle>
           <DialogDescription>
-            Importe dados de sócios e empresas a partir de arquivo PDF
+            Importe dados de sócios e empresas a partir de arquivo PDF ou planilha Excel (XLS/XLSX)
           </DialogDescription>
         </DialogHeader>
 
@@ -192,16 +201,16 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
                     <FileText className="h-10 w-10 text-muted-foreground" />
                   </div>
                   <div className="text-center space-y-2">
-                    <h3 className="font-semibold text-lg">Selecione o arquivo PDF</h3>
+                    <h3 className="font-semibold text-lg">Selecione o arquivo</h3>
                     <p className="text-sm text-muted-foreground max-w-md">
-                      O arquivo deve conter uma tabela com: Nome do Sócio, CPF, RG, Empresa, CNPJ, Função, Data de Inscrição e Data de Admissão
+                      Formatos aceitos: <strong>PDF, XLS ou XLSX</strong>. O arquivo deve conter: Nome, CPF, Empresa, CNPJ e demais dados dos sócios.
                     </p>
                   </div>
                   
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,application/pdf"
+                    accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     onChange={handleFileChange}
                     className="hidden"
                     disabled={isLoadingPreview}
@@ -215,12 +224,12 @@ export function ImportMembersDialog({ open, onOpenChange }: ImportMembersDialogP
                     {isLoadingPreview ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processando PDF...
+                        Processando arquivo...
                       </>
                     ) : (
                       <>
                         <Upload className="h-4 w-4 mr-2" />
-                        Selecionar PDF
+                        Selecionar Arquivo
                       </>
                     )}
                   </Button>

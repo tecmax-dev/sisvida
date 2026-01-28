@@ -23,6 +23,29 @@ function normalizeDigits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+function parseDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  // Expect DD/MM/YYYY format, convert to YYYY-MM-DD for database
+  const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    return `${year}-${month}-${day}`;
+  }
+  // Try ISO format
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    return dateStr.slice(0, 10);
+  }
+  return null;
+}
+
+function normalizeGender(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.toUpperCase().trim();
+  if (normalized.startsWith("M") || normalized === "MASCULINO") return "M";
+  if (normalized.startsWith("F") || normalized === "FEMININO") return "F";
+  return null;
+}
+
 function pickEmployerName(params: {
   rfData?: CnpjLookupResult | null;
   fallbackFromPdf?: string;
@@ -245,16 +268,29 @@ export function useImportExecution(clinicId: string | undefined) {
         }
 
         if ((firstRecord.action === "update" || firstRecord.status === "will_update") && firstRecord.patient_id) {
-          // Update existing patient
+          // Update existing patient with all available fields
+          const updateData: Record<string, any> = {
+            employer_cnpj: cnpjKey,
+            employer_name: employerName || null,
+            is_union_member: true,
+          };
+          
+          // Add optional fields if present
+          if (firstRecord.funcao) updateData.profession = firstRecord.funcao;
+          if (firstRecord.data_inscricao) updateData.union_joined_at = firstRecord.data_inscricao;
+          if (firstRecord.endereco) updateData.address = firstRecord.endereco;
+          if (firstRecord.cep) updateData.zip_code = firstRecord.cep.replace(/\D/g, "");
+          if (firstRecord.cidade) updateData.city = firstRecord.cidade;
+          if (firstRecord.uf) updateData.state = firstRecord.uf;
+          if (firstRecord.celular) updateData.phone = firstRecord.celular.replace(/\D/g, "");
+          if (firstRecord.nascimento) updateData.birth_date = parseDate(firstRecord.nascimento);
+          if (firstRecord.sexo) updateData.gender = normalizeGender(firstRecord.sexo);
+          if (firstRecord.estado_civil) updateData.marital_status = firstRecord.estado_civil;
+          if (firstRecord.nome_mae) updateData.mother_name = firstRecord.nome_mae;
+          
           const { error } = await supabase
             .from("patients")
-            .update({
-              employer_cnpj: cnpjKey,
-              employer_name: employerName || null,
-              profession: firstRecord.funcao || undefined,
-              is_union_member: true,
-              union_joined_at: firstRecord.data_inscricao || undefined,
-            })
+            .update(updateData)
             .eq("id", firstRecord.patient_id);
 
           if (error) {
@@ -272,23 +308,35 @@ export function useImportExecution(clinicId: string | undefined) {
             firstRecord.employer_id = employerId;
           }
         } else if (firstRecord.action === "create" || firstRecord.status === "will_create") {
-          // Create new patient
+          // Create new patient with all available fields
+          const insertData: Record<string, any> = {
+            clinic_id: clinicId,
+            name: firstRecord.nome,
+            cpf: cpfKey,
+            phone: firstRecord.celular?.replace(/\D/g, "") || firstRecord.telefone?.replace(/\D/g, "") || "00000000000",
+            employer_cnpj: cnpjKey,
+            employer_name: employerName || null,
+            is_active: true,
+            is_union_member: true,
+            notes: `Importado em ${new Date().toLocaleDateString("pt-BR")}. Admissão: ${firstRecord.data_admissao || "-"}`,
+          };
+          
+          // Add optional fields if present
+          if (firstRecord.rg) insertData.rg = firstRecord.rg;
+          if (firstRecord.funcao) insertData.profession = firstRecord.funcao;
+          if (firstRecord.data_inscricao) insertData.union_joined_at = firstRecord.data_inscricao;
+          if (firstRecord.endereco) insertData.address = firstRecord.endereco;
+          if (firstRecord.cep) insertData.zip_code = firstRecord.cep.replace(/\D/g, "");
+          if (firstRecord.cidade) insertData.city = firstRecord.cidade;
+          if (firstRecord.uf) insertData.state = firstRecord.uf;
+          if (firstRecord.nascimento) insertData.birth_date = parseDate(firstRecord.nascimento);
+          if (firstRecord.sexo) insertData.gender = normalizeGender(firstRecord.sexo);
+          if (firstRecord.estado_civil) insertData.marital_status = firstRecord.estado_civil;
+          if (firstRecord.nome_mae) insertData.mother_name = firstRecord.nome_mae;
+          
           const { data: newPatient, error } = await supabase
             .from("patients")
-            .insert({
-              clinic_id: clinicId,
-              name: firstRecord.nome,
-              cpf: cpfKey,
-              rg: firstRecord.rg || undefined,
-              phone: "00000000000", // Required field - placeholder
-              employer_cnpj: cnpjKey,
-              employer_name: employerName || null,
-              profession: firstRecord.funcao || undefined,
-              is_active: true,
-              is_union_member: true,
-              union_joined_at: firstRecord.data_inscricao || undefined,
-              notes: `Importado em ${new Date().toLocaleDateString("pt-BR")}. Admissão: ${firstRecord.data_admissao || "-"}`,
-            })
+            .insert(insertData as any)
             .select("id")
             .single();
 

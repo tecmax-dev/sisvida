@@ -2,6 +2,40 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImportedMember, PreviewData, ProcessingProgress } from "./types";
 import { extractTextFromPdf, parseExtractedText } from "./pdfTextExtractor";
+import { parseXlsxFile, ParsedXlsxRecord } from "./xlsxParser";
+
+type FileType = "pdf" | "xlsx" | "xls";
+
+function detectFileType(file: File): FileType | null {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pdf") || file.type.includes("pdf")) return "pdf";
+  if (name.endsWith(".xlsx") || file.type.includes("spreadsheet") || file.type.includes("openxmlformats")) return "xlsx";
+  if (name.endsWith(".xls") || file.type.includes("excel")) return "xls";
+  return null;
+}
+
+function xlsxRecordToImportedMember(record: ParsedXlsxRecord): Omit<ImportedMember, "status" | "action" | "error_message" | "patient_id" | "employer_id" | "existing_patient_name" | "existing_employer_name"> {
+  return {
+    nome: record.nome,
+    cpf: record.cpf,
+    rg: record.rg,
+    empresa_nome: record.empresa_nome,
+    cnpj: record.cnpj,
+    funcao: record.funcao,
+    data_inscricao: record.data_inscricao,
+    data_admissao: record.data_admissao,
+    endereco: record.endereco,
+    cep: record.cep,
+    cidade: record.cidade,
+    uf: record.uf,
+    telefone: record.telefone,
+    celular: record.celular,
+    nascimento: record.nascimento,
+    sexo: record.sexo,
+    estado_civil: record.estado_civil,
+    nome_mae: record.nome_mae,
+  };
+}
 
 export function useImportPreview(clinicId: string | undefined) {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,9 +54,10 @@ export function useImportPreview(clinicId: string | undefined) {
       return null;
     }
 
-    // Validate file type
-    if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Apenas arquivos PDF são aceitos");
+    // Detect file type
+    const fileType = detectFileType(file);
+    if (!fileType) {
+      setError("Formato de arquivo não suportado. Use PDF, XLS ou XLSX.");
       return null;
     }
 
@@ -31,22 +66,37 @@ export function useImportPreview(clinicId: string | undefined) {
     setPreviewData(null);
 
     try {
-      // Phase 1: Extract text from PDF
-      setProgress({ current: 10, total: 100, phase: "extracting", message: "Extraindo texto do PDF..." });
-      
-      const { rawText, pageCount } = await extractTextFromPdf(file);
-      
-      if (!rawText || rawText.trim().length < 50) {
-        throw new Error("Não foi possível extrair texto do PDF. Verifique se o arquivo contém texto selecionável.");
-      }
+      let parsedRecords: Omit<ImportedMember, "status" | "action" | "error_message" | "patient_id" | "employer_id" | "existing_patient_name" | "existing_employer_name">[];
 
-      // Phase 2: Parse extracted text
-      setProgress({ current: 30, total: 100, phase: "parsing", message: `Analisando ${pageCount} páginas...` });
-      
-      const parsedRecords = parseExtractedText(rawText);
-      
-      if (parsedRecords.length === 0) {
-        throw new Error("Nenhum registro válido encontrado no PDF. Verifique se o formato está correto (Nome, CPF, Empresa, CNPJ).");
+      if (fileType === "xlsx" || fileType === "xls") {
+        // Parse XLSX/XLS file
+        setProgress({ current: 10, total: 100, phase: "extracting", message: "Lendo planilha..." });
+        
+        const { records: xlsxRecords, rowCount } = await parseXlsxFile(file);
+        
+        if (xlsxRecords.length === 0) {
+          throw new Error("Nenhum registro válido encontrado na planilha.");
+        }
+
+        setProgress({ current: 30, total: 100, phase: "parsing", message: `${xlsxRecords.length} registros encontrados...` });
+        parsedRecords = xlsxRecords.map(xlsxRecordToImportedMember);
+      } else {
+        // Parse PDF file
+        setProgress({ current: 10, total: 100, phase: "extracting", message: "Extraindo texto do PDF..." });
+        
+        const { rawText, pageCount } = await extractTextFromPdf(file);
+        
+        if (!rawText || rawText.trim().length < 50) {
+          throw new Error("Não foi possível extrair texto do PDF. Verifique se o arquivo contém texto selecionável.");
+        }
+
+        setProgress({ current: 30, total: 100, phase: "parsing", message: `Analisando ${pageCount} páginas...` });
+        
+        parsedRecords = parseExtractedText(rawText);
+        
+        if (parsedRecords.length === 0) {
+          throw new Error("Nenhum registro válido encontrado no PDF. Verifique se o formato está correto (Nome, CPF, Empresa, CNPJ).");
+        }
       }
 
       // Phase 3: Validate against database
