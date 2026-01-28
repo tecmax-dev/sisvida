@@ -271,9 +271,13 @@ export function useImportExecution(clinicId: string | undefined) {
             cnae_description: rfData?.cnae_fiscal_descricao || null,
           };
 
-          const { data: newEmployer, error } = await supabase
+          // Use upsert to handle race conditions and duplicates
+          const { data: upsertedEmployer, error } = await supabase
             .from("employers")
-            .insert(employerData)
+            .upsert(employerData, { 
+              onConflict: "clinic_id,cnpj",
+              ignoreDuplicates: false 
+            })
             .select("id")
             .single();
 
@@ -290,14 +294,14 @@ export function useImportExecution(clinicId: string | undefined) {
               message: `Erro ao criar empresa: ${error.message}`,
               data: { cnpj, name: record.empresa_nome },
             });
-          } else if (newEmployer) {
+          } else if (upsertedEmployer) {
             addAuditEntry({
               action: 'employer_created',
               entity_type: 'employer',
-              entity_id: newEmployer.id,
+              entity_id: upsertedEmployer.id,
               details: { cnpj, name: resolvedEmployerName, rf_data_available: !!rfData },
             });
-            employerIdMap.set(cnpj, newEmployer.id);
+            employerIdMap.set(cnpj, upsertedEmployer.id);
             employerNameByCnpj.set(cnpj, resolvedEmployerName);
             employerTradeNameByCnpj.set(cnpj, rfData?.nome_fantasia || null);
             importResult.employersCreated++;
