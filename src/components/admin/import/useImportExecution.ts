@@ -300,7 +300,7 @@ export function useImportExecution(clinicId: string | undefined) {
             
             // Add optional fields if present
             if (firstRecord.funcao) updateData.profession = firstRecord.funcao;
-            if (firstRecord.data_inscricao) updateData.union_joined_at = firstRecord.data_inscricao;
+            if (firstRecord.data_inscricao) updateData.union_joined_at = parseDate(firstRecord.data_inscricao);
             if (firstRecord.endereco) updateData.address = firstRecord.endereco;
             if (firstRecord.cep) updateData.zip_code = firstRecord.cep.replace(/\D/g, "");
             if (firstRecord.cidade) updateData.city = firstRecord.cidade;
@@ -348,7 +348,7 @@ export function useImportExecution(clinicId: string | undefined) {
             // Add optional fields if present
             if (firstRecord.rg) insertData.rg = firstRecord.rg;
             if (firstRecord.funcao) insertData.profession = firstRecord.funcao;
-            if (firstRecord.data_inscricao) insertData.union_joined_at = firstRecord.data_inscricao;
+            if (firstRecord.data_inscricao) insertData.union_joined_at = parseDate(firstRecord.data_inscricao);
             if (firstRecord.endereco) insertData.address = firstRecord.endereco;
             if (firstRecord.cep) insertData.zip_code = firstRecord.cep.replace(/\D/g, "");
             if (firstRecord.cidade) insertData.city = firstRecord.cidade;
