@@ -390,7 +390,7 @@ export function useImportExecution(clinicId: string | undefined) {
             if (firstRecord.funcao) updateData.profession = firstRecord.funcao;
             if (firstRecord.data_inscricao) updateData.union_joined_at = parseDate(firstRecord.data_inscricao);
             if (firstRecord.endereco) updateData.address = firstRecord.endereco;
-            if (firstRecord.cep) updateData.zip_code = firstRecord.cep.replace(/\D/g, "");
+            if (firstRecord.cep) updateData.cep = firstRecord.cep.replace(/\D/g, "");
             if (firstRecord.cidade) updateData.city = firstRecord.cidade;
             if (firstRecord.uf) updateData.state = firstRecord.uf;
             if (firstRecord.celular) updateData.phone = firstRecord.celular.replace(/\D/g, "");
@@ -450,7 +450,7 @@ export function useImportExecution(clinicId: string | undefined) {
             if (firstRecord.funcao) insertData.profession = firstRecord.funcao;
             if (firstRecord.data_inscricao) insertData.union_joined_at = parseDate(firstRecord.data_inscricao);
             if (firstRecord.endereco) insertData.address = firstRecord.endereco;
-            if (firstRecord.cep) insertData.zip_code = firstRecord.cep.replace(/\D/g, "");
+            if (firstRecord.cep) insertData.cep = firstRecord.cep.replace(/\D/g, "");
             if (firstRecord.cidade) insertData.city = firstRecord.cidade;
             if (firstRecord.uf) insertData.state = firstRecord.uf;
             if (firstRecord.nascimento) insertData.birth_date = parseDate(firstRecord.nascimento);
