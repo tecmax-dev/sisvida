@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllEmployers, fetchAllPatients } from "@/lib/supabase-helpers";
 import { ImportedMember, ImportResult, ProcessingProgress, PreviewData } from "./types";
 
 interface CnpjLookupResult {
@@ -224,10 +225,21 @@ export function useImportExecution(clinicId: string | undefined) {
       const rfCache = new Map<string, CnpjLookupResult | null>();
 
       // Get existing employers - fetch all and filter by normalized CNPJ
-      const { data: allEmployers } = await supabase
-        .from("employers")
-        .select("id, cnpj, name, trade_name")
-        .eq("clinic_id", clinicId);
+      const employersResult = await fetchAllEmployers<{
+        id: string;
+        cnpj: string;
+        name: string;
+        trade_name?: string | null;
+      }>(clinicId, {
+        select: "id, cnpj, name, trade_name",
+        activeOnly: false,
+      });
+
+      if (employersResult.error) {
+        throw employersResult.error;
+      }
+
+      const allEmployers = employersResult.data;
 
       (allEmployers || []).forEach(e => {
         if (e.cnpj) {
@@ -344,6 +356,28 @@ export function useImportExecution(clinicId: string | undefined) {
       }
 
       // Phase 2: Process members - BATCH OPTIMIZED
+      setProgress({ current: 25, total: 100, phase: "importing_members", message: "Carregando sócios existentes..." });
+
+      // Fetch existing patients for this clinic (no 1000-row truncation)
+      const uniqueCpfs = [...new Set(recordsToProcess.map(r => normalizeDigits(r.cpf)))];
+      const patientsResult = await fetchAllPatients<{ id: string; cpf: string | null; name: string }>(clinicId, {
+        select: "id, cpf, name",
+        activeOnly: false,
+      });
+
+      if (patientsResult.error) {
+        throw patientsResult.error;
+      }
+
+      const patientMap = new Map<string, { id: string; name: string }>();
+      (patientsResult.data || []).forEach(p => {
+        if (!p.cpf) return;
+        const cpfKey = normalizeDigits(p.cpf);
+        if (uniqueCpfs.includes(cpfKey)) {
+          patientMap.set(cpfKey, { id: p.id, name: p.name });
+        }
+      });
+
       setProgress({ current: 30, total: 100, phase: "importing_members", message: "Preparando sócios..." });
 
       // Group by CPF to handle duplicates
@@ -378,17 +412,19 @@ export function useImportExecution(clinicId: string | undefined) {
           });
           if (employerName) employerNameByCnpj.set(cnpjKey, employerName);
         }
-        
-        // NÃO há mais skip - sempre atualizar ou criar
-        if ((firstRecord.action === "update" || firstRecord.status === "will_update") && firstRecord.patient_id) {
+
+        // REGRA PRINCIPAL: identificar sócio pelo CPF normalizado
+        // Se existir -> atualizar e vincular; se não -> criar e vincular.
+        const existingPatient = patientMap.get(cpfKey);
+        if (existingPatient) {
+          firstRecord.patient_id = existingPatient.id;
+          firstRecord.action = "update";
+          firstRecord.status = "will_update";
           toUpdate.push({ cpfKey, firstRecord, cnpjKey, employerName: employerName || "Empresa", employerId });
-        } else if (firstRecord.action === "create" || firstRecord.status === "will_create") {
+        } else {
+          firstRecord.action = "create";
+          firstRecord.status = "will_create";
           toCreate.push({ cpfKey, firstRecord, cnpjKey, employerName: employerName || "Empresa", employerId });
-        } else if (firstRecord.action === "skip" || firstRecord.status === "will_skip") {
-          // Fallback legacy - não deve acontecer mais
-          importResult.membersSkipped++;
-          firstRecord.status = "skipped";
-          importResult.processedRecords.push(firstRecord);
         }
       }
 
