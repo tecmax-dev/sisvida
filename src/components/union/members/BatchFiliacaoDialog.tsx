@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
-import JSZip from "jszip";
 
 interface MemberWithCard {
   id: string;
@@ -86,7 +85,8 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      const today = new Date().toISOString();
+      // Use date-only string for comparison (YYYY-MM-DD format)
+      const today = new Date().toISOString().split("T")[0];
 
       const { data, error } = await supabase
         .from("patients")
@@ -300,6 +300,8 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
     if (sendMethod === "download") {
       // Generate all PDFs and create a ZIP file
       try {
+        // Dynamic import to avoid build issues
+        const JSZip = (await import("jszip")).default;
         const zip = new JSZip();
 
         for (let i = 0; i < selectedList.length; i++) {
