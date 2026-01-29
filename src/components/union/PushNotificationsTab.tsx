@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PushNotificationSetup } from "./PushNotificationSetup";
 
 interface PushNotificationHistory {
   id: string;
@@ -256,6 +257,9 @@ export function PushNotificationsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Admin Push Notification Setup */}
+      <PushNotificationSetup patientId={null} clinicId={effectiveClinicId} />
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
