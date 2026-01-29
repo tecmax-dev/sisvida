@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,11 +80,14 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     setResults([...diagnostics]);
 
     // 4. Check Service Worker registration
-    let swStatus: DiagnosticResult = {
-      name: 'Service Worker',
-      status: 'pending',
-      message: 'Verificando...'
-    };
+    let swInfo: {
+      appSW: ServiceWorkerRegistration | undefined;
+      appScope: string | null;
+      appOk: boolean;
+      appHasPushManager: boolean;
+      registrations: readonly ServiceWorkerRegistration[];
+    } | null = null;
+
     try {
       const registrations = await navigator.serviceWorker.getRegistrations();
 
@@ -93,56 +96,48 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         registrations.find((r) => r.active?.scriptURL?.endsWith('/sw.js')) ||
         registrations.find((r) => r.active?.scriptURL && !r.active.scriptURL.includes('OneSignal'));
 
+      const appScope = appSW?.scope || null;
+      const appOk = !!appSW && (appScope?.endsWith('/') ?? false);
+      const appHasPushManager = !!appSW?.pushManager;
+
+      swInfo = { appSW, appScope, appOk, appHasPushManager, registrations };
+
       const getFile = (r: ServiceWorkerRegistration | undefined) =>
         r?.active?.scriptURL?.split('/').pop() || null;
 
-      const appScope = appSW?.scope || null;
-
-      const appOk = !!appSW && appScope?.endsWith('/');
-      const appHasPushManager = !!appSW?.pushManager;
-
-      let statusLevel: DiagnosticResult['status'] = 'success';
-      let message = '';
-
-      const appSub = appSW
-        ? await appSW.pushManager?.getSubscription().catch(() => null)
-        : null;
-
       if (!appOk) {
-        statusLevel = 'error';
-        message = 'SW do app não encontrado ou escopo incorreto.';
+        diagnostics.push({
+          name: 'Service Worker',
+          status: 'error',
+          message: 'SW do app não encontrado ou escopo incorreto.',
+          details: `regs=${registrations.length}`,
+        });
       } else if (!appHasPushManager) {
-        statusLevel = 'error';
-        message = 'SW do app sem PushManager (push indisponível).';
-      } else if (!appSub) {
-        statusLevel = 'warning';
-        message = 'SW OK, mas sem PushSubscription ativa. Clique "Ativar Notificações".';
+        diagnostics.push({
+          name: 'Service Worker',
+          status: 'error',
+          message: 'SW do app sem PushManager (push indisponível).',
+          details: `sw=${getFile(appSW)}`,
+        });
       } else {
-        statusLevel = 'success';
-        message = 'SW unificado OK com PushSubscription ativa.';
+        // Preliminary - will be updated after OneSignal check
+        diagnostics.push({
+          name: 'Service Worker',
+          status: 'pending',
+          message: 'SW encontrado, verificando OneSignal...',
+          details: `sw=${getFile(appSW)} | scope=${appScope}`,
+        });
       }
-
-      swStatus = {
-        name: 'Service Worker',
-        status: statusLevel,
-        message,
-        details: [
-          `sw=${getFile(appSW) ?? 'N/A'}`,
-          `scope=${appScope ?? 'N/A'}`,
-          `pushSub=${appSub ? 'ativa' : 'não'}`,
-          `regs=${registrations.length}`,
-        ].join(' | '),
-      };
+      setResults([...diagnostics]);
     } catch (err) {
-      swStatus = {
+      diagnostics.push({
         name: 'Service Worker',
         status: 'error',
         message: 'Erro ao verificar SW',
         details: String(err),
-      };
+      });
+      setResults([...diagnostics]);
     }
-    diagnostics.push(swStatus);
-    setResults([...diagnostics]);
 
     // 5. Initialize OneSignal and check subscription
     let oneSignalStatus: DiagnosticResult = {
@@ -150,6 +145,9 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
       status: 'pending',
       message: 'Inicializando...'
     };
+    
+    let isFullySubscribed = false;
+    
     try {
       const initialized = await initializeOneSignal();
       if (!initialized) {
@@ -164,9 +162,11 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         const subscribed = await checkIsSubscribed();
         const playerId = await getSubscriptionId();
         
+        isFullySubscribed = !!(subscribed && playerId && state?.optedIn);
+        
         oneSignalStatus = {
           name: 'OneSignal SDK',
-          status: subscribed && playerId && state?.optedIn ? 'success' : 'warning',
+          status: isFullySubscribed ? 'success' : 'warning',
           message: state?.optedIn ? 'optedIn=true' : 'optedIn=false',
           details: [
             playerId ? `Player ID: ${playerId.substring(0, 12)}...` : 'Sem Player ID',
@@ -182,7 +182,34 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         details: String(err)
       };
     }
+    
     diagnostics.push(oneSignalStatus);
+    
+    // Update SW status based on OneSignal result
+    if (swInfo?.appOk && swInfo?.appHasPushManager) {
+      const swIndex = diagnostics.findIndex(d => d.name === 'Service Worker');
+      if (swIndex !== -1) {
+        const getFile = (r: ServiceWorkerRegistration | undefined) =>
+          r?.active?.scriptURL?.split('/').pop() || null;
+          
+        if (isFullySubscribed) {
+          diagnostics[swIndex] = {
+            name: 'Service Worker',
+            status: 'success',
+            message: 'SW unificado OK com push ativo via OneSignal.',
+            details: `sw=${getFile(swInfo.appSW)} | scope=${swInfo.appScope}`,
+          };
+        } else {
+          diagnostics[swIndex] = {
+            name: 'Service Worker',
+            status: 'warning',
+            message: 'SW OK. Clique "Ativar Notificações" para completar.',
+            details: `sw=${getFile(swInfo.appSW)} | scope=${swInfo.appScope}`,
+          };
+        }
+      }
+    }
+    
     setResults([...diagnostics]);
 
     // 6. Check database registration
