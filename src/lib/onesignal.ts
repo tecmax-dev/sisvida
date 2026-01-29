@@ -13,6 +13,46 @@ export interface OneSignalUser {
   };
 }
 
+async function clearPreviousOneSignalData(): Promise<void> {
+  try {
+    // Unregister any existing OneSignal service workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        if (registration.scope.includes('OneSignal') || 
+            registration.active?.scriptURL?.includes('OneSignal')) {
+          await registration.unregister();
+          console.log('OneSignal: Unregistered old service worker');
+        }
+      }
+    }
+
+    // Clear OneSignal IndexedDB databases
+    const databases = await indexedDB.databases?.() || [];
+    for (const db of databases) {
+      if (db.name && (db.name.includes('OneSignal') || db.name.includes('onesignal'))) {
+        indexedDB.deleteDatabase(db.name);
+        console.log('OneSignal: Cleared IndexedDB:', db.name);
+      }
+    }
+
+    // Clear OneSignal localStorage items
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('OneSignal') || key.includes('onesignal'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log('OneSignal: Cleared localStorage:', key);
+    });
+  } catch (error) {
+    console.warn('OneSignal: Error clearing previous data:', error);
+  }
+}
+
 export async function initializeOneSignal(): Promise<boolean> {
   if (isInitialized) {
     console.log('OneSignal: Already initialized');
@@ -35,6 +75,9 @@ export async function initializeOneSignal(): Promise<boolean> {
   }
 
   try {
+    // Clear any previous OneSignal data that might cause App ID mismatch
+    await clearPreviousOneSignalData();
+
     // Dynamically load OneSignal SDK
     if (!window.OneSignalDeferred) {
       window.OneSignalDeferred = [];
