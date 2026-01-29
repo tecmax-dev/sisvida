@@ -9,7 +9,8 @@ import {
   Clock, 
   FileCheck,
   Loader2,
-  Calendar
+  Calendar,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { usePayslipRequests, PayslipRequest } from '@/hooks/usePayslipRequests';
 import { PayslipImageViewer } from './PayslipImageViewer';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +47,7 @@ interface PayslipRequestsListProps {
 }
 
 export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsListProps) {
-  const { requests, isLoading, reviewRequest, isReviewing, getAttachmentUrl, refetch } = usePayslipRequests(
+  const { requests, isLoading, reviewRequest, isReviewing, deleteRequest, isDeleting, getAttachmentUrl, refetch } = usePayslipRequests(
     clinicId,
     patientId
   );
@@ -48,6 +59,7 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
   const [loadingImage, setLoadingImage] = useState(false);
 
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PayslipRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [newExpiresAt, setNewExpiresAt] = useState('');
@@ -73,6 +85,18 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
     defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
     setNewExpiresAt(defaultExpiry.toISOString().split('T')[0]);
     setReviewDialogOpen(true);
+  };
+
+  const openDeleteDialog = (request: PayslipRequest) => {
+    setSelectedRequest(request);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (!selectedRequest) return;
+    deleteRequest(selectedRequest.id, {
+      onSuccess: () => setDeleteDialogOpen(false),
+    });
   };
 
   const handleApprove = async () => {
@@ -265,6 +289,18 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
                     Revisar
                   </Button>
                 )}
+
+                {/* Delete button - only for pending and received statuses */}
+                {(request.status === 'pending' || request.status === 'received') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDeleteDialog(request)}
+                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -350,6 +386,33 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Envio de Contracheque</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o envio de contracheque
+              {selectedRequest?.patients?.name && (
+                <> de <strong>{selectedRequest.patients.name}</strong></>
+              )}? 
+              O arquivo anexado também será removido. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

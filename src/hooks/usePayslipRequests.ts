@@ -125,6 +125,46 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      // First get the request to find the attachment path
+      const { data: request } = await supabase
+        .from('payslip_requests')
+        .select('attachment_path')
+        .eq('id', requestId)
+        .single();
+
+      // Delete from storage if exists
+      if (request?.attachment_path) {
+        await supabase.storage
+          .from('contra-cheques')
+          .remove([request.attachment_path]);
+      }
+
+      // Delete the request record
+      const { error } = await supabase
+        .from('payslip_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payslip-requests'] });
+      toast({
+        title: 'Envio excluído',
+        description: 'O contracheque foi removido com sucesso.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const getAttachmentUrl = async (path: string): Promise<string | null> => {
     try {
       const { data, error } = await supabase.functions.invoke('get-payslip-signed-url', {
@@ -170,6 +210,8 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
     refetch,
     reviewRequest: reviewMutation.mutate,
     isReviewing: reviewMutation.isPending,
+    deleteRequest: deleteMutation.mutate,
+    isDeleting: deleteMutation.isPending,
     getAttachmentUrl,
   };
 }
