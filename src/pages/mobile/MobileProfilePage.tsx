@@ -11,7 +11,11 @@ import {
   Trash2,
   HelpCircle,
   Loader2,
+  Bell,
+  BellOff,
+  CheckCircle2,
 } from "lucide-react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,7 +60,16 @@ export default function MobileProfilePage() {
   const { toast } = useToast();
   
   // Hook de autenticação - usado para obter IDs e logout
-  const { patientId, logout } = useMobileAuth();
+  const { patientId, clinicId, logout } = useMobileAuth();
+
+  // Hook de notificações push
+  const {
+    isNative,
+    isWebPushSupported,
+    isWebPushSubscribed,
+    isWebPushLoading,
+    subscribeToWebPush,
+  } = usePushNotifications({ patientId, clinicId });
 
   const APP_VERSION = "2.0.4";
 
@@ -227,6 +240,52 @@ export default function MobileProfilePage() {
         </div>
 
         <Separator className="mb-6" />
+
+        {/* Push Notifications Section */}
+        {!isNative && isWebPushSupported && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Notificações</h3>
+            {isWebPushSubscribed ? (
+              <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-emerald-900">Notificações ativas</p>
+                  <p className="text-sm text-emerald-700">Você receberá avisos importantes do sindicato</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <BellOff className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-amber-900">Notificações desativadas</p>
+                  <p className="text-sm text-amber-700 mb-2">Ative para receber avisos importantes</p>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={subscribeToWebPush}
+                    disabled={isWebPushLoading}
+                  >
+                    {isWebPushLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Ativando...
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="h-4 w-4 mr-2" />
+                        Ativar Notificações
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* User Data */}
         <div className="space-y-4">
