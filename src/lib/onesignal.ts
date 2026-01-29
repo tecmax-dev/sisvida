@@ -2,8 +2,7 @@
 // Documentation: https://documentation.onesignal.com/docs/web-push-sdk
 
 // Note: App ID is a public key (safe to expose in frontend code)
-// This is intentionally hardcoded because VITE_ secrets are not exposed to the browser
-const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID || '7f9de3d4-4c1e-4d6a-9b8f-placeholder';
+const ONESIGNAL_APP_ID = '8522abd2-4541-4ada-9f7c-49d453642042';
 
 let isInitialized = false;
 
