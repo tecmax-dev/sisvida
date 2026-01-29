@@ -309,6 +309,9 @@ export function MobileNotificationBell() {
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                         {notification.body}
                       </p>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1 inline-block">
+                        Ler mais →
+                      </span>
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDistanceToNow(new Date(notification.created_at), {
                           addSuffix: true,
