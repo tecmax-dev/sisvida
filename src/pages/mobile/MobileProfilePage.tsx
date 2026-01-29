@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { PushDiagnostics } from "@/components/push/PushDiagnostics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -300,6 +301,9 @@ export default function MobileProfilePage() {
                 </div>
               </div>
             )}
+            
+            {/* Diagnostic Tool */}
+            <PushDiagnostics patientId={patientId} clinicId={clinicId} />
           </div>
         )}
 

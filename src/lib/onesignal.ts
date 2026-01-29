@@ -117,18 +117,12 @@ export async function initializeOneSignal(): Promise<boolean> {
             },
             promptOptions: {
               autoPrompt: false, // We control when to prompt
+              native: {
+                enabled: true, // Use native browser prompt only
+              },
               slidedown: {
-                prompts: [
-                  {
-                    type: 'push',
-                    autoPrompt: false,
-                    text: {
-                      actionMessage: 'Deseja receber notificações do sindicato?',
-                      acceptButton: 'Permitir',
-                      cancelButton: 'Agora não',
-                    },
-                  },
-                ],
+                enabled: false, // Completely disable slidedown to prevent English default
+                prompts: [],
               },
               customlink: {
                 enabled: false,
