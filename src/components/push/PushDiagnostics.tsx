@@ -14,7 +14,8 @@ import {
 import { 
   initializeOneSignal, 
   getSubscriptionId, 
-  isSubscribed as checkIsSubscribed 
+  isSubscribed as checkIsSubscribed,
+  getPushSubscriptionState,
 } from '@/lib/onesignal';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
@@ -86,46 +87,46 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     };
     try {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      // Check for OneSignal SW (either dedicated file or the SDK embedded in main SW)
-      const onesignalSW = registrations.find(r => 
-        r.active?.scriptURL.includes('OneSignal') || 
-        r.active?.scriptURL.includes('sw.js') // VitePWA SW that may handle push
-      );
-      
-      // Also check if push subscription exists in any SW
-      let hasPushSubscription = false;
-      for (const reg of registrations) {
-        try {
-          const sub = await reg.pushManager?.getSubscription();
-          if (sub) {
-            hasPushSubscription = true;
-            break;
-          }
-        } catch {}
-      }
-      
-      if (onesignalSW && hasPushSubscription) {
-        swStatus = {
-          name: 'Service Worker',
-          status: 'success',
-          message: 'SW com Push ativo',
-          details: `${registrations.length} SW(s) registrado(s): ${registrations.map(r => r.active?.scriptURL?.split('/').pop() || 'unknown').join(', ')}`
-        };
-      } else if (onesignalSW) {
-        swStatus = {
-          name: 'Service Worker',
-          status: 'warning',
-          message: 'SW encontrado, mas sem Push subscription',
-          details: registrations.map(r => r.active?.scriptURL?.split('/').pop() || 'unknown').join(', ')
-        };
-      } else {
-        swStatus = {
-          name: 'Service Worker',
-          status: 'warning',
-          message: 'Nenhum SW de Push encontrado',
-          details: `${registrations.length} SW(s): ${registrations.map(r => r.scope).join(', ')}`
-        };
-      }
+
+      const appSW = registrations.find((r) => r.active?.scriptURL.includes('/sw.js'))
+        || registrations.find((r) => r.active?.scriptURL.endsWith('/sw.js'));
+
+      const oneSignalWorker = registrations.find((r) => r.active?.scriptURL.endsWith('/OneSignalSDKWorker.js'))
+        || registrations.find((r) => r.active?.scriptURL.includes('/OneSignalSDKWorker.js'));
+
+      const oneSignalUpdater = registrations.find((r) => r.active?.scriptURL.endsWith('/OneSignalSDKUpdaterWorker.js'))
+        || registrations.find((r) => r.active?.scriptURL.includes('/OneSignalSDKUpdaterWorker.js'));
+
+      const getFile = (r: ServiceWorkerRegistration | undefined) => r?.active?.scriptURL?.split('/').pop() || null;
+
+      const appScope = appSW?.scope || null;
+      const oneSignalScope = oneSignalWorker?.scope || null;
+
+      const scopeOk =
+        (!!appScope && appScope.endsWith('/')) &&
+        (!!oneSignalScope && oneSignalScope.endsWith('/'));
+
+      const appHasPushManager = !!appSW?.pushManager;
+      const oneSignalHasPushManager = !!oneSignalWorker?.pushManager;
+
+      const appSub = appSW ? await appSW.pushManager?.getSubscription().catch(() => null) : null;
+      const oneSignalSub = oneSignalWorker ? await oneSignalWorker.pushManager?.getSubscription().catch(() => null) : null;
+
+      const ok = !!appSW && !!oneSignalWorker && appHasPushManager && oneSignalHasPushManager && scopeOk;
+
+      swStatus = {
+        name: 'Service Worker',
+        status: ok ? 'success' : 'warning',
+        message: ok
+          ? 'App SW + OneSignal SW (scope "/")'
+          : 'SWs incompletos (App/OneSignal) ou escopo errado',
+        details: [
+          `app=${getFile(appSW) ?? 'N/A'} scope=${appScope ?? 'N/A'} pushSub=${appSub ? 'sim' : 'não'}`,
+          `onesignal=${getFile(oneSignalWorker) ?? 'N/A'} scope=${oneSignalScope ?? 'N/A'} pushSub=${oneSignalSub ? 'sim' : 'não'}`,
+          `updater=${getFile(oneSignalUpdater) ?? 'N/A'}`,
+          `totalRegs=${registrations.length}`,
+        ].join(' | ')
+      };
     } catch (err) {
       swStatus = {
         name: 'Service Worker',
@@ -153,14 +154,18 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
           details: 'Verifique console para mais detalhes'
         };
       } else {
+        const state = await getPushSubscriptionState();
         const subscribed = await checkIsSubscribed();
         const playerId = await getSubscriptionId();
         
         oneSignalStatus = {
           name: 'OneSignal SDK',
-          status: subscribed && playerId ? 'success' : 'warning',
-          message: subscribed ? 'Inscrito' : 'Não inscrito',
-          details: playerId ? `Player ID: ${playerId.substring(0, 12)}...` : 'Sem Player ID'
+          status: subscribed && playerId && state?.optedIn ? 'success' : 'warning',
+          message: state?.optedIn ? 'optedIn=true' : 'optedIn=false',
+          details: [
+            playerId ? `Player ID: ${playerId.substring(0, 12)}...` : 'Sem Player ID',
+            `token: ${state?.token ? 'presente' : 'ausente'}`,
+          ].join(' | ')
         };
       }
     } catch (err) {

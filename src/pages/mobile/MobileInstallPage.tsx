@@ -194,17 +194,12 @@ export default function MobileInstallPage() {
     toast.info('Atualizando aplicativo...');
     
     try {
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-      
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => r.unregister()));
+        await Promise.all(registrations.map((r) => r.update().catch(() => undefined)));
       }
       
-      toast.success('Cache limpo! Recarregando...');
+      toast.success('Atualização aplicada! Recarregando...');
       
       setTimeout(() => {
         window.location.reload();

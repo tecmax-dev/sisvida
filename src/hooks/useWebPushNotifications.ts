@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   initializeOneSignal,
-  subscribeToNotificationsWithRefresh,
+  subscribeToNotifications,
   isSubscribed as checkIsSubscribed,
   setExternalUserId,
   addTags,
@@ -176,10 +176,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
       // Subscribe to push notifications
       console.log('OneSignal: Subscribing to notifications...');
-      const playerId = await subscribeToNotificationsWithRefresh({
-        // When permission is already granted, forcing a refresh helps recover from stale/invalid OneSignal IDs
-        forceRefresh: Notification.permission === 'granted',
-      });
+      const playerId = await subscribeToNotifications();
       
       if (!playerId) {
         const permission = Notification.permission;

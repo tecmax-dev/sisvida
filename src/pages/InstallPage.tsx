@@ -69,21 +69,13 @@ export default function InstallPage() {
     toast.info('Atualizando aplicativo...');
     
     try {
-      // Limpar todos os caches
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-        console.log('Caches limpos:', cacheNames);
-      }
-      
-      // Desregistrar Service Workers antigos
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => r.unregister()));
-        console.log('Service Workers desregistrados');
+        await Promise.all(registrations.map((r) => r.update().catch(() => undefined)));
+        console.log('Service Workers atualizados (sem desregistrar)');
       }
       
-      toast.success('Cache limpo! Recarregando...');
+      toast.success('Atualização aplicada! Recarregando...');
       
       // Pequeno delay para mostrar o toast
       setTimeout(() => {
@@ -350,7 +342,7 @@ export default function InstallPage() {
                 Atualizar Aplicativo
               </CardTitle>
               <CardDescription>
-                Limpe o cache e force o download da versão mais recente
+                Verifique atualizações e recarregue o app
               </CardDescription>
             </CardHeader>
             <CardContent>

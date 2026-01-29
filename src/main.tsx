@@ -69,24 +69,25 @@ function renderApp() {
     console.log('Forçando atualização do PWA...');
     
     try {
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => {
-          console.log('Limpando cache:', name);
-          return caches.delete(name);
-        }));
-        console.log('Todos os caches limpos');
-      }
-      
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => {
-          console.log('Desregistrando SW:', r);
-          return r.unregister();
-        }));
-        console.log('Service Workers desregistrados');
+        await Promise.all(
+          registrations.map((r) =>
+            r.update().catch((e) => {
+              console.warn('Falha ao atualizar SW (continuando):', e);
+            })
+          )
+        );
+        console.log('Service Workers atualizados (sem desregistrar)');
       }
-      
+
+      // Pede para o PWA aplicar a atualização quando houver (skipWaiting/clientsClaim)
+      // Isso NÃO apaga nem desregistra nenhum SW.
+      try {
+        (updateSW as any)(true);
+      } catch (e) {
+        console.warn('Não foi possível acionar updateSW (continuando):', e);
+      }
       return true;
     } catch (error) {
       console.error('Erro ao forçar atualização do PWA:', error);
