@@ -6766,6 +6766,60 @@ export type Database = {
           },
         ]
       }
+      patient_notifications: {
+        Row: {
+          body: string
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          patient_id: string | null
+          read_at: string | null
+          title: string
+          type: string | null
+        }
+        Insert: {
+          body: string
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          patient_id?: string | null
+          read_at?: string | null
+          title: string
+          type?: string | null
+        }
+        Update: {
+          body?: string
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          patient_id?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_notifications_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notifications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_packages: {
         Row: {
           clinic_id: string

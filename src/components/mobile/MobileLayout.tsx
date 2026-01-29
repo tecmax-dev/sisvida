@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
-import NotificationBell from "@/components/notifications/NotificationBell";
+import { MobileNotificationBell } from "./MobileNotificationBell";
 interface MobileLayoutProps {
   children: ReactNode;
   showBottomNav?: boolean;
@@ -122,7 +122,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
           </div>
         </div>
         
-        <NotificationBell />
+        <MobileNotificationBell />
       </header>
 
       {/* Main Content */}
