@@ -253,6 +253,22 @@ export default function MobileProfilePage() {
                 <div className="flex-1">
                   <p className="font-medium text-emerald-900">Notificações ativas</p>
                   <p className="text-sm text-emerald-700">Você receberá avisos importantes do sindicato</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 border-emerald-600 text-emerald-700"
+                    onClick={subscribeToWebPush}
+                    disabled={isWebPushLoading}
+                  >
+                    {isWebPushLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Reconfigurando...
+                      </>
+                    ) : (
+                      'Reconfigurar notificações'
+                    )}
+                  </Button>
                 </div>
               </div>
             ) : (

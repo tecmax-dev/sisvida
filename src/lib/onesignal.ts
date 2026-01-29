@@ -4,6 +4,9 @@
 // Note: App ID is a public key (safe to expose in frontend code)
 const ONESIGNAL_APP_ID = '8522abd2-4541-4ada-9f7c-49d453642042';
 
+// Bump this when changing promptOptions/SDK behavior so old cached settings are cleared.
+const ONESIGNAL_CONFIG_VERSION = '2026-01-29-pt-1';
+
 let isInitialized = false;
 
 export interface OneSignalUser {
@@ -21,32 +24,42 @@ async function clearPreviousOneSignalData(): Promise<void> {
     // IMPORTANT: Do NOT unregister service workers - they are needed for push notifications!
     // Only clear stale localStorage/sessionStorage data if there's an App ID mismatch
 
-    // Check if we have a stored App ID that doesn't match current
+    // Check if we have a stored App ID / config version that doesn't match current
     const storedAppId = localStorage.getItem('onesignal-app-id');
-    if (storedAppId && storedAppId !== ONESIGNAL_APP_ID) {
-      console.log('OneSignal: App ID mismatch, clearing old data...');
-      
+    const storedConfigVersion = localStorage.getItem('onesignal-config-version');
+    const needsReset =
+      (storedAppId && storedAppId !== ONESIGNAL_APP_ID) ||
+      (storedConfigVersion && storedConfigVersion !== ONESIGNAL_CONFIG_VERSION);
+
+    if (needsReset) {
+      console.log('OneSignal: Config mismatch, clearing old data...', {
+        storedAppId,
+        storedConfigVersion,
+      });
+
       // Clear OneSignal localStorage items only on mismatch
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (
-          key.includes('OneSignal') || 
-          key.includes('onesignal') ||
-          key.includes('ONE_SIGNAL') ||
-          key.includes('os_')
-        )) {
+        if (
+          key &&
+          (key.includes('OneSignal') ||
+            key.includes('onesignal') ||
+            key.includes('ONE_SIGNAL') ||
+            key.includes('os_'))
+        ) {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => {
+      keysToRemove.forEach((key) => {
         localStorage.removeItem(key);
         console.log('OneSignal: Cleared localStorage:', key);
       });
     }
-    
-    // Store current App ID
+
+    // Store current App ID + config version
     localStorage.setItem('onesignal-app-id', ONESIGNAL_APP_ID);
+    localStorage.setItem('onesignal-config-version', ONESIGNAL_CONFIG_VERSION);
     
     console.log('OneSignal: Cleanup completed');
   } catch (error) {
@@ -221,6 +234,90 @@ export async function subscribeToNotifications(): Promise<string | null> {
             }
           }
           
+          if (playerId) {
+            console.log('OneSignal: Successfully subscribed with Player ID:', playerId.substring(0, 20) + '...');
+            resolve(playerId);
+          } else {
+            console.warn('OneSignal: No Player ID available after retries. Subscription state:', {
+              optedIn: OneSignal.User.PushSubscription?.optedIn,
+              token: OneSignal.User.PushSubscription?.token ? 'present' : 'missing',
+            });
+            resolve(null);
+          }
+        } catch (error) {
+          console.error('OneSignal: Subscription error:', error);
+          reject(error);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('OneSignal: Error subscribing:', error);
+    return null;
+  }
+}
+
+export async function subscribeToNotificationsWithRefresh(options?: { forceRefresh?: boolean }): Promise<string | null> {
+  const forceRefresh = options?.forceRefresh ?? false;
+
+  if (!isInitialized) {
+    const initialized = await initializeOneSignal();
+    if (!initialized) {
+      console.error('OneSignal: Failed to initialize');
+      return null;
+    }
+  }
+
+  try {
+    return await new Promise((resolve, reject) => {
+      window.OneSignalDeferred.push(async (OneSignal: any) => {
+        try {
+          const currentPermission = Notification.permission;
+          console.log('OneSignal: Current permission state:', currentPermission);
+
+          if (currentPermission === 'denied') {
+            console.log('OneSignal: Permission was denied previously');
+            resolve(null);
+            return;
+          }
+
+          if (currentPermission !== 'granted') {
+            console.log('OneSignal: Requesting native browser permission...');
+            const newPermission = await Notification.requestPermission();
+            console.log('OneSignal: Permission after prompt:', newPermission);
+            if (newPermission !== 'granted') {
+              console.log('OneSignal: Permission not granted');
+              resolve(null);
+              return;
+            }
+          }
+
+          if (forceRefresh) {
+            console.log('OneSignal: Force refresh subscription (optOut -> optIn)...');
+            try {
+              await OneSignal.User.PushSubscription.optOut();
+              await new Promise((r) => setTimeout(r, 300));
+            } catch (e) {
+              console.warn('OneSignal: optOut failed (continuing):', e);
+            }
+          }
+
+          console.log('OneSignal: Opting in to push notifications...');
+          await OneSignal.User.PushSubscription.optIn();
+
+          let playerId: string | null = null;
+          const maxRetries = 5;
+
+          for (let i = 0; i < maxRetries; i++) {
+            await new Promise((r) => setTimeout(r, 1000));
+            const subscription = OneSignal.User.PushSubscription;
+            playerId = subscription?.id || null;
+            console.log(
+              `OneSignal: Attempt ${i + 1}/${maxRetries} - Player ID:`,
+              playerId ? playerId.substring(0, 20) + '...' : 'null'
+            );
+            if (playerId) break;
+          }
+
           if (playerId) {
             console.log('OneSignal: Successfully subscribed with Player ID:', playerId.substring(0, 20) + '...');
             resolve(playerId);
