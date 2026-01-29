@@ -16,73 +16,37 @@ export interface OneSignalUser {
 
 async function clearPreviousOneSignalData(): Promise<void> {
   try {
-    console.log('OneSignal: Starting aggressive data cleanup...');
+    console.log('OneSignal: Starting data cleanup...');
     
-    // Unregister ALL service workers completely
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-        console.log('OneSignal: Unregistered service worker:', registration.scope);
-      }
-    }
+    // IMPORTANT: Do NOT unregister service workers - they are needed for push notifications!
+    // Only clear stale localStorage/sessionStorage data if there's an App ID mismatch
 
-    // Clear ALL OneSignal IndexedDB databases
-    if (indexedDB.databases) {
-      const databases = await indexedDB.databases();
-      for (const db of databases) {
-        if (db.name && (
-          db.name.includes('OneSignal') || 
-          db.name.includes('onesignal') ||
-          db.name.includes('ONE_SIGNAL')
+    // Check if we have a stored App ID that doesn't match current
+    const storedAppId = localStorage.getItem('onesignal-app-id');
+    if (storedAppId && storedAppId !== ONESIGNAL_APP_ID) {
+      console.log('OneSignal: App ID mismatch, clearing old data...');
+      
+      // Clear OneSignal localStorage items only on mismatch
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.includes('OneSignal') || 
+          key.includes('onesignal') ||
+          key.includes('ONE_SIGNAL') ||
+          key.includes('os_')
         )) {
-          try {
-            indexedDB.deleteDatabase(db.name);
-            console.log('OneSignal: Cleared IndexedDB:', db.name);
-          } catch (e) {
-            console.warn('OneSignal: Could not delete IndexedDB:', db.name);
-          }
+          keysToRemove.push(key);
         }
       }
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('OneSignal: Cleared localStorage:', key);
+      });
     }
-
-    // Clear OneSignal localStorage items
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (
-        key.includes('OneSignal') || 
-        key.includes('onesignal') ||
-        key.includes('ONE_SIGNAL') ||
-        key.includes('os_')
-      )) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-      console.log('OneSignal: Cleared localStorage:', key);
-    });
-
-    // Clear sessionStorage as well
-    const sessionKeysToRemove: string[] = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && (
-        key.includes('OneSignal') || 
-        key.includes('onesignal') ||
-        key.includes('ONE_SIGNAL')
-      )) {
-        sessionKeysToRemove.push(key);
-      }
-    }
-    sessionKeysToRemove.forEach(key => {
-      sessionStorage.removeItem(key);
-      console.log('OneSignal: Cleared sessionStorage:', key);
-    });
-
-    // Wait a bit for cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Store current App ID
+    localStorage.setItem('onesignal-app-id', ONESIGNAL_APP_ID);
     
     console.log('OneSignal: Cleanup completed');
   } catch (error) {
