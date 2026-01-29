@@ -14,6 +14,7 @@ import { Bell, Wrench, CreditCard, Sparkles, AlertTriangle, Info, Check } from "
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { NotificationDetailDialog } from "./NotificationDetailDialog";
 
 interface SystemNotification {
   id: string;
@@ -48,6 +49,8 @@ export default function NotificationBell() {
   const { user, currentClinic } = useAuth();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<SystemNotification | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   // Fetch notifications
   const { data: notifications = [] } = useQuery({
@@ -149,13 +152,21 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
   const hasUnread = unreadCount > 0;
 
-  const handleNotificationClick = (notificationId: string) => {
-    if (!readIds.has(notificationId)) {
-      markAsReadMutation.mutate(notificationId);
+  const handleNotificationClick = (notification: SystemNotification) => {
+    if (!readIds.has(notification.id)) {
+      markAsReadMutation.mutate(notification.id);
     }
+    setSelectedNotification(notification);
+    setDetailDialogOpen(true);
   };
 
   return (
+    <>
+      <NotificationDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        notification={selectedNotification}
+      />
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
@@ -215,7 +226,7 @@ export default function NotificationBell() {
                       priorityColors[notification.priority],
                       !isRead && "bg-muted/30"
                     )}
-                    onClick={() => handleNotificationClick(notification.id)}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex gap-3">
                       <div
@@ -261,5 +272,6 @@ export default function NotificationBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+    </>
   );
 }
