@@ -184,22 +184,17 @@ export async function subscribeToNotifications(): Promise<string | null> {
             return;
           }
 
-          // If permission not yet granted, use OneSignal's slidedown prompt (Portuguese)
+          // If permission not yet granted, use native browser prompt
+          // (The slidedown sometimes shows English text)
           if (currentPermission !== 'granted') {
-            console.log('OneSignal: Showing slidedown prompt...');
+            console.log('OneSignal: Requesting native browser permission...');
             
-            // Show OneSignal's native slidedown with Portuguese text
-            await OneSignal.Slidedown.promptPush();
-            
-            // Wait for user response
-            await new Promise(r => setTimeout(r, 500));
-            
-            // Check if permission was granted after prompt
-            const newPermission = Notification.permission;
+            // Use native browser API for permission request
+            const newPermission = await Notification.requestPermission();
             console.log('OneSignal: Permission after prompt:', newPermission);
             
             if (newPermission !== 'granted') {
-              console.log('OneSignal: Permission not granted after prompt');
+              console.log('OneSignal: Permission not granted');
               resolve(null);
               return;
             }
