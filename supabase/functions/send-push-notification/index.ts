@@ -13,170 +13,75 @@ interface PushNotificationRequest {
   data?: Record<string, string>;
   target_type: 'all' | 'specific' | 'segment';
   target_patient_ids?: string[];
+  url?: string;
 }
 
-interface ServiceAccount {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
+interface OneSignalNotificationResponse {
+  id: string;
+  recipients: number;
+  errors?: string[];
 }
 
-// Create JWT for OAuth2 authentication
-async function createJWT(serviceAccount: ServiceAccount): Promise<string> {
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT',
-  };
-
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: serviceAccount.client_email,
-    sub: serviceAccount.client_email,
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-    scope: 'https://www.googleapis.com/auth/firebase.messaging',
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const unsignedToken = `${headerB64}.${payloadB64}`;
-
-  // Import the private key
-  const pemHeader = '-----BEGIN PRIVATE KEY-----';
-  const pemFooter = '-----END PRIVATE KEY-----';
-  const pemContents = serviceAccount.private_key
-    .replace(pemHeader, '')
-    .replace(pemFooter, '')
-    .replace(/\s/g, '');
-  
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256',
-    },
-    false,
-    ['sign']
-  );
-
-  // Sign the token
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    encoder.encode(unsignedToken)
-  );
-
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-
-  return `${unsignedToken}.${signatureB64}`;
-}
-
-// Get OAuth2 access token
-async function getAccessToken(serviceAccount: ServiceAccount): Promise<string> {
-  const jwt = await createJWT(serviceAccount);
-  
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('OAuth2 token error:', response.status, errorText);
-    throw new Error(`Failed to get access token: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
-
-// Send notification using FCM v1 API
-async function sendFCMNotificationV1(
-  token: string,
+// Send notification using OneSignal REST API
+async function sendOneSignalNotification(
+  playerIds: string[],
   title: string,
   body: string,
-  projectId: string,
-  accessToken: string,
-  data?: Record<string, string>
-): Promise<{ success: boolean; error?: string }> {
-  const message = {
-    message: {
-      token: token,
-      notification: {
-        title,
-        body,
-      },
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          default_vibrate_timings: true,
-          default_light_settings: true,
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1,
-          },
-        },
-      },
-      data: data ? { ...data, click_action: 'FLUTTER_NOTIFICATION_CLICK' } : { click_action: 'FLUTTER_NOTIFICATION_CLICK' },
-    },
+  appId: string,
+  restApiKey: string,
+  data?: Record<string, string>,
+  url?: string
+): Promise<{ success: boolean; recipients?: number; error?: string }> {
+  if (playerIds.length === 0) {
+    return { success: false, error: 'No player IDs provided' };
+  }
+
+  const payload: Record<string, unknown> = {
+    app_id: appId,
+    include_subscription_ids: playerIds,
+    headings: { en: title, pt: title },
+    contents: { en: body, pt: body },
+    data: data || {},
   };
 
-  try {
-    const response = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      }
-    );
+  // Add URL if provided
+  if (url) {
+    payload.url = url;
+  }
 
+  try {
+    console.log('OneSignal: Sending notification to', playerIds.length, 'devices');
+    
+    const response = await fetch('https://onesignal.com/api/v1/notifications', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${restApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseData = await response.json();
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('FCM v1 API error:', response.status, JSON.stringify(errorData));
-      
-      // Check for unregistered token
-      const errorCode = errorData?.error?.details?.[0]?.errorCode || errorData?.error?.code;
-      if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT') {
-        return { success: false, error: errorCode };
-      }
-      
-      return { success: false, error: errorData?.error?.message || 'Unknown error' };
+      console.error('OneSignal API error:', response.status, JSON.stringify(responseData));
+      return { 
+        success: false, 
+        error: responseData.errors?.join(', ') || `HTTP ${response.status}` 
+      };
     }
 
-    return { success: true };
+    console.log('OneSignal: Notification sent successfully', responseData);
+    return { 
+      success: true, 
+      recipients: responseData.recipients || playerIds.length 
+    };
   } catch (error) {
-    console.error('FCM request error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error('OneSignal: Request error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
   }
 }
 
@@ -190,174 +95,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get Firebase Service Account
-    const serviceAccountSecret = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
-    if (!serviceAccountSecret) {
-      console.error('FIREBASE_SERVICE_ACCOUNT not configured');
+    // Get OneSignal credentials
+    const oneSignalAppId = Deno.env.get('ONESIGNAL_APP_ID');
+    const oneSignalRestApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY');
+
+    if (!oneSignalAppId || !oneSignalRestApiKey) {
+      console.error('OneSignal credentials not configured');
       return new Response(
         JSON.stringify({
-          error: 'FIREBASE_SERVICE_ACCOUNT not configured',
-          message: 'Please configure the Firebase Service Account JSON in your project secrets.',
+          error: 'OneSignal not configured',
+          message: 'Please configure ONESIGNAL_APP_ID and ONESIGNAL_REST_API_KEY in your project secrets.',
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Debug: log secret metadata (not the actual secret)
-    console.log('Secret metadata:', {
-      length: serviceAccountSecret.length,
-      firstChars: serviceAccountSecret.substring(0, 20),
-      lastChars: serviceAccountSecret.substring(serviceAccountSecret.length - 20),
-      startsWithBrace: serviceAccountSecret.trim().startsWith('{'),
-      endsWithBrace: serviceAccountSecret.trim().endsWith('}'),
-    });
-
-    function extractFirstJsonObject(input: string): string | null {
-      const s = input.replace(/^\uFEFF/, '');
-      const start = s.indexOf('{');
-      if (start < 0) return null;
-
-      let depth = 0;
-      let inString = false;
-      let escaped = false;
-
-      for (let i = start; i < s.length; i++) {
-        const ch = s[i];
-
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-
-        if (ch === '\\') {
-          if (inString) escaped = true;
-          continue;
-        }
-
-        if (ch === '"') {
-          inString = !inString;
-          continue;
-        }
-
-        if (!inString) {
-          if (ch === '{') depth++;
-          if (ch === '}') depth--;
-          if (depth === 0) {
-            return s.slice(start, i + 1);
-          }
-        }
-      }
-
-      return null;
-    }
-
-    function parseServiceAccountSecret(raw: string): ServiceAccount {
-      // Accept:
-      // 1) raw JSON object string: {"type":...}
-      // 2) JSON string containing JSON (double-encoded): "{...}"
-      // 3) Base64-encoded JSON
-      // 4) Secrets that contain extra prefix/suffix text (we extract the first JSON object)
-      const trimmed = raw.trim();
-
-      // Attempt #0: extract first JSON object from any text
-      const extracted = extractFirstJsonObject(trimmed);
-      if (extracted) {
-        return JSON.parse(extracted);
-      }
-
-      // Attempt #1: direct JSON
-      if (trimmed.startsWith('{')) {
-        return JSON.parse(trimmed);
-      }
-
-      // Attempt #2: double-encoded JSON string
-      try {
-        const maybeString = JSON.parse(trimmed);
-        if (typeof maybeString === 'string') {
-          const innerExtracted = extractFirstJsonObject(maybeString.trim());
-          if (innerExtracted) return JSON.parse(innerExtracted);
-        }
-      } catch {
-        // ignore
-      }
-
-      // Attempt #3: base64 JSON
-      try {
-        const decoded = atob(trimmed).trim();
-        const decodedExtracted = extractFirstJsonObject(decoded);
-        if (decodedExtracted) return JSON.parse(decodedExtracted);
-      } catch {
-        // ignore
-      }
-
-      throw new Error('Invalid service account JSON');
-    }
-
-    let serviceAccount: ServiceAccount;
-    try {
-      serviceAccount = parseServiceAccountSecret(serviceAccountSecret);
-
-      // Validate required fields
-      if (!serviceAccount.private_key) {
-        console.error('Service account missing private_key');
-        return new Response(
-          JSON.stringify({
-            error: 'Invalid service account configuration',
-            message:
-              'The FIREBASE_SERVICE_ACCOUNT is missing the private_key field. Please ensure you copied the full service account JSON.',
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (!serviceAccount.client_email) {
-        console.error('Service account missing client_email');
-        return new Response(
-          JSON.stringify({
-            error: 'Invalid service account configuration',
-            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the client_email field.',
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (!serviceAccount.project_id) {
-        console.error('Service account missing project_id');
-        return new Response(
-          JSON.stringify({
-            error: 'Invalid service account configuration',
-            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the project_id field.',
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log('Service account validated:', {
-        project_id: serviceAccount.project_id,
-        client_email: serviceAccount.client_email,
-        has_private_key: !!serviceAccount.private_key,
-      });
-    } catch (parseError) {
-      console.error('Failed to parse service account JSON:', parseError);
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid service account JSON',
-          message:
-            'The FIREBASE_SERVICE_ACCOUNT secret contains invalid JSON. Paste the full JSON file contents (or, alternatively, paste a base64 of the JSON).',
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get OAuth2 access token
-    console.log('Getting OAuth2 access token...');
-    const accessToken = await getAccessToken(serviceAccount);
-    console.log('Successfully obtained access token');
+    console.log('OneSignal: App ID configured:', oneSignalAppId.substring(0, 8) + '...');
 
     const payload: PushNotificationRequest = await req.json();
     console.log('Push notification request:', JSON.stringify(payload));
 
-    const { clinic_id, title, body, data, target_type, target_patient_ids } = payload;
+    const { clinic_id, title, body, data, target_type, target_patient_ids, url } = payload;
 
     if (!clinic_id || !title || !body) {
       return new Response(
@@ -366,10 +124,10 @@ serve(async (req) => {
       );
     }
 
-    // Build query for tokens
+    // Build query for tokens - only get OneSignal web tokens
     let tokensQuery = supabase
       .from('push_notification_tokens')
-      .select('token, patient_id, platform')
+      .select('token, patient_id, platform, device_info')
       .eq('clinic_id', clinic_id)
       .eq('is_active', true);
 
@@ -418,44 +176,56 @@ serve(async (req) => {
       );
     }
 
-    const uniquePatientIds = [...new Set(tokensData.map(t => t.patient_id))];
-    console.log(`Found ${tokensData.length} tokens for ${uniquePatientIds.length} patients`);
-
-    // Send notifications one by one (FCM v1 API requires individual sends)
-    let totalSuccess = 0;
-    let totalFailed = 0;
-    const invalidTokens: string[] = [];
+    // Separate tokens by type
+    const oneSignalTokens: string[] = [];
+    const legacyFcmTokens: string[] = [];
 
     for (const tokenData of tokensData) {
-      const result = await sendFCMNotificationV1(
-        tokenData.token,
-        title,
-        body,
-        serviceAccount.project_id,
-        accessToken,
-        data
-      );
-
-      if (result.success) {
-        totalSuccess++;
+      const deviceInfo = tokenData.device_info as Record<string, unknown> | null;
+      const isOneSignal = deviceInfo?.type === 'onesignal-web';
+      
+      if (isOneSignal) {
+        oneSignalTokens.push(tokenData.token);
+      } else if (tokenData.platform === 'web') {
+        // Skip legacy FCM web tokens - they won't work with OneSignal
+        console.log('Skipping legacy FCM web token');
       } else {
-        totalFailed++;
-        console.log(`Token failed:`, result.error);
-        
-        // Mark tokens with permanent errors for deactivation
-        if (result.error === 'UNREGISTERED' || result.error === 'INVALID_ARGUMENT') {
-          invalidTokens.push(tokenData.token);
-        }
+        // Native tokens (Android/iOS) - these are FCM tokens
+        legacyFcmTokens.push(tokenData.token);
       }
     }
 
-    // Deactivate invalid tokens
-    if (invalidTokens.length > 0) {
-      console.log(`Deactivating ${invalidTokens.length} invalid tokens`);
-      await supabase
-        .from('push_notification_tokens')
-        .update({ is_active: false })
-        .in('token', invalidTokens);
+    console.log(`Found ${oneSignalTokens.length} OneSignal tokens, ${legacyFcmTokens.length} legacy FCM tokens`);
+
+    let totalSuccess = 0;
+    let totalFailed = 0;
+
+    // Send to OneSignal tokens (batch send)
+    if (oneSignalTokens.length > 0) {
+      const result = await sendOneSignalNotification(
+        oneSignalTokens,
+        title,
+        body,
+        oneSignalAppId,
+        oneSignalRestApiKey,
+        data,
+        url
+      );
+
+      if (result.success) {
+        totalSuccess += result.recipients || oneSignalTokens.length;
+        console.log(`OneSignal: Successfully sent to ${result.recipients} devices`);
+      } else {
+        totalFailed += oneSignalTokens.length;
+        console.error(`OneSignal: Failed to send:`, result.error);
+      }
+    }
+
+    // Note: Legacy FCM tokens are skipped as we've migrated to OneSignal
+    // If native app support is needed in future, implement FCM v1 API here
+    if (legacyFcmTokens.length > 0) {
+      console.log(`Skipping ${legacyFcmTokens.length} legacy FCM tokens - migration to OneSignal required`);
+      totalFailed += legacyFcmTokens.length;
     }
 
     // Record in history
@@ -485,7 +255,8 @@ serve(async (req) => {
         total_sent: tokensData.length,
         total_success: totalSuccess,
         total_failed: totalFailed,
-        invalid_tokens_removed: invalidTokens.length,
+        onesignal_tokens: oneSignalTokens.length,
+        legacy_fcm_tokens: legacyFcmTokens.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
