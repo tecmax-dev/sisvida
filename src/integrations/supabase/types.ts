@@ -8247,10 +8247,11 @@ export type Database = {
           device_info: Json | null
           id: string
           is_active: boolean | null
-          patient_id: string
+          patient_id: string | null
           platform: string
           token: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           clinic_id: string
@@ -8258,10 +8259,11 @@ export type Database = {
           device_info?: Json | null
           id?: string
           is_active?: boolean | null
-          patient_id: string
+          patient_id?: string | null
           platform: string
           token: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           clinic_id?: string
@@ -8269,10 +8271,11 @@ export type Database = {
           device_info?: Json | null
           id?: string
           is_active?: boolean | null
-          patient_id?: string
+          patient_id?: string | null
           platform?: string
           token?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {

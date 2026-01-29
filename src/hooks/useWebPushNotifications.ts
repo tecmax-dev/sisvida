@@ -56,10 +56,21 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
     console.log('OneSignal: Registering Player ID...', playerId.substring(0, 20) + '...');
 
     try {
+      // Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || null;
+
+      // We need at least one identifier
+      if (!patientId && !userId) {
+        console.log('OneSignal: Missing both patientId and userId');
+        return false;
+      }
+
       const { error } = await supabase
         .from('push_notification_tokens')
         .upsert({
           patient_id: patientId || null,
+          user_id: userId,
           clinic_id: clinicId,
           token: playerId,
           platform: 'web',
