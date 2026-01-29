@@ -88,11 +88,14 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     try {
       const registrations = await navigator.serviceWorker.getRegistrations();
 
-      // Detect PWA/VitePWA SW (can be sw.js or registerSW.js or generated workbox file)
-      const appSW = registrations.find(
-        (r) => r.active?.scriptURL && !r.active.scriptURL.includes('OneSignal')
-      );
+      // Detect PWA SW (vite-plugin-pwa generates /sw.js by default)
+      const appSW =
+        registrations.find((r) => r.active?.scriptURL?.endsWith('/sw.js')) ||
+        registrations.find((r) => r.active?.scriptURL && !r.active.scriptURL.includes('OneSignal'));
 
+      // NOTE: In browsers, only ONE SW can exist per scope ('/').
+      // OneSignal runs inside the app SW via Workbox importScripts.
+      // Therefore, a separate OneSignalSDKWorker.js registration is not expected.
       const oneSignalWorker = registrations.find((r) =>
         r.active?.scriptURL?.includes('OneSignalSDKWorker.js')
       );
@@ -103,35 +106,29 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
       const appScope = appSW?.scope || null;
       const oneSignalScope = oneSignalWorker?.scope || null;
 
-      // OneSignal SW might not exist yet if user hasn't subscribed
-      const oneSignalMissing = !oneSignalWorker;
-
       const appOk = !!appSW && appScope?.endsWith('/');
-      const oneSignalOk = !!oneSignalWorker && oneSignalScope?.endsWith('/');
+      const appHasPushManager = !!appSW?.pushManager;
 
       let statusLevel: DiagnosticResult['status'] = 'success';
       let message = '';
 
-      if (appOk && oneSignalOk) {
-        message = 'App SW + OneSignal SW (scope "/")';
-      } else if (appOk && oneSignalMissing) {
-        // Normal state before first push subscription
-        statusLevel = 'warning';
-        message = 'App SW OK. OneSignal SW será criado ao ativar notificações.';
-      } else if (!appOk) {
-        statusLevel = 'error';
-        message = 'SW do app não encontrado ou escopo incorreto.';
-      } else {
-        statusLevel = 'warning';
-        message = 'OneSignal SW presente mas escopo incorreto.';
-      }
-
       const appSub = appSW
         ? await appSW.pushManager?.getSubscription().catch(() => null)
         : null;
-      const oneSignalSub = oneSignalWorker
-        ? await oneSignalWorker.pushManager?.getSubscription().catch(() => null)
-        : null;
+
+      if (!appOk) {
+        statusLevel = 'error';
+        message = 'SW do app não encontrado ou escopo incorreto.';
+      } else if (!appHasPushManager) {
+        statusLevel = 'error';
+        message = 'SW do app sem PushManager (push indisponível).';
+      } else if (!appSub) {
+        statusLevel = 'warning';
+        message = 'SW do app OK, mas sem PushSubscription ativa.';
+      } else {
+        statusLevel = 'success';
+        message = 'SW do app OK (scope "/" + PushSubscription ativa).';
+      }
 
       swStatus = {
         name: 'Service Worker',
@@ -140,8 +137,8 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         details: [
           `app=${getFile(appSW) ?? 'N/A'} scope=${appScope ?? 'N/A'} pushSub=${appSub ? 'sim' : 'não'}`,
           oneSignalWorker
-            ? `onesignal=${getFile(oneSignalWorker)} scope=${oneSignalScope} pushSub=${oneSignalSub ? 'sim' : 'não'}`
-            : 'onesignal=não registrado (normal antes de ativar)',
+            ? `onesignalSW=${getFile(oneSignalWorker)} scope=${oneSignalScope ?? 'N/A'}`
+            : 'onesignalSW=integrado ao sw.js (sem registro separado)',
           `totalRegs=${registrations.length}`,
         ].join(' | '),
       };
