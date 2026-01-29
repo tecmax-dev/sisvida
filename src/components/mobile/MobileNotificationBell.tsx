@@ -14,6 +14,7 @@ import { Bell, Check, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { NotificationDetailDialog } from "@/components/notifications/NotificationDetailDialog";
 
 interface PatientNotification {
   id: string;
@@ -70,6 +71,8 @@ export function MobileNotificationBell() {
   const { patientId } = useMobileAuth();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<PatientNotification | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const previousUnreadCountRef = useRef<number>(0);
   const isFirstLoadRef = useRef(true);
 
@@ -203,6 +206,8 @@ export function MobileNotificationBell() {
     if (!notification.is_read) {
       markAsReadMutation.mutate(notification.id);
     }
+    setSelectedNotification(notification);
+    setDetailDialogOpen(true);
   };
 
   // If no patientId, show disabled bell
@@ -215,7 +220,13 @@ export function MobileNotificationBell() {
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <>
+      <NotificationDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        notification={selectedNotification}
+      />
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -313,5 +324,6 @@ export function MobileNotificationBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+    </>
   );
 }
