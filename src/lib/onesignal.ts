@@ -135,18 +135,26 @@ export async function initializeOneSignal(): Promise<boolean> {
             notifyButton: {
               enable: false, // We use our own UI
             },
+            welcomeNotification: {
+              disable: true, // Disable default welcome notification
+            },
             promptOptions: {
+              autoPrompt: false, // We control when to prompt
               slidedown: {
                 prompts: [
                   {
                     type: 'push',
-                    autoPrompt: false, // We control when to prompt
+                    autoPrompt: false,
                     text: {
+                      actionMessage: 'Deseja receber notificações do sindicato?',
                       acceptButton: 'Permitir',
                       cancelButton: 'Agora não',
                     },
                   },
                 ],
+              },
+              customlink: {
+                enabled: false,
               },
             },
           });
