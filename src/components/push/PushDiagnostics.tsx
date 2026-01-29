@@ -86,13 +86,46 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     };
     try {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      const onesignalSW = registrations.find(r => r.active?.scriptURL.includes('OneSignal'));
-      swStatus = {
-        name: 'Service Worker',
-        status: onesignalSW ? 'success' : 'warning',
-        message: onesignalSW ? 'OneSignal SW ativo' : 'OneSignal SW não encontrado',
-        details: registrations.map(r => r.scope).join(', ')
-      };
+      // Check for OneSignal SW (either dedicated file or the SDK embedded in main SW)
+      const onesignalSW = registrations.find(r => 
+        r.active?.scriptURL.includes('OneSignal') || 
+        r.active?.scriptURL.includes('sw.js') // VitePWA SW that may handle push
+      );
+      
+      // Also check if push subscription exists in any SW
+      let hasPushSubscription = false;
+      for (const reg of registrations) {
+        try {
+          const sub = await reg.pushManager?.getSubscription();
+          if (sub) {
+            hasPushSubscription = true;
+            break;
+          }
+        } catch {}
+      }
+      
+      if (onesignalSW && hasPushSubscription) {
+        swStatus = {
+          name: 'Service Worker',
+          status: 'success',
+          message: 'SW com Push ativo',
+          details: `${registrations.length} SW(s) registrado(s): ${registrations.map(r => r.active?.scriptURL?.split('/').pop() || 'unknown').join(', ')}`
+        };
+      } else if (onesignalSW) {
+        swStatus = {
+          name: 'Service Worker',
+          status: 'warning',
+          message: 'SW encontrado, mas sem Push subscription',
+          details: registrations.map(r => r.active?.scriptURL?.split('/').pop() || 'unknown').join(', ')
+        };
+      } else {
+        swStatus = {
+          name: 'Service Worker',
+          status: 'warning',
+          message: 'Nenhum SW de Push encontrado',
+          details: `${registrations.length} SW(s): ${registrations.map(r => r.scope).join(', ')}`
+        };
+      }
     } catch (err) {
       swStatus = {
         name: 'Service Worker',
