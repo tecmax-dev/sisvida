@@ -15,24 +15,43 @@ export interface OneSignalUser {
 
 async function clearPreviousOneSignalData(): Promise<void> {
   try {
-    // Unregister any existing OneSignal service workers
+    console.log('OneSignal: Starting aggressive data cleanup...');
+    
+    // Unregister ALL service workers (not just OneSignal ones)
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const registration of registrations) {
-        if (registration.scope.includes('OneSignal') || 
-            registration.active?.scriptURL?.includes('OneSignal')) {
+        // Unregister any service worker that might be related to push
+        const scriptUrl = registration.active?.scriptURL || '';
+        const scope = registration.scope || '';
+        
+        if (scriptUrl.includes('OneSignal') || 
+            scriptUrl.includes('onesignal') ||
+            scriptUrl.includes('push') ||
+            scriptUrl.includes('sw') ||
+            scope.includes('onesignal')) {
           await registration.unregister();
-          console.log('OneSignal: Unregistered old service worker');
+          console.log('OneSignal: Unregistered service worker:', scriptUrl);
         }
       }
     }
 
-    // Clear OneSignal IndexedDB databases
-    const databases = await indexedDB.databases?.() || [];
-    for (const db of databases) {
-      if (db.name && (db.name.includes('OneSignal') || db.name.includes('onesignal'))) {
-        indexedDB.deleteDatabase(db.name);
-        console.log('OneSignal: Cleared IndexedDB:', db.name);
+    // Clear ALL OneSignal IndexedDB databases
+    if (indexedDB.databases) {
+      const databases = await indexedDB.databases();
+      for (const db of databases) {
+        if (db.name && (
+          db.name.includes('OneSignal') || 
+          db.name.includes('onesignal') ||
+          db.name.includes('ONE_SIGNAL')
+        )) {
+          try {
+            indexedDB.deleteDatabase(db.name);
+            console.log('OneSignal: Cleared IndexedDB:', db.name);
+          } catch (e) {
+            console.warn('OneSignal: Could not delete IndexedDB:', db.name);
+          }
+        }
       }
     }
 
@@ -40,7 +59,12 @@ async function clearPreviousOneSignalData(): Promise<void> {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.includes('OneSignal') || key.includes('onesignal'))) {
+      if (key && (
+        key.includes('OneSignal') || 
+        key.includes('onesignal') ||
+        key.includes('ONE_SIGNAL') ||
+        key.includes('os_')
+      )) {
         keysToRemove.push(key);
       }
     }
@@ -48,6 +72,28 @@ async function clearPreviousOneSignalData(): Promise<void> {
       localStorage.removeItem(key);
       console.log('OneSignal: Cleared localStorage:', key);
     });
+
+    // Clear sessionStorage as well
+    const sessionKeysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && (
+        key.includes('OneSignal') || 
+        key.includes('onesignal') ||
+        key.includes('ONE_SIGNAL')
+      )) {
+        sessionKeysToRemove.push(key);
+      }
+    }
+    sessionKeysToRemove.forEach(key => {
+      sessionStorage.removeItem(key);
+      console.log('OneSignal: Cleared sessionStorage:', key);
+    });
+
+    // Wait a bit for cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('OneSignal: Cleanup completed');
   } catch (error) {
     console.warn('OneSignal: Error clearing previous data:', error);
   }
