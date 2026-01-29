@@ -15065,6 +15065,18 @@ export type Database = {
           relationship: string
         }[]
       }
+      get_patient_notifications: {
+        Args: { p_patient_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          data: Json
+          id: string
+          is_read: boolean
+          title: string
+          type: string
+        }[]
+      }
       get_user_clinic_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_permissions: {
         Args: { _clinic_id: string; _user_id: string }
@@ -15128,6 +15140,14 @@ export type Database = {
           p_transaction_id: string
         }
         Returns: string
+      }
+      mark_all_notifications_read: {
+        Args: { p_patient_id: string }
+        Returns: number
+      }
+      mark_notification_read: {
+        Args: { p_notification_id: string; p_patient_id: string }
+        Returns: boolean
       }
       normalize_check_number: { Args: { check_num: string }; Returns: string }
       recalculate_union_cash_register_balance: {

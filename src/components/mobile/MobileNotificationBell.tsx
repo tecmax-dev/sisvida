@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
@@ -67,34 +67,51 @@ const playNotificationSound = () => {
 };
 
 export function MobileNotificationBell() {
-  const { patientId, clinicId } = useMobileAuth();
+  const { patientId } = useMobileAuth();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const previousUnreadCountRef = useRef<number>(0);
   const isFirstLoadRef = useRef(true);
 
-  // Fetch notifications for this patient
-  const { data: notifications = [] } = useQuery({
+  // Debug: Log patientId
+  useEffect(() => {
+    console.log("[MobileNotificationBell] patientId:", patientId);
+  }, [patientId]);
+
+  // Fetch notifications using RPC function (bypasses RLS issues)
+  const { data: notifications = [], isLoading, error } = useQuery({
     queryKey: ["patient-notifications", patientId],
     queryFn: async () => {
-      if (!patientId) return [];
-      
-      const { data, error } = await supabase
-        .from("patient_notifications")
-        .select("id, title, body, type, data, is_read, created_at")
-        .eq("patient_id", patientId)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      
-      if (error) {
-        console.error("Error fetching patient notifications:", error);
+      if (!patientId) {
+        console.log("[MobileNotificationBell] No patientId, returning empty");
         return [];
       }
-      return data as PatientNotification[];
+      
+      console.log("[MobileNotificationBell] Fetching notifications for:", patientId);
+      
+      // Use RPC function that bypasses RLS with SECURITY DEFINER
+      const { data, error } = await supabase
+        .rpc("get_patient_notifications", { p_patient_id: patientId });
+      
+      if (error) {
+        console.error("[MobileNotificationBell] Error fetching notifications:", error);
+        throw error;
+      }
+      
+      console.log("[MobileNotificationBell] Fetched notifications:", data?.length || 0);
+      return (data || []) as PatientNotification[];
     },
     enabled: !!patientId,
     refetchInterval: 30000,
+    staleTime: 10000,
   });
+
+  // Log errors
+  useEffect(() => {
+    if (error) {
+      console.error("[MobileNotificationBell] Query error:", error);
+    }
+  }, [error]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -117,6 +134,8 @@ export function MobileNotificationBell() {
   useEffect(() => {
     if (!patientId) return;
 
+    console.log("[MobileNotificationBell] Setting up realtime for patient:", patientId);
+
     const channel = supabase
       .channel(`patient-notifications-${patientId}`)
       .on(
@@ -128,47 +147,50 @@ export function MobileNotificationBell() {
           filter: `patient_id=eq.${patientId}`,
         },
         (payload) => {
-          console.log("New notification received:", payload);
+          console.log("[MobileNotificationBell] New notification received:", payload);
           playNotificationSound();
           queryClient.invalidateQueries({ queryKey: ["patient-notifications", patientId] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[MobileNotificationBell] Realtime subscription status:", status);
+      });
 
     return () => {
+      console.log("[MobileNotificationBell] Cleaning up realtime");
       supabase.removeChannel(channel);
     };
   }, [patientId, queryClient]);
 
-  // Mark as read mutation
+  // Mark as read mutation using RPC
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from("patient_notifications")
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq("id", notificationId);
+      if (!patientId) throw new Error("No patient ID");
+      
+      const { data, error } = await supabase
+        .rpc("mark_notification_read", { 
+          p_notification_id: notificationId,
+          p_patient_id: patientId 
+        });
+      
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-notifications", patientId] });
     },
   });
 
-  // Mark all as read
+  // Mark all as read using RPC
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const unreadIds = notifications
-        .filter((n) => !n.is_read)
-        .map((n) => n.id);
-
-      if (unreadIds.length === 0) return;
-
-      const { error } = await supabase
-        .from("patient_notifications")
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .in("id", unreadIds);
+      if (!patientId) throw new Error("No patient ID");
+      
+      const { data, error } = await supabase
+        .rpc("mark_all_notifications_read", { p_patient_id: patientId });
       
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-notifications", patientId] });
@@ -183,6 +205,7 @@ export function MobileNotificationBell() {
     }
   };
 
+  // If no patientId, show disabled bell
   if (!patientId) {
     return (
       <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -233,7 +256,12 @@ export function MobileNotificationBell() {
           )}
         </div>
         <ScrollArea className="h-[300px]">
-          {notifications.length === 0 ? (
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <div className="animate-spin h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2" />
+              <p className="text-sm">Carregando...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-3 opacity-20" />
               <p className="text-sm">Nenhuma notificação</p>
