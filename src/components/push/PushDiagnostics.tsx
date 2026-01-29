@@ -93,18 +93,10 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         registrations.find((r) => r.active?.scriptURL?.endsWith('/sw.js')) ||
         registrations.find((r) => r.active?.scriptURL && !r.active.scriptURL.includes('OneSignal'));
 
-      // NOTE: In browsers, only ONE SW can exist per scope ('/').
-      // OneSignal runs inside the app SW via Workbox importScripts.
-      // Therefore, a separate OneSignalSDKWorker.js registration is not expected.
-      const oneSignalWorker = registrations.find((r) =>
-        r.active?.scriptURL?.includes('OneSignalSDKWorker.js')
-      );
-
       const getFile = (r: ServiceWorkerRegistration | undefined) =>
         r?.active?.scriptURL?.split('/').pop() || null;
 
       const appScope = appSW?.scope || null;
-      const oneSignalScope = oneSignalWorker?.scope || null;
 
       const appOk = !!appSW && appScope?.endsWith('/');
       const appHasPushManager = !!appSW?.pushManager;
@@ -124,10 +116,10 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         message = 'SW do app sem PushManager (push indisponível).';
       } else if (!appSub) {
         statusLevel = 'warning';
-        message = 'SW do app OK, mas sem PushSubscription ativa.';
+        message = 'SW OK, mas sem PushSubscription ativa. Clique "Ativar Notificações".';
       } else {
         statusLevel = 'success';
-        message = 'SW do app OK (scope "/" + PushSubscription ativa).';
+        message = 'SW unificado OK com PushSubscription ativa.';
       }
 
       swStatus = {
@@ -135,11 +127,10 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
         status: statusLevel,
         message,
         details: [
-          `app=${getFile(appSW) ?? 'N/A'} scope=${appScope ?? 'N/A'} pushSub=${appSub ? 'sim' : 'não'}`,
-          oneSignalWorker
-            ? `onesignalSW=${getFile(oneSignalWorker)} scope=${oneSignalScope ?? 'N/A'}`
-            : 'onesignalSW=integrado ao sw.js (sem registro separado)',
-          `totalRegs=${registrations.length}`,
+          `sw=${getFile(appSW) ?? 'N/A'}`,
+          `scope=${appScope ?? 'N/A'}`,
+          `pushSub=${appSub ? 'ativa' : 'não'}`,
+          `regs=${registrations.length}`,
         ].join(' | '),
       };
     } catch (err) {
