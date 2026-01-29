@@ -256,6 +256,9 @@ export default function NotificationBell() {
                         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                           {notification.message}
                         </p>
+                        <span className="text-xs text-primary/70 hover:text-primary font-medium mt-1 inline-block">
+                          Ler mais →
+                        </span>
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDistanceToNow(new Date(notification.scheduled_at), {
                             addSuffix: true,
