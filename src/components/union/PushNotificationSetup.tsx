@@ -71,6 +71,24 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
           <p className="text-sm text-muted-foreground">
             Você receberá notificações importantes do sindicato diretamente no seu navegador.
           </p>
+          <Button
+            onClick={subscribeToWebPush}
+            disabled={isWebPushLoading || !clinicId}
+            variant="outline"
+            className="mt-4 w-full"
+          >
+            {isWebPushLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Reconfigurando...
+              </>
+            ) : (
+              <>
+                <Bell className="mr-2 h-4 w-4" />
+                Reconfigurar notificações
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     );

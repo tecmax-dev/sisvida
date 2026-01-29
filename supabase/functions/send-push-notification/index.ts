@@ -18,8 +18,13 @@ interface PushNotificationRequest {
 
 interface OneSignalNotificationResponse {
   id: string;
-  recipients: number;
-  errors?: string[];
+  recipients?: number;
+  // OneSignal may return either an array of error strings or an object with details (e.g. invalid_player_ids)
+  errors?:
+    | string[]
+    | {
+        invalid_player_ids?: string[];
+      };
 }
 
 // Send notification using OneSignal REST API
@@ -31,7 +36,7 @@ async function sendOneSignalNotification(
   restApiKey: string,
   data?: Record<string, string>,
   url?: string
-): Promise<{ success: boolean; recipients?: number; error?: string }> {
+): Promise<{ success: boolean; recipients?: number; error?: string; invalidPlayerIds?: string[] }> {
   if (playerIds.length === 0) {
     return { success: false, error: 'No player IDs provided' };
   }
@@ -61,20 +66,28 @@ async function sendOneSignalNotification(
       body: JSON.stringify(payload),
     });
 
-    const responseData = await response.json();
+     const responseData: OneSignalNotificationResponse = await response.json();
     
     if (!response.ok) {
       console.error('OneSignal API error:', response.status, JSON.stringify(responseData));
       return { 
         success: false, 
-        error: responseData.errors?.join(', ') || `HTTP ${response.status}` 
+         error: Array.isArray(responseData.errors)
+           ? responseData.errors.join(', ')
+           : (responseData.errors as any)?.invalid_player_ids?.join(', ') || `HTTP ${response.status}` 
       };
     }
+
+     const invalidPlayerIds =
+       !Array.isArray(responseData.errors) && responseData.errors?.invalid_player_ids
+         ? responseData.errors.invalid_player_ids
+         : [];
 
     console.log('OneSignal: Notification sent successfully', responseData);
     return { 
       success: true, 
-      recipients: responseData.recipients || playerIds.length 
+       recipients: responseData.recipients || playerIds.length,
+       invalidPlayerIds,
     };
   } catch (error) {
     console.error('OneSignal: Request error:', error);
@@ -215,6 +228,27 @@ serve(async (req) => {
       if (result.success) {
         totalSuccess += result.recipients || oneSignalTokens.length;
         console.log(`OneSignal: Successfully sent to ${result.recipients} devices`);
+
+        // Deactivate invalid OneSignal IDs so we stop sending to stale devices
+        if (result.invalidPlayerIds && result.invalidPlayerIds.length > 0) {
+          console.log('OneSignal: Deactivating invalid player IDs:', result.invalidPlayerIds.length);
+          const { error: deactivateError } = await supabase
+            .from('push_notification_tokens')
+            .update({
+              is_active: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('clinic_id', clinic_id)
+            .eq('platform', 'web')
+            .in('token', result.invalidPlayerIds);
+
+          if (deactivateError) {
+            console.error('Error deactivating invalid player IDs:', deactivateError);
+          } else {
+            // Count invalid IDs as failed attempts (best-effort metric)
+            totalFailed += result.invalidPlayerIds.length;
+          }
+        }
       } else {
         totalFailed += oneSignalTokens.length;
         console.error(`OneSignal: Failed to send:`, result.error);

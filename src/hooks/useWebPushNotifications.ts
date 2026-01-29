@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   initializeOneSignal,
-  subscribeToNotifications,
+  subscribeToNotificationsWithRefresh,
   isSubscribed as checkIsSubscribed,
   setExternalUserId,
   addTags,
@@ -79,6 +79,35 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         return false;
       }
 
+       // Deactivate stale tokens for the SAME device (same userAgent) so we don't keep sending to invalid IDs
+       // while still allowing multiple devices per user.
+       try {
+         let deactivateQuery = supabase
+           .from('push_notification_tokens')
+           .update({
+             is_active: false,
+             updated_at: new Date().toISOString(),
+           })
+           .eq('clinic_id', clinicId)
+           .eq('platform', 'web')
+           .eq('is_active', true)
+           .eq('device_info->>userAgent', navigator.userAgent)
+           .neq('token', playerId);
+
+         if (normalizedPatientId) {
+           deactivateQuery = deactivateQuery.eq('patient_id', normalizedPatientId);
+         } else if (userId) {
+           deactivateQuery = deactivateQuery.eq('user_id', userId);
+         }
+
+         const { error: deactivateError } = await deactivateQuery;
+         if (deactivateError) {
+           console.warn('OneSignal: Could not deactivate stale tokens for this device:', deactivateError);
+         }
+       } catch (e) {
+         console.warn('OneSignal: Error while deactivating stale tokens:', e);
+       }
+
       const { error } = await supabase
         .from('push_notification_tokens')
         .upsert({
@@ -147,7 +176,10 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
       // Subscribe to push notifications
       console.log('OneSignal: Subscribing to notifications...');
-      const playerId = await subscribeToNotifications();
+      const playerId = await subscribeToNotificationsWithRefresh({
+        // When permission is already granted, forcing a refresh helps recover from stale/invalid OneSignal IDs
+        forceRefresh: Notification.permission === 'granted',
+      });
       
       if (!playerId) {
         const permission = Notification.permission;
