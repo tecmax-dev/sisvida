@@ -53,8 +53,11 @@ export async function initializeOneSignal(): Promise<boolean> {
             await OneSignal.init({
               appId: ONESIGNAL_APP_ID,
               allowLocalhostAsSecureOrigin: true,
-              // CRITICAL: use dedicated OneSignal SW at domain root with a single scope (/)
-              serviceWorkerPath: '/OneSignalSDKWorker.js',
+              // IMPORTANT: Browsers only allow ONE Service Worker per scope.
+              // Our PWA SW is /sw.js at scope '/'. We load OneSignal's worker code
+              // into it via Workbox `importScripts` (see vite.config.ts).
+              // Therefore OneSignal must use the app SW path here.
+              serviceWorkerPath: '/sw.js',
               serviceWorkerParam: { scope: '/' },
               notifyButton: {
                 enable: false, // We use our own UI

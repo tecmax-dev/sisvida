@@ -56,6 +56,10 @@ export default defineConfig(({ mode }) => ({
         dir: "ltr"
       },
       workbox: {
+        // IMPORTANT: Only one Service Worker can exist per scope ("/") in browsers.
+        // We keep the app SW (sw.js) as the single SW at scope "/" and load OneSignal
+        // inside it so push works reliably in installed PWA.
+        importScripts: ["/OneSignalSDKWorker.js"],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
         // Exclude OneSignal service worker from being cached/intercepted
         globIgnores: ["**/OneSignalSDKWorker.js", "**/OneSignalSDKUpdaterWorker.js"],
