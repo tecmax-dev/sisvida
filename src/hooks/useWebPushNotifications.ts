@@ -199,7 +199,27 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
     const checkExistingSubscription = async () => {
       try {
-        // First check in database
+        // Check browser permission first
+        const permission = Notification.permission;
+        console.log('Web Push: Browser permission state:', permission);
+        
+        if (permission !== 'granted') {
+          // If browser permission is not granted, we're not subscribed
+          setIsSubscribed(false);
+          return;
+        }
+        
+        // Permission is granted, verify with OneSignal
+        await initializeOneSignal();
+        const oneSignalSubscribed = await checkIsSubscribed();
+        console.log('Web Push: OneSignal subscription state:', oneSignalSubscribed);
+        
+        if (!oneSignalSubscribed) {
+          setIsSubscribed(false);
+          return;
+        }
+        
+        // Finally check database for token registration
         let query = supabase
           .from('push_notification_tokens')
           .select('id')
@@ -212,15 +232,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         }
         
         const { data } = await query.maybeSingle();
-
-        if (data) {
-          // Also verify with OneSignal
-          await initializeOneSignal();
-          const subscribed = await checkIsSubscribed();
-          setIsSubscribed(subscribed || !!data);
-        }
+        
+        // Only considered subscribed if ALL checks pass
+        const fullySubscribed = permission === 'granted' && oneSignalSubscribed && !!data;
+        console.log('Web Push: Full subscription check:', { permission, oneSignalSubscribed, hasDbRecord: !!data, fullySubscribed });
+        setIsSubscribed(fullySubscribed);
       } catch (error) {
         console.error('Error checking subscription:', error);
+        setIsSubscribed(false);
       }
     };
 
