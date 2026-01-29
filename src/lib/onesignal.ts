@@ -174,15 +174,35 @@ export async function subscribeToNotifications(): Promise<string | null> {
     return await new Promise((resolve, reject) => {
       window.OneSignalDeferred.push(async (OneSignal: any) => {
         try {
-          // Check current permission
-          console.log('OneSignal: Requesting notification permission...');
-          const permission = await Notification.requestPermission();
-          console.log('OneSignal: Permission result:', permission);
+          // Check current permission state
+          const currentPermission = Notification.permission;
+          console.log('OneSignal: Current permission state:', currentPermission);
           
-          if (permission !== 'granted') {
-            console.log('OneSignal: Permission not granted:', permission);
+          if (currentPermission === 'denied') {
+            console.log('OneSignal: Permission was denied previously');
             resolve(null);
             return;
+          }
+
+          // If permission not yet granted, use OneSignal's slidedown prompt (Portuguese)
+          if (currentPermission !== 'granted') {
+            console.log('OneSignal: Showing slidedown prompt...');
+            
+            // Show OneSignal's native slidedown with Portuguese text
+            await OneSignal.Slidedown.promptPush();
+            
+            // Wait for user response
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Check if permission was granted after prompt
+            const newPermission = Notification.permission;
+            console.log('OneSignal: Permission after prompt:', newPermission);
+            
+            if (newPermission !== 'granted') {
+              console.log('OneSignal: Permission not granted after prompt');
+              resolve(null);
+              return;
+            }
           }
 
           // Opt in to push
