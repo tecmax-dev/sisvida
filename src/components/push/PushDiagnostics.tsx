@@ -88,51 +88,69 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     try {
       const registrations = await navigator.serviceWorker.getRegistrations();
 
-      const appSW = registrations.find((r) => r.active?.scriptURL.includes('/sw.js'))
-        || registrations.find((r) => r.active?.scriptURL.endsWith('/sw.js'));
+      // Detect PWA/VitePWA SW (can be sw.js or registerSW.js or generated workbox file)
+      const appSW = registrations.find(
+        (r) => r.active?.scriptURL && !r.active.scriptURL.includes('OneSignal')
+      );
 
-      const oneSignalWorker = registrations.find((r) => r.active?.scriptURL.endsWith('/OneSignalSDKWorker.js'))
-        || registrations.find((r) => r.active?.scriptURL.includes('/OneSignalSDKWorker.js'));
+      const oneSignalWorker = registrations.find((r) =>
+        r.active?.scriptURL?.includes('OneSignalSDKWorker.js')
+      );
 
-      const oneSignalUpdater = registrations.find((r) => r.active?.scriptURL.endsWith('/OneSignalSDKUpdaterWorker.js'))
-        || registrations.find((r) => r.active?.scriptURL.includes('/OneSignalSDKUpdaterWorker.js'));
-
-      const getFile = (r: ServiceWorkerRegistration | undefined) => r?.active?.scriptURL?.split('/').pop() || null;
+      const getFile = (r: ServiceWorkerRegistration | undefined) =>
+        r?.active?.scriptURL?.split('/').pop() || null;
 
       const appScope = appSW?.scope || null;
       const oneSignalScope = oneSignalWorker?.scope || null;
 
-      const scopeOk =
-        (!!appScope && appScope.endsWith('/')) &&
-        (!!oneSignalScope && oneSignalScope.endsWith('/'));
+      // OneSignal SW might not exist yet if user hasn't subscribed
+      const oneSignalMissing = !oneSignalWorker;
 
-      const appHasPushManager = !!appSW?.pushManager;
-      const oneSignalHasPushManager = !!oneSignalWorker?.pushManager;
+      const appOk = !!appSW && appScope?.endsWith('/');
+      const oneSignalOk = !!oneSignalWorker && oneSignalScope?.endsWith('/');
 
-      const appSub = appSW ? await appSW.pushManager?.getSubscription().catch(() => null) : null;
-      const oneSignalSub = oneSignalWorker ? await oneSignalWorker.pushManager?.getSubscription().catch(() => null) : null;
+      let statusLevel: DiagnosticResult['status'] = 'success';
+      let message = '';
 
-      const ok = !!appSW && !!oneSignalWorker && appHasPushManager && oneSignalHasPushManager && scopeOk;
+      if (appOk && oneSignalOk) {
+        message = 'App SW + OneSignal SW (scope "/")';
+      } else if (appOk && oneSignalMissing) {
+        // Normal state before first push subscription
+        statusLevel = 'warning';
+        message = 'App SW OK. OneSignal SW será criado ao ativar notificações.';
+      } else if (!appOk) {
+        statusLevel = 'error';
+        message = 'SW do app não encontrado ou escopo incorreto.';
+      } else {
+        statusLevel = 'warning';
+        message = 'OneSignal SW presente mas escopo incorreto.';
+      }
+
+      const appSub = appSW
+        ? await appSW.pushManager?.getSubscription().catch(() => null)
+        : null;
+      const oneSignalSub = oneSignalWorker
+        ? await oneSignalWorker.pushManager?.getSubscription().catch(() => null)
+        : null;
 
       swStatus = {
         name: 'Service Worker',
-        status: ok ? 'success' : 'warning',
-        message: ok
-          ? 'App SW + OneSignal SW (scope "/")'
-          : 'SWs incompletos (App/OneSignal) ou escopo errado',
+        status: statusLevel,
+        message,
         details: [
           `app=${getFile(appSW) ?? 'N/A'} scope=${appScope ?? 'N/A'} pushSub=${appSub ? 'sim' : 'não'}`,
-          `onesignal=${getFile(oneSignalWorker) ?? 'N/A'} scope=${oneSignalScope ?? 'N/A'} pushSub=${oneSignalSub ? 'sim' : 'não'}`,
-          `updater=${getFile(oneSignalUpdater) ?? 'N/A'}`,
+          oneSignalWorker
+            ? `onesignal=${getFile(oneSignalWorker)} scope=${oneSignalScope} pushSub=${oneSignalSub ? 'sim' : 'não'}`
+            : 'onesignal=não registrado (normal antes de ativar)',
           `totalRegs=${registrations.length}`,
-        ].join(' | ')
+        ].join(' | '),
       };
     } catch (err) {
       swStatus = {
         name: 'Service Worker',
         status: 'error',
         message: 'Erro ao verificar SW',
-        details: String(err)
+        details: String(err),
       };
     }
     diagnostics.push(swStatus);
