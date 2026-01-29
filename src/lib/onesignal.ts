@@ -1,7 +1,9 @@
 // OneSignal Web Push Configuration
 // Documentation: https://documentation.onesignal.com/docs/web-push-sdk
 
-const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
+// Note: App ID is a public key (safe to expose in frontend code)
+// This is intentionally hardcoded because VITE_ secrets are not exposed to the browser
+const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID || '7f9de3d4-4c1e-4d6a-9b8f-placeholder';
 
 let isInitialized = false;
 
