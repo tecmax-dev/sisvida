@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { persistSession, clearSession, STORAGE_KEYS } from "./useMobileSession";
+import { persistSession, clearSession, restoreSession } from "./useMobileSession";
 
 interface MobileAuthState {
   isLoggedIn: boolean;
@@ -71,24 +71,74 @@ export function useMobileAuthSession() {
     
     console.log("[MobileAuth] Inicializando a partir do localStorage...");
     
-    try {
-      // Apenas ler dados que o bootstrap já validou e persistiu
-      const patientId = localStorage.getItem(STORAGE_KEYS.patientId);
-      const clinicId = localStorage.getItem(STORAGE_KEYS.clinicId);
-      const patientName = localStorage.getItem(STORAGE_KEYS.patientName);
-      
-      if (patientId) {
-        console.log("[MobileAuth] Dados encontrados:", patientName);
+    (async () => {
+      try {
+        // Restaurar de qualquer camada (primary localStorage > backup localStorage > IndexedDB)
+        const restored = await restoreSession();
+
+        if (restored.patientId) {
+          console.log("[MobileAuth] Sessão restaurada:", restored.patientName);
+          setState({
+            isLoggedIn: true,
+            patientId: restored.patientId,
+            clinicId: restored.clinicId || TARGET_CLINIC_ID,
+            patientName: restored.patientName,
+            loading: false,
+            initialized: true,
+          });
+          return;
+        }
+
+        // Fallback: se o usuário está autenticado no backend mas perdeu storage local,
+        // recuperar patient_id do metadata e repersistir.
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          console.warn("[MobileAuth] getUser() falhou:", error);
+        }
+
+        const user = data?.user;
+        const appMeta = (user?.app_metadata ?? {}) as Record<string, any>;
+        const userMeta = (user?.user_metadata ?? {}) as Record<string, any>;
+
+        const patientIdFromMeta: string | null =
+          (appMeta.patient_id as string | undefined) ??
+          (userMeta.patient_id as string | undefined) ??
+          null;
+
+        const clinicIdFromMeta: string | null =
+          (appMeta.clinic_id as string | undefined) ??
+          (userMeta.clinic_id as string | undefined) ??
+          null;
+
+        const nameFromMeta: string | null =
+          (userMeta.name as string | undefined) ??
+          null;
+
+        if (patientIdFromMeta) {
+          console.log("[MobileAuth] Sessão recuperada do usuário autenticado");
+          await persistSession(patientIdFromMeta, clinicIdFromMeta || TARGET_CLINIC_ID, nameFromMeta || "Paciente");
+          setState({
+            isLoggedIn: true,
+            patientId: patientIdFromMeta,
+            clinicId: clinicIdFromMeta || TARGET_CLINIC_ID,
+            patientName: nameFromMeta,
+            loading: false,
+            initialized: true,
+          });
+          return;
+        }
+
+        console.log("[MobileAuth] Nenhuma sessão encontrada");
         setState({
-          isLoggedIn: true,
-          patientId,
-          clinicId: clinicId || TARGET_CLINIC_ID,
-          patientName,
+          isLoggedIn: false,
+          patientId: null,
+          clinicId: null,
+          patientName: null,
           loading: false,
           initialized: true,
         });
-      } else {
-        console.log("[MobileAuth] Nenhum dado no localStorage");
+      } catch (err) {
+        console.error("[MobileAuth] Erro ao inicializar sessão:", err);
         setState({
           isLoggedIn: false,
           patientId: null,
@@ -98,17 +148,7 @@ export function useMobileAuthSession() {
           initialized: true,
         });
       }
-    } catch (err) {
-      console.error("[MobileAuth] Erro ao ler localStorage:", err);
-      setState({
-        isLoggedIn: false,
-        patientId: null,
-        clinicId: null,
-        patientName: null,
-        loading: false,
-        initialized: true,
-      });
-    }
+    })();
   }, []);
 
   /**
@@ -166,27 +206,23 @@ export function useMobileAuthSession() {
         authSuccess = true;
         console.log("[MobileAuth] Login Supabase bem sucedido");
       } else if (signInError.message.includes('Invalid login credentials')) {
-        // Usuário não existe ou senha diferente - tentar signUp
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: patient.patient_name,
-              patient_id: patient.patient_id,
-              clinic_id: patient.clinic_id,
-            },
-          },
-        });
-        
-        if (!signUpError) {
-          // Após signup, fazer login
-          const { error: loginAfterSignup } = await supabase.auth.signInWithPassword({
-            email,
+        // Provisionar/atualizar usuário via RPC híbrido (garante app_metadata com patient_id)
+        const { data: hybridData, error: hybridError } = await supabase.rpc(
+          'authenticate_patient_hybrid',
+          { p_cpf: normalizedCpf, p_password: password }
+        );
+
+        if (hybridError) {
+          console.warn('[MobileAuth] authenticate_patient_hybrid falhou:', hybridError);
+        } else {
+          const emailFromHybrid = (hybridData as any)?.patient_email as string | undefined;
+          const finalEmail = emailFromHybrid || email;
+          const { error: loginAfterHybrid } = await supabase.auth.signInWithPassword({
+            email: finalEmail,
             password,
           });
-          authSuccess = !loginAfterSignup;
-          console.log("[MobileAuth] SignUp + Login:", authSuccess);
+          authSuccess = !loginAfterHybrid;
+          console.log("[MobileAuth] Hybrid provision + Login:", authSuccess);
         }
       }
       
