@@ -1,12 +1,12 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Calendar, User, Bell, Menu } from "lucide-react";
+import { Home, Calendar, User, Menu } from "lucide-react";
 import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
-
+import NotificationBell from "@/components/notifications/NotificationBell";
 interface MobileLayoutProps {
   children: ReactNode;
   showBottomNav?: boolean;
@@ -122,9 +122,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
           </div>
         </div>
         
-        <button className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 active:scale-95">
-          <Bell className="h-6 w-6" />
-        </button>
+        <NotificationBell />
       </header>
 
       {/* Main Content */}
