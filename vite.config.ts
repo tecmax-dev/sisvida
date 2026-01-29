@@ -57,6 +57,9 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
+        // Exclude OneSignal service worker from being cached/intercepted
+        globIgnores: ["**/OneSignalSDKWorker.js"],
+        navigateFallbackDenylist: [/^\/OneSignalSDKWorker\.js$/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
         cleanupOutdatedCaches: true, // Limpar caches antigos automaticamente
         skipWaiting: true, // Ativar novo SW imediatamente
@@ -72,6 +75,11 @@ export default defineConfig(({ mode }) => ({
                 maxAgeSeconds: 60 * 5, // 5 minutos (reduzido de 24h)
               },
             },
+          },
+          // Let OneSignal requests bypass cache
+          {
+            urlPattern: /^https:\/\/.*onesignal\.com\/.*/i,
+            handler: "NetworkOnly",
           },
         ],
       },
