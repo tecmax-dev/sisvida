@@ -57,19 +57,32 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
     try {
       // Get current authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('OneSignal: Auth error:', authError);
+      }
+      
       const userId = user?.id || null;
+      
+      // Normalize patientId - treat empty string as null
+      const normalizedPatientId = patientId && patientId.trim() !== '' ? patientId : null;
 
-      // We need at least one identifier
-      if (!patientId && !userId) {
-        console.log('OneSignal: Missing both patientId and userId');
+      console.log('OneSignal: Identifiers check:', {
+        patientId: normalizedPatientId ? 'present' : 'null',
+        userId: userId ? 'present' : 'null',
+      });
+
+      // We need at least one identifier - check AFTER getting userId
+      if (!normalizedPatientId && !userId) {
+        console.error('OneSignal: Cannot register - no patientId or userId available. User must be authenticated.');
         return false;
       }
 
       const { error } = await supabase
         .from('push_notification_tokens')
         .upsert({
-          patient_id: patientId || null,
+          patient_id: normalizedPatientId,
           user_id: userId,
           clinic_id: clinicId,
           token: playerId,
