@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
@@ -25,10 +25,53 @@ interface PatientNotification {
   created_at: string;
 }
 
+// Notification sound using Web Audio API
+const playNotificationSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a pleasant notification chime
+    const oscillator1 = audioContext.createOscillator();
+    const oscillator2 = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator1.connect(gainNode);
+    oscillator2.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // First tone
+    oscillator1.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+    oscillator1.type = 'sine';
+    
+    // Second tone (harmony)
+    oscillator2.frequency.setValueAtTime(1318.5, audioContext.currentTime); // E6
+    oscillator2.type = 'sine';
+    
+    // Envelope
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator1.start(audioContext.currentTime);
+    oscillator2.start(audioContext.currentTime);
+    oscillator1.stop(audioContext.currentTime + 0.5);
+    oscillator2.stop(audioContext.currentTime + 0.5);
+    
+    // Cleanup
+    setTimeout(() => {
+      audioContext.close();
+    }, 600);
+  } catch (error) {
+    console.log('Could not play notification sound:', error);
+  }
+};
+
 export function MobileNotificationBell() {
   const { patientId, clinicId } = useMobileAuth();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const previousUnreadCountRef = useRef<number>(0);
+  const isFirstLoadRef = useRef(true);
 
   // Fetch notifications for this patient
   const { data: notifications = [] } = useQuery({
@@ -50,10 +93,27 @@ export function MobileNotificationBell() {
       return data as PatientNotification[];
     },
     enabled: !!patientId,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Subscribe to realtime updates
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // Play sound when new unread notifications arrive
+  useEffect(() => {
+    if (isFirstLoadRef.current) {
+      isFirstLoadRef.current = false;
+      previousUnreadCountRef.current = unreadCount;
+      return;
+    }
+
+    if (unreadCount > previousUnreadCountRef.current) {
+      playNotificationSound();
+    }
+    
+    previousUnreadCountRef.current = unreadCount;
+  }, [unreadCount]);
+
+  // Subscribe to realtime updates and play sound
   useEffect(() => {
     if (!patientId) return;
 
@@ -67,7 +127,9 @@ export function MobileNotificationBell() {
           table: "patient_notifications",
           filter: `patient_id=eq.${patientId}`,
         },
-        () => {
+        (payload) => {
+          console.log("New notification received:", payload);
+          playNotificationSound();
           queryClient.invalidateQueries({ queryKey: ["patient-notifications", patientId] });
         }
       )
@@ -113,7 +175,6 @@ export function MobileNotificationBell() {
     },
   });
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
   const hasUnread = unreadCount > 0;
 
   const handleNotificationClick = (notification: PatientNotification) => {

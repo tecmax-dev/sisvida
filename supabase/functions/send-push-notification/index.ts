@@ -159,6 +159,29 @@ serve(async (req) => {
       );
     }
 
+    // Always save notifications for specific patients, even if no tokens
+    if (target_type === 'specific' && target_patient_ids && target_patient_ids.length > 0) {
+      const notificationsToInsert = target_patient_ids.map((pid) => ({
+        clinic_id,
+        patient_id: pid,
+        title,
+        body,
+        type: 'push',
+        data: data || {},
+        is_read: false,
+      }));
+
+      const { error: notifError } = await supabase
+        .from('patient_notifications')
+        .insert(notificationsToInsert);
+
+      if (notifError) {
+        console.error('Error saving patient notifications (no tokens):', notifError);
+      } else {
+        console.log(`Saved ${notificationsToInsert.length} notifications to patient_notifications table (no tokens)`);
+      }
+    }
+
     if (!tokensData || tokensData.length === 0) {
       console.log('No active tokens found for clinic:', clinic_id);
       
@@ -180,10 +203,11 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'No active tokens found',
+          message: 'No active tokens found, but notifications saved for in-app display',
           total_sent: 0,
           total_success: 0,
-          total_failed: 0
+          total_failed: 0,
+          notifications_saved: target_type === 'specific' ? target_patient_ids?.length || 0 : 0
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
