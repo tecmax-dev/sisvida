@@ -18,22 +18,12 @@ async function clearPreviousOneSignalData(): Promise<void> {
   try {
     console.log('OneSignal: Starting aggressive data cleanup...');
     
-    // Unregister ALL service workers (not just OneSignal ones)
+    // Unregister ALL service workers completely
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const registration of registrations) {
-        // Unregister any service worker that might be related to push
-        const scriptUrl = registration.active?.scriptURL || '';
-        const scope = registration.scope || '';
-        
-        if (scriptUrl.includes('OneSignal') || 
-            scriptUrl.includes('onesignal') ||
-            scriptUrl.includes('push') ||
-            scriptUrl.includes('sw') ||
-            scope.includes('onesignal')) {
-          await registration.unregister();
-          console.log('OneSignal: Unregistered service worker:', scriptUrl);
-        }
+        await registration.unregister();
+        console.log('OneSignal: Unregistered service worker:', registration.scope);
       }
     }
 
