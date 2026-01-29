@@ -262,6 +262,36 @@ serve(async (req) => {
       totalFailed += legacyFcmTokens.length;
     }
 
+    // Save notifications to patient_notifications table for in-app display
+    const patientIds = new Set<string>();
+    for (const tokenData of tokensData) {
+      if (tokenData.patient_id) {
+        patientIds.add(tokenData.patient_id);
+      }
+    }
+
+    if (patientIds.size > 0) {
+      const notificationsToInsert = Array.from(patientIds).map((pid) => ({
+        clinic_id,
+        patient_id: pid,
+        title,
+        body,
+        type: 'push',
+        data: data || {},
+        is_read: false,
+      }));
+
+      const { error: notifError } = await supabase
+        .from('patient_notifications')
+        .insert(notificationsToInsert);
+
+      if (notifError) {
+        console.error('Error saving patient notifications:', notifError);
+      } else {
+        console.log(`Saved ${notificationsToInsert.length} notifications to patient_notifications table`);
+      }
+    }
+
     // Record in history
     const { error: historyError } = await supabase
       .from('push_notification_history')
