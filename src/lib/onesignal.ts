@@ -104,31 +104,33 @@ export async function initializeOneSignal(): Promise<boolean> {
 
     // Initialize OneSignal
     await new Promise<void>((resolve, reject) => {
-      window.OneSignalDeferred.push(async (OneSignal: any) => {
-        try {
-          await OneSignal.init({
-            appId: ONESIGNAL_APP_ID,
-            allowLocalhostAsSecureOrigin: true,
-            notifyButton: {
-              enable: false, // We use our own UI
-            },
-            welcomeNotification: {
-              disable: true, // Disable default welcome notification
-            },
-            promptOptions: {
-              autoPrompt: false, // We control when to prompt
-              native: {
-                enabled: true, // Use native browser prompt only
+        window.OneSignalDeferred.push(async (OneSignal: any) => {
+          try {
+            await OneSignal.init({
+              appId: ONESIGNAL_APP_ID,
+              allowLocalhostAsSecureOrigin: true,
+              serviceWorkerPath: '/OneSignalSDKWorker.js', // Explicit path to service worker
+              serviceWorkerParam: { scope: '/' }, // Scope for the service worker
+              notifyButton: {
+                enable: false, // We use our own UI
               },
-              slidedown: {
-                enabled: false, // Completely disable slidedown to prevent English default
-                prompts: [],
+              welcomeNotification: {
+                disable: true, // Disable default welcome notification
               },
-              customlink: {
-                enabled: false,
+              promptOptions: {
+                autoPrompt: false, // We control when to prompt
+                native: {
+                  enabled: true, // Use native browser prompt only
+                },
+                slidedown: {
+                  enabled: false, // Completely disable slidedown to prevent English default
+                  prompts: [],
+                },
+                customlink: {
+                  enabled: false,
+                },
               },
-            },
-          });
+            });
           console.log('OneSignal: Initialized successfully');
           isInitialized = true;
           resolve();
