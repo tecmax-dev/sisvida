@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Loader2, 
   CalendarDays,
@@ -108,39 +107,37 @@ export function DateTimeSelectionStep({
         </div>
         
         {availableDates.length > 0 ? (
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2">
-              {availableDates.map((date) => {
-                const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
-                return (
-                  <Card
-                    key={format(date, "yyyy-MM-dd")}
-                    className={`cursor-pointer flex-shrink-0 min-w-[80px] transition-all ${
-                      isSelected 
-                        ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600" 
-                        : "hover:border-emerald-300"
-                    }`}
-                    onClick={() => setSelectedDate(date)}
-                  >
-                    <CardContent className="p-3 text-center">
-                      <p className={`text-xs font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                        {format(date, "EEE", { locale: ptBR })}
-                      </p>
-                      <p className={`text-xl font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
-                        {format(date, "dd")}
-                      </p>
-                      <p className={`text-xs ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                        {format(date, "MMM", { locale: ptBR })}
-                      </p>
-                      {isSelected && (
-                        <Check className="h-4 w-4 text-emerald-600 mx-auto mt-1" />
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </ScrollArea>
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+            {availableDates.map((date) => {
+              const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
+              return (
+                <Card
+                  key={format(date, "yyyy-MM-dd")}
+                  className={`cursor-pointer transition-all ${
+                    isSelected 
+                      ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600" 
+                      : "hover:border-emerald-300"
+                  }`}
+                  onClick={() => setSelectedDate(date)}
+                >
+                  <CardContent className="p-2 sm:p-3 text-center">
+                    <p className={`text-[10px] sm:text-xs font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {format(date, "EEE", { locale: ptBR })}
+                    </p>
+                    <p className={`text-lg sm:text-xl font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
+                      {format(date, "dd")}
+                    </p>
+                    <p className={`text-[10px] sm:text-xs ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {format(date, "MMM", { locale: ptBR })}
+                    </p>
+                    {isSelected && (
+                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-600 mx-auto mt-0.5" />
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         ) : (
           <div className="text-center py-6 bg-muted/50 rounded-lg">
             <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
