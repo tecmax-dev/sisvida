@@ -38,6 +38,7 @@ import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModa
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
+import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
 
 interface InsurancePlan {
   id: string;
@@ -964,6 +965,13 @@ export default function UnionMemberDetailPage() {
               clinicId={currentClinic?.id || ''}
             />
           </div>
+        </div>
+      )}
+
+      {/* Aba Anexos */}
+      {activeTab === 'anexos' && id && (
+        <div className="bg-card rounded-lg border">
+          <UnionMemberAttachmentsTab patientId={id} />
         </div>
       )}
 
