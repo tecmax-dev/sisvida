@@ -74,9 +74,13 @@ export default defineConfig(({ mode }) => ({
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-cache",
+              networkTimeoutSeconds: 3, // Timeout rápido para fallback
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 5, // 5 minutos (reduzido de 24h)
+                maxEntries: 30,
+                maxAgeSeconds: 60, // 1 minuto - TTL reduzido
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
               },
             },
           },
