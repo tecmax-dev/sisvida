@@ -40,20 +40,16 @@ async function bootstrapApp() {
   renderApp();
 }
 
-// Limpar caches antigos ao iniciar o app
-async function clearOldCaches() {
+// Limpar TODOS os caches ao iniciar o app para garantir dados frescos
+async function clearAllCaches() {
   if ('caches' in window) {
     try {
       const cacheNames = await caches.keys();
-      const oldCaches = cacheNames.filter(name => 
-        name.includes('workbox') || 
-        name.includes('supabase-cache') ||
-        name.includes('runtime')
-      );
       
-      if (oldCaches.length > 0) {
-        console.log('[PWA] Limpando caches antigos:', oldCaches);
-        await Promise.all(oldCaches.map(name => caches.delete(name)));
+      if (cacheNames.length > 0) {
+        console.log('[PWA] Limpando todos os caches:', cacheNames);
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        console.log('[PWA] Todos os caches limpos com sucesso');
       }
     } catch (e) {
       console.warn('[PWA] Erro ao limpar caches:', e);
@@ -99,8 +95,8 @@ async function forceServiceWorkerUpdate() {
 }
 
 function renderApp() {
-  // Limpar caches e forçar atualização ao abrir o app
-  clearOldCaches();
+  // Limpar TODOS os caches e forçar atualização ao abrir o app
+  clearAllCaches();
   forceServiceWorkerUpdate();
 
   // Registrar Service Worker para PWA
