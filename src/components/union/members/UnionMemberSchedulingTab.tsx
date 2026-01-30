@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
 import { 
   User,
   Calendar,
@@ -156,39 +156,36 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
         </Card>
       ) : (
         <>
-          <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex gap-2 pb-2">
-              {specialtyTabs.map((specialty) => {
-                const isActive = activeSpecialty === specialty.id;
-                
-                return (
-                  <button
-                    key={specialty.id}
-                    onClick={() => setActiveSpecialty(specialty.id)}
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {specialtyTabs.map((specialty) => {
+              const isActive = activeSpecialty === specialty.id;
+              
+              return (
+                <button
+                  key={specialty.id}
+                  onClick={() => setActiveSpecialty(specialty.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all whitespace-nowrap",
+                    "text-sm font-medium flex-shrink-0",
+                    isActive
+                      ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
+                      : "bg-card text-muted-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  <span>{specialty.name}</span>
+                  <Badge 
+                    variant="secondary" 
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all whitespace-nowrap",
-                      "text-sm font-medium flex-shrink-0",
-                      isActive
-                        ? "bg-primary/10 text-primary border-primary/30 shadow-sm"
-                        : "bg-card text-muted-foreground border-border hover:bg-muted"
+                      "ml-1 h-5 px-1.5 text-xs",
+                      isActive ? "bg-primary/20 text-primary" : ""
                     )}
                   >
-                    <span>{specialty.name}</span>
-                    <Badge 
-                      variant="secondary" 
-                      className={cn(
-                        "ml-1 h-5 px-1.5 text-xs",
-                        isActive ? "bg-primary/20 text-primary" : ""
-                      )}
-                    >
-                      {specialty.count}
-                    </Badge>
-                  </button>
-                );
-              })}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+                    {specialty.count}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
 
           {/* Professionals Grid */}
           <div className="min-h-[300px]">
