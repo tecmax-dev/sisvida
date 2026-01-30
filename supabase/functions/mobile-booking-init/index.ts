@@ -97,12 +97,43 @@ serve(async (req) => {
       );
     }
 
-    // 2. Buscar profissionais ativos da clínica
-    const { data: professionals, error: profError } = await supabase
+    // 2. Buscar profissionais ativos da clínica COM especialidades
+    const { data: professionalsRaw, error: profError } = await supabase
       .from("professionals")
-      .select("id, name, specialty, appointment_duration, schedule, avatar_url")
+      .select(`
+        id, 
+        name, 
+        specialty, 
+        appointment_duration, 
+        schedule, 
+        avatar_url,
+        professional_specialties (
+          specialty:specialties (
+            id,
+            name,
+            category
+          )
+        )
+      `)
       .eq("clinic_id", card.clinic_id)
       .eq("is_active", true);
+
+    // Mapear profissionais para incluir array de especialidades formatado
+    const professionals = (professionalsRaw || []).map((prof: any) => ({
+      id: prof.id,
+      name: prof.name,
+      specialty: prof.specialty,
+      appointment_duration: prof.appointment_duration,
+      schedule: prof.schedule,
+      avatar_url: prof.avatar_url,
+      specialties: (prof.professional_specialties || [])
+        .filter((ps: any) => ps.specialty)
+        .map((ps: any) => ({
+          id: ps.specialty.id,
+          name: ps.specialty.name,
+          category: ps.specialty.category,
+        })),
+    }));
 
     if (profError) {
       console.error("[mobile-booking-init] Erro ao buscar profissionais:", profError);

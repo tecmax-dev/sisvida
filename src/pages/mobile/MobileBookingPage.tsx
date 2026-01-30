@@ -28,6 +28,7 @@ import { ptBR } from "date-fns/locale";
 import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 import { Badge } from "@/components/ui/badge";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
+import { MobileCategoryTabs, MOBILE_CATEGORIES, type SpecialtyCategory } from "@/components/mobile/MobileCategoryTabs";
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
 const dayMap: Record<number, string> = {
@@ -54,6 +55,12 @@ interface ProfessionalSchedule {
   [key: string]: { enabled: boolean; slots: { start: string; end: string }[] } | ScheduleBlock[] | undefined;
 }
 
+interface ProfessionalSpecialty {
+  id: string;
+  name: string;
+  category: 'medical' | 'dental' | 'aesthetic' | 'therapy' | 'massage';
+}
+
 interface Professional {
   id: string;
   name: string;
@@ -61,6 +68,7 @@ interface Professional {
   appointment_duration: number;
   schedule: ProfessionalSchedule | null;
   avatar_url: string | null;
+  specialties?: ProfessionalSpecialty[];
 }
 
 interface Dependent {
@@ -114,6 +122,7 @@ export default function MobileBookingPage() {
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
+  const [activeCategory, setActiveCategory] = useState<SpecialtyCategory>('medical');
   
   // useRef para clinicId - evita race condition e garante valor consistente no submit
   const clinicIdRef = useRef<string | null>(null);
@@ -673,59 +682,116 @@ export default function MobileBookingPage() {
             </div>
           )}
 
-          {/* Step 2: Professional */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-foreground">Escolha o profissional</h2>
-              
-              <div className="space-y-3">
-                {professionals.map((prof) => (
-                  <Card 
-                    key={prof.id}
-                    className={`cursor-pointer transition-colors ${selectedProfessionalId === prof.id ? "border-emerald-600 bg-emerald-50" : ""}`}
-                    onClick={() => {
-                      setSelectedProfessionalId(prof.id);
-                      // Reset date and time when changing professional
-                      setSelectedDate(undefined);
-                      setSelectedTime("");
-                      setAvailableSlots([]);
-                    }}
-                  >
-                    <CardContent className="p-4 flex items-center gap-4">
-                      {prof.avatar_url ? (
-                        <img 
-                          src={prof.avatar_url} 
-                          alt={prof.name}
-                          className="w-12 h-12 rounded-full object-cover border border-border"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <User className="h-6 w-6 text-emerald-600" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{prof.name}</p>
-                        {prof.specialty && (
-                          <p className="text-sm text-muted-foreground">{prof.specialty}</p>
-                        )}
-                      </div>
-                      {selectedProfessionalId === prof.id && (
-                        <Check className="h-5 w-5 text-emerald-600" />
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+          {/* Step 2: Professional with Category Tabs */}
+          {step === 2 && (() => {
+            // Filter professionals by active category
+            const filteredProfessionals = professionals.filter(prof => {
+              // If professional has specialties, check if any matches active category
+              if (prof.specialties && prof.specialties.length > 0) {
+                return prof.specialties.some(s => s.category === activeCategory);
+              }
+              // Fallback: show professionals without specialties in 'medical' category
+              return activeCategory === 'medical';
+            });
 
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!selectedProfessionalId}
-                onClick={() => setStep(3)}
-              >
-                Continuar
-              </Button>
-            </div>
-          )}
+            // Count professionals per category
+            const categoryCounts = MOBILE_CATEGORIES.reduce((acc, cat) => {
+              acc[cat.id] = professionals.filter(prof => {
+                if (prof.specialties && prof.specialties.length > 0) {
+                  return prof.specialties.some(s => s.category === cat.id);
+                }
+                return cat.id === 'medical';
+              }).length;
+              return acc;
+            }, {} as Record<SpecialtyCategory, number>);
+
+            // Get specialty names for display
+            const getSpecialtyNames = (prof: Professional): string => {
+              if (!prof.specialties?.length) return prof.specialty || '';
+              const categorySpecialties = prof.specialties
+                .filter(s => s.category === activeCategory)
+                .map(s => s.name);
+              return categorySpecialties.join(', ') || prof.specialty || '';
+            };
+
+            return (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Escolha o profissional</h2>
+                
+                {/* Category Tabs */}
+                <MobileCategoryTabs
+                  activeCategory={activeCategory}
+                  onCategoryChange={(cat) => {
+                    setActiveCategory(cat);
+                    // Reset selection when changing category
+                    setSelectedProfessionalId("");
+                    setSelectedDate(undefined);
+                    setSelectedTime("");
+                    setAvailableSlots([]);
+                  }}
+                  categoryCounts={categoryCounts}
+                />
+                
+                {/* Professionals List */}
+                <div className="space-y-3">
+                  {filteredProfessionals.length === 0 ? (
+                    <Card className="border-dashed">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">
+                          Nenhum profissional nesta categoria
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    filteredProfessionals.map((prof) => (
+                      <Card 
+                        key={prof.id}
+                        className={`cursor-pointer transition-colors ${selectedProfessionalId === prof.id ? "border-emerald-600 bg-emerald-50" : ""}`}
+                        onClick={() => {
+                          setSelectedProfessionalId(prof.id);
+                          // Reset date and time when changing professional
+                          setSelectedDate(undefined);
+                          setSelectedTime("");
+                          setAvailableSlots([]);
+                        }}
+                      >
+                        <CardContent className="p-4 flex items-center gap-4">
+                          {prof.avatar_url ? (
+                            <img 
+                              src={prof.avatar_url} 
+                              alt={prof.name}
+                              className="w-12 h-12 rounded-full object-cover border border-border"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                              <User className="h-6 w-6 text-emerald-600" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{prof.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {getSpecialtyNames(prof)}
+                            </p>
+                          </div>
+                          {selectedProfessionalId === prof.id && (
+                            <Check className="h-5 w-5 text-emerald-600" />
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  disabled={!selectedProfessionalId}
+                  onClick={() => setStep(3)}
+                >
+                  Continuar
+                </Button>
+              </div>
+            );
+          })()}
 
           {/* Step 3: Date and Time in same screen */}
           {step === 3 && (
