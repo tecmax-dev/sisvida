@@ -65,19 +65,35 @@ async function clearOldCaches() {
 async function forceServiceWorkerUpdate() {
   if ('serviceWorker' in navigator) {
     try {
+      // Emitir evento de verificação
+      window.dispatchEvent(new CustomEvent('pwa-checking-update'));
+      
       const registrations = await navigator.serviceWorker.getRegistrations();
+      let updateFound = false;
+      
       await Promise.all(
         registrations.map(async (r) => {
           await r.update();
           // Se há um SW waiting, ativar imediatamente
           if (r.waiting) {
+            updateFound = true;
+            window.dispatchEvent(new CustomEvent('pwa-update-found'));
             r.waiting.postMessage({ type: 'SKIP_WAITING' });
           }
         })
       );
+      
+      if (updateFound) {
+        // Aguardar um pouco para o SW ativar
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('pwa-update-applied'));
+        }, 1500);
+      }
+      
       console.log('[PWA] Service Workers atualizados');
     } catch (e) {
       console.warn('[PWA] Erro ao atualizar SW:', e);
+      window.dispatchEvent(new CustomEvent('pwa-update-error', { detail: e }));
     }
   }
 }
@@ -92,8 +108,12 @@ function renderApp() {
     immediate: true,
     onNeedRefresh() {
       console.log('[PWA] Nova versão disponível, aplicando automaticamente...');
+      window.dispatchEvent(new CustomEvent('pwa-update-found'));
       // Auto-aplicar atualização
       updateSW(true);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pwa-update-applied'));
+      }, 1500);
     },
     onOfflineReady() {
       console.log('[PWA] App pronto para uso offline');
@@ -104,12 +124,14 @@ function renderApp() {
         // Verificar atualizações a cada 5 minutos
         setInterval(() => {
           console.log('[PWA] Verificando atualizações...');
+          window.dispatchEvent(new CustomEvent('pwa-checking-update'));
           r.update();
         }, 5 * 60 * 1000);
       }
     },
     onRegisterError(error) {
       console.error('[PWA] Erro ao registrar Service Worker:', error);
+      window.dispatchEvent(new CustomEvent('pwa-update-error', { detail: error }));
     },
   });
 

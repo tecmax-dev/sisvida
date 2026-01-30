@@ -15,6 +15,7 @@ import { UnionBudgetLegacyRedirect } from "@/components/routing/UnionBudgetLegac
 import { GlobalBackButton } from "@/components/layout/GlobalBackButton";
 import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
 import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
+import { PWAUpdateListener } from "@/components/pwa/PWAUpdateListener";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -316,6 +317,7 @@ const App = () => (
           <ModalProvider>
             <Toaster />
             <Sonner />
+            <PWAUpdateListener />
             <BrowserRouter>
               <AuthProvider>
                 <GlobalBackButton />
