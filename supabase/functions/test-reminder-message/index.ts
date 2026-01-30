@@ -14,6 +14,19 @@ interface EvolutionConfig {
   instance_name: string;
 }
 
+// Profissionais com local de atendimento específico (Sede do Sindicato dos Rodoviários)
+const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar'];
+
+function getProfessionalLocation(professionalName: string): string | null {
+  const lowerName = professionalName.toLowerCase();
+  for (const name of PROFESSIONALS_RODOVIARIOS_LOCATION) {
+    if (lowerName.includes(name)) {
+      return `📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
+    }
+  }
+  return null;
+}
+
 function formatAppointmentReminder(
   patientName: string,
   clinicName: string,
@@ -30,6 +43,12 @@ function formatAppointmentReminder(
     `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
   ];
 
+  // Instrução de antecedência
+  const arrivalInstruction = `⏳ *Compareça com 15 minutos de antecedência.*`;
+  
+  // Local específico para Dr. Marcelo Aguiar e Dr. Jorge Avelar
+  const specificLocation = getProfessionalLocation(professionalName);
+
   if (directReplyEnabled) {
     const lines = [
       `Olá ${patientName}! 👋`,
@@ -40,6 +59,10 @@ function formatAppointmentReminder(
       `🕐 *Horário:* ${time}`,
       `👨‍⚕️ *Profissional:* ${professionalName}`,
       `🏥 *Clínica:* ${clinicName}`,
+      specificLocation ? `` : null,
+      specificLocation,
+      ``,
+      arrivalInstruction,
       ``,
       ...noShowWarning,
       ``,
@@ -48,7 +71,7 @@ function formatAppointmentReminder(
       ``,
       `Atenciosamente,`,
       `Equipe ${clinicName}`,
-    ];
+    ].filter(Boolean);
     return lines.join('\n');
   }
 
@@ -61,6 +84,10 @@ function formatAppointmentReminder(
     `🕐 *Horário:* ${time}`,
     `👨‍⚕️ *Profissional:* ${professionalName}`,
     `🏥 *Clínica:* ${clinicName}`,
+    specificLocation ? `` : null,
+    specificLocation,
+    ``,
+    arrivalInstruction,
     ``,
     ...noShowWarning,
     ``,
@@ -68,7 +95,7 @@ function formatAppointmentReminder(
     ``,
     `Atenciosamente,`,
     `Equipe ${clinicName}`,
-  ];
+  ].filter(Boolean);
 
   return lines.join('\n');
 }
