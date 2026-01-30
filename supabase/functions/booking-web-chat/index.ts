@@ -1281,9 +1281,16 @@ serve(async (req) => {
           ? session.selected_dependent_name
           : session.patient_name;
 
+        // Verificar se precisa incluir local específico (Dr. Marcelo Aguiar ou Dr. Jorge Avelar)
+        const professionalNameLower = (session.selected_professional_name || '').toLowerCase();
+        const isRodoviariosProfessional = professionalNameLower.includes('marcelo aguiar') || professionalNameLower.includes('jorge avelar');
+        const locationInfo = isRodoviariosProfessional 
+          ? `\n\n📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`
+          : '';
+
         return new Response(
           JSON.stringify({
-            response: `✅ Agendamento confirmado!\n\nPaciente: *${bookingForName}*\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*\n\nCompareça com 10 minutos de antecedência.`,
+            response: `✅ Agendamento confirmado!\n\nPaciente: *${bookingForName}*\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*${locationInfo}\n\n⏳ *Compareça com 15 minutos de antecedência.*`,
             state: "FINISHED",
             booking_complete: true,
           }),

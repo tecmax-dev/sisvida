@@ -974,14 +974,25 @@ Digite *SIM* para confirmar ou *NÃO* para cancelar.`,
     time: string;
     professionalName: string;
     clinicName: string;
-  }) => `✅ *Agendamento confirmado com sucesso!*
+  }) => {
+    // Verificar se precisa incluir local específico (Dr. Marcelo Aguiar ou Dr. Jorge Avelar)
+    const lowerName = data.professionalName.toLowerCase();
+    const isRodoviariosProfessional = lowerName.includes('marcelo aguiar') || lowerName.includes('jorge avelar');
+    const locationInfo = isRodoviariosProfessional 
+      ? `\n\n📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`
+      : '';
+    
+    return `✅ *Agendamento confirmado com sucesso!*
 
 📅 ${data.date} às ${data.time}
-👨‍⚕️ Dr(a). ${data.professionalName}
+👨‍⚕️ Dr(a). ${data.professionalName}${locationInfo}
+
+⏳ *Compareça com 15 minutos de antecedência.*
 
 Qualquer dúvida, estamos à disposição! 😊
 
-${data.clinicName}`,
+${data.clinicName}`;
+  },
 
   appointmentCancelled: `❌ Agendamento cancelado.
 
