@@ -171,6 +171,7 @@ import UnionEmployersPage from "./pages/union/UnionEmployersPage";
 import UnionAccountingOfficesPage from "./pages/union/UnionAccountingOfficesPage";
 import UnionMembersListPage from "./pages/union/UnionMembersListPage";
 import UnionMemberDetailPage from "./pages/union/UnionMemberDetailPage";
+import UnionMemberNewPage from "./pages/union/UnionMemberNewPage";
 import UnionContributionsPage from "./pages/union/UnionContributionsPage";
 import UnionFinancialsPage from "./pages/union/UnionFinancialsPage";
 import UnionExpensesPage from "./pages/union/UnionExpensesPage";
@@ -523,7 +524,7 @@ const App = () => (
                   <Route path="empresas" element={<UnionEmployersPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
                   <Route path="socios" element={<UnionMembersListPage />} />
-                  <Route path="socios/novo" element={<PatientEditPage />} />
+                  <Route path="socios/novo" element={<UnionMemberNewPage />} />
                   <Route path="socios/contracheques" element={<UnionPayslipApprovalsPage />} />
                   <Route path="socios/:id" element={<UnionMemberDetailPage />} />
                   <Route path="contribuicoes" element={<UnionContributionsPage />} />
