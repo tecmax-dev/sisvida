@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -558,8 +559,8 @@ export default function MobileBookingPage() {
         <div className="p-4">
           {/* Step 1: Patient Type */}
           {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-foreground">Para quem é a consulta?</h2>
+            <div className="space-y-4">
+              <h2 className="text-base font-semibold text-foreground">Para quem é a consulta?</h2>
               
               <RadioGroup 
                 value={patientType} 
@@ -715,8 +716,8 @@ export default function MobileBookingPage() {
             };
 
             return (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Escolha o profissional</h2>
+              <div className="space-y-3">
+                <h2 className="text-base font-semibold text-foreground">Escolha o profissional</h2>
                 
                 {/* Category Tabs */}
                 <MobileCategoryTabs
@@ -733,11 +734,11 @@ export default function MobileBookingPage() {
                 />
                 
                 {/* Professionals List */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {filteredProfessionals.length === 0 ? (
                     <Card className="border-dashed">
-                      <CardContent className="p-6 text-center">
-                        <p className="text-muted-foreground">
+                      <CardContent className="p-4 text-center">
+                        <p className="text-sm text-muted-foreground">
                           Nenhum profissional nesta categoria
                         </p>
                       </CardContent>
@@ -746,7 +747,12 @@ export default function MobileBookingPage() {
                     filteredProfessionals.map((prof) => (
                       <Card 
                         key={prof.id}
-                        className={`cursor-pointer transition-colors ${selectedProfessionalId === prof.id ? "border-emerald-600 bg-emerald-50" : ""}`}
+                        className={cn(
+                          "cursor-pointer transition-colors active:scale-[0.98]",
+                          selectedProfessionalId === prof.id 
+                            ? "border-emerald-600 bg-emerald-50" 
+                            : ""
+                        )}
                         onClick={() => {
                           setSelectedProfessionalId(prof.id);
                           // Reset date and time when changing professional
@@ -755,26 +761,26 @@ export default function MobileBookingPage() {
                           setAvailableSlots([]);
                         }}
                       >
-                        <CardContent className="p-4 flex items-center gap-4">
+                        <CardContent className="p-3 flex items-center gap-3">
                           {prof.avatar_url ? (
                             <img 
                               src={prof.avatar_url} 
                               alt={prof.name}
-                              className="w-12 h-12 rounded-full object-cover border border-border"
+                              className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                              <User className="h-6 w-6 text-emerald-600" />
+                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                              <User className="h-5 w-5 text-emerald-600" />
                             </div>
                           )}
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{prof.name}</p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate">{prof.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
                               {getSpecialtyNames(prof)}
                             </p>
                           </div>
                           {selectedProfessionalId === prof.id && (
-                            <Check className="h-5 w-5 text-emerald-600" />
+                            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                           )}
                         </CardContent>
                       </Card>
