@@ -107,34 +107,33 @@ export function DateTimeSelectionStep({
         </div>
         
         {availableDates.length > 0 ? (
-          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-4 gap-3">
             {availableDates.map((date) => {
               const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
               return (
-                <Card
+                <button
                   key={format(date, "yyyy-MM-dd")}
-                  className={`cursor-pointer transition-all ${
+                  type="button"
+                  className={`rounded-xl border-2 p-3 text-center transition-all ${
                     isSelected 
-                      ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600" 
-                      : "hover:border-emerald-300"
+                      ? "border-emerald-600 bg-emerald-50 shadow-md" 
+                      : "border-border bg-card hover:border-emerald-300"
                   }`}
                   onClick={() => setSelectedDate(date)}
                 >
-                  <CardContent className="p-2 sm:p-3 text-center">
-                    <p className={`text-[10px] sm:text-xs font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                      {format(date, "EEE", { locale: ptBR })}
-                    </p>
-                    <p className={`text-lg sm:text-xl font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
-                      {format(date, "dd")}
-                    </p>
-                    <p className={`text-[10px] sm:text-xs ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                      {format(date, "MMM", { locale: ptBR })}
-                    </p>
-                    {isSelected && (
-                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-600 mx-auto mt-0.5" />
-                    )}
-                  </CardContent>
-                </Card>
+                  <p className={`text-[11px] font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                    {format(date, "EEE", { locale: ptBR })}
+                  </p>
+                  <p className={`text-xl font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
+                    {format(date, "dd")}
+                  </p>
+                  <p className={`text-[11px] ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                    {format(date, "MMM", { locale: ptBR })}
+                  </p>
+                  {isSelected && (
+                    <Check className="h-4 w-4 text-emerald-600 mx-auto mt-1" />
+                  )}
+                </button>
               );
             })}
           </div>
@@ -164,25 +163,24 @@ export function DateTimeSelectionStep({
           </p>
 
           {availableTimeSlots.length > 0 ? (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {availableTimeSlots.map((slot) => {
                 const isSelected = selectedTime === slot.time;
                 return (
-                  <Card
+                  <button
                     key={slot.time}
-                    className={`cursor-pointer transition-all ${
+                    type="button"
+                    className={`rounded-xl border-2 py-4 px-3 text-center transition-all ${
                       isSelected 
-                        ? "border-emerald-600 bg-emerald-600 text-white" 
-                        : "hover:border-emerald-300"
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-md" 
+                        : "border-border bg-card hover:border-emerald-300"
                     }`}
                     onClick={() => setSelectedTime(slot.time)}
                   >
-                    <CardContent className="p-3 text-center">
-                      <p className={`text-sm font-semibold ${isSelected ? "text-white" : "text-foreground"}`}>
-                        {slot.time}
-                      </p>
-                    </CardContent>
-                  </Card>
+                    <p className={`text-base font-semibold ${isSelected ? "text-white" : "text-foreground"}`}>
+                      {slot.time}
+                    </p>
+                  </button>
                 );
               })}
             </div>
