@@ -40,27 +40,76 @@ async function bootstrapApp() {
   renderApp();
 }
 
+// Limpar caches antigos ao iniciar o app
+async function clearOldCaches() {
+  if ('caches' in window) {
+    try {
+      const cacheNames = await caches.keys();
+      const oldCaches = cacheNames.filter(name => 
+        name.includes('workbox') || 
+        name.includes('supabase-cache') ||
+        name.includes('runtime')
+      );
+      
+      if (oldCaches.length > 0) {
+        console.log('[PWA] Limpando caches antigos:', oldCaches);
+        await Promise.all(oldCaches.map(name => caches.delete(name)));
+      }
+    } catch (e) {
+      console.warn('[PWA] Erro ao limpar caches:', e);
+    }
+  }
+}
+
+// Forçar atualização do Service Worker
+async function forceServiceWorkerUpdate() {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations.map(async (r) => {
+          await r.update();
+          // Se há um SW waiting, ativar imediatamente
+          if (r.waiting) {
+            r.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        })
+      );
+      console.log('[PWA] Service Workers atualizados');
+    } catch (e) {
+      console.warn('[PWA] Erro ao atualizar SW:', e);
+    }
+  }
+}
+
 function renderApp() {
+  // Limpar caches e forçar atualização ao abrir o app
+  clearOldCaches();
+  forceServiceWorkerUpdate();
+
   // Registrar Service Worker para PWA
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      console.log('Nova versão do PWA disponível. Atualize manualmente quando conveniente.');
+      console.log('[PWA] Nova versão disponível, aplicando automaticamente...');
+      // Auto-aplicar atualização
+      updateSW(true);
     },
     onOfflineReady() {
-      console.log('App pronto para uso offline');
+      console.log('[PWA] App pronto para uso offline');
     },
     onRegistered(r) {
-      console.log('Service Worker registrado:', r);
+      console.log('[PWA] Service Worker registrado:', r);
       if (r) {
+        // Verificar atualizações a cada 5 minutos
         setInterval(() => {
-          console.log('Verificando atualizações do PWA...');
+          console.log('[PWA] Verificando atualizações...');
           r.update();
-        }, 60 * 60 * 1000);
+        }, 5 * 60 * 1000);
       }
     },
     onRegisterError(error) {
-      console.error('Erro ao registrar Service Worker:', error);
+      console.error('[PWA] Erro ao registrar Service Worker:', error);
     },
   });
 
