@@ -37,6 +37,7 @@ import { DependentsPanel } from "@/components/patients/DependentsPanel";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
+import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
 
 interface InsurancePlan {
   id: string;
@@ -455,12 +456,10 @@ export default function UnionMemberDetailPage() {
   });
 
   const handleTabChange = (tab: UnionMemberTab) => {
-    if (tab === 'cadastro' || tab === 'dependentes' || tab === 'sindical' || tab === 'anexos') {
+    if (tab === 'cadastro' || tab === 'dependentes' || tab === 'sindical' || tab === 'anexos' || tab === 'agendamentos') {
       setActiveTab(tab);
     } else if (tab === 'carteirinha') {
       openModal('patientCards', { patientId: id, patientName: formData.name });
-    } else if (tab === 'agendamentos') {
-      openModal('patientAppointments', { patientId: id, patientName: formData.name });
     }
   };
 
@@ -965,6 +964,16 @@ export default function UnionMemberDetailPage() {
               clinicId={currentClinic?.id || ''}
             />
           </div>
+        </div>
+      )}
+
+      {/* Aba Agendamentos */}
+      {activeTab === 'agendamentos' && id && (
+        <div className="bg-card rounded-lg border">
+          <UnionMemberSchedulingTab
+            patientId={id}
+            patientName={formData.name}
+          />
         </div>
       )}
 
