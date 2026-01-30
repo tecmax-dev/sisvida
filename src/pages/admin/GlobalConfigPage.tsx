@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Save, Globe, Wifi, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Save, Globe, Wifi, CheckCircle, XCircle, Scale, Users } from "lucide-react";
+import { UnionPlanProfessionalsConfig } from "@/components/admin/UnionPlanProfessionalsConfig";
 
 interface GlobalConfig {
   id?: string;
@@ -150,83 +152,102 @@ export default function GlobalConfigPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Evolution API
-          </CardTitle>
-          <CardDescription>
-            Configure a URL e chave da Evolution API para envio de mensagens WhatsApp
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="evolution_api_url">URL da API</Label>
-            <Input
-              id="evolution_api_url"
-              value={config.evolution_api_url}
-              onChange={(e) =>
-                setConfig({ ...config, evolution_api_url: e.target.value })
-              }
-              placeholder="https://api.evolution.com.br"
-            />
-          </div>
+      <Tabs defaultValue="integrations" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="integrations" className="gap-2">
+            <Globe className="h-4 w-4" />
+            Integrações
+          </TabsTrigger>
+          <TabsTrigger value="union-plans" className="gap-2">
+            <Scale className="h-4 w-4" />
+            Planos Sindicato
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="evolution_api_key">Chave da API (API Key)</Label>
-            <Input
-              id="evolution_api_key"
-              type="password"
-              value={config.evolution_api_key}
-              onChange={(e) =>
-                setConfig({ ...config, evolution_api_key: e.target.value })
-              }
-              placeholder="Sua chave de API"
-            />
-          </div>
+        <TabsContent value="integrations">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Evolution API
+              </CardTitle>
+              <CardDescription>
+                Configure a URL e chave da Evolution API para envio de mensagens WhatsApp
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="evolution_api_url">URL da API</Label>
+                <Input
+                  id="evolution_api_url"
+                  value={config.evolution_api_url}
+                  onChange={(e) =>
+                    setConfig({ ...config, evolution_api_url: e.target.value })
+                  }
+                  placeholder="https://api.evolution.com.br"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="evolution_instance">Nome da Instância</Label>
-            <Input
-              id="evolution_instance"
-              value={config.evolution_instance}
-              onChange={(e) =>
-                setConfig({ ...config, evolution_instance: e.target.value })
-              }
-              placeholder="ex: eclini"
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="evolution_api_key">Chave da API (API Key)</Label>
+                <Input
+                  id="evolution_api_key"
+                  type="password"
+                  value={config.evolution_api_key}
+                  onChange={(e) =>
+                    setConfig({ ...config, evolution_api_key: e.target.value })
+                  }
+                  placeholder="Sua chave de API"
+                />
+              </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Salvar Configurações
-            </Button>
+              <div className="space-y-2">
+                <Label htmlFor="evolution_instance">Nome da Instância</Label>
+                <Input
+                  id="evolution_instance"
+                  value={config.evolution_instance}
+                  onChange={(e) =>
+                    setConfig({ ...config, evolution_instance: e.target.value })
+                  }
+                  placeholder="ex: eclini"
+                />
+              </div>
 
-            <Button 
-              variant="outline" 
-              onClick={handleTestConnection} 
-              disabled={testing || !config.evolution_api_url || !config.evolution_api_key || !config.evolution_instance}
-            >
-              {testing ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : connectionStatus === "connected" ? (
-                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-              ) : connectionStatus === "error" ? (
-                <XCircle className="h-4 w-4 mr-2 text-red-500" />
-              ) : (
-                <Wifi className="h-4 w-4 mr-2" />
-              )}
-              Testar Conexão
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex items-center gap-3 pt-2">
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar Configurações
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  onClick={handleTestConnection} 
+                  disabled={testing || !config.evolution_api_url || !config.evolution_api_key || !config.evolution_instance}
+                >
+                  {testing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : connectionStatus === "connected" ? (
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                  ) : connectionStatus === "error" ? (
+                    <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                  ) : (
+                    <Wifi className="h-4 w-4 mr-2" />
+                  )}
+                  Testar Conexão
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="union-plans">
+          <UnionPlanProfessionalsConfig />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
