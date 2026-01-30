@@ -38,7 +38,7 @@ export function MobileCategoryTabs({
   categoryCounts 
 }: MobileCategoryTabsProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+    <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
       {MOBILE_CATEGORIES.map((category) => {
         const Icon = category.icon;
         const count = categoryCounts[category.id] || 0;
@@ -49,20 +49,20 @@ export function MobileCategoryTabs({
             key={category.id}
             onClick={() => onCategoryChange(category.id)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all whitespace-nowrap",
-              "text-sm font-medium flex-shrink-0",
+              "flex items-center gap-1 px-2.5 py-1.5 rounded-lg border transition-all whitespace-nowrap",
+              "text-xs font-medium flex-shrink-0 active:scale-95",
               isActive
                 ? `${category.bgColor} ${category.color} shadow-sm`
                 : "bg-card text-muted-foreground border-border"
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-3.5 w-3.5" />
             <span>{category.label}</span>
             {count > 0 && (
               <Badge 
                 variant="secondary" 
                 className={cn(
-                  "ml-0.5 h-5 min-w-5 px-1 text-xs justify-center",
+                  "h-4 min-w-4 px-1 text-[10px] justify-center",
                   isActive ? "bg-white/60" : ""
                 )}
               >
