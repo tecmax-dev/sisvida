@@ -62,6 +62,44 @@ export function useMobileAuthSession() {
   const initializationDone = useRef(false);
 
   /**
+   * Verifica se a sessão foi invalidada pelo admin (force logout)
+   */
+  const checkForceLogout = useCallback(async (clinicId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('mobile_app_settings')
+        .select('force_logout_after')
+        .eq('clinic_id', clinicId)
+        .maybeSingle();
+      
+      if (error || !data?.force_logout_after) {
+        return false; // Sem configuração = não forçar logout
+      }
+      
+      // Verificar se a sessão local foi criada antes do force_logout_after
+      const lastLoginStr = localStorage.getItem('mobile_session_created_at');
+      if (!lastLoginStr) {
+        // Sessão antiga sem timestamp = forçar logout
+        console.warn("[MobileAuth] Sessão sem timestamp, forçando logout");
+        return true;
+      }
+      
+      const lastLogin = new Date(lastLoginStr);
+      const forceAfter = new Date(data.force_logout_after);
+      
+      if (lastLogin < forceAfter) {
+        console.warn("[MobileAuth] Sessão invalidada pelo admin (force_logout_after)");
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      console.error("[MobileAuth] Erro ao verificar force_logout:", err);
+      return false;
+    }
+  }, []);
+
+  /**
    * Inicialização: Apenas lê dados do localStorage
    * NÃO faz verificação ativa de sessão (bootstrap já fez)
    */
@@ -77,6 +115,26 @@ export function useMobileAuthSession() {
         const restored = await restoreSession();
 
         if (restored.patientId) {
+          // Verificar se sessão foi invalidada pelo admin
+          const shouldForceLogout = await checkForceLogout(restored.clinicId || TARGET_CLINIC_ID);
+          
+          if (shouldForceLogout) {
+            console.warn("[MobileAuth] Forçando logout por invalidação de sessão");
+            await clearSession();
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch {}
+            setState({
+              isLoggedIn: false,
+              patientId: null,
+              clinicId: null,
+              patientName: null,
+              loading: false,
+              initialized: true,
+            });
+            return;
+          }
+          
           console.log("[MobileAuth] Sessão restaurada:", restored.patientName);
           setState({
             isLoggedIn: true,
@@ -115,6 +173,26 @@ export function useMobileAuthSession() {
           null;
 
         if (patientIdFromMeta) {
+          // Verificar se sessão foi invalidada pelo admin
+          const shouldForceLogout = await checkForceLogout(clinicIdFromMeta || TARGET_CLINIC_ID);
+          
+          if (shouldForceLogout) {
+            console.warn("[MobileAuth] Forçando logout por invalidação de sessão (metadata)");
+            await clearSession();
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch {}
+            setState({
+              isLoggedIn: false,
+              patientId: null,
+              clinicId: null,
+              patientName: null,
+              loading: false,
+              initialized: true,
+            });
+            return;
+          }
+          
           console.log("[MobileAuth] Sessão recuperada do usuário autenticado");
           await persistSession(patientIdFromMeta, clinicIdFromMeta || TARGET_CLINIC_ID, nameFromMeta || "Paciente");
           setState({
@@ -149,7 +227,7 @@ export function useMobileAuthSession() {
         });
       }
     })();
-  }, []);
+  }, [checkForceLogout]);
 
   /**
    * Login: verifica senha customizada e cria sessão JWT do Supabase

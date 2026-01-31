@@ -98,6 +98,7 @@ async function readFromIDB(key: string): Promise<string | null> {
  */
 async function persistSession(patientId: string, clinicId: string, patientName: string): Promise<void> {
   const timestamp = Date.now().toString();
+  const isoTimestamp = new Date().toISOString(); // For force_logout comparison
   
   // Layer 1: Primary localStorage
   try {
@@ -105,6 +106,8 @@ async function persistSession(patientId: string, clinicId: string, patientName: 
     localStorage.setItem(STORAGE_KEYS.clinicId, clinicId);
     localStorage.setItem(STORAGE_KEYS.patientName, patientName);
     localStorage.setItem(STORAGE_KEYS.sessionTimestamp, timestamp);
+    // ISO timestamp for force_logout_after comparison
+    localStorage.setItem('mobile_session_created_at', isoTimestamp);
   } catch (err) {
     console.warn("[MobileSession] localStorage save error:", err);
   }
@@ -123,6 +126,7 @@ async function persistSession(patientId: string, clinicId: string, patientName: 
   await saveToIDB("clinicId", clinicId);
   await saveToIDB("patientName", patientName);
   await saveToIDB("sessionTimestamp", timestamp);
+  await saveToIDB("sessionCreatedAt", isoTimestamp);
   
   console.log("[MobileSession] Session persisted successfully");
 }
@@ -145,6 +149,7 @@ async function clearSession(): Promise<void> {
     localStorage.removeItem(STORAGE_KEYS.clinicId);
     localStorage.removeItem(STORAGE_KEYS.patientName);
     localStorage.removeItem(STORAGE_KEYS.sessionTimestamp);
+    localStorage.removeItem('mobile_session_created_at');
   } catch (err) {
     console.warn("[MobileSession] localStorage clear error:", err);
   }
@@ -163,6 +168,7 @@ async function clearSession(): Promise<void> {
   await saveToIDB("clinicId", null);
   await saveToIDB("patientName", null);
   await saveToIDB("sessionTimestamp", null);
+  await saveToIDB("sessionCreatedAt", null);
   
   console.warn("[MobileSession] Session CLEARED - stack:", stack?.split('\n')[2]);
 }

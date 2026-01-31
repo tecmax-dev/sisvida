@@ -5487,6 +5487,41 @@ export type Database = {
           },
         ]
       }
+      mobile_app_settings: {
+        Row: {
+          clinic_id: string | null
+          created_at: string | null
+          force_logout_after: string | null
+          id: string
+          min_app_version: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string | null
+          force_logout_after?: string | null
+          id?: string
+          min_app_version?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string | null
+          force_logout_after?: string | null
+          id?: string
+          min_app_version?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobile_app_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mobile_app_tabs: {
         Row: {
           created_at: string
