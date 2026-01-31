@@ -105,25 +105,59 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         console.warn('Pusher Beams: Error while deactivating stale tokens:', e);
       }
 
-      const { error } = await supabase
+      // First, try to find existing record with same clinic_id and token
+      const { data: existingByClinic } = await supabase
         .from('push_notification_tokens')
-        .upsert({
-          patient_id: normalizedPatientId,
-          user_id: userId,
-          clinic_id: clinicId,
-          token: deviceId,
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('token', deviceId)
+        .maybeSingle();
+
+      // Also check for existing record with same patient_id and token (if patient exists)
+      let existingByPatient = null;
+      if (normalizedPatientId) {
+        const { data } = await supabase
+          .from('push_notification_tokens')
+          .select('id')
+          .eq('patient_id', normalizedPatientId)
+          .eq('token', deviceId)
+          .maybeSingle();
+        existingByPatient = data;
+      }
+
+      const existingId = existingByClinic?.id || existingByPatient?.id;
+
+      const tokenData = {
+        patient_id: normalizedPatientId,
+        user_id: userId,
+        clinic_id: clinicId,
+        token: deviceId,
+        platform: 'web',
+        is_active: true,
+        device_info: {
           platform: 'web',
-          is_active: true,
-          device_info: {
-            platform: 'web',
-            isNative: false,
-            userAgent: navigator.userAgent,
-            type: 'pusher-beams-web'
-          },
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'clinic_id,token',
-        });
+          isNative: false,
+          userAgent: navigator.userAgent,
+          type: 'pusher-beams-web'
+        },
+        updated_at: new Date().toISOString(),
+      };
+
+      let error;
+      if (existingId) {
+        // Update existing record
+        const result = await supabase
+          .from('push_notification_tokens')
+          .update(tokenData)
+          .eq('id', existingId);
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('push_notification_tokens')
+          .insert(tokenData);
+        error = result.error;
+      }
 
       if (error) {
         console.error('Pusher Beams: Error registering token:', error);
