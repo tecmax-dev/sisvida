@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,8 +26,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  useHomologacaoProfessionalsWithSchedules,
+  filterProfessionalsByDayOfWeek,
+  getProfessionalWorkingDays,
+} from "@/hooks/useHomologacaoProfessionalsWithSchedules";
 
 interface NovoAgendamentoDialogProps {
   open: boolean;
@@ -51,22 +56,29 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     notes: "",
   });
 
-  // Fetch professionals
-  const { data: professionals } = useQuery({
-    queryKey: ["homologacao-professionals", currentClinic?.id],
-    queryFn: async () => {
-      if (!currentClinic?.id) return [];
-      const { data, error } = await supabase
-        .from("homologacao_professionals")
-        .select("id, name")
-        .eq("clinic_id", currentClinic.id)
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
+  // Fetch professionals with their schedules
+  const { data: allProfessionals = [] } = useHomologacaoProfessionalsWithSchedules({
+    clinicId: currentClinic?.id,
     enabled: !!currentClinic?.id && open,
   });
+
+  // Filter professionals by the selected day of week
+  const professionalsForSelectedDay = useMemo(() => {
+    const dayOfWeek = formData.appointment_date.getDay();
+    return filterProfessionalsByDayOfWeek(allProfessionals, dayOfWeek);
+  }, [allProfessionals, formData.appointment_date]);
+
+  // Reset professional when date changes and they don't work that day
+  useMemo(() => {
+    if (formData.professional_id) {
+      const stillAvailable = professionalsForSelectedDay.some(
+        (p) => p.id === formData.professional_id
+      );
+      if (!stillAvailable) {
+        setFormData((prev) => ({ ...prev, professional_id: "" }));
+      }
+    }
+  }, [professionalsForSelectedDay, formData.professional_id]);
 
   // Fetch service types
   const { data: serviceTypes } = useQuery({
@@ -300,13 +312,26 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {professionals?.map((prof) => (
-                      <SelectItem key={prof.id} value={prof.id}>
-                        {prof.name}
-                      </SelectItem>
-                    ))}
+                    {professionalsForSelectedDay.length > 0 ? (
+                      professionalsForSelectedDay.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                        <AlertCircle className="h-4 w-4 mx-auto mb-1" />
+                        Nenhum profissional atende neste dia
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
+                {professionalsForSelectedDay.length === 0 && allProfessionals.length > 0 && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Nenhum profissional com horário configurado para este dia da semana
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Tipo de Serviço</Label>

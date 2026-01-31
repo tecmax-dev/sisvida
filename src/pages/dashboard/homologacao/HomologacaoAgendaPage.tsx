@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { format, startOfWeek, addDays, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,6 +61,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Pencil, Trash2, MessageCircle, FileText, Mail, History } from "lucide-react";
+import { 
+  useHomologacaoProfessionalsWithSchedules,
+  filterProfessionalsByDayOfWeek,
+  getProfessionalScheduleForDay,
+} from "@/hooks/useHomologacaoProfessionalsWithSchedules";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -131,21 +135,17 @@ export default function HomologacaoAgendaPage() {
     enabled: !!currentClinic,
   });
 
-  // Fetch professionals
-  const { data: professionals = [] } = useQuery({
-    queryKey: ["homologacao-professionals", currentClinic?.id],
-    queryFn: async () => {
-      if (!currentClinic?.id) return [];
-      const { data } = await supabase
-        .from("homologacao_professionals")
-        .select("*")
-        .eq("clinic_id", currentClinic.id)
-        .eq("is_active", true)
-        .order("name");
-      return data || [];
-    },
+  // Fetch professionals with schedules
+  const { data: allProfessionals = [] } = useHomologacaoProfessionalsWithSchedules({
+    clinicId: currentClinic?.id,
     enabled: !!currentClinic?.id,
   });
+
+  // Filter professionals for the selected day (used in DayView)
+  const professionalsForSelectedDay = useMemo(() => {
+    const dayOfWeek = selectedDate.getDay();
+    return filterProfessionalsByDayOfWeek(allProfessionals, dayOfWeek);
+  }, [allProfessionals, selectedDate]);
 
   // Filter appointments by search
   const filteredAppointments = useMemo(() => {
@@ -695,12 +695,12 @@ export default function HomologacaoAgendaPage() {
   const DayView = () => {
     const dayAppointments = getAppointmentsForDate(selectedDate);
     
-    // Group by professional
+    // Group by professional - use only professionals that work on this day
     const groupedByProfessional = useMemo(() => {
       const groups: Record<string, { professional: any; appointments: HomologacaoAppointment[] }> = {};
       
-      // First add all professionals
-      professionals.forEach(prof => {
+      // First add only professionals that work on the selected day
+      professionalsForSelectedDay.forEach(prof => {
         groups[prof.id] = {
           professional: prof,
           appointments: [],
@@ -712,7 +712,7 @@ export default function HomologacaoAgendaPage() {
         if (apt.professional_id && groups[apt.professional_id]) {
           groups[apt.professional_id].appointments.push(apt);
         } else if (apt.professional_id) {
-          // Professional not in list, create temporary entry
+          // Professional not in list (might have appointment on a day they don't work), create temporary entry
           groups[apt.professional_id] = {
             professional: apt.professional || { id: apt.professional_id, name: "Profissional" },
             appointments: [apt],
@@ -720,12 +720,12 @@ export default function HomologacaoAgendaPage() {
         }
       });
       
-      // Filter to only show professionals with appointments or all if no appointments
+      // Filter to only show professionals with appointments or all available if no appointments
       const entries = Object.values(groups);
       const withAppointments = entries.filter(g => g.appointments.length > 0);
       
       return withAppointments.length > 0 ? withAppointments : entries;
-    }, [dayAppointments, professionals]);
+    }, [dayAppointments, professionalsForSelectedDay]);
 
     if (isLoading) {
       return (
@@ -736,7 +736,7 @@ export default function HomologacaoAgendaPage() {
       );
     }
 
-    if (professionals.length === 0 && dayAppointments.length === 0) {
+    if (professionalsForSelectedDay.length === 0 && dayAppointments.length === 0) {
       return (
         <div className="text-center py-12 text-muted-foreground">
           <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
