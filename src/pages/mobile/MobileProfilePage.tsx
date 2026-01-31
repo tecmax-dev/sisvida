@@ -66,6 +66,7 @@ export default function MobileProfilePage() {
   // Hook de notificações push
   const {
     isNative,
+    effectiveClinicId,
     isWebPushSupported,
     isWebPushSubscribed,
     isWebPushLoading,
@@ -303,7 +304,7 @@ export default function MobileProfilePage() {
             )}
             
             {/* Diagnostic Tool */}
-            <PushDiagnostics patientId={patientId} clinicId={clinicId} />
+            <PushDiagnostics patientId={patientId} clinicId={effectiveClinicId} />
           </div>
         )}
 
