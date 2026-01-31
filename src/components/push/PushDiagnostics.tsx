@@ -12,10 +12,10 @@ import {
   Bug
 } from 'lucide-react';
 import { 
-  initializePusherBeams, 
-  getDeviceId, 
+  initializeOneSignal, 
+  getPlayerId, 
   isSubscribed as checkIsSubscribed,
-} from '@/lib/pusher-beams';
+} from '@/lib/onesignal';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
@@ -118,11 +118,11 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
           details: `sw=${getFile(appSW)}`,
         });
       } else {
-        // Preliminary - will be updated after Pusher Beams check
+        // Preliminary - will be updated after OneSignal check
         diagnostics.push({
           name: 'Service Worker',
           status: 'pending',
-          message: 'SW encontrado, verificando Pusher Beams...',
+          message: 'SW encontrado, verificando OneSignal...',
           details: `sw=${getFile(appSW)} | scope=${appScope}`,
         });
       }
@@ -137,49 +137,50 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
       setResults([...diagnostics]);
     }
 
-    // 5. Initialize Pusher Beams and check subscription
-    let pusherBeamsStatus: DiagnosticResult = {
-      name: 'Pusher Beams SDK',
+    // 5. Initialize OneSignal and check subscription
+    let oneSignalStatus: DiagnosticResult = {
+      name: 'OneSignal SDK',
       status: 'pending',
       message: 'Inicializando...'
     };
     
     let isFullySubscribed = false;
+    let currentPlayerId: string | null = null;
     
     try {
-      const initialized = await initializePusherBeams();
+      const initialized = await initializeOneSignal();
       if (!initialized) {
-        pusherBeamsStatus = {
-          name: 'Pusher Beams SDK',
+        oneSignalStatus = {
+          name: 'OneSignal SDK',
           status: 'error',
           message: 'Falha na inicialização',
           details: 'Verifique console para mais detalhes'
         };
       } else {
         const subscribed = await checkIsSubscribed();
-        const deviceId = await getDeviceId();
+        currentPlayerId = await getPlayerId();
         
-        isFullySubscribed = !!(subscribed && deviceId);
+        isFullySubscribed = !!(subscribed && currentPlayerId);
         
-        pusherBeamsStatus = {
-          name: 'Pusher Beams SDK',
+        oneSignalStatus = {
+          name: 'OneSignal SDK',
           status: isFullySubscribed ? 'success' : 'warning',
           message: subscribed ? 'Inscrito' : 'Não inscrito',
-          details: deviceId ? `Device ID: ${deviceId.substring(0, 12)}...` : 'Sem Device ID'
+          details: currentPlayerId ? `Player ID: ${currentPlayerId.substring(0, 12)}...` : 'Sem Player ID'
         };
       }
     } catch (err) {
-      pusherBeamsStatus = {
-        name: 'Pusher Beams SDK',
+      oneSignalStatus = {
+        name: 'OneSignal SDK',
         status: 'error',
         message: 'Erro no SDK',
         details: String(err)
       };
     }
     
-    diagnostics.push(pusherBeamsStatus);
+    diagnostics.push(oneSignalStatus);
     
-    // Update SW status based on Pusher Beams result
+    // Update SW status based on OneSignal result
     if (swInfo?.appOk && swInfo?.appHasPushManager) {
       const swIndex = diagnostics.findIndex(d => d.name === 'Service Worker');
       if (swIndex !== -1) {
@@ -190,7 +191,7 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
           diagnostics[swIndex] = {
             name: 'Service Worker',
             status: 'success',
-            message: 'SW OK com push ativo via Pusher Beams.',
+            message: 'SW OK com push ativo via OneSignal.',
             details: `sw=${getFile(swInfo.appSW)} | scope=${swInfo.appScope}`,
           };
         } else {
@@ -214,21 +215,27 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     };
     if (clinicId) {
       try {
+        // Build query to find token for this device
         let query = supabase
           .from('push_notification_tokens')
           .select('id, token, is_active, updated_at, device_info')
           .eq('clinic_id', clinicId)
           .eq('platform', 'web')
-          .eq('is_active', true)
-          .eq('device_info->>userAgent', navigator.userAgent)
-          .order('updated_at', { ascending: false })
-          .limit(1);
+          .eq('is_active', true);
+
+        // If we have a player ID, search by token
+        if (currentPlayerId) {
+          query = query.eq('token', currentPlayerId);
+        } else {
+          // Fallback: search by userAgent
+          query = query.eq('device_info->>userAgent', navigator.userAgent);
+        }
 
         if (patientId) {
           query = query.eq('patient_id', patientId);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(1);
 
         if (error) {
           dbStatus = {
