@@ -153,30 +153,37 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
     setIsLoading(true);
 
     try {
-      // Check current permission state first
+      // STEP 1: Check current permission state
       const currentPermission = Notification.permission;
-      console.log('Pusher Beams: Current permission state:', currentPermission);
+      console.log('[PUSH-ACTIVATION] Step 1 - Permission check:', currentPermission);
       
       if (currentPermission === 'denied') {
+        console.error('[PUSH-ACTIVATION] BLOCKED: Permission denied by browser');
         toast.error('Notificações bloqueadas. Acesse as configurações do navegador para permitir.');
         setIsLoading(false);
         return false;
       }
 
-      // Initialize Pusher Beams
+      // STEP 2: Initialize Pusher Beams SDK
+      console.log('[PUSH-ACTIVATION] Step 2 - Initializing Pusher Beams...');
       const initialized = await initializePusherBeams();
+      console.log('[PUSH-ACTIVATION] Step 2 - Initialization result:', initialized);
+      
       if (!initialized) {
+        console.error('[PUSH-ACTIVATION] FAILED: Could not initialize Pusher Beams SDK');
         toast.error('Erro ao inicializar serviço de notificações');
         setIsLoading(false);
         return false;
       }
 
-      // Subscribe to push notifications
-      console.log('Pusher Beams: Subscribing to notifications...');
+      // STEP 3: Subscribe to push notifications (triggers permission prompt if needed)
+      console.log('[PUSH-ACTIVATION] Step 3 - Subscribing to notifications...');
       const deviceId = await subscribeToNotifications();
+      console.log('[PUSH-ACTIVATION] Step 3 - Device ID result:', deviceId ? deviceId.substring(0, 20) + '...' : 'NULL');
       
       if (!deviceId) {
         const permission = Notification.permission;
+        console.error('[PUSH-ACTIVATION] FAILED: No device ID returned. Permission:', permission);
         if (permission === 'denied') {
           toast.error('Permissão negada. Habilite nas configurações do navegador.');
         } else {
@@ -186,28 +193,35 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         return false;
       }
 
-      // Add device interests for targeting
+      // STEP 4: Add device interests for targeting
+      console.log('[PUSH-ACTIVATION] Step 4 - Adding interests...');
       if (clinicId) {
+        console.log('[PUSH-ACTIVATION] Adding clinic interest:', `clinic-${clinicId}`);
         await addDeviceInterest(`clinic-${clinicId}`);
       }
       if (patientId) {
+        console.log('[PUSH-ACTIVATION] Adding patient interest:', `patient-${patientId}`);
         await addDeviceInterest(`patient-${patientId}`);
       }
 
-      // Register with backend
+      // STEP 5: Register token with backend database
+      console.log('[PUSH-ACTIVATION] Step 5 - Registering token with backend...');
       const success = await registerToken(deviceId);
+      console.log('[PUSH-ACTIVATION] Step 5 - Registration result:', success);
       
       if (success) {
         setIsSubscribed(true);
+        console.log('[PUSH-ACTIVATION] SUCCESS: Notifications fully activated');
         toast.success('Notificações ativadas com sucesso!');
       } else {
+        console.error('[PUSH-ACTIVATION] FAILED: Could not save token to database');
         toast.error('Erro ao salvar configuração de notificações');
       }
 
       setIsLoading(false);
       return success;
     } catch (error) {
-      console.error('Pusher Beams: Error subscribing:', error);
+      console.error('[PUSH-ACTIVATION] EXCEPTION:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast.error(`Erro ao ativar notificações: ${errorMessage}`);
       setIsLoading(false);
