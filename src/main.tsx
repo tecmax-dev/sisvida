@@ -37,24 +37,35 @@ async function bootstrapApp() {
   }
   
   // Agora renderizar React com a rota já definida
-  renderApp();
+  await renderApp();
 }
 
 // Limpar TODOS os caches ao iniciar o app para garantir dados frescos
-async function clearAllCaches() {
+async function clearAllCaches(): Promise<boolean> {
   if ('caches' in window) {
     try {
       const cacheNames = await caches.keys();
       
-      if (cacheNames.length > 0) {
-        console.log('[PWA] Limpando todos os caches:', cacheNames);
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-        console.log('[PWA] Todos os caches limpos com sucesso');
+      // Filtrar apenas caches de dados (não limpar caches de assets estáticos)
+      const dataCaches = cacheNames.filter(name => 
+        name.includes('supabase') || 
+        name.includes('api') || 
+        name.includes('runtime')
+      );
+      
+      if (dataCaches.length > 0) {
+        console.log('[PWA] Limpando caches de dados:', dataCaches);
+        await Promise.all(dataCaches.map(name => caches.delete(name)));
+        console.log('[PWA] Caches de dados limpos com sucesso');
+        return true;
+      } else {
+        console.log('[PWA] Nenhum cache de dados para limpar');
       }
     } catch (e) {
       console.warn('[PWA] Erro ao limpar caches:', e);
     }
   }
+  return false;
 }
 
 // Forçar atualização do Service Worker
@@ -94,9 +105,12 @@ async function forceServiceWorkerUpdate() {
   }
 }
 
-function renderApp() {
-  // Limpar TODOS os caches e forçar atualização ao abrir o app
-  clearAllCaches();
+async function renderApp() {
+  // Limpar caches de dados ANTES de renderizar (aguardar conclusão)
+  console.log('[PWA] Iniciando limpeza de cache...');
+  await clearAllCaches();
+  
+  // Forçar atualização do Service Worker
   forceServiceWorkerUpdate();
 
   // Registrar Service Worker para PWA
