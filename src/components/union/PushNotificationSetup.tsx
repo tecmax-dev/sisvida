@@ -13,6 +13,8 @@ interface PushNotificationSetupProps {
 export function PushNotificationSetup({ patientId, clinicId }: PushNotificationSetupProps) {
   const {
     isNative,
+    effectiveClinicId,
+    isResolvingClinicId,
     isWebPushSupported,
     isWebPushSubscribed,
     isWebPushLoading,
@@ -74,7 +76,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
           </p>
           <Button
             onClick={subscribeToWebPush}
-            disabled={isWebPushLoading || !clinicId}
+            disabled={isWebPushLoading || isResolvingClinicId || !effectiveClinicId}
             variant="outline"
             className="mt-4 w-full"
           >
@@ -82,6 +84,11 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Reconfigurando...
+              </>
+            ) : isResolvingClinicId ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Preparando...
               </>
             ) : (
               <>
@@ -92,7 +99,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
           </Button>
           
           {/* Diagnostic Tool */}
-          <PushDiagnostics patientId={patientId} clinicId={clinicId} />
+          <PushDiagnostics patientId={patientId} clinicId={effectiveClinicId} />
         </CardContent>
       </Card>
     );
@@ -112,13 +119,18 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
       <CardContent>
         <Button 
           onClick={subscribeToWebPush} 
-          disabled={isWebPushLoading || !clinicId}
+          disabled={isWebPushLoading || isResolvingClinicId || !effectiveClinicId}
           className="w-full"
         >
           {isWebPushLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Ativando...
+            </>
+          ) : isResolvingClinicId ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Preparando...
             </>
           ) : (
             <>
@@ -127,7 +139,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
             </>
           )}
         </Button>
-        {!clinicId && (
+        {!effectiveClinicId && !isResolvingClinicId && (
           <p className="mt-2 text-xs text-muted-foreground text-center">
             Faça login para ativar as notificações
           </p>
