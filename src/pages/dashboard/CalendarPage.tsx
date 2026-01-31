@@ -4224,14 +4224,19 @@ const updateData: Record<string, any> = {
                   const shouldAutoShowProfessionals = searchQuery.trim().length === 0;
 
                   if (shouldAutoShowProfessionals) {
+                    // Sempre filtrar profissionais que têm escala no dia selecionado
+                    const professionalsWithScheduleToday = professionals.filter(
+                      (p) => getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0
+                    );
+                    
                     const targetProfessionalIds =
                       filterProfessionals.length > 0
-                        ? filterProfessionals
-                        : professionals
-                            .filter((p) => getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0)
-                            .map((p) => p.id);
+                        ? filterProfessionals.filter((id) => 
+                            professionalsWithScheduleToday.some((p) => p.id === id)
+                          )
+                        : professionalsWithScheduleToday.map((p) => p.id);
 
-                    const targetProfessionals = professionals.filter((p) => targetProfessionalIds.includes(p.id));
+                    const targetProfessionals = professionalsWithScheduleToday.filter((p) => targetProfessionalIds.includes(p.id));
 
                     if (targetProfessionals.length > 0) {
                       professionalGroups = targetProfessionals.map((p) => ({
@@ -4252,12 +4257,17 @@ const updateData: Record<string, any> = {
                 // Regra: se não há busca ativa, mostramos todos os profissionais com escala no dia
                 // (ou apenas os selecionados no filtro, quando houver).
                 if (dayAppointments.length > 0 && searchQuery.trim().length === 0) {
+                  // Sempre filtrar profissionais que têm escala no dia selecionado
+                  const professionalsWithScheduleToday = professionals.filter(
+                    (p) => getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0
+                  );
+                  
                   const shouldIncludeIds =
                     filterProfessionals.length > 0
-                      ? filterProfessionals
-                      : professionals
-                          .filter((p) => getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0)
-                          .map((p) => p.id);
+                      ? filterProfessionals.filter((id) =>
+                          professionalsWithScheduleToday.some((p) => p.id === id)
+                        )
+                      : professionalsWithScheduleToday.map((p) => p.id);
 
                   const present = new Set(professionalGroups.map((g) => g.professional.id));
                   const missing = professionals.filter(
