@@ -769,11 +769,19 @@ Aproveite essa novidade! 🎉`,
 
     const clinicName = clinic?.name || 'SECMI - Sindicato dos Comerciários de Ilhéus';
 
-    // SECMI Custom System Prompt
-    const systemPrompt = `## PERSONA
-Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos Comerciários de Ilhéus e Região (SECMI). Sua função é auxiliar associados, empresas e escritórios de contabilidade a terem acesso aos serviços disponibilizados pelo sindicato de forma eficiente e amigável.
+    // CRITICAL: Check booking_enabled GLOBALLY for all messages (not just option 6)
+    // This prevents the AI from offering booking services when disabled
+    const { data: evolutionConfigGlobal } = await supabase
+      .from('evolution_configs')
+      .select('booking_enabled')
+      .eq('clinic_id', clinic_id)
+      .maybeSingle();
+    
+    const isBookingEnabled = evolutionConfigGlobal?.booking_enabled !== false;
+    console.log(`[ai-assistant] Global booking_enabled check: ${isBookingEnabled}`);
 
-## REGRAS DE AGENDAMENTO INTELIGENTE (MUITO IMPORTANTE!)
+    // SECMI Custom System Prompt - with dynamic booking section
+    const bookingEnabledSection = `## REGRAS DE AGENDAMENTO INTELIGENTE (MUITO IMPORTANTE!)
 - Quando o paciente perguntar sobre disponibilidade de um profissional SEM especificar uma data específica, use IMEDIATAMENTE a função "buscar_proximas_datas_disponiveis" com o nome do profissional
 - Exemplos de mensagens que DEVEM acionar buscar_proximas_datas_disponiveis:
   * "quero agendar com Dr. Alcides"
@@ -792,13 +800,47 @@ Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos 
 - NUNCA peça ao paciente para digitar uma data manualmente
 - Quando o paciente responder com um número (1, 2, 3...), use buscar_horarios_disponiveis com a data correspondente
 
+## QUANDO PEDIREM AGENDAMENTO
+Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, etc.), use buscar_proximas_datas_disponiveis para mostrar as próximas datas disponíveis de forma NUMERADA.`;
+
+    const bookingDisabledSection = `## AGENDAMENTO TEMPORARIAMENTE SUSPENSO VIA WHATSAPP (MUITO IMPORTANTE!)
+⚠️ O agendamento de consultas por WhatsApp está TEMPORARIAMENTE SUSPENSO.
+- NÃO ofereça ajuda para agendar consultas por aqui.
+- NÃO busque profissionais, datas ou horários disponíveis.
+- NÃO tente usar funções de agendamento.
+- SEMPRE que o associado mencionar agendamento, consulta médica, dentista, pediatra, ou qualquer profissional de saúde, responda EXATAMENTE assim:
+
+"⚠️ *Agendamento Temporariamente Suspenso*
+
+O agendamento por WhatsApp está suspenso no momento, mas temos uma *novidade ainda melhor* para você!
+
+📲 *NOVO APP DO SINDICATO*
+Agora você pode agendar suas consultas pelo nosso aplicativo:
+• Agendamento rápido 24h
+• Carteirinha digital
+• Gestão de dependentes
+• Notificações de consultas
+
+📥 *Instale agora:*
+https://app.eclini.com.br/sindicato/instalar
+
+*Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial."
+
+## QUANDO PEDIREM AGENDAMENTO
+SEMPRE redirecione para o aplicativo com a mensagem acima. NÃO tente ajudar a agendar por aqui.`;
+
+    const systemPrompt = `## PERSONA
+Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos Comerciários de Ilhéus e Região (SECMI). Sua função é auxiliar associados, empresas e escritórios de contabilidade a terem acesso aos serviços disponibilizados pelo sindicato de forma eficiente e amigável.
+
+${isBookingEnabled ? bookingEnabledSection : bookingDisabledSection}
+
 ## REGRAS DE FLUXO
 - Se digitar 1: mostre opções para associados
 - Se digitar 2: mostre opções para empresas (NÃO solicite CNPJ nem e-mail, siga o fluxo)
 - Se digitar 3: mostre opções para contabilidade
 - Se digitar 4: pergunte sobre qual assunto do Dia do Comerciário
 - Se digitar 5: pergunte do que se trata, ao responder peça para aguardar o atendente
-- Se digitar 6: RESPONDA APENAS: "HANDOFF_BOOKING" (o sistema de agendamento assumirá)
+- Se digitar 6: ${isBookingEnabled ? 'RESPONDA APENAS: "HANDOFF_BOOKING" (o sistema de agendamento assumirá)' : 'Informe que o agendamento está temporariamente suspenso e redirecione para o app'}
 - Se digitar 7: RESPONDA APENAS: "HANDOFF_BOLETO" (o sistema de boleto empresa assumirá)
 
 ## DADOS DE CONTATO DO SINDICATO (USE EXATAMENTE ESTES DADOS!)
@@ -875,10 +917,7 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
 - Salário de padeiro: não representamos essa categoria (apenas Sindipan)
 - Falar com atendente: peça para aguardar e transfira (horário: 09:00-16:00, exceto almoço)
 - Sábados e domingos: não há atendimento humano
-- Problemas com agendamento no app: peça CPF do titular para verificar
-
-## QUANDO PEDIREM AGENDAMENTO
-Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, etc.), use buscar_proximas_datas_disponiveis para mostrar as próximas datas disponíveis de forma NUMERADA.`;
+- Problemas com agendamento no app: peça CPF do titular para verificar`;
 
     // Build messages array with history
     const messages: any[] = [
@@ -893,6 +932,24 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
 
     console.log('[ai-assistant] Sending to AI with', messages.length, 'messages');
 
+    // Filter tools based on booking_enabled status
+    // When booking is disabled, remove all booking-related tools
+    const bookingToolNames = [
+      'buscar_profissionais',
+      'buscar_proximas_datas_disponiveis', 
+      'buscar_horarios_disponiveis',
+      'buscar_paciente_por_cpf',
+      'criar_agendamento',
+      'listar_agendamentos_paciente',
+      'cancelar_agendamento'
+    ];
+    
+    const activeTools = isBookingEnabled 
+      ? tools 
+      : tools.filter(t => !bookingToolNames.includes(t.function.name));
+    
+    console.log(`[ai-assistant] Active tools: ${activeTools.map(t => t.function.name).join(', ')}`);
+
     // Helper function to call AI API with fallback
     const callAI = async (msgs: any[], useTools: boolean = true): Promise<Response> => {
       // Try Lovable AI Gateway first
@@ -905,7 +962,7 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
         body: JSON.stringify({
           model: 'google/gemini-3-flash-preview',
           messages: msgs,
-          ...(useTools ? { tools, tool_choice: 'auto' } : {}),
+          ...(useTools && activeTools.length > 0 ? { tools: activeTools, tool_choice: 'auto' } : {}),
         }),
       });
 
