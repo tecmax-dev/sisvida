@@ -21,6 +21,11 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
     subscribeToWebPush,
   } = usePushNotifications({ patientId, clinicId });
 
+  const canShowReconfigure =
+    typeof window !== 'undefined' &&
+    'Notification' in window &&
+    Notification.permission === 'granted';
+
   // Don't show if not supported
   if (isNative) {
     return (
@@ -139,6 +144,28 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
             </>
           )}
         </Button>
+
+        {canShowReconfigure && (
+          <Button
+            onClick={subscribeToWebPush}
+            disabled={isWebPushLoading || isResolvingClinicId || !effectiveClinicId}
+            variant="outline"
+            className="mt-2 w-full"
+          >
+            {isWebPushLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Reconfigurando...
+              </>
+            ) : (
+              <>
+                <Bell className="mr-2 h-4 w-4" />
+                Reconfigurar notificações
+              </>
+            )}
+          </Button>
+        )}
+
         {!effectiveClinicId && !isResolvingClinicId && (
           <p className="mt-2 text-xs text-muted-foreground text-center">
             Faça login para ativar as notificações
