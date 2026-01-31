@@ -181,8 +181,11 @@ const calculateProfessionalSlots = (
     }
   }
 
-  // Se não tiver _blocks ou não gerou slots, usar estrutura antiga (slots por dia)
-  if (allTimeSlots.length === 0 && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
+  // IMPORTANTE: Se existem _blocks definidos, NÃO usar o fallback do schedule antigo.
+  // O fallback só deve ser usado quando o profissional ainda usa a estrutura antiga (sem _blocks).
+  const hasBlocks = blocks && blocks.length > 0;
+
+  if (allTimeSlots.length === 0 && !hasBlocks && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
     for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
       const [sh, sm] = String(s.start).split(':').map(Number);
       const [eh, em] = String(s.end).split(':').map(Number);
@@ -701,8 +704,13 @@ export default function CalendarPage() {
         }
       }
 
+      // IMPORTANTE: Se existem _blocks definidos, NÃO usar o fallback do schedule antigo.
+      // O fallback só deve ser usado quando o profissional ainda usa a estrutura antiga (sem _blocks).
+      const hasBlocks = blocks && blocks.length > 0;
+
       if (
         slots.length === 0 &&
+        !hasBlocks &&
         daySchedule?.enabled &&
         Array.isArray(daySchedule.slots) &&
         daySchedule.slots.length > 0
