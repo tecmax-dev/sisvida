@@ -1,11 +1,13 @@
 import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  initializePusherBeams,
+  initializeOneSignal,
   subscribeToNotifications,
   isSubscribed as checkIsSubscribed,
-  addDeviceInterest,
-} from '@/lib/pusher-beams';
+  getPlayerId,
+  addTag,
+  clearLocalState,
+} from '@/lib/onesignal';
 import { toast } from 'sonner';
 
 interface UseWebPushNotificationsOptions {
@@ -45,20 +47,20 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
   }, []);
 
   // Register token with backend
-  const registerToken = useCallback(async (deviceId: string) => {
+  const registerToken = useCallback(async (playerId: string) => {
     if (!clinicId) {
-      console.log('Pusher Beams: Missing clinicId');
+      console.log('OneSignal: Missing clinicId');
       return false;
     }
 
-    console.log('Pusher Beams: Registering Device ID...', deviceId.substring(0, 20) + '...');
+    console.log('OneSignal: Registering Player ID...', playerId.substring(0, 20) + '...');
 
     try {
       // Get current authenticated user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError) {
-        console.error('Pusher Beams: Auth error:', authError);
+        console.error('OneSignal: Auth error:', authError);
       }
       
       const userId = user?.id || null;
@@ -66,14 +68,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       // Normalize patientId - treat empty string as null
       const normalizedPatientId = patientId && patientId.trim() !== '' ? patientId : null;
 
-      console.log('Pusher Beams: Identifiers check:', {
+      console.log('OneSignal: Identifiers check:', {
         patientId: normalizedPatientId ? 'present' : 'null',
         userId: userId ? 'present' : 'null',
       });
 
       // We need at least one identifier - check AFTER getting userId
       if (!normalizedPatientId && !userId) {
-        console.error('Pusher Beams: Cannot register - no patientId or userId available. User must be authenticated.');
+        console.error('OneSignal: Cannot register - no patientId or userId available. User must be authenticated.');
         return false;
       }
 
@@ -89,7 +91,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
           .eq('platform', 'web')
           .eq('is_active', true)
           .eq('device_info->>userAgent', navigator.userAgent)
-          .neq('token', deviceId);
+          .neq('token', playerId);
 
         if (normalizedPatientId) {
           deactivateQuery = deactivateQuery.eq('patient_id', normalizedPatientId);
@@ -99,10 +101,10 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
         const { error: deactivateError } = await deactivateQuery;
         if (deactivateError) {
-          console.warn('Pusher Beams: Could not deactivate stale tokens for this device:', deactivateError);
+          console.warn('OneSignal: Could not deactivate stale tokens for this device:', deactivateError);
         }
       } catch (e) {
-        console.warn('Pusher Beams: Error while deactivating stale tokens:', e);
+        console.warn('OneSignal: Error while deactivating stale tokens:', e);
       }
 
       // First, try to find existing record with same clinic_id and token
@@ -110,7 +112,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         .from('push_notification_tokens')
         .select('id')
         .eq('clinic_id', clinicId)
-        .eq('token', deviceId)
+        .eq('token', playerId)
         .maybeSingle();
 
       // Also check for existing record with same patient_id and token (if patient exists)
@@ -120,7 +122,7 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
           .from('push_notification_tokens')
           .select('id')
           .eq('patient_id', normalizedPatientId)
-          .eq('token', deviceId)
+          .eq('token', playerId)
           .maybeSingle();
         existingByPatient = data;
       }
@@ -131,14 +133,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         patient_id: normalizedPatientId,
         user_id: userId,
         clinic_id: clinicId,
-        token: deviceId,
+        token: playerId,
         platform: 'web',
         is_active: true,
         device_info: {
           platform: 'web',
           isNative: false,
           userAgent: navigator.userAgent,
-          type: 'pusher-beams-web'
+          type: 'onesignal-web'
         },
         updated_at: new Date().toISOString(),
       };
@@ -160,14 +162,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       }
 
       if (error) {
-        console.error('Pusher Beams: Error registering token:', error);
+        console.error('OneSignal: Error registering token:', error);
         return false;
       }
       
-      console.log('Pusher Beams: Token registered successfully');
+      console.log('OneSignal: Token registered successfully');
       return true;
     } catch (err) {
-      console.error('Pusher Beams: Exception registering token:', err);
+      console.error('OneSignal: Exception registering token:', err);
       return false;
     }
   }, [patientId, clinicId]);
@@ -201,20 +203,19 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       // STEP 1.5: Clear any stale local state before re-subscribing
       console.log('[PUSH-ACTIVATION] Step 1.5 - Clearing stale local state...');
       try {
-        const { clearLocalState } = await import('@/lib/pusher-beams');
         await clearLocalState();
         console.log('[PUSH-ACTIVATION] Step 1.5 - Local state cleared');
       } catch (clearError) {
         console.warn('[PUSH-ACTIVATION] Could not clear local state:', clearError);
       }
 
-      // STEP 2: Initialize Pusher Beams SDK
-      console.log('[PUSH-ACTIVATION] Step 2 - Initializing Pusher Beams...');
-      const initialized = await initializePusherBeams();
+      // STEP 2: Initialize OneSignal SDK
+      console.log('[PUSH-ACTIVATION] Step 2 - Initializing OneSignal...');
+      const initialized = await initializeOneSignal();
       console.log('[PUSH-ACTIVATION] Step 2 - Initialization result:', initialized);
       
       if (!initialized) {
-        console.error('[PUSH-ACTIVATION] FAILED: Could not initialize Pusher Beams SDK');
+        console.error('[PUSH-ACTIVATION] FAILED: Could not initialize OneSignal SDK');
         toast.error('Erro ao inicializar serviço de notificações');
         setIsLoading(false);
         return false;
@@ -222,12 +223,12 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
 
       // STEP 3: Subscribe to push notifications (triggers permission prompt if needed)
       console.log('[PUSH-ACTIVATION] Step 3 - Subscribing to notifications...');
-      const deviceId = await subscribeToNotifications();
-      console.log('[PUSH-ACTIVATION] Step 3 - Device ID result:', deviceId ? deviceId.substring(0, 20) + '...' : 'NULL');
+      const playerId = await subscribeToNotifications();
+      console.log('[PUSH-ACTIVATION] Step 3 - Player ID result:', playerId ? playerId.substring(0, 20) + '...' : 'NULL');
       
-      if (!deviceId) {
+      if (!playerId) {
         const permission = Notification.permission;
-        console.error('[PUSH-ACTIVATION] FAILED: No device ID returned. Permission:', permission);
+        console.error('[PUSH-ACTIVATION] FAILED: No Player ID returned. Permission:', permission);
         if (permission === 'denied') {
           toast.error('Permissão negada. Habilite nas configurações do navegador.');
         } else {
@@ -237,20 +238,20 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         return false;
       }
 
-      // STEP 4: Add device interests for targeting
-      console.log('[PUSH-ACTIVATION] Step 4 - Adding interests...');
+      // STEP 4: Add tags for targeting
+      console.log('[PUSH-ACTIVATION] Step 4 - Adding tags...');
       if (clinicId) {
-        console.log('[PUSH-ACTIVATION] Adding clinic interest:', `clinic-${clinicId}`);
-        await addDeviceInterest(`clinic-${clinicId}`);
+        console.log('[PUSH-ACTIVATION] Adding clinic tag:', clinicId);
+        await addTag('clinic_id', clinicId);
       }
       if (patientId) {
-        console.log('[PUSH-ACTIVATION] Adding patient interest:', `patient-${patientId}`);
-        await addDeviceInterest(`patient-${patientId}`);
+        console.log('[PUSH-ACTIVATION] Adding patient tag:', patientId);
+        await addTag('patient_id', patientId);
       }
 
       // STEP 5: Register token with backend database
       console.log('[PUSH-ACTIVATION] Step 5 - Registering token with backend...');
-      const success = await registerToken(deviceId);
+      const success = await registerToken(playerId);
       console.log('[PUSH-ACTIVATION] Step 5 - Registration result:', success);
       
       if (success) {
@@ -288,48 +289,47 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
           return;
         }
         
-        // Permission is granted, verify with Pusher Beams
-        const initialized = await initializePusherBeams();
+        // Permission is granted, verify with OneSignal
+        const initialized = await initializeOneSignal();
         if (!initialized) {
-          console.warn('Web Push: Could not initialize Pusher Beams for check');
+          console.warn('Web Push: Could not initialize OneSignal for check');
           setIsSubscribed(false);
           return;
         }
         
-        const beamsSubscribed = await checkIsSubscribed();
-        console.log('Web Push: Pusher Beams subscription state:', beamsSubscribed);
+        const oneSignalSubscribed = await checkIsSubscribed();
+        console.log('Web Push: OneSignal subscription state:', oneSignalSubscribed);
         
-        if (!beamsSubscribed) {
+        if (!oneSignalSubscribed) {
           setIsSubscribed(false);
           return;
         }
         
-        // Get current device ID
-        const { getDeviceId } = await import('@/lib/pusher-beams');
-        const deviceId = await getDeviceId();
+        // Get current Player ID
+        const playerId = await getPlayerId();
         
-        if (!deviceId) {
-          console.log('Web Push: No device ID, subscription incomplete');
+        if (!playerId) {
+          console.log('Web Push: No Player ID, subscription incomplete');
           setIsSubscribed(false);
           return;
         }
         
-        // Finally check database for token registration with the CURRENT device ID
+        // Finally check database for token registration with the CURRENT Player ID
         const { data } = await supabase
           .from('push_notification_tokens')
           .select('id')
           .eq('clinic_id', clinicId)
-          .eq('token', deviceId)
+          .eq('token', playerId)
           .eq('platform', 'web')
           .eq('is_active', true)
           .maybeSingle();
         
         // Only considered subscribed if ALL checks pass
-        const fullySubscribed = permission === 'granted' && beamsSubscribed && !!data;
+        const fullySubscribed = permission === 'granted' && oneSignalSubscribed && !!data;
         console.log('Web Push: Full subscription check:', { 
           permission, 
-          beamsSubscribed, 
-          deviceId: deviceId?.substring(0, 12) + '...',
+          oneSignalSubscribed, 
+          playerId: playerId?.substring(0, 12) + '...',
           hasDbRecord: !!data, 
           fullySubscribed 
         });
