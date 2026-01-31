@@ -7,6 +7,8 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
 import { MobileNotificationBell } from "./MobileNotificationBell";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+
 interface MobileLayoutProps {
   children: ReactNode;
   showBottomNav?: boolean;
@@ -34,8 +36,12 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   // Usar hook de autenticação com sessão JWT persistente
   const { patientId, clinicId, isLoggedIn, initialized } = useMobileAuth();
 
-  // Initialize push notifications
-  usePushNotifications({ patientId, clinicId });
+  // Initialize push notifications - use fallback for anonymous users in sindicato app
+  usePushNotifications({ 
+    patientId, 
+    clinicId, 
+    fallbackClinicId: SINDICATO_CLINIC_ID 
+  });
 
   // Update PWA branding (favicon, manifest, meta tags) to clinic data
   useDynamicPWA();

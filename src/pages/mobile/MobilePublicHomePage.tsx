@@ -4,6 +4,7 @@ import { MobileCarousel } from "@/components/mobile/MobileCarousel";
 import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicationSection";
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
+import { PushNotificationSetup } from "@/components/union/PushNotificationSetup";
 import { 
   LogIn,
   UserPlus,
@@ -13,9 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import illustrationDiretoria from "@/assets/mobile/illustration-diretoria.png";
-
-// ID do sindicato comerciários (hardcoded para este app)
-const TARGET_UNION_ENTITY_ID = "74f74e75-6b09-43d5-bf75-41225e085e28";
+import { SINDICATO_UNION_ENTITY_ID } from "@/constants/sindicato";
 
 export default function MobilePublicHomePage() {
   const navigate = useNavigate();
@@ -38,7 +37,7 @@ export default function MobilePublicHomePage() {
             Entrar
           </Button>
           <Button
-            onClick={() => navigate(`/sindical/filiacao/${TARGET_UNION_ENTITY_ID}`)}
+            onClick={() => navigate(`/sindical/filiacao/${SINDICATO_UNION_ENTITY_ID}`)}
             className="flex-1 bg-white text-emerald-700 hover:bg-gray-100"
           >
             <UserPlus className="h-4 w-4 mr-2" />
@@ -62,6 +61,15 @@ export default function MobilePublicHomePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Push Notification Setup - disponível para usuários anônimos */}
+      <div className="mx-4 mt-4">
+        <PushNotificationSetup 
+          patientId={null} 
+          clinicId={null} 
+          allowAnonymous={true}
+        />
       </div>
 
       {/* Carousel Banners */}
