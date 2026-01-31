@@ -31,6 +31,18 @@ export async function initializePusherBeams(): Promise<boolean> {
   }
 
   try {
+    // Wait for the PWA service worker to be ready before initializing Beams
+    console.log('Pusher Beams: Waiting for Service Worker to be ready...');
+    const registration = await navigator.serviceWorker.ready;
+    console.log('Pusher Beams: Service Worker ready, scope:', registration.scope);
+    
+    // Ensure the SW is fully active
+    if (!registration.active) {
+      console.warn('Pusher Beams: Service Worker not active yet');
+      // Wait a bit for activation
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
     beamsClient = new PusherPushNotifications.Client({
       instanceId: PUSHER_BEAMS_INSTANCE_ID,
     });

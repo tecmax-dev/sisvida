@@ -289,7 +289,13 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         }
         
         // Permission is granted, verify with Pusher Beams
-        await initializePusherBeams();
+        const initialized = await initializePusherBeams();
+        if (!initialized) {
+          console.warn('Web Push: Could not initialize Pusher Beams for check');
+          setIsSubscribed(false);
+          return;
+        }
+        
         const beamsSubscribed = await checkIsSubscribed();
         console.log('Web Push: Pusher Beams subscription state:', beamsSubscribed);
         
@@ -298,23 +304,35 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
           return;
         }
         
-        // Finally check database for token registration
-        let query = supabase
+        // Get current device ID
+        const { getDeviceId } = await import('@/lib/pusher-beams');
+        const deviceId = await getDeviceId();
+        
+        if (!deviceId) {
+          console.log('Web Push: No device ID, subscription incomplete');
+          setIsSubscribed(false);
+          return;
+        }
+        
+        // Finally check database for token registration with the CURRENT device ID
+        const { data } = await supabase
           .from('push_notification_tokens')
           .select('id')
           .eq('clinic_id', clinicId)
+          .eq('token', deviceId)
           .eq('platform', 'web')
-          .eq('is_active', true);
-        
-        if (patientId) {
-          query = query.eq('patient_id', patientId);
-        }
-        
-        const { data } = await query.maybeSingle();
+          .eq('is_active', true)
+          .maybeSingle();
         
         // Only considered subscribed if ALL checks pass
         const fullySubscribed = permission === 'granted' && beamsSubscribed && !!data;
-        console.log('Web Push: Full subscription check:', { permission, beamsSubscribed, hasDbRecord: !!data, fullySubscribed });
+        console.log('Web Push: Full subscription check:', { 
+          permission, 
+          beamsSubscribed, 
+          deviceId: deviceId?.substring(0, 12) + '...',
+          hasDbRecord: !!data, 
+          fullySubscribed 
+        });
         setIsSubscribed(fullySubscribed);
       } catch (error) {
         console.error('Error checking subscription:', error);
