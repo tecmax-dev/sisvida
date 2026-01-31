@@ -68,39 +68,25 @@ async function clearAllCaches(): Promise<boolean> {
   return false;
 }
 
-// Forçar atualização do Service Worker
+// Force update service worker (without notification loop)
 async function forceServiceWorkerUpdate() {
   if ('serviceWorker' in navigator) {
     try {
-      // Emitir evento de verificação
-      window.dispatchEvent(new CustomEvent('pwa-checking-update'));
-      
       const registrations = await navigator.serviceWorker.getRegistrations();
-      let updateFound = false;
       
       await Promise.all(
         registrations.map(async (r) => {
           await r.update();
-          // Se há um SW waiting, ativar imediatamente
+          // If there's a waiting SW, activate it immediately (no notifications)
           if (r.waiting) {
-            updateFound = true;
-            window.dispatchEvent(new CustomEvent('pwa-update-found'));
             r.waiting.postMessage({ type: 'SKIP_WAITING' });
           }
         })
       );
       
-      if (updateFound) {
-        // Aguardar um pouco para o SW ativar
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('pwa-update-applied'));
-        }, 1500);
-      }
-      
-      console.log('[PWA] Service Workers atualizados');
+      console.log('[PWA] Service Workers updated');
     } catch (e) {
-      console.warn('[PWA] Erro ao atualizar SW:', e);
-      window.dispatchEvent(new CustomEvent('pwa-update-error', { detail: e }));
+      console.warn('[PWA] Error updating SW:', e);
     }
   }
 }
@@ -113,35 +99,28 @@ async function renderApp() {
   // Forçar atualização do Service Worker
   forceServiceWorkerUpdate();
 
-  // Registrar Service Worker para PWA
+  // Register Service Worker for PWA (without update notification loop)
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      console.log('[PWA] Nova versão disponível, aplicando automaticamente...');
-      window.dispatchEvent(new CustomEvent('pwa-update-found'));
-      // Auto-aplicar atualização
+      console.log('[PWA] New version available, applying silently...');
+      // Auto-apply update without notifications
       updateSW(true);
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('pwa-update-applied'));
-      }, 1500);
     },
     onOfflineReady() {
-      console.log('[PWA] App pronto para uso offline');
+      console.log('[PWA] App ready for offline use');
     },
     onRegistered(r) {
-      console.log('[PWA] Service Worker registrado:', r);
+      console.log('[PWA] Service Worker registered');
       if (r) {
-        // Verificar atualizações a cada 5 minutos
+        // Check for updates every 10 minutes (silently)
         setInterval(() => {
-          console.log('[PWA] Verificando atualizações...');
-          window.dispatchEvent(new CustomEvent('pwa-checking-update'));
           r.update();
-        }, 5 * 60 * 1000);
+        }, 10 * 60 * 1000);
       }
     },
     onRegisterError(error) {
-      console.error('[PWA] Erro ao registrar Service Worker:', error);
-      window.dispatchEvent(new CustomEvent('pwa-update-error', { detail: error }));
+      console.error('[PWA] Service Worker registration error:', error);
     },
   });
 

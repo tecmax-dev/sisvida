@@ -68,16 +68,14 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
       // Normalize patientId - treat empty string as null
       const normalizedPatientId = patientId && patientId.trim() !== '' ? patientId : null;
 
-      console.log('OneSignal: Identifiers check:', {
+      console.log('OneSignal: Identifiers:', {
         patientId: normalizedPatientId ? 'present' : 'null',
         userId: userId ? 'present' : 'null',
+        clinicId: 'present',
       });
 
-      // We need at least one identifier - check AFTER getting userId
-      if (!normalizedPatientId && !userId) {
-        console.error('OneSignal: Cannot register - no patientId or userId available. User must be authenticated.');
-        return false;
-      }
+      // We only need clinicId to register - patientId/userId are optional but helpful
+      // This allows users to receive notifications even before full login
 
       // Deactivate stale tokens for the SAME device (same userAgent) so we don't keep sending to invalid IDs
       try {
