@@ -198,6 +198,16 @@ export function useWebPushNotifications({ patientId, clinicId }: UseWebPushNotif
         return false;
       }
 
+      // STEP 1.5: Clear any stale local state before re-subscribing
+      console.log('[PUSH-ACTIVATION] Step 1.5 - Clearing stale local state...');
+      try {
+        const { clearLocalState } = await import('@/lib/pusher-beams');
+        await clearLocalState();
+        console.log('[PUSH-ACTIVATION] Step 1.5 - Local state cleared');
+      } catch (clearError) {
+        console.warn('[PUSH-ACTIVATION] Could not clear local state:', clearError);
+      }
+
       // STEP 2: Initialize Pusher Beams SDK
       console.log('[PUSH-ACTIVATION] Step 2 - Initializing Pusher Beams...');
       const initialized = await initializePusherBeams();

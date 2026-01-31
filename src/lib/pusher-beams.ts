@@ -198,6 +198,36 @@ export async function stopBeams(): Promise<void> {
   }
 }
 
+/**
+ * Clear local Pusher Beams state to force a fresh registration.
+ * This is useful when recovering from stale token states.
+ */
+export async function clearLocalState(): Promise<void> {
+  console.log('Pusher Beams: Clearing local state...');
+  
+  try {
+    // Stop the current client if running
+    if (beamsClient) {
+      try {
+        await beamsClient.stop();
+      } catch (stopError) {
+        console.warn('Pusher Beams: Error stopping during clear:', stopError);
+      }
+    }
+    
+    // Reset module state
+    isInitialized = false;
+    beamsClient = null;
+    
+    console.log('Pusher Beams: Local state cleared successfully');
+  } catch (error) {
+    console.error('Pusher Beams: Error clearing local state:', error);
+    // Still reset module state even if stop failed
+    isInitialized = false;
+    beamsClient = null;
+  }
+}
+
 export function getClient(): PusherPushNotifications.Client | null {
   return beamsClient;
 }
