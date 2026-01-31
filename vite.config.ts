@@ -56,14 +56,7 @@ export default defineConfig(({ mode }) => ({
         dir: "ltr"
       },
       workbox: {
-        // IMPORTANT: Only one Service Worker can exist per scope ("/") in browsers.
-        // We keep the app SW (sw.js) as the single SW at scope "/" and load OneSignal
-        // inside it so push works reliably in installed PWA.
-        importScripts: ["/OneSignalSDKWorker.js"],
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
-        // Exclude OneSignal service worker from being cached/intercepted
-        globIgnores: ["**/OneSignalSDKWorker.js", "**/OneSignalSDKUpdaterWorker.js"],
-        navigateFallbackDenylist: [/^\/OneSignalSDKWorker\.js$/, /^\/OneSignalSDKUpdaterWorker\.js$/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
         cleanupOutdatedCaches: true, // Limpar caches antigos automaticamente
         skipWaiting: true, // Ativar novo SW imediatamente
@@ -84,9 +77,13 @@ export default defineConfig(({ mode }) => ({
               },
             },
           },
-          // Let OneSignal requests bypass cache
+          // Let Pusher Beams requests bypass cache
           {
-            urlPattern: /^https:\/\/.*onesignal\.com\/.*/i,
+            urlPattern: /^https:\/\/.*\.pusher\.com\/.*/i,
+            handler: "NetworkOnly",
+          },
+          {
+            urlPattern: /^https:\/\/.*\.pushnotifications\.pusher\.com\/.*/i,
             handler: "NetworkOnly",
           },
         ],

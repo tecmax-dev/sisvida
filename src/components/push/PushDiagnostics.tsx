@@ -12,11 +12,10 @@ import {
   Bug
 } from 'lucide-react';
 import { 
-  initializeOneSignal, 
-  getSubscriptionId, 
+  initializePusherBeams, 
+  getDeviceId, 
   isSubscribed as checkIsSubscribed,
-  getPushSubscriptionState,
-} from '@/lib/onesignal';
+} from '@/lib/pusher-beams';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
@@ -92,9 +91,8 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
       const registrations = await navigator.serviceWorker.getRegistrations();
 
       // Detect PWA SW (vite-plugin-pwa generates /sw.js by default)
-      const appSW =
-        registrations.find((r) => r.active?.scriptURL?.endsWith('/sw.js')) ||
-        registrations.find((r) => r.active?.scriptURL && !r.active.scriptURL.includes('OneSignal'));
+      const appSW = registrations.find((r) => r.active?.scriptURL?.endsWith('/sw.js')) ||
+        registrations.find((r) => r.active?.scriptURL);
 
       const appScope = appSW?.scope || null;
       const appOk = !!appSW && (appScope?.endsWith('/') ?? false);
@@ -120,11 +118,11 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
           details: `sw=${getFile(appSW)}`,
         });
       } else {
-        // Preliminary - will be updated after OneSignal check
+        // Preliminary - will be updated after Pusher Beams check
         diagnostics.push({
           name: 'Service Worker',
           status: 'pending',
-          message: 'SW encontrado, verificando OneSignal...',
+          message: 'SW encontrado, verificando Pusher Beams...',
           details: `sw=${getFile(appSW)} | scope=${appScope}`,
         });
       }
@@ -139,9 +137,9 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
       setResults([...diagnostics]);
     }
 
-    // 5. Initialize OneSignal and check subscription
-    let oneSignalStatus: DiagnosticResult = {
-      name: 'OneSignal SDK',
+    // 5. Initialize Pusher Beams and check subscription
+    let pusherBeamsStatus: DiagnosticResult = {
+      name: 'Pusher Beams SDK',
       status: 'pending',
       message: 'Inicializando...'
     };
@@ -149,43 +147,39 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
     let isFullySubscribed = false;
     
     try {
-      const initialized = await initializeOneSignal();
+      const initialized = await initializePusherBeams();
       if (!initialized) {
-        oneSignalStatus = {
-          name: 'OneSignal SDK',
+        pusherBeamsStatus = {
+          name: 'Pusher Beams SDK',
           status: 'error',
           message: 'Falha na inicialização',
           details: 'Verifique console para mais detalhes'
         };
       } else {
-        const state = await getPushSubscriptionState();
         const subscribed = await checkIsSubscribed();
-        const playerId = await getSubscriptionId();
+        const deviceId = await getDeviceId();
         
-        isFullySubscribed = !!(subscribed && playerId && state?.optedIn);
+        isFullySubscribed = !!(subscribed && deviceId);
         
-        oneSignalStatus = {
-          name: 'OneSignal SDK',
+        pusherBeamsStatus = {
+          name: 'Pusher Beams SDK',
           status: isFullySubscribed ? 'success' : 'warning',
-          message: state?.optedIn ? 'optedIn=true' : 'optedIn=false',
-          details: [
-            playerId ? `Player ID: ${playerId.substring(0, 12)}...` : 'Sem Player ID',
-            `token: ${state?.token ? 'presente' : 'ausente'}`,
-          ].join(' | ')
+          message: subscribed ? 'Inscrito' : 'Não inscrito',
+          details: deviceId ? `Device ID: ${deviceId.substring(0, 12)}...` : 'Sem Device ID'
         };
       }
     } catch (err) {
-      oneSignalStatus = {
-        name: 'OneSignal SDK',
+      pusherBeamsStatus = {
+        name: 'Pusher Beams SDK',
         status: 'error',
         message: 'Erro no SDK',
         details: String(err)
       };
     }
     
-    diagnostics.push(oneSignalStatus);
+    diagnostics.push(pusherBeamsStatus);
     
-    // Update SW status based on OneSignal result
+    // Update SW status based on Pusher Beams result
     if (swInfo?.appOk && swInfo?.appHasPushManager) {
       const swIndex = diagnostics.findIndex(d => d.name === 'Service Worker');
       if (swIndex !== -1) {
@@ -196,7 +190,7 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
           diagnostics[swIndex] = {
             name: 'Service Worker',
             status: 'success',
-            message: 'SW unificado OK com push ativo via OneSignal.',
+            message: 'SW OK com push ativo via Pusher Beams.',
             details: `sw=${getFile(swInfo.appSW)} | scope=${swInfo.appScope}`,
           };
         } else {
