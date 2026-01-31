@@ -4,13 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { PushDiagnostics } from '@/components/push/PushDiagnostics';
+import { SINDICATO_CLINIC_ID } from '@/constants/sindicato';
 
 interface PushNotificationSetupProps {
   patientId: string | null;
   clinicId: string | null;
+  /** If true, allows anonymous users to subscribe using the fallback clinic ID */
+  allowAnonymous?: boolean;
 }
 
-export function PushNotificationSetup({ patientId, clinicId }: PushNotificationSetupProps) {
+export function PushNotificationSetup({ patientId, clinicId, allowAnonymous = false }: PushNotificationSetupProps) {
+  // Use fallback clinic ID for anonymous users in the sindicato app
+  const fallbackClinicId = allowAnonymous ? SINDICATO_CLINIC_ID : null;
+  
   const {
     isNative,
     effectiveClinicId,
@@ -19,7 +25,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
     isWebPushSubscribed,
     isWebPushLoading,
     subscribeToWebPush,
-  } = usePushNotifications({ patientId, clinicId });
+  } = usePushNotifications({ patientId, clinicId, fallbackClinicId });
 
   const canShowReconfigure =
     typeof window !== 'undefined' &&
@@ -166,7 +172,7 @@ export function PushNotificationSetup({ patientId, clinicId }: PushNotificationS
           </Button>
         )}
 
-        {!effectiveClinicId && !isResolvingClinicId && (
+        {!effectiveClinicId && !isResolvingClinicId && !allowAnonymous && (
           <p className="mt-2 text-xs text-muted-foreground text-center">
             Faça login para ativar as notificações
           </p>

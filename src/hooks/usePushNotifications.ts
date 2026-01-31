@@ -7,12 +7,14 @@ import { useResolvedClinicId } from './useResolvedClinicId';
 interface UsePushNotificationsOptions {
   patientId: string | null;
   clinicId: string | null;
+  /** Fallback clinicId to use if patientId is null and clinicId is null (for anonymous users) */
+  fallbackClinicId?: string | null;
 }
 
-export function usePushNotifications({ patientId, clinicId }: UsePushNotificationsOptions) {
+export function usePushNotifications({ patientId, clinicId, fallbackClinicId }: UsePushNotificationsOptions) {
   const [isNative, setIsNative] = useState(false);
 
-  const { effectiveClinicId, isResolvingClinicId } = useResolvedClinicId(patientId, clinicId);
+  const { effectiveClinicId, isResolvingClinicId } = useResolvedClinicId(patientId, clinicId, fallbackClinicId);
   
   // Web Push hook for PWA/browser
   const webPush = useWebPushNotifications({ patientId, clinicId: effectiveClinicId });

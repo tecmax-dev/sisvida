@@ -23,13 +23,13 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { PushNotificationSetup } from "@/components/union/PushNotificationSetup";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
-
-const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 export default function MobileInstallPage() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -158,7 +158,7 @@ export default function MobileInstallPage() {
       const { data } = await supabase
         .from("clinics")
         .select("name, logo_url")
-        .eq("id", TARGET_CLINIC_ID)
+        .eq("id", SINDICATO_CLINIC_ID)
         .single();
 
       if (data) {
@@ -307,6 +307,13 @@ export default function MobileInstallPage() {
             </CardContent>
           </Card>
         ) : null}
+
+        {/* Push Notification Setup - disponível para usuários anônimos */}
+        <PushNotificationSetup 
+          patientId={null} 
+          clinicId={null} 
+          allowAnonymous={true}
+        />
 
         {/* Aviso iOS fora do Safari */}
         {isIOS && !isSafari && (
