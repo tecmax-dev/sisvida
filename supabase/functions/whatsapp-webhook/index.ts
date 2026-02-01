@@ -372,6 +372,7 @@ async function sendWhatsAppMessage(
 
 // ==========================================
 // INTERACTIVE BUTTONS SENDER (up to 3 buttons)
+// Uses native Evolution API buttons with text fallback
 // ==========================================
 
 interface ButtonOption {
@@ -387,13 +388,53 @@ async function sendWhatsAppButtons(
   buttons: ButtonOption[],
   footer?: string
 ): Promise<boolean> {
-  // Use only numbered text for maximum compatibility across all WhatsApp clients/devices
-  console.log(`[booking] Sending numbered options to phone:`, buttons.map(b => b.text));
+  const destination = formatPhoneForWhatsApp(phone);
   
-  const numberedOptions = buttons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n');
-  const message = `${title}\n\n${description}\n\n${numberedOptions}${footer ? `\n\n${footer}` : ''}`;
+  // Limit to 3 buttons (WhatsApp API limit)
+  const limitedButtons = buttons.slice(0, 3);
   
-  return await sendWhatsAppMessage(config, phone, message);
+  console.log(`[booking] Sending native buttons to ${destination}:`, limitedButtons.map(b => b.text));
+
+  try {
+    // Try native buttons first via Evolution API
+    const formattedButtons = limitedButtons.map(btn => ({
+      buttonId: btn.id,
+      buttonText: { displayText: btn.text.substring(0, 20) } // 20 char limit
+    }));
+
+    const response = await fetch(`${config.api_url}/message/sendButtons/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: config.api_key,
+      },
+      body: JSON.stringify({
+        number: destination,
+        title: title.substring(0, 60),
+        description: description.substring(0, 1024),
+        footer: footer?.substring(0, 60) || '',
+        buttons: formattedButtons,
+      }),
+    });
+
+    const responseText = await response.text();
+
+    if (response.ok) {
+      console.log(`[booking] Native buttons sent successfully (${response.status})`);
+      return true;
+    }
+
+    // If native buttons fail, fallback to numbered text
+    console.warn(`[booking] Native buttons failed (${response.status}), using text fallback:`, responseText);
+  } catch (error) {
+    console.warn('[booking] Native buttons error, using text fallback:', error);
+  }
+
+  // Fallback: numbered text options for maximum compatibility
+  const numberedOptions = limitedButtons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n');
+  const fallbackMessage = `${title}\n\n${description}\n\n${numberedOptions}${footer ? `\n\n_${footer}_` : ''}`;
+  
+  return await sendWhatsAppMessage(config, phone, fallbackMessage);
 }
 
 // ==========================================
