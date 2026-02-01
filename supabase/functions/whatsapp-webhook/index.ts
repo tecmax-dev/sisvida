@@ -397,7 +397,9 @@ async function sendWhatsAppButtons(
 
   try {
     // Try native buttons first via Evolution API
+    // Evolution API requires 'type: "reply"' for interactive buttons
     const formattedButtons = limitedButtons.map(btn => ({
+      type: "reply",
       buttonId: btn.id,
       buttonText: { displayText: btn.text.substring(0, 20) } // 20 char limit
     }));
