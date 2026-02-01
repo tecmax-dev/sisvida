@@ -371,8 +371,8 @@ async function sendWhatsAppMessage(
 }
 
 // ==========================================
-// INTERACTIVE BUTTONS SENDER (up to 3 buttons)
-// Uses native Evolution API buttons with text fallback
+// TEXT-BASED OPTIONS SENDER (no interactive buttons)
+// Always uses numbered text format for maximum compatibility
 // ==========================================
 
 interface ButtonOption {
@@ -388,59 +388,21 @@ async function sendWhatsAppButtons(
   buttons: ButtonOption[],
   footer?: string
 ): Promise<boolean> {
-  const destination = formatPhoneForWhatsApp(phone);
-  
-  // Limit to 3 buttons (WhatsApp API limit)
+  // Limit to 3 options
   const limitedButtons = buttons.slice(0, 3);
   
-  console.log(`[booking] Sending native buttons to ${destination}:`, limitedButtons.map(b => b.text));
+  console.log(`[booking] Sending text options to ${phone}:`, limitedButtons.map(b => b.text));
 
-  try {
-    // Try native buttons first via Evolution API
-    // Evolution API requires 'type: "reply"' for interactive buttons
-    const formattedButtons = limitedButtons.map(btn => ({
-      type: "reply",
-      buttonId: btn.id,
-      buttonText: { displayText: btn.text.substring(0, 20) } // 20 char limit
-    }));
-
-    const response = await fetch(`${config.api_url}/message/sendButtons/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify({
-        number: destination,
-        title: title.substring(0, 60),
-        description: description.substring(0, 1024),
-        footer: footer?.substring(0, 60) || '',
-        buttons: formattedButtons,
-      }),
-    });
-
-    const responseText = await response.text();
-
-    if (response.ok) {
-      console.log(`[booking] Native buttons sent successfully (${response.status})`);
-      return true;
-    }
-
-    // If native buttons fail, fallback to numbered text
-    console.warn(`[booking] Native buttons failed (${response.status}), using text fallback:`, responseText);
-  } catch (error) {
-    console.warn('[booking] Native buttons error, using text fallback:', error);
-  }
-
-  // Fallback: numbered text options for maximum compatibility
+  // Always use numbered text format (no native buttons)
   const numberedOptions = limitedButtons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n');
-  const fallbackMessage = `${title}\n\n${description}\n\n${numberedOptions}${footer ? `\n\n_${footer}_` : ''}`;
+  const textMessage = `${title}\n\n${description}\n\n${numberedOptions}${footer ? `\n\n_${footer}_` : ''}`;
   
-  return await sendWhatsAppMessage(config, phone, fallbackMessage);
+  return await sendWhatsAppMessage(config, phone, textMessage);
 }
 
 // ==========================================
-// INTERACTIVE LIST SENDER (for many options)
+// TEXT-BASED LIST SENDER (no interactive lists)
+// Always uses numbered text format for maximum compatibility
 // ==========================================
 
 interface ListRow {
@@ -463,69 +425,24 @@ async function sendWhatsAppList(
   sections: ListSection[],
   footer?: string
 ): Promise<boolean> {
-  try {
-    const destination = formatPhoneForWhatsApp(phone);
-    console.log(`[booking] Sending list to ${destination}: ${sections.reduce((acc, s) => acc + s.rows.length, 0)} items`);
+  console.log(`[booking] Sending text list to ${phone}: ${sections.reduce((acc, s) => acc + s.rows.length, 0)} items`);
 
-    // Format sections for Evolution API
-    const formattedSections = sections.map(section => ({
-      title: section.title.substring(0, 24),
-      rows: section.rows.slice(0, 10).map(row => ({
-        rowId: row.id,
-        title: row.title.substring(0, 24),
-        description: row.description?.substring(0, 72) || ''
-      }))
-    }));
-
-    const response = await fetch(`${config.api_url}/message/sendList/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify({
-        number: destination,
-        title: title.substring(0, 60),
-        description: description.substring(0, 1024),
-        buttonText: buttonText.substring(0, 20),
-        footerText: footer?.substring(0, 60) || '',
-        sections: formattedSections,
-      }),
+  // Always use numbered text format (no native lists)
+  let textMessage = `${title}\n\n${description}\n\n`;
+  let globalIndex = 1;
+  
+  sections.forEach(section => {
+    if (section.title) textMessage += `*${section.title}*\n`;
+    section.rows.forEach((row) => {
+      textMessage += `${globalIndex}️⃣ ${row.title}${row.description ? ` - ${row.description}` : ''}\n`;
+      globalIndex++;
     });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error('[booking] WhatsApp List API error:', responseText);
-      // Fallback to text message if list fails
-      let fallbackMsg = `${title}\n\n${description}\n\n`;
-      sections.forEach(section => {
-        if (section.title) fallbackMsg += `*${section.title}*\n`;
-        section.rows.forEach((row, i) => {
-          fallbackMsg += `${i + 1}️⃣ ${row.title}${row.description ? ` - ${row.description}` : ''}\n`;
-        });
-        fallbackMsg += '\n';
-      });
-      if (footer) fallbackMsg += footer;
-      return await sendWhatsAppMessage(config, phone, fallbackMsg.trim());
-    }
-
-    console.log(`[booking] WhatsApp List API ok (${response.status})`);
-    return true;
-  } catch (error) {
-    console.error('[booking] Error sending WhatsApp list:', error);
-    // Fallback to text message
-    let fallbackMsg = `${title}\n\n${description}\n\n`;
-    sections.forEach(section => {
-      if (section.title) fallbackMsg += `*${section.title}*\n`;
-      section.rows.forEach((row, i) => {
-        fallbackMsg += `${i + 1}️⃣ ${row.title}${row.description ? ` - ${row.description}` : ''}\n`;
-      });
-      fallbackMsg += '\n';
-    });
-    if (footer) fallbackMsg += footer;
-    return await sendWhatsAppMessage(config, phone, fallbackMsg.trim());
-  }
+    textMessage += '\n';
+  });
+  
+  if (footer) textMessage += footer;
+  
+  return await sendWhatsAppMessage(config, phone, textMessage.trim());
 }
 
 // Helper to extract button/list response ID from message
