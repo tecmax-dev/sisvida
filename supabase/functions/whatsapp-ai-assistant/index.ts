@@ -713,26 +713,19 @@ serve(async (req) => {
 
 O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
 
-✨ *NOVO APP DO SINDICATO* ✨
+📲 *NOVO APP DO SINDICATO*
 
-Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com ainda mais praticidade:
-
-📱 *Benefícios do App:*
-• Agendamento rápido em poucos toques
+Agora você pode agendar suas consultas diretamente pelo nosso aplicativo:
+• Agendamento rápido 24h
 • Carteirinha digital sempre à mão
 • Gestão de dependentes
 • Notificações de consultas
-• Funciona offline após instalado
 
 📥 *Instale agora:*
-https://app.eclini.com.br/sindicato/instalar
+👉 Android: https://n9.cl/c2riv
+👉 iPhone: https://n9.cl/d6sl2
 
-⚠️ *Dica de instalação:*
-• iPhone: abra pelo *Safari*
-• Android: abra pelo *Chrome*
-• Toque em "Adicionar à Tela Inicial"
-
-Aproveite essa novidade! 🎉`,
+*Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial.`,
           handoff_to_booking: false
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -822,7 +815,8 @@ Agora você pode agendar suas consultas pelo nosso aplicativo:
 • Notificações de consultas
 
 📥 *Instale agora:*
-https://app.eclini.com.br/sindicato/instalar
+👉 Android: https://n9.cl/c2riv
+👉 iPhone: https://n9.cl/d6sl2
 
 *Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial."
 
@@ -889,8 +883,9 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 - Nível 04 (R$2.050): Encarregado de Loja, Subgerente e Gerente
 
 ## APLICATIVO DO SINDICATO
-- Android: https://abre.ai/nh7q
-- iPhone: https://l1nk.dev/ZiSCK
+- Android: https://n9.cl/c2riv
+- iPhone: https://n9.cl/d6sl2
+- Instalação universal: https://app.eclini.com.br/sindicato/instalar
 
 ## HOMOLOGAÇÃO
 Link: https://app.eclini.com.br/homologacao/sindicato
