@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Receipt,
   Upload,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ import { SendWelcomeWhatsAppDialog } from "@/components/union/SendWelcomeWhatsAp
 import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
+import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -182,6 +184,10 @@ export default function UnionMembersListPage() {
 
   // Import members dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // Delete member dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedMemberForDelete, setSelectedMemberForDelete] = useState<UnionMember | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -890,6 +896,18 @@ export default function UnionMembersListPage() {
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Enviar Boas-Vindas
                             </DropdownMenuItem>
+                            {canManageMembers && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedMemberForDelete(member);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir Associado
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1187,6 +1205,26 @@ export default function UnionMembersListPage() {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
       />
+
+      {/* Delete Member Dialog */}
+      {currentClinic?.id && (
+        <DeleteMemberDialog
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) setSelectedMemberForDelete(null);
+          }}
+          member={selectedMemberForDelete ? {
+            id: selectedMemberForDelete.id,
+            name: selectedMemberForDelete.name,
+            cpf: selectedMemberForDelete.cpf,
+            phone: selectedMemberForDelete.phone,
+            dependentsCount: selectedMemberForDelete.dependents_count,
+          } : null}
+          clinicId={currentClinic.id}
+          onSuccess={fetchMembers}
+        />
+      )}
     </div>
   );
 }
