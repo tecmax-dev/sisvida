@@ -33,6 +33,7 @@ import {
   Smartphone,
   Send,
   Download,
+  Shield,
 } from "lucide-react";
 import {
   Collapsible,
@@ -220,6 +221,7 @@ const unionNavTree: NavCategory[] = [
     color: "homologacao",
     items: [
       { href: "/union/configuracoes", icon: Settings, label: "Geral", permission: "union_module_access" },
+      { href: "/union/configuracoes/grupos-acesso", icon: Shield, label: "Grupos de Acesso", permission: "union_module_access" },
     ]
   }
 ];

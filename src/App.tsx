@@ -194,6 +194,7 @@ import UnionAppContentPage from "./pages/union/UnionAppContentPage";
 import UnionPWAInstallationsPage from "./pages/union/UnionPWAInstallationsPage";
 import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
+import UnionAccessGroupsPage from "./pages/union/UnionAccessGroupsPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
@@ -575,6 +576,7 @@ const App = () => (
                   <Route path="juridico/prazos/novo" element={<UnionLegalDeadlineFormPage />} />
                   <Route path="juridico/despesas" element={<UnionLegalExpensesPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
+                  <Route path="configuracoes/grupos-acesso" element={<UnionAccessGroupsPage />} />
                 </Route>
                 {/* Mobile App Routes - Rotas fixas declarativas (decisão de navegação feita no bootstrap imperativo) */}
                 <Route
