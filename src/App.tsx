@@ -15,6 +15,7 @@ import { UnionBudgetLegacyRedirect } from "@/components/routing/UnionBudgetLegac
 import { GlobalBackButton } from "@/components/layout/GlobalBackButton";
 import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
 import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
+import { DomainRedirect } from "@/components/routing/DomainRedirect";
 import { PWAUpdateListener } from "@/components/pwa/PWAUpdateListener";
 
 // Layouts (carregamento imediato - necessários para estrutura)
@@ -322,6 +323,7 @@ const App = () => (
             <BrowserRouter>
               <AuthProvider>
                 <GlobalBackButton />
+                <DomainRedirect />
                 <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />

@@ -7,8 +7,14 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-// Target clinic for SECMI
-const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+// Mapeamento de domínios personalizados para clinic_ids
+const DOMAIN_TO_CLINIC: Record<string, string> = {
+  "app.secmi.org.br": "89e7585e-7bce-4e58-91fa-c37080d1170d",
+  // Adicione outros domínios aqui
+};
+
+// Fallback clinic_id para /sindicato genérico
+const DEFAULT_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,17 +27,40 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const url = new URL(req.url);
+    const path = url.searchParams.get("path") || "/sindicato";
+    const requestedClinicId = url.searchParams.get("clinic_id");
+    
+    // Detectar clinic_id: 1) query param, 2) header de domínio, 3) fallback
+    let clinicId = requestedClinicId;
+    
+    // Tentar detectar pelo header de origem (quando chamado via proxy)
+    const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+    try {
+      const originUrl = new URL(origin);
+      if (DOMAIN_TO_CLINIC[originUrl.hostname]) {
+        clinicId = DOMAIN_TO_CLINIC[originUrl.hostname];
+      }
+    } catch {
+      // Ignorar erro de URL inválida
+    }
+    
+    // Fallback para clinic padrão
+    if (!clinicId) {
+      clinicId = DEFAULT_CLINIC_ID;
+    }
+
     // Fetch clinic and union entity data
     const { data: clinic } = await supabase
       .from("clinics")
       .select("name, logo_url, entity_nomenclature")
-      .eq("id", TARGET_CLINIC_ID)
+      .eq("id", clinicId)
       .single();
 
     const { data: unionEntity } = await supabase
       .from("union_entities")
       .select("razao_social, nome_fantasia, logo_url")
-      .eq("clinic_id", TARGET_CLINIC_ID)
+      .eq("clinic_id", clinicId)
       .eq("status", "ativa")
       .maybeSingle();
 
@@ -39,9 +68,14 @@ serve(async (req) => {
     const entityName = unionEntity?.nome_fantasia || unionEntity?.razao_social || clinic?.name || "Sindicato";
     const logoUrl = unionEntity?.logo_url || clinic?.logo_url || "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
     
-    const url = new URL(req.url);
-    const path = url.searchParams.get("path") || "/sindicato";
-    const baseUrl = "https://app.eclini.com.br";
+    // Determinar base URL baseado no domínio customizado ou padrão
+    let baseUrl = "https://app.eclini.com.br";
+    for (const [domain, cId] of Object.entries(DOMAIN_TO_CLINIC)) {
+      if (cId === clinicId) {
+        baseUrl = `https://${domain}`;
+        break;
+      }
+    }
 
     // Determine page-specific content
     let title = `${entityName} - App do Associado`;
