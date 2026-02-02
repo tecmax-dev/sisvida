@@ -7,6 +7,8 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
 import { MobileNotificationBell } from "./MobileNotificationBell";
+import { MobilePopupNotice } from "./MobilePopupNotice";
+import { useActivePopupNotices } from "@/hooks/usePopupNotices";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface MobileLayoutProps {
@@ -45,6 +47,10 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
 
   // Update PWA branding (favicon, manifest, meta tags) to clinic data
   useDynamicPWA();
+
+  // Fetch active popup notices for the clinic
+  const effectiveClinicId = clinicId || SINDICATO_CLINIC_ID;
+  const { data: popupNotices } = useActivePopupNotices(effectiveClinicId);
 
   useEffect(() => {
     if (patientId) {
@@ -158,6 +164,11 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
             );
           })}
         </nav>
+      )}
+
+      {/* Popup Notices */}
+      {popupNotices && popupNotices.length > 0 && (
+        <MobilePopupNotice notices={popupNotices} />
       )}
     </div>
   );
