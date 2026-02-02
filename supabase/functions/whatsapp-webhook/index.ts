@@ -1062,6 +1062,40 @@ async function handleAIBookingFlow(
   const clinicId = config.clinic_id;
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
 
+  // =========================================================================
+  // CRITICAL: Check if booking is disabled FIRST - block ALL booking attempts
+  // =========================================================================
+  if (config.booking_enabled === false) {
+    // Check if message contains ANY booking-related keywords
+    const bookingKeywords = [
+      'agendar', 'agendamento', 'agenda', 'marcar', 'marcação', 'remarcar',
+      'consulta', 'consultas', 'médico', 'medico', 'doutor', 'doutora',
+      'dr.', 'dra.', 'dr ', 'dra ', 'dentista', 'pediatra', 'clínico', 
+      'clinico', 'ginecologista', 'especialista',
+      'alcides', 'juliane', 'uiara', 'tiuba', 'dione',
+      'horário', 'horario', 'horários', 'horarios', 'hora', 'horas',
+      'vaga', 'vagas', 'disponível', 'disponivel', 'disponibilidade',
+      'atende', 'atendimento', 'quando atende',
+      'quero agendar', 'preciso agendar', 'gostaria de agendar',
+      'quero marcar', 'preciso marcar', 'gostaria de marcar',
+      'tem vaga', 'tem horario', 'tem horário',
+      'próxima data', 'proxima data', 'data disponível', 'data disponivel'
+    ];
+    
+    const messageLower = messageText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const keywordsNormalized = bookingKeywords.map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+    const isBookingRequest = keywordsNormalized.some(kw => messageLower.includes(kw)) || 
+                             messageText.trim() === '6' ||
+                             messageText.replace(/\D/g, '').length === 11; // CPF attempt
+    
+    if (isBookingRequest) {
+      console.log(`[ai-booking] BLOCKED: Booking disabled for clinic ${clinicId}. Message: "${messageText.substring(0, 50)}..."`);
+      await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
+      return;
+    }
+  }
+  // =========================================================================
+
   try {
     // FIRST: Check if there's an active booking session - if so, use traditional flow
     const { data: existingBookingSession } = await supabase
