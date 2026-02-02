@@ -82,19 +82,27 @@ serve(async (req) => {
     // Se NULL, significa que a clínica não tem restrição (padrão 12 meses)
     const bookingMonthsAhead = clinicConfig?.booking_months_ahead ?? 12;
 
-    // Cartão expirado
-    if (card.expires_at && new Date(card.expires_at) < new Date()) {
-      return new Response(
-        JSON.stringify({ 
-          cardExpired: true,
-          cardExpiryDate: card.expires_at,
-          professionals: [], 
-          dependents: [],
-          clinicId: card.clinic_id,
-          bookingMonthsAhead
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Cartão expirado - use midday normalization to avoid timezone issues
+    // (memory: timezone-safe-date-parsing-system-wide-v2)
+    if (card.expires_at) {
+      const expiryDate = new Date(card.expires_at);
+      expiryDate.setUTCHours(12, 0, 0, 0);
+      const nowMidDay = new Date();
+      nowMidDay.setUTCHours(12, 0, 0, 0);
+      
+      if (expiryDate < nowMidDay) {
+        return new Response(
+          JSON.stringify({ 
+            cardExpired: true,
+            cardExpiryDate: card.expires_at,
+            professionals: [], 
+            dependents: [],
+            clinicId: card.clinic_id,
+            bookingMonthsAhead
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 2. Buscar profissionais ativos da clínica COM especialidades

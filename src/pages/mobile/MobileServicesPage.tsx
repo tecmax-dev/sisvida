@@ -327,7 +327,14 @@ function DeclaracoesContent() {
         .limit(1)
         .maybeSingle();
 
-      if (!cardData || (cardData.expires_at && parseISO(cardData.expires_at) < now)) {
+      // Use midday normalization to avoid timezone issues (memory: timezone-safe-date-parsing-system-wide-v2)
+      if (!cardData || (cardData.expires_at && (() => {
+        const expiryDate = parseISO(cardData.expires_at);
+        expiryDate.setHours(12, 0, 0, 0);
+        const todayMidDay = new Date();
+        todayMidDay.setHours(12, 0, 0, 0);
+        return expiryDate < todayMidDay;
+      })())) {
         setCardExpired(true);
       }
 

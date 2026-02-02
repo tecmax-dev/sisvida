@@ -215,10 +215,15 @@ export default function DependentsPage() {
     }
   };
 
+  // Use midday normalization to avoid timezone issues (memory: timezone-safe-date-parsing-system-wide-v2)
   const isCardExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
     try {
-      return isBefore(parseISO(expiresAt), new Date());
+      const expiryDate = parseISO(expiresAt);
+      expiryDate.setHours(12, 0, 0, 0);
+      const todayMidDay = new Date();
+      todayMidDay.setHours(12, 0, 0, 0);
+      return isBefore(expiryDate, todayMidDay);
     } catch {
       return false;
     }
