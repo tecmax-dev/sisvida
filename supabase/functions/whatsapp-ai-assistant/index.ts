@@ -970,15 +970,31 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
     // Additional safety: If booking is disabled and message contains booking keywords, 
     // return the maintenance message immediately without calling the AI
     if (!isBookingEnabled) {
+      // Comprehensive list of booking-related keywords in Portuguese
       const bookingKeywords = [
-        'agendar', 'agendamento', 'marcar', 'consulta', 'médico', 'doutor', 'doutora',
-        'dr.', 'dra.', 'dentista', 'pediatra', 'clínico', 'ginecologista',
-        'alcides', 'juliane', 'uiara', 'horário', 'horarios', 'vaga', 'disponível',
-        'disponivel', 'atende', 'atendimento médico', 'consulta médica'
+        // Verbos de agendamento
+        'agendar', 'agendamento', 'agenda', 'marcar', 'marcação', 'remarcar',
+        'desmarcar', 'cancelar consulta', 'cancelar agendamento',
+        // Palavras médicas
+        'consulta', 'consultas', 'médico', 'medico', 'doutor', 'doutora',
+        'dr.', 'dra.', 'dr ', 'dra ', 'dentista', 'pediatra', 'clínico', 
+        'clinico', 'ginecologista', 'especialista',
+        // Nomes de profissionais do SECMI
+        'alcides', 'juliane', 'uiara', 'tiuba', 'dione',
+        // Horários e disponibilidade
+        'horário', 'horario', 'horários', 'horarios', 'hora', 'horas',
+        'vaga', 'vagas', 'disponível', 'disponivel', 'disponibilidade',
+        'atende', 'atendimento', 'quando atende',
+        // Frases comuns
+        'quero agendar', 'preciso agendar', 'gostaria de agendar',
+        'quero marcar', 'preciso marcar', 'gostaria de marcar',
+        'tem vaga', 'tem horario', 'tem horário',
+        'próxima data', 'proxima data', 'data disponível', 'data disponivel'
       ];
       
-      const messageLower = message.toLowerCase();
-      const isBookingRequest = bookingKeywords.some(kw => messageLower.includes(kw)) || message.trim() === '6';
+      const messageLower = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const keywordsNormalized = bookingKeywords.map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+      const isBookingRequest = keywordsNormalized.some(kw => messageLower.includes(kw)) || message.trim() === '6';
       
       if (isBookingRequest) {
         console.log(`[ai-assistant] BLOCKED: Booking request detected while disabled. Message: "${message.substring(0, 50)}..."`);
