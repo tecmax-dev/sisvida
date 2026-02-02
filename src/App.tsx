@@ -170,6 +170,7 @@ import UnionBudgetPage from "./pages/union/budget/UnionBudgetPage";
 import UnionBudgetDetailPage from "./pages/union/budget/UnionBudgetDetailPage";
 import UnionPlansPage from "./pages/union/UnionPlansPage";
 import UnionEmployersPage from "./pages/union/UnionEmployersPage";
+import UnionEmployerDetailPage from "./pages/union/UnionEmployerDetailPage";
 import UnionAccountingOfficesPage from "./pages/union/UnionAccountingOfficesPage";
 import UnionMembersListPage from "./pages/union/UnionMembersListPage";
 import UnionMemberDetailPage from "./pages/union/UnionMemberDetailPage";
@@ -527,6 +528,7 @@ const App = () => (
                   <Route path="orcamento/:id" element={<UnionBudgetLegacyRedirect />} />
                   <Route path="planos" element={<UnionPlansPage />} />
                   <Route path="empresas" element={<UnionEmployersPage />} />
+                  <Route path="empresas/:id" element={<UnionEmployerDetailPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
                   <Route path="socios" element={<UnionMembersListPage />} />
                   <Route path="socios/novo" element={<UnionMemberNewPage />} />
