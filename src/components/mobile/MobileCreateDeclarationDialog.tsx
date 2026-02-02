@@ -123,8 +123,15 @@ export function MobileCreateDeclarationDialog({
     enabled: !!patientId && open,
   });
 
-  // Determine if card is expired
-  const isCardExpired = !activeCard || (activeCard.expires_at && isPast(parseISO(activeCard.expires_at)));
+  // Determine if card is expired using midday normalization to avoid timezone issues
+  // (memory: timezone-safe-date-parsing-system-wide-v2)
+  const isCardExpired = !activeCard || (activeCard.expires_at && (() => {
+    const expiryDate = parseISO(activeCard.expires_at);
+    expiryDate.setHours(12, 0, 0, 0);
+    const todayMidDay = new Date();
+    todayMidDay.setHours(12, 0, 0, 0);
+    return expiryDate < todayMidDay;
+  })());
 
   // Check if a benefit already has an active authorization
   const hasActiveAuthorization = (benefitId: string) => {

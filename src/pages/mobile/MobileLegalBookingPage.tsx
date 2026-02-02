@@ -195,25 +195,33 @@ export default function MobileLegalBookingPage() {
       if (cardData) {
         setCardInfo(cardData);
         
-        // Check if card is expired
-        if (cardData.expires_at && isPast(parseISO(cardData.expires_at))) {
-          setCardExpired(true);
+        // Check if card is expired using midday normalization to avoid timezone issues
+        // (memory: timezone-safe-date-parsing-system-wide-v2)
+        if (cardData.expires_at) {
+          const expiryDate = parseISO(cardData.expires_at);
+          expiryDate.setHours(12, 0, 0, 0);
+          const todayMidDay = new Date();
+          todayMidDay.setHours(12, 0, 0, 0);
           
-          // Check if there's already a pending payslip request
-          const { data: pendingRequest } = await supabase
-            .from("payslip_requests")
-            .select("id, status")
-            .eq("patient_id", authPatientId)
-            .eq("card_id", cardData.id)
-            .in("status", ["pending", "received"])
-            .limit(1);
-          
-          if (pendingRequest && pendingRequest.length > 0) {
-            setHasPendingPayslip(true);
+          if (expiryDate < todayMidDay) {
+            setCardExpired(true);
+            
+            // Check if there's already a pending payslip request
+            const { data: pendingRequest } = await supabase
+              .from("payslip_requests")
+              .select("id, status")
+              .eq("patient_id", authPatientId)
+              .eq("card_id", cardData.id)
+              .in("status", ["pending", "received"])
+              .limit(1);
+            
+            if (pendingRequest && pendingRequest.length > 0) {
+              setHasPendingPayslip(true);
+            }
+            
+            setLoading(false);
+            return;
           }
-          
-          setLoading(false);
-          return;
         }
       }
 
