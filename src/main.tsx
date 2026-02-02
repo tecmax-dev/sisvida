@@ -3,6 +3,10 @@ import { registerSW } from 'virtual:pwa-register';
 import App from "./App.tsx";
 import "./index.css";
 
+// Hard reset (apaga caches + desregistra SW) uma vez por versão para forçar atualização imediata
+const PWA_HARD_RESET_VERSION = "20260202c";
+const PWA_HARD_RESET_STORAGE_KEY = "pwa_hard_reset_version";
+
 /**
  * BOOTSTRAP IMPERATIVO - Executa ANTES do React
  * 
@@ -38,6 +42,48 @@ async function bootstrapApp() {
   
   // Agora renderizar React com a rota já definida
   await renderApp();
+}
+
+/**
+ * Limpeza HARD do PWA:
+ * - desregistra service workers
+ * - apaga TODOS os caches (incluindo precache de assets)
+ * 
+ * Executa apenas 1x por versão para evitar loops e não degradar performance.
+ */
+async function hardResetPWAIfNeeded(): Promise<boolean> {
+  try {
+    const alreadyResetForThisVersion =
+      localStorage.getItem(PWA_HARD_RESET_STORAGE_KEY) === PWA_HARD_RESET_VERSION;
+
+    if (alreadyResetForThisVersion) return false;
+
+    // Marcar ANTES do reload para evitar loop
+    localStorage.setItem(PWA_HARD_RESET_STORAGE_KEY, PWA_HARD_RESET_VERSION);
+
+    console.log('[PWA] Hard reset iniciado (limpeza total de caches + SW)');
+
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations.map((r) => r.unregister().catch(() => undefined))
+      );
+      console.log('[PWA] Service Workers desregistrados');
+    }
+
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      console.log('[PWA] Todos os caches apagados:', cacheNames);
+    }
+
+    // Recarregar para baixar assets novos e registrar SW novamente
+    window.location.reload();
+    return true;
+  } catch (e) {
+    console.warn('[PWA] Falha no hard reset (continuando):', e);
+    return false;
+  }
 }
 
 // Limpar TODOS os caches ao iniciar o app para garantir dados frescos
@@ -92,6 +138,10 @@ async function forceServiceWorkerUpdate() {
 }
 
 async function renderApp() {
+  // Forçar limpeza total UMA VEZ nesta versão para aplicar alterações imediatamente
+  const didHardReset = await hardResetPWAIfNeeded();
+  if (didHardReset) return;
+
   // Limpar caches de dados ANTES de renderizar (aguardar conclusão)
   console.log('[PWA] Iniciando limpeza de cache...');
   await clearAllCaches();
