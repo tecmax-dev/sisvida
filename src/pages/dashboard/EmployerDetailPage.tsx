@@ -159,6 +159,9 @@ const STATUS_CONFIG = {
 export default function EmployerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = window.location.pathname;
+  const isUnionModule = location.startsWith("/union");
+  const backUrl = isUnionModule ? "/union/empresas" : "/dashboard/empresas";
   const { currentClinic, session } = useAuth();
 
   const [employer, setEmployer] = useState<Employer | null>(null);
@@ -303,7 +306,7 @@ export default function EmployerDetailPage() {
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados da empresa");
-      navigate("/dashboard/empresas");
+      navigate(backUrl);
     } finally {
       setLoading(false);
     }
@@ -795,7 +798,7 @@ export default function EmployerDetailPage() {
     <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/empresas")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
