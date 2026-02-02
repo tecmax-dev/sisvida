@@ -24,6 +24,7 @@ import {
   Receipt,
   Upload,
   Trash2,
+  Bell,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFi
 import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
 import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -490,6 +492,52 @@ export default function UnionMembersListPage() {
     navigate(`/union/socios/${memberId}`);
   };
 
+  // Enviar notificação rápida de carteirinha atualizada via WhatsApp
+  const handleSendCardNotification = async (member: UnionMember) => {
+    if (!currentClinic || !member.phone) {
+      toast({
+        title: "Erro",
+        description: "Telefone do associado não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const expiryText = member.card_expires_at 
+        ? format(parseISO(member.card_expires_at), "dd/MM/yyyy")
+        : "não definida";
+
+      const message = `✅ *Carteirinha Atualizada!*\n\nOlá ${member.name}! 👋\n\nSua carteirinha foi atualizada com sucesso!\n\n📅 *Nova validade:* ${expiryText}\n${member.card_number ? `🎫 *Número:* ${member.card_number}\n` : ""}\nAtenciosamente,\n${currentClinic.name}`;
+
+      const result = await sendWhatsAppMessage({
+        phone: member.phone,
+        message,
+        clinicId: currentClinic.id,
+        type: "custom",
+      });
+
+      if (result.success) {
+        toast({
+          title: "Notificação enviada!",
+          description: `${member.name} foi notificado(a) sobre a carteirinha.`,
+        });
+      } else {
+        toast({
+          title: "Erro ao enviar",
+          description: result.error || "Não foi possível enviar a notificação.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao enviar notificação.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Stats
   const activeCount = useMemo(() => members.filter((m) => m.is_active !== false).length, [members]);
   const inactiveCount = useMemo(() => totalMembers - activeCount, [totalMembers, activeCount]);
@@ -896,6 +944,15 @@ export default function UnionMembersListPage() {
                               <MessageCircle className="h-4 w-4 mr-2" />
                               Enviar Boas-Vindas
                             </DropdownMenuItem>
+                            {member.card_expires_at && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendCardNotification(member)}
+                                className="text-blue-600"
+                              >
+                                <Bell className="h-4 w-4 mr-2" />
+                                Notificar Carteirinha
+                              </DropdownMenuItem>
+                            )}
                             {canManageMembers && (
                               <DropdownMenuItem
                                 onClick={() => {
