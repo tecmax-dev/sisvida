@@ -2589,7 +2589,12 @@ Deno.serve(async (req) => {
           reason?: string;
           paidAt?: string;
           paidValue?: number;
+          feeAmount?: number;
+          netValue?: number;
+          paymentMethod?: string;
           source?: string;
+          dueDate?: string;
+          originalValue?: number;
         }> = [];
 
         try {
@@ -2847,7 +2852,12 @@ Deno.serve(async (req) => {
                 result: "conciliated",
                 paidAt: paidAt || undefined,
                 paidValue: paidValueCents || undefined,
+                feeAmount: feeAmount || undefined,
+                netValue: netValue || undefined,
+                paymentMethod: paymentMethod || undefined,
                 source: invoiceSource,
+                dueDate: contrib.due_date || undefined,
+                originalValue: contrib.value || undefined,
               });
 
               // Registrar no log de conciliação

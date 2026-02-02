@@ -193,6 +193,24 @@ export function LytexConciliationHistoryDialog({
     }
   };
 
+  const getPaymentMethodLabel = (method: string | null | undefined) => {
+    if (!method) return "-";
+    switch (method.toLowerCase()) {
+      case "boleto":
+      case "bank_slip":
+        return "Boleto";
+      case "pix":
+        return "PIX";
+      case "credit_card":
+      case "credit":
+        return "Cartão";
+      case "transfer":
+        return "Transferência";
+      default:
+        return method;
+    }
+  };
+
   const getConciliationLogsForSync = (syncLogId: string) => {
     return conciliationLogs.filter((log) => log.id === syncLogId);
   };
@@ -292,27 +310,47 @@ export function LytexConciliationHistoryDialog({
                                 <TableRow>
                                   <TableHead>Empresa</TableHead>
                                   <TableHead>Competência</TableHead>
+                                  <TableHead>Vencimento</TableHead>
                                   <TableHead>Resultado</TableHead>
-                                  <TableHead>Valor Pago</TableHead>
+                                  <TableHead className="text-right">Valor Original</TableHead>
+                                  <TableHead className="text-right">Valor Pago</TableHead>
+                                  <TableHead className="text-right">Taxa</TableHead>
+                                  <TableHead className="text-right">Valor Líquido</TableHead>
+                                  <TableHead>Forma Pgto</TableHead>
                                   <TableHead>Data Pagamento</TableHead>
                                   <TableHead>Motivo</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {log.details.items.slice(0, 50).map((item: any, idx: number) => (
-                                  <TableRow key={idx}>
+                                  <TableRow key={idx} className={item.result === "conciliated" ? "bg-green-50/50" : ""}>
                                     <TableCell className="font-medium">
                                       {item.employerName || "-"}
                                     </TableCell>
                                     <TableCell>{item.competence || "-"}</TableCell>
-                                    <TableCell>{getResultBadge(item.result)}</TableCell>
                                     <TableCell>
+                                      {item.dueDate ? format(new Date(item.dueDate), "dd/MM/yyyy", { locale: ptBR }) : "-"}
+                                    </TableCell>
+                                    <TableCell>{getResultBadge(item.result)}</TableCell>
+                                    <TableCell className="text-right">
+                                      {item.originalValue ? formatCurrency(item.originalValue) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium text-green-700">
                                       {item.paidValue ? formatCurrency(item.paidValue) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right text-orange-600">
+                                      {item.feeAmount ? formatCurrency(item.feeAmount) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">
+                                      {item.netValue ? formatCurrency(item.netValue) : "-"}
+                                    </TableCell>
+                                    <TableCell>
+                                      {getPaymentMethodLabel(item.paymentMethod)}
                                     </TableCell>
                                     <TableCell>
                                       {item.paidAt ? formatDateTime(item.paidAt) : "-"}
                                     </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={item.reason}>
                                       {item.reason || "-"}
                                     </TableCell>
                                   </TableRow>
@@ -323,6 +361,51 @@ export function LytexConciliationHistoryDialog({
                               <p className="text-sm text-muted-foreground text-center mt-2">
                                 Exibindo 50 de {log.details.items.length} itens
                               </p>
+                            )}
+                            
+                            {/* Resumo dos valores */}
+                            {log.sync_type === "fetch_paid_invoices" && log.details.items.some((item: any) => item.result === "conciliated") && (
+                              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <h4 className="font-medium text-green-800 mb-2">Resumo dos Boletos Conciliados</h4>
+                                <div className="grid grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Total Pago:</span>
+                                    <p className="font-bold text-green-700">
+                                      {formatCurrency(
+                                        log.details.items
+                                          .filter((item: any) => item.result === "conciliated")
+                                          .reduce((sum: number, item: any) => sum + (item.paidValue || 0), 0)
+                                      )}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Total Taxas:</span>
+                                    <p className="font-bold text-orange-600">
+                                      {formatCurrency(
+                                        log.details.items
+                                          .filter((item: any) => item.result === "conciliated")
+                                          .reduce((sum: number, item: any) => sum + (item.feeAmount || 0), 0)
+                                      )}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Total Líquido:</span>
+                                    <p className="font-bold text-primary">
+                                      {formatCurrency(
+                                        log.details.items
+                                          .filter((item: any) => item.result === "conciliated")
+                                          .reduce((sum: number, item: any) => sum + (item.netValue || 0), 0)
+                                      )}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Qtd Boletos:</span>
+                                    <p className="font-bold">
+                                      {log.details.items.filter((item: any) => item.result === "conciliated").length}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             )}
                           </div>
                         ) : (
