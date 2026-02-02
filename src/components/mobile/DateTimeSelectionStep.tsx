@@ -107,37 +107,35 @@ export function DateTimeSelectionStep({
         </div>
         
         {availableDates.length > 0 ? (
-          <div className="overflow-x-auto pb-2 -mx-1 px-1">
-            <div className="flex gap-2" style={{ width: 'max-content' }}>
-              {availableDates.map((date) => {
-                const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
-                return (
-                  <button
-                    key={format(date, "yyyy-MM-dd")}
-                    type="button"
-                    className={`flex-shrink-0 w-[72px] rounded-xl border-2 p-3 text-center transition-all ${
-                      isSelected 
-                        ? "border-emerald-600 bg-emerald-50 shadow-md" 
-                        : "border-border bg-card hover:border-emerald-300"
-                    }`}
-                    onClick={() => setSelectedDate(date)}
-                  >
-                    <p className={`text-[11px] font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                      {format(date, "EEE", { locale: ptBR })}
-                    </p>
-                    <p className={`text-xl font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
-                      {format(date, "dd")}
-                    </p>
-                    <p className={`text-[11px] ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                      {format(date, "MMM", { locale: ptBR })}
-                    </p>
-                    {isSelected && (
-                      <Check className="h-4 w-4 text-emerald-600 mx-auto mt-1" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-4 gap-2">
+            {availableDates.map((date) => {
+              const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
+              return (
+                <button
+                  key={format(date, "yyyy-MM-dd")}
+                  type="button"
+                  className={`rounded-xl border-2 p-2 text-center transition-all ${
+                    isSelected 
+                      ? "border-emerald-600 bg-emerald-50 shadow-md" 
+                      : "border-border bg-card hover:border-emerald-300"
+                  }`}
+                  onClick={() => setSelectedDate(date)}
+                >
+                  <p className={`text-[10px] font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                    {format(date, "EEE", { locale: ptBR })}
+                  </p>
+                  <p className={`text-lg font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
+                    {format(date, "dd")}
+                  </p>
+                  <p className={`text-[10px] ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                    {format(date, "MMM", { locale: ptBR })}
+                  </p>
+                  {isSelected && (
+                    <Check className="h-3 w-3 text-emerald-600 mx-auto mt-1" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-6 bg-muted/50 rounded-lg">
@@ -165,28 +163,26 @@ export function DateTimeSelectionStep({
           </p>
 
           {availableTimeSlots.length > 0 ? (
-            <div className="overflow-x-auto pb-2 -mx-1 px-1">
-              <div className="flex gap-2" style={{ width: 'max-content' }}>
-                {availableTimeSlots.map((slot) => {
-                  const isSelected = selectedTime === slot.time;
-                  return (
-                    <button
-                      key={slot.time}
-                      type="button"
-                      className={`flex-shrink-0 w-[140px] rounded-xl border-2 py-4 px-3 text-center transition-all ${
-                        isSelected 
-                          ? "border-emerald-600 bg-emerald-600 text-white shadow-md" 
-                          : "border-border bg-card hover:border-emerald-300"
-                      }`}
-                      onClick={() => setSelectedTime(slot.time)}
-                    >
-                      <p className={`text-base font-semibold ${isSelected ? "text-white" : "text-foreground"}`}>
-                        {slot.time}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              {availableTimeSlots.map((slot) => {
+                const isSelected = selectedTime === slot.time;
+                return (
+                  <button
+                    key={slot.time}
+                    type="button"
+                    className={`rounded-xl border-2 py-3 px-2 text-center transition-all ${
+                      isSelected 
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-md" 
+                        : "border-border bg-card hover:border-emerald-300"
+                    }`}
+                    onClick={() => setSelectedTime(slot.time)}
+                  >
+                    <p className={`text-base font-semibold ${isSelected ? "text-white" : "text-foreground"}`}>
+                      {slot.time}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-6 bg-muted/50 rounded-lg">
