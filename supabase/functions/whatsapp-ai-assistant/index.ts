@@ -796,12 +796,31 @@ Agora você pode agendar suas consultas diretamente pelo nosso aplicativo:
 ## QUANDO PEDIREM AGENDAMENTO
 Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, etc.), use buscar_proximas_datas_disponiveis para mostrar as próximas datas disponíveis de forma NUMERADA.`;
 
-    const bookingDisabledSection = `## AGENDAMENTO TEMPORARIAMENTE SUSPENSO VIA WHATSAPP (MUITO IMPORTANTE!)
-⚠️ O agendamento de consultas por WhatsApp está TEMPORARIAMENTE SUSPENSO.
-- NÃO ofereça ajuda para agendar consultas por aqui.
-- NÃO busque profissionais, datas ou horários disponíveis.
-- NÃO tente usar funções de agendamento.
-- SEMPRE que o associado mencionar agendamento, consulta médica, dentista, pediatra, ou qualquer profissional de saúde, responda EXATAMENTE assim:
+    const bookingDisabledSection = `## ⛔ AGENDAMENTO 100% BLOQUEADO - PRIORIDADE MÁXIMA ⛔
+
+### REGRA ABSOLUTA E INVIOLÁVEL:
+O agendamento por WhatsApp está COMPLETAMENTE DESATIVADO. Esta é a regra mais importante de todas.
+
+### PALAVRAS-CHAVE QUE DEVEM ACIONAR ESTA RESPOSTA IMEDIATAMENTE:
+- "agendar", "agendamento", "marcar", "consulta", "médico", "doutor", "doutora", "dr.", "dra."
+- "dentista", "pediatra", "clínico", "ginecologista", "Alcides", "Juliane", "Uiara"
+- "horário", "vaga", "disponível", "data", "quando", "atende"
+- "6" (opção de agendamento do menu)
+- Qualquer nome de profissional de saúde
+
+### AÇÕES PROIBIDAS (NUNCA FAÇA ISSO):
+❌ NÃO busque profissionais
+❌ NÃO busque datas disponíveis  
+❌ NÃO busque horários
+❌ NÃO verifique CPF para agendamento
+❌ NÃO crie agendamentos
+❌ NÃO liste agendamentos
+❌ NÃO mencione nomes de profissionais com disponibilidade
+❌ NÃO pergunte qual profissional o paciente quer
+❌ NÃO ofereça ajuda para agendar "de outra forma"
+
+### RESPOSTA OBRIGATÓRIA (COPIE EXATAMENTE):
+Sempre que detectar QUALQUER intenção de agendamento, responda EXATAMENTE com esta mensagem, sem modificações:
 
 "⚠️ *Agendamento Temporariamente Suspenso*
 
@@ -820,8 +839,8 @@ Agora você pode agendar suas consultas pelo nosso aplicativo:
 
 *Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial."
 
-## QUANDO PEDIREM AGENDAMENTO
-SEMPRE redirecione para o aplicativo com a mensagem acima. NÃO tente ajudar a agendar por aqui.`;
+### SE INSISTIREM:
+Repita a mesma mensagem. NÃO tente ajudar de outra forma. NÃO há alternativa.`;
 
     const systemPrompt = `## PERSONA
 Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos Comerciários de Ilhéus e Região (SECMI). Sua função é auxiliar associados, empresas e escritórios de contabilidade a terem acesso aos serviços disponibilizados pelo sindicato de forma eficiente e amigável.
@@ -928,7 +947,8 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
     console.log('[ai-assistant] Sending to AI with', messages.length, 'messages');
 
     // Filter tools based on booking_enabled status
-    // When booking is disabled, remove all booking-related tools
+    // When booking is disabled, remove ALL tools to prevent any booking attempts
+    // This is a critical safety measure - the AI should ONLY respond with text
     const bookingToolNames = [
       'buscar_profissionais',
       'buscar_proximas_datas_disponiveis', 
@@ -939,11 +959,52 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
       'cancelar_agendamento'
     ];
     
+    // CRITICAL: When booking is disabled, provide NO tools at all
+    // This forces the AI to only respond with text and follow the system prompt
     const activeTools = isBookingEnabled 
       ? tools 
-      : tools.filter(t => !bookingToolNames.includes(t.function.name));
+      : []; // Empty array = no tools available when booking is disabled
     
-    console.log(`[ai-assistant] Active tools: ${activeTools.map(t => t.function.name).join(', ')}`);
+    console.log(`[ai-assistant] Booking enabled: ${isBookingEnabled}, Active tools: ${activeTools.length > 0 ? activeTools.map(t => t.function.name).join(', ') : 'NONE (booking disabled)'}`);
+    
+    // Additional safety: If booking is disabled and message contains booking keywords, 
+    // return the maintenance message immediately without calling the AI
+    if (!isBookingEnabled) {
+      const bookingKeywords = [
+        'agendar', 'agendamento', 'marcar', 'consulta', 'médico', 'doutor', 'doutora',
+        'dr.', 'dra.', 'dentista', 'pediatra', 'clínico', 'ginecologista',
+        'alcides', 'juliane', 'uiara', 'horário', 'horarios', 'vaga', 'disponível',
+        'disponivel', 'atende', 'atendimento médico', 'consulta médica'
+      ];
+      
+      const messageLower = message.toLowerCase();
+      const isBookingRequest = bookingKeywords.some(kw => messageLower.includes(kw)) || message.trim() === '6';
+      
+      if (isBookingRequest) {
+        console.log(`[ai-assistant] BLOCKED: Booking request detected while disabled. Message: "${message.substring(0, 50)}..."`);
+        return new Response(JSON.stringify({ 
+          response: `⚠️ *Agendamento Temporariamente Suspenso*
+
+O agendamento por WhatsApp está suspenso no momento, mas temos uma *novidade ainda melhor* para você!
+
+📲 *NOVO APP DO SINDICATO*
+Agora você pode agendar suas consultas pelo nosso aplicativo:
+• Agendamento rápido 24h
+• Carteirinha digital
+• Gestão de dependentes
+• Notificações de consultas
+
+📥 *Instale agora:*
+👉 Android: https://n9.cl/c2riv
+👉 iPhone: https://n9.cl/d6sl2
+
+*Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial.`,
+          booking_blocked: true
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Helper function to call AI API with fallback
     const callAI = async (msgs: any[], useTools: boolean = true): Promise<Response> => {
