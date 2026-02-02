@@ -61,12 +61,16 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true, // Limpar caches antigos automaticamente
         skipWaiting: true, // Ativar novo SW imediatamente
         clientsClaim: true, // Tomar controle imediatamente - atualizações mais rápidas
+        // Force cache invalidation with version timestamp
+        additionalManifestEntries: [
+          { url: '/cache-bust-v20260202a', revision: null }
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
             options: {
-              cacheName: "supabase-cache",
+              cacheName: "supabase-cache-v2",
               networkTimeoutSeconds: 3, // Timeout rápido para fallback
               expiration: {
                 maxEntries: 30,
