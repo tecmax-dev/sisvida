@@ -8,10 +8,9 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
-import { format, addDays, startOfDay, endOfMonth, addMonths } from "date-fns";
+import { format, addDays, startOfDay, endOfMonth, addMonths, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
 interface Professional {
   id: string;
   name: string;
@@ -82,11 +81,22 @@ export function DateTimeSelectionStep({
     return dates;
   }, [professional, isDateEnabled, lastAllowedDate]);
 
-  const availableTimeSlots = availableSlots.filter(s => s.available);
+  // Filtrar horários disponíveis, excluindo horários passados se for o dia atual
+  const availableTimeSlots = useMemo(() => {
+    const slots = availableSlots.filter(s => s.available);
+    
+    // Se a data selecionada for hoje, filtrar horários que já passaram
+    if (selectedDate && isToday(selectedDate)) {
+      const now = new Date();
+      const currentTime = format(now, "HH:mm");
+      return slots.filter(slot => slot.time > currentTime);
+    }
+    
+    return slots;
+  }, [availableSlots, selectedDate]);
   
   // Verificar se há restrição de meses ativa (para exibir mensagem)
   const hasMonthRestriction = bookingMonthsAhead < 12;
-
   return (
     <div className="space-y-6">
       {/* Mensagem de restrição de período (se aplicável) */}
