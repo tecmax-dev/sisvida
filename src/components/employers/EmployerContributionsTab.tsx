@@ -31,6 +31,9 @@ import {
   Calendar,
   FileText,
   Handshake,
+  TrendingUp,
+  Wallet,
+  CircleDollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
@@ -136,6 +139,50 @@ interface EmployerContributionsTabProps {
 
 function formatCompetence(month: number, year: number): string {
   return `${String(month).padStart(2, "0")}/${year}`;
+}
+
+// Status Filter Badge Component
+function StatusFilterBadge({
+  label,
+  count,
+  active,
+  onClick,
+  variant = "default",
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+  variant?: "default" | "success" | "warning" | "danger" | "muted";
+}) {
+  const baseClasses = "cursor-pointer transition-all px-3 py-1.5 rounded-full text-sm font-medium border";
+  
+  const variants = {
+    default: active 
+      ? "bg-primary text-primary-foreground border-primary" 
+      : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
+    success: active 
+      ? "bg-emerald-500 text-white border-emerald-500" 
+      : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+    warning: active 
+      ? "bg-amber-500 text-white border-amber-500" 
+      : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+    danger: active 
+      ? "bg-rose-500 text-white border-rose-500" 
+      : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100",
+    muted: active 
+      ? "bg-gray-500 text-white border-gray-500" 
+      : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100",
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`${baseClasses} ${variants[variant]}`}
+    >
+      {label} <span className="ml-1 font-bold">{count}</span>
+    </button>
+  );
 }
 
 // Contribution Card Component
@@ -293,16 +340,42 @@ export default function EmployerContributionsTab({
   onGenerateInvoice,
   onOpenNegotiationDialog,
 }: EmployerContributionsTabProps) {
-  const [filteredContributions, setFilteredContributions] = useState<Contribution[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [overdueCollapsed, setOverdueCollapsed] = useState(false);
 
   // Check if there are overdue or pending contributions for negotiation
   const hasNegotiableContributions = useMemo(() => {
     return contributions.some(c => c.status === "overdue" || c.status === "pending");
   }, [contributions]);
-  const displayContributions = filteredContributions.length > 0 ? filteredContributions : contributions;
 
-  // Separate contributions by status
+  // Status counts
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: contributions.length,
+      paid: 0,
+      pending: 0,
+      overdue: 0,
+      cancelled: 0,
+    };
+    contributions.forEach(c => {
+      if (c.status === "paid") counts.paid++;
+      else if (c.status === "pending" || c.status === "awaiting_value" || c.status === "processing") counts.pending++;
+      else if (c.status === "overdue") counts.overdue++;
+      else if (c.status === "cancelled") counts.cancelled++;
+    });
+    return counts;
+  }, [contributions]);
+
+  // Filter contributions by status
+  const displayContributions = useMemo(() => {
+    if (statusFilter === "all") return contributions;
+    if (statusFilter === "pending") {
+      return contributions.filter(c => c.status === "pending" || c.status === "awaiting_value" || c.status === "processing");
+    }
+    return contributions.filter(c => c.status === statusFilter);
+  }, [contributions, statusFilter]);
+
+  // Separate contributions by status for display
   const { activeContributions, overdueContributions } = useMemo(() => {
     const overdue = displayContributions.filter(c => c.status === "overdue").sort(
       (a, b) => parseDateOnlyToLocalNoon(a.due_date).getTime() - parseDateOnlyToLocalNoon(b.due_date).getTime()
@@ -310,6 +383,13 @@ export default function EmployerContributionsTab({
     const active = displayContributions.filter(c => c.status !== "overdue");
     return { activeContributions: active, overdueContributions: overdue };
   }, [displayContributions]);
+
+  // Calculate pending value
+  const pendingValue = useMemo(() => {
+    return contributions
+      .filter(c => c.status === "pending" || c.status === "overdue" || c.status === "awaiting_value")
+      .reduce((acc, c) => acc + c.value, 0);
+  }, [contributions]);
 
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedContributionIds);
@@ -339,59 +419,97 @@ export default function EmployerContributionsTab({
 
   return (
     <div className="space-y-4">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Total {new Date().getFullYear()}</p>
-            <p className="text-xl font-bold">{stats.yearTotal}</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(stats.totalValue)}</p>
+      {/* Status Filter Badges */}
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusFilterBadge
+          label="Todos"
+          count={statusCounts.all}
+          active={statusFilter === "all"}
+          onClick={() => setStatusFilter("all")}
+          variant="default"
+        />
+        <StatusFilterBadge
+          label="Pagos"
+          count={statusCounts.paid}
+          active={statusFilter === "paid"}
+          onClick={() => setStatusFilter("paid")}
+          variant="success"
+        />
+        <StatusFilterBadge
+          label="Pendentes"
+          count={statusCounts.pending}
+          active={statusFilter === "pending"}
+          onClick={() => setStatusFilter("pending")}
+          variant="warning"
+        />
+        <StatusFilterBadge
+          label="Vencidos"
+          count={statusCounts.overdue}
+          active={statusFilter === "overdue"}
+          onClick={() => setStatusFilter("overdue")}
+          variant="danger"
+        />
+        <StatusFilterBadge
+          label="Cancelados"
+          count={statusCounts.cancelled}
+          active={statusFilter === "cancelled"}
+          onClick={() => setStatusFilter("cancelled")}
+          variant="muted"
+        />
+      </div>
+
+      {/* Summary Cards - 3 columns */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total</p>
+                <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                  {formatCurrency(stats.totalValue)}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Pagos</p>
-            <p className="text-xl font-bold text-emerald-600">{stats.paid}</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(stats.paidValue)}</p>
+
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <Wallet className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Recebido</p>
+                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                  {formatCurrency(stats.paidValue)}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Pendentes</p>
-            <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-rose-500">
-          <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Vencidos</p>
-            <p className="text-xl font-bold text-rose-600">{stats.overdue}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-500 col-span-2 sm:col-span-1">
-          <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Histórico Total</p>
-            <p className="text-xl font-bold text-blue-600">{stats.total}</p>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border-amber-200 dark:border-amber-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <CircleDollarSign className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Pendente</p>
+                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                  {formatCurrency(pendingValue)}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <EmployerContributionFilters
-        contributions={contributions}
-        onFilterChange={setFilteredContributions}
-        onSendOverdueWhatsApp={onOpenOverdueDialog}
-        employerName={employer?.name || ""}
-        employerCnpj={employer?.cnpj || ""}
-        clinicInfo={currentClinic ? {
-          name: currentClinic.name,
-          cnpj: currentClinic.cnpj,
-          phone: currentClinic.phone,
-          address: currentClinic.address,
-          logoUrl,
-        } : undefined}
-      />
-
-      {/* Actions */}
+      {/* Actions Row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Checkbox
@@ -499,7 +617,7 @@ export default function EmployerContributionsTab({
           )}
 
           {/* Overdue Contributions - At Bottom, Collapsible */}
-          {overdueContributions.length > 0 && (
+          {overdueContributions.length > 0 && statusFilter !== "overdue" && (
             <Collapsible open={!overdueCollapsed} onOpenChange={(open) => setOverdueCollapsed(!open)}>
               <Card className="border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
                 <CollapsibleTrigger asChild>
@@ -564,6 +682,49 @@ export default function EmployerContributionsTab({
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+          )}
+
+          {/* When filtering by overdue, show all in grid */}
+          {overdueContributions.length > 0 && statusFilter === "overdue" && (
+            <div>
+              <h3 className="text-sm font-medium text-rose-600 mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Contribuições Vencidas ({overdueContributions.length})
+                <Badge className="bg-rose-200 text-rose-800 text-xs ml-2">
+                  {formatCurrency(overdueContributions.reduce((acc, c) => acc + c.value, 0))}
+                </Badge>
+              </h3>
+              <ScrollArea className="h-[500px] pr-3">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {overdueContributions.map(contrib => {
+                    const isEligible = !!(contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled");
+                    return (
+                      <ContributionCard
+                        key={contrib.id}
+                        contrib={contrib}
+                        isSelected={selectedContributionIds.has(contrib.id)}
+                        isEligible={isEligible}
+                        onSelect={() => toggleSelection(contrib.id)}
+                        onView={() => onViewContribution(contrib)}
+                        onGenerateInvoice={() => onGenerateInvoice(contrib)}
+                        generatingInvoice={generatingInvoice}
+                      />
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <div className="mt-3 flex items-center justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-rose-600 border-rose-300 hover:bg-rose-100"
+                  onClick={onOpenOverdueDialog}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Cobrar via WhatsApp
+                </Button>
+              </div>
+            </div>
           )}
         </>
       )}
