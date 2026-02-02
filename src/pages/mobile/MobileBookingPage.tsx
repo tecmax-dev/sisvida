@@ -29,7 +29,7 @@ import { ptBR } from "date-fns/locale";
 import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 import { Badge } from "@/components/ui/badge";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
-import { MobileCategoryTabs, MOBILE_CATEGORIES, type SpecialtyCategory } from "@/components/mobile/MobileCategoryTabs";
+// Category tabs removed - showing all professionals in single list
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
 const dayMap: Record<number, string> = {
@@ -123,7 +123,7 @@ export default function MobileBookingPage() {
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
-  const [activeCategory, setActiveCategory] = useState<SpecialtyCategory>('medical');
+  // Category state removed - showing all professionals
   
   // useRef para clinicId - evita race condition e garante valor consistente no submit
   const clinicIdRef = useRef<string | null>(null);
@@ -683,121 +683,75 @@ export default function MobileBookingPage() {
             </div>
           )}
 
-          {/* Step 2: Professional with Category Tabs */}
-          {step === 2 && (() => {
-            // Filter professionals by active category
-            const filteredProfessionals = professionals.filter(prof => {
-              // If professional has specialties, check if any matches active category
-              if (prof.specialties && prof.specialties.length > 0) {
-                return prof.specialties.some(s => s.category === activeCategory);
-              }
-              // Fallback: show professionals without specialties in 'medical' category
-              return activeCategory === 'medical';
-            });
-
-            // Count professionals per category
-            const categoryCounts = MOBILE_CATEGORIES.reduce((acc, cat) => {
-              acc[cat.id] = professionals.filter(prof => {
-                if (prof.specialties && prof.specialties.length > 0) {
-                  return prof.specialties.some(s => s.category === cat.id);
-                }
-                return cat.id === 'medical';
-              }).length;
-              return acc;
-            }, {} as Record<SpecialtyCategory, number>);
-
-            // Get specialty names for display
-            const getSpecialtyNames = (prof: Professional): string => {
-              if (!prof.specialties?.length) return prof.specialty || '';
-              const categorySpecialties = prof.specialties
-                .filter(s => s.category === activeCategory)
-                .map(s => s.name);
-              return categorySpecialties.join(', ') || prof.specialty || '';
-            };
-
-            return (
-              <div className="space-y-3">
-                <h2 className="text-base font-semibold text-foreground">Escolha o profissional</h2>
-                
-                {/* Category Tabs */}
-                <MobileCategoryTabs
-                  activeCategory={activeCategory}
-                  onCategoryChange={(cat) => {
-                    setActiveCategory(cat);
-                    // Reset selection when changing category
-                    setSelectedProfessionalId("");
-                    setSelectedDate(undefined);
-                    setSelectedTime("");
-                    setAvailableSlots([]);
-                  }}
-                  categoryCounts={categoryCounts}
-                />
-                
-                {/* Professionals List */}
-                <div className="space-y-2">
-                  {filteredProfessionals.length === 0 ? (
-                    <Card className="border-dashed">
-                      <CardContent className="p-4 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          Nenhum profissional nesta categoria
-                        </p>
+          {/* Step 2: Professional Selection - Single List */}
+          {step === 2 && (
+            <div className="space-y-3">
+              <h2 className="text-base font-semibold text-foreground">Escolha o profissional</h2>
+              
+              {/* Professionals List */}
+              <div className="space-y-2">
+                {professionals.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum profissional disponível
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  professionals.map((prof) => (
+                    <Card 
+                      key={prof.id}
+                      className={cn(
+                        "cursor-pointer transition-colors active:scale-[0.98]",
+                        selectedProfessionalId === prof.id 
+                          ? "border-emerald-600 bg-emerald-50" 
+                          : ""
+                      )}
+                      onClick={() => {
+                        setSelectedProfessionalId(prof.id);
+                        // Reset date and time when changing professional
+                        setSelectedDate(undefined);
+                        setSelectedTime("");
+                        setAvailableSlots([]);
+                      }}
+                    >
+                      <CardContent className="p-3 flex items-center gap-3">
+                        {prof.avatar_url ? (
+                          <img 
+                            src={prof.avatar_url} 
+                            alt={prof.name}
+                            className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <User className="h-5 w-5 text-emerald-600" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{prof.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {prof.specialties?.map(s => s.name).join(', ') || prof.specialty || ''}
+                          </p>
+                        </div>
+                        {selectedProfessionalId === prof.id && (
+                          <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                        )}
                       </CardContent>
                     </Card>
-                  ) : (
-                    filteredProfessionals.map((prof) => (
-                      <Card 
-                        key={prof.id}
-                        className={cn(
-                          "cursor-pointer transition-colors active:scale-[0.98]",
-                          selectedProfessionalId === prof.id 
-                            ? "border-emerald-600 bg-emerald-50" 
-                            : ""
-                        )}
-                        onClick={() => {
-                          setSelectedProfessionalId(prof.id);
-                          // Reset date and time when changing professional
-                          setSelectedDate(undefined);
-                          setSelectedTime("");
-                          setAvailableSlots([]);
-                        }}
-                      >
-                        <CardContent className="p-3 flex items-center gap-3">
-                          {prof.avatar_url ? (
-                            <img 
-                              src={prof.avatar_url} 
-                              alt={prof.name}
-                              className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                              <User className="h-5 w-5 text-emerald-600" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-foreground truncate">{prof.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {getSpecialtyNames(prof)}
-                            </p>
-                          </div>
-                          {selectedProfessionalId === prof.id && (
-                            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-
-                <Button 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  disabled={!selectedProfessionalId}
-                  onClick={() => setStep(3)}
-                >
-                  Continuar
-                </Button>
+                  ))
+                )}
               </div>
-            );
-          })()}
+
+              <Button 
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                disabled={!selectedProfessionalId}
+                onClick={() => setStep(3)}
+              >
+                Continuar
+              </Button>
+            </div>
+          )}
 
           {/* Step 3: Date and Time in same screen */}
           {step === 3 && (
