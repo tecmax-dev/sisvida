@@ -76,10 +76,19 @@ interface Dependent {
   id: string;
   name: string;
   birth_date: string | null;
+  relationship?: string | null;
 }
 
 // Age limit for dependents (in years)
 const DEPENDENT_MAX_AGE = 21;
+
+// Only "child" dependents are subject to max age rule.
+// (Fix: previously the rule was applied to any dependent, e.g. cônjuge.)
+const isAgeRestrictedDependent = (dep: Dependent) => {
+  const rel = (dep.relationship || "").toLowerCase().trim();
+  // Cobre: "filho", "filha", "Filho(a)", "Filho(a) - até 21 anos", etc.
+  return rel.startsWith("filh");
+};
 
 // Calculate age from birth date
 const calculateAge = (birthDate: string): number => {
@@ -598,7 +607,10 @@ export default function MobileBookingPage() {
                     <SelectContent>
                       {dependents.map((dep) => {
                         const age = dep.birth_date ? calculateAge(dep.birth_date) : null;
-                        const isOverAge = age !== null && age > DEPENDENT_MAX_AGE;
+                        const isOverAge =
+                          age !== null &&
+                          age > DEPENDENT_MAX_AGE &&
+                          isAgeRestrictedDependent(dep);
                         
                         return (
                           <SelectItem 
@@ -630,7 +642,7 @@ export default function MobileBookingPage() {
                     const selectedDep = dependents.find(d => d.id === selectedDependentId);
                     if (selectedDep?.birth_date) {
                       const age = calculateAge(selectedDep.birth_date);
-                      if (age > DEPENDENT_MAX_AGE) {
+                      if (age > DEPENDENT_MAX_AGE && isAgeRestrictedDependent(selectedDep)) {
                         return (
                           <Card className="border-amber-200 bg-amber-50">
                             <CardContent className="p-3 flex items-center gap-2">
@@ -664,7 +676,7 @@ export default function MobileBookingPage() {
                     const selectedDep = dependents.find(d => d.id === selectedDependentId);
                     if (selectedDep?.birth_date) {
                       const age = calculateAge(selectedDep.birth_date);
-                      if (age > DEPENDENT_MAX_AGE) {
+                      if (age > DEPENDENT_MAX_AGE && isAgeRestrictedDependent(selectedDep)) {
                         toast({
                           title: "Limite de idade excedido",
                           description: `Dependentes acima de ${DEPENDENT_MAX_AGE} anos não podem agendar consultas.`,
