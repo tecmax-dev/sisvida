@@ -958,8 +958,9 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 ## HOMOLOGAÇÃO
 Link: https://app.eclini.com.br/homologacao/sindicato
 
-## SEGUNDA VIA DE BOLETO
-Pergunte: CNPJ, tipo de contribuição (Mensalidade ou Taxa Negocial), mês/período, valor, se há mais boletos.
+## SEGUNDA VIA DE BOLETO (EMPRESAS)
+⚠️ IMPORTANTE: Quando o usuário solicitar segunda via de boleto, 2ª via, boleto vencido, ou qualquer pedido relacionado a boleto empresarial, NÃO tente processar manualmente.
+RESPONDA APENAS: "HANDOFF_BOLETO" - o sistema automatizado de boletos assumirá o atendimento.
 
 ## CARTA DE OPOSIÇÃO / DESCONTO TAXA NEGOCIAL
 Procedimento presencial na sede até 09/05/2025 (Comércio Varejista).
