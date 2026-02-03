@@ -1,25 +1,21 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Receipt,
   Loader2,
-  Building2,
-  User,
-  Clock,
+  LayoutDashboard,
+  List,
+  Tag,
+  FileBarChart,
   Download,
   ChevronDown,
-  FileBarChart,
-  Hash,
   RefreshCw,
   Zap,
   CloudDownload,
-  LayoutDashboard,
-  Tag,
+  Hash,
   Handshake,
   Users,
-  List,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,7 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
@@ -38,13 +33,12 @@ import { extractFunctionsError } from "@/lib/functionsError";
 import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { formatCompetence } from "@/lib/competence-format";
 
-// Components
-import UnionContributionsAdvancedFilters from "@/components/union/contributions/UnionContributionsAdvancedFilters";
-import UnionContributionsSummaryBar from "@/components/union/contributions/UnionContributionsSummaryBar";
-import UnionContributionsBatchActions from "@/components/union/contributions/UnionContributionsBatchActions";
-import UnionContributionsTable from "@/components/union/contributions/UnionContributionsTable";
-
-// Existing dialogs and components
+// Existing components from dashboard pattern
+import ContributionsOverviewTab from "@/components/contributions/ContributionsOverviewTab";
+import ContributionsListTab from "@/components/contributions/ContributionsListTab";
+import ContributionTypesTab from "@/components/contributions/ContributionTypesTab";
+import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
+import PFContributionsReportsTab from "@/components/contributions/PFContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 import PFContributionDialog from "@/components/contributions/PFContributionDialog";
 import PFBatchContributionDialog from "@/components/contributions/PFBatchContributionDialog";
@@ -56,15 +50,8 @@ import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncSt
 import { LytexSyncProgress, LytexActionType } from "@/components/contributions/LytexSyncProgress";
 import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
 import { BatchGenerateLytexDialog } from "@/components/contributions/BatchGenerateLytexDialog";
-import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
-import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmailDialog";
-import { generateBoletosReport } from "@/lib/boleto-report";
-import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
-import ContributionsOverviewTab from "@/components/contributions/ContributionsOverviewTab";
-import ContributionTypesTab from "@/components/contributions/ContributionTypesTab";
-import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
-import PFContributionsReportsTab from "@/components/contributions/PFContributionsReportsTab";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
 
 // Types
 interface Employer {
@@ -121,24 +108,6 @@ interface Contribution {
   contribution_types?: ContributionType;
 }
 
-interface FilterState {
-  search: string;
-  status: string;
-  competence: string;
-  contributionType: string;
-  dueDateStart: string;
-  dueDateEnd: string;
-  paymentDateStart: string;
-  paymentDateEnd: string;
-}
-
-const getInitialCompetence = () => {
-  const now = new Date();
-  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  return `${String(prevMonth).padStart(2, "0")}/${prevYear}`;
-};
-
 const getInitialYear = () => {
   const now = new Date();
   return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
@@ -158,24 +127,8 @@ export default function UnionContributionsPageRedesign() {
   const [yearFilter, setYearFilter] = useState<number>(getInitialYear());
   const [yearDetectionDone, setYearDetectionDone] = useState(false);
   
-  // Filter state
-  const [filters, setFilters] = useState<FilterState>({
-    search: "",
-    status: "hide_cancelled",
-    competence: getInitialCompetence(),
-    contributionType: "all",
-    dueDateStart: "",
-    dueDateEnd: "",
-    paymentDateStart: "",
-    paymentDateEnd: "",
-  });
-  
   // UI state
-  const [activeTab, setActiveTab] = useState("contributions");
-  const [documentTypeTab, setDocumentTypeTab] = useState<"pj" | "pf" | "awaiting">("pj");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
-  const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("overview");
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -187,8 +140,6 @@ export default function UnionContributionsPageRedesign() {
   const [batchGenerateLytexOpen, setBatchGenerateLytexOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
-  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
@@ -202,6 +153,7 @@ export default function UnionContributionsPageRedesign() {
   const [extractingRegistrations, setExtractingRegistrations] = useState(false);
   const [fixingTypes, setFixingTypes] = useState(false);
   const [fetchingPaid, setFetchingPaid] = useState(false);
+  const [importingExternal, setImportingExternal] = useState(false);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
   const [currentActionType, setCurrentActionType] = useState<LytexActionType>("import");
 
@@ -307,152 +259,6 @@ export default function UnionContributionsPageRedesign() {
     }
   };
 
-  // Separate contributions by type
-  const pjContributions = useMemo(() => 
-    contributions.filter(c => !c.member_id && c.status !== "awaiting_value"),
-    [contributions]
-  );
-
-  const pfContributions = useMemo(() => 
-    contributions.filter(c => !!c.member_id && c.status !== "awaiting_value"),
-    [contributions]
-  );
-
-  const awaitingContributions = useMemo(() => 
-    contributions.filter(c => c.status === "awaiting_value" || (!c.lytex_invoice_url && c.public_access_token)),
-    [contributions]
-  );
-
-  const activeContributions = documentTypeTab === "pj" 
-    ? pjContributions 
-    : documentTypeTab === "pf" 
-      ? pfContributions
-      : awaitingContributions;
-
-  // Filter contributions
-  const filteredContributions = useMemo(() => {
-    return activeContributions.filter((c) => {
-      // Search
-      let matchesSearch = true;
-      if (filters.search.trim()) {
-        const searchLower = filters.search.toLowerCase().trim();
-        const searchClean = filters.search.replace(/\D/g, "");
-        
-        if (documentTypeTab === "pj" || documentTypeTab === "awaiting") {
-          const employerNameMatch = c.employers?.name?.toLowerCase().includes(searchLower);
-          const employerTradeNameMatch = c.employers?.trade_name?.toLowerCase().includes(searchLower);
-          const cnpjClean = c.employers?.cnpj?.replace(/\D/g, "") || "";
-          const cnpjMatch = searchClean.length >= 3 && cnpjClean.includes(searchClean);
-          const registrationMatch = c.employers?.registration_number?.toLowerCase().includes(searchLower);
-          matchesSearch = !!(employerNameMatch || employerTradeNameMatch || cnpjMatch || registrationMatch);
-        } else {
-          const memberNameMatch = c.patients?.name?.toLowerCase().includes(searchLower);
-          const cpfClean = c.patients?.cpf?.replace(/\D/g, "") || "";
-          const cpfMatch = searchClean.length >= 3 && cpfClean.includes(searchClean);
-          matchesSearch = !!(memberNameMatch || cpfMatch);
-        }
-      }
-
-      // Status
-      const matchesStatus = filters.status === "all" || 
-        (filters.status === "hide_cancelled" ? c.status !== "cancelled" : c.status === filters.status);
-
-      // Competence
-      let matchesCompetence = true;
-      if (filters.competence !== "all") {
-        const [filterMonth, filterYear] = filters.competence.split("/").map(Number);
-        matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
-      }
-
-      // Contribution type
-      const matchesType = filters.contributionType === "all" || c.contribution_type_id === filters.contributionType;
-
-      // Due date range
-      let matchesDueDate = true;
-      if (filters.dueDateStart) {
-        matchesDueDate = matchesDueDate && c.due_date >= filters.dueDateStart;
-      }
-      if (filters.dueDateEnd) {
-        matchesDueDate = matchesDueDate && c.due_date <= filters.dueDateEnd;
-      }
-
-      // Payment date range
-      let matchesPaymentDate = true;
-      if (c.paid_at && (filters.paymentDateStart || filters.paymentDateEnd)) {
-        const paidDate = c.paid_at.split("T")[0];
-        if (filters.paymentDateStart) {
-          matchesPaymentDate = matchesPaymentDate && paidDate >= filters.paymentDateStart;
-        }
-        if (filters.paymentDateEnd) {
-          matchesPaymentDate = matchesPaymentDate && paidDate <= filters.paymentDateEnd;
-        }
-      } else if (filters.paymentDateStart || filters.paymentDateEnd) {
-        matchesPaymentDate = false;
-      }
-
-      return matchesSearch && matchesStatus && matchesCompetence && matchesType && matchesDueDate && matchesPaymentDate;
-    });
-  }, [activeContributions, filters, documentTypeTab]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredContributions.length / itemsPerPage);
-  const paginatedContributions = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredContributions.slice(start, start + itemsPerPage);
-  }, [filteredContributions, currentPage, itemsPerPage]);
-
-  // Selection helpers
-  const eligibleOnPage = useMemo(() => 
-    paginatedContributions.filter(c => 
-      (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
-    ),
-    [paginatedContributions]
-  );
-
-  const allEligibleContributions = useMemo(() => 
-    filteredContributions.filter(c => 
-      (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
-    ),
-    [filteredContributions]
-  );
-
-  const allVisibleSelected = eligibleOnPage.length > 0 && eligibleOnPage.every(c => selectedContributionIds.has(c.id));
-  const allEligibleSelected = allEligibleContributions.length > 0 && allEligibleContributions.every(c => selectedContributionIds.has(c.id));
-
-  const selectedContributions = useMemo(() => {
-    if (selectedContributionIds.size === 0) return filteredContributions;
-    return contributions.filter(c => selectedContributionIds.has(c.id));
-  }, [contributions, filteredContributions, selectedContributionIds]);
-
-  // Handlers
-  const handleToggleSelection = (id: string) => {
-    const newSet = new Set(selectedContributionIds);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
-    setSelectedContributionIds(newSet);
-  };
-
-  const handleSelectAllVisible = () => {
-    const newSet = new Set(selectedContributionIds);
-    if (allVisibleSelected) {
-      eligibleOnPage.forEach(c => newSet.delete(c.id));
-    } else {
-      eligibleOnPage.forEach(c => newSet.add(c.id));
-    }
-    setSelectedContributionIds(newSet);
-  };
-
-  const handleSelectAllEligible = () => {
-    if (allEligibleSelected) {
-      setSelectedContributionIds(new Set());
-    } else {
-      setSelectedContributionIds(new Set(allEligibleContributions.map(c => c.id)));
-    }
-  };
-
   const handleViewContribution = (contribution: Contribution) => {
     setSelectedContribution(contribution);
     setViewDialogOpen(true);
@@ -462,13 +268,19 @@ export default function UnionContributionsPageRedesign() {
     const isPF = !!contribution.member_id;
     
     if (isPF) {
-      if (!contribution.patients?.cpf) {
+      if (!contribution.patients) {
+        toast.error("Dados do contribuinte não encontrados");
+        return;
+      }
+      if (!contribution.patients.cpf) {
         toast.error("CPF do contribuinte não informado");
         return;
       }
-    } else if (!contribution.employers) {
-      toast.error("Dados da empresa não encontrados");
-      return;
+    } else {
+      if (!contribution.employers) {
+        toast.error("Dados da empresa não encontrados");
+        return;
+      }
     }
 
     const isSessionValid = await validateSession();
@@ -507,13 +319,17 @@ export default function UnionContributionsPageRedesign() {
       }
 
       const response = await supabase.functions.invoke("lytex-api", { body });
-      if (response.error) throw new Error(response.error.message);
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
 
       toast.success("Boleto gerado com sucesso!");
       setViewDialogOpen(false);
       fetchData();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error generating invoice:", error);
       toast.error(`Erro ao gerar boleto: ${errorMessage}`);
     } finally {
       setGeneratingInvoice(false);
@@ -522,6 +338,7 @@ export default function UnionContributionsPageRedesign() {
 
   const handleSyncAll = async () => {
     if (!currentClinic) return;
+    
     const isSessionValid = await validateSession();
     if (!isSessionValid) return;
     
@@ -529,7 +346,10 @@ export default function UnionContributionsPageRedesign() {
     setCurrentActionType("sync");
     try {
       const { data, error } = await supabase.functions.invoke("lytex-api", {
-        body: { action: "sync_all_pending", clinicId: currentClinic.id },
+        body: {
+          action: "sync_all_pending",
+          clinicId: currentClinic.id,
+        },
       });
 
       if (error) {
@@ -545,6 +365,7 @@ export default function UnionContributionsPageRedesign() {
       }
     } catch (error: unknown) {
       const { message } = extractFunctionsError(error);
+      console.error("Error syncing:", error);
       toast.error(`Erro ao sincronizar: ${message}`);
     } finally {
       setSyncing(false);
@@ -553,6 +374,7 @@ export default function UnionContributionsPageRedesign() {
 
   const handleImportFromLytex = async () => {
     if (!currentClinic) return;
+    
     const isSessionValid = await validateSession();
     if (!isSessionValid) return;
     
@@ -562,7 +384,10 @@ export default function UnionContributionsPageRedesign() {
     
     try {
       const response = supabase.functions.invoke("lytex-api", {
-        body: { action: "import_from_lytex", clinicId: currentClinic.id },
+        body: {
+          action: "import_from_lytex",
+          clinicId: currentClinic.id,
+        },
       });
 
       const checkForLog = async () => {
@@ -586,6 +411,9 @@ export default function UnionContributionsPageRedesign() {
       clearInterval(logCheckInterval);
 
       if (error) throw error;
+
+      const imported = (data?.clientsImported || 0) + (data?.invoicesImported || 0);
+      const updated = (data?.clientsUpdated || 0) + (data?.invoicesUpdated || 0);
 
       let details = undefined;
       if (data?.syncLogId) {
@@ -612,34 +440,179 @@ export default function UnionContributionsPageRedesign() {
       
       setSyncResult(result);
       setSyncResultsOpen(true);
+
+      if (data?.errors?.length) {
+        toast.warning(`Sincronização concluída com ${data.errors.length} erro(s)`);
+      } else if (imported > 0 || updated > 0) {
+        toast.success("Sincronização concluída com sucesso!");
+      } else {
+        toast.info("Nenhum dado novo encontrado na Lytex");
+      }
+
       fetchData();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
-      toast.error(`Erro ao importar: ${errorMessage}`);
+    } catch (error) {
+      const { message } = extractFunctionsError(error);
+      console.error("Error importing from Lytex:", error);
+      toast.error(`Erro ao importar: ${message}`);
     } finally {
       setImporting(false);
     }
   };
 
-  const handleTabChange = (value: string) => {
-    setDocumentTypeTab(value as "pj" | "pf" | "awaiting");
-    setCurrentPage(1);
-    setSelectedContributionIds(new Set());
-  };
-
-  const handleFiltersChange = (newFilters: FilterState) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
+  const handleExtractRegistrations = async () => {
+    if (!currentClinic) return;
     
-    if (newFilters.competence !== "all") {
-      const [, year] = newFilters.competence.split("/").map(Number);
-      if (year && year !== yearFilter) {
-        setYearFilter(year);
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setExtractingRegistrations(true);
+    setCurrentActionType("extract_registrations");
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "extract_registrations",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} matrícula(s) extraída(s) com sucesso!`);
+        fetchData();
+      } else {
+        toast.info("Nenhuma matrícula encontrada para extrair");
       }
+    } catch (error) {
+      const { message } = extractFunctionsError(error);
+      console.error("Error extracting registrations:", error);
+      toast.error(`Erro ao extrair matrículas: ${message}`);
+    } finally {
+      setExtractingRegistrations(false);
     }
   };
 
-  if (loading) {
+  const handleFixContributionTypes = async () => {
+    if (!currentClinic) return;
+    
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setFixingTypes(true);
+    setCurrentActionType("fix_types");
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "fix_contribution_types",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} tipo(s) de contribuição corrigido(s)!`);
+        fetchData();
+      } else {
+        toast.info("Nenhum tipo de contribuição precisou de correção");
+      }
+    } catch (error) {
+      const { message } = extractFunctionsError(error);
+      console.error("Error fixing contribution types:", error);
+      toast.error(`Erro ao corrigir tipos: ${message}`);
+    } finally {
+      setFixingTypes(false);
+    }
+  };
+
+  const handleFetchPaidInvoices = async () => {
+    if (!currentClinic) return;
+    
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setFetchingPaid(true);
+    setCurrentSyncLogId(null);
+    setCurrentActionType("sync");
+    try {
+      const response = supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "fetch_paid_invoices",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      const checkForLog = async () => {
+        const { data: logs } = await supabase
+          .from("lytex_sync_logs")
+          .select("id")
+          .eq("clinic_id", currentClinic.id)
+          .eq("status", "running")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        
+        if (logs && logs.length > 0) {
+          setCurrentSyncLogId(logs[0].id);
+        }
+      };
+      
+      await checkForLog();
+      const logCheckInterval = setInterval(checkForLog, 500);
+      
+      const { data, error } = await response;
+      clearInterval(logCheckInterval);
+
+      if (error) throw error;
+
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} pagamento(s) conciliado(s)!`);
+        fetchData();
+      } else {
+        toast.info("Nenhum pagamento novo encontrado");
+      }
+    } catch (error) {
+      const { message } = extractFunctionsError(error);
+      console.error("Error fetching paid invoices:", error);
+      toast.error(`Erro ao buscar pagamentos: ${message}`);
+    } finally {
+      setFetchingPaid(false);
+    }
+  };
+
+  const handleImportExternalPaidInvoices = async () => {
+    if (!currentClinic) return;
+    
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setImportingExternal(true);
+    setCurrentActionType("import");
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "import_external_paid",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.imported > 0) {
+        toast.success(`${data.imported} boleto(s) externo(s) importado(s)!`);
+        fetchData();
+      } else {
+        toast.info("Nenhum boleto externo encontrado");
+      }
+    } catch (error) {
+      const { message } = extractFunctionsError(error);
+      console.error("Error importing external paid invoices:", error);
+      toast.error(`Erro ao importar boletos externos: ${message}`);
+    } finally {
+      setImportingExternal(false);
+    }
+  };
+
+  if (loading && !yearDetectionDone) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -648,58 +621,73 @@ export default function UnionContributionsPageRedesign() {
   }
 
   if (!currentClinic) {
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertDescription>
-            Nenhuma clínica vinculada. Entre em contato com o administrador.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Receipt className="h-6 w-6 text-primary" />
-            Gerenciando contas a receber de Empresas
+            Contribuições Sindicais
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie o recebimento das empresas associadas, gere e cancele boletos de forma prática
+          <p className="text-muted-foreground">
+            Gerencie boletos e contribuições das empresas associadas
           </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" disabled={importing || extractingRegistrations || fixingTypes}>
-              {importing || extractingRegistrations || fixingTypes ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
+
+        {/* Actions Dropdown */}
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                disabled={importing || extractingRegistrations || fixingTypes}
+              >
+                {importing || extractingRegistrations || fixingTypes ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Lytex
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleImportFromLytex} disabled={importing}>
                 <Download className="h-4 w-4 mr-2" />
-              )}
-              Lytex
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleImportFromLytex} disabled={importing}>
-              <Download className="h-4 w-4 mr-2" />
-              Importar Clientes e Faturas
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setBatchGenerateLytexOpen(true)} className="text-amber-600">
-              <Zap className="h-4 w-4 mr-2" />
-              Gerar Boletos Pendentes
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
-              <FileBarChart className="h-4 w-4 mr-2" />
-              Histórico de Sincronização
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                Importar Clientes e Faturas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExtractRegistrations} disabled={extractingRegistrations}>
+                <Hash className="h-4 w-4 mr-2" />
+                Extrair Matrículas das Faturas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFixContributionTypes} disabled={fixingTypes}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Corrigir Tipos de Contribuição
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setBatchGenerateLytexOpen(true)} className="text-amber-600">
+                <Zap className="h-4 w-4 mr-2" />
+                Gerar Boletos Pendentes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
+                <Receipt className="h-4 w-4 mr-2" />
+                Buscar Pagamentos (Conciliação)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportExternalPaidInvoices} disabled={importingExternal} className="text-blue-600">
+                <CloudDownload className="h-4 w-4 mr-2" />
+                Importar Boletos Externos Pagos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
+                <FileBarChart className="h-4 w-4 mr-2" />
+                Histórico de Sincronização
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Lytex Sync Status */}
@@ -747,83 +735,24 @@ export default function UnionContributionsPageRedesign() {
           />
         </TabsContent>
 
-        <TabsContent value="contributions" className="space-y-4">
-          {/* Document Type Tabs */}
-          <Tabs value={documentTypeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full max-w-xl grid-cols-3">
-              <TabsTrigger value="pj" className="gap-2">
-                <Building2 className="h-4 w-4" />
-                Empresas (PJ)
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                  {pjContributions.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="pf" className="gap-2">
-                <User className="h-4 w-4" />
-                Pessoa Física (PF)
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                  {pfContributions.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="awaiting" className="gap-2">
-                <Clock className="h-4 w-4" />
-                Aguardando Valor
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
-                  {awaitingContributions.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {/* Advanced Filters */}
-          <UnionContributionsAdvancedFilters
-            filters={filters}
-            onFiltersChange={handleFiltersChange}
-            contributionTypes={contributionTypes}
-            onSearch={() => setCurrentPage(1)}
-            resultCount={filteredContributions.length}
-          />
-
-          {/* Summary Bar */}
-          <UnionContributionsSummaryBar contributions={filteredContributions} />
-
-          {/* Batch Actions */}
-          <UnionContributionsBatchActions
-            selectedCount={selectedContributionIds.size}
-            totalEligible={allEligibleContributions.length}
-            allSelected={allEligibleSelected}
-            onSelectAll={handleSelectAllEligible}
-            onWhatsApp={() => setWhatsappDialogOpen(true)}
-            onEmail={() => setEmailDialogOpen(true)}
-            onPrint={() => generateBoletosReport(selectedContributions.filter(c => c.lytex_invoice_id))}
-            onSync={handleSyncAll}
-            syncing={syncing}
-            onCreatePJ={() => setCreateDialogOpen(true)}
-            onCreateWithoutValue={() => setCreateWithoutValueDialogOpen(true)}
-            onBulkGenerate={() => setBulkDialogOpen(true)}
-            onNegotiate={() => setNegotiationDialogOpen(true)}
-            onBatchGenerateLytex={() => setBatchGenerateLytexOpen(true)}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={(v) => { setItemsPerPage(v); setCurrentPage(1); }}
-            documentType={documentTypeTab}
-            onCreatePF={() => setCreatePFDialogOpen(true)}
-          />
-
-          {/* Table */}
-          <UnionContributionsTable
-            contributions={paginatedContributions}
-            selectedIds={selectedContributionIds}
-            onToggleSelection={handleToggleSelection}
-            onSelectAllVisible={handleSelectAllVisible}
-            allVisibleSelected={allVisibleSelected}
-            eligibleOnPageCount={eligibleOnPage.length}
+        <TabsContent value="contributions">
+          <ContributionsListTab
+            contributions={contributions}
             onViewContribution={handleViewContribution}
-            documentType={documentTypeTab}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalCount={filteredContributions.length}
-            itemsPerPage={itemsPerPage}
+            onGenerateInvoice={handleGenerateInvoice}
+            onOpenCreate={() => setCreateDialogOpen(true)}
+            onOpenCreatePF={() => setCreatePFDialogOpen(true)}
+            onOpenCreateWithoutValue={() => setCreateWithoutValueDialogOpen(true)}
+            onSyncAll={handleSyncAll}
+            generatingInvoice={generatingInvoice}
+            syncing={syncing}
+            yearFilter={yearFilter}
+            onYearFilterChange={setYearFilter}
+            clinicId={currentClinic.id}
+            onOpenNegotiation={(employerId?: string) => {
+              setNegotiationEmployerId(employerId);
+              setNegotiationDialogOpen(true);
+            }}
           />
         </TabsContent>
 
@@ -939,20 +868,6 @@ export default function UnionContributionsPageRedesign() {
         onEnsureYearVisible={setYearFilter}
       />
 
-      <SendBoletoWhatsAppDialog
-        open={whatsappDialogOpen}
-        onOpenChange={setWhatsappDialogOpen}
-        contributions={selectedContributions}
-        clinicId={currentClinic.id}
-      />
-
-      <SendBoletoEmailDialog
-        open={emailDialogOpen}
-        onOpenChange={setEmailDialogOpen}
-        contributions={selectedContributions}
-        clinicId={currentClinic.id}
-      />
-
       <LytexSyncResultsDialog
         open={syncResultsOpen}
         onOpenChange={setSyncResultsOpen}
@@ -986,11 +901,19 @@ export default function UnionContributionsPageRedesign() {
         }}
         clinicId={currentClinic.id}
         userId={session?.user.id || ""}
-        employers={employers as any}
+        employers={employers.map(e => ({
+          id: e.id,
+          name: e.name,
+          cnpj: e.cnpj,
+          trade_name: e.trade_name,
+          registration_number: e.registration_number,
+        }))}
         onSuccess={() => {
           fetchData();
-          setActiveTab("negotiations");
+          setNegotiationDialogOpen(false);
+          setNegotiationEmployerId(undefined);
         }}
+        initialEmployerId={negotiationEmployerId}
       />
     </div>
   );
