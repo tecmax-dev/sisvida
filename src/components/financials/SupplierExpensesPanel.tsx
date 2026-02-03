@@ -137,9 +137,16 @@ export function SupplierExpensesPanel({ clinicId }: SupplierExpensesPanelProps) 
 
     return Object.values(groups)
       .filter((group) => {
+        const searchLower = search.toLowerCase();
+        const searchClean = search.replace(/\D/g, "");
+        const cnpjClean = group.supplier.cnpj?.replace(/\D/g, "") || "";
+        const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+        const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+        
         const matchesSearch =
-          group.supplier.name.toLowerCase().includes(search.toLowerCase()) ||
-          group.supplier.cnpj?.includes(search);
+          group.supplier.name.toLowerCase().includes(searchLower) ||
+          (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+          (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros));
 
         const matchesStatus =
           statusFilter === "all" ||

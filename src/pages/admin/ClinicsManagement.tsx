@@ -821,11 +821,20 @@ export default function ClinicsManagement() {
     return <Badge variant="outline" className={s.className}>{s.label}</Badge>;
   };
 
-  const filteredClinics = clinics.filter((clinic) =>
-    clinic.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    clinic.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (clinic.cnpj && clinic.cnpj.includes(searchTerm))
-  );
+  const filteredClinics = clinics.filter((clinic) => {
+    const searchLower = searchTerm.toLowerCase();
+    const searchClean = searchTerm.replace(/\D/g, "");
+    const cnpjClean = clinic.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
+    return (
+      clinic.name.toLowerCase().includes(searchLower) ||
+      clinic.slug.toLowerCase().includes(searchLower) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros))
+    );
+  });
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const isProfessionalLimitExceeded = selectedClinic && selectedPlan 

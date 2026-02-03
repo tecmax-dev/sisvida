@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatCnpj, createEmployerSearchFilter } from "@/lib/cnpj-search-utils";
 
 interface Employer {
   id: string;
@@ -31,12 +32,6 @@ interface EmployerSearchComboboxProps {
   placeholder?: string;
   disabled?: boolean;
 }
-
-const formatCNPJ = (cnpj: string): string => {
-  if (!cnpj) return "";
-  const cleaned = cnpj.replace(/\D/g, "");
-  return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-};
 
 export function EmployerSearchCombobox({
   employers,
@@ -55,30 +50,9 @@ export function EmployerSearchCombobox({
   const filteredEmployers = useMemo(() => {
     if (!search.trim()) return employers.slice(0, 50);
     
-    const searchLower = search.toLowerCase().trim();
-    const searchClean = search.replace(/\D/g, "");
-    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
-    
-    return employers.filter((e) => {
-      // Name match
-      if (e.name?.toLowerCase().includes(searchLower)) return true;
-      
-      // Trade name match
-      if (e.trade_name?.toLowerCase().includes(searchLower)) return true;
-      
-      // CNPJ match (both sides normalized, handle leading zeros)
-      const cnpjClean = e.cnpj?.replace(/\D/g, "") || "";
-      if (searchClean.length >= 3 && cnpjClean.includes(searchClean)) return true;
-      if (searchNoLeadingZeros.length >= 3 && cnpjClean.includes(searchNoLeadingZeros)) return true;
-      
-      // Also check if CNPJ starts with the search term
-      if (searchClean.length >= 2 && cnpjClean.startsWith(searchClean)) return true;
-      
-      // Registration number match
-      if (e.registration_number?.toLowerCase().includes(searchLower)) return true;
-      
-      return false;
-    }).slice(0, 50);
+    const filterFn = createEmployerSearchFilter<Employer>(search);
+    // Don't limit when searching - show all matches
+    return employers.filter(filterFn);
   }, [employers, search]);
 
   const handleSelect = (employerId: string) => {
@@ -174,7 +148,7 @@ export function EmployerSearchCombobox({
                     <span className="font-medium truncate">{employer.name}</span>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-mono bg-amber-100 text-amber-800 px-1 rounded">
-                        {formatCNPJ(employer.cnpj)}
+                        {formatCnpj(employer.cnpj)}
                       </span>
                       {employer.registration_number && (
                         <span className="bg-indigo-100 text-indigo-800 px-1 rounded">

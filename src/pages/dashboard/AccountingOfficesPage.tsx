@@ -381,11 +381,20 @@ export default function AccountingOfficesPage() {
     setIsLinkDialogOpen(true);
   };
 
-  const filteredEmployersForLink = employers.filter(employer =>
-    employer.name.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
-    employer.cnpj?.includes(linkSearchTerm.replace(/\D/g, "")) ||
-    employer.registration_number?.includes(linkSearchTerm)
-  );
+  const filteredEmployersForLink = employers.filter(employer => {
+    const searchLower = linkSearchTerm.toLowerCase();
+    const searchClean = linkSearchTerm.replace(/\D/g, "");
+    const cnpjClean = employer.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
+    return (
+      employer.name.toLowerCase().includes(searchLower) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
+      employer.registration_number?.includes(linkSearchTerm)
+    );
+  });
 
   const handleSelectAllEmployers = () => {
     const filteredIds = filteredEmployersForLink.map(e => e.id);
@@ -557,13 +566,18 @@ export default function AccountingOfficesPage() {
 
   const filteredOffices = offices.filter(office => {
     const search = searchTerm.toLowerCase();
-    const searchNumbers = searchTerm.replace(/\D/g, ""); // Remove formatação para CNPJ/telefone
+    const searchNumbers = searchTerm.replace(/\D/g, "");
+    const cnpjClean = office.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchNumbers.replace(/^0+/, "");
+    
     return (
       office.name.toLowerCase().includes(search) ||
       office.email.toLowerCase().includes(search) ||
       office.contact_name?.toLowerCase().includes(search) ||
       office.trade_name?.toLowerCase().includes(search) ||
-      (searchNumbers && office.cnpj?.includes(searchNumbers)) ||
+      (searchNumbers.length >= 2 && cnpjClean.includes(searchNumbers)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
       (searchNumbers && office.phone?.includes(searchNumbers))
     );
   });

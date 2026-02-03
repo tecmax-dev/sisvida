@@ -147,11 +147,20 @@ export default function BulkContributionDialog({
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(e => 
-        e.name.toLowerCase().includes(term) || 
-        e.cnpj.includes(term.replace(/\D/g, "")) ||
-        e.registration_number?.includes(term)
-      );
+      const termClean = searchTerm.replace(/\D/g, "");
+      const termNoLeadingZeros = termClean.replace(/^0+/, "");
+      
+      filtered = filtered.filter(e => {
+        const cnpjClean = e.cnpj?.replace(/\D/g, "") || "";
+        const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+        
+        return (
+          e.name.toLowerCase().includes(term) || 
+          (termClean.length >= 2 && cnpjClean.includes(termClean)) ||
+          (termNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(termNoLeadingZeros)) ||
+          e.registration_number?.includes(searchTerm)
+        );
+      });
     }
     
     return filtered;

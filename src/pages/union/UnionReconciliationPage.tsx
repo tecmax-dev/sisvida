@@ -172,10 +172,17 @@ export default function UnionReconciliationPage() {
   const filteredContributions = useMemo(() => {
     if (!contributions) return [];
     return contributions.filter((c) => {
+      const searchLower = search.toLowerCase();
+      const searchClean = search.replace(/\D/g, "");
+      const cnpjClean = c.employers?.cnpj?.replace(/\D/g, "") || "";
+      const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+      const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+      
       const matchesSearch =
-        c.employers?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.employers?.cnpj?.includes(search) ||
-        c.lytex_invoice_id?.toLowerCase().includes(search.toLowerCase());
+        c.employers?.name?.toLowerCase().includes(searchLower) ||
+        (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+        (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
+        c.lytex_invoice_id?.toLowerCase().includes(searchLower);
 
       const matchesStatus = statusFilter === "all" || c.status === statusFilter;
 

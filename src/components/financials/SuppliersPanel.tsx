@@ -106,12 +106,20 @@ export function SuppliersPanel({ clinicId }: SuppliersPanelProps) {
     },
   });
 
-  const filteredSuppliers = suppliers?.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.cnpj?.includes(search) ||
-      s.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSuppliers = suppliers?.filter((s) => {
+    const searchLower = search.toLowerCase();
+    const searchClean = search.replace(/\D/g, "");
+    const cnpjClean = s.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
+    return (
+      s.name.toLowerCase().includes(searchLower) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
+      s.email?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const activeCount = suppliers?.filter((s) => s.is_active).length || 0;
   const inactiveCount = suppliers?.filter((s) => !s.is_active).length || 0;

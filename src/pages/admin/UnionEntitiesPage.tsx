@@ -488,9 +488,15 @@ export default function UnionEntitiesPage() {
 
   const filteredEntities = entities.filter(entity => {
     const search = searchTerm.toLowerCase();
+    const searchClean = searchTerm.replace(/\D/g, "");
+    const cnpjClean = entity.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
     return (
       entity.razao_social.toLowerCase().includes(search) ||
-      entity.cnpj.includes(search) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
       entity.email_institucional.toLowerCase().includes(search) ||
       (entity.nome_fantasia && entity.nome_fantasia.toLowerCase().includes(search))
     );

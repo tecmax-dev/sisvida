@@ -295,11 +295,19 @@ export function ExpenseDialog({
       currency: "BRL",
     }).format(value);
 
-  const filteredSuppliers = suppliers?.filter(
-    (s) =>
-      s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
-      s.cnpj?.includes(supplierSearch)
-  );
+  const filteredSuppliers = suppliers?.filter((s) => {
+    const searchLower = supplierSearch.toLowerCase();
+    const searchClean = supplierSearch.replace(/\D/g, "");
+    const cnpjClean = s.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
+    return (
+      s.name.toLowerCase().includes(searchLower) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros))
+    );
+  });
 
   const selectedSupplier = suppliers?.find(
     (s) => s.id === form.watch("supplier_id")

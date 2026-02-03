@@ -284,13 +284,16 @@ export default function ContributionsListTab({
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase().trim();
         const searchClean = searchTerm.replace(/\D/g, "");
+        const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
         
         // For PJ, search in employer data; for PF, search in member/patient data
         if (documentTypeTab === "pj") {
           const employerNameMatch = c.employers?.name?.toLowerCase().includes(searchLower);
           const employerTradeNameMatch = c.employers?.trade_name?.toLowerCase().includes(searchLower);
           const cnpjClean = c.employers?.cnpj?.replace(/\D/g, "") || "";
-          const cnpjMatch = searchClean.length >= 3 && cnpjClean.includes(searchClean);
+          const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+          const cnpjMatch = (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+                           (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros));
           const registrationMatch = c.employers?.registration_number?.toLowerCase().includes(searchLower);
           const typeMatch = c.contribution_types?.name?.toLowerCase().includes(searchLower);
           
@@ -298,7 +301,9 @@ export default function ContributionsListTab({
         } else {
           const memberNameMatch = c.patients?.name?.toLowerCase().includes(searchLower);
           const cpfClean = c.patients?.cpf?.replace(/\D/g, "") || "";
-          const cpfMatch = searchClean.length >= 3 && cpfClean.includes(searchClean);
+          const cpfNoLeadingZeros = cpfClean.replace(/^0+/, "");
+          const cpfMatch = (searchClean.length >= 2 && cpfClean.includes(searchClean)) ||
+                          (searchNoLeadingZeros.length >= 2 && cpfNoLeadingZeros.includes(searchNoLeadingZeros));
           const typeMatch = c.contribution_types?.name?.toLowerCase().includes(searchLower);
           
           matchesSearchTerm = !!(memberNameMatch || cpfMatch || typeMatch);
