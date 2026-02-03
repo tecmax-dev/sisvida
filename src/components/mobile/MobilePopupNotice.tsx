@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -9,6 +10,7 @@ interface MobilePopupNoticeProps {
 }
 
 export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
@@ -72,10 +74,19 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
   };
 
   const handleButtonClick = () => {
-    if (currentNotice?.button_link) {
-      window.open(currentNotice.button_link, "_blank");
-    }
     handleDismiss();
+    
+    if (currentNotice?.button_link) {
+      // Se o link é interno (começa com /), usar navegação do React Router
+      if (currentNotice.button_link.startsWith("/")) {
+        navigate(currentNotice.button_link);
+      } else {
+        window.open(currentNotice.button_link, "_blank");
+      }
+    } else {
+      // Se não tem link configurado, navegar para a página de agendamento
+      navigate("/app/agendar");
+    }
   };
 
   if (!currentNotice) return null;
