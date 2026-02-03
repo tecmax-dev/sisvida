@@ -19,7 +19,10 @@ interface AIAssistantChatProps {
   clinicId: string;
 }
 
-const WELCOME_MESSAGE = `Olá, tudo bem? 👋 Sou LIA, assistente virtual SECMI. Estou aqui para auxiliar você!
+// Dynamic welcome message based on booking_enabled
+const getWelcomeMessage = (bookingEnabled: boolean) => {
+  if (bookingEnabled) {
+    return `Olá, tudo bem? 👋 Sou LIA, assistente virtual SECMI. Estou aqui para auxiliar você!
 
 1️⃣ Atendimento Associado
 2️⃣ Atendimento Empresa
@@ -30,11 +33,26 @@ const WELCOME_MESSAGE = `Olá, tudo bem? 👋 Sou LIA, assistente virtual SECMI.
 7️⃣ 2ª via Boleto Empresa
 
 Digite o número da opção desejada:`;
+  }
+
+  return `Olá, tudo bem? 👋 Sou LIA, assistente virtual SECMI. Estou aqui para auxiliar você!
+
+1️⃣ Atendimento Associado
+2️⃣ Atendimento Empresa
+3️⃣ Atendimento Contabilidade
+4️⃣ Dia do Comerciário
+5️⃣ Outros Assuntos
+6️⃣ 2ª via Boleto Empresa
+
+📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
+👉 https://app.eclini.com.br/sindicato/instalar
+
+Digite o número da opção desejada:`;
+};
 
 export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: WELCOME_MESSAGE }
-  ]);
+  const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isBookingMode, setIsBookingMode] = useState(false);
@@ -42,6 +60,23 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const isMobile = useIsMobile();
+
+  // Fetch booking_enabled config on mount
+  useEffect(() => {
+    const fetchBookingConfig = async () => {
+      const { data } = await supabase
+        .from('evolution_configs')
+        .select('booking_enabled')
+        .eq('clinic_id', clinicId)
+        .maybeSingle();
+
+      const isEnabled = data?.booking_enabled !== false;
+      setBookingEnabled(isEnabled);
+      setMessages([{ role: 'assistant', content: getWelcomeMessage(isEnabled) }]);
+    };
+
+    fetchBookingConfig();
+  }, [clinicId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -163,7 +198,7 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   };
 
   const clearChat = () => {
-    setMessages([{ role: 'assistant', content: WELCOME_MESSAGE }]);
+    setMessages([{ role: 'assistant', content: getWelcomeMessage(bookingEnabled ?? true) }]);
     setIsBookingMode(false);
   };
 
