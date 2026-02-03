@@ -692,32 +692,102 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if user selected option 6 (Agendar Consultas) - hand off to booking flow
-    const cleanMessage = message.trim();
-    if (cleanMessage === '6' || /^(6\b|agendar|agendamento|marcar consulta)/i.test(cleanMessage)) {
-      console.log('[ai-assistant] User selected option 6 - checking booking_enabled');
-      
-      // Check if booking is enabled for this clinic
-      const { data: evolutionConfig } = await supabase
-        .from('evolution_configs')
-        .select('booking_enabled')
-        .eq('clinic_id', clinic_id)
-        .maybeSingle();
-      
-      const bookingEnabled = evolutionConfig?.booking_enabled !== false;
-      
-      if (!bookingEnabled) {
-        console.log('[ai-assistant] Booking is disabled, sending app update notification');
-        return new Response(JSON.stringify({ 
-          response: `Olá! 👋
+    // Fetch booking flag once for early routing decisions (menu + option 6)
+    const { data: evolutionConfigEarly, error: evolutionConfigEarlyError } = await supabase
+      .from('evolution_configs')
+      .select('booking_enabled')
+      .eq('clinic_id', clinic_id)
+      .maybeSingle();
 
-O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
+    if (evolutionConfigEarlyError) {
+      console.error('[ai-assistant] Error fetching evolution_configs (early):', evolutionConfigEarlyError);
+    }
+
+    const isBookingEnabledEarly = evolutionConfigEarly?.booking_enabled !== false;
+
+    const cleanMessage = message.trim();
+
+    // If user greets / asks for menu, return a deterministic menu (avoid model drift)
+    const isMenuRequest =
+      /^(oi|olá|ola|bom dia|boa tarde|boa noite)\b/i.test(cleanMessage) ||
+      /\b(menu|op(ç|c)ões|op(ç|c)oes|opcoes|opções|ajuda|in(í|i)cio|come(ç|c)ar|comecar)\b/i.test(cleanMessage);
+
+    if (isMenuRequest) {
+      const menuText = isBookingEnabledEarly
+        ? `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
+
+Como posso ajudar? Escolha uma opção:
+
+1️⃣ Sou associado(a)
+2️⃣ Sou empresa
+3️⃣ Sou contador/escritório contábil
+4️⃣ Dia do Comerciário (30/10)
+5️⃣ Falar com atendente
+6️⃣ Agendar consulta ou exame
+7️⃣ Segunda via de boleto (empresa)
+
+Digite o número da opção desejada.`
+        : `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
+
+Como posso ajudar? Escolha uma opção:
+
+1️⃣ Sou associado(a)
+2️⃣ Sou empresa
+3️⃣ Sou contador/escritório contábil
+4️⃣ Dia do Comerciário (30/10)
+5️⃣ Falar com atendente
+6️⃣ Segunda via de boleto (empresa)
+
+📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
+👉 https://app.eclini.com.br/sindicato/instalar
+
+Digite o número da opção desejada.`;
+
+      return new Response(
+        JSON.stringify({ response: menuText, handoff_to_booking: false, action: 'show_menu' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user selected option 6 or is attempting booking
+    // IMPORTANT: When booking is disabled, option 6 is boleto (not booking)
+    if (cleanMessage === '6') {
+      if (isBookingEnabledEarly) {
+        console.log('[ai-assistant] Option 6 selected and booking enabled - handing off to booking flow');
+        return new Response(
+          JSON.stringify({ response: null, handoff_to_booking: true, action: 'start_booking_flow' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('[ai-assistant] Option 6 selected and booking disabled - handing off to boleto flow');
+      return new Response(
+        JSON.stringify({ response: 'HANDOFF_BOLETO', handoff_to_booking: false, action: 'handoff_boleto' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Any other booking intent: either handoff to booking (enabled) or redirect to app (disabled)
+    if (/\b(agendar|agendamento|marcar\s+consulta|marcar\s+exame|consulta|horário|horario|vaga|dispon(í|i)vel|disponivel)\b/i.test(cleanMessage)) {
+      if (isBookingEnabledEarly) {
+        console.log('[ai-assistant] Booking intent detected and booking enabled - handing off to booking flow');
+        return new Response(
+          JSON.stringify({ response: null, handoff_to_booking: true, action: 'start_booking_flow' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('[ai-assistant] Booking intent detected but booking disabled - sending app update notification');
+      return new Response(
+        JSON.stringify({
+          response: `⚠️ *Agendamento Temporariamente Suspenso*
+
+O agendamento por WhatsApp está suspenso no momento, mas temos uma *novidade ainda melhor* para você!
 
 📲 *NOVO APP DO SINDICATO*
-
-Agora você pode agendar suas consultas diretamente pelo nosso aplicativo:
+Agora você pode agendar suas consultas pelo nosso aplicativo:
 • Agendamento rápido 24h
-• Carteirinha digital sempre à mão
+• Carteirinha digital
 • Gestão de dependentes
 • Notificações de consultas
 
@@ -726,20 +796,11 @@ Agora você pode agendar suas consultas diretamente pelo nosso aplicativo:
 👉 iPhone: https://n9.cl/d6sl2
 
 *Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial.`,
-          handoff_to_booking: false
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      console.log('[ai-assistant] Booking enabled - handing off to booking flow');
-      return new Response(JSON.stringify({ 
-        response: null,
-        handoff_to_booking: true,
-        action: 'start_booking_flow'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+          handoff_to_booking: false,
+          action: 'booking_disabled_redirect',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
