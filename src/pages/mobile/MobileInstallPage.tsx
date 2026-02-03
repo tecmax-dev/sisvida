@@ -1,24 +1,20 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Smartphone, 
   Share, 
   Plus, 
-  MoreVertical, 
   ArrowLeft, 
   Download, 
   CheckCircle2, 
   RefreshCw,
-  AlertTriangle,
-  Copy,
   Apple,
-  Chrome,
   Zap,
   Shield,
   Wifi,
-  Clock
+  Clock,
+  ExternalLink
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -41,23 +37,15 @@ export default function MobileInstallPage() {
   
   const [isIOS, setIsIOS] = useState(false);
   const [isSafari, setIsSafari] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("ios");
 
-  // CRITICAL: Apply iOS PWA icon immediately on mount (before any async operations)
-  // iOS captures the apple-touch-icon at the moment of "Add to Home Screen"
-  // so we need to set it synchronously as early as possible
+  // CRITICAL: Apply iOS PWA icon immediately on mount
   useEffect(() => {
-    // Immediately set the Sindicato icon for iOS PWA installation
     const sindicatoLogoUrl = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
     
-    // Update apple-touch-icon immediately (critical for iOS PWA icon)
     const updateAppleTouchIcon = (href: string) => {
-      // Remove all existing apple-touch-icon links to prevent conflicts
       const existingIcons = document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]');
       existingIcons.forEach(icon => icon.remove());
       
-      // Create new apple-touch-icon with highest priority
       const sizes = ['180x180', '152x152', '144x144', '120x120', '114x114', '76x76', '72x72', '60x60', '57x57'];
       sizes.forEach(size => {
         const link = document.createElement('link');
@@ -67,32 +55,26 @@ export default function MobileInstallPage() {
         document.head.insertBefore(link, document.head.firstChild);
       });
       
-      // Also add one without sizes attribute (fallback)
       const fallbackLink = document.createElement('link');
       fallbackLink.rel = 'apple-touch-icon';
       fallbackLink.href = href;
       document.head.insertBefore(fallbackLink, document.head.firstChild);
       
-      // Add precomposed version (prevents iOS from adding effects)
       const precomposedLink = document.createElement('link');
       precomposedLink.rel = 'apple-touch-icon-precomposed';
       precomposedLink.href = href;
       document.head.insertBefore(precomposedLink, document.head.firstChild);
     };
     
-    // Apply immediately with known Sindicato logo
     updateAppleTouchIcon(sindicatoLogoUrl);
     
-    // Also update regular favicon
     const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (faviconLink) {
       faviconLink.href = sindicatoLogoUrl;
     }
     
-    // Update document title for PWA name
     document.title = "Sindicato - Instalar App";
     
-    // Update meta tags for iOS
     const updateMeta = (name: string, content: string) => {
       let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
       if (meta) {
@@ -113,35 +95,37 @@ export default function MobileInstallPage() {
     const ua = navigator.userAgent;
     const isIOSDevice = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     const isSafariBrowser = /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua);
-    const isAndroidDevice = /Android/.test(ua);
     
     setIsIOS(isIOSDevice);
     setIsSafari(isSafariBrowser);
-    setIsAndroid(isAndroidDevice);
-    
-    // Set default tab based on device
-    if (isAndroidDevice) {
-      setActiveTab("android");
-    } else {
-      setActiveTab("ios");
-    }
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Detectar se já está instalado (modo standalone)
+    const checkStandalone = () => {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             (window.navigator as any).standalone === true;
+    };
+
+    if (checkStandalone()) {
       setIsInstalled(true);
       return;
     }
 
+    // Capturar evento beforeinstallprompt para Chrome/Edge/Android
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setCanInstall(true);
+      console.log('[PWA] beforeinstallprompt capturado');
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
+    // Detectar quando o app foi instalado
     const installedHandler = () => {
+      console.log('[PWA] App instalado com sucesso');
       setIsInstalled(true);
       setCanInstall(false);
+      setDeferredPrompt(null);
     };
     window.addEventListener('appinstalled', installedHandler);
 
@@ -170,22 +154,31 @@ export default function MobileInstallPage() {
     }
   };
 
+  // Instalação via prompt nativo do navegador
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      console.error('[PWA] Prompt de instalação não disponível');
+      return;
+    }
 
     try {
+      console.log('[PWA] Disparando prompt de instalação nativo...');
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
+      
+      console.log('[PWA] Resultado da instalação:', outcome);
       
       if (outcome === 'accepted') {
         setIsInstalled(true);
         setCanInstall(false);
         toast.success('App instalado com sucesso!');
+      } else {
+        toast.info('Instalação cancelada. Você pode tentar novamente.');
       }
       setDeferredPrompt(null);
     } catch (error) {
-      console.error('Erro ao instalar PWA:', error);
-      toast.error('Erro ao instalar. Tente as instruções manuais.');
+      console.error('[PWA] Erro ao instalar:', error);
+      toast.error('Erro ao instalar. Tente recarregar a página.');
     }
   };
 
@@ -211,10 +204,8 @@ export default function MobileInstallPage() {
     }
   };
 
-  const handleCopyLink = () => {
-    const url = window.location.origin + '/app';
-    navigator.clipboard.writeText(url);
-    toast.success('Link copiado! Cole no Safari para instalar.');
+  const openApp = () => {
+    window.location.href = '/app';
   };
 
   const StepItem = ({ number, title, description, icon: Icon }: { 
@@ -275,230 +266,155 @@ export default function MobileInstallPage() {
       </header>
 
       <main className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-        {/* BOTÃO PRINCIPAL DE INSTALAÇÃO - SEMPRE VISÍVEL */}
-        <Card className="border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg">
-          <CardContent className="py-6 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-md">
-                <Download className="h-7 w-7 text-primary-foreground" />
-              </div>
-              <div className="flex-1">
-                {isInstalled ? (
-                  <>
-                    <p className="font-bold text-lg text-green-700">✓ App Instalado!</p>
-                    <p className="text-sm text-muted-foreground">Acesse pela tela inicial do seu celular</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-bold text-lg text-foreground">Instalar Aplicativo</p>
-                    <p className="text-sm text-muted-foreground">Acesso rápido na tela inicial</p>
-                  </>
-                )}
-              </div>
-            </div>
-            
-            {!isInstalled && (
-              <div className="space-y-3">
-                {/* Botão automático (quando disponível) */}
-                {canInstall && (
-                  <Button onClick={handleInstall} size="lg" className="w-full gap-2 h-12 text-base font-semibold">
-                    <Download className="h-5 w-5" />
-                    Instalar Agora
-                  </Button>
-                )}
-                
-                {/* Botão INSTALAR APP - SEMPRE VISÍVEL */}
-                {!canInstall && (
-                  <Button 
-                    onClick={handleCopyLink} 
-                    size="lg" 
-                    className="w-full gap-2 h-14 text-lg font-bold bg-primary hover:bg-primary/90"
-                  >
-                    <Download className="h-6 w-6" />
-                    INSTALAR APP
-                  </Button>
-                )}
-                
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                  {isIOS 
-                    ? 'Abre no Safari para adicionar à tela inicial'
-                    : 'Siga os passos abaixo para instalar'
-                  }
-                </p>
-              </div>
-            )}
-            
-            {isInstalled && (
-              <Button onClick={handleForceUpdate} variant="outline" size="lg" className="w-full gap-2" disabled={isUpdating}>
-                <RefreshCw className={`h-5 w-5 ${isUpdating ? 'animate-spin' : ''}`} />
-                {isUpdating ? 'Atualizando...' : 'Verificar Atualizações'}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Push Notification Setup - disponível para usuários anônimos */}
-        <PushNotificationSetup 
-          patientId={null} 
-          clinicId={null} 
-          allowAnonymous={true}
-        />
-
-        {/* Aviso iOS fora do Safari */}
-        {isIOS && !isSafari && (
-          <Card className="border-amber-300 bg-amber-50">
-            <CardContent className="py-5">
-              <div className="flex gap-4">
-                <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-semibold text-amber-800">Use o Safari</p>
-                    <p className="text-sm text-amber-700">
-                      No iPhone e iPad, a instalação só funciona pelo navegador Safari.
-                    </p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full border-amber-400 text-amber-700 hover:bg-amber-100"
-                    onClick={handleCopyLink}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copiar Link
-                  </Button>
+        
+        {/* === ESTADO: APP JÁ INSTALADO === */}
+        {isInstalled && (
+          <Card className="border-green-500 bg-gradient-to-br from-green-50 to-green-100 shadow-lg">
+            <CardContent className="py-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-green-500 flex items-center justify-center shadow-md">
+                  <CheckCircle2 className="h-7 w-7 text-white" />
                 </div>
+                <div className="flex-1">
+                  <p className="font-bold text-lg text-green-800">App Instalado!</p>
+                  <p className="text-sm text-green-700">O aplicativo está na sua tela inicial</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <Button onClick={openApp} size="lg" className="w-full gap-2 h-12 text-base font-semibold bg-green-600 hover:bg-green-700">
+                  <ExternalLink className="h-5 w-5" />
+                  Abrir App
+                </Button>
+                
+                <Button onClick={handleForceUpdate} variant="outline" size="lg" className="w-full gap-2" disabled={isUpdating}>
+                  <RefreshCw className={`h-5 w-5 ${isUpdating ? 'animate-spin' : ''}`} />
+                  {isUpdating ? 'Atualizando...' : 'Verificar Atualizações'}
+                </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Instruções por plataforma */}
-        {!isInstalled && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">
-              Como instalar
-            </h2>
-            
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-12">
-                <TabsTrigger 
-                  value="ios" 
-                  className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  <Apple className="h-4 w-4" />
-                  iPhone / iPad
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="android" 
-                  className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  <Chrome className="h-4 w-4" />
-                  Android
-                </TabsTrigger>
-              </TabsList>
+        {/* === ESTADO: PODE INSTALAR VIA PROMPT NATIVO (Chrome/Edge/Android) === */}
+        {!isInstalled && canInstall && (
+          <Card className="border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg">
+            <CardContent className="py-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-md">
+                  <Download className="h-7 w-7 text-primary-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-lg text-foreground">Instalar Aplicativo</p>
+                  <p className="text-sm text-muted-foreground">Adicione à sua tela inicial</p>
+                </div>
+              </div>
               
-              <TabsContent value="ios" className="mt-4">
-                <Card>
-                  <CardContent className="py-6 space-y-6">
-                    {isIOS && isSafari && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="font-medium">Você está no Safari! Siga os passos:</span>
-                      </div>
-                    )}
-                    
-                    <StepItem 
-                      number={1}
-                      title="Abra no Safari"
-                      description="Este é o navegador padrão da Apple, com ícone de bússola azul."
-                      icon={Apple}
-                    />
-                    
-                    <StepItem 
-                      number={2}
-                      title="Toque em Compartilhar"
-                      description="Ícone de quadrado com seta para cima, na barra inferior."
-                      icon={Share}
-                    />
-                    
-                    <StepItem 
-                      number={3}
-                      title="Adicionar à Tela de Início"
-                      description="Role as opções e encontre esta opção com ícone de +"
-                      icon={Plus}
-                    />
-                    
-                    <StepItem 
-                      number={4}
-                      title="Confirme em 'Adicionar'"
-                      description="Pronto! O app aparecerá na sua tela inicial."
-                      icon={CheckCircle2}
-                    />
-
-                    {isIOS && !isSafari && (
-                      <Button 
-                        variant="outline" 
-                        className="w-full mt-4"
-                        onClick={handleCopyLink}
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copiar link para o Safari
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              <Button 
+                onClick={handleInstall} 
+                size="lg" 
+                className="w-full gap-2 h-14 text-lg font-bold"
+              >
+                <Download className="h-6 w-6" />
+                INSTALAR APP
+              </Button>
               
-              <TabsContent value="android" className="mt-4">
-                <Card>
-                  <CardContent className="py-6 space-y-6">
-                    {isAndroid && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="font-medium">Você está no Android! Siga os passos:</span>
-                      </div>
-                    )}
-                    
-                    <StepItem 
-                      number={1}
-                      title="Abra no Chrome"
-                      description="Use o navegador Google Chrome para melhor experiência."
-                      icon={Chrome}
-                    />
-                    
-                    <StepItem 
-                      number={2}
-                      title="Toque no menu"
-                      description="Ícone de três pontos verticais no canto superior direito."
-                      icon={MoreVertical}
-                    />
-                    
-                    <StepItem 
-                      number={3}
-                      title="Adicionar à tela inicial"
-                      description="Ou 'Instalar aplicativo' se aparecer esta opção."
-                      icon={Plus}
-                    />
-                    
-                    <StepItem 
-                      number={4}
-                      title="Confirme a instalação"
-                      description="Pronto! O app aparecerá na sua tela inicial."
-                      icon={CheckCircle2}
-                    />
-
-                    {canInstall && (
-                      <Button onClick={handleInstall} className="w-full mt-4 gap-2">
-                        <Download className="h-4 w-4" />
-                        Instalar Automaticamente
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
+              <p className="text-xs text-center text-muted-foreground">
+                O diálogo nativo do navegador será aberto
+              </p>
+            </CardContent>
+          </Card>
         )}
+
+        {/* === ESTADO: iOS (Safari) - Instruções manuais === */}
+        {!isInstalled && !canInstall && isIOS && (
+          <Card className="border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg">
+            <CardContent className="py-6 space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-md">
+                  <Apple className="h-7 w-7 text-primary-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-lg text-foreground">Instalar no iPhone/iPad</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isSafari ? 'Você está no Safari! Siga os passos:' : 'Abra no Safari para instalar'}
+                  </p>
+                </div>
+              </div>
+              
+              {isSafari ? (
+                <div className="space-y-4 pt-2">
+                  <StepItem 
+                    number={1}
+                    title="Toque em Compartilhar"
+                    description="Ícone de quadrado com seta para cima, na barra inferior."
+                    icon={Share}
+                  />
+                  
+                  <StepItem 
+                    number={2}
+                    title="Adicionar à Tela de Início"
+                    description="Role as opções e encontre esta opção com ícone de +"
+                    icon={Plus}
+                  />
+                  
+                  <StepItem 
+                    number={3}
+                    title="Confirme em 'Adicionar'"
+                    description="Pronto! O app aparecerá na sua tela inicial."
+                    icon={CheckCircle2}
+                  />
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-amber-800 font-medium text-sm">
+                    ⚠️ Para instalar no iPhone/iPad, é necessário abrir esta página no Safari (navegador padrão da Apple).
+                  </p>
+                  <p className="text-amber-700 text-sm mt-2">
+                    Copie o endereço desta página e cole no Safari.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* === ESTADO: Navegador sem suporte (Desktop ou navegador antigo) === */}
+        {!isInstalled && !canInstall && !isIOS && (
+          <Card className="border-muted bg-muted/30 shadow-lg">
+            <CardContent className="py-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center shadow-md">
+                  <Smartphone className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-lg text-foreground">Instalação não disponível</p>
+                  <p className="text-sm text-muted-foreground">
+                    Seu navegador não suporta instalação de PWA
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                <p className="text-blue-800 font-medium text-sm">
+                  💡 Para instalar o app:
+                </p>
+                <ul className="text-blue-700 text-sm space-y-1 list-disc list-inside">
+                  <li><strong>Android:</strong> Abra no Google Chrome</li>
+                  <li><strong>iPhone/iPad:</strong> Abra no Safari</li>
+                  <li><strong>Desktop:</strong> Use Chrome ou Edge</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Push Notification Setup */}
+        <PushNotificationSetup 
+          patientId={null} 
+          clinicId={null} 
+          allowAnonymous={true}
+        />
 
         {/* Benefícios */}
         <div className="space-y-4">
@@ -548,30 +464,6 @@ export default function MobileInstallPage() {
             </Card>
           </div>
         </div>
-
-        {/* Atualização forçada */}
-        {isInstalled && (
-          <Card className="border-muted">
-            <CardContent className="py-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Atualizar App</p>
-                  <p className="text-sm text-muted-foreground">Força download da versão mais recente</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleForceUpdate}
-                  disabled={isUpdating}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
-                  {isUpdating ? 'Atualizando...' : 'Atualizar'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Botão voltar */}
         <Button asChild variant="outline" className="w-full" size="lg">
