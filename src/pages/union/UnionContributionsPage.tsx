@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Receipt, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import ContributionsPage from "@/pages/dashboard/ContributionsPage";
+import UnionContributionsPageRedesign from "@/components/union/contributions/UnionContributionsPageRedesign";
 
 export default function UnionContributionsPage() {
   const { currentClinic, loading } = useAuth();
@@ -36,5 +36,5 @@ export default function UnionContributionsPage() {
     );
   }
 
-  return <ContributionsPage />;
+  return <UnionContributionsPageRedesign />;
 }
