@@ -91,7 +91,7 @@ const formatPhone = (phone: string) => {
 export default function UnionAssociadosPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentClinic } = useAuth();
+  const { currentClinic, user } = useAuth();
   const { canManageMembers } = useUnionPermissions();
   const { entity: unionEntity, loading: entityLoading } = useUnionEntity();
   const queryClient = useQueryClient();
@@ -131,84 +131,28 @@ export default function UnionAssociadosPage() {
     enabled: !!sindicatoId,
   });
 
-  // Aprovar associado e criar/vincular em patients
+  // Aprovar associado - atualiza apenas sindical_associados
   const aprovarMutation = useMutation({
     mutationFn: async (associado: Associado) => {
-      // 1. Primeiro, verificar se já existe um paciente com esse CPF
-      const cpfDigits = associado.cpf.replace(/\D/g, "");
-      const { data: existingPatient } = await supabase
-        .from("patients")
-        .select("id")
-        .or(`cpf.eq.${cpfDigits},cpf.eq.${associado.cpf}`)
-        .eq("clinic_id", associado.sindicato_id)
-        .maybeSingle();
-
-      let patientId = existingPatient?.id;
-
-      // 2. Se não existe, criar novo paciente (dados básicos apenas)
-      if (!patientId) {
-        const { data: newPatient, error: patientError } = await supabase
-          .from("patients")
-          .insert({
-            clinic_id: associado.sindicato_id,
-            name: associado.nome,
-            cpf: cpfDigits,
-            email: associado.email,
-            phone: associado.telefone,
-            birth_date: associado.data_nascimento,
-            gender: associado.sexo === "masculino" ? "male" : associado.sexo === "feminino" ? "female" : null,
-            address: associado.logradouro ? `${associado.logradouro}, ${associado.numero || ""}${associado.complemento ? ` - ${associado.complemento}` : ""}` : null,
-            city: associado.cidade,
-            state: associado.uf,
-            cep: associado.cep,
-            is_union_member: true,
-          })
-          .select("id")
-          .single();
-
-        if (patientError) throw patientError;
-        patientId = newPatient.id;
-      } else {
-        // 3. Se já existe, apenas marcar como membro sindical
-        const { error: updateError } = await supabase
-          .from("patients")
-          .update({
-            is_union_member: true,
-          })
-          .eq("id", patientId);
-
-        if (updateError) throw updateError;
-      }
-
-      // 4. Atualizar status na tabela sindical_associados
+      // Atualizar status na tabela sindical_associados
       const { error } = await supabase
         .from("sindical_associados")
         .update({ 
           status: "ativo",
           aprovado_at: new Date().toISOString(),
+          aprovado_por: user?.id,
         })
         .eq("id", associado.id);
+      
       if (error) throw error;
 
-      // 5. Registrar auditoria
-      await supabase.from("union_member_audit_logs").insert({
-        patient_id: patientId,
-        clinic_id: associado.sindicato_id,
-        action: "approved_membership",
-        changes: {
-          source: "sindical_associados",
-          associado_id: associado.id,
-          approved_at: new Date().toISOString(),
-        },
-      });
-
-      return patientId;
+      return associado.id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sindical-associados"] });
       toast({ 
         title: "Associado aprovado com sucesso!", 
-        description: "O sócio foi vinculado e já aparece na lista de Sócios." 
+        description: "O cadastro foi aprovado e o associado está ativo." 
       });
       setShowDetailDialog(false);
     },
