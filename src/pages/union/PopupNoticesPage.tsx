@@ -115,7 +115,8 @@ export default function PopupNoticesPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
-    return format(new Date(dateStr), "dd/MM/yy HH:mm", { locale: ptBR });
+    // Formato brasileiro 24h
+    return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
 
   if (!clinicId) {
