@@ -51,7 +51,9 @@ Digite o número da opção desejada:`;
 };
 
 export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
-  const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
+  // undefined = ainda não carregado / indeterminado (NUNCA assumir true/false sem ler do banco)
+  const [bookingEnabled, setBookingEnabled] = useState<boolean | undefined>(undefined);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,22 +63,58 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
+  const loadBookingConfig = useCallback(async () => {
+    setConfigError(null);
+    setBookingEnabled(undefined);
+    setMessages([{ role: 'assistant', content: 'Carregando configurações…' }]);
+
+    const { data, error } = await supabase
+      .from('evolution_configs')
+      .select('booking_enabled')
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+
+    console.log('[AIAssistantChat] evolution_configs.booking_enabled', {
+      clinicId,
+      data,
+      error: error?.message,
+    });
+
+    if (error) {
+      // Sem permissão RLS / erro de rede: não podemos inferir o valor real.
+      setConfigError(error.message);
+      setMessages([
+        {
+          role: 'assistant',
+          content:
+            'Não foi possível carregar a configuração de agendamento desta clínica. Verifique seu acesso e tente novamente.',
+        },
+      ]);
+      return;
+    }
+
+    if (!data || typeof data.booking_enabled !== 'boolean') {
+      // Registro inexistente ou valor inválido: não assumir defaults.
+      setConfigError('Configuração não encontrada ou inválida');
+      setMessages([
+        {
+          role: 'assistant',
+          content:
+            'Configuração de agendamento não encontrada para esta clínica (booking_enabled). Por favor, revise a configuração no backend.',
+        },
+      ]);
+      return;
+    }
+
+    const isEnabled = data.booking_enabled;
+    setBookingEnabled(isEnabled);
+    setMessages([{ role: 'assistant', content: getWelcomeMessage(isEnabled) }]);
+  }, [clinicId]);
+
   // Fetch booking_enabled config on mount
   useEffect(() => {
-    const fetchBookingConfig = async () => {
-      const { data } = await supabase
-        .from('evolution_configs')
-        .select('booking_enabled')
-        .eq('clinic_id', clinicId)
-        .maybeSingle();
-
-      const isEnabled = data?.booking_enabled !== false;
-      setBookingEnabled(isEnabled);
-      setMessages([{ role: 'assistant', content: getWelcomeMessage(isEnabled) }]);
-    };
-
-    fetchBookingConfig();
-  }, [clinicId]);
+    void loadBookingConfig();
+  }, [loadBookingConfig]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -198,8 +236,15 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   };
 
   const clearChat = () => {
-    setMessages([{ role: 'assistant', content: getWelcomeMessage(bookingEnabled ?? true) }]);
     setIsBookingMode(false);
+
+    if (typeof bookingEnabled === 'boolean') {
+      setMessages([{ role: 'assistant', content: getWelcomeMessage(bookingEnabled) }]);
+      return;
+    }
+
+    // Se ainda não carregou ou deu erro, recarrega do banco.
+    void loadBookingConfig();
   };
 
   // Handle touch events for mobile
@@ -230,6 +275,12 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
         <p className="text-sm text-muted-foreground hidden md:block">
           Teste o assistente de IA integrado com OpenAI
         </p>
+
+        {configError && (
+          <p className="text-xs text-destructive hidden md:block">
+            Configuração do menu indisponível (não foi possível ler booking_enabled).
+          </p>
+        )}
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col overflow-hidden p-0 min-h-0">
