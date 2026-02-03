@@ -307,21 +307,22 @@ export default function MobileInstallPage() {
                   </Button>
                 )}
                 
-                {/* Botão de copiar link - SEMPRE VISÍVEL */}
-                <Button 
-                  onClick={handleCopyLink} 
-                  variant={canInstall ? "outline" : "default"}
-                  size="lg" 
-                  className={`w-full gap-2 h-12 text-base ${!canInstall ? 'font-semibold' : ''}`}
-                >
-                  <Copy className="h-5 w-5" />
-                  {canInstall ? 'Copiar Link' : 'Copiar Link do App'}
-                </Button>
+                {/* Botão INSTALAR APP - SEMPRE VISÍVEL */}
+                {!canInstall && (
+                  <Button 
+                    onClick={handleCopyLink} 
+                    size="lg" 
+                    className="w-full gap-2 h-14 text-lg font-bold bg-primary hover:bg-primary/90"
+                  >
+                    <Download className="h-6 w-6" />
+                    INSTALAR APP
+                  </Button>
+                )}
                 
-                <p className="text-xs text-center text-muted-foreground">
+                <p className="text-xs text-center text-muted-foreground mt-2">
                   {isIOS 
-                    ? 'Cole no Safari e siga as instruções abaixo'
-                    : 'Cole no Chrome e siga as instruções abaixo'
+                    ? 'Abre no Safari para adicionar à tela inicial'
+                    : 'Siga os passos abaixo para instalar'
                   }
                 </p>
               </div>
