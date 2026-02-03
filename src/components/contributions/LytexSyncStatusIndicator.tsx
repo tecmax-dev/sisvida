@@ -344,10 +344,19 @@ export function LytexSyncStatusIndicator({
            (details.errors && details.errors.length > 0);
   };
 
-  const filteredClients = selectedLog?.details?.clients?.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.cnpj.includes(searchTerm)
-  ) || [];
+  const filteredClients = selectedLog?.details?.clients?.filter(c => {
+    const searchLower = searchTerm.toLowerCase();
+    const searchClean = searchTerm.replace(/\D/g, "");
+    const cnpjClean = c.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
+    return (
+      c.name.toLowerCase().includes(searchLower) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros))
+    );
+  }) || [];
 
   const filteredInvoices = selectedLog?.details?.invoices?.filter(inv =>
     inv.employerName.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -83,13 +83,21 @@ export function SindSystemEmployersTable({
   const filteredEmployers = useMemo(() => {
     if (!searchTerm) return employers;
     const term = searchTerm.toLowerCase();
-    return employers.filter(
-      (emp) =>
+    const termClean = searchTerm.replace(/\D/g, "");
+    const termNoLeadingZeros = termClean.replace(/^0+/, "");
+    
+    return employers.filter((emp) => {
+      const cnpjClean = emp.cnpj?.replace(/\D/g, "") || "";
+      const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+      
+      return (
         emp.name.toLowerCase().includes(term) ||
-        emp.cnpj.includes(term.replace(/\D/g, "")) ||
+        (termClean.length >= 2 && cnpjClean.includes(termClean)) ||
+        (termNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(termNoLeadingZeros)) ||
         emp.trade_name?.toLowerCase().includes(term) ||
-        emp.registration_number?.includes(term)
-    );
+        emp.registration_number?.includes(searchTerm)
+      );
+    });
   }, [employers, searchTerm]);
 
   const totalPages = Math.ceil(filteredEmployers.length / parseInt(perPage));

@@ -249,9 +249,15 @@ export default function NegotiationInstallmentsTab({
       const matchesYear = dueYear === effectiveYearFilter;
       
       const searchLower = searchTerm.toLowerCase();
+      const searchClean = searchTerm.replace(/\D/g, "");
+      const cnpjClean = inst.negotiation?.employers?.cnpj?.replace(/\D/g, "") || "";
+      const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+      const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+      
       const matchesSearch = 
         inst.negotiation?.employers?.name.toLowerCase().includes(searchLower) ||
-        inst.negotiation?.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
+        (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+        (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
         inst.negotiation?.employers?.registration_number?.includes(searchTerm) ||
         inst.negotiation?.negotiation_code.toLowerCase().includes(searchLower);
       

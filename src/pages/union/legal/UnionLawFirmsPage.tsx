@@ -62,11 +62,20 @@ export default function UnionLawFirmsPage() {
 
   const { lawFirms, isLoading, createLawFirm } = useUnionLawFirms(currentClinic?.id);
 
-  const filteredFirms = (lawFirms || []).filter((f) =>
-    f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (f.cnpj && f.cnpj.includes(searchTerm)) ||
-    (f.email && f.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredFirms = (lawFirms || []).filter((f) => {
+    const searchLower = searchTerm.toLowerCase();
+    const searchClean = searchTerm.replace(/\D/g, "");
+    const cnpjClean = f.cnpj?.replace(/\D/g, "") || "";
+    const cnpjNoLeadingZeros = cnpjClean.replace(/^0+/, "");
+    const searchNoLeadingZeros = searchClean.replace(/^0+/, "");
+    
+    return (
+      f.name.toLowerCase().includes(searchLower) ||
+      (searchClean.length >= 2 && cnpjClean.includes(searchClean)) ||
+      (searchNoLeadingZeros.length >= 2 && cnpjNoLeadingZeros.includes(searchNoLeadingZeros)) ||
+      (f.email && f.email.toLowerCase().includes(searchLower))
+    );
+  });
 
   const resetForm = () => {
     setFormData({
