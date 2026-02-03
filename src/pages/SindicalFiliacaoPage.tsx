@@ -451,9 +451,13 @@ export default function SindicalFiliacaoPage() {
     setSubmitting(true);
 
     try {
-      const { data: associadoData, error: associadoError } = await supabase
+      // Gera ID no cliente para evitar necessidade de .select() que exige permissão SELECT
+      const associadoId = crypto.randomUUID();
+
+      const { error: associadoError } = await supabase
         .from("sindical_associados")
         .insert({
+          id: associadoId,
           sindicato_id: sindicato.id,
           nome: data.nome,
           cpf: data.cpf.replace(/\D/g, ""),
@@ -490,15 +494,13 @@ export default function SindicalFiliacaoPage() {
           aceite_lgpd: data.aceite_lgpd,
           aceite_lgpd_at: new Date().toISOString(),
           status: "pendente",
-        })
-        .select("id")
-        .single();
+        });
 
       if (associadoError) throw associadoError;
 
-      if (dependents.length > 0 && associadoData) {
+      if (dependents.length > 0) {
         const dependentesInsert = dependents.map(dep => ({
-          associado_id: associadoData.id,
+          associado_id: associadoId,
           nome: dep.nome,
           grau_parentesco: dep.grau_parentesco,
           data_nascimento: dep.data_nascimento,
