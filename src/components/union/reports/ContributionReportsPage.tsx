@@ -82,6 +82,13 @@ export function ContributionReportsPage({
   const [filters, setFilters] = useState<ContributionReportFiltersState>(getDefaultFilters());
   const [isLoading, setIsLoading] = useState(false);
 
+  // Create a map of employers by ID for fallback lookups
+  const employerMap = useMemo(() => {
+    const map = new Map<string, Employer>();
+    employers.forEach(e => map.set(e.id, e));
+    return map;
+  }, [employers]);
+
   // Helper to get date from contribution based on filter type
   const getDateForFilter = useCallback((c: Contribution): Date | null => {
     if (filters.dateFilterType === "competence") {
@@ -172,7 +179,7 @@ export function ContributionReportsPage({
 
   // Generate table data (by employer)
   const tableData = useMemo(() => {
-    const employerMap = new Map<string, {
+    const aggregatedData = new Map<string, {
       employerId: string;
       employerName: string;
       cnpj: string;
@@ -187,12 +194,14 @@ export function ContributionReportsPage({
     }>();
 
     filteredContributions.forEach((c) => {
-      if (!c.employers) return;
+      // Get employer data from embedded relation or fallback to employers lookup
+      const employer = c.employers || employerMap.get(c.employer_id);
+      if (!employer) return;
       
-      const existing = employerMap.get(c.employer_id) || {
+      const existing = aggregatedData.get(c.employer_id) || {
         employerId: c.employer_id,
-        employerName: c.employers.name,
-        cnpj: c.employers.cnpj,
+        employerName: employer.name,
+        cnpj: employer.cnpj,
         totalValue: 0,
         paidValue: 0,
         pendingValue: 0,
@@ -223,10 +232,10 @@ export function ContributionReportsPage({
         existing.lastUpdate = updateDate;
       }
 
-      employerMap.set(c.employer_id, existing);
+      aggregatedData.set(c.employer_id, existing);
     });
 
-    return Array.from(employerMap.values())
+    return Array.from(aggregatedData.values())
       .map(row => ({
         ...row,
         status: row.hasOverdue ? 'overdue' as const : 
@@ -234,7 +243,7 @@ export function ContributionReportsPage({
                 'paid' as const,
       }))
       .sort((a, b) => b.totalValue - a.totalValue);
-  }, [filteredContributions]);
+  }, [filteredContributions, employerMap]);
 
   // Export handlers
   const periodLabel = useMemo(() => {
