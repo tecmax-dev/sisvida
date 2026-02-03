@@ -134,6 +134,26 @@ export function useHomologacaoAppointments() {
       
       invalidate();
       toast.success(`Atendimento concluído! Protocolo: ${data?.protocol_number || "Gerado"}`);
+
+      // Send protocol automatically via WhatsApp and Email
+      try {
+        const response = await supabase.functions.invoke("send-homologacao-protocol", {
+          body: { appointment_id: id },
+        });
+        
+        if (response.data?.success) {
+          const channels = [];
+          if (response.data.whatsapp_sent) channels.push("WhatsApp");
+          if (response.data.email_sent) channels.push("E-mail");
+          if (channels.length > 0) {
+            toast.success(`Protocolo enviado via ${channels.join(" e ")}!`);
+          }
+        }
+      } catch (protocolError) {
+        console.error("Error sending protocol notification:", protocolError);
+        // Don't fail the completion if notification fails
+      }
+
       return true;
     } catch (err: any) {
       console.error("Error completing appointment:", err);
