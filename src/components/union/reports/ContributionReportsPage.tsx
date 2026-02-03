@@ -1,19 +1,18 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { format, startOfYear, endOfYear } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { generateContributionsReport } from "@/lib/contributions-report-pdf";
 
 import { 
   ContributionReportFilters, 
   ContributionReportFiltersState,
-  ReportCategory,
-  DateFilterType,
 } from "./ContributionReportFilters";
 import { ContributionReportMetrics, ReportSummary } from "./ContributionReportMetrics";
 import { ContributionReportTable } from "./ContributionReportTable";
+import { FilterAuditPanel, FilterAuditData } from "./FilterAuditPanel";
 
 interface Employer {
   id: string;
@@ -72,15 +71,17 @@ const getDefaultFilters = (): ContributionReportFiltersState => ({
 });
 
 export function ContributionReportsPage({
-  contributions,
+  contributions: initialContributions,
   employers,
   contributionTypes,
   clinicName,
   clinicLogo,
 }: ContributionReportsPageProps) {
-  const { session } = useAuth();
+  const { session, currentClinic } = useAuth();
   const [filters, setFilters] = useState<ContributionReportFiltersState>(getDefaultFilters());
   const [isLoading, setIsLoading] = useState(false);
+  const [filteredContributions, setFilteredContributions] = useState<Contribution[]>(initialContributions);
+  const [auditData, setAuditData] = useState<FilterAuditData | null>(null);
 
   // Create a map of employers by ID for fallback lookups
   const employerMap = useMemo(() => {
@@ -89,61 +90,63 @@ export function ContributionReportsPage({
     return map;
   }, [employers]);
 
-  // Helper to get date from contribution based on filter type
-  const getDateForFilter = useCallback((c: Contribution): Date | null => {
-    if (filters.dateFilterType === "competence") {
-      return new Date(c.competence_year, c.competence_month - 1, 1);
-    } else if (filters.dateFilterType === "due_date") {
-      return new Date(c.due_date + "T12:00:00");
-    } else if (filters.dateFilterType === "paid_at") {
-      if (!c.paid_at) return null;
-      return new Date(c.paid_at);
+  // Apply filters via backend Edge Function
+  const handleApplyFilters = async () => {
+    if (!currentClinic?.id) {
+      toast.error("Clínica não identificada");
+      return;
     }
-    return null;
-  }, [filters.dateFilterType]);
 
-  // Filter contributions
-  const filteredContributions = useMemo(() => {
-    const start = filters.startDate ? new Date(filters.startDate) : null;
-    const end = filters.endDate ? new Date(filters.endDate) : null;
-    if (start) start.setHours(0, 0, 0, 0);
-    if (end) end.setHours(23, 59, 59, 999);
-    
-    return contributions.filter((c) => {
-      // Date filter
-      let matchesPeriod = true;
-      const contributionDate = getDateForFilter(c);
-      
-      if (contributionDate === null && filters.dateFilterType === "paid_at") {
-        return false;
+    setIsLoading(true);
+    setAuditData(null);
+
+    const payload = {
+      clinic_id: currentClinic.id,
+      start_date: filters.startDate.toISOString(),
+      end_date: filters.endDate.toISOString(),
+      date_filter_type: filters.dateFilterType,
+      status: filters.status,
+      employer_id: filters.selectedEmployer?.id || null,
+      contribution_type_id: filters.contributionTypeId !== 'all' ? filters.contributionTypeId : null,
+      origin_filter: filters.originFilter !== 'all' ? filters.originFilter : null,
+    };
+
+    console.log("=== FRONTEND: Sending filter request ===");
+    console.log("Payload:", JSON.stringify(payload, null, 2));
+
+    try {
+      const { data: responseData, error } = await supabase.functions.invoke('filter-contributions', {
+        body: payload,
+      });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        toast.error(`Erro ao filtrar: ${error.message}`);
+        return;
       }
-      
-      if (contributionDate) {
-        if (start && contributionDate < start) matchesPeriod = false;
-        if (end && contributionDate > end) matchesPeriod = false;
-      }
-      
-      // Status filter
-      const matchesStatus =
-        filters.status === "all" ||
-        (filters.status === "hide_cancelled"
-          ? c.status !== "cancelled"
-          : filters.status === "pending"
-            ? c.status === "pending" || c.status === "awaiting_value"
-            : c.status === filters.status);
-      
-      // Employer filter
-      const matchesEmployer = !filters.selectedEmployer || c.employer_id === filters.selectedEmployer.id;
-      
-      // Contribution type filter
-      const matchesType = filters.contributionTypeId === "all" || c.contribution_type_id === filters.contributionTypeId;
-      
-      // Origin filter
-      const matchesOrigin = filters.originFilter === "all" || c.origin === filters.originFilter;
-      
-      return matchesPeriod && matchesStatus && matchesEmployer && matchesType && matchesOrigin;
-    });
-  }, [contributions, filters, getDateForFilter]);
+
+      console.log("=== FRONTEND: Response received ===");
+      console.log("Audit:", JSON.stringify(responseData.audit, null, 2));
+      console.log("Row count:", responseData.data?.length);
+
+      setFilteredContributions(responseData.data || []);
+      setAuditData({
+        receivedAt: responseData.audit.received_at,
+        payload: responseData.audit.payload,
+        queryDescription: responseData.audit.query_description,
+        filtersApplied: responseData.audit.filters_applied,
+        rowCount: responseData.audit.row_count,
+        executionTimeMs: responseData.audit.execution_time_ms,
+      });
+
+      toast.success(`Filtros aplicados: ${responseData.data?.length || 0} contribuições encontradas`);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Erro inesperado ao aplicar filtros");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate summary
   const summary: ReportSummary = useMemo(() => {
@@ -371,10 +374,6 @@ export function ContributionReportsPage({
     toast.success("Janela de impressão aberta");
   };
 
-  const handleApplyFilters = () => {
-    toast.success(`Filtros aplicados: ${filteredContributions.length} contribuições encontradas`);
-  };
-
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Filters Section */}
@@ -386,6 +385,11 @@ export function ContributionReportsPage({
         isLoading={isLoading}
         onApplyFilters={handleApplyFilters}
       />
+
+      {/* Audit Panel - Shows payload, parameters, and query */}
+      {auditData && (
+        <FilterAuditPanel data={auditData} />
+      )}
 
       {/* Metrics Section */}
       <ContributionReportMetrics 
