@@ -145,7 +145,7 @@ export default function UnionAssociadosPage() {
 
       let patientId = existingPatient?.id;
 
-      // 2. Se não existe, criar novo paciente
+      // 2. Se não existe, criar novo paciente (dados básicos apenas)
       if (!patientId) {
         const { data: newPatient, error: patientError } = await supabase
           .from("patients")
@@ -162,11 +162,6 @@ export default function UnionAssociadosPage() {
             state: associado.uf,
             cep: associado.cep,
             is_union_member: true,
-            union_status: "ativo",
-            union_category_id: associado.categoria_id,
-            union_contribution_value: associado.valor_contribuicao,
-            union_join_date: new Date().toISOString(),
-            union_observations: `Aprovado via formulário de filiação em ${new Date().toLocaleDateString("pt-BR")}`,
           })
           .select("id")
           .single();
@@ -174,16 +169,11 @@ export default function UnionAssociadosPage() {
         if (patientError) throw patientError;
         patientId = newPatient.id;
       } else {
-        // 3. Se já existe, atualizar para marcar como membro sindical
+        // 3. Se já existe, apenas marcar como membro sindical
         const { error: updateError } = await supabase
           .from("patients")
           .update({
             is_union_member: true,
-            union_status: "ativo",
-            union_category_id: associado.categoria_id,
-            union_contribution_value: associado.valor_contribuicao,
-            union_join_date: new Date().toISOString(),
-            union_observations: `Aprovado via formulário de filiação em ${new Date().toLocaleDateString("pt-BR")}`,
           })
           .eq("id", patientId);
 
