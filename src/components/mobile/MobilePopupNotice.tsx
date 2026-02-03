@@ -76,16 +76,19 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
   const handleButtonClick = () => {
     handleDismiss();
     
+    // Se configurado para navegar para agendamento
+    if (currentNotice?.navigate_to_booking) {
+      navigate("/app/agendar");
+      return;
+    }
+    
+    // Se tem link configurado
     if (currentNotice?.button_link) {
-      // Se o link é interno (começa com /), usar navegação do React Router
       if (currentNotice.button_link.startsWith("/")) {
         navigate(currentNotice.button_link);
       } else {
         window.open(currentNotice.button_link, "_blank");
       }
-    } else {
-      // Se não tem link configurado, navegar para a página de agendamento
-      navigate("/app/agendar");
     }
   };
 
