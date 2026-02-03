@@ -209,7 +209,7 @@ export function ContributionReportsPage({
       if (c.status === "paid") {
         existing.paidValue += c.paid_value || c.value;
         existing.hasPaid = true;
-      } else if (c.status === "pending") {
+      } else if (c.status === "pending" || c.status === "awaiting_value") {
         existing.pendingValue += c.value;
         existing.hasPending = true;
       } else if (c.status === "overdue") {
