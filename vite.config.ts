@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => ({
         "favicon.ico",
       ],
       manifest: {
-        name: "Sindicato - App do Associado",
-        short_name: "Sindicato",
+        name: "SECMI - Sindicato",
+        short_name: "SECMI",
         description: "Aplicativo do associado para acesso a serviços, carteirinha digital, boletos e muito mais.",
         theme_color: "#16a394",
         background_color: "#16a394",
@@ -31,29 +31,42 @@ export default defineConfig(({ mode }) => ({
         orientation: "portrait",
         scope: "/",
         start_url: "/app",
+        id: "/app",
         icons: [
           {
-            src: "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png",
+            src: "/pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
           },
+          {
+            src: "/icon-144x144.png",
+            sizes: "144x144",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/icon-72x72.png",
+            sizes: "72x72",
+            type: "image/png",
+            purpose: "any",
+          },
         ],
         categories: ["business", "utilities"],
         lang: "pt-BR",
-        dir: "ltr"
+        dir: "ltr",
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
