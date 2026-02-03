@@ -124,8 +124,13 @@ export function ContributionReportsPage({
       }
       
       // Status filter
-      const matchesStatus = filters.status === "all" || 
-        (filters.status === "hide_cancelled" ? c.status !== "cancelled" : c.status === filters.status);
+      const matchesStatus =
+        filters.status === "all" ||
+        (filters.status === "hide_cancelled"
+          ? c.status !== "cancelled"
+          : filters.status === "pending"
+            ? c.status === "pending" || c.status === "awaiting_value"
+            : c.status === filters.status);
       
       // Employer filter
       const matchesEmployer = !filters.selectedEmployer || c.employer_id === filters.selectedEmployer.id;
@@ -147,14 +152,14 @@ export function ContributionReportsPage({
       .filter((c) => c.status === "paid")
       .reduce((acc, c) => acc + (c.paid_value || c.value), 0);
     const pendingValue = filteredContributions
-      .filter((c) => c.status === "pending")
+      .filter((c) => c.status === "pending" || c.status === "awaiting_value")
       .reduce((acc, c) => acc + c.value, 0);
     const overdueValue = filteredContributions
       .filter((c) => c.status === "overdue")
       .reduce((acc, c) => acc + c.value, 0);
     
     const paidCount = filteredContributions.filter((c) => c.status === "paid").length;
-    const pendingCount = filteredContributions.filter((c) => c.status === "pending").length;
+    const pendingCount = filteredContributions.filter((c) => c.status === "pending" || c.status === "awaiting_value").length;
     const overdueCount = filteredContributions.filter((c) => c.status === "overdue").length;
     
     const employerIds = new Set(filteredContributions.map(c => c.employer_id));

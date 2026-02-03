@@ -126,3 +126,56 @@ export async function fetchAllPatients<T = {
     return { data: [], error: error as Error };
   }
 }
+
+/**
+ * Fetches all employer contributions for a clinic using pagination.
+ * Returns the complete list bypassing the 1000 row default limit.
+ *
+ * Use this when you need ALL contributions for reporting/exports.
+ */
+export async function fetchAllEmployerContributions<T = any>(
+  clinicId: string,
+  options?: {
+    select?: string;
+    pageSize?: number;
+  }
+): Promise<{ data: T[]; error: Error | null }> {
+  const PAGE_SIZE = options?.pageSize ?? 1000;
+  const select =
+    options?.select ??
+    `*,
+     employers:employers!employer_contributions_employer_id_fkey (id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number),
+     contribution_types:contribution_types!employer_contributions_contribution_type_id_fkey (id, name, description, default_value, is_active)`;
+
+  let allData: T[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  try {
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("employer_contributions")
+        .select(select)
+        .eq("clinic_id", clinicId)
+        .range(from, from + PAGE_SIZE - 1)
+        .order("competence_year", { ascending: false })
+        .order("competence_month", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...(data as T[])];
+        from += PAGE_SIZE;
+        hasMore = data.length === PAGE_SIZE;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return { data: allData, error: null };
+  } catch (error) {
+    console.error("Error fetching all employer contributions:", error);
+    return { data: [], error: error as Error };
+  }
+}

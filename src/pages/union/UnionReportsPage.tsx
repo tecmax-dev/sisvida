@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllEmployers } from "@/lib/supabase-helpers";
+import { fetchAllEmployers, fetchAllEmployerContributions } from "@/lib/supabase-helpers";
 import { Loader2, FileBarChart, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -67,20 +67,11 @@ export default function UnionReportsPage() {
     setLoading(true);
 
     try {
-      // Fetch ALL contributions (not filtered by year - let the component filter)
-      const { data: contribData, error: contribError } = await supabase
-        .from("employer_contributions")
-        .select(`
-          *,
-          employers (id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number),
-          contribution_types (id, name, description, default_value, is_active)
-        `)
-        .eq("clinic_id", currentClinic.id)
-        .order("competence_year", { ascending: false })
-        .order("competence_month", { ascending: false });
-
-      if (contribError) throw contribError;
-      setContributions(contribData || []);
+      // Fetch ALL contributions (pagination to avoid 1000-row limit)
+      // NOTE: explicit FK joins to ensure relational data is embedded reliably.
+      const contribResult = await fetchAllEmployerContributions<Contribution>(currentClinic.id);
+      if (contribResult.error) throw contribResult.error;
+      setContributions(contribResult.data);
 
       // Fetch employers - using pagination to avoid 1000 limit
       // Include trade_name for search functionality
