@@ -5,9 +5,7 @@ import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { Loader2, FileBarChart, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
-import { useAvailableYears } from "@/hooks/useAvailableYears";
 
 interface Employer {
   id: string;
@@ -52,50 +50,10 @@ interface Contribution {
 
 export default function UnionReportsPage() {
   const { currentClinic } = useAuth();
-  const { years, loading: yearsLoading } = useAvailableYears(currentClinic?.id);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
-  const [detectedYear, setDetectedYear] = useState<number | null>(null);
-
-  // Detectar o ano com mais dados quando não há dados no ano atual
-  useEffect(() => {
-    if (currentClinic?.id && !yearsLoading && years.length > 0) {
-      detectBestYear();
-    }
-  }, [currentClinic?.id, yearsLoading, years]);
-
-  const detectBestYear = async () => {
-    if (!currentClinic?.id) return;
-
-    // Verificar se há dados no ano atual
-    const { count } = await supabase
-      .from("employer_contributions")
-      .select("*", { count: "exact", head: true })
-      .eq("clinic_id", currentClinic.id)
-      .eq("competence_year", new Date().getFullYear());
-
-    if (count && count > 0) {
-      setYearFilter(new Date().getFullYear());
-      return;
-    }
-
-    // Se não há dados no ano atual, buscar o ano mais recente com dados
-    const { data } = await supabase
-      .from("employer_contributions")
-      .select("competence_year")
-      .eq("clinic_id", currentClinic.id)
-      .order("competence_year", { ascending: false })
-      .limit(1);
-
-    if (data && data.length > 0) {
-      const bestYear = data[0].competence_year;
-      setYearFilter(bestYear);
-      setDetectedYear(bestYear);
-    }
-  };
 
   useEffect(() => {
     if (currentClinic?.id) {
@@ -146,11 +104,6 @@ export default function UnionReportsPage() {
     }
   };
 
-  const handleYearChange = (year: number) => {
-    setYearFilter(year);
-    setDetectedYear(null);
-  };
-
   if (!currentClinic) {
     return (
       <div className="space-y-6">
@@ -173,7 +126,7 @@ export default function UnionReportsPage() {
     );
   }
 
-  if (loading || yearsLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -183,44 +136,15 @@ export default function UnionReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileBarChart className="h-6 w-6 text-blue-500" />
-            Relatórios Sindicais
-          </h1>
-          <p className="text-muted-foreground">
-            Relatórios financeiros do módulo sindical
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Ano:</span>
-          <Select
-            value={yearFilter.toString()}
-            onValueChange={(value) => handleYearChange(parseInt(value))}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <FileBarChart className="h-6 w-6 text-blue-500" />
+          Relatórios Sindicais
+        </h1>
+        <p className="text-muted-foreground">
+          Relatórios financeiros do módulo sindical
+        </p>
       </div>
-
-      {detectedYear && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Não há dados em {new Date().getFullYear()}. Exibindo dados de {detectedYear}.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {contributions.length === 0 ? (
         <Card>
@@ -230,13 +154,13 @@ export default function UnionReportsPage() {
               Sem Dados
             </CardTitle>
             <CardDescription>
-              Nenhuma contribuição encontrada para {yearFilter}
+              Nenhuma contribuição encontrada
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-12 text-muted-foreground">
               <FileBarChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Selecione outro ano ou aguarde o lançamento de contribuições</p>
+              <p>Aguarde o lançamento de contribuições para visualizar os relatórios</p>
             </div>
           </CardContent>
         </Card>
