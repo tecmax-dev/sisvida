@@ -39,6 +39,19 @@ export function PopupNoticeFormDialog({
 
   const uploadImage = useUploadPopupImage();
 
+  // Helper to convert ISO date to local datetime-local format
+  const isoToLocalDatetime = (isoString: string | null): string => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    // Format as YYYY-MM-DDTHH:mm for datetime-local input
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   useEffect(() => {
     if (editingNotice) {
       setTitle(editingNotice.title);
@@ -50,8 +63,8 @@ export function PopupNoticeFormDialog({
       setShowOncePerSession(editingNotice.show_once_per_session);
       setNavigateToBooking(editingNotice.navigate_to_booking || false);
       setPriority(editingNotice.priority);
-      setStartsAt(editingNotice.starts_at ? editingNotice.starts_at.slice(0, 16) : "");
-      setExpiresAt(editingNotice.expires_at ? editingNotice.expires_at.slice(0, 16) : "");
+      setStartsAt(isoToLocalDatetime(editingNotice.starts_at));
+      setExpiresAt(isoToLocalDatetime(editingNotice.expires_at));
     } else {
       resetForm();
     }
@@ -79,6 +92,16 @@ export function PopupNoticeFormDialog({
     setImageUrl(url);
   };
 
+  // Helper to convert datetime-local value to ISO string
+  const localDatetimeToIso = (localDatetime: string): string | null => {
+    if (!localDatetime) return null;
+    // datetime-local gives us "YYYY-MM-DDTHH:mm" in local time
+    // We need to convert to ISO string
+    const date = new Date(localDatetime);
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -93,8 +116,8 @@ export function PopupNoticeFormDialog({
       show_once_per_session: showOncePerSession,
       navigate_to_booking: navigateToBooking,
       priority,
-      starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      starts_at: localDatetimeToIso(startsAt),
+      expires_at: localDatetimeToIso(expiresAt),
     });
   };
 
