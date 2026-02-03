@@ -436,27 +436,6 @@ export default function ContributionsReportsTab({
               </SelectContent>
             </Select>
 
-            {/* Export Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="default" className="ml-auto gap-2 bg-emerald-600 hover:bg-emerald-700">
-                  <Download className="h-4 w-4" />
-                  Exportar
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
-                  <FileText className="h-4 w-4 mr-2 text-rose-600" />
-                  Exportar PDF
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
-                  <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
-                  Exportar CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           {/* Selected Employer Badge */}
@@ -517,15 +496,41 @@ export default function ContributionsReportsTab({
 
       {/* Report Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            {currentReportType?.label || "Relatório"}
-          </CardTitle>
-          <CardDescription>
-            {filteredContributions.length} contribuições no período selecionado
-            {selectedEmployer && ` • Empresa: ${selectedEmployer.name}`}
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4" />
+              {currentReportType?.label || "Relatório"}
+            </CardTitle>
+            <CardDescription>
+              {filteredContributions.length} contribuições no período selecionado
+              {selectedEmployer && ` • Empresa: ${selectedEmployer.name}`}
+            </CardDescription>
+          </div>
+          
+          {/* Export Dropdown - Only show when there are results */}
+          {byEmployerReport.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Exportar</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
+                  <FileText className="h-4 w-4 mr-2 text-rose-600" />
+                  Exportar PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
+                  <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+                  Exportar CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
