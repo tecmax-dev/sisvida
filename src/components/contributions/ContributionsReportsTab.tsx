@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { getStaticYearRange } from "@/hooks/useAvailableYears";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,8 +89,10 @@ interface ContributionsReportsTabProps {
   contributionTypes: ContributionType[];
   clinicName?: string;
   clinicLogo?: string;
-  yearFilter: number;
-  onYearFilterChange: (year: number) => void;
+  /** @deprecated No longer used - filtering is now done internally with date range */
+  yearFilter?: number;
+  /** @deprecated No longer used - filtering is now done internally with date range */
+  onYearFilterChange?: (year: number) => void;
 }
 
 import { formatCompetence } from "@/lib/competence-format";
@@ -111,17 +113,26 @@ export default function ContributionsReportsTab({
   contributionTypes,
   clinicName,
   clinicLogo,
-  yearFilter,
-  onYearFilterChange,
 }: ContributionsReportsTabProps) {
   const { session } = useAuth();
   const [reportType, setReportType] = useState<ReportType>("general");
-  const [monthFilter, setMonthFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">("competence");
+  
+  // Date range filters - default to first day of current year to today
+  const getDefaultStartDate = () => {
+    const date = new Date();
+    date.setMonth(0);
+    date.setDate(1);
+    return date.toISOString().split('T')[0];
+  };
+  const getDefaultEndDate = () => new Date().toISOString().split('T')[0];
+  
+  const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
+  const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -136,22 +147,36 @@ export default function ContributionsReportsTab({
     return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
   };
 
+  // Helper to get date from contribution based on filter type
+  const getDateForFilter = (c: Contribution): Date | null => {
+    if (dateFilterType === "competence") {
+      // Create date from competence month/year (use day 1)
+      return new Date(c.competence_year, c.competence_month - 1, 1);
+    } else if (dateFilterType === "due_date") {
+      return new Date(c.due_date + "T12:00:00");
+    } else if (dateFilterType === "paid_at") {
+      if (!c.paid_at) return null;
+      return new Date(c.paid_at);
+    }
+    return null;
+  };
+
   const filteredContributions = useMemo(() => {
+    const start = startDate ? new Date(startDate + "T00:00:00") : null;
+    const end = endDate ? new Date(endDate + "T23:59:59") : null;
+    
     return contributions.filter((c) => {
-      // Filtro por período baseado no tipo selecionado
-      let matchesPeriod = false;
-      if (dateFilterType === "competence") {
-        matchesPeriod = c.competence_year === yearFilter && 
-          (monthFilter === "all" || c.competence_month === parseInt(monthFilter));
-      } else if (dateFilterType === "due_date") {
-        const dueDate = new Date(c.due_date + "T12:00:00");
-        matchesPeriod = dueDate.getFullYear() === yearFilter && 
-          (monthFilter === "all" || (dueDate.getMonth() + 1) === parseInt(monthFilter));
-      } else if (dateFilterType === "paid_at") {
-        if (!c.paid_at) return false; // Se filtro é por data de pagamento, excluir não pagos
-        const paidDate = new Date(c.paid_at);
-        matchesPeriod = paidDate.getFullYear() === yearFilter && 
-          (monthFilter === "all" || (paidDate.getMonth() + 1) === parseInt(monthFilter));
+      // Filter by date range based on selected filter type
+      let matchesPeriod = true;
+      const contributionDate = getDateForFilter(c);
+      
+      if (contributionDate === null && dateFilterType === "paid_at") {
+        return false; // Exclude unpaid contributions when filtering by payment date
+      }
+      
+      if (contributionDate) {
+        if (start && contributionDate < start) matchesPeriod = false;
+        if (end && contributionDate > end) matchesPeriod = false;
       }
       
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
@@ -160,7 +185,7 @@ export default function ContributionsReportsTab({
       const matchesOrigin = originFilter === "all" || c.origin === originFilter;
       return matchesPeriod && matchesStatus && matchesEmployer && matchesType && matchesOrigin;
     });
-  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer, contributionTypeFilter, originFilter, dateFilterType]);
+  }, [contributions, startDate, endDate, statusFilter, selectedEmployer, contributionTypeFilter, originFilter, dateFilterType]);
 
   // Report by employer
   const byEmployerReport = useMemo(() => {
@@ -225,9 +250,11 @@ export default function ContributionsReportsTab({
   }, [filteredContributions]);
 
   const periodLabel = useMemo(() => {
-    const monthLabel = monthFilter === "all" ? "Todos os meses" : String(parseInt(monthFilter)).padStart(2, "0");
-    return `${monthLabel}/${yearFilter}`;
-  }, [yearFilter, monthFilter]);
+    if (startDate && endDate) {
+      return `${format(new Date(startDate + "T12:00:00"), "dd/MM/yyyy")} a ${format(new Date(endDate + "T12:00:00"), "dd/MM/yyyy")}`;
+    }
+    return "Período não definido";
+  }, [startDate, endDate]);
 
   const handleExportCSV = () => {
     let csvContent = "";
@@ -237,7 +264,9 @@ export default function ContributionsReportsTab({
     byEmployerReport.forEach((row) => {
       csvContent += `"${row.employer.name}","${row.employer.cnpj}",${row.count},${row.total / 100},${row.paid / 100},${row.pending / 100},${row.overdue / 100}\n`;
     });
-    filename = `contribuicoes-${yearFilter}${monthFilter !== "all" ? `-${monthFilter.padStart(2, "0")}` : ""}.csv`;
+    const startLabel = startDate ? startDate.replace(/-/g, "") : "inicio";
+    const endLabel = endDate ? endDate.replace(/-/g, "") : "fim";
+    filename = `contribuicoes-${startLabel}-a-${endLabel}.csv`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -348,30 +377,24 @@ export default function ContributionsReportsTab({
               </SelectContent>
             </Select>
 
-            <Select value={String(yearFilter)} onValueChange={(v) => onYearFilterChange(parseInt(v))}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {getStaticYearRange().map((year) => (
-                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Mês" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os meses</SelectItem>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <SelectItem key={i} value={String(i + 1)}>
-                    {String(i + 1).padStart(2, "0")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground">De:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground">Até:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]">
