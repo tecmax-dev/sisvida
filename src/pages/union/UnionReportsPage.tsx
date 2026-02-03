@@ -11,6 +11,7 @@ interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  trade_name?: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -71,7 +72,7 @@ export default function UnionReportsPage() {
         .from("employer_contributions")
         .select(`
           *,
-          employers (id, name, cnpj, email, phone, address, city, state, category_id, registration_number),
+          employers (id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number),
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
@@ -82,8 +83,9 @@ export default function UnionReportsPage() {
       setContributions(contribData || []);
 
       // Fetch employers - using pagination to avoid 1000 limit
+      // Include trade_name for search functionality
       const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
-        select: "id, name, cnpj, email, phone, address, city, state, category_id, registration_number"
+        select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number"
       });
       if (employersResult.error) throw employersResult.error;
       setEmployers(employersResult.data);
