@@ -245,8 +245,8 @@ export default function UnionReportsPage() {
           contributions={contributions}
           employers={employers}
           contributionTypes={contributionTypes}
-          yearFilter={yearFilter}
-          onYearFilterChange={handleYearChange}
+          clinicName={currentClinic?.name}
+          clinicLogo={currentClinic?.logo_url || undefined}
         />
       )}
     </div>

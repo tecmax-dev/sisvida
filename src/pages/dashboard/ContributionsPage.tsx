@@ -837,8 +837,6 @@ export default function ContributionsPage() {
             contributionTypes={contributionTypes}
             clinicName={currentClinic?.name}
             clinicLogo={currentClinic?.logo_url || undefined}
-            yearFilter={yearFilter}
-            onYearFilterChange={setYearFilter}
           />
         </TabsContent>
 
