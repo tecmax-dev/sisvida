@@ -12,6 +12,7 @@ export interface PopupNotice {
   button_link: string | null;
   is_active: boolean;
   show_once_per_session: boolean;
+  navigate_to_booking: boolean;
   priority: number;
   starts_at: string | null;
   expires_at: string | null;

@@ -32,6 +32,7 @@ export function PopupNoticeFormDialog({
   const [buttonLink, setButtonLink] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [showOncePerSession, setShowOncePerSession] = useState(true);
+  const [navigateToBooking, setNavigateToBooking] = useState(false);
   const [priority, setPriority] = useState(0);
   const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -47,6 +48,7 @@ export function PopupNoticeFormDialog({
       setButtonLink(editingNotice.button_link || "");
       setIsActive(editingNotice.is_active);
       setShowOncePerSession(editingNotice.show_once_per_session);
+      setNavigateToBooking(editingNotice.navigate_to_booking || false);
       setPriority(editingNotice.priority);
       setStartsAt(editingNotice.starts_at ? editingNotice.starts_at.slice(0, 16) : "");
       setExpiresAt(editingNotice.expires_at ? editingNotice.expires_at.slice(0, 16) : "");
@@ -63,6 +65,7 @@ export function PopupNoticeFormDialog({
     setButtonLink("");
     setIsActive(true);
     setShowOncePerSession(true);
+    setNavigateToBooking(false);
     setPriority(0);
     setStartsAt("");
     setExpiresAt("");
@@ -85,9 +88,10 @@ export function PopupNoticeFormDialog({
       message: message || null,
       image_url: imageUrl || null,
       button_text: buttonText || "Entendi",
-      button_link: buttonLink || null,
+      button_link: navigateToBooking ? null : (buttonLink || null),
       is_active: isActive,
       show_once_per_session: showOncePerSession,
+      navigate_to_booking: navigateToBooking,
       priority,
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
@@ -249,6 +253,16 @@ export function PopupNoticeFormDialog({
                 </p>
               </div>
               <Switch checked={showOncePerSession} onCheckedChange={setShowOncePerSession} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Abrir página de agendamento</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ao clicar no botão, abre a lista de profissionais
+                </p>
+              </div>
+              <Switch checked={navigateToBooking} onCheckedChange={setNavigateToBooking} />
             </div>
           </div>
 

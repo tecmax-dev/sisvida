@@ -7658,6 +7658,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           message: string | null
+          navigate_to_booking: boolean | null
           priority: number
           show_once_per_session: boolean
           starts_at: string | null
@@ -7675,6 +7676,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           message?: string | null
+          navigate_to_booking?: boolean | null
           priority?: number
           show_once_per_session?: boolean
           starts_at?: string | null
@@ -7692,6 +7694,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           message?: string | null
+          navigate_to_booking?: boolean | null
           priority?: number
           show_once_per_session?: boolean
           starts_at?: string | null
