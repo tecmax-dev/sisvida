@@ -16,20 +16,27 @@ interface MobileAppLayoutProps {
 export function MobileAppLayout({ children }: MobileAppLayoutProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const location = useLocation();
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Verificar se deve mostrar splash na inicialização
+    // Funciona tanto no modo navegador quanto no PWA standalone
+    const splashShown = sessionStorage.getItem("splash_shown");
+    if (splashShown) return false;
+    
+    // Detectar modo PWA standalone
+    const isStandalone = 
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    
+    // Verificar se está em rota mobile
+    const isMobileRoute = location.pathname.startsWith("/app");
+    
+    // Mostrar splash se: não foi mostrado ainda E (é PWA standalone OU está na raiz /app)
+    const isAppRoot = location.pathname === "/app" || location.pathname === "/app/";
+    return isMobileRoute && (isStandalone || isAppRoot);
+  });
   
   // Rastrear instalação do PWA
   usePWAInstallTracking();
-
-  // Verificar se deve mostrar splash (apenas na raiz /app e se não foi mostrado nesta sessão)
-  useEffect(() => {
-    const isAppRoot = location.pathname === "/app" || location.pathname === "/app/";
-    const splashShown = sessionStorage.getItem("splash_shown");
-    
-    if (isAppRoot && !splashShown) {
-      setShowSplash(true);
-    }
-  }, [location.pathname]);
 
   const handleSplashComplete = () => {
     sessionStorage.setItem("splash_shown", "true");
