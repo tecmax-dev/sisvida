@@ -7179,6 +7179,7 @@ export type Database = {
           tag: string | null
           union_category_id: string | null
           union_contribution_value: number | null
+          union_join_date: string | null
           union_joined_at: string | null
           union_member_status: string | null
           union_observations: string | null
@@ -7243,6 +7244,7 @@ export type Database = {
           tag?: string | null
           union_category_id?: string | null
           union_contribution_value?: number | null
+          union_join_date?: string | null
           union_joined_at?: string | null
           union_member_status?: string | null
           union_observations?: string | null
@@ -7307,6 +7309,7 @@ export type Database = {
           tag?: string | null
           union_category_id?: string | null
           union_contribution_value?: number | null
+          union_join_date?: string | null
           union_joined_at?: string | null
           union_member_status?: string | null
           union_observations?: string | null
