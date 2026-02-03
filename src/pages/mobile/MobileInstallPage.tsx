@@ -275,56 +275,66 @@ export default function MobileInstallPage() {
       </header>
 
       <main className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-        {/* Status de instalação */}
-        {isInstalled ? (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="flex items-center gap-4 py-5">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
+        {/* BOTÃO PRINCIPAL DE INSTALAÇÃO - SEMPRE VISÍVEL */}
+        <Card className="border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg">
+          <CardContent className="py-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-md">
+                <Download className="h-7 w-7 text-primary-foreground" />
               </div>
-              <div>
-                <p className="font-semibold text-green-800">App Instalado!</p>
-                <p className="text-sm text-green-600">Acesse pela sua tela inicial</p>
+              <div className="flex-1">
+                {isInstalled ? (
+                  <>
+                    <p className="font-bold text-lg text-green-700">✓ App Instalado!</p>
+                    <p className="text-sm text-muted-foreground">Acesse pela tela inicial do seu celular</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold text-lg text-foreground">Instalar Aplicativo</p>
+                    <p className="text-sm text-muted-foreground">Acesso rápido na tela inicial</p>
+                  </>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        ) : canInstall ? (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="py-5 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Download className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Pronto para instalar!</p>
-                  <p className="text-sm text-muted-foreground">Clique no botão abaixo</p>
-                </div>
+            </div>
+            
+            {!isInstalled && (
+              <div className="space-y-3">
+                {/* Botão automático (quando disponível) */}
+                {canInstall && (
+                  <Button onClick={handleInstall} size="lg" className="w-full gap-2 h-12 text-base font-semibold">
+                    <Download className="h-5 w-5" />
+                    Instalar Agora
+                  </Button>
+                )}
+                
+                {/* Botão de copiar link - SEMPRE VISÍVEL */}
+                <Button 
+                  onClick={handleCopyLink} 
+                  variant={canInstall ? "outline" : "default"}
+                  size="lg" 
+                  className={`w-full gap-2 h-12 text-base ${!canInstall ? 'font-semibold' : ''}`}
+                >
+                  <Copy className="h-5 w-5" />
+                  {canInstall ? 'Copiar Link' : 'Copiar Link do App'}
+                </Button>
+                
+                <p className="text-xs text-center text-muted-foreground">
+                  {isIOS 
+                    ? 'Cole no Safari e siga as instruções abaixo'
+                    : 'Cole no Chrome e siga as instruções abaixo'
+                  }
+                </p>
               </div>
-              <Button onClick={handleInstall} size="lg" className="w-full gap-2">
-                <Download className="h-5 w-5" />
-                Instalar Agora
+            )}
+            
+            {isInstalled && (
+              <Button onClick={handleForceUpdate} variant="outline" size="lg" className="w-full gap-2" disabled={isUpdating}>
+                <RefreshCw className={`h-5 w-5 ${isUpdating ? 'animate-spin' : ''}`} />
+                {isUpdating ? 'Atualizando...' : 'Verificar Atualizações'}
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-muted bg-muted/30">
-            <CardContent className="py-5 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Smartphone className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Instale o aplicativo</p>
-                  <p className="text-sm text-muted-foreground">Siga as instruções abaixo para seu dispositivo</p>
-                </div>
-              </div>
-              <Button onClick={handleCopyLink} variant="outline" size="lg" className="w-full gap-2">
-                <Copy className="h-5 w-5" />
-                Copiar Link do App
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Push Notification Setup - disponível para usuários anônimos */}
         <PushNotificationSetup 
