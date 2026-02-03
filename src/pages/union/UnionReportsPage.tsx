@@ -5,7 +5,7 @@ import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { Loader2, FileBarChart, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
+import { ContributionReportsPage } from "@/components/union/reports/ContributionReportsPage";
 
 interface Employer {
   id: string;
@@ -111,11 +111,11 @@ export default function UnionReportsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileBarChart className="h-6 w-6 text-blue-500" />
-            Relatórios Sindicais
+            <FileBarChart className="h-6 w-6 text-primary" />
+            Relatórios de Contribuições
           </h1>
           <p className="text-muted-foreground">
-            Relatórios financeiros do módulo sindical
+            Visualize, filtre e exporte relatórios detalhados sobre contribuições sindicais
           </p>
         </div>
         <Alert variant="destructive">
@@ -131,20 +131,24 @@ export default function UnionReportsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando dados do relatório...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <FileBarChart className="h-6 w-6 text-blue-500" />
-          Relatórios Sindicais
+          <FileBarChart className="h-6 w-6 text-primary" />
+          Relatórios de Contribuições
         </h1>
         <p className="text-muted-foreground">
-          Relatórios financeiros do módulo sindical
+          Dados consolidados de contribuições sindicais por empresa, período e situação dos débitos
         </p>
       </div>
 
@@ -152,7 +156,7 @@ export default function UnionReportsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileBarChart className="h-5 w-5 text-blue-500" />
+              <FileBarChart className="h-5 w-5 text-primary" />
               Sem Dados
             </CardTitle>
             <CardDescription>
@@ -162,12 +166,13 @@ export default function UnionReportsPage() {
           <CardContent>
             <div className="text-center py-12 text-muted-foreground">
               <FileBarChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Aguarde o lançamento de contribuições para visualizar os relatórios</p>
+              <p className="font-medium">Aguarde o lançamento de contribuições</p>
+              <p className="text-sm mt-1">Os relatórios serão exibidos aqui assim que houver dados disponíveis</p>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <ContributionsReportsTab
+        <ContributionReportsPage
           contributions={contributions}
           employers={employers}
           contributionTypes={contributionTypes}
