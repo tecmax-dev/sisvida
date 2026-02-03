@@ -306,7 +306,25 @@ export default function MobileInstallPage() {
               </Button>
             </CardContent>
           </Card>
-        ) : null}
+        ) : (
+          <Card className="border-muted bg-muted/30">
+            <CardContent className="py-5 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Smartphone className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Instale o aplicativo</p>
+                  <p className="text-sm text-muted-foreground">Siga as instruções abaixo para seu dispositivo</p>
+                </div>
+              </div>
+              <Button onClick={handleCopyLink} variant="outline" size="lg" className="w-full gap-2">
+                <Copy className="h-5 w-5" />
+                Copiar Link do App
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Push Notification Setup - disponível para usuários anônimos */}
         <PushNotificationSetup 
