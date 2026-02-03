@@ -625,68 +625,72 @@ export default function UnionContributionsPageRedesign() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Receipt className="h-6 w-6 text-primary" />
-            Contribuições Sindicais
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie boletos e contribuições das empresas associadas
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+              <Receipt className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+              <span className="truncate">Contribuições Sindicais</span>
+            </h1>
+            <p className="text-sm text-muted-foreground hidden sm:block">
+              Gerencie boletos e contribuições das empresas associadas
+            </p>
+          </div>
 
-        {/* Actions Dropdown */}
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                disabled={importing || extractingRegistrations || fixingTypes}
-              >
-                {importing || extractingRegistrations || fixingTypes ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
+          {/* Actions Dropdown */}
+          <div className="flex items-center gap-2 shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-9"
+                  disabled={importing || extractingRegistrations || fixingTypes}
+                >
+                  {importing || extractingRegistrations || fixingTypes ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Lytex
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleImportFromLytex} disabled={importing}>
                   <Download className="h-4 w-4 mr-2" />
-                )}
-                Lytex
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleImportFromLytex} disabled={importing}>
-                <Download className="h-4 w-4 mr-2" />
-                Importar Clientes e Faturas
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExtractRegistrations} disabled={extractingRegistrations}>
-                <Hash className="h-4 w-4 mr-2" />
-                Extrair Matrículas das Faturas
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleFixContributionTypes} disabled={fixingTypes}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Corrigir Tipos de Contribuição
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setBatchGenerateLytexOpen(true)} className="text-amber-600">
-                <Zap className="h-4 w-4 mr-2" />
-                Gerar Boletos Pendentes
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
-                <Receipt className="h-4 w-4 mr-2" />
-                Buscar Pagamentos (Conciliação)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleImportExternalPaidInvoices} disabled={importingExternal} className="text-blue-600">
-                <CloudDownload className="h-4 w-4 mr-2" />
-                Importar Boletos Externos Pagos
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
-                <FileBarChart className="h-4 w-4 mr-2" />
-                Histórico de Sincronização
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  Importar Clientes e Faturas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExtractRegistrations} disabled={extractingRegistrations}>
+                  <Hash className="h-4 w-4 mr-2" />
+                  Extrair Matrículas das Faturas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleFixContributionTypes} disabled={fixingTypes}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Corrigir Tipos de Contribuição
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setBatchGenerateLytexOpen(true)} className="text-amber-600">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Gerar Boletos Pendentes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Buscar Pagamentos (Conciliação)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportExternalPaidInvoices} disabled={importingExternal} className="text-blue-600">
+                  <CloudDownload className="h-4 w-4 mr-2" />
+                  Importar Boletos Externos Pagos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
+                  <FileBarChart className="h-4 w-4 mr-2" />
+                  Histórico de Sincronização
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -699,29 +703,29 @@ export default function UnionContributionsPageRedesign() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="overview" className="gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            <span className="hidden sm:inline">Visão Geral</span>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 w-full sm:w-auto sm:inline-flex">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+            <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">Visão Geral</span>
           </TabsTrigger>
-          <TabsTrigger value="contributions" className="gap-2">
-            <List className="h-4 w-4" />
-            <span className="hidden sm:inline">Contribuições</span>
+          <TabsTrigger value="contributions" className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+            <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">Contribuições</span>
           </TabsTrigger>
-          <TabsTrigger value="negotiations" className="gap-2">
-            <Handshake className="h-4 w-4" />
-            <span className="hidden sm:inline">Negociações</span>
+          <TabsTrigger value="negotiations" className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+            <Handshake className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">Negociações</span>
           </TabsTrigger>
-          <TabsTrigger value="types" className="gap-2">
-            <Tag className="h-4 w-4" />
-            <span className="hidden sm:inline">Tipos</span>
+          <TabsTrigger value="types" className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+            <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline sm:inline">Tipos</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" className="gap-2">
-            <FileBarChart className="h-4 w-4" />
+          <TabsTrigger value="reports" className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+            <FileBarChart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Relatórios PJ</span>
           </TabsTrigger>
-          <TabsTrigger value="reports-pf" className="gap-2">
-            <Users className="h-4 w-4" />
+          <TabsTrigger value="reports-pf" className="gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Relatórios PF</span>
           </TabsTrigger>
         </TabsList>

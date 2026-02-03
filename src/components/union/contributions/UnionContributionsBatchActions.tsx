@@ -78,16 +78,16 @@ export default function UnionContributionsBatchActions({
   onCreatePF,
 }: UnionContributionsBatchActionsProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 py-3 px-4 bg-muted/30 rounded-lg border border-border/50">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 sm:py-3 px-3 sm:px-4 bg-muted/30 rounded-lg border border-border/50">
       {/* Left side: Items per page and selection */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Exibir:</span>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-xs sm:text-sm text-muted-foreground">Exibir:</span>
           <Select 
             value={String(itemsPerPage)} 
             onValueChange={(v) => onItemsPerPageChange(Number(v))}
           >
-            <SelectTrigger className="w-[70px] h-8">
+            <SelectTrigger className="w-[60px] sm:w-[70px] h-7 sm:h-8 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -107,11 +107,13 @@ export default function UnionContributionsBatchActions({
                   variant={allSelected ? "secondary" : "outline"}
                   size="sm"
                   onClick={onSelectAll}
-                  className={allSelected ? "bg-primary/10 text-primary border-primary/30" : ""}
+                  className={`h-7 sm:h-8 text-xs sm:text-sm ${allSelected ? "bg-primary/10 text-primary border-primary/30" : ""}`}
                 >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  {allSelected ? "Desmarcar" : "Selecionar"} Todos
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden xs:inline">{allSelected ? "Desmarcar" : "Selecionar"}</span>
+                  <span className="xs:hidden">{allSelected ? "Des." : "Sel."}</span>
+                  <span className="hidden sm:inline"> Todos</span>
+                  <Badge variant="secondary" className="ml-1.5 sm:ml-2 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
                     {totalEligible}
                   </Badge>
                 </Button>
@@ -127,14 +129,14 @@ export default function UnionContributionsBatchActions({
       </div>
 
       {/* Right side: Action buttons */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {/* Sync */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={onSync} disabled={syncing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-                Sincronizar
+              <Button variant="outline" size="sm" onClick={onSync} disabled={syncing} className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3">
+                <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2 ${syncing ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">Sincronizar</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Sincronizar status com Lytex</TooltipContent>
@@ -149,12 +151,12 @@ export default function UnionContributionsBatchActions({
                 variant="outline"
                 size="sm"
                 onClick={onWhatsApp}
-                className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3 text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                WhatsApp
+                <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">WhatsApp</span>
                 {selectedCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
                     {selectedCount}
                   </Badge>
                 )}
@@ -172,12 +174,12 @@ export default function UnionContributionsBatchActions({
                 variant="outline"
                 size="sm"
                 onClick={onEmail}
-                className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3 text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
               >
-                <Mail className="h-4 w-4 mr-2" />
-                Email
+                <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Email</span>
                 {selectedCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
                     {selectedCount}
                   </Badge>
                 )}
@@ -196,11 +198,12 @@ export default function UnionContributionsBatchActions({
                 size="sm"
                 onClick={onPrint}
                 disabled={selectedCount === 0}
+                className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <Printer className="h-4 w-4 mr-2" />
-                Imprimir
+                <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Imprimir</span>
                 {selectedCount > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 sm:h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
                     {selectedCount}
                   </Badge>
                 )}
@@ -219,10 +222,10 @@ export default function UnionContributionsBatchActions({
                   variant="outline"
                   size="sm"
                   onClick={onNegotiate}
-                  className="text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                  className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3 text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                 >
-                  <Handshake className="h-4 w-4 mr-2" />
-                  Negociar
+                  <Handshake className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Negociar</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Criar negociação de débitos</TooltipContent>
@@ -233,10 +236,10 @@ export default function UnionContributionsBatchActions({
         {/* Generate Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Gerar
-              <ChevronDown className="h-4 w-4" />
+            <Button size="sm" className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3 gap-1 sm:gap-2">
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Gerar</span>
+              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
