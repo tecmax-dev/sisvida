@@ -101,14 +101,14 @@ export default function UnionReportsPage() {
     if (currentClinic?.id) {
       fetchData();
     }
-  }, [currentClinic?.id, yearFilter]);
+  }, [currentClinic?.id]);
 
   const fetchData = async () => {
     if (!currentClinic?.id) return;
     setLoading(true);
 
     try {
-      // Fetch contributions with relations
+      // Fetch ALL contributions (not filtered by year - let the component filter)
       const { data: contribData, error: contribError } = await supabase
         .from("employer_contributions")
         .select(`
@@ -117,7 +117,7 @@ export default function UnionReportsPage() {
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
-        .eq("competence_year", yearFilter)
+        .order("competence_year", { ascending: false })
         .order("competence_month", { ascending: false });
 
       if (contribError) throw contribError;
