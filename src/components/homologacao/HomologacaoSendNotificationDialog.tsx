@@ -19,10 +19,10 @@ import { Loader2, MessageCircle, Mail, Send, FileText, Phone, Building2, User } 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  openWhatsAppChat,
   formatReminderMessage,
   formatProtocolMessage,
   logHomologacaoNotification,
+  sendWhatsAppViaEvolution,
 } from "@/lib/homologacaoUtils";
 
 interface HomologacaoAppointment {
@@ -97,23 +97,33 @@ export function HomologacaoSendNotificationDialog({
     let errorCount = 0;
 
     try {
-      // Send via WhatsApp
+      // Send via WhatsApp using Evolution API
       if (sendWhatsApp && appointment.company_phone) {
         const message = customMessage || baseMessage;
-        openWhatsAppChat(appointment.company_phone, message);
+        const result = await sendWhatsAppViaEvolution(
+          currentClinic.id,
+          appointment.company_phone,
+          message
+        );
         
         await logHomologacaoNotification(
           appointment.id,
           currentClinic.id,
           "whatsapp",
-          "sent",
+          result.success ? "sent" : "failed",
           appointment.company_phone,
           undefined,
           message,
-          undefined,
+          result.error,
           type === "protocol"
         );
-        successCount++;
+        
+        if (result.success) {
+          successCount++;
+        } else {
+          errorCount++;
+          console.error("WhatsApp error:", result.error);
+        }
       }
 
       // Send via Email

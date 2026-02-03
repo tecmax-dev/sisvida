@@ -43,10 +43,10 @@ import {
   HomologacaoAppointment 
 } from "@/hooks/useHomologacaoAppointments";
 import { 
-  openWhatsAppChat, 
   formatReminderMessage, 
   formatProtocolMessage,
   logHomologacaoNotification,
+  sendWhatsAppViaEvolution,
 } from "@/lib/homologacaoUtils";
 import { HomologacaoSendNotificationDialog } from "@/components/homologacao/HomologacaoSendNotificationDialog";
 import { HomologacaoNotificationHistory } from "@/components/homologacao/HomologacaoNotificationHistory";
@@ -277,26 +277,33 @@ export default function HomologacaoAgendaPage() {
     setHistoryOpen(true);
   };
 
-  // Legacy quick WhatsApp send (for dropdown menu quick access)
+  // Quick WhatsApp send via Evolution API
   const handleSendReminder = async (apt: HomologacaoAppointment) => {
-    const message = formatReminderMessage(apt);
-    openWhatsAppChat(apt.company_phone, message);
-    
-    if (currentClinic?.id) {
-      await logHomologacaoNotification(
-        apt.id,
-        currentClinic.id,
-        "whatsapp",
-        "sent",
-        apt.company_phone,
-        undefined,
-        message,
-        undefined,
-        false
-      );
+    if (!currentClinic?.id) {
+      toast.error("Clínica não encontrada");
+      return;
     }
     
-    toast.success("WhatsApp aberto com a mensagem de lembrete");
+    const message = formatReminderMessage(apt);
+    const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
+    
+    await logHomologacaoNotification(
+      apt.id,
+      currentClinic.id,
+      "whatsapp",
+      result.success ? "sent" : "failed",
+      apt.company_phone,
+      undefined,
+      message,
+      result.error,
+      false
+    );
+    
+    if (result.success) {
+      toast.success("Lembrete enviado via WhatsApp");
+    } else {
+      toast.error(result.error || "Erro ao enviar lembrete");
+    }
   };
 
   const handleSendProtocol = async (apt: HomologacaoAppointment) => {
@@ -304,27 +311,39 @@ export default function HomologacaoAgendaPage() {
       toast.error("Este agendamento ainda não possui protocolo");
       return;
     }
-    const message = formatProtocolMessage(apt);
-    openWhatsAppChat(apt.company_phone, message);
-    
-    if (currentClinic?.id) {
-      await logHomologacaoNotification(
-        apt.id,
-        currentClinic.id,
-        "whatsapp",
-        "sent",
-        apt.company_phone,
-        undefined,
-        message,
-        undefined,
-        true
-      );
+    if (!currentClinic?.id) {
+      toast.error("Clínica não encontrada");
+      return;
     }
     
-    toast.success("WhatsApp aberto com o protocolo");
+    const message = formatProtocolMessage(apt);
+    const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
+    
+    await logHomologacaoNotification(
+      apt.id,
+      currentClinic.id,
+      "whatsapp",
+      result.success ? "sent" : "failed",
+      apt.company_phone,
+      undefined,
+      message,
+      result.error,
+      true
+    );
+    
+    if (result.success) {
+      toast.success("Protocolo enviado via WhatsApp");
+    } else {
+      toast.error(result.error || "Erro ao enviar protocolo");
+    }
   };
 
   const handleBulkReminder = async (professionalId: string, appointments: HomologacaoAppointment[]) => {
+    if (!currentClinic?.id) {
+      toast.error("Clínica não encontrada");
+      return;
+    }
+    
     const eligibleAppointments = appointments.filter(apt => 
       apt.status === 'scheduled' || apt.status === 'confirmed'
     );
@@ -336,16 +355,28 @@ export default function HomologacaoAgendaPage() {
 
     setSendingBulkReminder(professionalId);
     let successCount = 0;
+    let errorCount = 0;
 
     for (const apt of eligibleAppointments) {
       const message = formatReminderMessage(apt);
-      openWhatsAppChat(apt.company_phone, message);
-      successCount++;
+      const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
+      
+      if (result.success) {
+        successCount++;
+      } else {
+        errorCount++;
+      }
+      
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     setSendingBulkReminder(null);
-    toast.success(`${successCount} lembrete(s) preparado(s)`);
+    
+    if (errorCount > 0) {
+      toast.warning(`${successCount} lembrete(s) enviado(s), ${errorCount} falha(s)`);
+    } else {
+      toast.success(`${successCount} lembrete(s) enviado(s) com sucesso`);
+    }
   };
 
   const handleSaveEdit = async (data: Partial<HomologacaoAppointment>) => {

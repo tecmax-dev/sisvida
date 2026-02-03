@@ -12,6 +12,11 @@ interface HomologacaoAppointment {
   professional?: { name: string } | null;
 }
 
+interface SendWhatsAppResult {
+  success: boolean;
+  error?: string;
+}
+
 // Generate unique protocol number: HOM-YYYYMMDD-NNNN
 export async function generateProtocolNumber(clinicId: string, date: string): Promise<string> {
   const dateStr = date.replace(/-/g, "");
@@ -86,7 +91,39 @@ Guarde este protocolo para seus registros.
 _Este é um comprovante oficial._`;
 }
 
-// Open WhatsApp with message
+// Send WhatsApp via Evolution API (through edge function)
+export async function sendWhatsAppViaEvolution(
+  clinicId: string,
+  phone: string, 
+  message: string
+): Promise<SendWhatsAppResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+      body: {
+        phone,
+        message,
+        clinicId,
+        type: 'custom',
+      },
+    });
+
+    if (error) {
+      console.error('Error invoking send-whatsapp function:', error);
+      return { success: false, error: error.message || 'Erro ao enviar mensagem' };
+    }
+
+    if (data && !data.success) {
+      return { success: false, error: data.error || 'Erro ao enviar mensagem' };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error sending WhatsApp via Evolution:', err);
+    return { success: false, error: err.message || 'Erro ao enviar mensagem' };
+  }
+}
+
+// Open WhatsApp with message (legacy - opens WhatsApp Web)
 export function openWhatsAppChat(phone: string, message: string): void {
   const formattedPhone = formatWhatsAppPhone(phone);
   const encodedMessage = encodeURIComponent(message);
