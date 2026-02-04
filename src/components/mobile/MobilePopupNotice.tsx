@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { PopupNotice } from "@/hooks/usePopupNotices";
@@ -114,11 +115,13 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
         {/* Image */}
         {currentNotice.image_url && (
           <div className="w-full">
-            <img
-              src={currentNotice.image_url}
-              alt={currentNotice.title}
-              className="w-full h-48 object-cover"
-            />
+            <AspectRatio ratio={9 / 16}>
+              <img
+                src={currentNotice.image_url}
+                alt={currentNotice.title}
+                className="w-full h-full object-cover"
+              />
+            </AspectRatio>
           </div>
         )}
 
