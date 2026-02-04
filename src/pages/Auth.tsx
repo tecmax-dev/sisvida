@@ -66,6 +66,11 @@ export default function Auth() {
 
   // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
   const isFirstAccessFlowRef = useRef(false);
+  
+  // PROTEÇÃO ANTI-LOOP: flag de execução para bloquear login concorrente
+  const isAuthenticatingRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
+  
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -356,8 +361,21 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // PROTEÇÃO ANTI-LOOP: bloquear execução concorrente
+    if (isAuthenticatingRef.current) {
+      console.warn('[Auth] Login já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    
+    // PROTEÇÃO ANTI-LOOP: evitar re-login após navegação
+    if (hasNavigatedRef.current) {
+      console.warn('[Auth] Navegação já realizada, ignorando');
+      return;
+    }
+    
     if (!validateForm()) return;
 
+    isAuthenticatingRef.current = true;
     setLoading(true);
 
     try {
@@ -377,6 +395,7 @@ export default function Auth() {
         });
         
         if (error) {
+          isAuthenticatingRef.current = false;
           if (error.message.includes("Invalid login credentials")) {
             toast({
               title: "Credenciais inválidas",
@@ -390,14 +409,16 @@ export default function Auth() {
           return;
         }
 
-        // Login bem-sucedido - redirect imediato
-        // Verificar super admin de forma simples e direta
+        // Login bem-sucedido - redirect imediato (SEM resetar loading para evitar re-render)
         if (signInData.user) {
+          // Marcar que navegação vai acontecer ANTES de qualquer async
+          hasNavigatedRef.current = true;
+          
           const { data: isSuperAdmin } = await supabase
             .rpc('is_super_admin', { _user_id: signInData.user.id });
           
           if (isSuperAdmin === true) {
-            navigate("/admin");
+            navigate("/admin", { replace: true });
             return;
           }
           
@@ -409,13 +430,13 @@ export default function Auth() {
             .limit(1);
           
           if (rolesData && rolesData.length > 0) {
-            navigate("/dashboard");
+            navigate("/dashboard", { replace: true });
           } else {
-            navigate("/clinic-setup");
+            navigate("/clinic-setup", { replace: true });
           }
         }
         
-        setLoading(false);
+        // NÃO resetar loading após navegação para evitar flash
         return;
       } else if (view === "signup") {
         // Gerar senha temporária
