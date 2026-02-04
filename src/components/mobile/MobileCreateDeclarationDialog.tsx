@@ -303,8 +303,9 @@ export function MobileCreateDeclarationDialog({
     }
     
     if (hasActiveAuthorization(benefit.id)) {
+      const depFound = dependents.find(d => d.id === selectedDependentId);
       const beneficiaryLabel = beneficiaryType === "dependent" 
-        ? `este dependente (${selectedDependent?.name})`
+        ? `este dependente (${depFound?.name || "selecionado"})`
         : "você (titular)";
       toast({
         title: "Declaração já existe",
