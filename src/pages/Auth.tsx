@@ -281,7 +281,12 @@ export default function Auth() {
   }, [toast]);
 
   useEffect(() => {
+    // Ref para evitar múltiplos redirects
+    let hasRedirected = false;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth Page] onAuthStateChange:', event);
+      
       // PASSWORD_RECOVERY - marcar ref e não redirecionar
       if (event === "PASSWORD_RECOVERY") {
         isRecoveryFlowRef.current = true;
@@ -302,24 +307,23 @@ export default function Auth() {
         return;
       }
       
-      if (session?.user) {
+      // CRÍTICO: Só redirecionar em SIGNED_IN, não em outros eventos (TOKEN_REFRESHED, INITIAL_SESSION)
+      // Isso evita loops onde o listener do useAuth e este listener competem
+      if (event === "SIGNED_IN" && session?.user && !hasRedirected) {
+        hasRedirected = true;
         setTimeout(() => {
-          // Verificar refs novamente antes de redirecionar
           if (!isRecoveryFlowRef.current && !isFirstAccessFlowRef.current) {
-            // redirect robusto com timeout é acionado no callback abaixo
-            // (mantém a mesma lógica para sessão inicial e SIGNED_IN)
             void checkUserAndRedirect(session.user.id);
           }
         }, 0);
       }
     });
 
-    // Verificar sessão existente
+    // Verificar sessão existente apenas uma vez na montagem
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Verificar refs ANTES de redirecionar
+      if (hasRedirected) return;
       if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
-      // Verificar URL hash como dupla checagem
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       if (hashParams.get("type") === "recovery") {
         isRecoveryFlowRef.current = true;
@@ -327,12 +331,13 @@ export default function Auth() {
       }
       
       if (session?.user) {
+        hasRedirected = true;
         void checkUserAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [checkUserAndRedirect]); // Removido isResettingPassword das dependências!
+  }, [checkUserAndRedirect]);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};

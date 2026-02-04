@@ -372,61 +372,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Refs fora do closure para manter estado entre execuções do listener
+    let isLoadingUserData = false;
+    let lastLoadedUserId: string | null = null;
+    let initDone = false;
+
     const loadUserData = async (userId: string) => {
+      // Guard: evitar múltiplas execuções simultâneas
+      if (isLoadingUserData) {
+        console.log('[Auth] loadUserData já em execução, ignorando');
+        return;
+      }
+      
+      isLoadingUserData = true;
+      
       try {
         await Promise.all([
           withTimeout(fetchProfile(userId), AUTH_BOOT_TIMEOUT_MS, "fetchProfile"),
           withTimeout(fetchUserRoles(userId), AUTH_BOOT_TIMEOUT_MS, "fetchUserRoles"),
           withTimeout(fetchSuperAdminStatus(userId), AUTH_BOOT_TIMEOUT_MS, "fetchSuperAdminStatus"),
         ]);
+        lastLoadedUserId = userId;
       } catch (e) {
-        // Nunca manter a UI travada: loga e libera o app para renderizar.
         console.error("[Auth] Falha ao carregar dados do usuário (liberando UI):", e);
       } finally {
-        // Garantia: ProtectedRoute depende desses flags para não ficar preso.
+        isLoadingUserData = false;
         setRolesLoaded(true);
         setLoading(false);
       }
     };
 
-    // Ref para evitar múltiplos loadUserData simultâneos (causa loop)
-    let isLoadingUserData = false;
-    let lastUserId: string | null = null;
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('[Auth] onAuthStateChange:', event, session?.user?.id?.slice(0, 8));
         
+        // Atualizar estado de sessão/user SEMPRE (sem setLoading aqui!)
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Evitar reload se já estamos carregando dados do mesmo usuário
-          if (isLoadingUserData && lastUserId === session.user.id) {
-            console.log('[Auth] Ignorando evento duplicado, já carregando dados');
+          // CRÍTICO: Não recarregar se já temos dados do mesmo user
+          if (lastLoadedUserId === session.user.id && initDone) {
+            console.log('[Auth] Dados já carregados para', session.user.id.slice(0, 8));
             return;
           }
           
-          // Evitar reload se já temos os dados carregados do mesmo usuário
-          if (rolesLoaded && lastUserId === session.user.id && event !== 'SIGNED_IN') {
-            console.log('[Auth] Dados já carregados para este usuário, ignorando');
-            return;
-          }
+          // CRÍTICO: Não fazer setLoading(true) aqui - causa loop infinito
+          // O loading só é setado na inicialização e liberado no finally do loadUserData
           
-          isLoadingUserData = true;
-          lastUserId = session.user.id;
-          setLoading(true);
-          setRolesLoaded(false);
-          
-          // Defer data fetching to avoid deadlock
+          // Carregar dados do usuário (defer para evitar deadlock)
           setTimeout(() => {
-            loadUserData(session.user.id).finally(() => {
-              isLoadingUserData = false;
-            });
+            loadUserData(session.user.id);
           }, 0);
         } else {
-          isLoadingUserData = false;
-          lastUserId = null;
+          // Logout: limpar estado
+          lastLoadedUserId = null;
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
@@ -437,29 +437,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Inicialização: validar sessão no servidor antes de aceitar como "logado"
+    // Inicialização única
     const initSession = async () => {
-      // Verificar se há lock de deslogado forçado
+      // Verificar lock de logout forçado
       const forceSignedOut = localStorage.getItem('eclini_force_signed_out');
       if (forceSignedOut) {
         console.warn('[Auth] Lock de logout detectado, forçando signOut local');
         try {
-          await withTimeout(
-            supabase.auth.signOut({ scope: 'local' }) as unknown as Promise<void>,
-            AUTH_BOOT_TIMEOUT_MS,
-            "supabase.auth.signOut(local)"
-          );
+          await supabase.auth.signOut({ scope: 'local' });
         } catch (e) {
-          console.warn('[Auth] Falha ao forçar signOut local (continuando):', e);
+          console.warn('[Auth] Falha ao forçar signOut local:', e);
         }
         localStorage.removeItem('eclini_force_signed_out');
         setRolesLoaded(true);
         setLoading(false);
+        initDone = true;
         return;
       }
       
       let session: Session | null = null;
-      let sessionError: unknown = null;
       try {
         const res = await withTimeout(
           supabase.auth.getSession(),
@@ -467,34 +463,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "supabase.auth.getSession"
         );
         session = res.data.session;
-        sessionError = res.error;
+        if (res.error) {
+          console.error('[Auth] Erro ao obter sessão:', res.error);
+        }
       } catch (e) {
-        sessionError = e;
+        console.error('[Auth] Timeout ao obter sessão:', e);
       }
 
-      if (sessionError) {
-        console.error('[Auth] Erro ao obter sessão (liberando UI):', sessionError);
-      }
-      
-      // Se não há sessão local, está deslogado
       if (!session) {
         setSession(null);
         setUser(null);
         setRolesLoaded(true);
         setLoading(false);
+        initDone = true;
         return;
       }
       
-      // Sessão existe localmente - confiar no autoRefreshToken do Supabase
-      // O Supabase já gerencia renovação automática, não validar agressivamente
       setSession(session);
       setUser(session.user);
       
-      // Garantir que o tempo de login existe (para sessões restauradas)
-      // Removido: não precisamos mais de controle manual de tempo de sessão
-      
-      // Não aguardar aqui para evitar travas na inicialização; loadUserData já tem timeout.
-      loadUserData(session.user.id);
+      // Carregar dados do usuário
+      await loadUserData(session.user.id);
+      initDone = true;
     };
     
     initSession();
