@@ -9,11 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
-import ReCAPTCHA from "react-google-recaptcha";
 import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
-
-// Site key pública - deve corresponder à configurada no Google reCAPTCHA Console
-const RECAPTCHA_SITE_KEY = "6LfVluASAAAAAJwhu_mrnueliUH7IVMo40JClOt1";
+import { authTrace, maskEmail } from "@/lib/authTrace";
 
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
 // Using a different domain between the auth start and the callback will cause:
@@ -61,8 +58,6 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
   const [isFirstAccess, setIsFirstAccess] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
   const isFirstAccessFlowRef = useRef(false);
@@ -76,7 +71,6 @@ export default function Auth() {
     password?: string; 
     confirmPassword?: string;
     name?: string;
-    recaptcha?: string;
   }>({});
 
   // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
@@ -189,27 +183,6 @@ export default function Auth() {
     setView("login");
   }, [toast]);
 
-  /**
-   * AUTH LISTENER MÍNIMO
-   * 
-   * APENAS detecta PASSWORD_RECOVERY para mostrar tela de reset.
-   * NÃO redireciona automaticamente.
-   * NÃO carrega dados extras.
-   * 
-   * O redirecionamento acontece APENAS no handleSubmit após login bem-sucedido.
-   */
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // PASSWORD_RECOVERY - marcar ref e mostrar tela de reset
-      if (event === "PASSWORD_RECOVERY") {
-        isRecoveryFlowRef.current = true;
-        setView("reset-password");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const validateForm = () => {
     const newErrors: typeof errors = {};
     
@@ -243,41 +216,8 @@ export default function Auth() {
       newErrors.name = "Nome é obrigatório";
     }
 
-    // DESATIVADO: Validação de reCAPTCHA (Edge Function desativada)
-    // if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY && !recaptchaToken) {
-    //   newErrors.recaptcha = "Complete o reCAPTCHA";
-    // }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const verifyRecaptcha = async (
-    token: string
-  ): Promise<{ ok: boolean; codes?: string[]; error?: string }> => {
-    try {
-      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
-        body: { token },
-      });
-
-      if (error) {
-        console.error("Erro ao verificar reCAPTCHA (invoke):", error.message);
-        return { ok: false, error: error.message };
-      }
-
-      if (data?.success === true) return { ok: true };
-
-      const codes = (data?.codes ?? []) as string[];
-      console.error("Erro ao verificar reCAPTCHA (server):", { codes, data });
-      return {
-        ok: false,
-        codes,
-        error: data?.error || "Verificação do reCAPTCHA falhou",
-      };
-    } catch (err: any) {
-      console.error("Erro ao verificar reCAPTCHA (exception):", err);
-      return { ok: false, error: err?.message || "Erro inesperado" };
-    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -360,16 +300,23 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    authTrace("Auth.submit", {
+      view,
+      email: email ? maskEmail(email) : "[empty]",
+    });
     
     // PROTEÇÃO ANTI-LOOP: bloquear execução concorrente
     if (isAuthenticatingRef.current) {
       console.warn('[Auth] Login já em andamento, ignorando chamada duplicada');
+      authTrace("Auth.blocked.concurrent");
       return;
     }
     
     // PROTEÇÃO ANTI-LOOP: evitar re-login após navegação
     if (hasNavigatedRef.current) {
       console.warn('[Auth] Navegação já realizada, ignorando');
+      authTrace("Auth.blocked.afterNavigate");
       return;
     }
     
@@ -379,19 +326,17 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      // DESATIVADO: Verificação de reCAPTCHA via Edge Function
-      // Motivo: Todas as Edge Functions desativadas no login/bootstrap
-      // Se precisar reativar, descomentar o bloco abaixo
-      /*
-      if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY) {
-        // ... código de verificação reCAPTCHA ...
-      }
-      */
-
       if (view === "login") {
+        authTrace("Auth.signIn.start");
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
+        });
+
+        authTrace("Auth.signIn.return", {
+          ok: !error,
+          hasUser: !!signInData?.user,
+          error: error?.message ?? null,
         });
         
         if (error) {
@@ -413,6 +358,7 @@ export default function Auth() {
         // A página de destino fará a verificação de roles/permissões
         if (signInData.user) {
           hasNavigatedRef.current = true;
+          authTrace("Auth.navigate", { to: "/dashboard" });
           // Redirecionar para dashboard - a página fará o roteamento correto
           navigate("/dashboard", { replace: true });
         }
@@ -470,6 +416,7 @@ export default function Auth() {
         }
       }
     } catch (error: any) {
+      authTrace("Auth.exception", { message: error?.message ?? "unknown" });
       toast({
         title: "Erro",
         description: error.message || "Ocorreu um erro. Tente novamente.",
@@ -817,44 +764,7 @@ export default function Auth() {
                     </div>
                   )}
 
-                  {/* reCAPTCHA - só exibe se a chave estiver configurada */}
-                  {RECAPTCHA_SITE_KEY && (
-                    <div className="flex flex-col items-center">
-                      <ReCAPTCHA
-                        key={`recaptcha-${view}`}
-                        ref={recaptchaRef}
-                        sitekey={RECAPTCHA_SITE_KEY}
-                        onChange={(token) => {
-                          setRecaptchaToken(token);
-                          if (errors.recaptcha) {
-                            setErrors((prev) => ({ ...prev, recaptcha: undefined }));
-                          }
-                        }}
-                        onExpired={() => {
-                          setRecaptchaToken(null);
-                          toast({
-                            title: "reCAPTCHA expirou",
-                            description: "Por favor, complete o reCAPTCHA novamente.",
-                            variant: "destructive",
-                          });
-                        }}
-                        onErrored={() => {
-                          setRecaptchaToken(null);
-                          toast({
-                            title: "Erro no reCAPTCHA",
-                            description: `Verifique se o domínio ${window.location.hostname} está autorizado no Google reCAPTCHA Console.`,
-                            variant: "destructive",
-                          });
-                        }}
-                        hl="pt-BR"
-                      />
-                      {errors.recaptcha && (
-                        <p className="mt-1 text-sm text-destructive">{errors.recaptcha}</p>
-                      )}
-                    </div>
-                  )}
-
-                  <Button type="submit" className="w-full h-10 gap-2" disabled={loading || (RECAPTCHA_SITE_KEY ? !recaptchaToken : false)}>
+                  <Button type="submit" className="w-full h-10 gap-2" disabled={loading}>
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                     {view === "login" ? "Entrar" : "Criar conta"}
                     {!loading && <ArrowLeft className="h-3.5 w-3.5 rotate-180" />}

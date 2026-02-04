@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { authTrace, trackAuthListener } from "@/lib/authTrace";
 
 /**
  * AUTH MÍNIMO FUNCIONAL v4
@@ -192,32 +193,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // INICIALIZAÇÃO ÚNICA - sem queries no login
   useEffect(() => {
     let mounted = true;
+    authTrace("AuthProvider.mount");
     
     const init = async () => {
+      authTrace("AuthProvider.init.start");
       // Verificar sessão existente UMA VEZ
       const { data: { session: existingSession } } = await supabase.auth.getSession();
       
       if (!mounted) return;
       
       if (existingSession?.user) {
+        authTrace("AuthProvider.init.session", {
+          hasSession: true,
+          hasUser: true,
+          userId: existingSession.user.id,
+        });
         setSession(existingSession);
         setUser(existingSession.user);
         // NÃO carregar dados aqui - será feito pela página de destino quando necessário
+      } else {
+        authTrace("AuthProvider.init.session", { hasSession: !!existingSession, hasUser: false });
       }
       
       // Loading = false APENAS UMA VEZ
       if (!loadingSetRef.current) {
         loadingSetRef.current = true;
         setLoading(false);
+        authTrace("AuthProvider.loading.false");
       }
     };
     
     init();
     
     // Listener MÍNIMO - apenas sincroniza estado de sessão, ZERO queries
+    const untrack = trackAuthListener("AuthProvider.onAuthStateChange");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         if (!mounted) return;
+
+        authTrace("AuthProvider.onAuthStateChange", {
+          event,
+          hasSession: !!newSession,
+          userId: newSession?.user?.id ?? null,
+        });
         
         // Apenas atualiza estado - sem lógica condicional, sem queries
         setSession(newSession);
@@ -231,6 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsSuperAdmin(false);
           setRolesLoaded(false);
           dataLoadedRef.current = false;
+          authTrace("AuthProvider.session.cleared");
         }
       }
     );
@@ -238,6 +257,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      untrack();
+      authTrace("AuthProvider.unmount");
     };
   }, []);
 
