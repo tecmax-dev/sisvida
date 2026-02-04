@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,12 +14,15 @@ interface UnionMemberAttachmentsTabProps {
   patientId: string;
 }
 
+const CONTRA_CHEQUES_FOLDER_NAME = "Contra cheques";
+
 export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsTabProps) {
   const { currentClinic } = useAuth();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<PatientAttachment | null>(null);
   const [logsAttachment, setLogsAttachment] = useState<PatientAttachment | null>(null);
+  const folderCreationAttemptedRef = useRef(false);
 
   const {
     folders,
@@ -44,6 +47,29 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
       fetchAttachments(selectedFolderId);
     }
   }, [patientId, currentClinic?.id, selectedFolderId, fetchFolders, fetchAttachments]);
+
+  // Garantir que a pasta "Contra cheques" exista automaticamente
+  useEffect(() => {
+    const ensureContraChequesFolder = async () => {
+      // Evitar múltiplas tentativas de criação
+      if (folderCreationAttemptedRef.current || loading || folders.length === 0) return;
+
+      const hasContraChequesFolder = folders.some(
+        (f) =>
+          f.name.toLowerCase().includes("contra") &&
+          f.name.toLowerCase().includes("cheque")
+      );
+
+      if (!hasContraChequesFolder) {
+        folderCreationAttemptedRef.current = true;
+        await createFolder(CONTRA_CHEQUES_FOLDER_NAME);
+        // Atualizar lista de pastas após criação
+        await fetchFolders();
+      }
+    };
+
+    ensureContraChequesFolder();
+  }, [folders, loading, createFolder, fetchFolders]);
 
   const handleFolderSelect = useCallback((folderId: string | null) => {
     setSelectedFolderId(folderId);
