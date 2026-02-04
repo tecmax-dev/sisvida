@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,30 @@ import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
 
 // Site key pública - deve corresponder à configurada no Google reCAPTCHA Console
 const RECAPTCHA_SITE_KEY = "6LfVluASAAAAAJwhu_mrnueliUH7IVMo40JClOt1";
+
+// Fail-safe do fluxo de login: evita promises penduradas travarem o UI em "Carregando...".
+const AUTH_REQUEST_TIMEOUT_MS = 12_000;
+const AUTH_REDIRECT_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  const promise = Promise.resolve(promiseLike as any) as Promise<T>;
+
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(`[Auth] Timeout em ${label} após ${ms}ms`));
+    }, ms);
+
+    promise
+      .then((value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((err) => {
+        window.clearTimeout(timeoutId);
+        reject(err);
+      });
+  });
+}
 
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
 // Using a different domain between the auth start and the callback will cause:
@@ -77,8 +101,80 @@ export default function Auth() {
   // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
   const isRecoveryFlowRef = useRef(false);
 
+  // trava para impedir múltiplas decisões de redirect concorrentes
+  const redirectInFlightRef = useRef(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const checkUserAndRedirect = useCallback(async (userId: string) => {
+    // trava anti-reentrada (listener + submit podem chamar ao mesmo tempo)
+    if (redirectInFlightRef.current) return;
+    redirectInFlightRef.current = true;
+
+    try {
+      // Verificar refs antes de redirecionar
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
+
+      // Verificar se é super admin usando a função RPC
+      const { data: isSuperAdmin, error: saError } = await withTimeout(
+        supabase.rpc('is_super_admin', { _user_id: userId }),
+        AUTH_REQUEST_TIMEOUT_MS,
+        "rpc:is_super_admin"
+      );
+
+      console.log("[Auth] Super admin check:", { userId, isSuperAdmin, error: saError?.message });
+
+      // Verificar refs novamente após a query assíncrona
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
+
+      if (isSuperAdmin === true) {
+        console.log("[Auth] Redirecting super admin to /admin");
+        navigate("/admin");
+        return;
+      }
+
+      // Verificar se usuário tem roles/clínica
+      const { data: rolesData, error: rolesError } = await withTimeout(
+        supabase
+          .from('user_roles')
+          .select('clinic_id')
+          .eq('user_id', userId)
+          .limit(1),
+        AUTH_REQUEST_TIMEOUT_MS,
+        "select:user_roles"
+      );
+
+      if (rolesError) {
+        console.warn("[Auth] Erro ao buscar roles (fallback para dashboard):", rolesError.message);
+        navigate("/dashboard");
+        return;
+      }
+
+      // Verificar refs novamente
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
+
+      // Se tem pelo menos uma clínica, vai para dashboard
+      if (rolesData && rolesData.length > 0) {
+        navigate("/dashboard");
+      } else {
+        // Sem clínica, vai para setup
+        navigate("/clinic-setup");
+      }
+    } catch (err: any) {
+      console.error("[Auth] Falha no redirect pós-login:", err);
+      toast({
+        title: "Login concluído, mas não foi possível redirecionar",
+        description: err?.message || "Tente recarregar a página.",
+        variant: "destructive",
+      });
+
+      // Fallback seguro: deixa o usuário sair da tela de login.
+      navigate("/dashboard");
+    } finally {
+      redirectInFlightRef.current = false;
+    }
+  }, [navigate, toast]);
 
   // Importante: não forçar troca de domínio aqui.
   // Se o login iniciar em um domínio e retornar em outro, o PKCE quebra e gera
@@ -185,44 +281,6 @@ export default function Auth() {
   }, [toast]);
 
   useEffect(() => {
-    const checkUserAndRedirect = async (userId: string) => {
-      // Verificar refs antes de redirecionar
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      // Verificar se é super admin usando a função RPC que é SECURITY DEFINER
-      const { data: isSuperAdmin, error: saError } = await supabase
-        .rpc('is_super_admin', { _user_id: userId });
-      
-      console.log("[Auth] Super admin check:", { userId, isSuperAdmin, error: saError?.message });
-      
-      // Verificar refs novamente após a query assíncrona
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      if (isSuperAdmin === true) {
-        console.log("[Auth] Redirecting super admin to /admin");
-        navigate("/admin");
-        return;
-      }
-      
-      // Verificar se usuário tem roles/clínica
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('clinic_id')
-        .eq('user_id', userId)
-        .limit(1);
-      
-      // Verificar refs novamente
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      // Se tem pelo menos uma clínica, vai para dashboard
-      if (rolesData && rolesData.length > 0) {
-        navigate("/dashboard");
-      } else {
-        // Sem clínica, vai para setup
-        navigate("/clinic-setup");
-      }
-    };
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // PASSWORD_RECOVERY - marcar ref e não redirecionar
       if (event === "PASSWORD_RECOVERY") {
@@ -248,7 +306,9 @@ export default function Auth() {
         setTimeout(() => {
           // Verificar refs novamente antes de redirecionar
           if (!isRecoveryFlowRef.current && !isFirstAccessFlowRef.current) {
-            checkUserAndRedirect(session.user.id);
+            // redirect robusto com timeout é acionado no callback abaixo
+            // (mantém a mesma lógica para sessão inicial e SIGNED_IN)
+            void checkUserAndRedirect(session.user.id);
           }
         }, 0);
       }
@@ -267,12 +327,12 @@ export default function Auth() {
       }
       
       if (session?.user) {
-        checkUserAndRedirect(session.user.id);
+        void checkUserAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]); // Removido isResettingPassword das dependências!
+  }, [checkUserAndRedirect]); // Removido isResettingPassword das dependências!
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -320,9 +380,13 @@ export default function Auth() {
     token: string
   ): Promise<{ ok: boolean; codes?: string[]; error?: string }> => {
     try {
-      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
-        body: { token },
-      });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("verify-recaptcha", {
+          body: { token },
+        }),
+        AUTH_REQUEST_TIMEOUT_MS,
+        "functions:verify-recaptcha"
+      );
 
       if (error) {
         console.error("Erro ao verificar reCAPTCHA (invoke):", error.message);
@@ -479,10 +543,14 @@ export default function Auth() {
       }
 
       if (view === "login") {
-        const { data: signInData, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data: signInData, error } = await withTimeout(
+          supabase.auth.signInWithPassword({
+            email,
+            password,
+          }),
+          AUTH_REQUEST_TIMEOUT_MS,
+          "auth:signInWithPassword"
+        );
         
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
@@ -500,14 +568,23 @@ export default function Auth() {
 
         // Após login bem-sucedido, verificar se é primeiro acesso
         if (signInData.user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', signInData.user.id)
-            .single();
+          const { data: profileData, error: profileError } = await withTimeout(
+            supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', signInData.user.id)
+              .single(),
+            AUTH_REQUEST_TIMEOUT_MS,
+            "select:profiles"
+          );
+
+          if (profileError) {
+            // Não travar login por falha/timeout ao consultar profile.
+            console.warn("[Auth] Falha ao buscar profile pós-login (continuando):", profileError.message);
+          }
 
           // Se password_changed é false ou null, é primeiro acesso
-          if (!(profileData as any)?.password_changed) {
+          if (profileData && !(profileData as any)?.password_changed) {
             isFirstAccessFlowRef.current = true; // Bloquear redirecionamento
             setIsFirstAccess(true);
             setView("first-access");
@@ -516,6 +593,13 @@ export default function Auth() {
             setLoading(false);
             return;
           }
+
+          // Redirecionar de forma determinística (não depender só do listener)
+          await withTimeout(
+            checkUserAndRedirect(signInData.user.id),
+            AUTH_REDIRECT_TIMEOUT_MS,
+            "checkUserAndRedirect"
+          );
         }
       } else if (view === "first-access") {
         // Criar nova senha pessoal
