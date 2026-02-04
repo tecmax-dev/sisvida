@@ -41,7 +41,7 @@ import {
   List,
   FileSearch,
 } from "lucide-react";
-import { format } from "date-fns";
+import { endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EmployerSearchCombobox } from "./EmployerSearchCombobox";
 import { generateContributionsReport } from "@/lib/contributions-report-pdf";
@@ -121,18 +121,48 @@ export default function ContributionsReportsTab({
   const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">("competence");
-  
-  // Date range filters - default to first day of current year to today
-  const getDefaultStartDate = () => {
-    const date = new Date();
-    date.setMonth(0);
-    date.setDate(1);
-    return date.toISOString().split('T')[0];
+
+  // Date range filters
+  // IMPORTANTE: se o dataset é de anos anteriores, defaultar no ano corrente faz parecer que “não há dados”.
+  // Então inicializamos o período com base no histórico real (competência) quando disponível.
+  const toInputDate = (d: Date) => format(d, "yyyy-MM-dd");
+
+  const getInitialDateRange = () => {
+    // fallback seguro: ano corrente até hoje
+    const fallbackStart = (() => {
+      const d = new Date();
+      d.setMonth(0);
+      d.setDate(1);
+      return toInputDate(d);
+    })();
+    const fallbackEnd = toInputDate(new Date());
+
+    if (!contributions || contributions.length === 0) {
+      return { start: fallbackStart, end: fallbackEnd };
+    }
+
+    const competenceDates = contributions
+      .map((c) => new Date(c.competence_year, (c.competence_month || 1) - 1, 1))
+      .filter((d) => !Number.isNaN(d.getTime()));
+
+    if (competenceDates.length === 0) {
+      return { start: fallbackStart, end: fallbackEnd };
+    }
+
+    const minTs = Math.min(...competenceDates.map((d) => d.getTime()));
+    const maxTs = Math.max(...competenceDates.map((d) => d.getTime()));
+    const minDate = new Date(minTs);
+    const maxDate = new Date(maxTs);
+
+    return {
+      start: toInputDate(minDate),
+      end: toInputDate(endOfMonth(maxDate)),
+    };
   };
-  const getDefaultEndDate = () => new Date().toISOString().split('T')[0];
-  
-  const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
-  const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
+
+  const initialRange = getInitialDateRange();
+  const [startDate, setStartDate] = useState<string>(initialRange.start);
+  const [endDate, setEndDate] = useState<string>(initialRange.end);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
