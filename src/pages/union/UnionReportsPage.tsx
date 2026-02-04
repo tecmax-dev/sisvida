@@ -5,13 +5,12 @@ import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { Loader2, FileBarChart, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ContributionReportsPage } from "@/components/union/reports/ContributionReportsPage";
+import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
 
 interface Employer {
   id: string;
   name: string;
   cnpj: string;
-  trade_name?: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -72,7 +71,7 @@ export default function UnionReportsPage() {
         .from("employer_contributions")
         .select(`
           *,
-          employers (id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number),
+          employers (id, name, cnpj, email, phone, address, city, state, category_id, registration_number),
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
@@ -83,9 +82,8 @@ export default function UnionReportsPage() {
       setContributions(contribData || []);
 
       // Fetch employers - using pagination to avoid 1000 limit
-      // Include trade_name for search functionality
       const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
-        select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number"
+        select: "id, name, cnpj, email, phone, address, city, state, category_id, registration_number"
       });
       if (employersResult.error) throw employersResult.error;
       setEmployers(employersResult.data);
@@ -111,11 +109,11 @@ export default function UnionReportsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileBarChart className="h-6 w-6 text-primary" />
-            Relatórios de Contribuições
+            <FileBarChart className="h-6 w-6 text-blue-500" />
+            Relatórios Sindicais
           </h1>
           <p className="text-muted-foreground">
-            Visualize, filtre e exporte relatórios detalhados sobre contribuições sindicais
+            Relatórios financeiros do módulo sindical
           </p>
         </div>
         <Alert variant="destructive">
@@ -131,24 +129,20 @@ export default function UnionReportsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Carregando dados do relatório...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <FileBarChart className="h-6 w-6 text-primary" />
-          Relatórios de Contribuições
+          <FileBarChart className="h-6 w-6 text-blue-500" />
+          Relatórios Sindicais
         </h1>
         <p className="text-muted-foreground">
-          Dados consolidados de contribuições sindicais por empresa, período e situação dos débitos
+          Relatórios financeiros do módulo sindical
         </p>
       </div>
 
@@ -156,7 +150,7 @@ export default function UnionReportsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileBarChart className="h-5 w-5 text-primary" />
+              <FileBarChart className="h-5 w-5 text-blue-500" />
               Sem Dados
             </CardTitle>
             <CardDescription>
@@ -166,13 +160,12 @@ export default function UnionReportsPage() {
           <CardContent>
             <div className="text-center py-12 text-muted-foreground">
               <FileBarChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">Aguarde o lançamento de contribuições</p>
-              <p className="text-sm mt-1">Os relatórios serão exibidos aqui assim que houver dados disponíveis</p>
+              <p>Aguarde o lançamento de contribuições para visualizar os relatórios</p>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <ContributionReportsPage
+        <ContributionsReportsTab
           contributions={contributions}
           employers={employers}
           contributionTypes={contributionTypes}
