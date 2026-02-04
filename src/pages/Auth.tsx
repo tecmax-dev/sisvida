@@ -183,6 +183,47 @@ export default function Auth() {
     setView("login");
   }, [toast]);
 
+  // OAuth (Google): após o callback, a sessão é criada pelo SDK automaticamente.
+  // Aqui apenas redirecionamos o usuário logado para o dashboard (sem quebrar recovery flow).
+  useEffect(() => {
+    let mounted = true;
+
+    const redirectIfSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+
+        if (session?.user && !isRecoveryFlowRef.current && !hasNavigatedRef.current) {
+          hasNavigatedRef.current = true;
+          authTrace("Auth.oauth.sessionDetected");
+          navigate("/dashboard", { replace: true });
+        }
+      } catch {
+        // silencioso: não bloquear UI por falha de leitura de sessão
+      }
+    };
+
+    redirectIfSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (!session?.user) return;
+      if (isRecoveryFlowRef.current) return;
+      if (hasNavigatedRef.current) return;
+
+      if (event === "SIGNED_IN") {
+        hasNavigatedRef.current = true;
+        authTrace("Auth.oauth.signedIn");
+        navigate("/dashboard", { replace: true });
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
   const validateForm = () => {
     const newErrors: typeof errors = {};
     
@@ -434,7 +475,6 @@ export default function Auth() {
         provider: 'google',
         options: {
           redirectTo: `${getAppBaseUrl()}/auth`,
-          scopes: "https://www.googleapis.com/auth/userinfo.email",
         },
       });
 
