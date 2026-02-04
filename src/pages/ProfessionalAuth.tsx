@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,12 @@ export default function ProfessionalAuth() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
+  // PROTEÇÃO ANTI-LOOP: flags de execução
+  const isAuthenticatingRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  /**
-   * AUTH MÍNIMO - Verificação apenas no submit
-   * 
-   * Removida lógica de onAuthStateChange e getSession automáticos.
-   * O redirect acontece APENAS após login bem-sucedido no handleSubmit.
-   */
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -55,8 +52,21 @@ export default function ProfessionalAuth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // PROTEÇÃO ANTI-LOOP: bloquear execução concorrente
+    if (isAuthenticatingRef.current) {
+      console.warn('[ProfessionalAuth] Login já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    
+    // PROTEÇÃO ANTI-LOOP: evitar re-login após navegação
+    if (hasNavigatedRef.current) {
+      console.warn('[ProfessionalAuth] Navegação já realizada, ignorando');
+      return;
+    }
+    
     if (!validateForm()) return;
 
+    isAuthenticatingRef.current = true;
     setLoading(true);
 
     try {
@@ -66,6 +76,7 @@ export default function ProfessionalAuth() {
       });
       
       if (error) {
+        isAuthenticatingRef.current = false;
         if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Credenciais inválidas",
@@ -81,6 +92,9 @@ export default function ProfessionalAuth() {
 
       // Login bem-sucedido - verificar se é profissional
       if (signInData.user) {
+        // Marcar que navegação vai acontecer ANTES de qualquer async
+        hasNavigatedRef.current = true;
+        
         const { data: professional } = await supabase
           .from('professionals')
           .select('id, name, clinic_id')
@@ -89,23 +103,27 @@ export default function ProfessionalAuth() {
           .maybeSingle();
         
         if (professional) {
-          navigate("/profissional/painel");
+          navigate("/profissional/painel", { replace: true });
         } else {
+          hasNavigatedRef.current = false; // Reset pois não vai navegar
+          isAuthenticatingRef.current = false;
           toast({
             title: "Acesso negado",
             description: "Sua conta não está vinculada a nenhum profissional ativo.",
             variant: "destructive",
           });
           await supabase.auth.signOut();
+          setLoading(false);
         }
       }
     } catch (error: any) {
+      isAuthenticatingRef.current = false;
+      hasNavigatedRef.current = false;
       toast({
         title: "Erro",
         description: error.message || "Ocorreu um erro. Tente novamente.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
