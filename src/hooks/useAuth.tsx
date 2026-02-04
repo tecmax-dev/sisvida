@@ -375,7 +375,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Refs fora do closure para manter estado entre execuções do listener
     let isLoadingUserData = false;
     let lastLoadedUserId: string | null = null;
-    let initDone = false;
 
     const loadUserData = async (userId: string) => {
       // Guard: evitar múltiplas execuções simultâneas
@@ -387,40 +386,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoadingUserData = true;
       
       try {
+        // Carregar dados em background - não bloquear o UI
         await Promise.all([
-          withTimeout(fetchProfile(userId), AUTH_BOOT_TIMEOUT_MS, "fetchProfile"),
-          withTimeout(fetchUserRoles(userId), AUTH_BOOT_TIMEOUT_MS, "fetchUserRoles"),
-          withTimeout(fetchSuperAdminStatus(userId), AUTH_BOOT_TIMEOUT_MS, "fetchSuperAdminStatus"),
+          withTimeout(fetchProfile(userId), AUTH_BOOT_TIMEOUT_MS, "fetchProfile").catch(e => {
+            console.warn("[Auth] Falha ao carregar profile:", e.message);
+          }),
+          withTimeout(fetchUserRoles(userId), AUTH_BOOT_TIMEOUT_MS, "fetchUserRoles").catch(e => {
+            console.warn("[Auth] Falha ao carregar roles:", e.message);
+          }),
+          withTimeout(fetchSuperAdminStatus(userId), AUTH_BOOT_TIMEOUT_MS, "fetchSuperAdminStatus").catch(e => {
+            console.warn("[Auth] Falha ao verificar super admin:", e.message);
+          }),
         ]);
         lastLoadedUserId = userId;
       } catch (e) {
-        console.error("[Auth] Falha ao carregar dados do usuário (liberando UI):", e);
+        console.error("[Auth] Falha ao carregar dados do usuário:", e);
       } finally {
         isLoadingUserData = false;
         setRolesLoaded(true);
-        setLoading(false);
       }
     };
 
+    // LISTENER PASSIVO: Apenas atualiza sessão/user, carrega dados em background
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('[Auth] onAuthStateChange:', event, session?.user?.id?.slice(0, 8));
         
-        // Atualizar estado de sessão/user SEMPRE (sem setLoading aqui!)
+        // Atualizar estado de sessão/user SEMPRE
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           // CRÍTICO: Não recarregar se já temos dados do mesmo user
-          if (lastLoadedUserId === session.user.id && initDone) {
+          if (lastLoadedUserId === session.user.id) {
             console.log('[Auth] Dados já carregados para', session.user.id.slice(0, 8));
             return;
           }
           
-          // CRÍTICO: Não fazer setLoading(true) aqui - causa loop infinito
-          // O loading só é setado na inicialização e liberado no finally do loadUserData
-          
-          // Carregar dados do usuário (defer para evitar deadlock)
+          // Carregar dados em background (não bloqueia loading)
           setTimeout(() => {
             loadUserData(session.user.id);
           }, 0);
@@ -432,12 +435,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCurrentClinic(null);
           setIsSuperAdmin(false);
           setRolesLoaded(false);
-          setLoading(false);
         }
       }
     );
 
-    // Inicialização única
+    // Inicialização única - RÁPIDA
     const initSession = async () => {
       // Verificar lock de logout forçado
       const forceSignedOut = localStorage.getItem('eclini_force_signed_out');
@@ -449,9 +451,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn('[Auth] Falha ao forçar signOut local:', e);
         }
         localStorage.removeItem('eclini_force_signed_out');
-        setRolesLoaded(true);
         setLoading(false);
-        initDone = true;
+        setRolesLoaded(true);
         return;
       }
       
@@ -470,21 +471,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[Auth] Timeout ao obter sessão:', e);
       }
 
-      if (!session) {
-        setSession(null);
-        setUser(null);
-        setRolesLoaded(true);
-        setLoading(false);
-        initDone = true;
-        return;
-      }
-      
+      // CRÍTICO: Liberar loading IMEDIATAMENTE após determinar sessão
+      // O carregamento de dados acontece em background
       setSession(session);
-      setUser(session.user);
+      setUser(session?.user ?? null);
+      setLoading(false); // <-- Libera UI imediatamente
       
-      // Carregar dados do usuário
-      await loadUserData(session.user.id);
-      initDone = true;
+      if (session?.user) {
+        // Carregar dados em background
+        loadUserData(session.user.id);
+      } else {
+        setRolesLoaded(true);
+      }
     };
     
     initSession();
