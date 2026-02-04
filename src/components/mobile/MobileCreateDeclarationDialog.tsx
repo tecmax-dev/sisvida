@@ -13,6 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -28,6 +37,8 @@ import {
   Gift,
   CheckCircle2,
   AlertTriangle,
+  User,
+  Users,
 } from "lucide-react";
 
 interface Benefit {
@@ -37,6 +48,12 @@ interface Benefit {
   category: string | null;
   partner_name: string | null;
   validity_days: number;
+}
+
+interface Dependent {
+  id: string;
+  name: string;
+  relationship: string;
 }
 
 interface Props {
@@ -58,11 +75,15 @@ export function MobileCreateDeclarationDialog({
   const queryClient = useQueryClient();
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [beneficiaryType, setBeneficiaryType] = useState<"titular" | "dependent">("titular");
+  const [selectedDependentId, setSelectedDependentId] = useState<string>("");
 
   // Reset selection when dialog closes
   useEffect(() => {
     if (!open) {
       setSelectedBenefit(null);
+      setBeneficiaryType("titular");
+      setSelectedDependentId("");
     }
   }, [open]);
 
@@ -83,13 +104,30 @@ export function MobileCreateDeclarationDialog({
     enabled: !!clinicId && open,
   });
 
+  // Fetch patient dependents
+  const { data: dependents = [], isLoading: loadingDependents } = useQuery({
+    queryKey: ["mobile-patient-dependents", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patient_dependents")
+        .select("id, name, relationship")
+        .eq("patient_id", patientId)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data as Dependent[];
+    },
+    enabled: !!patientId && open,
+  });
+
   // Fetch existing active authorizations to check for duplicates
   const { data: existingAuthorizations = [] } = useQuery({
     queryKey: ["mobile-active-authorizations", patientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("union_authorizations")
-        .select("id, benefit_id, valid_until, status")
+        .select("id, benefit_id, valid_until, status, is_for_dependent, dependent_id")
         .eq("patient_id", patientId)
         .neq("status", "revoked");
 
@@ -133,9 +171,18 @@ export function MobileCreateDeclarationDialog({
     return expiryDate < todayMidDay;
   })());
 
-  // Check if a benefit already has an active authorization
+  // Check if a benefit already has an active authorization for the selected beneficiary
   const hasActiveAuthorization = (benefitId: string) => {
-    return existingAuthorizations.some(auth => auth.benefit_id === benefitId);
+    return existingAuthorizations.some(auth => {
+      if (auth.benefit_id !== benefitId) return false;
+      
+      // Check based on beneficiary type
+      if (beneficiaryType === "titular") {
+        return !auth.is_for_dependent;
+      } else {
+        return auth.is_for_dependent && auth.dependent_id === selectedDependentId;
+      }
+    });
   };
 
   // Get union entity
@@ -155,21 +202,36 @@ export function MobileCreateDeclarationDialog({
 
   const createMutation = useMutation({
     mutationFn: async (benefit: Benefit) => {
-      // Double-check for duplicates
+      const isForDependent = beneficiaryType === "dependent";
+      
+      // Validate dependent selection
+      if (isForDependent && !selectedDependentId) {
+        throw new Error("Selecione um dependente.");
+      }
+
+      // Double-check for duplicates (considering beneficiary type)
       const { data: existing } = await supabase
         .from("union_authorizations")
-        .select("id, valid_until, status")
+        .select("id, valid_until, status, is_for_dependent, dependent_id")
         .eq("patient_id", patientId)
         .eq("benefit_id", benefit.id)
         .neq("status", "revoked");
 
       const activeExists = (existing || []).some(auth => {
         const validUntil = parseISO(auth.valid_until);
-        return !isPast(validUntil);
+        if (isPast(validUntil)) return false;
+        
+        // Check if same beneficiary type
+        if (isForDependent) {
+          return auth.is_for_dependent && auth.dependent_id === selectedDependentId;
+        } else {
+          return !auth.is_for_dependent;
+        }
       });
 
       if (activeExists) {
-        throw new Error("Você já possui uma declaração ativa para este benefício.");
+        const beneficiaryLabel = isForDependent ? "este dependente" : "você";
+        throw new Error(`Já existe uma declaração ativa deste benefício para ${beneficiaryLabel}.`);
       }
 
       // Generate authorization number and hash
@@ -181,17 +243,22 @@ export function MobileCreateDeclarationDialog({
       const validFrom = new Date();
       const validUntil = addDays(validFrom, benefit.validity_days);
 
+      const selectedDependent = dependents.find(d => d.id === selectedDependentId);
+      const beneficiaryName = isForDependent && selectedDependent 
+        ? selectedDependent.name 
+        : "titular";
+
       const payload = {
         clinic_id: clinicId,
         patient_id: patientId,
         benefit_id: benefit.id,
-        is_for_dependent: false,
-        dependent_id: null,
+        is_for_dependent: isForDependent,
+        dependent_id: isForDependent ? selectedDependentId : null,
         authorization_number: authNumber,
         validation_hash: hash,
         valid_from: format(validFrom, "yyyy-MM-dd"),
         valid_until: format(validUntil, "yyyy-MM-dd"),
-        notes: `Declaração gerada pelo próprio associado via app`,
+        notes: `Declaração gerada pelo próprio associado via app - Beneficiário: ${beneficiaryName}`,
         created_by: patientId,
         union_entity_id: unionEntity?.id || null,
       };
@@ -225,10 +292,23 @@ export function MobileCreateDeclarationDialog({
   });
 
   const handleSelectBenefit = (benefit: Benefit) => {
+    // Validate dependent selection if beneficiaryType is "dependent"
+    if (beneficiaryType === "dependent" && !selectedDependentId) {
+      toast({
+        title: "Selecione um dependente",
+        description: "Escolha o dependente antes de selecionar o benefício.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (hasActiveAuthorization(benefit.id)) {
+      const beneficiaryLabel = beneficiaryType === "dependent" 
+        ? `este dependente (${selectedDependent?.name})`
+        : "você (titular)";
       toast({
         title: "Declaração já existe",
-        description: "Você já possui uma declaração ativa para este benefício.",
+        description: `Já existe uma declaração ativa deste benefício para ${beneficiaryLabel}.`,
         variant: "destructive",
       });
       return;
@@ -238,12 +318,21 @@ export function MobileCreateDeclarationDialog({
   };
 
   const handleConfirm = () => {
+    if (beneficiaryType === "dependent" && !selectedDependentId) {
+      toast({
+        title: "Selecione um dependente",
+        description: "Escolha o dependente para emitir a declaração.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (selectedBenefit) {
       createMutation.mutate(selectedBenefit);
     }
   };
 
-  const isLoading = loadingBenefits || loadingCard;
+  const selectedDependent = dependents.find(d => d.id === selectedDependentId);
+  const isLoading = loadingBenefits || loadingCard || loadingDependents;
 
   return (
     <>
@@ -282,8 +371,65 @@ export function MobileCreateDeclarationDialog({
             </div>
           ) : (
             <>
+              {/* Beneficiary Selection */}
+              <div className="space-y-3 pb-3 border-b">
+                <Label className="text-sm font-medium">Para quem é a declaração?</Label>
+                <RadioGroup
+                  value={beneficiaryType}
+                  onValueChange={(value) => {
+                    setBeneficiaryType(value as "titular" | "dependent");
+                    if (value === "titular") {
+                      setSelectedDependentId("");
+                    }
+                  }}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="titular" id="mobile-titular" />
+                    <Label htmlFor="mobile-titular" className="flex items-center gap-1.5 cursor-pointer">
+                      <User className="h-4 w-4 text-emerald-600" />
+                      Titular
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem 
+                      value="dependent" 
+                      id="mobile-dependent"
+                      disabled={dependents.length === 0}
+                    />
+                    <Label 
+                      htmlFor="mobile-dependent" 
+                      className={`flex items-center gap-1.5 cursor-pointer ${dependents.length === 0 ? 'opacity-50' : ''}`}
+                    >
+                      <Users className="h-4 w-4 text-violet-600" />
+                      Dependente {dependents.length === 0 && "(nenhum)"}
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {/* Dependent Selector */}
+                {beneficiaryType === "dependent" && dependents.length > 0 && (
+                  <Select value={selectedDependentId} onValueChange={setSelectedDependentId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o dependente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dependents.map((dep) => (
+                        <SelectItem key={dep.id} value={dep.id}>
+                          {dep.name} ({dep.relationship})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
               <p className="text-sm text-muted-foreground">
-                Selecione o benefício para gerar uma nova declaração.
+                Selecione o benefício para gerar a declaração
+                {beneficiaryType === "dependent" && selectedDependent && (
+                  <span className="font-medium text-violet-600"> para {selectedDependent.name}</span>
+                )}
+                .
               </p>
 
               <ScrollArea className="flex-1 -mx-6 px-6 max-h-[50vh]">
@@ -374,15 +520,32 @@ export function MobileCreateDeclarationDialog({
             <AlertDialogDescription className="text-left">
               Você está prestes a gerar uma declaração para:
               <br />
-              <strong className="text-gray-900">{selectedBenefit?.name}</strong>
+              <strong className="text-foreground">{selectedBenefit?.name}</strong>
               <br />
+              {beneficiaryType === "dependent" && selectedDependent && (
+                <>
+                  <span className="text-violet-600">
+                    Beneficiário: {selectedDependent.name} (Dependente)
+                  </span>
+                  <br />
+                </>
+              )}
+              {beneficiaryType === "titular" && (
+                <>
+                  <span className="text-emerald-600">
+                    Beneficiário: Titular
+                  </span>
+                  <br />
+                </>
+              )}
               <br />
               Esta declaração terá validade de{" "}
               <strong>{selectedBenefit?.validity_days} dias</strong>.
               <br />
               <br />
               <span className="text-amber-600 text-xs">
-                ⚠️ Não será possível emitir outra declaração para este benefício
+                ⚠️ Não será possível emitir outra declaração deste benefício para{" "}
+                {beneficiaryType === "dependent" ? "este dependente" : "você (titular)"}{" "}
                 enquanto esta estiver ativa.
               </span>
             </AlertDialogDescription>
