@@ -5,6 +5,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSessionTimeout } from "./useSessionTimeout";
 import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
 
+// Fail-safe: evita deadlock infinito de loading caso alguma request fique pendurada.
+const AUTH_BOOT_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(`[Auth] Timeout em ${label} após ${ms}ms`));
+    }, ms);
+
+    promise
+      .then((value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((err) => {
+        window.clearTimeout(timeoutId);
+        reject(err);
+      });
+  });
+}
+
 interface Profile {
   id: string;
   user_id: string;
@@ -354,11 +375,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loadUserData = async (userId: string) => {
       try {
         await Promise.all([
-          fetchProfile(userId),
-          fetchUserRoles(userId),
-          fetchSuperAdminStatus(userId),
+          withTimeout(fetchProfile(userId), AUTH_BOOT_TIMEOUT_MS, "fetchProfile"),
+          withTimeout(fetchUserRoles(userId), AUTH_BOOT_TIMEOUT_MS, "fetchUserRoles"),
+          withTimeout(fetchSuperAdminStatus(userId), AUTH_BOOT_TIMEOUT_MS, "fetchSuperAdminStatus"),
         ]);
+      } catch (e) {
+        // Nunca manter a UI travada: loga e libera o app para renderizar.
+        console.error("[Auth] Falha ao carregar dados do usuário (liberando UI):", e);
       } finally {
+        // Garantia: ProtectedRoute depende desses flags para não ficar preso.
+        setRolesLoaded(true);
         setLoading(false);
       }
     };
@@ -392,18 +418,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const forceSignedOut = localStorage.getItem('eclini_force_signed_out');
       if (forceSignedOut) {
         console.warn('[Auth] Lock de logout detectado, forçando signOut local');
-        await supabase.auth.signOut({ scope: 'local' });
+        try {
+          await withTimeout(
+            supabase.auth.signOut({ scope: 'local' }) as unknown as Promise<void>,
+            AUTH_BOOT_TIMEOUT_MS,
+            "supabase.auth.signOut(local)"
+          );
+        } catch (e) {
+          console.warn('[Auth] Falha ao forçar signOut local (continuando):', e);
+        }
         localStorage.removeItem('eclini_force_signed_out');
+        setRolesLoaded(true);
         setLoading(false);
         return;
       }
       
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      let session: Session | null = null;
+      let sessionError: unknown = null;
+      try {
+        const res = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_BOOT_TIMEOUT_MS,
+          "supabase.auth.getSession"
+        );
+        session = res.data.session;
+        sessionError = res.error;
+      } catch (e) {
+        sessionError = e;
+      }
+
+      if (sessionError) {
+        console.error('[Auth] Erro ao obter sessão (liberando UI):', sessionError);
+      }
       
       // Se não há sessão local, está deslogado
       if (!session) {
         setSession(null);
         setUser(null);
+        setRolesLoaded(true);
         setLoading(false);
         return;
       }
@@ -416,6 +468,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Garantir que o tempo de login existe (para sessões restauradas)
       // Removido: não precisamos mais de controle manual de tempo de sessão
       
+      // Não aguardar aqui para evitar travas na inicialização; loadUserData já tem timeout.
       loadUserData(session.user.id);
     };
     
