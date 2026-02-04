@@ -127,6 +127,23 @@ export default function ContributionsReportsTab({
   // Então inicializamos o período com base no histórico real (competência) quando disponível.
   const toInputDate = (d: Date) => format(d, "yyyy-MM-dd");
 
+  // Helper to get date from contribution based on filter type
+  const getDateForFilter = (c: Contribution): Date | null => {
+    if (dateFilterType === "competence") {
+      // Create date from competence month/year (use day 1)
+      return new Date(c.competence_year, c.competence_month - 1, 1);
+    }
+    if (dateFilterType === "due_date") {
+      // Date-only fields: normalize to noon to avoid timezone edge cases
+      return new Date(c.due_date + "T12:00:00");
+    }
+    if (dateFilterType === "paid_at") {
+      if (!c.paid_at) return null;
+      return new Date(c.paid_at);
+    }
+    return null;
+  };
+
   const fallbackRange = useMemo(() => {
     const start = new Date();
     start.setMonth(0);
@@ -141,14 +158,16 @@ export default function ContributionsReportsTab({
   const autoRange = useMemo(() => {
     if (!contributions || contributions.length === 0) return fallbackRange;
 
-    const competenceDates = contributions
-      .map((c) => new Date(c.competence_year, (c.competence_month || 1) - 1, 1))
-      .filter((d) => !Number.isNaN(d.getTime()));
+    // Calcula o range automaticamente de acordo com o tipo de data selecionado.
+    // Ex.: quando o usuário muda para "Por Vencimento", o período deve se ajustar ao histórico de vencimentos.
+    const dates = contributions
+      .map(getDateForFilter)
+      .filter((d): d is Date => !!d && !Number.isNaN(d.getTime()));
 
-    if (competenceDates.length === 0) return fallbackRange;
+    if (dates.length === 0) return fallbackRange;
 
-    const minTs = Math.min(...competenceDates.map((d) => d.getTime()));
-    const maxTs = Math.max(...competenceDates.map((d) => d.getTime()));
+    const minTs = Math.min(...dates.map((d) => d.getTime()));
+    const maxTs = Math.max(...dates.map((d) => d.getTime()));
     const minDate = new Date(minTs);
     const maxDate = new Date(maxTs);
 
@@ -156,7 +175,8 @@ export default function ContributionsReportsTab({
       start: toInputDate(minDate),
       end: toInputDate(endOfMonth(maxDate)),
     };
-  }, [contributions, fallbackRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contributions, fallbackRange, dateFilterType]);
 
   // TabsContent (Radix) mantém o conteúdo montado mesmo quando a aba não está ativa.
   // Então este componente pode montar com `contributions=[]` e só depois receber dados.
@@ -184,20 +204,6 @@ export default function ContributionsReportsTab({
     if (!cnpj) return "-";
     const cleaned = cnpj.replace(/\D/g, "");
     return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-  };
-
-  // Helper to get date from contribution based on filter type
-  const getDateForFilter = (c: Contribution): Date | null => {
-    if (dateFilterType === "competence") {
-      // Create date from competence month/year (use day 1)
-      return new Date(c.competence_year, c.competence_month - 1, 1);
-    } else if (dateFilterType === "due_date") {
-      return new Date(c.due_date + "T12:00:00");
-    } else if (dateFilterType === "paid_at") {
-      if (!c.paid_at) return null;
-      return new Date(c.paid_at);
-    }
-    return null;
   };
 
   const filteredContributions = useMemo(() => {
