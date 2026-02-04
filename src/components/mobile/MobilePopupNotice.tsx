@@ -81,6 +81,12 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
       navigate("/app/agendar");
       return;
     }
+
+    // Se configurado para navegar para autorizações
+    if (currentNotice?.navigate_to_authorizations) {
+      navigate("/app/autorizacoes");
+      return;
+    }
     
     // Se tem link configurado
     if (currentNotice?.button_link) {
