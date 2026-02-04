@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       .eq('clinic_id', clinicId)
       .single();
 
-    const isAuthorized = superAdmin || userRole?.role === 'admin';
+    const isAuthorized = superAdmin || userRole?.role === 'admin' || userRole?.role === 'owner';
 
     if (!isAuthorized) {
       console.error('[delete-patient] User not authorized:', requestingUser.id);
