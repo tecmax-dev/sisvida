@@ -33,6 +33,7 @@ export function PopupNoticeFormDialog({
   const [isActive, setIsActive] = useState(true);
   const [showOncePerSession, setShowOncePerSession] = useState(true);
   const [navigateToBooking, setNavigateToBooking] = useState(false);
+  const [navigateToAuthorizations, setNavigateToAuthorizations] = useState(false);
   const [priority, setPriority] = useState(0);
   const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -62,6 +63,7 @@ export function PopupNoticeFormDialog({
       setIsActive(editingNotice.is_active);
       setShowOncePerSession(editingNotice.show_once_per_session);
       setNavigateToBooking(editingNotice.navigate_to_booking || false);
+      setNavigateToAuthorizations(editingNotice.navigate_to_authorizations || false);
       setPriority(editingNotice.priority);
       setStartsAt(isoToLocalDatetime(editingNotice.starts_at));
       setExpiresAt(isoToLocalDatetime(editingNotice.expires_at));
@@ -79,6 +81,7 @@ export function PopupNoticeFormDialog({
     setIsActive(true);
     setShowOncePerSession(true);
     setNavigateToBooking(false);
+    setNavigateToAuthorizations(false);
     setPriority(0);
     setStartsAt("");
     setExpiresAt("");
@@ -111,10 +114,11 @@ export function PopupNoticeFormDialog({
       message: message || null,
       image_url: imageUrl || null,
       button_text: buttonText || "Entendi",
-      button_link: navigateToBooking ? null : (buttonLink || null),
+      button_link: (navigateToBooking || navigateToAuthorizations) ? null : (buttonLink || null),
       is_active: isActive,
       show_once_per_session: showOncePerSession,
       navigate_to_booking: navigateToBooking,
+      navigate_to_authorizations: navigateToAuthorizations,
       priority,
       starts_at: localDatetimeToIso(startsAt),
       expires_at: localDatetimeToIso(expiresAt),
@@ -285,7 +289,29 @@ export function PopupNoticeFormDialog({
                   Ao clicar no botão, abre a lista de profissionais
                 </p>
               </div>
-              <Switch checked={navigateToBooking} onCheckedChange={setNavigateToBooking} />
+              <Switch 
+                checked={navigateToBooking} 
+                onCheckedChange={(checked) => {
+                  setNavigateToBooking(checked);
+                  if (checked) setNavigateToAuthorizations(false);
+                }} 
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Abrir página de autorizações</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ao clicar no botão, abre a aba de autorizações
+                </p>
+              </div>
+              <Switch 
+                checked={navigateToAuthorizations} 
+                onCheckedChange={(checked) => {
+                  setNavigateToAuthorizations(checked);
+                  if (checked) setNavigateToBooking(false);
+                }} 
+              />
             </div>
           </div>
 

@@ -7661,6 +7661,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           message: string | null
+          navigate_to_authorizations: boolean | null
           navigate_to_booking: boolean | null
           priority: number
           show_once_per_session: boolean
@@ -7679,6 +7680,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           message?: string | null
+          navigate_to_authorizations?: boolean | null
           navigate_to_booking?: boolean | null
           priority?: number
           show_once_per_session?: boolean
@@ -7697,6 +7699,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           message?: string | null
+          navigate_to_authorizations?: boolean | null
           navigate_to_booking?: boolean | null
           priority?: number
           show_once_per_session?: boolean
