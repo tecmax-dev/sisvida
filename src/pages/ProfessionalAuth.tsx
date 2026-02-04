@@ -8,7 +8,11 @@ import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Stethoscope } from "lucide-react";
 import { z } from "zod";
-import { authTrace, maskEmail } from "@/lib/authTrace";
+
+/**
+ * PANIC MODE - Login 100% imperativo
+ * Zero listeners, zero contexto global, zero queries extras
+ */
 
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
@@ -20,12 +24,14 @@ export default function ProfessionalAuth() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
-  // PROTEÇÃO ANTI-LOOP: flags de execução
+  // PROTEÇÃO ANTI-LOOP
   const isAuthenticatingRef = useRef(false);
   const hasNavigatedRef = useRef(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  console.info("[AUTH-PANIC] ProfessionalAuth mounted - panic mode");
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -53,21 +59,10 @@ export default function ProfessionalAuth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    authTrace("ProfessionalAuth.submit", {
-      email: email ? maskEmail(email) : "[empty]",
-    });
+    console.info("[AUTH-PANIC] ProfessionalAuth.submit");
     
-    // PROTEÇÃO ANTI-LOOP: bloquear execução concorrente
-    if (isAuthenticatingRef.current) {
-      console.warn('[ProfessionalAuth] Login já em andamento, ignorando chamada duplicada');
-      authTrace("ProfessionalAuth.blocked.concurrent");
-      return;
-    }
-    
-    // PROTEÇÃO ANTI-LOOP: evitar re-login após navegação
-    if (hasNavigatedRef.current) {
-      console.warn('[ProfessionalAuth] Navegação já realizada, ignorando');
-      authTrace("ProfessionalAuth.blocked.afterNavigate");
+    if (isAuthenticatingRef.current || hasNavigatedRef.current) {
+      console.warn("[AUTH-PANIC] Blocked - already in progress or navigated");
       return;
     }
     
@@ -77,16 +72,16 @@ export default function ProfessionalAuth() {
     setLoading(true);
 
     try {
-      authTrace("ProfessionalAuth.signIn.start");
-      const { data: signInData, error } = await supabase.auth.signInWithPassword({
+      console.info("[AUTH-PANIC] signInWithPassword start");
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      authTrace("ProfessionalAuth.signIn.return", {
-        ok: !error,
-        hasUser: !!signInData?.user,
-        error: error?.message ?? null,
+      console.info("[AUTH-PANIC] signInWithPassword returned", { 
+        ok: !error, 
+        hasUser: !!data?.user,
+        error: error?.message 
       });
       
       if (error) {
@@ -104,17 +99,16 @@ export default function ProfessionalAuth() {
         return;
       }
 
-      // Login bem-sucedido - redirect IMEDIATO sem queries adicionais
-      // A página de destino verificará se é profissional ativo
-      if (signInData.user) {
+      // SUCESSO - navegar IMEDIATAMENTE
+      if (data.user) {
         hasNavigatedRef.current = true;
-        authTrace("ProfessionalAuth.navigate", { to: "/profissional/painel" });
+        console.info("[AUTH-PANIC] navigate to /profissional/painel");
         navigate("/profissional/painel", { replace: true });
       }
     } catch (error: any) {
       isAuthenticatingRef.current = false;
       hasNavigatedRef.current = false;
-      authTrace("ProfessionalAuth.exception", { message: error?.message ?? "unknown" });
+      console.error("[AUTH-PANIC] Exception:", error?.message);
       toast({
         title: "Erro",
         description: error.message || "Ocorreu um erro. Tente novamente.",

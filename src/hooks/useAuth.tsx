@@ -1,16 +1,13 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { authTrace, trackAuthListener } from "@/lib/authTrace";
 
 /**
- * AUTH MÍNIMO FUNCIONAL v4
+ * AUTH PANIC MODE v2
  * 
- * PRINCÍPIOS:
- * 1. loading muda apenas 1 vez (de true para false)
- * 2. Zero efeitos colaterais no listener
- * 3. Dados extras carregam em background (não bloqueiam)
- * 4. Sem redirects automáticos - páginas controlam navegação
+ * Zero listeners no boot - apenas getSession inicial.
+ * Login é 100% imperativo nas páginas Auth/ProfessionalAuth.
+ * Dados carregam sob demanda.
  */
 
 interface Profile {
@@ -72,19 +69,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   
-  // Refs para controle de estado sem re-renders
   const loadingSetRef = useRef(false);
   const dataLoadedRef = useRef(false);
 
-  // Logout simples e direto
+  console.info("[AUTH-PANIC] AuthProvider mount - panic mode v2");
+
   const signOut = useCallback(async () => {
+    console.info("[AUTH-PANIC] signOut called");
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } catch (e) {
-      console.warn('[Auth] Erro no signOut:', e);
+      console.warn('[AUTH-PANIC] signOut error:', e);
     }
     
-    // Limpar estados
     setProfile(null);
     setUserRoles([]);
     setCurrentClinic(null);
@@ -95,14 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  // Função para carregar dados do usuário (lazy - chamada APENAS quando necessário pela UI)
-  // NÃO é chamada automaticamente no login
   const loadUserData = useCallback(async (userId: string) => {
     if (dataLoadedRef.current) return;
     dataLoadedRef.current = true;
     
+    console.info("[AUTH-PANIC] loadUserData start", { userId });
+    
     try {
-      // Carregar perfil
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -113,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileData as Profile);
       }
 
-      // Verificar super admin
       const { data: saData } = await supabase
         .from('super_admins')
         .select('id')
@@ -122,7 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setIsSuperAdmin(!!saData);
 
-      // Carregar roles
       const { data: rolesData } = await supabase
         .from('user_roles')
         .select(`
@@ -154,7 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCurrentClinic(roles[0].clinic);
         }
       } else if (saData) {
-        // Super admin: carregar todas as clínicas
         const { data: clinics } = await supabase
           .from('clinics')
           .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
@@ -177,8 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setRolesLoaded(true);
+      console.info("[AUTH-PANIC] loadUserData complete");
     } catch (err) {
-      console.error('[Auth] Erro ao carregar dados:', err);
+      console.error('[AUTH-PANIC] loadUserData error:', err);
       setRolesLoaded(true);
     }
   }, [currentClinic]);
@@ -190,66 +184,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, loadUserData]);
 
-  // INICIALIZAÇÃO ÚNICA - sem queries no login
+  // PANIC MODE: Apenas getSession inicial - ZERO listeners no boot
   useEffect(() => {
     let mounted = true;
-    authTrace("AuthProvider.mount");
     
     const init = async () => {
-      authTrace("AuthProvider.init.start");
-      // Verificar sessão existente UMA VEZ
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      console.info("[AUTH-PANIC] init start");
       
-      if (!mounted) return;
-      
-      if (existingSession?.user) {
-        authTrace("AuthProvider.init.session", {
-          hasSession: true,
-          hasUser: true,
-          userId: existingSession.user.id,
-        });
-        setSession(existingSession);
-        setUser(existingSession.user);
-        // NÃO carregar dados aqui - será feito pela página de destino quando necessário
-      } else {
-        authTrace("AuthProvider.init.session", { hasSession: !!existingSession, hasUser: false });
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (existingSession?.user) {
+          console.info("[AUTH-PANIC] init found session", { userId: existingSession.user.id });
+          setSession(existingSession);
+          setUser(existingSession.user);
+          // Carregar dados do usuário
+          await loadUserData(existingSession.user.id);
+        } else {
+          console.info("[AUTH-PANIC] init no session");
+        }
+      } catch (err) {
+        console.error("[AUTH-PANIC] init error:", err);
       }
       
       // Loading = false APENAS UMA VEZ
       if (!loadingSetRef.current) {
         loadingSetRef.current = true;
         setLoading(false);
-        authTrace("AuthProvider.loading.false");
+        console.info("[AUTH-PANIC] loading = false");
       }
     };
     
     init();
     
-    // Listener MÍNIMO - apenas sincroniza estado de sessão, ZERO queries
-    const untrack = trackAuthListener("AuthProvider.onAuthStateChange");
+    // PANIC MODE: Listener MÍNIMO - apenas para logout/token refresh
+    // NÃO dispara queries, NÃO faz redirect
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         if (!mounted) return;
-
-        authTrace("AuthProvider.onAuthStateChange", {
-          event,
-          hasSession: !!newSession,
-          userId: newSession?.user?.id ?? null,
-        });
         
-        // Apenas atualiza estado - sem lógica condicional, sem queries
+        console.info("[AUTH-PANIC] onAuthStateChange", { event, hasSession: !!newSession });
+        
+        // Apenas sincroniza estado - sem lógica adicional
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (!newSession) {
-          // Limpar dados quando não há sessão
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
           setRolesLoaded(false);
           dataLoadedRef.current = false;
-          authTrace("AuthProvider.session.cleared");
         }
       }
     );
@@ -257,10 +245,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      untrack();
-      authTrace("AuthProvider.unmount");
+      console.info("[AUTH-PANIC] AuthProvider unmount");
     };
-  }, []);
+  }, [loadUserData]);
 
   return (
     <AuthContext.Provider value={{ 
