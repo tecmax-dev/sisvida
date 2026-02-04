@@ -238,10 +238,10 @@ export default function Auth() {
       newErrors.name = "Nome é obrigatório";
     }
 
-    // Validar reCAPTCHA para login e signup (apenas se a chave estiver configurada)
-    if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY && !recaptchaToken) {
-      newErrors.recaptcha = "Complete o reCAPTCHA";
-    }
+    // DESATIVADO: Validação de reCAPTCHA (Edge Function desativada)
+    // if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY && !recaptchaToken) {
+    //   newErrors.recaptcha = "Complete o reCAPTCHA";
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -361,53 +361,14 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      // Verificar reCAPTCHA no servidor para login e signup (se configurado)
+      // DESATIVADO: Verificação de reCAPTCHA via Edge Function
+      // Motivo: Todas as Edge Functions desativadas no login/bootstrap
+      // Se precisar reativar, descomentar o bloco abaixo
+      /*
       if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY) {
-        // Obter token fresco diretamente do componente
-        let tokenToVerify = recaptchaToken;
-        
-        // Se não tem token, tentar executar novamente
-        if (!tokenToVerify) {
-          try {
-            tokenToVerify = await recaptchaRef.current?.executeAsync?.() || null;
-          } catch {
-            // Se falhar, resetar e pedir ao usuário
-            recaptchaRef.current?.reset();
-            setRecaptchaToken(null);
-            setErrors({ recaptcha: "Complete o reCAPTCHA novamente" });
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (!tokenToVerify) {
-          setErrors({ recaptcha: "Complete o reCAPTCHA" });
-          setLoading(false);
-          return;
-        }
-
-        const verification = await verifyRecaptcha(tokenToVerify);
-        if (!verification.ok) {
-          const isExpired = verification.codes?.includes("timeout-or-duplicate");
-          
-          toast({
-            title: isExpired ? "reCAPTCHA expirado" : "Verificação falhou",
-            description: isExpired 
-              ? "O reCAPTCHA expirou. Complete novamente e tente rapidamente."
-              : (verification.error || "O reCAPTCHA não pôde ser verificado"),
-            variant: "destructive",
-          });
-
-          recaptchaRef.current?.reset();
-          setRecaptchaToken(null);
-          setLoading(false);
-          return;
-        }
-
-        // Resetar após uso bem-sucedido (token é single-use)
-        recaptchaRef.current?.reset();
-        setRecaptchaToken(null);
+        // ... código de verificação reCAPTCHA ...
       }
+      */
 
       if (view === "login") {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
@@ -490,39 +451,16 @@ export default function Auth() {
         }
 
         if (data.user) {
-          // Enviar credenciais por email
-          try {
-            const { error: credentialsError } = await supabase.functions.invoke(
-              "send-user-credentials",
-              {
-                body: {
-                  userEmail: email,
-                  userName: name,
-                  tempPassword: tempPassword,
-                  clinicName: "",
-                },
-              }
-            );
-
-            if (credentialsError) {
-              throw credentialsError;
-            }
-          } catch (emailError) {
-            console.error("Erro ao enviar credenciais:", emailError);
-            toast({
-              title: "Conta criada, mas email não enviado",
-              description:
-                "Não foi possível enviar sua senha temporária. Tente novamente.",
-              variant: "destructive",
-            });
-          }
-
+          // DESATIVADO: Envio de credenciais via Edge Function
+          // Motivo: Todas as Edge Functions desativadas no login/bootstrap
+          // O fluxo de cadastro agora apenas cria a conta e faz logout
+          
           // Fazer logout para que o usuário faça login com as credenciais recebidas
           await supabase.auth.signOut();
 
           toast({
             title: "Conta criada com sucesso!",
-            description: "Suas credenciais foram enviadas para seu email.",
+            description: "Verifique seu email para confirmar a conta e definir sua senha.",
           });
 
           // Voltar para a tela de login
