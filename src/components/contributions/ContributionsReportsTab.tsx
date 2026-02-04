@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -127,27 +127,25 @@ export default function ContributionsReportsTab({
   // Então inicializamos o período com base no histórico real (competência) quando disponível.
   const toInputDate = (d: Date) => format(d, "yyyy-MM-dd");
 
-  const getInitialDateRange = () => {
-    // fallback seguro: ano corrente até hoje
-    const fallbackStart = (() => {
-      const d = new Date();
-      d.setMonth(0);
-      d.setDate(1);
-      return toInputDate(d);
-    })();
-    const fallbackEnd = toInputDate(new Date());
+  const fallbackRange = useMemo(() => {
+    const start = new Date();
+    start.setMonth(0);
+    start.setDate(1);
+    return {
+      start: toInputDate(start),
+      end: toInputDate(new Date()),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    if (!contributions || contributions.length === 0) {
-      return { start: fallbackStart, end: fallbackEnd };
-    }
+  const autoRange = useMemo(() => {
+    if (!contributions || contributions.length === 0) return fallbackRange;
 
     const competenceDates = contributions
       .map((c) => new Date(c.competence_year, (c.competence_month || 1) - 1, 1))
       .filter((d) => !Number.isNaN(d.getTime()));
 
-    if (competenceDates.length === 0) {
-      return { start: fallbackStart, end: fallbackEnd };
-    }
+    if (competenceDates.length === 0) return fallbackRange;
 
     const minTs = Math.min(...competenceDates.map((d) => d.getTime()));
     const maxTs = Math.max(...competenceDates.map((d) => d.getTime()));
@@ -158,11 +156,22 @@ export default function ContributionsReportsTab({
       start: toInputDate(minDate),
       end: toInputDate(endOfMonth(maxDate)),
     };
-  };
+  }, [contributions, fallbackRange]);
 
-  const initialRange = getInitialDateRange();
-  const [startDate, setStartDate] = useState<string>(initialRange.start);
-  const [endDate, setEndDate] = useState<string>(initialRange.end);
+  // TabsContent (Radix) mantém o conteúdo montado mesmo quando a aba não está ativa.
+  // Então este componente pode montar com `contributions=[]` e só depois receber dados.
+  // Precisamos sincronizar o range automático quando os dados chegarem, sem sobrescrever
+  // se o usuário já mexeu nas datas.
+  const dateTouchedRef = useRef(false);
+
+  const [startDate, setStartDate] = useState<string>(autoRange.start);
+  const [endDate, setEndDate] = useState<string>(autoRange.end);
+
+  useEffect(() => {
+    if (dateTouchedRef.current) return;
+    setStartDate((prev) => (prev === autoRange.start ? prev : autoRange.start));
+    setEndDate((prev) => (prev === autoRange.end ? prev : autoRange.end));
+  }, [autoRange.start, autoRange.end]);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -412,7 +421,10 @@ export default function ContributionsReportsTab({
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  dateTouchedRef.current = true;
+                  setStartDate(e.target.value);
+                }}
                 className="h-9 px-3 rounded-md border border-input bg-background text-sm"
               />
             </div>
@@ -421,7 +433,10 @@ export default function ContributionsReportsTab({
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  dateTouchedRef.current = true;
+                  setEndDate(e.target.value);
+                }}
                 className="h-9 px-3 rounded-md border border-input bg-background text-sm"
               />
             </div>
