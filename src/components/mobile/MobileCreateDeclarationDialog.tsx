@@ -243,9 +243,9 @@ export function MobileCreateDeclarationDialog({
       const validFrom = new Date();
       const validUntil = addDays(validFrom, benefit.validity_days);
 
-      const selectedDependent = dependents.find(d => d.id === selectedDependentId);
-      const beneficiaryName = isForDependent && selectedDependent 
-        ? selectedDependent.name 
+      const dependentForPayload = dependents.find(d => d.id === selectedDependentId);
+      const beneficiaryName = isForDependent && dependentForPayload 
+        ? dependentForPayload.name 
         : "titular";
 
       const payload = {
