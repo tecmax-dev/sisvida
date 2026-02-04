@@ -52,7 +52,7 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
   useEffect(() => {
     const ensureContraChequesFolder = async () => {
       // Evitar múltiplas tentativas de criação
-      if (folderCreationAttemptedRef.current || loading || folders.length === 0) return;
+      if (folderCreationAttemptedRef.current || loading) return;
 
       const hasContraChequesFolder = folders.some(
         (f) =>
