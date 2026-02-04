@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -313,21 +313,52 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-const App = () => (
-  <ErrorBoundary>
-    <ThemeProvider defaultTheme="system" storageKey="eclini-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <ModalProvider>
-            <Toaster />
-            <Sonner />
-            <PWAUpdateListener />
-            <BrowserRouter>
-              <AuthProvider>
-                <GlobalBackButton />
-                <DomainRedirect />
-                <Suspense fallback={<LoadingFallback />}>
-              <Routes>
+declare global {
+  interface Window {
+    __BOOT_APP_MOUNT_COUNT__?: number;
+  }
+}
+
+function App() {
+  // 🔥 Isolamento total do loop (nível raiz)
+  // Ative com: ?isolate=1
+  const isolateRoot =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("isolate");
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      console.info("[BOOT] App.tsx mounted");
+      return;
+    }
+
+    window.__BOOT_APP_MOUNT_COUNT__ = (window.__BOOT_APP_MOUNT_COUNT__ ?? 0) + 1;
+    console.info("[BOOT] App.tsx mounted", { count: window.__BOOT_APP_MOUNT_COUNT__ });
+  }, []);
+
+  if (isolateRoot) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        APP BOOT OK
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="system" storageKey="eclini-theme">
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <ModalProvider>
+              <Toaster />
+              <Sonner />
+              <PWAUpdateListener />
+              <BrowserRouter>
+                <AuthProvider>
+                  <GlobalBackButton />
+                  <DomainRedirect />
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Routes>
                 <Route path="/" element={<Index />} />
                 {/* Aliases para evitar 404 por URLs antigas/alternativas */}
                 <Route path="/agendar-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
@@ -629,15 +660,16 @@ const App = () => (
                   <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-              </Suspense>
-            </AuthProvider>
-          </BrowserRouter>
-          </ModalProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </ErrorBoundary>
-);
+                    </Routes>
+                  </Suspense>
+                </AuthProvider>
+              </BrowserRouter>
+            </ModalProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
 
 export default App;
