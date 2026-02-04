@@ -1,16 +1,15 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * AUTH MÍNIMO FUNCIONAL
+ * AUTH MÍNIMO FUNCIONAL v4
  * 
- * Este hook gerencia APENAS a sessão do Supabase.
- * NÃO carrega perfil, roles, ou dados extras.
- * 
- * A lógica de redirecionamento pós-login está na página Auth.tsx.
- * Este provider apenas mantém o estado da sessão.
+ * PRINCÍPIOS:
+ * 1. loading muda apenas 1 vez (de true para false)
+ * 2. Zero efeitos colaterais no listener
+ * 3. Dados extras carregam em background (não bloqueiam)
+ * 4. Sem redirects automáticos - páginas controlam navegação
  */
 
 interface Profile {
@@ -72,8 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   
-  // Flag para evitar carregamento duplicado
-  const [dataLoaded, setDataLoaded] = useState(false);
+  // Refs para controle de estado sem re-renders
+  const loadingSetRef = useRef(false);
+  const dataLoadedRef = useRef(false);
 
   // Logout simples e direto
   const signOut = useCallback(async () => {
@@ -89,14 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentClinic(null);
     setIsSuperAdmin(false);
     setRolesLoaded(false);
-    setDataLoaded(false);
+    dataLoadedRef.current = false;
     setSession(null);
     setUser(null);
   }, []);
 
-  // Função para carregar dados do usuário (lazy - chamada sob demanda)
+  // Função para carregar dados do usuário (lazy - em background)
   const loadUserData = useCallback(async (userId: string) => {
-    if (dataLoaded) return;
+    if (dataLoadedRef.current) return;
+    dataLoadedRef.current = true;
     
     try {
       // Carregar perfil
@@ -174,64 +175,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setRolesLoaded(true);
-      setDataLoaded(true);
     } catch (err) {
       console.error('[Auth] Erro ao carregar dados:', err);
       setRolesLoaded(true);
-      setDataLoaded(true);
     }
-  }, [currentClinic, dataLoaded]);
+  }, [currentClinic]);
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      setDataLoaded(false);
+      dataLoadedRef.current = false;
       await loadUserData(user.id);
     }
   }, [user, loadUserData]);
 
+  // INICIALIZAÇÃO ÚNICA - sem listener de efeitos colaterais
   useEffect(() => {
-    // Auth state listener - APENAS mantém sessão, NÃO redireciona
+    let mounted = true;
+    
+    const init = async () => {
+      // Verificar sessão existente UMA VEZ
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      
+      if (!mounted) return;
+      
+      if (existingSession?.user) {
+        setSession(existingSession);
+        setUser(existingSession.user);
+        // Carregar dados em background (não bloqueia loading)
+        loadUserData(existingSession.user.id);
+      }
+      
+      // Loading = false APENAS UMA VEZ
+      if (!loadingSetRef.current) {
+        loadingSetRef.current = true;
+        setLoading(false);
+      }
+    };
+    
+    init();
+    
+    // Listener MÍNIMO - apenas sincroniza estado, ZERO efeitos colaterais
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
-        console.log('[Auth] onAuthStateChange:', event);
+        if (!mounted) return;
         
+        // Apenas atualiza estado - sem lógica condicional complexa
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        if (newSession?.user) {
-          // Carregar dados em background (não bloqueia)
+        if (newSession?.user && !dataLoadedRef.current) {
           loadUserData(newSession.user.id);
-        } else {
-          // Limpar estados quando não há sessão
+        } else if (!newSession) {
+          // Limpar dados quando não há sessão
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
           setRolesLoaded(false);
-          setDataLoaded(false);
+          dataLoadedRef.current = false;
         }
-        
-        // Loading false após determinar sessão
-        setLoading(false);
       }
     );
 
-    // Inicialização: verificar sessão existente
-    const initSession = async () => {
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
-      
-      if (existingSession?.user) {
-        setSession(existingSession);
-        setUser(existingSession.user);
-        loadUserData(existingSession.user.id);
-      }
-      
-      setLoading(false);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
     };
-    
-    initSession();
-
-    return () => subscription.unsubscribe();
   }, [loadUserData]);
 
   return (
