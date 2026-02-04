@@ -430,9 +430,12 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const { lovable } = await import("@/integrations/lovable");
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/auth",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${getAppBaseUrl()}/auth`,
+          scopes: "https://www.googleapis.com/auth/userinfo.email",
+        },
       });
 
       if (error) throw error;
