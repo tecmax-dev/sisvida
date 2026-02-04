@@ -85,7 +85,7 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
 
     // Se configurado para navegar para autorizações
     if (currentNotice?.navigate_to_authorizations) {
-      navigate("/sindicato/autorizacoes");
+      navigate("/app/autorizacoes");
       return;
     }
     
