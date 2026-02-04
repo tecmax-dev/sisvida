@@ -94,7 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  // Função para carregar dados do usuário (lazy - em background)
+  // Função para carregar dados do usuário (lazy - chamada APENAS quando necessário pela UI)
+  // NÃO é chamada automaticamente no login
   const loadUserData = useCallback(async (userId: string) => {
     if (dataLoadedRef.current) return;
     dataLoadedRef.current = true;
@@ -188,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, loadUserData]);
 
-  // INICIALIZAÇÃO ÚNICA - sem listener de efeitos colaterais
+  // INICIALIZAÇÃO ÚNICA - sem queries no login
   useEffect(() => {
     let mounted = true;
     
@@ -201,8 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (existingSession?.user) {
         setSession(existingSession);
         setUser(existingSession.user);
-        // Carregar dados em background (não bloqueia loading)
-        loadUserData(existingSession.user.id);
+        // NÃO carregar dados aqui - será feito pela página de destino quando necessário
       }
       
       // Loading = false APENAS UMA VEZ
@@ -214,18 +214,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     init();
     
-    // Listener MÍNIMO - apenas sincroniza estado, ZERO efeitos colaterais
+    // Listener MÍNIMO - apenas sincroniza estado de sessão, ZERO queries
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         if (!mounted) return;
         
-        // Apenas atualiza estado - sem lógica condicional complexa
+        // Apenas atualiza estado - sem lógica condicional, sem queries
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        if (newSession?.user && !dataLoadedRef.current) {
-          loadUserData(newSession.user.id);
-        } else if (!newSession) {
+        if (!newSession) {
           // Limpar dados quando não há sessão
           setProfile(null);
           setUserRoles([]);
@@ -241,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [loadUserData]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ 

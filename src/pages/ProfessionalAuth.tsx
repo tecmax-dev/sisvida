@@ -90,31 +90,11 @@ export default function ProfessionalAuth() {
         return;
       }
 
-      // Login bem-sucedido - verificar se é profissional
+      // Login bem-sucedido - redirect IMEDIATO sem queries adicionais
+      // A página de destino verificará se é profissional ativo
       if (signInData.user) {
-        // Marcar que navegação vai acontecer ANTES de qualquer async
         hasNavigatedRef.current = true;
-        
-        const { data: professional } = await supabase
-          .from('professionals')
-          .select('id, name, clinic_id')
-          .eq('user_id', signInData.user.id)
-          .eq('is_active', true)
-          .maybeSingle();
-        
-        if (professional) {
-          navigate("/profissional/painel", { replace: true });
-        } else {
-          hasNavigatedRef.current = false; // Reset pois não vai navegar
-          isAuthenticatingRef.current = false;
-          toast({
-            title: "Acesso negado",
-            description: "Sua conta não está vinculada a nenhum profissional ativo.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          setLoading(false);
-        }
+        navigate("/profissional/painel", { replace: true });
       }
     } catch (error: any) {
       isAuthenticatingRef.current = false;

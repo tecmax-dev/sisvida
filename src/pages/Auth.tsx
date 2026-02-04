@@ -409,31 +409,12 @@ export default function Auth() {
           return;
         }
 
-        // Login bem-sucedido - redirect imediato (SEM resetar loading para evitar re-render)
+        // Login bem-sucedido - redirect IMEDIATO sem queries adicionais
+        // A página de destino fará a verificação de roles/permissões
         if (signInData.user) {
-          // Marcar que navegação vai acontecer ANTES de qualquer async
           hasNavigatedRef.current = true;
-          
-          const { data: isSuperAdmin } = await supabase
-            .rpc('is_super_admin', { _user_id: signInData.user.id });
-          
-          if (isSuperAdmin === true) {
-            navigate("/admin", { replace: true });
-            return;
-          }
-          
-          // Verificar se tem clínica vinculada
-          const { data: rolesData } = await supabase
-            .from('user_roles')
-            .select('clinic_id')
-            .eq('user_id', signInData.user.id)
-            .limit(1);
-          
-          if (rolesData && rolesData.length > 0) {
-            navigate("/dashboard", { replace: true });
-          } else {
-            navigate("/clinic-setup", { replace: true });
-          }
+          // Redirecionar para dashboard - a página fará o roteamento correto
+          navigate("/dashboard", { replace: true });
         }
         
         // NÃO resetar loading após navegação para evitar flash
