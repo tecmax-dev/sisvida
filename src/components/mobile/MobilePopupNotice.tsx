@@ -115,7 +115,7 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
         {/* Image */}
         {currentNotice.image_url && (
           <div className="w-full">
-            <AspectRatio ratio={9 / 16}>
+            <AspectRatio ratio={494 / 741}>
               <img
                 src={currentNotice.image_url}
                 alt={currentNotice.title}
