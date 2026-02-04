@@ -22,6 +22,7 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<PatientAttachment | null>(null);
   const [logsAttachment, setLogsAttachment] = useState<PatientAttachment | null>(null);
+  const [initialFetchComplete, setInitialFetchComplete] = useState(false);
   const folderCreationAttemptedRef = useRef(false);
 
   const {
@@ -41,18 +42,25 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
     getFileUrl
   } = usePatientAttachments(patientId);
 
+  // Reset state when patientId changes
+  useEffect(() => {
+    folderCreationAttemptedRef.current = false;
+    setInitialFetchComplete(false);
+  }, [patientId]);
+
   useEffect(() => {
     if (patientId && currentClinic?.id) {
-      fetchFolders();
+      fetchFolders().finally(() => setInitialFetchComplete(true));
       fetchAttachments(selectedFolderId);
     }
   }, [patientId, currentClinic?.id, selectedFolderId, fetchFolders, fetchAttachments]);
 
   // Garantir que a pasta "Contra cheques" exista automaticamente
+  // Só executa APÓS a busca inicial das pastas ter completado
   useEffect(() => {
     const ensureContraChequesFolder = async () => {
-      // Evitar múltiplas tentativas de criação
-      if (folderCreationAttemptedRef.current || loading) return;
+      // Aguardar busca inicial e evitar múltiplas tentativas
+      if (!initialFetchComplete || folderCreationAttemptedRef.current || loading) return;
 
       const hasContraChequesFolder = folders.some(
         (f) =>
@@ -63,13 +71,12 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
       if (!hasContraChequesFolder) {
         folderCreationAttemptedRef.current = true;
         await createFolder(CONTRA_CHEQUES_FOLDER_NAME);
-        // Atualizar lista de pastas após criação
         await fetchFolders();
       }
     };
 
     ensureContraChequesFolder();
-  }, [folders, loading, createFolder, fetchFolders]);
+  }, [initialFetchComplete, folders, loading, createFolder, fetchFolders]);
 
   const handleFolderSelect = useCallback((folderId: string | null) => {
     setSelectedFolderId(folderId);
