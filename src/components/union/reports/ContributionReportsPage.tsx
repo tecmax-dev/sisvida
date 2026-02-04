@@ -1,18 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { format, startOfYear, endOfYear } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { generateContributionsReport } from "@/lib/contributions-report-pdf";
 
 import { 
   ContributionReportFilters, 
   ContributionReportFiltersState,
+  ReportCategory,
+  DateFilterType,
 } from "./ContributionReportFilters";
 import { ContributionReportMetrics, ReportSummary } from "./ContributionReportMetrics";
 import { ContributionReportTable } from "./ContributionReportTable";
-import { FilterAuditPanel, FilterAuditData } from "./FilterAuditPanel";
 
 interface Employer {
   id: string;
@@ -71,82 +72,66 @@ const getDefaultFilters = (): ContributionReportFiltersState => ({
 });
 
 export function ContributionReportsPage({
-  contributions: initialContributions,
+  contributions,
   employers,
   contributionTypes,
   clinicName,
   clinicLogo,
 }: ContributionReportsPageProps) {
-  const { session, currentClinic } = useAuth();
+  const { session } = useAuth();
   const [filters, setFilters] = useState<ContributionReportFiltersState>(getDefaultFilters());
   const [isLoading, setIsLoading] = useState(false);
-  const [filteredContributions, setFilteredContributions] = useState<Contribution[]>(initialContributions);
-  const [auditData, setAuditData] = useState<FilterAuditData | null>(null);
 
-  // Create a map of employers by ID for fallback lookups
-  const employerMap = useMemo(() => {
-    const map = new Map<string, Employer>();
-    employers.forEach(e => map.set(e.id, e));
-    return map;
-  }, [employers]);
-
-  // Apply filters via backend Edge Function
-  const handleApplyFilters = async () => {
-    if (!currentClinic?.id) {
-      toast.error("Clínica não identificada");
-      return;
+  // Helper to get date from contribution based on filter type
+  const getDateForFilter = useCallback((c: Contribution): Date | null => {
+    if (filters.dateFilterType === "competence") {
+      return new Date(c.competence_year, c.competence_month - 1, 1);
+    } else if (filters.dateFilterType === "due_date") {
+      return new Date(c.due_date + "T12:00:00");
+    } else if (filters.dateFilterType === "paid_at") {
+      if (!c.paid_at) return null;
+      return new Date(c.paid_at);
     }
+    return null;
+  }, [filters.dateFilterType]);
 
-    setIsLoading(true);
-    setAuditData(null);
-
-    const payload = {
-      clinic_id: currentClinic.id,
-      start_date: filters.startDate.toISOString(),
-      end_date: filters.endDate.toISOString(),
-      date_filter_type: filters.dateFilterType,
-      status: filters.status,
-      employer_id: filters.selectedEmployer?.id || null,
-      contribution_type_id: filters.contributionTypeId !== 'all' ? filters.contributionTypeId : null,
-      origin_filter: filters.originFilter !== 'all' ? filters.originFilter : null,
-    };
-
-    console.log("=== FRONTEND: Sending filter request ===");
-    console.log("Payload:", JSON.stringify(payload, null, 2));
-
-    try {
-      const { data: responseData, error } = await supabase.functions.invoke('filter-contributions', {
-        body: payload,
-      });
-
-      if (error) {
-        console.error("Edge function error:", error);
-        toast.error(`Erro ao filtrar: ${error.message}`);
-        return;
+  // Filter contributions
+  const filteredContributions = useMemo(() => {
+    const start = filters.startDate ? new Date(filters.startDate) : null;
+    const end = filters.endDate ? new Date(filters.endDate) : null;
+    if (start) start.setHours(0, 0, 0, 0);
+    if (end) end.setHours(23, 59, 59, 999);
+    
+    return contributions.filter((c) => {
+      // Date filter
+      let matchesPeriod = true;
+      const contributionDate = getDateForFilter(c);
+      
+      if (contributionDate === null && filters.dateFilterType === "paid_at") {
+        return false;
       }
-
-      console.log("=== FRONTEND: Response received ===");
-      console.log("Audit:", JSON.stringify(responseData.audit, null, 2));
-      console.log("Row count:", responseData.data?.length);
-
-      setFilteredContributions(responseData.data || []);
-      setAuditData({
-        receivedAt: responseData.audit.received_at,
-        payload: responseData.audit.payload,
-        queryDescription: responseData.audit.query_description,
-        filtersApplied: responseData.audit.filters_applied,
-        rowCount: responseData.audit.row_count,
-        executionTimeMs: responseData.audit.execution_time_ms,
-      });
-
-      toast.success(`Filtros aplicados: ${responseData.data?.length || 0} contribuições encontradas`);
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      toast.error("Erro inesperado ao aplicar filtros");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      
+      if (contributionDate) {
+        if (start && contributionDate < start) matchesPeriod = false;
+        if (end && contributionDate > end) matchesPeriod = false;
+      }
+      
+      // Status filter
+      const matchesStatus = filters.status === "all" || 
+        (filters.status === "hide_cancelled" ? c.status !== "cancelled" : c.status === filters.status);
+      
+      // Employer filter
+      const matchesEmployer = !filters.selectedEmployer || c.employer_id === filters.selectedEmployer.id;
+      
+      // Contribution type filter
+      const matchesType = filters.contributionTypeId === "all" || c.contribution_type_id === filters.contributionTypeId;
+      
+      // Origin filter
+      const matchesOrigin = filters.originFilter === "all" || c.origin === filters.originFilter;
+      
+      return matchesPeriod && matchesStatus && matchesEmployer && matchesType && matchesOrigin;
+    });
+  }, [contributions, filters, getDateForFilter]);
 
   // Calculate summary
   const summary: ReportSummary = useMemo(() => {
@@ -155,14 +140,14 @@ export function ContributionReportsPage({
       .filter((c) => c.status === "paid")
       .reduce((acc, c) => acc + (c.paid_value || c.value), 0);
     const pendingValue = filteredContributions
-      .filter((c) => c.status === "pending" || c.status === "awaiting_value")
+      .filter((c) => c.status === "pending")
       .reduce((acc, c) => acc + c.value, 0);
     const overdueValue = filteredContributions
       .filter((c) => c.status === "overdue")
       .reduce((acc, c) => acc + c.value, 0);
     
     const paidCount = filteredContributions.filter((c) => c.status === "paid").length;
-    const pendingCount = filteredContributions.filter((c) => c.status === "pending" || c.status === "awaiting_value").length;
+    const pendingCount = filteredContributions.filter((c) => c.status === "pending").length;
     const overdueCount = filteredContributions.filter((c) => c.status === "overdue").length;
     
     const employerIds = new Set(filteredContributions.map(c => c.employer_id));
@@ -187,7 +172,7 @@ export function ContributionReportsPage({
 
   // Generate table data (by employer)
   const tableData = useMemo(() => {
-    const aggregatedData = new Map<string, {
+    const employerMap = new Map<string, {
       employerId: string;
       employerName: string;
       cnpj: string;
@@ -202,14 +187,12 @@ export function ContributionReportsPage({
     }>();
 
     filteredContributions.forEach((c) => {
-      // Get employer data from embedded relation or fallback to employers lookup
-      const employer = c.employers || employerMap.get(c.employer_id);
-      if (!employer) return;
+      if (!c.employers) return;
       
-      const existing = aggregatedData.get(c.employer_id) || {
+      const existing = employerMap.get(c.employer_id) || {
         employerId: c.employer_id,
-        employerName: employer.name,
-        cnpj: employer.cnpj,
+        employerName: c.employers.name,
+        cnpj: c.employers.cnpj,
         totalValue: 0,
         paidValue: 0,
         pendingValue: 0,
@@ -226,7 +209,7 @@ export function ContributionReportsPage({
       if (c.status === "paid") {
         existing.paidValue += c.paid_value || c.value;
         existing.hasPaid = true;
-      } else if (c.status === "pending" || c.status === "awaiting_value") {
+      } else if (c.status === "pending") {
         existing.pendingValue += c.value;
         existing.hasPending = true;
       } else if (c.status === "overdue") {
@@ -240,10 +223,10 @@ export function ContributionReportsPage({
         existing.lastUpdate = updateDate;
       }
 
-      aggregatedData.set(c.employer_id, existing);
+      employerMap.set(c.employer_id, existing);
     });
 
-    return Array.from(aggregatedData.values())
+    return Array.from(employerMap.values())
       .map(row => ({
         ...row,
         status: row.hasOverdue ? 'overdue' as const : 
@@ -251,7 +234,7 @@ export function ContributionReportsPage({
                 'paid' as const,
       }))
       .sort((a, b) => b.totalValue - a.totalValue);
-  }, [filteredContributions, employerMap]);
+  }, [filteredContributions]);
 
   // Export handlers
   const periodLabel = useMemo(() => {
@@ -374,6 +357,10 @@ export function ContributionReportsPage({
     toast.success("Janela de impressão aberta");
   };
 
+  const handleApplyFilters = () => {
+    toast.success(`Filtros aplicados: ${filteredContributions.length} contribuições encontradas`);
+  };
+
   return (
     <div className="space-y-6 print:space-y-4">
       {/* Filters Section */}
@@ -385,11 +372,6 @@ export function ContributionReportsPage({
         isLoading={isLoading}
         onApplyFilters={handleApplyFilters}
       />
-
-      {/* Audit Panel - Shows payload, parameters, and query */}
-      {auditData && (
-        <FilterAuditPanel data={auditData} />
-      )}
 
       {/* Metrics Section */}
       <ContributionReportMetrics 

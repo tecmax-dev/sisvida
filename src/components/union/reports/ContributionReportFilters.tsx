@@ -61,7 +61,6 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name?: string | null;
-  registration_number?: string | null;
 }
 
 interface ContributionType {

@@ -22,8 +22,6 @@ const PWA_HARD_RESET_STORAGE_KEY = "pwa_hard_reset_version";
  */
 async function bootstrapApp() {
   const isMobileRoute = window.location.pathname.startsWith('/app');
-  const currentSearch = window.location.search;
-  const currentHash = window.location.hash;
   
   if (isMobileRoute) {
     // Importar e executar bootstrap mobile ANTES do React
@@ -36,8 +34,7 @@ async function bootstrapApp() {
     // Se NÃO estiver logado, deixar na rota pública /app (index = MobilePublicHomePage)
     if (window.location.pathname === '/app' || window.location.pathname === '/app/') {
       if (result.isAuthenticated) {
-        // CRÍTICO (preview): preservar query string (ex.: __lovable_token) para não quebrar reloads.
-        window.history.replaceState(null, '', `/app/home${currentSearch}${currentHash}`);
+        window.history.replaceState(null, '', '/app/home');
       }
       // Se não autenticado, NÃO redireciona - fica na página pública
     }
@@ -45,27 +42,6 @@ async function bootstrapApp() {
   
   // Agora renderizar React com a rota já definida
   await renderApp();
-}
-
-function isStandalonePWA(): boolean {
-  try {
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://')
-    );
-  } catch {
-    return false;
-  }
-}
-
-function shouldEnablePWAOps(): boolean {
-  // Evita loops globais: operações agressivas de SW/cache só no contexto PWA ou no app mobile.
-  // Também evita quebrar o preview (token na URL) com reloads automáticos.
-  const isMobileRoute = window.location.pathname.startsWith('/app');
-  const standalone = isStandalonePWA();
-  const isPreview = window.location.hostname.includes('lovableproject.com');
-  return !isPreview && (standalone || isMobileRoute);
 }
 
 /**
@@ -162,74 +138,72 @@ async function forceServiceWorkerUpdate() {
 }
 
 async function renderApp() {
-  const enablePwaOps = shouldEnablePWAOps();
+  // Forçar limpeza total UMA VEZ nesta versão para aplicar alterações imediatamente
+  const didHardReset = await hardResetPWAIfNeeded();
+  if (didHardReset) return;
 
-  if (enablePwaOps) {
-    // Forçar limpeza total UMA VEZ nesta versão para aplicar alterações imediatamente
-    const didHardReset = await hardResetPWAIfNeeded();
-    if (didHardReset) return;
+  // Limpar caches de dados ANTES de renderizar (aguardar conclusão)
+  console.log('[PWA] Iniciando limpeza de cache...');
+  await clearAllCaches();
+  
+  // Forçar atualização do Service Worker
+  forceServiceWorkerUpdate();
 
-    // Limpar caches de dados ANTES de renderizar (aguardar conclusão)
-    console.log('[PWA] Iniciando limpeza de cache...');
-    await clearAllCaches();
-
-    // Forçar atualização do Service Worker (best-effort)
-    forceServiceWorkerUpdate();
-
-    // Register Service Worker apenas em contexto PWA/mobile.
-    // Importante: não auto-aplicar update no onNeedRefresh (isso pode gerar loops).
-    const updateSW = registerSW({
-      immediate: true,
-      onNeedRefresh() {
-        console.log('[PWA] Nova versão disponível (aguardando recarregamento do usuário).');
-      },
-      onOfflineReady() {
-        console.log('[PWA] App ready for offline use');
-      },
-      onRegistered(r) {
-        console.log('[PWA] Service Worker registered');
-        if (r) {
-          setInterval(() => {
-            r.update();
-          }, 10 * 60 * 1000);
-        }
-      },
-      onRegisterError(error) {
-        console.error('[PWA] Service Worker registration error:', error);
-      },
-    });
-
-    // Função global para forçar atualização do PWA (manual)
-    (window as any).forceUpdatePWA = async (): Promise<boolean> => {
-      console.log('Forçando atualização do PWA...');
-
-      try {
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(
-            registrations.map((r) =>
-              r.update().catch((e) => {
-                console.warn('Falha ao atualizar SW (continuando):', e);
-              })
-            )
-          );
-          console.log('Service Workers atualizados (sem desregistrar)');
-        }
-
-        try {
-          (updateSW as any)(true);
-        } catch (e) {
-          console.warn('Não foi possível acionar updateSW (continuando):', e);
-        }
-        return true;
-      } catch (error) {
-        console.error('Erro ao forçar atualização do PWA:', error);
-        return false;
+  // Register Service Worker for PWA (without update notification loop)
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      console.log('[PWA] New version available, applying silently...');
+      // Auto-apply update without notifications
+      updateSW(true);
+    },
+    onOfflineReady() {
+      console.log('[PWA] App ready for offline use');
+    },
+    onRegistered(r) {
+      console.log('[PWA] Service Worker registered');
+      if (r) {
+        // Check for updates every 10 minutes (silently)
+        setInterval(() => {
+          r.update();
+        }, 10 * 60 * 1000);
       }
-    };
-  } else {
-    console.log('[PWA] Operações de SW/cache desativadas (web/preview).');
-  }
+    },
+    onRegisterError(error) {
+      console.error('[PWA] Service Worker registration error:', error);
+    },
+  });
+
+  // Função global para forçar atualização do PWA
+  (window as any).forceUpdatePWA = async (): Promise<boolean> => {
+    console.log('Forçando atualização do PWA...');
+    
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          registrations.map((r) =>
+            r.update().catch((e) => {
+              console.warn('Falha ao atualizar SW (continuando):', e);
+            })
+          )
+        );
+        console.log('Service Workers atualizados (sem desregistrar)');
+      }
+
+      // Pede para o PWA aplicar a atualização quando houver (skipWaiting/clientsClaim)
+      // Isso NÃO apaga nem desregistra nenhum SW.
+      try {
+        (updateSW as any)(true);
+      } catch (e) {
+        console.warn('Não foi possível acionar updateSW (continuando):', e);
+      }
+      return true;
+    } catch (error) {
+      console.error('Erro ao forçar atualização do PWA:', error);
+      return false;
+    }
+  };
 
   createRoot(document.getElementById("root")!).render(<App />);
 }

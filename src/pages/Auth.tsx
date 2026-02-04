@@ -15,30 +15,9 @@ import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
 // Site key pública - deve corresponder à configurada no Google reCAPTCHA Console
 const RECAPTCHA_SITE_KEY = "6LfVluASAAAAAJwhu_mrnueliUH7IVMo40JClOt1";
 
-// Fail-safe do fluxo de login: evita promises penduradas travarem o UI em "Carregando...".
-const AUTH_REQUEST_TIMEOUT_MS = 12_000;
-
-function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, label: string): Promise<T> {
-  const promise = Promise.resolve(promiseLike as any) as Promise<T>;
-
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = window.setTimeout(() => {
-      reject(new Error(`[Auth] Timeout em ${label} após ${ms}ms`));
-    }, ms);
-
-    promise
-      .then((value) => {
-        window.clearTimeout(timeoutId);
-        resolve(value);
-      })
-      .catch((err) => {
-        window.clearTimeout(timeoutId);
-        reject(err);
-      });
-  });
-}
-
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
+// Using a different domain between the auth start and the callback will cause:
+// "Unable to exchange external code".
 const getAppBaseUrl = () => {
   if (typeof window === "undefined") return "";
   return window.location.origin;
@@ -53,7 +32,8 @@ const PUBLISHED_FALLBACK_HOST = "eclini.lovable.app";
 const CANONICAL_CUSTOM_DOMAIN = "https://app.eclini.com.br";
 
 export default function Auth() {
-  // Canonicaliza APENAS o domínio publicado fallback para o domínio customizado.
+  // Canonicaliza APENAS o domínio publicado fallback (eclini.lovable.app) para o domínio customizado.
+  // Importante: não fazer isso durante callbacks OAuth (quando há ?code=... ou hash), para não quebrar PKCE.
   if (typeof window !== "undefined") {
     const isOnPublishedFallback = window.location.hostname === PUBLISHED_FALLBACK_HOST;
     const isAuthRoute = window.location.pathname.startsWith("/auth");
@@ -80,12 +60,12 @@ export default function Auth() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
+  const [isFirstAccess, setIsFirstAccess] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
-  // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
-  const isRecoveryFlowRef = useRef(false);
-
+  // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
+  const isFirstAccessFlowRef = useRef(false);
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -94,8 +74,17 @@ export default function Auth() {
     recaptcha?: string;
   }>({});
 
+  // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
+  const isRecoveryFlowRef = useRef(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Importante: não forçar troca de domínio aqui.
+  // Se o login iniciar em um domínio e retornar em outro, o PKCE quebra e gera
+  // "Unable to exchange external code".
+  // A canonicalização deve ser feita via redirecionamento no provedor de hosting/DNS,
+  // não no cliente durante o fluxo de OAuth.
 
   // Verificar URL hash IMEDIATAMENTE na inicialização - antes de qualquer coisa
   useEffect(() => {
@@ -195,11 +184,46 @@ export default function Auth() {
     setView("login");
   }, [toast]);
 
-  // LISTENER PASSIVO: Apenas detecta recovery e redireciona se já logado (não bloqueia)
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth Page] onAuthStateChange:', event);
+    const checkUserAndRedirect = async (userId: string) => {
+      // Verificar refs antes de redirecionar
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
+      // Verificar se é super admin usando a função RPC que é SECURITY DEFINER
+      const { data: isSuperAdmin, error: saError } = await supabase
+        .rpc('is_super_admin', { _user_id: userId });
+      
+      console.log("[Auth] Super admin check:", { userId, isSuperAdmin, error: saError?.message });
+      
+      // Verificar refs novamente após a query assíncrona
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
+      
+      if (isSuperAdmin === true) {
+        console.log("[Auth] Redirecting super admin to /admin");
+        navigate("/admin");
+        return;
+      }
+      
+      // Verificar se usuário tem roles/clínica
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('clinic_id')
+        .eq('user_id', userId)
+        .limit(1);
+      
+      // Verificar refs novamente
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
+      
+      // Se tem pelo menos uma clínica, vai para dashboard
+      if (rolesData && rolesData.length > 0) {
+        navigate("/dashboard");
+      } else {
+        // Sem clínica, vai para setup
+        navigate("/clinic-setup");
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // PASSWORD_RECOVERY - marcar ref e não redirecionar
       if (event === "PASSWORD_RECOVERY") {
         isRecoveryFlowRef.current = true;
@@ -207,8 +231,8 @@ export default function Auth() {
         return;
       }
       
-      // Se está em recovery, não fazer nada
-      if (isRecoveryFlowRef.current) return;
+      // Verificar refs (síncrono e confiável)
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
       // Verificar URL hash como fallback
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -220,16 +244,35 @@ export default function Auth() {
         return;
       }
       
-      // Se há sessão e é INITIAL_SESSION (page load com sessão existente), redirecionar
-      // Isso permite que usuários já logados sejam redirecionados automaticamente
-      if (event === "INITIAL_SESSION" && session?.user) {
-        console.log('[Auth Page] Sessão existente detectada, redirecionando para /dashboard');
-        navigate("/dashboard");
+      if (session?.user) {
+        setTimeout(() => {
+          // Verificar refs novamente antes de redirecionar
+          if (!isRecoveryFlowRef.current && !isFirstAccessFlowRef.current) {
+            checkUserAndRedirect(session.user.id);
+          }
+        }, 0);
+      }
+    });
+
+    // Verificar sessão existente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      // Verificar refs ANTES de redirecionar
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
+      
+      // Verificar URL hash como dupla checagem
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (hashParams.get("type") === "recovery") {
+        isRecoveryFlowRef.current = true;
+        return;
+      }
+      
+      if (session?.user) {
+        checkUserAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate]); // Removido isResettingPassword das dependências!
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -277,13 +320,9 @@ export default function Auth() {
     token: string
   ): Promise<{ ok: boolean; codes?: string[]; error?: string }> => {
     try {
-      const { data, error } = await withTimeout(
-        supabase.functions.invoke("verify-recaptcha", {
-          body: { token },
-        }),
-        AUTH_REQUEST_TIMEOUT_MS,
-        "functions:verify-recaptcha"
-      );
+      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
+        body: { token },
+      });
 
       if (error) {
         console.error("Erro ao verificar reCAPTCHA (invoke):", error.message);
@@ -440,17 +479,10 @@ export default function Auth() {
       }
 
       if (view === "login") {
-        // ============================================================
-        // LOGIN MÍNIMO: signIn → navegar direto → carregamento em background
-        // ============================================================
-        const { data: signInData, error } = await withTimeout(
-          supabase.auth.signInWithPassword({
-            email,
-            password,
-          }),
-          AUTH_REQUEST_TIMEOUT_MS,
-          "auth:signInWithPassword"
-        );
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
@@ -466,13 +498,24 @@ export default function Auth() {
           return;
         }
 
-        // SUCESSO: Navegar DIRETAMENTE para /dashboard
-        // O AuthProvider carrega perfil/roles em background (não bloqueia)
+        // Após login bem-sucedido, verificar se é primeiro acesso
         if (signInData.user) {
-          console.log("[Auth] Login OK, navegando para /dashboard");
-          navigate("/dashboard");
-          // NÃO chamar setLoading(false) - a navegação vai desmontar o componente
-          return;
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', signInData.user.id)
+            .single();
+
+          // Se password_changed é false ou null, é primeiro acesso
+          if (!(profileData as any)?.password_changed) {
+            isFirstAccessFlowRef.current = true; // Bloquear redirecionamento
+            setIsFirstAccess(true);
+            setView("first-access");
+            setPassword("");
+            setConfirmPassword("");
+            setLoading(false);
+            return;
+          }
         }
       } else if (view === "first-access") {
         // Criar nova senha pessoal
@@ -495,8 +538,24 @@ export default function Auth() {
           title: "Senha criada com sucesso!",
           description: "Sua senha pessoal foi definida.",
         });
+
+        isFirstAccessFlowRef.current = false; // Liberar redirecionamento
+        setIsFirstAccess(false);
         
-        navigate("/dashboard");
+        // Redirecionar para a área correta
+        if (userData.user) {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('clinic_id')
+            .eq('user_id', userData.user.id)
+            .limit(1);
+
+          if (rolesData && rolesData.length > 0) {
+            navigate("/dashboard");
+          } else {
+            navigate("/clinic-setup");
+          }
+        }
         return;
       } else if (view === "signup") {
         // Gerar senha temporária

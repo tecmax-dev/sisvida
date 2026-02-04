@@ -5,27 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSessionTimeout } from "./useSessionTimeout";
 import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
 
-// Fail-safe: evita deadlock infinito de loading caso alguma request fique pendurada.
-const AUTH_BOOT_TIMEOUT_MS = 10_000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = window.setTimeout(() => {
-      reject(new Error(`[Auth] Timeout em ${label} após ${ms}ms`));
-    }, ms);
-
-    promise
-      .then((value) => {
-        window.clearTimeout(timeoutId);
-        resolve(value);
-      })
-      .catch((err) => {
-        window.clearTimeout(timeoutId);
-        reject(err);
-      });
-  });
-}
-
 interface Profile {
   id: string;
   user_id: string;
@@ -372,117 +351,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Refs fora do closure para manter estado entre execuções do listener
-    let isLoadingUserData = false;
-    let lastLoadedUserId: string | null = null;
-
     const loadUserData = async (userId: string) => {
-      // Guard: evitar múltiplas execuções simultâneas
-      if (isLoadingUserData) {
-        console.log('[Auth] loadUserData já em execução, ignorando');
-        return;
-      }
-      
-      isLoadingUserData = true;
-      
       try {
-        // Carregar dados em background - não bloquear o UI
         await Promise.all([
-          withTimeout(fetchProfile(userId), AUTH_BOOT_TIMEOUT_MS, "fetchProfile").catch(e => {
-            console.warn("[Auth] Falha ao carregar profile:", e.message);
-          }),
-          withTimeout(fetchUserRoles(userId), AUTH_BOOT_TIMEOUT_MS, "fetchUserRoles").catch(e => {
-            console.warn("[Auth] Falha ao carregar roles:", e.message);
-          }),
-          withTimeout(fetchSuperAdminStatus(userId), AUTH_BOOT_TIMEOUT_MS, "fetchSuperAdminStatus").catch(e => {
-            console.warn("[Auth] Falha ao verificar super admin:", e.message);
-          }),
+          fetchProfile(userId),
+          fetchUserRoles(userId),
+          fetchSuperAdminStatus(userId),
         ]);
-        lastLoadedUserId = userId;
-      } catch (e) {
-        console.error("[Auth] Falha ao carregar dados do usuário:", e);
       } finally {
-        isLoadingUserData = false;
-        setRolesLoaded(true);
+        setLoading(false);
       }
     };
 
-    // LISTENER PASSIVO: Apenas atualiza sessão/user, carrega dados em background
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[Auth] onAuthStateChange:', event, session?.user?.id?.slice(0, 8));
-        
-        // Atualizar estado de sessão/user SEMPRE
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // CRÍTICO: Não recarregar se já temos dados do mesmo user
-          if (lastLoadedUserId === session.user.id) {
-            console.log('[Auth] Dados já carregados para', session.user.id.slice(0, 8));
-            return;
-          }
-          
-          // Carregar dados em background (não bloqueia loading)
+          setLoading(true);
+          setRolesLoaded(false);
+          // Defer data fetching to avoid deadlock
           setTimeout(() => {
             loadUserData(session.user.id);
           }, 0);
         } else {
-          // Logout: limpar estado
-          lastLoadedUserId = null;
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
           setRolesLoaded(false);
+          setLoading(false);
         }
       }
     );
 
-    // Inicialização única - RÁPIDA
+    // Inicialização: validar sessão no servidor antes de aceitar como "logado"
     const initSession = async () => {
-      // Verificar lock de logout forçado
+      // Verificar se há lock de deslogado forçado
       const forceSignedOut = localStorage.getItem('eclini_force_signed_out');
       if (forceSignedOut) {
         console.warn('[Auth] Lock de logout detectado, forçando signOut local');
-        try {
-          await supabase.auth.signOut({ scope: 'local' });
-        } catch (e) {
-          console.warn('[Auth] Falha ao forçar signOut local:', e);
-        }
+        await supabase.auth.signOut({ scope: 'local' });
         localStorage.removeItem('eclini_force_signed_out');
         setLoading(false);
-        setRolesLoaded(true);
         return;
       }
       
-      let session: Session | null = null;
-      try {
-        const res = await withTimeout(
-          supabase.auth.getSession(),
-          AUTH_BOOT_TIMEOUT_MS,
-          "supabase.auth.getSession"
-        );
-        session = res.data.session;
-        if (res.error) {
-          console.error('[Auth] Erro ao obter sessão:', res.error);
-        }
-      } catch (e) {
-        console.error('[Auth] Timeout ao obter sessão:', e);
-      }
-
-      // CRÍTICO: Liberar loading IMEDIATAMENTE após determinar sessão
-      // O carregamento de dados acontece em background
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false); // <-- Libera UI imediatamente
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (session?.user) {
-        // Carregar dados em background
-        loadUserData(session.user.id);
-      } else {
-        setRolesLoaded(true);
+      // Se não há sessão local, está deslogado
+      if (!session) {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
       }
+      
+      // Sessão existe localmente - confiar no autoRefreshToken do Supabase
+      // O Supabase já gerencia renovação automática, não validar agressivamente
+      setSession(session);
+      setUser(session.user);
+      
+      // Garantir que o tempo de login existe (para sessões restauradas)
+      // Removido: não precisamos mais de controle manual de tempo de sessão
+      
+      loadUserData(session.user.id);
     };
     
     initSession();
