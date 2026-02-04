@@ -232,6 +232,7 @@ import AddonRequestsPage from "./pages/admin/AddonRequestsPage";
 import AddonsManagementPage from "./pages/admin/AddonsManagementPage";
 import PendingDependentApprovals from "./pages/admin/PendingDependentApprovals";
 import UnionEntitiesPage from "./pages/admin/UnionEntitiesPage";
+import SubscriptionBillingPage from "./pages/admin/SubscriptionBillingPage";
 
 // Login exclusivo para entidades sindicais
 const UnionEntityLoginPage = lazy(() => import("./pages/UnionEntityLoginPage"));
@@ -482,6 +483,7 @@ function App() {
                   <Route path="config" element={<GlobalConfigPage />} />
                   <Route path="dependent-approvals" element={<PendingDependentApprovals />} />
                   <Route path="union-entities" element={<UnionEntitiesPage />} />
+                  <Route path="billing" element={<SubscriptionBillingPage />} />
                 </Route>
                 {/* Dashboard Routes */}
                 <Route

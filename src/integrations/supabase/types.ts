@@ -9693,6 +9693,148 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_billing_settings: {
+        Row: {
+          auto_generate_enabled: boolean | null
+          created_at: string
+          default_due_day_offset: number | null
+          generate_day_of_month: number | null
+          id: string
+          lytex_enabled: boolean | null
+          send_email_on_generation: boolean | null
+          send_reminder_days_before: number | null
+          send_whatsapp_on_generation: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          auto_generate_enabled?: boolean | null
+          created_at?: string
+          default_due_day_offset?: number | null
+          generate_day_of_month?: number | null
+          id?: string
+          lytex_enabled?: boolean | null
+          send_email_on_generation?: boolean | null
+          send_reminder_days_before?: number | null
+          send_whatsapp_on_generation?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          auto_generate_enabled?: boolean | null
+          created_at?: string
+          default_due_day_offset?: number | null
+          generate_day_of_month?: number | null
+          id?: string
+          lytex_enabled?: boolean | null
+          send_email_on_generation?: boolean | null
+          send_reminder_days_before?: number | null
+          send_whatsapp_on_generation?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_invoices: {
+        Row: {
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          digitable_line: string | null
+          due_date: string
+          fee_cents: number | null
+          id: string
+          invoice_url: string | null
+          lytex_client_id: string | null
+          lytex_invoice_id: string | null
+          net_value_cents: number | null
+          notes: string | null
+          paid_at: string | null
+          paid_value_cents: number | null
+          payment_method: string | null
+          pix_code: string | null
+          plan_id: string | null
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          value_cents: number
+        }
+        Insert: {
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          digitable_line?: string | null
+          due_date: string
+          fee_cents?: number | null
+          id?: string
+          invoice_url?: string | null
+          lytex_client_id?: string | null
+          lytex_invoice_id?: string | null
+          net_value_cents?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_value_cents?: number | null
+          payment_method?: string | null
+          pix_code?: string | null
+          plan_id?: string | null
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          value_cents: number
+        }
+        Update: {
+          clinic_id?: string
+          competence_month?: number
+          competence_year?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          digitable_line?: string | null
+          due_date?: string
+          fee_cents?: number | null
+          id?: string
+          invoice_url?: string | null
+          lytex_client_id?: string | null
+          lytex_invoice_id?: string | null
+          net_value_cents?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_value_cents?: number | null
+          payment_method?: string | null
+          pix_code?: string | null
+          plan_id?: string | null
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          value_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           annual_price: number | null
