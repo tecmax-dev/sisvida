@@ -25,7 +25,7 @@ export default function UnionEntityLoginPage() {
 
     setLoading(true);
     try {
-      // Authenticate with Supabase
+      // LOGIN MÍNIMO: Apenas autenticar
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -33,12 +33,12 @@ export default function UnionEntityLoginPage() {
 
       if (authError) throw authError;
 
-      // Check if user is a union entity admin
+      // Verificação básica de entidade sindical (sem bloquear)
       const { data: entityData, error: entityError } = await supabase
         .from('union_entities')
         .select('id, status, razao_social')
         .eq('user_id', authData.user.id)
-        .single();
+        .maybeSingle();
 
       if (entityError || !entityData) {
         await supabase.auth.signOut();
@@ -55,20 +55,20 @@ export default function UnionEntityLoginPage() {
         throw new Error(statusMessages[entityData.status as keyof typeof statusMessages] || 'Conta não ativa');
       }
 
-      // Update last access
-      await supabase
+      // Update last access em background (não bloqueia)
+      supabase
         .from('union_entities')
         .update({ ultimo_acesso: new Date().toISOString() })
-        .eq('id', entityData.id);
+        .eq('id', entityData.id)
+        .then(() => {});
 
       toast.success(`Bem-vindo, ${entityData.razao_social}!`);
       
-      // Redirect to union module
+      // Navegar DIRETAMENTE
       navigate('/union');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Erro ao fazer login');
-    } finally {
       setLoading(false);
     }
   };
