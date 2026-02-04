@@ -2,8 +2,16 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useSessionTimeout } from "./useSessionTimeout";
-import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
+
+/**
+ * AUTH MÍNIMO FUNCIONAL
+ * 
+ * Este hook gerencia APENAS a sessão do Supabase.
+ * NÃO carrega perfil, roles, ou dados extras.
+ * 
+ * A lógica de redirecionamento pós-login está na página Auth.tsx.
+ * Este provider apenas mantém o estado da sessão.
+ */
 
 interface Profile {
   id: string;
@@ -64,369 +72,167 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   
-  const navigate = useNavigate();
-  const location = useLocation();
+  // Flag para evitar carregamento duplicado
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  /**
-   * SISTEMA DE PERSISTÊNCIA DE SESSÃO
-   * 
-   * Este sistema foi projetado para manter a sessão ativa indefinidamente
-   * até que o usuário faça logout manual ou o backend revogue a sessão.
-   * 
-   * Características:
-   * - Supabase autoRefreshToken gerencia renovação automática de tokens
-   * - Sem timeout de sessão ou inatividade
-   * - Sessão persiste entre fechamentos/recargas do app
-   * - Validação de sessão confia no sistema de refresh do Supabase
-   * 
-   * IMPORTANTE: Não adicione validações agressivas que possam limpar
-   * a sessão automaticamente. A única forma de logout deve ser explícita.
-   */
-
-  // Função de logout robusta - local-first para garantir deslog mesmo offline
-  const handleSignOut = async () => {
-    // 1. Marcar lock de deslogado ANTES de tudo (proteção contra race conditions)
-    localStorage.setItem('eclini_force_signed_out', '1');
+  // Logout simples e direto
+  const signOut = useCallback(async () => {
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.warn('[Auth] Erro no signOut:', e);
+    }
     
-    // 2. Limpar estados React imediatamente
+    // Limpar estados
     setProfile(null);
     setUserRoles([]);
     setCurrentClinic(null);
     setIsSuperAdmin(false);
     setRolesLoaded(false);
+    setDataLoaded(false);
     setSession(null);
     setUser(null);
+  }, []);
+
+  // Função para carregar dados do usuário (lazy - chamada sob demanda)
+  const loadUserData = useCallback(async (userId: string) => {
+    if (dataLoaded) return;
     
-    // 3. Logout LOCAL primeiro (funciona offline, remove tokens do localStorage)
     try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch (e) {
-      console.warn('[Auth] Erro ao fazer signOut local:', e);
-    }
-    
-    // 4. Tentar logout global (best-effort, pode falhar se offline)
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (e) {
-      console.warn('[Auth] Erro ao fazer signOut global (best-effort):', e);
-    }
-    
-    // 5. Remover lock após confirmar que não há sessão
-    const { data: { session: checkSession } } = await supabase.auth.getSession();
-    if (!checkSession) {
-      localStorage.removeItem('eclini_force_signed_out');
-    }
-  };
-
-  // Detectar se é PWA instalado (mais robusto)
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                (window.navigator as any).standalone === true ||
-                document.referrer.includes('android-app://');
-  
-  // Verifica se está no app mobile - desabilita timeout para manter sessão persistente
-  const isMobileApp = location.pathname.startsWith('/app') || location.pathname.startsWith('/m') || isPWA;
-
-  // Hook de timeout de sessão (DESABILITADO COMPLETAMENTE - sessão só expira por logout manual)
-  const {
-    saveLoginTime,
-    clearSessionData,
-    renewSession: baseRenewSession,
-    showWarning,
-    timeRemaining,
-  } = useSessionTimeout({
-    maxSessionDuration: 480, // 8 horas
-    inactivityTimeout: 30,   // 30 minutos
-    warningTime: 5,          // 5 minutos de aviso
-    onExpire: handleSignOut,
-    enabled: false // DESABILITADO PERMANENTEMENTE - sessão persiste até logout manual
-  });
-
-  // Função de renovar sessão com redirecionamento para o dashboard
-  const handleRenewSession = useCallback(() => {
-    baseRenewSession();
-    
-    // Se o usuário não está no dashboard, redireciona para lá
-    const isOnDashboard = location.pathname.startsWith('/dashboard');
-    const isOnAdmin = location.pathname.startsWith('/admin');
-    const isOnProfessional = location.pathname.startsWith('/profissional');
-    
-    if (!isOnDashboard && !isOnAdmin && !isOnProfessional) {
-      if (isSuperAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
+      // Carregar perfil
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (profileData) {
+        setProfile(profileData as Profile);
       }
-    }
-  }, [baseRenewSession, location.pathname, isSuperAdmin, navigate]);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (data) {
-      setProfile(data as Profile);
-    }
-  };
+      // Verificar super admin
+      const { data: saData } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      setIsSuperAdmin(!!saData);
 
-  const fetchSuperAdminStatus = async (userId: string) => {
-    const { data } = await supabase
-      .from('super_admins')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    setIsSuperAdmin(!!data);
-    return !!data;
-  };
+      // Carregar roles
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select(`
+          clinic_id,
+          role,
+          access_group_id,
+          professional_id,
+          clinic:clinics (
+            id, name, slug, address, phone, cnpj, logo_url,
+            whatsapp_header_image_url, is_blocked, blocked_reason,
+            is_maintenance, maintenance_reason, entity_nomenclature
+          )
+        `)
+        .eq('user_id', userId);
 
-  const fetchUserRoles = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select(`
-        clinic_id,
-        role,
-        access_group_id,
-        professional_id,
-        clinic:clinics (
-          id,
-          name,
-          slug,
-          address,
-          phone,
-          cnpj,
-          logo_url,
-          whatsapp_header_image_url,
-          is_blocked,
-          blocked_reason,
-          is_maintenance,
-          maintenance_reason,
-          entity_nomenclature
-        )
-      `)
-      .eq('user_id', userId);
+      if (rolesData && rolesData.length > 0) {
+        const roles = rolesData
+          .filter((item) => item.clinic)
+          .map((item) => ({
+            clinic_id: item.clinic_id,
+            role: item.role as UserRole['role'],
+            access_group_id: item.access_group_id as string | null,
+            professional_id: item.professional_id as string | null,
+            clinic: item.clinic as unknown as Clinic,
+          }));
 
-    if (error) {
-      console.error('[Auth] Error fetching user roles:', error);
-    }
+        setUserRoles(roles);
+        if (!currentClinic && roles[0]?.clinic) {
+          setCurrentClinic(roles[0].clinic);
+        }
+      } else if (saData) {
+        // Super admin: carregar todas as clínicas
+        const { data: clinics } = await supabase
+          .from('clinics')
+          .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
+          .order('name');
 
-    // Caso padrão: usuário com roles em clínicas
-    if (data && data.length > 0) {
-      // Check for entidade_sindical_admin role (no clinic_id)
-      const unionAdminRole = data.find(
-        (item) => item.role === 'entidade_sindical_admin' && !item.clinic_id
-      );
-
-      if (unionAdminRole) {
-        // Fetch union entity to get linked clinic
-        const { data: entityData } = await supabase
-          .from('union_entities')
-          .select(`
-            id,
-            razao_social,
-            nome_fantasia,
-            clinic_id,
-            clinic:clinics (
-              id,
-              name,
-              slug,
-              address,
-              phone,
-              cnpj,
-              logo_url,
-              whatsapp_header_image_url,
-              is_blocked,
-              blocked_reason,
-              is_maintenance,
-              maintenance_reason,
-              entity_nomenclature
-            )
-          `)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (entityData?.clinic) {
-          const entityClinic = entityData.clinic as unknown as Clinic;
-          const roles: UserRole[] = [{
-            clinic_id: entityClinic.id,
-            role: 'admin', // Treat as admin for permissions
+        if (clinics) {
+          const roles: UserRole[] = clinics.map((c) => ({
+            clinic_id: c.id,
+            role: 'admin' as const,
             access_group_id: null,
             professional_id: null,
-            clinic: entityClinic,
-          }];
+            clinic: c as Clinic,
+          }));
 
           setUserRoles(roles);
-          setCurrentClinic(entityClinic);
-          setRolesLoaded(true);
-          return;
+          if (!currentClinic && roles[0]?.clinic) {
+            setCurrentClinic(roles[0].clinic);
+          }
         }
       }
 
-      // Regular clinic roles
-      const roles = data
-        .filter((item) => item.clinic) // Only include roles with valid clinics
-        .map((item) => ({
-          clinic_id: item.clinic_id,
-          role: item.role as UserRole['role'],
-          access_group_id: item.access_group_id as string | null,
-          professional_id: item.professional_id as string | null,
-          clinic: item.clinic as unknown as Clinic,
-        }));
-
-      setUserRoles(roles);
-
-      // Set first clinic as current if none selected
-      if (!currentClinic && roles[0]?.clinic) {
-        setCurrentClinic(roles[0].clinic);
-      }
-
       setRolesLoaded(true);
-      return;
-    }
-
-    // Super admin: precisa de um "contexto" de clínica para telas do dashboard
-    const isSa = await fetchSuperAdminStatus(userId);
-    if (isSa) {
-      const { data: clinics, error: clinicsError } = await supabase
-        .from('clinics')
-        .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
-        .order('name');
-
-      if (clinicsError) {
-        console.error('[Auth] Error fetching clinics for super admin:', clinicsError);
-        setUserRoles([]);
-        setCurrentClinic(null);
-        setRolesLoaded(true);
-        return;
-      }
-
-      const roles: UserRole[] = (clinics || []).map((c) => ({
-        clinic_id: c.id,
-        role: 'admin',
-        access_group_id: null,
-        professional_id: null,
-        clinic: c as Clinic,
-      }));
-
-      setUserRoles(roles);
-
-      if (!currentClinic && roles[0]?.clinic) {
-        setCurrentClinic(roles[0].clinic);
-      }
-
+      setDataLoaded(true);
+    } catch (err) {
+      console.error('[Auth] Erro ao carregar dados:', err);
       setRolesLoaded(true);
-      return;
+      setDataLoaded(true);
     }
+  }, [currentClinic, dataLoaded]);
 
-    // Check if user is a union entity admin without clinic linked
-    const { data: entityWithoutClinic } = await supabase
-      .from('union_entities')
-      .select('id, razao_social, nome_fantasia')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (entityWithoutClinic) {
-      console.warn('[Auth] Union entity user without linked clinic:', entityWithoutClinic.razao_social);
-      // Allow access but no clinic context
-      setUserRoles([]);
-      setCurrentClinic(null);
-      setRolesLoaded(true);
-      return;
-    }
-
-    // Sem roles e não super admin
-    setUserRoles([]);
-    setCurrentClinic(null);
-    setRolesLoaded(true);
-  };
-
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
-      await fetchProfile(user.id);
-      await fetchUserRoles(user.id);
-      await fetchSuperAdminStatus(user.id);
+      setDataLoaded(false);
+      await loadUserData(user.id);
     }
-  };
+  }, [user, loadUserData]);
 
   useEffect(() => {
-    const loadUserData = async (userId: string) => {
-      try {
-        await Promise.all([
-          fetchProfile(userId),
-          fetchUserRoles(userId),
-          fetchSuperAdminStatus(userId),
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    // Auth state listener - APENAS mantém sessão, NÃO redireciona
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, newSession) => {
+        console.log('[Auth] onAuthStateChange:', event);
         
-        if (session?.user) {
-          setLoading(true);
-          setRolesLoaded(false);
-          // Defer data fetching to avoid deadlock
-          setTimeout(() => {
-            loadUserData(session.user.id);
-          }, 0);
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        if (newSession?.user) {
+          // Carregar dados em background (não bloqueia)
+          loadUserData(newSession.user.id);
         } else {
+          // Limpar estados quando não há sessão
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
           setRolesLoaded(false);
-          setLoading(false);
+          setDataLoaded(false);
         }
+        
+        // Loading false após determinar sessão
+        setLoading(false);
       }
     );
 
-    // Inicialização: validar sessão no servidor antes de aceitar como "logado"
+    // Inicialização: verificar sessão existente
     const initSession = async () => {
-      // Verificar se há lock de deslogado forçado
-      const forceSignedOut = localStorage.getItem('eclini_force_signed_out');
-      if (forceSignedOut) {
-        console.warn('[Auth] Lock de logout detectado, forçando signOut local');
-        await supabase.auth.signOut({ scope: 'local' });
-        localStorage.removeItem('eclini_force_signed_out');
-        setLoading(false);
-        return;
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      
+      if (existingSession?.user) {
+        setSession(existingSession);
+        setUser(existingSession.user);
+        loadUserData(existingSession.user.id);
       }
       
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      // Se não há sessão local, está deslogado
-      if (!session) {
-        setSession(null);
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-      
-      // Sessão existe localmente - confiar no autoRefreshToken do Supabase
-      // O Supabase já gerencia renovação automática, não validar agressivamente
-      setSession(session);
-      setUser(session.user);
-      
-      // Garantir que o tempo de login existe (para sessões restauradas)
-      // Removido: não precisamos mais de controle manual de tempo de sessão
-      
-      loadUserData(session.user.id);
+      setLoading(false);
     };
     
     initSession();
 
     return () => subscription.unsubscribe();
-  }, [saveLoginTime, clearSessionData]);
-
-  const signOut = async () => {
-    await handleSignOut();
-  };
+  }, [loadUserData]);
 
   return (
     <AuthContext.Provider value={{ 
@@ -443,12 +249,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile
     }}>
       {children}
-      <SessionExpiryWarning
-        open={showWarning}
-        timeRemaining={timeRemaining}
-        onRenew={handleRenewSession}
-        onLogout={signOut}
-      />
     </AuthContext.Provider>
   );
 }

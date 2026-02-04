@@ -184,95 +184,26 @@ export default function Auth() {
     setView("login");
   }, [toast]);
 
+  /**
+   * AUTH LISTENER MÍNIMO
+   * 
+   * APENAS detecta PASSWORD_RECOVERY para mostrar tela de reset.
+   * NÃO redireciona automaticamente.
+   * NÃO carrega dados extras.
+   * 
+   * O redirecionamento acontece APENAS no handleSubmit após login bem-sucedido.
+   */
   useEffect(() => {
-    const checkUserAndRedirect = async (userId: string) => {
-      // Verificar refs antes de redirecionar
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      // Verificar se é super admin usando a função RPC que é SECURITY DEFINER
-      const { data: isSuperAdmin, error: saError } = await supabase
-        .rpc('is_super_admin', { _user_id: userId });
-      
-      console.log("[Auth] Super admin check:", { userId, isSuperAdmin, error: saError?.message });
-      
-      // Verificar refs novamente após a query assíncrona
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      if (isSuperAdmin === true) {
-        console.log("[Auth] Redirecting super admin to /admin");
-        navigate("/admin");
-        return;
-      }
-      
-      // Verificar se usuário tem roles/clínica
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('clinic_id')
-        .eq('user_id', userId)
-        .limit(1);
-      
-      // Verificar refs novamente
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      // Se tem pelo menos uma clínica, vai para dashboard
-      if (rolesData && rolesData.length > 0) {
-        navigate("/dashboard");
-      } else {
-        // Sem clínica, vai para setup
-        navigate("/clinic-setup");
-      }
-    };
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // PASSWORD_RECOVERY - marcar ref e não redirecionar
+      // PASSWORD_RECOVERY - marcar ref e mostrar tela de reset
       if (event === "PASSWORD_RECOVERY") {
         isRecoveryFlowRef.current = true;
         setView("reset-password");
-        return;
-      }
-      
-      // Verificar refs (síncrono e confiável)
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      // Verificar URL hash como fallback
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const isRecoveryInHash = hashParams.get("type") === "recovery" || 
-                               window.location.hash.includes("type=recovery");
-      
-      if (isRecoveryInHash) {
-        isRecoveryFlowRef.current = true;
-        return;
-      }
-      
-      if (session?.user) {
-        setTimeout(() => {
-          // Verificar refs novamente antes de redirecionar
-          if (!isRecoveryFlowRef.current && !isFirstAccessFlowRef.current) {
-            checkUserAndRedirect(session.user.id);
-          }
-        }, 0);
-      }
-    });
-
-    // Verificar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      // Verificar refs ANTES de redirecionar
-      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
-      
-      // Verificar URL hash como dupla checagem
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      if (hashParams.get("type") === "recovery") {
-        isRecoveryFlowRef.current = true;
-        return;
-      }
-      
-      if (session?.user) {
-        checkUserAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]); // Removido isResettingPassword das dependências!
+  }, []);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -498,64 +429,32 @@ export default function Auth() {
           return;
         }
 
-        // Após login bem-sucedido, verificar se é primeiro acesso
+        // Login bem-sucedido - redirect imediato
+        // Verificar super admin de forma simples e direta
         if (signInData.user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', signInData.user.id)
-            .single();
-
-          // Se password_changed é false ou null, é primeiro acesso
-          if (!(profileData as any)?.password_changed) {
-            isFirstAccessFlowRef.current = true; // Bloquear redirecionamento
-            setIsFirstAccess(true);
-            setView("first-access");
-            setPassword("");
-            setConfirmPassword("");
-            setLoading(false);
+          const { data: isSuperAdmin } = await supabase
+            .rpc('is_super_admin', { _user_id: signInData.user.id });
+          
+          if (isSuperAdmin === true) {
+            navigate("/admin");
             return;
           }
-        }
-      } else if (view === "first-access") {
-        // Criar nova senha pessoal
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password,
-        });
-
-        if (updateError) throw updateError;
-
-        // Marcar que a senha foi alterada
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          await supabase
-            .from('profiles')
-            .update({ password_changed: true } as any)
-            .eq('user_id', userData.user.id);
-        }
-
-        toast({
-          title: "Senha criada com sucesso!",
-          description: "Sua senha pessoal foi definida.",
-        });
-
-        isFirstAccessFlowRef.current = false; // Liberar redirecionamento
-        setIsFirstAccess(false);
-        
-        // Redirecionar para a área correta
-        if (userData.user) {
+          
+          // Verificar se tem clínica vinculada
           const { data: rolesData } = await supabase
             .from('user_roles')
             .select('clinic_id')
-            .eq('user_id', userData.user.id)
+            .eq('user_id', signInData.user.id)
             .limit(1);
-
+          
           if (rolesData && rolesData.length > 0) {
             navigate("/dashboard");
           } else {
             navigate("/clinic-setup");
           }
         }
+        
+        setLoading(false);
         return;
       } else if (view === "signup") {
         // Gerar senha temporária

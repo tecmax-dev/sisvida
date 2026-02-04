@@ -22,44 +22,12 @@ export default function ProfessionalAuth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const checkProfessionalAndRedirect = async (userId: string) => {
-      // Check if user is linked to a professional
-      const { data: professional } = await supabase
-        .from('professionals')
-        .select('id, name, clinic_id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (professional) {
-        navigate("/profissional/painel");
-      } else {
-        toast({
-          title: "Acesso negado",
-          description: "Sua conta não está vinculada a nenhum profissional ativo.",
-          variant: "destructive",
-        });
-        await supabase.auth.signOut();
-      }
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setTimeout(() => {
-          checkProfessionalAndRedirect(session.user.id);
-        }, 0);
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        checkProfessionalAndRedirect(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  /**
+   * AUTH MÍNIMO - Verificação apenas no submit
+   * 
+   * Removida lógica de onAuthStateChange e getSession automáticos.
+   * O redirect acontece APENAS após login bem-sucedido no handleSubmit.
+   */
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -92,7 +60,7 @@ export default function ProfessionalAuth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -106,6 +74,29 @@ export default function ProfessionalAuth() {
           });
         } else {
           throw error;
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Login bem-sucedido - verificar se é profissional
+      if (signInData.user) {
+        const { data: professional } = await supabase
+          .from('professionals')
+          .select('id, name, clinic_id')
+          .eq('user_id', signInData.user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (professional) {
+          navigate("/profissional/painel");
+        } else {
+          toast({
+            title: "Acesso negado",
+            description: "Sua conta não está vinculada a nenhum profissional ativo.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
         }
       }
     } catch (error: any) {
