@@ -209,24 +209,44 @@ export default function AccountingOfficePortal() {
 
   const loadData = async (officeId: string) => {
     setIsLoadingData(true);
+    // Reset states before loading to avoid stale data
+    setEmployers([]);
+    setContributions([]);
+    
     try {
-      const { data: employersData } = await supabase.functions.invoke("accounting-office-portal-auth", {
+      console.log("[Portal Contador] Carregando dados para escritório:", officeId);
+      
+      const { data: employersData, error: employersError } = await supabase.functions.invoke("accounting-office-portal-auth", {
         body: { action: "get_employers", accounting_office_id: officeId },
       });
       
+      if (employersError) {
+        console.error("[Portal Contador] Erro ao buscar empresas:", employersError);
+      }
+      
       if (employersData?.employers) {
+        console.log("[Portal Contador] Empresas carregadas:", employersData.employers.length);
         setEmployers(employersData.employers);
+      } else {
+        console.warn("[Portal Contador] Nenhuma empresa retornada:", employersData);
       }
 
-      const { data: contribData } = await supabase.functions.invoke("accounting-office-portal-auth", {
+      const { data: contribData, error: contribError } = await supabase.functions.invoke("accounting-office-portal-auth", {
         body: { action: "get_contributions", accounting_office_id: officeId },
       });
       
+      if (contribError) {
+        console.error("[Portal Contador] Erro ao buscar contribuições:", contribError);
+      }
+      
       if (contribData?.contributions) {
+        console.log("[Portal Contador] Contribuições carregadas:", contribData.contributions.length);
         setContributions(contribData.contributions);
+      } else {
+        console.warn("[Portal Contador] Nenhuma contribuição retornada:", contribData);
       }
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("[Portal Contador] Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados");
     } finally {
       setIsLoadingData(false);
