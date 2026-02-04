@@ -8,6 +8,7 @@ import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Stethoscope } from "lucide-react";
 import { z } from "zod";
+import { authTrace, maskEmail } from "@/lib/authTrace";
 
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
@@ -51,16 +52,22 @@ export default function ProfessionalAuth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    authTrace("ProfessionalAuth.submit", {
+      email: email ? maskEmail(email) : "[empty]",
+    });
     
     // PROTEÇÃO ANTI-LOOP: bloquear execução concorrente
     if (isAuthenticatingRef.current) {
       console.warn('[ProfessionalAuth] Login já em andamento, ignorando chamada duplicada');
+      authTrace("ProfessionalAuth.blocked.concurrent");
       return;
     }
     
     // PROTEÇÃO ANTI-LOOP: evitar re-login após navegação
     if (hasNavigatedRef.current) {
       console.warn('[ProfessionalAuth] Navegação já realizada, ignorando');
+      authTrace("ProfessionalAuth.blocked.afterNavigate");
       return;
     }
     
@@ -70,9 +77,16 @@ export default function ProfessionalAuth() {
     setLoading(true);
 
     try {
+      authTrace("ProfessionalAuth.signIn.start");
       const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+      });
+
+      authTrace("ProfessionalAuth.signIn.return", {
+        ok: !error,
+        hasUser: !!signInData?.user,
+        error: error?.message ?? null,
       });
       
       if (error) {
@@ -94,11 +108,13 @@ export default function ProfessionalAuth() {
       // A página de destino verificará se é profissional ativo
       if (signInData.user) {
         hasNavigatedRef.current = true;
+        authTrace("ProfessionalAuth.navigate", { to: "/profissional/painel" });
         navigate("/profissional/painel", { replace: true });
       }
     } catch (error: any) {
       isAuthenticatingRef.current = false;
       hasNavigatedRef.current = false;
+      authTrace("ProfessionalAuth.exception", { message: error?.message ?? "unknown" });
       toast({
         title: "Erro",
         description: error.message || "Ocorreu um erro. Tente novamente.",
