@@ -230,6 +230,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Apenas sincroniza estado - sem lógica adicional
         setSession(newSession);
         setUser(newSession?.user ?? null);
+
+        // IMPORTANTE: em logins novos (ex.: OAuth), o init() acima ainda não viu a sessão.
+        // Se não carregarmos roles/perfil aqui, o ProtectedRoute fica aguardando rolesLoaded.
+        if (event === "SIGNED_IN" && newSession?.user) {
+          // não await para não bloquear a thread do listener
+          void loadUserData(newSession.user.id);
+        }
         
         if (!newSession) {
           setProfile(null);
