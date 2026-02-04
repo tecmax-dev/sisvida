@@ -389,19 +389,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Ref para evitar múltiplos loadUserData simultâneos (causa loop)
+    let isLoadingUserData = false;
+    let lastUserId: string | null = null;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('[Auth] onAuthStateChange:', event, session?.user?.id?.slice(0, 8));
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Evitar reload se já estamos carregando dados do mesmo usuário
+          if (isLoadingUserData && lastUserId === session.user.id) {
+            console.log('[Auth] Ignorando evento duplicado, já carregando dados');
+            return;
+          }
+          
+          // Evitar reload se já temos os dados carregados do mesmo usuário
+          if (rolesLoaded && lastUserId === session.user.id && event !== 'SIGNED_IN') {
+            console.log('[Auth] Dados já carregados para este usuário, ignorando');
+            return;
+          }
+          
+          isLoadingUserData = true;
+          lastUserId = session.user.id;
           setLoading(true);
           setRolesLoaded(false);
+          
           // Defer data fetching to avoid deadlock
           setTimeout(() => {
-            loadUserData(session.user.id);
+            loadUserData(session.user.id).finally(() => {
+              isLoadingUserData = false;
+            });
           }, 0);
         } else {
+          isLoadingUserData = false;
+          lastUserId = null;
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
