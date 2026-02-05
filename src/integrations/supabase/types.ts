@@ -1882,6 +1882,8 @@ export type Database = {
           max_appointments_per_cpf_month: number | null
           name: string
           opening_time: string | null
+          owner_cpf: string | null
+          owner_name: string | null
           phone: string | null
           reminder_enabled: boolean | null
           reminder_hours: number | null
@@ -1922,6 +1924,8 @@ export type Database = {
           max_appointments_per_cpf_month?: number | null
           name: string
           opening_time?: string | null
+          owner_cpf?: string | null
+          owner_name?: string | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
@@ -1962,6 +1966,8 @@ export type Database = {
           max_appointments_per_cpf_month?: number | null
           name?: string
           opening_time?: string | null
+          owner_cpf?: string | null
+          owner_name?: string | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null

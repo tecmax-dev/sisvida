@@ -512,7 +512,9 @@ export default function SubscriptionBillingPage() {
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <p className="font-medium">{(invoice.clinics as any)?.name}</p>
-                              <p className="text-xs text-muted-foreground">{(invoice.clinics as any)?.cnpj}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {(invoice.clinics as any)?.cnpj || `CPF: ${(invoice.clinics as any)?.owner_cpf}` || "-"}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
@@ -739,8 +741,7 @@ export default function SubscriptionBillingPage() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
-              Serão gerados boletos para competência {MONTHS[selectedMonth - 1]}/{selectedYear} 
-              para todas as clínicas com assinatura ativa e CNPJ cadastrado.
+              Serão gerados boletos para competência {MONTHS[selectedMonth - 1]}/{selectedYear} para todas as clínicas com assinatura ativa e documento (CNPJ ou CPF) cadastrado.
             </p>
           </div>
           <DialogFooter>
