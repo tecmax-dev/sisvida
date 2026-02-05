@@ -37,6 +37,12 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     return <>{children}</>;
   }
 
+  // Super admin trying to access /dashboard should be redirected to /admin
+  // This ensures super admins land on admin panel after login
+  if (isSuperAdmin && location.pathname === "/dashboard") {
+    return <Navigate to="/admin" replace />;
+  }
+
   // Check if clinic is blocked (only for non-super-admins)
   if (currentClinic?.is_blocked && !isSuperAdmin && !location.pathname.startsWith("/admin")) {
     return <BlockedClinicOverlay reason={currentClinic.blocked_reason || undefined} />;
