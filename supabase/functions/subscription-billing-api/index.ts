@@ -67,6 +67,8 @@ interface CreateInvoiceParams {
   competenceMonth: number;
   competenceYear: number;
   instructions?: string;
+  // Texto curto para aparecer no boleto (vai no nome do item)
+  discountInfo?: string;
 }
 
 async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
@@ -75,6 +77,11 @@ async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
   const cleanDoc = params.clinicDocument.replace(/\D/g, "");
   const isPF = cleanDoc.length <= 11;
   
+  const baseItemName = `Assinatura ${params.planName} - ${String(params.competenceMonth).padStart(2, "0")}/${params.competenceYear}`;
+  // A Lytex pode ignorar campos de "instructions" no PDF do boleto.
+  // Para garantir que o desconto apareça, colocamos a info (curta) no nome do item.
+  const itemName = params.discountInfo ? `${baseItemName} (${params.discountInfo})` : baseItemName;
+
   const invoicePayload: any = {
     client: {
       type: isPF ? "pf" : "pj",
@@ -85,7 +92,7 @@ async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
     },
     items: [
       {
-        name: `Assinatura ${params.planName} - ${String(params.competenceMonth).padStart(2, "0")}/${params.competenceYear}`,
+        name: itemName,
         quantity: 1,
         value: params.valueCents,
       },
@@ -406,6 +413,7 @@ const handler = async (req: Request): Promise<Response> => {
           competenceMonth: month,
           competenceYear: year,
           instructions: boletoInstructions,
+          discountInfo: discountInfo || undefined,
         });
 
         // Salvar no banco
@@ -668,7 +676,7 @@ const handler = async (req: Request): Promise<Response> => {
         let itemName = `Assinatura ${plan?.name || "Plano"} - ${String(invoice.competence_month).padStart(2, "0")}/${invoice.competence_year}`;
         
         // Adicionar info do desconto na descrição do item se fornecida
-        if (discountInfo && newValueCents !== undefined) {
+        if (discountInfo) {
           itemName = `${itemName} (${discountInfo})`;
         }
 
@@ -680,10 +688,16 @@ const handler = async (req: Request): Promise<Response> => {
               newValueCents,
               discountInfo
             });
+
+            // Se veio discountInfo, garantimos que o nome do item seja atualizado na Lytex
+            // mesmo que o usuário não tenha alterado o valor (usamos o valor atual do boleto).
+            const shouldUpdateItem = newValueCents !== undefined || !!discountInfo;
+            const valueForItemUpdate = newValueCents ?? invoice.value_cents;
+
             await updateLytexInvoice(invoice.lytex_invoice_id, {
               dueDate: newDueDate || undefined,
-              valueCents: newValueCents,
-              itemName: newValueCents !== undefined ? itemName : undefined,
+              valueCents: shouldUpdateItem ? valueForItemUpdate : undefined,
+              itemName: shouldUpdateItem ? itemName : undefined,
             });
             console.log("[Subscription Billing] Lytex atualizado com sucesso");
           } catch (lytexError: any) {
@@ -733,6 +747,7 @@ const handler = async (req: Request): Promise<Response> => {
             dueDate: finalDueDate,
             competenceMonth: invoice.competence_month,
             competenceYear: invoice.competence_year,
+            discountInfo: discountInfo || undefined,
           });
 
           console.log("[Subscription Billing] Boleto criado na Lytex:", lytexInvoice.id);
@@ -767,6 +782,11 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (newValueCents !== undefined) {
           updateData.value_cents = newValueCents;
+          updateData.description = itemName;
+        }
+
+        // Se só veio discountInfo (sem novo valor), ainda assim atualiza a descrição local
+        if (discountInfo && newValueCents === undefined) {
           updateData.description = itemName;
         }
 
