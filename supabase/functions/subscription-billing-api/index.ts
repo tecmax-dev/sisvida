@@ -57,7 +57,8 @@ async function getSubscriptionLytexToken(): Promise<string> {
 interface CreateInvoiceParams {
   clinicId: string;
   clinicName: string;
-  clinicCnpj: string;
+  clinicDocument: string;
+  ownerName?: string;
   clinicEmail?: string;
   clinicPhone?: string;
   planName: string;
@@ -70,13 +71,14 @@ interface CreateInvoiceParams {
 async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
   const token = await getSubscriptionLytexToken();
 
-  const cleanCnpj = params.clinicCnpj.replace(/\D/g, "");
+  const cleanDoc = params.clinicDocument.replace(/\D/g, "");
+  const isPF = cleanDoc.length <= 11;
   
   const invoicePayload = {
     client: {
-      type: cleanCnpj.length === 14 ? "pj" : "pf",
-      name: params.clinicName,
-      cpfCnpj: cleanCnpj,
+      type: isPF ? "pf" : "pj",
+      name: isPF && params.ownerName ? params.ownerName : params.clinicName,
+      cpfCnpj: cleanDoc,
       email: params.clinicEmail || undefined,
       cellphone: params.clinicPhone?.replace(/\D/g, "").slice(-11) || undefined,
     },
@@ -176,7 +178,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Buscar dados da clínica e assinatura
         const { data: clinic, error: clinicError } = await supabase
           .from("clinics")
-          .select("id, name, cnpj, email, phone")
+          .select("id, name, cnpj, owner_cpf, owner_name, email, phone")
           .eq("id", clinicId)
           .single();
 
@@ -184,8 +186,10 @@ const handler = async (req: Request): Promise<Response> => {
           throw new Error("Clínica não encontrada");
         }
 
-        if (!clinic.cnpj) {
-          throw new Error("Clínica sem CNPJ cadastrado");
+        // Determinar documento para faturamento (CNPJ ou CPF do responsável)
+        const billingDocument = clinic.cnpj || clinic.owner_cpf;
+        if (!billingDocument) {
+          throw new Error("Clínica sem CNPJ ou CPF do responsável cadastrado");
         }
 
         // Buscar assinatura ativa
@@ -230,7 +234,8 @@ const handler = async (req: Request): Promise<Response> => {
         const lytexInvoice = await createLytexInvoice({
           clinicId: clinic.id,
           clinicName: clinic.name,
-          clinicCnpj: clinic.cnpj,
+          clinicDocument: billingDocument,
+          ownerName: clinic.owner_name,
           clinicEmail: clinic.email,
           clinicPhone: clinic.phone,
           planName: plan.name,
@@ -295,7 +300,9 @@ const handler = async (req: Request): Promise<Response> => {
           const clinic = sub.clinics as any;
           const plan = sub.subscription_plans as any;
 
-          if (!clinic?.cnpj) {
+          // Determinar documento para faturamento
+          const billingDocument = clinic?.cnpj || clinic?.owner_cpf;
+          if (!billingDocument) {
             results.skipped++;
             continue;
           }
@@ -330,7 +337,8 @@ const handler = async (req: Request): Promise<Response> => {
             const lytexInvoice = await createLytexInvoice({
               clinicId: clinic.id,
               clinicName: clinic.name,
-              clinicCnpj: clinic.cnpj,
+              clinicDocument: billingDocument,
+              ownerName: clinic.owner_name,
               clinicEmail: clinic.email,
               clinicPhone: clinic.phone,
               planName: plan.name,
