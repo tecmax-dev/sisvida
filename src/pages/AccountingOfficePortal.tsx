@@ -174,34 +174,57 @@ export default function AccountingOfficePortal() {
     }
   };
 
+  const getInvokeErrorMessage = (err: any): string | null => {
+    const body = err?.context?.body;
+    if (typeof body === "string") {
+      try {
+        const parsed = JSON.parse(body);
+        if (typeof parsed?.error === "string" && parsed.error.trim()) return parsed.error;
+      } catch {
+        // ignore
+      }
+    }
+    if (typeof err?.message === "string" && err.message.trim()) return err.message;
+    return null;
+  };
+
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsLoading(true);
 
     try {
+      const cleanEmail = email.trim();
+      const cleanAccessCode = accessCode.trim();
+
       const { data, error } = await supabase.functions.invoke("accounting-office-portal-auth", {
-        body: { action: "login", email, access_code: accessCode },
+        body: { action: "login", email: cleanEmail, access_code: cleanAccessCode },
       });
 
-      if (error) throw error;
+      if (error) {
+        toast.error(getInvokeErrorMessage(error) || "Erro ao fazer login.");
+        return;
+      }
 
-      if (data.error) {
+      if (data?.error) {
         toast.error(data.error);
         return;
       }
 
       setAccountingOffice(data.accounting_office);
       setIsAuthenticated(true);
-      
-      sessionStorage.setItem("accounting_office_session", JSON.stringify({
-        accountingOffice: data.accounting_office
-      }));
-      
+
+      sessionStorage.setItem(
+        "accounting_office_session",
+        JSON.stringify({
+          accountingOffice: data.accounting_office,
+        })
+      );
+
       toast.success("Login realizado com sucesso!");
       loadData(data.accounting_office.id);
     } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("Erro ao fazer login. Tente novamente.");
+      toast.error(error?.message || "Erro ao fazer login. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

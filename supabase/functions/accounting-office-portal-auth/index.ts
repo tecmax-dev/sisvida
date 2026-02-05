@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function extractEmailFromText(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const match = input.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0].toLowerCase().trim() : null;
+}
+
+function normalizeAccessCode(input: unknown): string {
+  return typeof input === "string" ? input.trim().toUpperCase() : "";
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,28 +27,50 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, email, access_code, accounting_office_id, union_entity_id } = await req.json();
+    const { action, email, access_code, accounting_office_id } = await req.json();
 
-    // Limpar email
-    const cleanEmail = email?.toLowerCase().trim();
+    // Normalizações
+    const cleanEmail = (typeof email === "string" ? email : "").toLowerCase().trim();
+    const cleanAccessCode = normalizeAccessCode(access_code);
 
     if (action === "login") {
       // Validar email e código de acesso
-      if (!cleanEmail || !access_code) {
+      if (!cleanEmail || !cleanAccessCode) {
         return new Response(
           JSON.stringify({ error: "E-mail e código de acesso são obrigatórios" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Buscar escritório - agora incluindo union_entity_id para isolamento multi-tenant
-      const { data: office, error } = await supabase
-        .from("accounting_offices")
-        .select("id, name, email, clinic_id, access_code, access_code_expires_at, is_active, union_entity_id")
-        .eq("email", cleanEmail)
-        .single();
+      const officeSelect = "id, name, email, clinic_id, access_code, access_code_expires_at, is_active, union_entity_id";
 
-      if (error || !office) {
+      // 1) Tentativa padrão (email exato)
+      let office: any = null;
+      const { data: officeExact, error: exactError } = await supabase
+        .from("accounting_offices")
+        .select(officeSelect)
+        .eq("email", cleanEmail)
+        .maybeSingle();
+
+      if (!exactError && officeExact) {
+        office = officeExact;
+      } else {
+        // 2) Fallback: tolerar cadastro ruim (ex.: "email dp1@..."), buscando candidatos
+        const { data: candidates, error: candError } = await supabase
+          .from("accounting_offices")
+          .select(officeSelect)
+          .ilike("email", `%${cleanEmail}%`)
+          .limit(10);
+
+        if (!candError && candidates?.length) {
+          office = candidates.find((c: any) => {
+            const extracted = extractEmailFromText(c.email);
+            return extracted === cleanEmail;
+          }) || null;
+        }
+      }
+
+      if (!office) {
         return new Response(
           JSON.stringify({ error: "E-mail não encontrado" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -51,14 +84,15 @@ serve(async (req) => {
         );
       }
 
-      if (!office.access_code) {
+      const storedAccessCode = normalizeAccessCode(office.access_code);
+      if (!storedAccessCode) {
         return new Response(
           JSON.stringify({ error: "Código de acesso não configurado. Entre em contato com o sindicato." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      if (office.access_code !== access_code.toUpperCase()) {
+      if (storedAccessCode !== cleanAccessCode) {
         return new Response(
           JSON.stringify({ error: "Código de acesso inválido" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
