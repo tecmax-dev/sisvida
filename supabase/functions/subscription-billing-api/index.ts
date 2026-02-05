@@ -494,6 +494,7 @@ const handler = async (req: Request): Promise<Response> => {
       case "update_invoice": {
         // Atualizar data de vencimento e/ou valor de um boleto existente
         const { invoiceId, newDueDate, newValueCents, discountInfo } = params;
+        const { regenerateLytex } = params; // Flag para criar boleto na Lytex se não existir
 
         if (!invoiceId) {
           throw new Error("ID do boleto é obrigatório");
@@ -574,11 +575,66 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           console.log("[Subscription Billing] Boleto sem lytex_invoice_id, atualizando apenas local");
         }
+        
+        // Se não tem lytex_invoice_id e foi solicitado regenerar, criar na Lytex
+        let lytexCreated = false;
+        const lytexData: any = {};
+        
+        if (!invoice.lytex_invoice_id && regenerateLytex) {
+          console.log("[Subscription Billing] Criando boleto na Lytex (regenerar)...");
+          
+          // Buscar dados completos da clínica
+          const { data: clinic, error: clinicError } = await supabase
+            .from("clinics")
+            .select("id, name, cnpj, owner_cpf, owner_name, email, phone")
+            .eq("id", invoice.clinic_id)
+            .single();
+
+          if (clinicError || !clinic) {
+            throw new Error("Clínica não encontrada para gerar boleto");
+          }
+
+          const billingDocument = clinic.cnpj || clinic.owner_cpf;
+          if (!billingDocument) {
+            throw new Error("Clínica sem CNPJ ou CPF cadastrado");
+          }
+
+          const finalValue = newValueCents ?? invoice.value_cents;
+          const finalDueDate = newDueDate ?? invoice.due_date;
+
+          const lytexInvoice = await createLytexInvoice({
+            clinicId: clinic.id,
+            clinicName: clinic.name,
+            clinicDocument: billingDocument,
+            ownerName: clinic.owner_name || undefined,
+            clinicEmail: clinic.email || undefined,
+            clinicPhone: clinic.phone || undefined,
+            planName: plan?.name || "Plano",
+            valueCents: finalValue,
+            dueDate: finalDueDate,
+            competenceMonth: invoice.competence_month,
+            competenceYear: invoice.competence_year,
+          });
+
+          console.log("[Subscription Billing] Boleto criado na Lytex:", lytexInvoice.id);
+          
+          lytexCreated = true;
+          lytexData.lytex_invoice_id = lytexInvoice.id;
+          lytexData.lytex_client_id = lytexInvoice.clientId;
+          lytexData.invoice_url = lytexInvoice.url || lytexInvoice.paymentUrl;
+          lytexData.digitable_line = lytexInvoice.boleto?.digitableLine || lytexInvoice.digitableLine;
+          lytexData.pix_code = lytexInvoice.pix?.code || lytexInvoice.pixCode;
+        }
 
         // Atualizar no banco de dados
         const updateData: any = {
           updated_at: new Date().toISOString(),
         };
+        
+        // Adicionar dados do Lytex se foi criado
+        if (lytexCreated) {
+          Object.assign(updateData, lytexData);
+        }
 
         if (newDueDate) {
           updateData.due_date = newDueDate;

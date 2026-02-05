@@ -12,8 +12,9 @@
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Label } from "@/components/ui/label";
-import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
+import { Loader2, Calendar, DollarSign, Percent, AlertTriangle, Zap } from "lucide-react";
  import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
  
  interface Invoice {
    id: string;
@@ -23,6 +24,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
    status: string;
    competence_month: number;
    competence_year: number;
+  lytex_invoice_id?: string | null;
    clinics?: { name: string };
    subscription_plans?: { name: string };
  }
@@ -44,6 +46,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
   const [discountReais, setDiscountReais] = useState("");
   const [originalValueCents, setOriginalValueCents] = useState(0);
   const [discountReason, setDiscountReason] = useState("");
+  const [regenerateLytex, setRegenerateLytex] = useState(false);
  
    useEffect(() => {
      if (invoice && open) {
@@ -52,15 +55,18 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
       setOriginalValueCents(invoice.value_cents);
       setDiscountReais("");
       setDiscountReason("");
+      // Se não tem lytex_invoice_id, sugerir regenerar
+      setRegenerateLytex(!invoice.lytex_invoice_id);
      }
    }, [invoice, open]);
  
    const updateMutation = useMutation({
-    mutationFn: async ({ invoiceId, newDueDate, newValueCents, discountInfo }: {
+    mutationFn: async ({ invoiceId, newDueDate, newValueCents, discountInfo, regenerateLytex }: {
        invoiceId: string;
        newDueDate?: string;
        newValueCents?: number;
       discountInfo?: string;
+      regenerateLytex?: boolean;
      }) => {
        const { data: { session } } = await supabase.auth.getSession();
        if (!session) throw new Error("Não autenticado");
@@ -79,6 +85,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
              newDueDate,
              newValueCents,
             discountInfo,
+            regenerateLytex,
            }),
          }
        );
@@ -147,7 +154,10 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
  
      if (!dateChanged && !valueChanged) {
        toast.info("Nenhuma alteração detectada");
-       return;
+        // Permitir continuar se for para regenerar na Lytex
+        if (!regenerateLytex || invoice.lytex_invoice_id) {
+          return;
+        }
      }
  
      updateMutation.mutate({
@@ -155,6 +165,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
        newDueDate: dateChanged ? dueDate : undefined,
       newValueCents: valueChanged ? finalValueCents : undefined,
       discountInfo,
+        regenerateLytex: regenerateLytex && !invoice.lytex_invoice_id,
      });
    };
  
@@ -197,6 +208,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
 
   const finalValueCents = calculateFinalValue();
   const hasDiscount = discountReais && parseFloat(discountReais.replace(",", ".")) > 0;
+  const hasNoLytexId = !invoice?.lytex_invoice_id;
 
    if (!invoice) return null;
  
@@ -314,6 +326,33 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
                 <span className="text-success">
                   R$ {(finalValueCents / 100).toFixed(2).replace(".", ",")}
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* Aviso: Boleto sem Lytex */}
+          {hasNoLytexId && (
+            <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-warning">Boleto sem registro na Lytex</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Este boleto não foi gerado na Lytex. Ative a opção abaixo para criar um novo boleto com os dados atuais.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="regenerate-lytex" className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Zap className="h-4 w-4" />
+                  Gerar boleto na Lytex
+                </Label>
+                <Switch
+                  id="regenerate-lytex"
+                  checked={regenerateLytex}
+                  onCheckedChange={setRegenerateLytex}
+                />
               </div>
             </div>
           )}
