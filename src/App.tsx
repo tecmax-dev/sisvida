@@ -369,6 +369,13 @@ function App() {
                 <Route path="/sindical/filiacao/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
+                {/* Aliases para portais sindicais - redireciona para rotas corretas */}
+                <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
+                <Route path="/sindicato/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
+                <Route path="/sindicato/portal-empresa" element={<Navigate to="/portal-empresa" replace />} />
+                <Route path="/sindicato/portal-empresa/:clinicSlug" element={<EmployerPortal />} />
+                <Route path="/sindicato/portal-socio" element={<Navigate to="/portal-socio" replace />} />
+                <Route path="/sindicato/portal-socio/:clinicSlug" element={<MemberPortal />} />
                 <Route path="/entidade-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/acessos" element={<PortalAccessPage />} />
