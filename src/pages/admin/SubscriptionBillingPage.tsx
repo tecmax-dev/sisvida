@@ -50,9 +50,16 @@ import {
  Plus,
   Pencil,
   MessageCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ptBR } from "date-fns/locale";
 import { EditSubscriptionInvoiceDialog } from "@/components/admin/EditSubscriptionInvoiceDialog";
 
@@ -611,7 +618,23 @@ _Equipe Eclini_`;
                         <TableCell className="font-medium">
                           {formatCurrency(invoice.value_cents)}
                         </TableCell>
-                        <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {getStatusBadge(invoice.status)}
+                            {!invoice.lytex_invoice_id && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Boleto sem registro na Lytex</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {invoice.invoice_url && (
