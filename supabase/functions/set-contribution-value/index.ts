@@ -364,18 +364,97 @@ serve(async (req) => {
     }
 
     // Gerar boleto na Lytex
-    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const monthNames = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ];
     const typeName = contribution.contribution_type?.name || "Contribuição";
     const description = `${typeName} - ${monthNames[contribution.competence_month - 1]}/${contribution.competence_year}`;
+
+    // Garantir que temos dados consistentes do pagador
+    const employer = contribution.employer as { cnpj?: string; name?: string; email?: string; phone?: string } | null;
+    if (!employer?.cnpj || !employer?.name) {
+      console.error("[SetValue] Dados do pagador ausentes na contribuição:", {
+        contribution_id,
+        employer_id: contribution.employer_id,
+        employer,
+      });
+      return new Response(
+        JSON.stringify({
+          error:
+            "Dados da empresa estão incompletos para emitir o boleto. Verifique o cadastro da empresa (CNPJ e Razão Social) e tente novamente.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Prevenir o erro Lytex: "Pagador não pode ser igual ao Emissor"
+    // (isso ocorre quando o CNPJ/CPF do pagador está igual ao do sindicato/entidade emissora)
+    try {
+      const cleanEmployerDoc = String(employer.cnpj).replace(/\D/g, "");
+
+      let issuerCnpj: string | null = null;
+      if (contribution.union_entity_id) {
+        const { data: unionEntity } = await supabase
+          .from("union_entities")
+          .select("cnpj")
+          .eq("id", contribution.union_entity_id)
+          .maybeSingle();
+        issuerCnpj = unionEntity?.cnpj ?? null;
+      } else if (clinicId) {
+        const { data: unionEntity } = await supabase
+          .from("union_entities")
+          .select("cnpj")
+          .eq("clinic_id", clinicId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        issuerCnpj = unionEntity?.cnpj ?? null;
+      }
+
+      const cleanIssuerDoc = String(issuerCnpj || "").replace(/\D/g, "");
+
+      if (cleanIssuerDoc && cleanEmployerDoc && cleanIssuerDoc === cleanEmployerDoc) {
+        console.error("[SetValue] Pagador igual ao emissor - bloqueando emissão:", {
+          contribution_id,
+          employer_id: contribution.employer_id,
+          payer_doc: cleanEmployerDoc,
+          issuer_doc: cleanIssuerDoc,
+          portal_type,
+          portal_id,
+        });
+
+        return new Response(
+          JSON.stringify({
+            error:
+              "Não foi possível emitir o boleto porque o CNPJ/CPF do pagador está igual ao do emissor. Corrija o cadastro da empresa vinculada e tente novamente.",
+            code: "PAYER_EQUALS_ISSUER",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } catch (issuerCheckError) {
+      // Não bloqueia o fluxo principal (apenas impede a validação preventiva)
+      console.error("[SetValue] Falha ao validar emissor vs pagador (nao critico):", issuerCheckError);
+    }
 
     try {
       const invoice = await createInvoice({
         employer: {
-          cnpj: contribution.employer.cnpj,
-          name: contribution.employer.name,
-          email: contribution.employer.email,
-          phone: contribution.employer.phone,
+          cnpj: employer.cnpj,
+          name: employer.name,
+          email: employer.email,
+          phone: employer.phone,
         },
         value: valueInCents,
         dueDate: contribution.due_date,
@@ -405,12 +484,12 @@ serve(async (req) => {
 
       // Registrar log se for portal
       if (portal_type && portal_id) {
-        const logTable = portal_type === "accounting_office" 
-          ? "accounting_office_portal_logs" 
-          : "employer_portal_logs";
-        const logData = portal_type === "accounting_office"
-          ? { accounting_office_id: portal_id, action: "set_value" }
-          : { employer_id: portal_id, action: "set_value" };
+        const logTable =
+          portal_type === "accounting_office" ? "accounting_office_portal_logs" : "employer_portal_logs";
+        const logData =
+          portal_type === "accounting_office"
+            ? { accounting_office_id: portal_id, action: "set_value" }
+            : { employer_id: portal_id, action: "set_value" };
 
         await supabase.from(logTable).insert({
           ...logData,
@@ -426,8 +505,8 @@ serve(async (req) => {
           await sendManagerNotification({
             managerEmail: clinicData.email,
             clinicName: clinicData.name,
-            employerName: contribution.employer?.name || "Empresa",
-            employerCnpj: contribution.employer?.cnpj || "",
+            employerName: employer?.name || "Empresa",
+            employerCnpj: employer?.cnpj || "",
             contributionType: contribution.contribution_type?.name || "Contribuição",
             competenceMonth: contribution.competence_month,
             competenceYear: contribution.competence_year,
@@ -447,13 +526,16 @@ serve(async (req) => {
           lytex_invoice_url: invoice.invoiceUrl,
           message: "Valor definido e boleto gerado com sucesso!",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     } catch (lytexError: any) {
       console.error("[SetValue] Erro Lytex:", lytexError);
+
+      // IMPORTANTE: retornar 200 para que os portais consigam exibir a mensagem real,
+      // evitando o erro genérico "Edge Function returned a non-2xx status code".
       return new Response(
         JSON.stringify({ error: lytexError.message || "Erro ao gerar boleto" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
   } catch (error: any) {
