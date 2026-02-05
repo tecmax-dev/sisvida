@@ -333,19 +333,6 @@ const handler = async (req: Request): Promise<Response> => {
           throw new Error("Plano sem valor configurado");
         }
 
-        // Verificar se já existe boleto para esse mês
-        const { data: existing } = await supabase
-          .from("subscription_invoices")
-          .select("id")
-          .eq("clinic_id", clinicId)
-          .eq("competence_month", month)
-          .eq("competence_year", year)
-          .maybeSingle();
-
-        if (existing) {
-          throw new Error(`Já existe boleto para ${month}/${year}`);
-        }
-
         // Calcular data de vencimento
         const billingDay = subscription.billing_day || 10;
         const dueDate = new Date(year, month - 1, billingDay);
