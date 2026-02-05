@@ -49,6 +49,7 @@ import {
   Search,
  Plus,
   Pencil,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -101,6 +102,7 @@ export default function SubscriptionBillingPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<any>(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
   // Verificar se credenciais estão configuradas
   const { data: credentialsStatus, isLoading: checkingCredentials } = useQuery({
@@ -330,6 +332,66 @@ export default function SubscriptionBillingPage() {
     paidValue: invoices.filter(i => i.status === "paid").reduce((sum, i) => sum + (i.paid_value_cents || i.value_cents || 0), 0),
   };
 
+  const handleSendWhatsApp = async (invoice: any) => {
+    const clinic = invoice.clinics;
+    if (!clinic) {
+      toast.error("Dados da clínica não encontrados");
+      return;
+    }
+
+    // Get clinic phone from database
+    const { data: clinicData, error: clinicError } = await supabase
+      .from("clinics")
+      .select("phone, name")
+      .eq("id", clinic.id)
+      .single();
+
+    if (clinicError || !clinicData?.phone) {
+      toast.error("Telefone da clínica não encontrado. Cadastre o telefone primeiro.");
+      return;
+    }
+
+    setSendingWhatsApp(invoice.id);
+
+    try {
+      const planName = (invoice.subscription_plans as any)?.name || "Assinatura";
+      const dueDate = format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy");
+      const valueBRL = (invoice.value_cents / 100).toFixed(2).replace(".", ",");
+      const competence = `${MONTHS[invoice.competence_month - 1]}/${invoice.competence_year}`;
+
+      const message = `🏥 *Eclini - Cobrança de Assinatura*
+
+Olá, ${clinicData.name}!
+
+Sua fatura referente a *${competence}* do plano *${planName}* está disponível.
+
+💰 *Valor:* R$ ${valueBRL}
+📅 *Vencimento:* ${dueDate}
+${invoice.invoice_url ? `\n📄 *Link do Boleto:* ${invoice.invoice_url}` : ""}
+
+Em caso de dúvidas, entre em contato conosco.
+
+_Equipe Eclini_`;
+
+      const { data, error } = await supabase.functions.invoke("test-billing-whatsapp", {
+        body: {
+          phone: clinicData.phone,
+          message: message,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro ao enviar mensagem");
+
+      toast.success("Mensagem enviada via WhatsApp com sucesso!");
+    } catch (error: any) {
+      console.error("WhatsApp error:", error);
+      toast.error(error.message || "Erro ao enviar mensagem via WhatsApp");
+    } finally {
+      setSendingWhatsApp(null);
+    }
+  };
+
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
 
@@ -549,6 +611,22 @@ export default function SubscriptionBillingPage() {
                                 <a href={invoice.invoice_url} target="_blank" rel="noopener noreferrer">
                                   <ExternalLink className="h-4 w-4" />
                                 </a>
+                              </Button>
+                            )}
+                            {invoice.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSendWhatsApp(invoice)}
+                                disabled={sendingWhatsApp === invoice.id}
+                                title="Enviar via WhatsApp"
+                                className="text-success hover:text-success/80"
+                              >
+                                {sendingWhatsApp === invoice.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MessageCircle className="h-4 w-4" />
+                                )}
                               </Button>
                             )}
                             {invoice.status !== "paid" && invoice.status !== "cancelled" && (
