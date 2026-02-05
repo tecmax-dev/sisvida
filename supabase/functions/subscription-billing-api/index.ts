@@ -201,63 +201,81 @@ function mapLytexStatus(invoice: any): "paid" | "pending" | "overdue" | "cancell
   return "pending";
 }
 
-async function cancelLytexInvoice(invoiceId: string, dueDate?: string, valueCents?: number): Promise<any> {
+function extractLytexInvoiceIdFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+
+  // Prefer UUIDs if present
+  const uuid = url.match(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  )?.[0];
+  if (uuid) return uuid;
+
+  // Fallback: last path segment
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean).pop();
+    return seg || null;
+  } catch {
+    const seg = url.split("?")[0].split("/").filter(Boolean).pop();
+    return seg || null;
+  }
+}
+
+async function cancelLytexInvoice(invoiceId: string): Promise<any> {
   const token = await getSubscriptionLytexToken();
 
-  console.log(`[Subscription Billing] Cancelando fatura Lytex: ${invoiceId}`);
+  const tryCancel = async (statusValue: "cancelled" | "canceled") => {
+    console.log(`[Subscription Billing] Cancelando fatura Lytex (${statusValue}): ${invoiceId}`);
 
-  // A API Lytex usa PUT com status "cancelled" para cancelar faturas
-  const cancelPayload: any = {
-    status: "cancelled",
+    const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status: statusValue }),
+    });
+
+    const responseText = await response.text();
+    let responseData: any = {};
+    if (responseText) {
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { raw: responseText };
+      }
+    }
+
+    console.log(`[Subscription Billing] Lytex cancel response: ${response.status}`, responseText);
+
+    const lower = (responseText || "").toLowerCase();
+    const alreadyCancelled =
+      lower.includes("already cancel") ||
+      lower.includes("já cancel");
+
+    if (response.ok) return { ok: true, data: responseData };
+
+    // Considerar como sucesso idempotente apenas quando claramente "já cancelado"
+    if (alreadyCancelled) return { ok: true, data: responseData, alreadyCancelled: true };
+
+    return { ok: false, status: response.status, text: responseText, data: responseData };
   };
 
-  if (dueDate) {
-    cancelPayload.dueDate = dueDate;
+  // 1) Tentativa padrão
+  const first = await tryCancel("cancelled");
+  if (first.ok) {
+    console.log("[Subscription Billing] Cancelamento confirmado na Lytex");
+    return { success: true, ...first.data, alreadyCancelled: first.alreadyCancelled };
   }
 
-  if (valueCents !== undefined) {
-    cancelPayload.items = [{ name: "Assinatura", quantity: 1, value: valueCents }];
+  // 2) Retry com grafia alternativa (algumas APIs usam "canceled")
+  const second = await tryCancel("canceled");
+  if (second.ok) {
+    console.log("[Subscription Billing] Cancelamento confirmado na Lytex (retry)");
+    return { success: true, ...second.data, alreadyCancelled: second.alreadyCancelled };
   }
 
-  const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify(cancelPayload),
-  });
-
-  const responseText = await response.text();
-  let responseData: any = {};
-  if (responseText) {
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { raw: responseText };
-    }
-  }
-
-  if (response.ok) {
-    console.log("[Subscription Billing] Fatura cancelada com sucesso na Lytex");
-    return { success: true, ...responseData };
-  }
-
-  // Verificar se é erro conhecido (já cancelado, não encontrado, etc.)
-  const errorMsg = responseText?.toLowerCase() || "";
-  
-  if (
-    errorMsg.includes("already cancelled") ||
-    errorMsg.includes("já cancelad") ||
-    errorMsg.includes("not found") ||
-    errorMsg.includes("não encontrad") ||
-    response.status === 404
-  ) {
-    console.log("[Subscription Billing] Fatura já cancelada ou não encontrada na Lytex - continuando");
-    return { success: true, alreadyCancelled: true };
-  }
-
-  throw new Error(`Erro ao cancelar fatura na Lytex: ${response.status} - ${responseText}`);
+  throw new Error(`Erro ao cancelar fatura na Lytex: ${second.status} - ${second.text}`);
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -766,19 +784,26 @@ const handler = async (req: Request): Promise<Response> => {
           throw new Error("Boleto já está cancelado");
         }
 
-        // Cancelar na Lytex se tiver ID
-        if (invoice.lytex_invoice_id) {
-          try {
-            await cancelLytexInvoice(
-              invoice.lytex_invoice_id,
-              invoice.due_date,
-              invoice.value_cents
-            );
-          } catch (lytexError: any) {
-            console.error("[Subscription Billing] Erro ao cancelar na Lytex:", lytexError);
-            // Continuar com cancelamento local mesmo se Lytex falhar
-          }
+        // Cancelar na Lytex (OBRIGATÓRIO se houver referência)
+        const lytexInvoiceId =
+          invoice.lytex_invoice_id || extractLytexInvoiceIdFromUrl(invoice.invoice_url);
+
+        if (!lytexInvoiceId) {
+          throw new Error(
+            "Não foi possível cancelar na Lytex: boleto sem identificador (lytex_invoice_id/invoice_url) salvo no sistema."
+          );
         }
+
+        // Se conseguimos extrair pela URL, persistir para não quebrar novamente
+        if (!invoice.lytex_invoice_id && lytexInvoiceId) {
+          await supabase
+            .from("subscription_invoices")
+            .update({ lytex_invoice_id: lytexInvoiceId })
+            .eq("id", invoiceId);
+        }
+
+        // Se a Lytex falhar, NÃO cancelamos localmente (evita divergência)
+        await cancelLytexInvoice(lytexInvoiceId);
 
         // Atualizar status no banco
         const { data: updatedInvoice, error: updateError } = await supabase
