@@ -85,7 +85,7 @@ interface Props {
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   pendente: { label: "Pendente", color: "bg-amber-500/20 text-amber-600 border-amber-500/30", icon: Clock },
-  aprovado: { label: "Aprovado", color: "bg-emerald-500/20 text-emerald-600 border-emerald-500/30", icon: CheckCircle },
+  ativo: { label: "Ativo", color: "bg-emerald-500/20 text-emerald-600 border-emerald-500/30", icon: CheckCircle },
   rejeitado: { label: "Rejeitado", color: "bg-red-500/20 text-red-600 border-red-500/30", icon: XCircle },
 };
 
@@ -539,7 +539,7 @@ export function FiliacaoDetailDialog({
                 Rejeitar
               </Button>
             </>
-          ) : data.status === "aprovado" ? (
+          ) : data.status === "ativo" ? (
             <>
               <Button onClick={handleDownloadPDF} variant="outline" className="gap-2" disabled={generatingPDF}>
                 {generatingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
