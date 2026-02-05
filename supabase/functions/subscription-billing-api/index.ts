@@ -270,11 +270,20 @@ async function cancelLytexInvoice(invoiceId: string, dueDate?: string): Promise<
     const alreadyCancelled =
       lower.includes("already cancel") ||
       lower.includes("já cancel");
+    
+    // Fatura não encontrada = considerar como já removida/cancelada
+    const notFound =
+      lower.includes("não encontrada") ||
+      lower.includes("not found") ||
+      response.status === 404;
 
     if (response.ok) return { ok: true, data: responseData };
 
     // Considerar como sucesso idempotente apenas quando claramente "já cancelado"
     if (alreadyCancelled) return { ok: true, data: responseData, alreadyCancelled: true };
+    
+    // Fatura não existe na Lytex - permitir cancelamento local
+    if (notFound) return { ok: true, data: responseData, notFoundInLytex: true };
 
     return { ok: false, status: response.status, text: responseText, data: responseData };
   };
