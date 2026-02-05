@@ -297,7 +297,7 @@ const handler = async (req: Request): Promise<Response> => {
     switch (action) {
       case "generate_invoice": {
         // Gerar boleto para uma clínica específica
-        const { clinicId, month, year } = params;
+        const { clinicId, month, year, discountCents, discountReason } = params;
 
         // Buscar dados da clínica e assinatura
         const { data: clinic, error: clinicError } = await supabase
@@ -353,8 +353,23 @@ const handler = async (req: Request): Promise<Response> => {
           dueDate.setMonth(dueDate.getMonth() + 1);
         }
 
+        // Calcular valor com desconto
+        const originalValueCents = Math.round(plan.monthly_price * 100);
+        let valueCents = originalValueCents;
+        let discountInfo: string | null = null;
+        
+        if (discountCents && discountCents > 0) {
+          if (discountCents >= originalValueCents) {
+            throw new Error("O desconto não pode ser maior ou igual ao valor do plano");
+          }
+          valueCents = originalValueCents - discountCents;
+          const discountBRL = (discountCents / 100).toFixed(2).replace(".", ",");
+          discountInfo = discountReason 
+            ? `Desconto: R$ ${discountBRL} - ${discountReason}`
+            : `Desconto aplicado: R$ ${discountBRL}`;
+        }
+        
         // Criar fatura no Lytex
-        const valueCents = Math.round(plan.monthly_price * 100);
         const lytexInvoice = await createLytexInvoice({
           clinicId: clinic.id,
           clinicName: clinic.name,
@@ -386,7 +401,10 @@ const handler = async (req: Request): Promise<Response> => {
             invoice_url: lytexInvoice.url || lytexInvoice.paymentUrl,
             digitable_line: lytexInvoice.boleto?.digitableLine || lytexInvoice.digitableLine,
             pix_code: lytexInvoice.pix?.code || lytexInvoice.pixCode,
-            description: `Assinatura ${plan.name} - ${String(month).padStart(2, "0")}/${year}`,
+            description: discountInfo 
+              ? `Assinatura ${plan.name} - ${String(month).padStart(2, "0")}/${year} (${discountInfo})`
+              : `Assinatura ${plan.name} - ${String(month).padStart(2, "0")}/${year}`,
+            notes: discountInfo || null,
           })
           .select()
           .single();

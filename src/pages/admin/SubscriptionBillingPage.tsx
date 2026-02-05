@@ -52,6 +52,7 @@ import {
   MessageCircle,
   AlertTriangle,
   Trash2,
+  Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -127,6 +128,8 @@ export default function SubscriptionBillingPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceToCancel, setInvoiceToCancel] = useState<any>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [discountReais, setDiscountReais] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
 
   // Verificar se credenciais estão configuradas
   const { data: credentialsStatus, isLoading: checkingCredentials } = useQuery({
@@ -259,7 +262,13 @@ export default function SubscriptionBillingPage() {
 
   // Mutation para gerar boleto individual
   const generateSingleMutation = useMutation({
-    mutationFn: async ({ clinicId, month, year }: { clinicId: string; month: number; year: number }) => {
+    mutationFn: async ({ clinicId, month, year, discountCents, discountReason }: { 
+      clinicId: string; 
+      month: number; 
+      year: number;
+      discountCents?: number;
+      discountReason?: string;
+    }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Não autenticado");
 
@@ -271,7 +280,14 @@ export default function SubscriptionBillingPage() {
             "Authorization": `Bearer ${session.access_token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ action: "generate_invoice", clinicId, month, year }),
+          body: JSON.stringify({ 
+            action: "generate_invoice", 
+            clinicId, 
+            month, 
+            year,
+            discountCents,
+            discountReason,
+          }),
         }
       );
 
@@ -287,6 +303,8 @@ export default function SubscriptionBillingPage() {
       queryClient.invalidateQueries({ queryKey: ["subscription-invoices"] });
       setGenerateSingleDialogOpen(false);
       setSelectedClinic(null);
+      setDiscountReais("");
+      setDiscountReason("");
     },
     onError: (error) => {
       toast.error(error.message);
@@ -1093,6 +1111,54 @@ _Equipe Eclini_`;
                 <span className="font-medium">{selectedClinic.name}</span>.
               </p>
             )}
+
+            {/* Campos de Desconto */}
+            <div className="space-y-4 pt-2 border-t">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  Desconto (R$) - Opcional
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    type="text"
+                    value={discountReais}
+                    onChange={(e) => {
+                      let cleaned = e.target.value.replace(/[^\d,]/g, "");
+                      const parts = cleaned.split(",");
+                      if (parts.length > 2) {
+                        cleaned = parts[0] + "," + parts.slice(1).join("");
+                      }
+                      if (parts[1]?.length > 2) {
+                        cleaned = parts[0] + "," + parts[1].slice(0, 2);
+                      }
+                      setDiscountReais(cleaned);
+                    }}
+                    className="pl-10"
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+
+              {discountReais && parseFloat(discountReais.replace(",", ".")) > 0 && (
+                <div className="space-y-2">
+                  <Label>Justificativa do Desconto *</Label>
+                  <Input
+                    type="text"
+                    value={discountReason}
+                    onChange={(e) => setDiscountReason(e.target.value)}
+                    placeholder="Ex: Pagamento antecipado, Acordo comercial..."
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Esta informação será exibida na descrição do boleto.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGenerateSingleDialogOpen(false)}>
@@ -1101,10 +1167,20 @@ _Equipe Eclini_`;
             <Button
               onClick={() => {
                 if (selectedClinic) {
+                  const cleanDiscount = discountReais.replace(/\./g, "").replace(",", ".");
+                  const discountCents = discountReais ? Math.round(parseFloat(cleanDiscount) * 100) : undefined;
+                  
+                  if (discountCents && discountCents > 0 && !discountReason.trim()) {
+                    toast.error("Informe a justificativa do desconto");
+                    return;
+                  }
+                  
                   generateSingleMutation.mutate({
                     clinicId: selectedClinic.id,
                     month: selectedMonth,
                     year: selectedYear,
+                    discountCents: discountCents && discountCents > 0 ? discountCents : undefined,
+                    discountReason: discountCents && discountCents > 0 ? discountReason.trim() : undefined,
                   });
                 }
               }}
