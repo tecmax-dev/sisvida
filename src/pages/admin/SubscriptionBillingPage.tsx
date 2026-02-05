@@ -176,7 +176,7 @@ export default function SubscriptionBillingPage() {
         .select(`
           *,
           clinics(id, name, slug, cnpj),
-          subscription_plans(id, name)
+         subscription_plans(id, name, monthly_price)
         `)
         .order("created_at", { ascending: false });
 
@@ -387,17 +387,30 @@ export default function SubscriptionBillingPage() {
 
     try {
       const planName = (whatsAppInvoice.subscription_plans as any)?.name || "Assinatura";
+     const planPrice = (whatsAppInvoice.subscription_plans as any)?.monthly_price;
       const dueDate = format(new Date(whatsAppInvoice.due_date + "T12:00:00"), "dd/MM/yyyy");
       const valueBRL = (whatsAppInvoice.value_cents / 100).toFixed(2).replace(".", ",");
       const competence = `${MONTHS[whatsAppInvoice.competence_month - 1]}/${whatsAppInvoice.competence_year}`;
 
+     // Verificar se há desconto aplicado
+     const hasDiscount = planPrice && (planPrice * 100) > whatsAppInvoice.value_cents;
+     const discountCents = hasDiscount ? (planPrice * 100) - whatsAppInvoice.value_cents : 0;
+     const originalValueBRL = planPrice ? planPrice.toFixed(2).replace(".", ",") : null;
+     const discountBRL = discountCents > 0 ? (discountCents / 100).toFixed(2).replace(".", ",") : null;
+     
+     // Extrair motivo do desconto do campo notes
+     const discountReason = whatsAppInvoice.notes?.match(/Desconto:.*?-\s*(.+)/)?.[1] || null;
+ 
       const message = `🏥 *Eclini - Cobrança de Assinatura*
 
 Olá, ${whatsAppInvoice.clinicName}!
 
 Sua fatura referente a *${competence}* do plano *${planName}* está disponível.
-
-💰 *Valor:* R$ ${valueBRL}
+${hasDiscount && originalValueBRL ? `
+💰 *Valor original:* ~R$ ${originalValueBRL}~
+🏷️ *Desconto:* R$ ${discountBRL}${discountReason ? ` (${discountReason})` : ""}
+✅ *Valor a pagar:* R$ ${valueBRL}` : `
+💰 *Valor:* R$ ${valueBRL}`}
 📅 *Vencimento:* ${dueDate}
 ${whatsAppInvoice.invoice_url ? `\n📄 *Link do Boleto:* ${whatsAppInvoice.invoice_url}` : ""}
 
