@@ -227,8 +227,20 @@ function extractLytexInvoiceIdFromUrl(url: string | null | undefined): string | 
   }
 }
 
-async function cancelLytexInvoice(invoiceId: string): Promise<any> {
+async function cancelLytexInvoice(invoiceId: string, dueDate?: string): Promise<any> {
   const token = await getSubscriptionLytexToken();
+
+  // Se não temos dueDate, buscar da fatura
+  let invoiceDueDate = dueDate;
+  if (!invoiceDueDate) {
+    try {
+      const invoiceDetails = await fetchInvoiceDetails(invoiceId);
+      invoiceDueDate = invoiceDetails?.dueDate?.split("T")[0] || new Date().toISOString().split("T")[0];
+    } catch {
+      // Fallback: usar data atual
+      invoiceDueDate = new Date().toISOString().split("T")[0];
+    }
+  }
 
   const tryCancel = async (statusValue: "cancelled" | "canceled") => {
     console.log(`[Subscription Billing] Cancelando fatura Lytex (${statusValue}): ${invoiceId}`);
@@ -239,7 +251,7 @@ async function cancelLytexInvoice(invoiceId: string): Promise<any> {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
       },
-      body: JSON.stringify({ status: statusValue }),
+      body: JSON.stringify({ status: statusValue, dueDate: invoiceDueDate }),
     });
 
     const responseText = await response.text();
@@ -820,7 +832,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           // Se a Lytex falhar, NÃO cancelamos localmente (evita divergência)
-          await cancelLytexInvoice(lytexInvoiceId);
+          await cancelLytexInvoice(lytexInvoiceId, invoice.due_date);
           cancelledInLytex = true;
         } else {
           console.log("[Subscription Billing] Boleto sem ID Lytex - cancelamento apenas local");
