@@ -136,6 +136,51 @@ async function fetchInvoiceDetails(invoiceId: string): Promise<any> {
   return result.data || result;
 }
 
+async function updateLytexInvoice(invoiceId: string, updates: {
+  dueDate?: string;
+  valueCents?: number;
+  itemName?: string;
+}): Promise<any> {
+  const token = await getSubscriptionLytexToken();
+
+  const updatePayload: any = {};
+
+  if (updates.dueDate) {
+    updatePayload.dueDate = updates.dueDate;
+  }
+
+  if (updates.valueCents !== undefined && updates.itemName) {
+    updatePayload.items = [
+      {
+        name: updates.itemName,
+        quantity: 1,
+        value: updates.valueCents,
+      },
+    ];
+  }
+
+  console.log("[Subscription Billing] Atualizando fatura Lytex:", invoiceId, JSON.stringify(updatePayload, null, 2));
+
+  const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updatePayload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Subscription Billing] Erro ao atualizar fatura:", errorText);
+    throw new Error(`Erro ao atualizar fatura Lytex: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log("[Subscription Billing] Fatura atualizada:", result);
+  return result.data || result;
+}
+
 function mapLytexStatus(invoice: any): "paid" | "pending" | "overdue" | "cancelled" {
   const status = String(invoice?.paymentStatus || invoice?.status || "").toLowerCase().replace(/[\s\-]+/g, "_");
   
@@ -442,6 +487,118 @@ const handler = async (req: Request): Promise<Response> => {
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+      }
+
+      case "update_invoice": {
+        // Atualizar data de vencimento e/ou valor de um boleto existente
+        const { invoiceId, newDueDate, newValueCents } = params;
+
+        if (!invoiceId) {
+          throw new Error("ID do boleto é obrigatório");
+        }
+
+        if (!newDueDate && newValueCents === undefined) {
+          throw new Error("Informe nova data de vencimento ou novo valor");
+        }
+
+        // Buscar boleto no banco
+        const { data: invoice, error: invoiceError } = await supabase
+          .from("subscription_invoices")
+          .select(`
+            *,
+            clinics(id, name),
+            subscription_plans(id, name)
+          `)
+          .eq("id", invoiceId)
+          .single();
+
+        if (invoiceError || !invoice) {
+          throw new Error("Boleto não encontrado");
+        }
+
+        // Não permitir editar boletos já pagos ou cancelados
+        if (invoice.status === "paid") {
+          throw new Error("Não é possível editar um boleto já pago");
+        }
+        if (invoice.status === "cancelled") {
+          throw new Error("Não é possível editar um boleto cancelado");
+        }
+
+        // Validar data futura
+        if (newDueDate) {
+          const [year, month, day] = newDueDate.split("-").map(Number);
+          const dueDateObj = new Date(year, month - 1, day, 12, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (dueDateObj < today) {
+            throw new Error("A data de vencimento deve ser futura");
+          }
+        }
+
+        // Validar valor
+        if (newValueCents !== undefined && newValueCents <= 0) {
+          throw new Error("O valor deve ser maior que zero");
+        }
+
+        // Preparar dados para atualização
+        const plan = invoice.subscription_plans as any;
+        const itemName = `Assinatura ${plan?.name || "Plano"} - ${String(invoice.competence_month).padStart(2, "0")}/${invoice.competence_year}`;
+
+        // Atualizar no Lytex se tiver ID
+        if (invoice.lytex_invoice_id) {
+          try {
+            await updateLytexInvoice(invoice.lytex_invoice_id, {
+              dueDate: newDueDate || undefined,
+              valueCents: newValueCents,
+              itemName: newValueCents !== undefined ? itemName : undefined,
+            });
+          } catch (lytexError: any) {
+            console.error("[Subscription Billing] Erro ao atualizar Lytex:", lytexError);
+            // Continuar com atualização local mesmo se Lytex falhar
+          }
+        }
+
+        // Atualizar no banco de dados
+        const updateData: any = {
+          updated_at: new Date().toISOString(),
+        };
+
+        if (newDueDate) {
+          updateData.due_date = newDueDate;
+          // Recalcular status baseado na nova data
+          const [year, month, day] = newDueDate.split("-").map(Number);
+          const dueDateObj = new Date(year, month - 1, day, 12, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          updateData.status = dueDateObj >= today ? "pending" : "overdue";
+        }
+
+        if (newValueCents !== undefined) {
+          updateData.value_cents = newValueCents;
+          updateData.description = itemName;
+        }
+
+        const { data: updatedInvoice, error: updateError } = await supabase
+          .from("subscription_invoices")
+          .update(updateData)
+          .eq("id", invoiceId)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error("[Subscription Billing] Erro ao atualizar banco:", updateError);
+          throw new Error("Erro ao atualizar boleto no banco de dados");
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            invoice: updatedInvoice,
+            message: "Boleto atualizado com sucesso"
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       default:
