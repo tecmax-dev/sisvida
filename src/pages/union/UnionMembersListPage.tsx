@@ -80,6 +80,7 @@ import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDia
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
 import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { UserAvatar } from "@/components/users/UserAvatar";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -106,6 +107,7 @@ interface UnionMember {
   card_number?: string | null;
   dependents_count?: number;
   inactivation_reason?: string | null;
+  photo_url?: string | null;
 }
 
 // Formatação de CPF: 000.000.000-00
@@ -285,6 +287,7 @@ export default function UnionMembersListPage() {
           inactivation_reason,
           insurance_plan_id,
           max_appointments_per_month,
+          photo_url,
           insurance_plan:insurance_plans ( name ),
           patient_dependents ( id ),
           patient_cards ( card_number, expires_at, is_active )
@@ -804,15 +807,12 @@ export default function UnionMembersListPage() {
                     >
                       <TableCell className="py-2">
                         <div className="flex items-center gap-2">
-                          <div
-                            className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                              member.is_active === false
-                                ? "bg-muted text-muted-foreground"
-                                : "bg-primary/10 text-primary"
-                            }`}
-                          >
-                            <User className="h-4 w-4" />
-                          </div>
+                          <UserAvatar
+                            avatarUrl={member.photo_url}
+                            name={member.name}
+                            size="sm"
+                            className={member.is_active === false ? "opacity-60" : ""}
+                          />
                           <div className="min-w-0">
                             <button
                               onClick={() => handleOpenEdit(member)}
