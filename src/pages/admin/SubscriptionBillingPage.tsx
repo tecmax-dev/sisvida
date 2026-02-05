@@ -51,9 +51,20 @@ import {
   Pencil,
   MessageCircle,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -113,6 +124,9 @@ export default function SubscriptionBillingPage() {
   const [whatsAppDialogOpen, setWhatsAppDialogOpen] = useState(false);
   const [whatsAppPhone, setWhatsAppPhone] = useState("");
   const [whatsAppInvoice, setWhatsAppInvoice] = useState<any>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [invoiceToCancel, setInvoiceToCancel] = useState<any>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   // Verificar se credenciais estão configuradas
   const { data: credentialsStatus, isLoading: checkingCredentials } = useQuery({
@@ -411,6 +425,47 @@ _Equipe Eclini_`;
     }
   };
 
+  const handleCancelInvoice = async () => {
+    if (!invoiceToCancel) return;
+
+    setCancelling(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Não autenticado");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/subscription-billing-api`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "cancel_invoice",
+            invoiceId: invoiceToCancel.id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao cancelar boleto");
+      }
+
+      toast.success("Boleto cancelado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["subscription-invoices"] });
+      setCancelDialogOpen(false);
+      setInvoiceToCancel(null);
+    } catch (error: any) {
+      console.error("Cancel error:", error);
+      toast.error(error.message || "Erro ao cancelar boleto");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
 
@@ -670,6 +725,20 @@ _Equipe Eclini_`;
                                 title="Editar boleto"
                               >
                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setInvoiceToCancel(invoice);
+                                  setCancelDialogOpen(true);
+                                }}
+                                title="Cancelar boleto"
+                                className="text-destructive hover:text-destructive/80"
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
@@ -1112,6 +1181,46 @@ _Equipe Eclini_`;
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Confirmação de Cancelamento */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Boleto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar este boleto? Esta ação não pode ser desfeita.
+              {invoiceToCancel?.lytex_invoice_id && (
+                <span className="block mt-2 text-warning">
+                  O boleto também será cancelado na Lytex.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {invoiceToCancel && (
+            <div className="p-3 bg-muted rounded-lg space-y-1 text-sm">
+              <p><strong>Clínica:</strong> {(invoiceToCancel.clinics as any)?.name}</p>
+              <p><strong>Valor:</strong> {formatCurrency(invoiceToCancel.value_cents)}</p>
+              <p><strong>Vencimento:</strong> {format(new Date(invoiceToCancel.due_date + "T12:00:00"), "dd/MM/yyyy")}</p>
+              <p><strong>Competência:</strong> {MONTHS[invoiceToCancel.competence_month - 1]}/{invoiceToCancel.competence_year}</p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelInvoice}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Cancelar Boleto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

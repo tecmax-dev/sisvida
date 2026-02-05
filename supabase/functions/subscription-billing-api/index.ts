@@ -201,6 +201,65 @@ function mapLytexStatus(invoice: any): "paid" | "pending" | "overdue" | "cancell
   return "pending";
 }
 
+async function cancelLytexInvoice(invoiceId: string, dueDate?: string, valueCents?: number): Promise<any> {
+  const token = await getSubscriptionLytexToken();
+
+  console.log(`[Subscription Billing] Cancelando fatura Lytex: ${invoiceId}`);
+
+  // A API Lytex usa PUT com status "cancelled" para cancelar faturas
+  const cancelPayload: any = {
+    status: "cancelled",
+  };
+
+  if (dueDate) {
+    cancelPayload.dueDate = dueDate;
+  }
+
+  if (valueCents !== undefined) {
+    cancelPayload.items = [{ name: "Assinatura", quantity: 1, value: valueCents }];
+  }
+
+  const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(cancelPayload),
+  });
+
+  const responseText = await response.text();
+  let responseData: any = {};
+  if (responseText) {
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
+  }
+
+  if (response.ok) {
+    console.log("[Subscription Billing] Fatura cancelada com sucesso na Lytex");
+    return { success: true, ...responseData };
+  }
+
+  // Verificar se é erro conhecido (já cancelado, não encontrado, etc.)
+  const errorMsg = responseText?.toLowerCase() || "";
+  
+  if (
+    errorMsg.includes("already cancelled") ||
+    errorMsg.includes("já cancelad") ||
+    errorMsg.includes("not found") ||
+    errorMsg.includes("não encontrad") ||
+    response.status === 404
+  ) {
+    console.log("[Subscription Billing] Fatura já cancelada ou não encontrada na Lytex - continuando");
+    return { success: true, alreadyCancelled: true };
+  }
+
+  throw new Error(`Erro ao cancelar fatura na Lytex: ${response.status} - ${responseText}`);
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("[Subscription Billing] Request received");
 
@@ -673,6 +732,78 @@ const handler = async (req: Request): Promise<Response> => {
             success: true, 
             invoice: updatedInvoice,
             message: "Boleto atualizado com sucesso"
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "cancel_invoice": {
+        // Cancelar boleto
+        const { invoiceId } = params;
+
+        if (!invoiceId) {
+          throw new Error("ID do boleto é obrigatório");
+        }
+
+        // Buscar boleto no banco
+        const { data: invoice, error: invoiceError } = await supabase
+          .from("subscription_invoices")
+          .select("*")
+          .eq("id", invoiceId)
+          .single();
+
+        if (invoiceError || !invoice) {
+          throw new Error("Boleto não encontrado");
+        }
+
+        // Não permitir cancelar boletos já pagos
+        if (invoice.status === "paid") {
+          throw new Error("Não é possível cancelar um boleto já pago");
+        }
+
+        // Não permitir cancelar boletos já cancelados
+        if (invoice.status === "cancelled") {
+          throw new Error("Boleto já está cancelado");
+        }
+
+        // Cancelar na Lytex se tiver ID
+        if (invoice.lytex_invoice_id) {
+          try {
+            await cancelLytexInvoice(
+              invoice.lytex_invoice_id,
+              invoice.due_date,
+              invoice.value_cents
+            );
+          } catch (lytexError: any) {
+            console.error("[Subscription Billing] Erro ao cancelar na Lytex:", lytexError);
+            // Continuar com cancelamento local mesmo se Lytex falhar
+          }
+        }
+
+        // Atualizar status no banco
+        const { data: updatedInvoice, error: updateError } = await supabase
+          .from("subscription_invoices")
+          .update({
+            status: "cancelled",
+            updated_at: new Date().toISOString(),
+            notes: invoice.notes 
+              ? `${invoice.notes}\n[Cancelado em ${new Date().toLocaleDateString("pt-BR")}]`
+              : `[Cancelado em ${new Date().toLocaleDateString("pt-BR")}]`,
+          })
+          .eq("id", invoiceId)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error("[Subscription Billing] Erro ao cancelar no banco:", updateError);
+          throw new Error("Erro ao cancelar boleto no banco de dados");
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            invoice: updatedInvoice,
+            message: "Boleto cancelado com sucesso",
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
