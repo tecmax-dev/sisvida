@@ -1050,6 +1050,23 @@ _Equipe Eclini_`;
                 <p><strong>Clínica:</strong> {whatsAppInvoice.clinicName}</p>
                 <p><strong>Valor:</strong> R$ {(whatsAppInvoice.value_cents / 100).toFixed(2).replace(".", ",")}</p>
                 <p><strong>Vencimento:</strong> {format(new Date(whatsAppInvoice.due_date + "T12:00:00"), "dd/MM/yyyy")}</p>
+                {whatsAppInvoice.invoice_url ? (
+                  <p className="break-all">
+                    <strong>Link do Boleto:</strong>{" "}
+                    <a 
+                      href={whatsAppInvoice.invoice_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {whatsAppInvoice.invoice_url}
+                    </a>
+                  </p>
+                ) : (
+                  <p className="text-destructive">
+                    <strong>⚠️ Boleto sem link!</strong> O link não será enviado.
+                  </p>
+                )}
               </div>
             )}
           </div>
