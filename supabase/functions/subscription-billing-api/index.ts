@@ -157,6 +157,8 @@ async function updateLytexInvoice(invoiceId: string, updates: {
         value: updates.valueCents,
       },
     ];
+    // Flag obrigatório para a API Lytex interpretar o valor corretamente em centavos
+    updatePayload.valueIsInCents = true;
   }
 
   console.log("[Subscription Billing] Atualizando fatura Lytex:", invoiceId, JSON.stringify(updatePayload, null, 2));
@@ -553,15 +555,24 @@ const handler = async (req: Request): Promise<Response> => {
         // Atualizar no Lytex se tiver ID
         if (invoice.lytex_invoice_id) {
           try {
+            console.log("[Subscription Billing] Tentando atualizar Lytex ID:", invoice.lytex_invoice_id, {
+              newDueDate,
+              newValueCents,
+              discountInfo
+            });
             await updateLytexInvoice(invoice.lytex_invoice_id, {
               dueDate: newDueDate || undefined,
               valueCents: newValueCents,
               itemName: newValueCents !== undefined ? itemName : undefined,
             });
+            console.log("[Subscription Billing] Lytex atualizado com sucesso");
           } catch (lytexError: any) {
             console.error("[Subscription Billing] Erro ao atualizar Lytex:", lytexError);
-            // Continuar com atualização local mesmo se Lytex falhar
+            console.error("[Subscription Billing] Stack:", lytexError.stack);
+            // Continuar com atualização local mesmo se Lytex falhar, mas loggar o erro
           }
+        } else {
+          console.log("[Subscription Billing] Boleto sem lytex_invoice_id, atualizando apenas local");
         }
 
         // Atualizar no banco de dados
