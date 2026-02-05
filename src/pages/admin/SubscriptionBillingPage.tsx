@@ -47,10 +47,18 @@ import {
   Calendar,
   DollarSign,
   Search,
+ Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+ interface Clinic {
+   id: string;
+   name: string;
+   cnpj: string | null;
+   email: string | null;
+ }
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -84,6 +92,9 @@ export default function SubscriptionBillingPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generateSingleDialogOpen, setGenerateSingleDialogOpen] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+  const [clinicSearchTerm, setClinicSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -158,6 +169,25 @@ export default function SubscriptionBillingPage() {
     },
   });
 
+  // Buscar clínicas com assinatura ativa para gerar boleto individual
+  const { data: clinicsWithSubscription = [] } = useQuery({
+    queryKey: ["clinics-with-subscription"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select(`
+          clinic_id,
+          clinics(id, name, cnpj, email)
+        `)
+        .eq("status", "active");
+
+      if (error) throw error;
+      return (data || [])
+        .filter((s: any) => s.clinics?.cnpj)
+        .map((s: any) => s.clinics as Clinic);
+    },
+  });
+
   // Mutation para gerar boletos em lote
   const generateBulkMutation = useMutation({
     mutationFn: async ({ month, year }: { month: number; year: number }) => {
@@ -191,6 +221,42 @@ export default function SubscriptionBillingPage() {
       }
       queryClient.invalidateQueries({ queryKey: ["subscription-invoices"] });
       setGenerateDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Mutation para gerar boleto individual
+  const generateSingleMutation = useMutation({
+    mutationFn: async ({ clinicId, month, year }: { clinicId: string; month: number; year: number }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Não autenticado");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/subscription-billing-api`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ action: "generate_invoice", clinicId, month, year }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao gerar boleto");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Boleto gerado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["subscription-invoices"] });
+      setGenerateSingleDialogOpen(false);
+      setSelectedClinic(null);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -286,6 +352,10 @@ export default function SubscriptionBillingPage() {
           <Button onClick={() => setGenerateDialogOpen(true)}>
             <Zap className="h-4 w-4 mr-2" />
             Gerar Boletos
+          </Button>
+          <Button variant="outline" onClick={() => setGenerateSingleDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Gerar por Clínica
           </Button>
         </div>
       </div>
@@ -687,6 +757,160 @@ export default function SubscriptionBillingPage() {
                 <Zap className="h-4 w-4 mr-2" />
               )}
               Gerar Boletos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Geração Individual por Clínica */}
+      <Dialog open={generateSingleDialogOpen} onOpenChange={(open) => {
+        setGenerateSingleDialogOpen(open);
+        if (!open) {
+          setSelectedClinic(null);
+          setClinicSearchTerm("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar Boleto por Clínica</DialogTitle>
+            <DialogDescription>
+              Gerar boleto de assinatura para uma clínica específica
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Seleção de Clínica */}
+            <div className="space-y-2">
+              <Label>Clínica</Label>
+              {selectedClinic ? (
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">{selectedClinic.name}</p>
+                      <p className="text-xs text-muted-foreground">{selectedClinic.cnpj}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedClinic(null)}>
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar clínica por nome..."
+                      value={clinicSearchTerm}
+                      onChange={(e) => setClinicSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
+                    {clinicsWithSubscription
+                      .filter((c) => 
+                        !clinicSearchTerm || 
+                        c.name.toLowerCase().includes(clinicSearchTerm.toLowerCase()) ||
+                        c.cnpj?.includes(clinicSearchTerm)
+                      )
+                      .slice(0, 10)
+                      .map((clinic) => (
+                        <button
+                          key={clinic.id}
+                          className="w-full p-3 text-left hover:bg-muted/50 transition-colors flex items-center gap-2"
+                          onClick={() => {
+                            setSelectedClinic(clinic);
+                            setClinicSearchTerm("");
+                          }}
+                        >
+                          <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{clinic.name}</p>
+                            <p className="text-xs text-muted-foreground">{clinic.cnpj}</p>
+                          </div>
+                        </button>
+                      ))}
+                    {clinicsWithSubscription.filter((c) => 
+                      !clinicSearchTerm || 
+                      c.name.toLowerCase().includes(clinicSearchTerm.toLowerCase())
+                    ).length === 0 && (
+                      <p className="p-3 text-sm text-muted-foreground text-center">
+                        Nenhuma clínica encontrada
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Seleção de Mês/Ano */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Mês</Label>
+                <Select
+                  value={String(selectedMonth)}
+                  onValueChange={(v) => setSelectedMonth(parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, index) => (
+                      <SelectItem key={index} value={String(index + 1)}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ano</Label>
+                <Select
+                  value={String(selectedYear)}
+                  onValueChange={(v) => setSelectedYear(parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {selectedClinic && (
+              <p className="text-sm text-muted-foreground">
+                Será gerado boleto de {MONTHS[selectedMonth - 1]}/{selectedYear} para{" "}
+                <span className="font-medium">{selectedClinic.name}</span>.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateSingleDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedClinic) {
+                  generateSingleMutation.mutate({
+                    clinicId: selectedClinic.id,
+                    month: selectedMonth,
+                    year: selectedYear,
+                  });
+                }
+              }}
+              disabled={!selectedClinic || generateSingleMutation.isPending}
+            >
+              {generateSingleMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Receipt className="h-4 w-4 mr-2" />
+              )}
+              Gerar Boleto
             </Button>
           </DialogFooter>
         </DialogContent>
