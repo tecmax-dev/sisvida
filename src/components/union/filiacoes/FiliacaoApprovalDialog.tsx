@@ -31,7 +31,7 @@ export function FiliacaoApprovalDialog({
   onComplete,
 }: Props) {
   const { toast } = useToast();
-  const { user, currentClinic } = useAuth();
+  const { user } = useAuth();
   const [processing, setProcessing] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
@@ -52,57 +52,8 @@ export function FiliacaoApprovalDialog({
       const now = new Date().toISOString();
 
       if (isApprove) {
-        // Fetch full filiacao data for patient creation
-        const { data: filiacaoData, error: fetchError } = await supabase
-          .from("sindical_associados")
-          .select("*, sindicato:sindicato_id(clinic_id)")
-          .eq("id", filiacao.id)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const clinicId = filiacaoData.sindicato?.clinic_id || currentClinic?.id;
-
-        if (!clinicId) {
-          throw new Error("Clínica não encontrada para criar o cadastro do associado");
-        }
-
         // Generate matricula (registration number)
         const matricula = `${Date.now().toString().slice(-6)}`;
-
-        // Create patient record in the clinic's patient database
-        const { data: newPatient, error: patientError } = await supabase
-          .from("patients")
-          .insert({
-            clinic_id: clinicId,
-            name: filiacaoData.nome,
-            cpf: filiacaoData.cpf,
-            email: filiacaoData.email || null,
-            phone: filiacaoData.telefone || null,
-            birth_date: filiacaoData.data_nascimento || null,
-            gender: filiacaoData.sexo || null,
-            street: filiacaoData.logradouro || null,
-            street_number: filiacaoData.numero || null,
-            neighborhood: filiacaoData.bairro || null,
-            city: filiacaoData.cidade || null,
-            state: filiacaoData.uf || null,
-            cep: filiacaoData.cep || null,
-            registration_number: matricula,
-            tag: "ativo",
-            notes: `Filiação aprovada em ${new Date().toLocaleDateString("pt-BR")}. Cargo: ${filiacaoData.cargo || "-"}`,
-          })
-          .select("id")
-          .single();
-
-        if (patientError) {
-          // Check if it's a duplicate CPF error
-          if (patientError.code === "23505") {
-            // CPF already exists, just update the filiacao
-            console.log("Patient already exists, updating filiacao status only");
-          } else {
-            throw patientError;
-          }
-        }
 
         // Update filiacao status (status must be 'ativo' per constraint)
         const updateData = {
@@ -139,9 +90,9 @@ export function FiliacaoApprovalDialog({
           }
         }
 
-        toast({ 
+        toast({
           title: "Filiação aprovada com sucesso!",
-          description: "Associado cadastrado na base de sócios da entidade.",
+          description: "Status atualizado e matrícula gerada.",
         });
       } else {
         // Reject
