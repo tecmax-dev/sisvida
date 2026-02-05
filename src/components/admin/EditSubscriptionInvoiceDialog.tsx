@@ -12,7 +12,7 @@
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Label } from "@/components/ui/label";
- import { Loader2, Calendar, DollarSign } from "lucide-react";
+import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
  import { toast } from "sonner";
  
  interface Invoice {
@@ -41,11 +41,15 @@
    const queryClient = useQueryClient();
    const [dueDate, setDueDate] = useState("");
    const [valueReais, setValueReais] = useState("");
+  const [discountReais, setDiscountReais] = useState("");
+  const [originalValueCents, setOriginalValueCents] = useState(0);
  
    useEffect(() => {
      if (invoice && open) {
        setDueDate(invoice.due_date);
        setValueReais((invoice.value_cents / 100).toFixed(2).replace(".", ","));
+      setOriginalValueCents(invoice.value_cents);
+      setDiscountReais("");
      }
    }, [invoice, open]);
  
@@ -104,9 +108,25 @@
        return;
      }
  
+    // Aplicar desconto se informado
+    let finalValueCents = valueCents;
+    if (discountReais) {
+      const cleanDiscount = discountReais.replace(/\./g, "").replace(",", ".");
+      const discountCents = Math.round(parseFloat(cleanDiscount) * 100);
+      
+      if (!isNaN(discountCents) && discountCents > 0) {
+        finalValueCents = valueCents - discountCents;
+        
+        if (finalValueCents <= 0) {
+          toast.error("O desconto não pode ser maior ou igual ao valor do boleto");
+          return;
+        }
+      }
+    }
+
      // Verificar se houve mudanças
      const dateChanged = dueDate !== invoice.due_date;
-     const valueChanged = valueCents !== invoice.value_cents;
+    const valueChanged = finalValueCents !== invoice.value_cents;
  
      if (!dateChanged && !valueChanged) {
        toast.info("Nenhuma alteração detectada");
@@ -116,7 +136,7 @@
      updateMutation.mutate({
        invoiceId: invoice.id,
        newDueDate: dateChanged ? dueDate : undefined,
-       newValueCents: valueChanged ? valueCents : undefined,
+      newValueCents: valueChanged ? finalValueCents : undefined,
      });
    };
  
@@ -138,6 +158,28 @@
      return cleaned;
    };
  
+  // Calcular valor final com desconto
+  const calculateFinalValue = () => {
+    const cleanValue = valueReais.replace(/\./g, "").replace(",", ".");
+    const valueCents = Math.round(parseFloat(cleanValue) * 100);
+    
+    if (isNaN(valueCents)) return 0;
+    
+    if (discountReais) {
+      const cleanDiscount = discountReais.replace(/\./g, "").replace(",", ".");
+      const discountCents = Math.round(parseFloat(cleanDiscount) * 100);
+      
+      if (!isNaN(discountCents) && discountCents > 0) {
+        return Math.max(0, valueCents - discountCents);
+      }
+    }
+    
+    return valueCents;
+  };
+
+  const finalValueCents = calculateFinalValue();
+  const hasDiscount = discountReais && parseFloat(discountReais.replace(",", ".")) > 0;
+
    if (!invoice) return null;
  
    const clinicName = (invoice.clinics as any)?.name || "Clínica";
@@ -195,6 +237,51 @@
                />
              </div>
            </div>
+
+          {/* Desconto */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Percent className="h-4 w-4" />
+              Desconto (R$)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                R$
+              </span>
+              <Input
+                type="text"
+                value={discountReais}
+                onChange={(e) => setDiscountReais(formatCurrency(e.target.value))}
+                className="pl-10"
+                placeholder="0,00"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para não aplicar desconto
+            </p>
+          </div>
+
+          {/* Resumo do valor final */}
+          {hasDiscount && (
+            <div className="p-3 bg-success/10 border border-success/20 rounded-lg space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Valor original:</span>
+                <span className="line-through text-muted-foreground">
+                  R$ {valueReais}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Desconto:</span>
+                <span className="text-destructive">- R$ {discountReais}</span>
+              </div>
+              <div className="flex justify-between font-medium border-t border-success/20 pt-1 mt-1">
+                <span>Valor final:</span>
+                <span className="text-success">
+                  R$ {(finalValueCents / 100).toFixed(2).replace(".", ",")}
+                </span>
+              </div>
+            </div>
+          )}
          </div>
  
          <DialogFooter>
