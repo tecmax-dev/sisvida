@@ -71,7 +71,7 @@ interface Filiacao {
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   pendente: { label: "Pendente", color: "bg-amber-500/20 text-amber-600 border-amber-500/30", icon: Clock },
-  aprovado: { label: "Aprovado", color: "bg-emerald-500/20 text-emerald-600 border-emerald-500/30", icon: CheckCircle },
+  ativo: { label: "Ativo", color: "bg-emerald-500/20 text-emerald-600 border-emerald-500/30", icon: CheckCircle },
   rejeitado: { label: "Rejeitado", color: "bg-red-500/20 text-red-600 border-red-500/30", icon: XCircle },
 };
 
@@ -189,7 +189,7 @@ export default function UnionFiliacoesPage() {
       const counts = {
         total: data.length,
         pendentes: data.filter((f) => f.status === "pendente").length,
-        aprovados: data.filter((f) => f.status === "aprovado").length,
+        aprovados: data.filter((f) => f.status === "ativo").length,
         rejeitados: data.filter((f) => f.status === "rejeitado").length,
       };
       setStats(counts);
@@ -285,8 +285,8 @@ export default function UnionFiliacoesPage() {
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all ${statusFilter === 'aprovado' ? 'ring-2 ring-emerald-500' : ''} bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20`}
-          onClick={() => setStatusFilter("aprovado")}
+          className={`cursor-pointer transition-all ${statusFilter === 'ativo' ? 'ring-2 ring-emerald-500' : ''} bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20`}
+          onClick={() => setStatusFilter("ativo")}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -295,7 +295,7 @@ export default function UnionFiliacoesPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-emerald-500">{stats.aprovados}</p>
-                <p className="text-xs text-muted-foreground">Aprovados</p>
+                <p className="text-xs text-muted-foreground">Ativos</p>
               </div>
             </div>
           </CardContent>
@@ -340,7 +340,7 @@ export default function UnionFiliacoesPage() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="pendente">Pendentes</SelectItem>
-                <SelectItem value="aprovado">Aprovados</SelectItem>
+                <SelectItem value="ativo">Ativos</SelectItem>
                 <SelectItem value="rejeitado">Rejeitados</SelectItem>
               </SelectContent>
             </Select>
@@ -453,7 +453,7 @@ export default function UnionFiliacoesPage() {
                                 </DropdownMenuItem>
                               </>
                             )}
-                            {filiacao.status === "aprovado" && (
+                            {filiacao.status === "ativo" && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => handleViewDetails(filiacao)}>
