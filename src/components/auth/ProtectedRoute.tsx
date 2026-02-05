@@ -42,15 +42,19 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     return <BlockedClinicOverlay reason={currentClinic.blocked_reason || undefined} />;
   }
 
-  // If user has no clinic, redirect to setup (unless super admin)
-  // Super admin without clinic should go to /admin, not /clinic-setup
-  if (userRoles.length === 0 && !isSuperAdmin && location.pathname !== "/clinic-setup") {
-    return <Navigate to="/clinic-setup" replace />;
+  // Super admin without clinic trying to access non-admin routes should go to admin
+  // IMPORTANT: Check this BEFORE the clinic-setup redirect to avoid wrong redirects
+  // Also redirect if super admin has no currentClinic set and is trying to access dashboard
+  if (isSuperAdmin && !location.pathname.startsWith("/admin")) {
+    // Super admin without roles OR without a current clinic should go to /admin
+    if (userRoles.length === 0 || !currentClinic) {
+      return <Navigate to="/admin" replace />;
+    }
   }
 
-  // Super admin without clinic trying to access non-admin routes should go to admin
-  if (isSuperAdmin && userRoles.length === 0 && !location.pathname.startsWith("/admin")) {
-    return <Navigate to="/admin" replace />;
+  // If user has no clinic, redirect to setup (unless super admin - handled above)
+  if (userRoles.length === 0 && !isSuperAdmin && location.pathname !== "/clinic-setup") {
+    return <Navigate to="/clinic-setup" replace />;
   }
 
   // Redirect professional-only users directly to their calendar
