@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.set-contribution-value]
 verify_jwt = false
+
+[functions.employer-portal-auth]
+verify_jwt = false
