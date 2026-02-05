@@ -81,7 +81,6 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SendWelcomeDialog } from "@/components/admin/SendWelcomeDialog";
 import { Switch } from "@/components/ui/switch";
-import { MercadoPagoPaymentDialog } from "@/components/payments/MercadoPagoPaymentDialog";
 
 interface Clinic {
   id: string;
@@ -411,7 +410,7 @@ export default function ClinicsManagement() {
   const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
   
   // Payment dialog
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [generatingBoleto, setGeneratingBoleto] = useState(false);
   
   const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
@@ -840,6 +839,54 @@ export default function ClinicsManagement() {
   const isProfessionalLimitExceeded = selectedClinic && selectedPlan 
     ? selectedClinic.professionalsCount > selectedPlan.max_professionals 
     : false;
+
+  // Handler para gerar boleto via Lytex
+  const handleGenerateLytexBoleto = async () => {
+    if (!selectedClinic || !selectedPlan) return;
+    
+    setGeneratingBoleto(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Não autenticado");
+      
+      const currentDate = new Date();
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/subscription-billing-api`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            action: "generate_invoice", 
+            clinicId: selectedClinic.id, 
+            month, 
+            year 
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao gerar boleto");
+      }
+      
+      const result = await response.json();
+      toast.success("Boleto gerado com sucesso!");
+      
+      if (result.invoice?.invoice_url) {
+        window.open(result.invoice.invoice_url, "_blank");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao gerar boleto");
+    } finally {
+      setGeneratingBoleto(false);
+    }
+  };
 
   // Calculate totals
   const totalPatients = clinics.reduce((sum, c) => sum + c.patientsCount, 0);
@@ -1477,13 +1524,18 @@ export default function ClinicsManagement() {
             <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>
               Cancelar
             </Button>
-            {selectedClinic?.subscription && selectedPlan && (
+            {selectedClinic?.subscription && selectedPlan && (selectedClinic.cnpj || (selectedClinic as any).owner_cpf) && (
               <Button 
                 variant="secondary"
-                onClick={() => setPaymentDialogOpen(true)}
+                onClick={handleGenerateLytexBoleto}
+                disabled={generatingBoleto}
               >
-                <QrCode className="h-4 w-4 mr-2" />
-                Gerar PIX/Boleto
+                {generatingBoleto ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <QrCode className="h-4 w-4 mr-2" />
+                )}
+                Gerar Boleto Lytex
               </Button>
             )}
             <Button 
@@ -1621,21 +1673,6 @@ export default function ClinicsManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Mercado Pago Payment Dialog for Plan Subscription */}
-      {selectedClinic && selectedPlan && (
-        <MercadoPagoPaymentDialog
-          open={paymentDialogOpen}
-          onOpenChange={setPaymentDialogOpen}
-          clinicId={selectedClinic.id}
-          amount={selectedPlan.monthly_price}
-          description={`Assinatura do plano ${selectedPlan.name} - ${selectedClinic.name}`}
-          source="subscription"
-          sourceId={selectedClinic.subscription?.id || selectedClinic.id}
-          payerName={selectedClinic.name}
-          payerEmail={selectedClinic.email || ""}
-          payerCpf={selectedClinic.cnpj || ""}
-        />
-      )}
     </div>
   );
 }
