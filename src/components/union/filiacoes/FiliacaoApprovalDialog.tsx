@@ -105,17 +105,12 @@ export function FiliacaoApprovalDialog({
         }
 
         // Update filiacao status
-        const updateData: any = {
+        const updateData = {
           status: "aprovado",
           aprovado_por: user.id,
           aprovado_at: now,
           matricula,
         };
-
-        // Link patient_id if created
-        if (newPatient?.id) {
-          updateData.patient_id = newPatient.id;
-        }
 
         const { error: updateError } = await supabase
           .from("sindical_associados")
