@@ -491,7 +491,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       case "update_invoice": {
         // Atualizar data de vencimento e/ou valor de um boleto existente
-        const { invoiceId, newDueDate, newValueCents } = params;
+        const { invoiceId, newDueDate, newValueCents, discountInfo } = params;
 
         if (!invoiceId) {
           throw new Error("ID do boleto é obrigatório");
@@ -543,7 +543,12 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Preparar dados para atualização
         const plan = invoice.subscription_plans as any;
-        const itemName = `Assinatura ${plan?.name || "Plano"} - ${String(invoice.competence_month).padStart(2, "0")}/${invoice.competence_year}`;
+        let itemName = `Assinatura ${plan?.name || "Plano"} - ${String(invoice.competence_month).padStart(2, "0")}/${invoice.competence_year}`;
+        
+        // Adicionar info do desconto na descrição do item se fornecida
+        if (discountInfo && newValueCents !== undefined) {
+          itemName = `${itemName} (${discountInfo})`;
+        }
 
         // Atualizar no Lytex se tiver ID
         if (invoice.lytex_invoice_id) {
@@ -577,6 +582,11 @@ const handler = async (req: Request): Promise<Response> => {
         if (newValueCents !== undefined) {
           updateData.value_cents = newValueCents;
           updateData.description = itemName;
+        }
+
+        // Salvar nota do desconto se fornecida
+        if (discountInfo) {
+          updateData.notes = discountInfo;
         }
 
         const { data: updatedInvoice, error: updateError } = await supabase

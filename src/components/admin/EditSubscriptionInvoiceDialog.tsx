@@ -43,6 +43,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
    const [valueReais, setValueReais] = useState("");
   const [discountReais, setDiscountReais] = useState("");
   const [originalValueCents, setOriginalValueCents] = useState(0);
+  const [discountReason, setDiscountReason] = useState("");
  
    useEffect(() => {
      if (invoice && open) {
@@ -50,14 +51,16 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
        setValueReais((invoice.value_cents / 100).toFixed(2).replace(".", ","));
       setOriginalValueCents(invoice.value_cents);
       setDiscountReais("");
+      setDiscountReason("");
      }
    }, [invoice, open]);
  
    const updateMutation = useMutation({
-     mutationFn: async ({ invoiceId, newDueDate, newValueCents }: {
+    mutationFn: async ({ invoiceId, newDueDate, newValueCents, discountInfo }: {
        invoiceId: string;
        newDueDate?: string;
        newValueCents?: number;
+      discountInfo?: string;
      }) => {
        const { data: { session } } = await supabase.auth.getSession();
        if (!session) throw new Error("Não autenticado");
@@ -75,6 +78,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
              invoiceId,
              newDueDate,
              newValueCents,
+            discountInfo,
            }),
          }
        );
@@ -124,6 +128,19 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
       }
     }
 
+    // Preparar info do desconto para o boleto
+    let discountInfo: string | undefined;
+    if (discountReais) {
+      const cleanDiscount = discountReais.replace(/\./g, "").replace(",", ".");
+      const discountCents = Math.round(parseFloat(cleanDiscount) * 100);
+      
+      if (!isNaN(discountCents) && discountCents > 0) {
+        discountInfo = discountReason 
+          ? `Desconto: R$ ${discountReais} - ${discountReason}`
+          : `Desconto aplicado: R$ ${discountReais}`;
+      }
+    }
+
      // Verificar se houve mudanças
      const dateChanged = dueDate !== invoice.due_date;
     const valueChanged = finalValueCents !== invoice.value_cents;
@@ -137,6 +154,7 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
        invoiceId: invoice.id,
        newDueDate: dateChanged ? dueDate : undefined,
       newValueCents: valueChanged ? finalValueCents : undefined,
+      discountInfo,
      });
    };
  
@@ -257,9 +275,26 @@ import { Loader2, Calendar, DollarSign, Percent } from "lucide-react";
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Deixe em branco para não aplicar desconto
+              Deixe em branco para manter valor atual
             </p>
           </div>
+
+          {/* Motivo do desconto */}
+          {hasDiscount && (
+            <div className="space-y-2">
+              <Label>Motivo do Desconto (aparecerá no boleto)</Label>
+              <Input
+                type="text"
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+                placeholder="Ex: Pagamento antecipado, Acordo comercial..."
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                Esta informação será exibida na descrição do boleto.
+              </p>
+            </div>
+          )}
 
           {/* Resumo do valor final */}
           {hasDiscount && (
