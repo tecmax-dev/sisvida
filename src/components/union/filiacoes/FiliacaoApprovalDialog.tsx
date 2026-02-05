@@ -104,9 +104,9 @@ export function FiliacaoApprovalDialog({
           }
         }
 
-        // Update filiacao status
+        // Update filiacao status (status must be 'ativo' per constraint)
         const updateData = {
-          status: "aprovado",
+          status: "ativo",
           aprovado_por: user.id,
           aprovado_at: now,
           matricula,
