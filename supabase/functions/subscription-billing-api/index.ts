@@ -275,7 +275,8 @@ async function cancelLytexInvoice(invoiceId: string, dueDate?: string): Promise<
     const notFound =
       lower.includes("não encontrada") ||
       lower.includes("not found") ||
-      response.status === 404;
+      response.status === 404 ||
+      (response.status === 400 && lower.includes("não encontrada"));
 
     if (response.ok) return { ok: true, data: responseData };
 
