@@ -383,11 +383,11 @@ const handler = async (req: Request): Promise<Response> => {
             value_cents: valueCents,
             due_date: dueDate.toISOString().split("T")[0],
             status: "pending",
-            lytex_invoice_id: lytexInvoice.id,
-            lytex_client_id: lytexInvoice.clientId,
-            invoice_url: lytexInvoice.url || lytexInvoice.paymentUrl,
-            digitable_line: lytexInvoice.boleto?.digitableLine || lytexInvoice.digitableLine,
-            pix_code: lytexInvoice.pix?.code || lytexInvoice.pixCode,
+            lytex_invoice_id: lytexInvoice._id || lytexInvoice.id,
+            lytex_client_id: lytexInvoice._clientId || lytexInvoice.clientId,
+            invoice_url: lytexInvoice.linkCheckout || lytexInvoice.url || lytexInvoice.paymentUrl,
+            digitable_line: lytexInvoice.paymentMethods?.boleto?.digitableLine || lytexInvoice.boleto?.digitableLine || lytexInvoice.digitableLine,
+            pix_code: lytexInvoice.paymentMethods?.pix?.qrcode || lytexInvoice.pix?.code || lytexInvoice.pixCode,
             description: discountInfo 
               ? `Assinatura ${plan.name} - ${String(month).padStart(2, "0")}/${year} (${discountInfo})`
               : `Assinatura ${plan.name} - ${String(month).padStart(2, "0")}/${year}`,
@@ -486,11 +486,11 @@ const handler = async (req: Request): Promise<Response> => {
               value_cents: valueCents,
               due_date: dueDate.toISOString().split("T")[0],
               status: "pending",
-              lytex_invoice_id: lytexInvoice.id,
-              lytex_client_id: lytexInvoice.clientId,
-              invoice_url: lytexInvoice.url || lytexInvoice.paymentUrl,
-              digitable_line: lytexInvoice.boleto?.digitableLine || lytexInvoice.digitableLine,
-              pix_code: lytexInvoice.pix?.code || lytexInvoice.pixCode,
+              lytex_invoice_id: lytexInvoice._id || lytexInvoice.id,
+              lytex_client_id: lytexInvoice._clientId || lytexInvoice.clientId,
+              invoice_url: lytexInvoice.linkCheckout || lytexInvoice.url || lytexInvoice.paymentUrl,
+              digitable_line: lytexInvoice.paymentMethods?.boleto?.digitableLine || lytexInvoice.boleto?.digitableLine || lytexInvoice.digitableLine,
+              pix_code: lytexInvoice.paymentMethods?.pix?.qrcode || lytexInvoice.pix?.code || lytexInvoice.pixCode,
               description: `Assinatura ${plan.name} - ${String(month).padStart(2, "0")}/${year}`,
             });
 
