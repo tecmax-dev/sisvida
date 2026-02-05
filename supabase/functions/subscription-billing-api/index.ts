@@ -793,22 +793,23 @@ const handler = async (req: Request): Promise<Response> => {
         const lytexInvoiceId =
           invoice.lytex_invoice_id || extractLytexInvoiceIdFromUrl(invoice.invoice_url);
 
-        if (!lytexInvoiceId) {
-          throw new Error(
-            "Não foi possível cancelar na Lytex: boleto sem identificador (lytex_invoice_id/invoice_url) salvo no sistema."
-          );
-        }
+        let cancelledInLytex = false;
+        
+        if (lytexInvoiceId) {
+          // Se conseguimos extrair pela URL, persistir para não quebrar novamente
+          if (!invoice.lytex_invoice_id && lytexInvoiceId) {
+            await supabase
+              .from("subscription_invoices")
+              .update({ lytex_invoice_id: lytexInvoiceId })
+              .eq("id", invoiceId);
+          }
 
-        // Se conseguimos extrair pela URL, persistir para não quebrar novamente
-        if (!invoice.lytex_invoice_id && lytexInvoiceId) {
-          await supabase
-            .from("subscription_invoices")
-            .update({ lytex_invoice_id: lytexInvoiceId })
-            .eq("id", invoiceId);
+          // Se a Lytex falhar, NÃO cancelamos localmente (evita divergência)
+          await cancelLytexInvoice(lytexInvoiceId);
+          cancelledInLytex = true;
+        } else {
+          console.log("[Subscription Billing] Boleto sem ID Lytex - cancelamento apenas local");
         }
-
-        // Se a Lytex falhar, NÃO cancelamos localmente (evita divergência)
-        await cancelLytexInvoice(lytexInvoiceId);
 
         // Atualizar status no banco
         const { data: updatedInvoice, error: updateError } = await supabase
@@ -816,9 +817,9 @@ const handler = async (req: Request): Promise<Response> => {
           .update({
             status: "cancelled",
             updated_at: new Date().toISOString(),
-            notes: invoice.notes 
-              ? `${invoice.notes}\n[Cancelado em ${new Date().toLocaleDateString("pt-BR")}]`
-              : `[Cancelado em ${new Date().toLocaleDateString("pt-BR")}]`,
+            notes: invoice.notes
+              ? `${invoice.notes}\n[Cancelado em ${new Date().toLocaleDateString("pt-BR")}${cancelledInLytex ? "" : " - apenas local"}]`
+              : `[Cancelado em ${new Date().toLocaleDateString("pt-BR")}${cancelledInLytex ? "" : " - apenas local"}]`,
           })
           .eq("id", invoiceId)
           .select()
