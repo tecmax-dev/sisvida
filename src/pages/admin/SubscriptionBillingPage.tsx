@@ -532,7 +532,7 @@ export default function SubscriptionBillingPage() {
                           <Badge variant="outline">{(invoice.subscription_plans as any)?.name || "-"}</Badge>
                         </TableCell>
                         <TableCell>
-                          {format(new Date(invoice.due_date), "dd/MM/yyyy")}
+                          {format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell className="font-medium">
                           {formatCurrency(invoice.value_cents)}
