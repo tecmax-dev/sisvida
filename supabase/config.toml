@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.send-homologacao-protocol]
 verify_jwt = false
+
+[functions.subscription-billing-webhook]
+verify_jwt = false
+
+[functions.lytex-webhook]
+verify_jwt = false

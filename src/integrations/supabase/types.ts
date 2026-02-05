@@ -9904,6 +9904,51 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_webhook_logs: {
+        Row: {
+          clinic_id: string | null
+          created_at: string | null
+          id: string
+          invoice_id: string | null
+          payload: Json | null
+          processed: boolean | null
+          webhook_type: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          payload?: Json | null
+          processed?: boolean | null
+          webhook_type?: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          payload?: Json | null
+          processed?: boolean | null
+          webhook_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_webhook_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_webhook_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           billing_day: number | null
