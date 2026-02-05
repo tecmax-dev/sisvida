@@ -66,6 +66,7 @@ interface CreateInvoiceParams {
   dueDate: string;
   competenceMonth: number;
   competenceYear: number;
+  instructions?: string;
 }
 
 async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
@@ -74,7 +75,7 @@ async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
   const cleanDoc = params.clinicDocument.replace(/\D/g, "");
   const isPF = cleanDoc.length <= 11;
   
-  const invoicePayload = {
+  const invoicePayload: any = {
     client: {
       type: isPF ? "pf" : "pj",
       name: isPF && params.ownerName ? params.ownerName : params.clinicName,
@@ -97,6 +98,11 @@ async function createLytexInvoice(params: CreateInvoiceParams): Promise<any> {
     },
     referenceId: `sub-${params.clinicId}-${params.competenceYear}-${params.competenceMonth}`,
   };
+
+  // Adicionar instruções ao boleto se fornecidas
+  if (params.instructions) {
+    invoicePayload.instructions = params.instructions;
+  }
 
   console.log("[Subscription Billing] Criando fatura Lytex:", JSON.stringify(invoicePayload, null, 2));
 
@@ -356,6 +362,14 @@ const handler = async (req: Request): Promise<Response> => {
             : `Desconto aplicado: R$ ${discountBRL}`;
         }
         
+        // Montar instruções do boleto
+        let boletoInstructions: string | undefined;
+        if (discountInfo) {
+          const originalBRL = (originalValueCents / 100).toFixed(2).replace(".", ",");
+          const finalBRL = (valueCents / 100).toFixed(2).replace(".", ",");
+          boletoInstructions = `Valor original: R$ ${originalBRL}\n${discountInfo}\nValor final: R$ ${finalBRL}`;
+        }
+
         // Criar fatura no Lytex
         const lytexInvoice = await createLytexInvoice({
           clinicId: clinic.id,
@@ -369,6 +383,7 @@ const handler = async (req: Request): Promise<Response> => {
           dueDate: dueDate.toISOString().split("T")[0],
           competenceMonth: month,
           competenceYear: year,
+          instructions: boletoInstructions,
         });
 
         // Salvar no banco
