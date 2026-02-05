@@ -48,10 +48,12 @@ import {
   DollarSign,
   Search,
  Plus,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { EditSubscriptionInvoiceDialog } from "@/components/admin/EditSubscriptionInvoiceDialog";
 
  interface Clinic {
    id: string;
@@ -97,6 +99,8 @@ export default function SubscriptionBillingPage() {
   const [clinicSearchTerm, setClinicSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<any>(null);
 
   // Verificar se credenciais estão configuradas
   const { data: credentialsStatus, isLoading: checkingCredentials } = useQuery({
@@ -547,9 +551,19 @@ export default function SubscriptionBillingPage() {
                                 </a>
                               </Button>
                             )}
-                            <Button variant="ghost" size="sm">
-                              <FileText className="h-4 w-4" />
-                            </Button>
+                            {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setInvoiceToEdit(invoice);
+                                  setEditDialogOpen(true);
+                                }}
+                                title="Editar boleto"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -916,6 +930,13 @@ export default function SubscriptionBillingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Edição de Boleto */}
+      <EditSubscriptionInvoiceDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        invoice={invoiceToEdit}
+      />
     </div>
   );
 }
