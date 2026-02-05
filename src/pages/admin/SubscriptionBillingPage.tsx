@@ -103,6 +103,9 @@ export default function SubscriptionBillingPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<any>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+  const [whatsAppDialogOpen, setWhatsAppDialogOpen] = useState(false);
+  const [whatsAppPhone, setWhatsAppPhone] = useState("");
+  const [whatsAppInvoice, setWhatsAppInvoice] = useState<any>(null);
 
   // Verificar se credenciais estão configuradas
   const { data: credentialsStatus, isLoading: checkingCredentials } = useQuery({
@@ -332,7 +335,7 @@ export default function SubscriptionBillingPage() {
     paidValue: invoices.filter(i => i.status === "paid").reduce((sum, i) => sum + (i.paid_value_cents || i.value_cents || 0), 0),
   };
 
-  const handleSendWhatsApp = async (invoice: any) => {
+  const handleOpenWhatsAppDialog = async (invoice: any) => {
     const clinic = invoice.clinics;
     if (!clinic) {
       toast.error("Dados da clínica não encontrados");
@@ -346,28 +349,36 @@ export default function SubscriptionBillingPage() {
       .eq("id", clinic.id)
       .single();
 
-    if (clinicError || !clinicData?.phone) {
-      toast.error("Telefone da clínica não encontrado. Cadastre o telefone primeiro.");
+    setWhatsAppPhone(clinicData?.phone || "");
+    setWhatsAppInvoice({ ...invoice, clinicName: clinicData?.name || clinic.name });
+    setWhatsAppDialogOpen(true);
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!whatsAppPhone.trim()) {
+      toast.error("Informe um número de telefone");
       return;
     }
 
-    setSendingWhatsApp(invoice.id);
+    if (!whatsAppInvoice) return;
+
+    setSendingWhatsApp(whatsAppInvoice.id);
 
     try {
-      const planName = (invoice.subscription_plans as any)?.name || "Assinatura";
-      const dueDate = format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy");
-      const valueBRL = (invoice.value_cents / 100).toFixed(2).replace(".", ",");
-      const competence = `${MONTHS[invoice.competence_month - 1]}/${invoice.competence_year}`;
+      const planName = (whatsAppInvoice.subscription_plans as any)?.name || "Assinatura";
+      const dueDate = format(new Date(whatsAppInvoice.due_date + "T12:00:00"), "dd/MM/yyyy");
+      const valueBRL = (whatsAppInvoice.value_cents / 100).toFixed(2).replace(".", ",");
+      const competence = `${MONTHS[whatsAppInvoice.competence_month - 1]}/${whatsAppInvoice.competence_year}`;
 
       const message = `🏥 *Eclini - Cobrança de Assinatura*
 
-Olá, ${clinicData.name}!
+Olá, ${whatsAppInvoice.clinicName}!
 
 Sua fatura referente a *${competence}* do plano *${planName}* está disponível.
 
 💰 *Valor:* R$ ${valueBRL}
 📅 *Vencimento:* ${dueDate}
-${invoice.invoice_url ? `\n📄 *Link do Boleto:* ${invoice.invoice_url}` : ""}
+${whatsAppInvoice.invoice_url ? `\n📄 *Link do Boleto:* ${whatsAppInvoice.invoice_url}` : ""}
 
 Em caso de dúvidas, entre em contato conosco.
 
@@ -375,7 +386,7 @@ _Equipe Eclini_`;
 
       const { data, error } = await supabase.functions.invoke("test-billing-whatsapp", {
         body: {
-          phone: clinicData.phone,
+          phone: whatsAppPhone,
           message: message,
         },
       });
@@ -384,6 +395,7 @@ _Equipe Eclini_`;
       if (!data?.success) throw new Error(data?.error || "Erro ao enviar mensagem");
 
       toast.success("Mensagem enviada via WhatsApp com sucesso!");
+      setWhatsAppDialogOpen(false);
     } catch (error: any) {
       console.error("WhatsApp error:", error);
       toast.error(error.message || "Erro ao enviar mensagem via WhatsApp");
@@ -617,16 +629,11 @@ _Equipe Eclini_`;
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleSendWhatsApp(invoice)}
-                                disabled={sendingWhatsApp === invoice.id}
+                                onClick={() => handleOpenWhatsAppDialog(invoice)}
                                 title="Enviar via WhatsApp"
                                 className="text-success hover:text-success/80"
                               >
-                                {sendingWhatsApp === invoice.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <MessageCircle className="h-4 w-4" />
-                                )}
+                                <MessageCircle className="h-4 w-4" />
                               </Button>
                             )}
                             {invoice.status !== "paid" && invoice.status !== "cancelled" && (
@@ -1015,6 +1022,56 @@ _Equipe Eclini_`;
         onOpenChange={setEditDialogOpen}
         invoice={invoiceToEdit}
       />
+
+      {/* Dialog de Envio WhatsApp */}
+      <Dialog open={whatsAppDialogOpen} onOpenChange={setWhatsAppDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar Boleto via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Confirme o número de telefone para envio
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp-phone">Telefone</Label>
+              <Input
+                id="whatsapp-phone"
+                value={whatsAppPhone}
+                onChange={(e) => setWhatsAppPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+              />
+              <p className="text-xs text-muted-foreground">
+                Número pré-preenchido da clínica. Altere se necessário.
+              </p>
+            </div>
+            {whatsAppInvoice && (
+              <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+                <p><strong>Clínica:</strong> {whatsAppInvoice.clinicName}</p>
+                <p><strong>Valor:</strong> R$ {(whatsAppInvoice.value_cents / 100).toFixed(2).replace(".", ",")}</p>
+                <p><strong>Vencimento:</strong> {format(new Date(whatsAppInvoice.due_date + "T12:00:00"), "dd/MM/yyyy")}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWhatsAppDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSendWhatsApp} 
+              disabled={sendingWhatsApp !== null}
+              className="gap-2"
+            >
+              {sendingWhatsApp ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageCircle className="h-4 w-4" />
+              )}
+              Enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
