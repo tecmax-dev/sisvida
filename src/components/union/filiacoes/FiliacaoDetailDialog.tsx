@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -118,39 +118,46 @@ export function FiliacaoDetailDialog({
   const [generatingPDF, setGeneratingPDF] = useState(false);
 
   // Fetch full data when dialog opens
-  const fetchData = async () => {
-    if (!filiacao?.id) return;
-    
-    setLoading(true);
-    try {
-      const { data: filiacaoData, error } = await supabase
-        .from("sindical_associados")
-        .select("*")
-        .eq("id", filiacao.id)
-        .single();
+  useEffect(() => {
+    if (!open || !filiacao?.id) return;
 
-      if (error) throw error;
-      setData(filiacaoData);
+    let cancelled = false;
 
-      // Fetch dependents
-      const { data: depsData } = await supabase
-        .from("sindical_associado_dependentes")
-        .select("*")
-        .eq("associado_id", filiacao.id);
-      
-      setDependents(depsData || []);
-    } catch (error) {
-      console.error("Error fetching filiacao:", error);
-      toast({ title: "Erro ao carregar dados", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const { data: filiacaoData, error } = await supabase
+          .from("sindical_associados")
+          .select("*")
+          .eq("id", filiacao.id)
+          .single();
 
-  // Fetch when dialog opens
-  if (open && filiacao?.id && !data) {
-    fetchData();
-  }
+        if (error) throw error;
+        if (cancelled) return;
+        setData(filiacaoData);
+
+        // Fetch dependents
+        const { data: depsData } = await supabase
+          .from("sindical_associado_dependentes")
+          .select("*")
+          .eq("associado_id", filiacao.id);
+
+        if (cancelled) return;
+        setDependents(depsData || []);
+      } catch (error) {
+        console.error("Error fetching filiacao:", error);
+        toast({ title: "Erro ao carregar dados", variant: "destructive" });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, filiacao?.id, toast]);
 
   // Reset when dialog closes
   const handleOpenChange = (newOpen: boolean) => {

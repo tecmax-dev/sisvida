@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.employer-portal-auth]
 verify_jwt = false
+
+[functions.send-filiacao-notification]
+verify_jwt = false
