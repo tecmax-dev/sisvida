@@ -65,6 +65,12 @@ async function renderApp() {
     }
   };
 
+  // Função global para limpar cache de pop-ups do PWA
+  (window as any).clearPopupCache = (): void => {
+    sessionStorage.removeItem("popup_notices_dismissed");
+    console.info('[PWA] Cache de pop-ups limpo. Recarregue a página para ver os avisos novamente.');
+  };
+
   createRoot(document.getElementById("root")!).render(<App />);
 }
 
