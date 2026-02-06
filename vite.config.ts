@@ -79,15 +79,37 @@ export default defineConfig(({ mode }) => ({
           { url: '/cache-bust-v20260202b', revision: null }
         ],
         runtimeCaching: [
+          // Popup notices - SEMPRE buscar da rede (sem cache)
+          {
+            urlPattern: /popup_notices/i,
+            handler: "NetworkOnly",
+          },
+          // Imagens de popup do storage - Network First com cache curto
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*popup.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "popup-images-cache",
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 30, // 30 segundos
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          // Outras requisições Supabase
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-cache-v2",
-              networkTimeoutSeconds: 3, // Timeout rápido para fallback
+              networkTimeoutSeconds: 3,
               expiration: {
                 maxEntries: 30,
-                maxAgeSeconds: 60, // 1 minuto - TTL reduzido
+                maxAgeSeconds: 60,
               },
               cacheableResponse: {
                 statuses: [0, 200],
