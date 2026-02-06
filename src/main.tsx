@@ -65,10 +65,17 @@ async function renderApp() {
     }
   };
 
-  // Função global para limpar cache de pop-ups do PWA
+  // Função global para limpar cache completo de pop-ups do PWA (sessão + dados)
   (window as any).clearPopupCache = (): void => {
+    // Limpa o registro de avisos visualizados
     sessionStorage.removeItem("popup_notices_dismissed");
-    console.info('[PWA] Cache de pop-ups limpo. Recarregue a página para ver os avisos novamente.');
+    
+    // Limpa o cache do React Query para forçar refetch
+    if ((window as any).__REACT_QUERY_CLIENT__) {
+      (window as any).__REACT_QUERY_CLIENT__.invalidateQueries({ queryKey: ["popup-notices-active"] });
+    }
+    
+    console.info('[PWA] Cache de pop-ups limpo. Recarregue a página para ver os avisos atualizados.');
   };
 
   createRoot(document.getElementById("root")!).render(<App />);

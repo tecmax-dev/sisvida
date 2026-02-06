@@ -50,7 +50,9 @@ export function useActivePopupNotices(clinicId: string | null) {
       return data as PopupNotice[];
     },
     enabled: !!clinicId,
-    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
+    staleTime: 0, // Sempre refetch para garantir dados atualizados
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
