@@ -1007,18 +1007,32 @@ Deno.serve(async (req) => {
       }
 
       case "update_invoice": {
+        // Atualizar contribuição - com tratamento gracioso de erros Lytex
         if (!params.invoiceId || !params.contributionId) {
           throw new Error("invoiceId e contributionId são obrigatórios");
         }
 
-        const updatedInvoice = await updateInvoice({
-          invoiceId: params.invoiceId,
-          value: params.value,
-          dueDate: params.dueDate,
-          description: params.description,
-        });
+        let lytexUpdated = false;
+        let lytexError: string | null = null;
+        let updatedInvoice: any = null;
 
-        // Atualizar dados no banco
+        // Tentar atualizar na Lytex primeiro
+        try {
+          updatedInvoice = await updateInvoice({
+            invoiceId: params.invoiceId,
+            value: params.value,
+            dueDate: params.dueDate,
+            description: params.description,
+          });
+          lytexUpdated = true;
+          console.log("[Lytex] Boleto de contribuição atualizado com sucesso");
+        } catch (err: any) {
+          lytexError = err?.message || "Erro ao atualizar boleto na Lytex";
+          console.warn("[Lytex] Não foi possível atualizar na Lytex:", lytexError);
+          // Continue to update local database even if Lytex fails
+        }
+
+        // Atualizar dados no banco local (sempre, independente do resultado Lytex)
         const updateData: any = {};
         if (params.value !== undefined) updateData.value = params.value;
         if (params.dueDate) updateData.due_date = params.dueDate;
@@ -1035,10 +1049,19 @@ Deno.serve(async (req) => {
 
           if (dbError) {
             console.error("[Lytex] Erro ao atualizar contribuição no banco:", dbError);
+            throw new Error("Erro ao atualizar contribuição no banco de dados");
           }
         }
 
-        result = { success: true, invoice: updatedInvoice };
+        result = { 
+          success: true, 
+          invoice: updatedInvoice,
+          lytexUpdated, 
+          lytexError,
+          message: lytexUpdated 
+            ? "Contribuição atualizada com sucesso" 
+            : "Contribuição atualizada localmente. Lytex recusou: " + lytexError
+        };
         break;
       }
 

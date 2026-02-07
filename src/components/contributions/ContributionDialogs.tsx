@@ -430,7 +430,7 @@ export default function ContributionDialogs({
       
       if (selectedContribution.lytex_invoice_id) {
         // Atualizar na Lytex e no banco
-        const { error } = await supabase.functions.invoke("lytex-api", {
+        const { data, error } = await supabase.functions.invoke("lytex-api", {
           body: {
             action: "update_invoice",
             invoiceId: selectedContribution.lytex_invoice_id,
@@ -445,6 +445,14 @@ export default function ContributionDialogs({
         });
 
         if (error) throw error;
+        
+        // Verificar se Lytex atualizou ou apenas salvou localmente
+        if (data?.lytexError) {
+          console.warn("[ContributionDialogs] Lytex recusou alteração:", data.lytexError);
+          toast.success("Contribuição atualizada localmente. A Lytex recusou a alteração (boleto pode estar em processamento).", { duration: 5000 });
+        } else {
+          toast.success("Contribuição atualizada com sucesso");
+        }
       } else {
         // Só atualizar no banco
         const { error } = await supabase
@@ -459,9 +467,9 @@ export default function ContributionDialogs({
           .eq("id", selectedContribution.id);
 
         if (error) throw error;
+        toast.success("Contribuição atualizada com sucesso");
       }
 
-      toast.success("Contribuição atualizada com sucesso");
       setEditDialogOpen(false);
       onViewDialogChange(false);
       onRefresh();
