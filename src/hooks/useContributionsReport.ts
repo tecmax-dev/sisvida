@@ -123,6 +123,9 @@ export function useContributionsReport(clinicId: string | undefined) {
         } else if (filters.status === "all") {
           // Mostrar todos os status principais (ocultar apenas awaiting_value e negotiated)
           query = query.in("status", ["paid", "pending", "overdue", "cancelled"]);
+        } else if (filters.status === "defaulting") {
+          // Relatório de inadimplência: mostrar apenas pending e overdue
+          query = query.in("status", ["pending", "overdue"]);
         } else {
           query = query.eq("status", filters.status);
         }
