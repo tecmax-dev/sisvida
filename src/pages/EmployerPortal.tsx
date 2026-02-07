@@ -215,13 +215,35 @@ export default function EmployerPortal() {
     }
 
     setIsLoading(true);
+    
+    // Timeout de 15 segundos para evitar loop infinito
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 15000);
+
     try {
+      console.log("[EmployerPortal] Iniciando login...");
       const { data, error } = await supabase.functions.invoke("employer-portal-auth", {
         body: { action: "login", cnpj, access_code: accessCode },
       });
 
-      if (error || data.error) {
-        toast.error(data?.error || "Erro ao fazer login");
+      clearTimeout(timeoutId);
+      console.log("[EmployerPortal] Resposta recebida:", { data, error });
+
+      if (error) {
+        console.error("[EmployerPortal] Erro na requisição:", error);
+        toast.error("Erro de conexão com o servidor. Tente novamente.");
+        return;
+      }
+      
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (!data?.employer) {
+        toast.error("Resposta inválida do servidor. Tente novamente.");
         return;
       }
 
@@ -234,8 +256,15 @@ export default function EmployerPortal() {
       
       toast.success(`Bem-vindo, ${data.employer.name}!`);
       loadContributions(data.employer.id);
-    } catch (err) {
-      toast.error("Erro de conexão");
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error("[EmployerPortal] Erro:", err);
+      
+      if (err?.name === "AbortError" || err?.message?.includes("abort")) {
+        toast.error("Tempo esgotado. Verifique sua conexão e tente novamente.");
+      } else {
+        toast.error("Erro de conexão. Tente novamente.");
+      }
     } finally {
       setIsLoading(false);
     }
