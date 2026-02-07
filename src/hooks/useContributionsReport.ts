@@ -7,7 +7,7 @@ export interface ContributionReportFilters {
   dateFilterType: "competence" | "due_date" | "paid_at";
   status: string; // "all" | "hide_cancelled" | "paid" | "pending" | "overdue" | "cancelled"
   employerId?: string;
-  contributionTypeId?: string;
+  contributionTypeIds?: string[]; // Array de IDs de tipos de contribuição
   origin?: string; // "all" | "pj" | "pf"
   searchTerm?: string;
 }
@@ -133,9 +133,9 @@ export function useContributionsReport(clinicId: string | undefined) {
           query = query.eq("employer_id", filters.employerId);
         }
 
-        // Filtro por tipo de contribuição
-        if (filters.contributionTypeId && filters.contributionTypeId !== "all") {
-          query = query.eq("contribution_type_id", filters.contributionTypeId);
+        // Filtro por tipos de contribuição (múltiplos)
+        if (filters.contributionTypeIds && filters.contributionTypeIds.length > 0) {
+          query = query.in("contribution_type_id", filters.contributionTypeIds);
         }
 
         // Aplicar filtro de data conforme o tipo selecionado

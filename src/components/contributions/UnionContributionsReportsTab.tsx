@@ -38,7 +38,15 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Check,
+  Tags,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { endOfMonth, format, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EmployerSearchCombobox } from "./EmployerSearchCombobox";
@@ -91,7 +99,7 @@ export default function UnionContributionsReportsTab({
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
-  const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
+  const [selectedContributionTypes, setSelectedContributionTypes] = useState<string[]>([]);
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">("competence");
 
@@ -128,10 +136,40 @@ export default function UnionContributionsReportsTab({
       dateFilterType,
       status: effectiveStatus,
       employerId: selectedEmployer?.id,
-      contributionTypeId: contributionTypeFilter !== "all" ? contributionTypeFilter : undefined,
+      contributionTypeIds: selectedContributionTypes.length > 0 ? selectedContributionTypes : undefined,
       origin: originFilter !== "all" ? originFilter : undefined,
     };
-  }, [startDate, endDate, dateFilterType, statusFilter, selectedEmployer, contributionTypeFilter, originFilter, reportType]);
+  }, [startDate, endDate, dateFilterType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, reportType]);
+
+  // Toggle contribution type selection
+  const toggleContributionType = (typeId: string) => {
+    setSelectedContributionTypes(prev => 
+      prev.includes(typeId) 
+        ? prev.filter(id => id !== typeId)
+        : [...prev, typeId]
+    );
+  };
+
+  // Select/deselect all contribution types
+  const toggleAllContributionTypes = () => {
+    if (selectedContributionTypes.length === contributionTypes.length) {
+      setSelectedContributionTypes([]);
+    } else {
+      setSelectedContributionTypes(contributionTypes.map(t => t.id));
+    }
+  };
+
+  // Get label for contribution types button
+  const getContributionTypesLabel = () => {
+    if (selectedContributionTypes.length === 0) {
+      return "Todos os tipos";
+    }
+    if (selectedContributionTypes.length === 1) {
+      const type = contributionTypes.find(t => t.id === selectedContributionTypes[0]);
+      return type?.name || "1 tipo";
+    }
+    return `${selectedContributionTypes.length} tipos selecionados`;
+  };
 
   // Fetch on mount and when filters change
   const handleSearch = useCallback(() => {
@@ -273,8 +311,10 @@ export default function UnionContributionsReportsTab({
       byEmployerReport: displayByEmployerReport,
     };
 
-    const selectedTypeName = contributionTypeFilter !== "all" 
-      ? contributionTypes.find(t => t.id === contributionTypeFilter)?.name 
+    const selectedTypeName = selectedContributionTypes.length > 0 
+      ? selectedContributionTypes.length === 1 
+        ? contributionTypes.find(t => t.id === selectedContributionTypes[0])?.name 
+        : `${selectedContributionTypes.length} tipos`
       : undefined;
 
     const config = {
@@ -401,18 +441,58 @@ export default function UnionContributionsReportsTab({
               </SelectContent>
             </Select>
 
-            {/* Contribution Type Filter */}
-            <Select value={contributionTypeFilter} onValueChange={setContributionTypeFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Tipo de Contribuição" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                {contributionTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Contribution Type Multi-Select */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[200px] justify-between">
+                  <div className="flex items-center gap-2 truncate">
+                    <Tags className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{getContributionTypesLabel()}</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[280px] p-0" align="start">
+                <div className="p-2 border-b">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-start text-xs"
+                    onClick={toggleAllContributionTypes}
+                  >
+                    <Check className={`h-3 w-3 mr-2 ${selectedContributionTypes.length === contributionTypes.length ? 'opacity-100' : 'opacity-0'}`} />
+                    {selectedContributionTypes.length === contributionTypes.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                  </Button>
+                </div>
+                <div className="max-h-[200px] overflow-y-auto p-2 space-y-1">
+                  {contributionTypes.map((type) => (
+                    <div 
+                      key={type.id} 
+                      className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                      onClick={() => toggleContributionType(type.id)}
+                    >
+                      <Checkbox 
+                        checked={selectedContributionTypes.includes(type.id)}
+                        onCheckedChange={() => toggleContributionType(type.id)}
+                      />
+                      <span className="text-sm">{type.name}</span>
+                    </div>
+                  ))}
+                </div>
+                {selectedContributionTypes.length > 0 && (
+                  <div className="p-2 border-t">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full text-xs text-muted-foreground"
+                      onClick={() => setSelectedContributionTypes([])}
+                    >
+                      Limpar seleção
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
 
             {/* Origin Filter */}
             <Select value={originFilter} onValueChange={setOriginFilter}>
