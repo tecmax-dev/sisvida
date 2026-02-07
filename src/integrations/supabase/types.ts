@@ -15265,6 +15265,10 @@ export type Database = {
           token: string
         }[]
       }
+      generate_associado_matricula: {
+        Args: { p_sindicato_id: string }
+        Returns: string
+      }
       generate_authorization_hash: { Args: never; Returns: string }
       generate_authorization_number: {
         Args: { p_clinic_id: string }
