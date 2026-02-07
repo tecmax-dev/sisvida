@@ -2,12 +2,30 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
+// ============================================================================
+// CORS HEADERS - CENTRALIZADOS (não duplicar em nenhum outro lugar)
+// ============================================================================
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
+
+// ============================================================================
+// HELPER: Resposta com CORS garantido (usar em TODAS as respostas)
+// ============================================================================
+function corsResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function corsError(message: string, status = 500, details?: unknown): Response {
+  console.error(`[send-boleto-email] Erro (${status}):`, message, details || "");
+  return corsResponse({ error: message }, status);
+}
 
 interface BoletoData {
   employerName: string;
@@ -152,9 +170,17 @@ ${data.boletos.length > 1 ? `<div style="margin-top: 24px; padding: 16px; backgr
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("send-boleto-email: Received request");
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startTime = Date.now();
+  const origin = req.headers.get("Origin") || req.headers.get("origin") || "unknown";
+  const method = req.method;
+  
+  console.log(`[send-boleto-email][${requestId}] ====== NOVA REQUISIÇÃO ======`);
+  console.log(`[send-boleto-email][${requestId}] Method: ${method}, Origin: ${origin}`);
 
-  if (req.method === "OPTIONS") {
+  // CORS Preflight - resposta imediata
+  if (method === "OPTIONS") {
+    console.log(`[send-boleto-email][${requestId}] Preflight OPTIONS - respondendo com CORS headers`);
     return new Response("ok", { headers: corsHeaders });
   }
 
@@ -165,33 +191,23 @@ const handler = async (req: Request): Promise<Response> => {
     const smtpPassword = Deno.env.get("SMTP_PASSWORD");
     const smtpFrom = Deno.env.get("SMTP_FROM");
 
-    console.log("send-boleto-email: SMTP_HOST:", smtpHost);
-    console.log("send-boleto-email: SMTP_PORT:", smtpPort);
+    console.log(`[send-boleto-email][${requestId}] SMTP Config: host=${smtpHost}, port=${smtpPort}, user=${smtpUser ? "***" : "N/A"}`);
 
     if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
-      console.error("send-boleto-email: SMTP not fully configured");
-      return new Response(
-        JSON.stringify({ error: "Configuracao SMTP incompleta." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error(`[send-boleto-email][${requestId}] SMTP não configurado completamente`);
+      return corsError("Configuracao SMTP incompleta.", 500);
     }
 
     const data: SendBoletoEmailRequest = await req.json();
-    console.log("send-boleto-email: Processing request for", data.recipientEmail, "with", data.boletos.length, "boletos");
+    console.log(`[send-boleto-email][${requestId}] Destinatário: ${data.recipientEmail}, Boletos: ${data.boletos?.length || 0}`);
 
     if (!data.recipientEmail || !data.recipientName || !data.clinicName || !data.boletos?.length) {
-      return new Response(
-        JSON.stringify({ error: "Campos obrigatorios nao preenchidos" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return corsError("Campos obrigatorios nao preenchidos", 400);
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.recipientEmail)) {
-      return new Response(
-        JSON.stringify({ error: "Email do destinatario invalido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return corsError("Email do destinatario invalido", 400);
     }
 
     // Busca logo do sindicato se clinicId foi informado
@@ -224,8 +240,9 @@ const handler = async (req: Request): Promise<Response> => {
       ? [data.recipientEmail, data.ccEmail]
       : [data.recipientEmail];
 
-    console.log("send-boleto-email: Sending email via SMTP to:", toAddresses);
+    console.log(`[send-boleto-email][${requestId}] Iniciando envio SMTP para: ${toAddresses.join(", ")}`);
 
+    // Criar cliente SMTP com timeout
     const client = new SMTPClient({
       connection: {
         hostname: smtpHost,
@@ -239,6 +256,8 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     try {
+      console.log(`[send-boleto-email][${requestId}] Conectando ao servidor SMTP...`);
+      
       await client.send({
         from: smtpFrom,
         to: toAddresses,
@@ -246,24 +265,38 @@ const handler = async (req: Request): Promise<Response> => {
         html: html,
       });
 
-      await client.close();
-      console.log("send-boleto-email: Email sent successfully via SMTP!");
+      console.log(`[send-boleto-email][${requestId}] Email enviado com sucesso!`);
+      
+      try { 
+        await client.close(); 
+        console.log(`[send-boleto-email][${requestId}] Conexão SMTP fechada`);
+      } catch (closeErr) {
+        console.warn(`[send-boleto-email][${requestId}] Aviso ao fechar SMTP:`, closeErr);
+      }
 
-      return new Response(
-        JSON.stringify({ success: true, message: "Email enviado com sucesso" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const elapsed = Date.now() - startTime;
+      console.log(`[send-boleto-email][${requestId}] ✓ Sucesso em ${elapsed}ms`);
+      
+      return corsResponse({ success: true, message: "Email enviado com sucesso" });
+      
     } catch (smtpError: any) {
-      console.error("send-boleto-email: SMTP error:", smtpError);
+      const elapsed = Date.now() - startTime;
+      console.error(`[send-boleto-email][${requestId}] ✗ Erro SMTP após ${elapsed}ms`);
+      console.error(`[send-boleto-email][${requestId}] SMTP Error Name:`, smtpError?.name);
+      console.error(`[send-boleto-email][${requestId}] SMTP Error Message:`, smtpError?.message);
+      console.error(`[send-boleto-email][${requestId}] SMTP Error Stack:`, smtpError?.stack);
+      
       try { await client.close(); } catch (_) {}
-      throw new Error(`Erro SMTP: ${smtpError.message || smtpError}`);
+      
+      // Não lançar exceção - retornar erro estruturado diretamente
+      return corsError(`Erro SMTP: ${smtpError.message || smtpError}`, 500);
     }
   } catch (error: any) {
-    console.error("send-boleto-email: Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Erro ao enviar email" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const elapsed = Date.now() - startTime;
+    console.error(`[send-boleto-email][${requestId}] ✗ Erro geral após ${elapsed}ms`);
+    console.error(`[send-boleto-email][${requestId}] Error:`, error?.message, error?.stack);
+    
+    return corsError(error.message || "Erro ao enviar email", 500);
   }
 };
 
