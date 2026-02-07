@@ -1,33 +1,81 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// ============ CORS CENTRALIZADO ============
-const corsHeaders = {
+const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": [
+    "authorization",
+    "x-client-info",
+    "apikey",
+    "content-type",
+    "x-request-id",
+    "x-supabase-client-platform",
+    "x-supabase-client-platform-version",
+    "x-supabase-client-runtime",
+    "x-supabase-client-runtime-version",
+  ].join(", "),
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
 
-// Helpers para garantir CORS em TODAS as respostas
-function corsResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+type JsonRecord = Record<string, unknown>;
+
+class AppError extends Error {
+  status: number;
+  code: string;
+  expose: boolean;
+
+  constructor(message: string, opts: { status: number; code: string; expose?: boolean }) {
+    super(message);
+    this.name = "AppError";
+    this.status = opts.status;
+    this.code = opts.code;
+    this.expose = opts.expose ?? true;
+  }
+}
+
+function ensureCors(res: Response): Response {
+  for (const [k, v] of Object.entries(corsHeaders)) res.headers.set(k, v);
+  return res;
+}
+
+function jsonResponse(
+  requestId: string,
+  payload: unknown,
+  status = 200,
+  logLabel = "return",
+): Response {
+  const body = JSON.stringify(payload);
+  console.log(`[accounting-office-portal-auth][${requestId}] ${logLabel} status=${status}`);
+  return new Response(body, {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
   });
 }
 
-function corsError(message: string, status = 500): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+function preflightResponse(requestId: string): Response {
+  console.log(`[accounting-office-portal-auth][${requestId}] return preflight 204`);
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
   });
 }
 
-// ============ SUPABASE CLIENT (module-level para reduzir cold start) ============
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+async function safeJson(req: Request, requestId: string): Promise<JsonRecord> {
+  const text = await req.text();
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object") return parsed as JsonRecord;
+    throw new Error("json_not_object");
+  } catch (err) {
+    console.error(`[accounting-office-portal-auth][${requestId}] bad_json:`, err);
+    throw new AppError("JSON inválido", { status: 400, code: "bad_json", expose: true });
+  }
+}
 
 function extractEmailFromText(input: unknown): string | null {
   if (typeof input !== "string") return null;
@@ -39,310 +87,462 @@ function normalizeAccessCode(input: unknown): string {
   return typeof input === "string" ? input.trim().toUpperCase() : "";
 }
 
-serve(async (req) => {
-  const requestId = crypto.randomUUID().slice(0, 8);
-  const startTime = Date.now();
-  const origin = req.headers.get("origin") || "unknown";
-  
-  console.log(`[accounting-office-portal-auth][${requestId}] ${req.method} from ${origin}`);
+function getRequestId(req: Request): string {
+  const headerId = req.headers.get("x-request-id")?.trim();
+  if (headerId) return headerId;
+  return crypto.randomUUID();
+}
 
-  // Preflight CORS
+function isTimeoutError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("timeout:");
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`timeout:${label}:${ms}ms`)), ms);
+    }),
+  ]);
+}
+
+serve(async (req) => {
+  // 1) OPTIONS tem que ser a PRIMEIRA instrução (sem Supabase/async extra)
+  const requestId = getRequestId(req);
   if (req.method === "OPTIONS") {
-    console.log(`[accounting-office-portal-auth][${requestId}] Preflight OK`);
-    return new Response("ok", { headers: corsHeaders });
+    return ensureCors(preflightResponse(requestId));
   }
 
-  try {
-    const { action, email, access_code, accounting_office_id } = await req.json();
-    console.log(`[accounting-office-portal-auth][${requestId}] Action: ${action}`);
+  const startTime = Date.now();
+  const origin = req.headers.get("origin") || "unknown";
+  console.log(`[accounting-office-portal-auth][${requestId}] start method=${req.method} origin=${origin}`);
 
-    // Normalizações
-    const cleanEmail = (typeof email === "string" ? email : "").toLowerCase().trim();
-    const cleanAccessCode = normalizeAccessCode(access_code);
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new AppError("Configuração do backend ausente", {
+        status: 500,
+        code: "missing_backend_config",
+        expose: false,
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = await safeJson(req, requestId);
+    const action = typeof body.action === "string" ? body.action : "";
+
+    console.log(`[accounting-office-portal-auth][${requestId}] action=${action || "(missing)"}`);
 
     if (action === "login") {
-      // Validar email e código de acesso
+      const email = typeof body.email === "string" ? body.email : "";
+      const accessCode = body.access_code;
+
+      const cleanEmail = email.toLowerCase().trim();
+      const cleanAccessCode = normalizeAccessCode(accessCode);
+
       if (!cleanEmail || !cleanAccessCode) {
-        console.log(`[accounting-office-portal-auth][${requestId}] Missing credentials`);
-        return corsError("E-mail e código de acesso são obrigatórios", 400);
+        return ensureCors(
+          jsonResponse(
+            requestId,
+            { success: false, error: "E-mail e código de acesso são obrigatórios", code: "missing_credentials", request_id: requestId },
+            400,
+            "return login missing_credentials",
+          ),
+        );
       }
 
       const officeSelect = "id, name, email, clinic_id, access_code, access_code_expires_at, is_active, union_entity_id";
 
-      // 1) Tentativa padrão (email exato)
       let office: any = null;
-      const { data: officeExact, error: exactError } = await supabase
-        .from("accounting_offices")
-        .select(officeSelect)
-        .eq("email", cleanEmail)
-        .maybeSingle();
 
-      if (!exactError && officeExact) {
-        office = officeExact;
+      // 1) Email exato
+      const exact = await withTimeout(
+        supabase.from("accounting_offices").select(officeSelect).eq("email", cleanEmail).maybeSingle(),
+        15000,
+        "db:accounting_offices:exact",
+      );
+
+      if (!exact.error && exact.data) {
+        office = exact.data;
       } else {
-        // 2) Fallback: tolerar cadastro ruim (ex.: "email dp1@..."), buscando candidatos
-        const { data: candidates, error: candError } = await supabase
-          .from("accounting_offices")
-          .select(officeSelect)
-          .ilike("email", `%${cleanEmail}%`)
-          .limit(10);
+        // 2) Fallback: e-mails com lixo (ex.: "email: x@y.com")
+        const cand = await withTimeout(
+          supabase.from("accounting_offices").select(officeSelect).ilike("email", `%${cleanEmail}%`).limit(10),
+          15000,
+          "db:accounting_offices:candidates",
+        );
 
-        if (!candError && candidates?.length) {
-          office = candidates.find((c: any) => {
-            const extracted = extractEmailFromText(c.email);
-            return extracted === cleanEmail;
-          }) || null;
+        if (!cand.error && cand.data?.length) {
+          office =
+            cand.data.find((c: any) => {
+              const extracted = extractEmailFromText(c.email);
+              return extracted === cleanEmail;
+            }) ?? null;
         }
       }
 
       if (!office) {
-        console.log(`[accounting-office-portal-auth][${requestId}] Email not found: ${cleanEmail}`);
-        return corsError("E-mail não encontrado", 404);
+        return ensureCors(
+          jsonResponse(
+            requestId,
+            { success: false, error: "E-mail não encontrado", code: "email_not_found", request_id: requestId },
+            404,
+            "return login email_not_found",
+          ),
+        );
       }
 
       if (!office.is_active) {
-        console.log(`[accounting-office-portal-auth][${requestId}] Office inactive: ${office.id}`);
-        return corsError("Escritório inativo. Entre em contato com o sindicato.", 403);
+        return ensureCors(
+          jsonResponse(
+            requestId,
+            { success: false, error: "Escritório inativo. Entre em contato com o sindicato.", code: "office_inactive", request_id: requestId },
+            403,
+            "return login office_inactive",
+          ),
+        );
       }
 
       const storedAccessCode = normalizeAccessCode(office.access_code);
       if (!storedAccessCode) {
-        console.log(`[accounting-office-portal-auth][${requestId}] No access code configured for office: ${office.id}`);
-        return corsError("Código de acesso não configurado. Entre em contato com o sindicato.", 403);
+        return ensureCors(
+          jsonResponse(
+            requestId,
+            {
+              success: false,
+              error: "Código de acesso não configurado. Entre em contato com o sindicato.",
+              code: "access_code_missing",
+              request_id: requestId,
+            },
+            403,
+            "return login access_code_missing",
+          ),
+        );
       }
 
       if (storedAccessCode !== cleanAccessCode) {
-        console.log(`[accounting-office-portal-auth][${requestId}] Invalid access code for office: ${office.id}`);
-        return corsError("Código de acesso inválido", 401);
+        return ensureCors(
+          jsonResponse(
+            requestId,
+            { success: false, error: "Código de acesso inválido", code: "invalid_access_code", request_id: requestId },
+            401,
+            "return login invalid_access_code",
+          ),
+        );
       }
 
-      // Verificar expiração
       if (office.access_code_expires_at && new Date(office.access_code_expires_at) < new Date()) {
-        console.log(`[accounting-office-portal-auth][${requestId}] Access code expired for office: ${office.id}`);
-        return corsError("Código de acesso expirado. Solicite um novo código.", 401);
+        return ensureCors(
+          jsonResponse(
+            requestId,
+            { success: false, error: "Código de acesso expirado. Solicite um novo código.", code: "access_code_expired", request_id: requestId },
+            401,
+            "return login access_code_expired",
+          ),
+        );
       }
 
-      // Buscar dados do sindicato vinculado (se houver)
-      let unionEntity = null;
+      let unionEntity: any = null;
       if (office.union_entity_id) {
-        const { data: entity } = await supabase
-          .from("union_entities")
-          .select("id, razao_social, nome_fantasia, cnpj, entity_type")
-          .eq("id", office.union_entity_id)
-          .maybeSingle();
-        unionEntity = entity;
+        const entityRes = await withTimeout(
+          supabase
+            .from("union_entities")
+            .select("id, razao_social, nome_fantasia, cnpj, entity_type")
+            .eq("id", office.union_entity_id)
+            .maybeSingle(),
+          15000,
+          "db:union_entities",
+        );
+        if (!entityRes.error) unionEntity = entityRes.data;
       }
 
-      // Atualizar último acesso
-      await supabase
-        .from("accounting_offices")
-        .update({ portal_last_access_at: new Date().toISOString() })
-        .eq("id", office.id);
+      // best-effort: não quebrar login por falha de update/log
+      try {
+        await withTimeout(
+          supabase.from("accounting_offices").update({ portal_last_access_at: new Date().toISOString() }).eq("id", office.id),
+          15000,
+          "db:accounting_offices:update_last_access",
+        );
+      } catch (e) {
+        console.error(`[accounting-office-portal-auth][${requestId}] warn update_last_access failed:`, e);
+      }
 
-      // Registrar log
-      await supabase.from("accounting_office_portal_logs").insert({
-        accounting_office_id: office.id,
-        action: "login",
-        ip_address: req.headers.get("x-forwarded-for") || "unknown",
-        user_agent: req.headers.get("user-agent") || "unknown",
-        details: { union_entity_id: office.union_entity_id },
-      });
+      try {
+        await withTimeout(
+          supabase.from("accounting_office_portal_logs").insert({
+            accounting_office_id: office.id,
+            action: "login",
+            ip_address: req.headers.get("x-forwarded-for") || "unknown",
+            user_agent: req.headers.get("user-agent") || "unknown",
+            details: { union_entity_id: office.union_entity_id, request_id: requestId },
+          }),
+          15000,
+          "db:accounting_office_portal_logs:insert",
+        );
+      } catch (e) {
+        console.error(`[accounting-office-portal-auth][${requestId}] warn portal_logs insert failed:`, e);
+      }
 
-      // Gerar token de sessão simples (base64 do office_id + timestamp)
       const sessionToken = btoa(`${office.id}:${Date.now()}`);
-
       const elapsed = Date.now() - startTime;
-      console.log(`[accounting-office-portal-auth][${requestId}] Login successful for office: ${office.id} in ${elapsed}ms`);
 
-      return corsResponse({
-        success: true,
-        accounting_office: {
-          id: office.id,
-          name: office.name,
-          email: office.email,
-          clinic_id: office.clinic_id,
-          union_entity_id: office.union_entity_id,
-        },
-        union_entity: unionEntity,
-        session_token: sessionToken,
-      });
+      return ensureCors(
+        jsonResponse(
+          requestId,
+          {
+            success: true,
+            accounting_office: {
+              id: office.id,
+              name: office.name,
+              email: office.email,
+              clinic_id: office.clinic_id,
+              union_entity_id: office.union_entity_id,
+            },
+            union_entity: unionEntity,
+            session_token: sessionToken,
+            request_id: requestId,
+            elapsed_ms: elapsed,
+          },
+          200,
+          "return login success",
+        ),
+      );
     }
 
     if (action === "get_employers") {
-      if (!accounting_office_id) {
-        return corsError("ID do escritório não informado", 400);
+      const accountingOfficeId = typeof body.accounting_office_id === "string" ? body.accounting_office_id : "";
+      if (!accountingOfficeId) {
+        throw new AppError("ID do escritório não informado", { status: 400, code: "missing_accounting_office_id", expose: true });
       }
 
-      // Buscar o escritório para obter o union_entity_id
-      const { data: office } = await supabase
-        .from("accounting_offices")
-        .select("union_entity_id")
-        .eq("id", accounting_office_id)
-        .maybeSingle();
+      const officeRes = await withTimeout(
+        supabase.from("accounting_offices").select("union_entity_id").eq("id", accountingOfficeId).maybeSingle(),
+        15000,
+        "db:accounting_offices:by_id",
+      );
 
-      // Buscar empresas vinculadas
-      const { data: links, error: linksError } = await supabase
-        .from("accounting_office_employers")
-        .select("employer_id")
-        .eq("accounting_office_id", accounting_office_id);
+      const linksRes = await withTimeout(
+        supabase
+          .from("accounting_office_employers")
+          .select("employer_id")
+          .eq("accounting_office_id", accountingOfficeId),
+        15000,
+        "db:accounting_office_employers",
+      );
 
-      if (linksError) {
-        console.error(`[accounting-office-portal-auth][${requestId}] Error fetching employer links:`, linksError);
-        return corsError("Erro ao buscar empresas vinculadas", 500);
+      if (linksRes.error) {
+        console.error(`[accounting-office-portal-auth][${requestId}] linksError:`, linksRes.error);
+        throw new AppError("Erro ao buscar empresas vinculadas", { status: 500, code: "db_links_error", expose: false });
       }
 
-      const employerIds = links?.map(l => l.employer_id) || [];
-
+      const employerIds = linksRes.data?.map((l) => l.employer_id) ?? [];
       if (employerIds.length === 0) {
-        return corsResponse({ employers: [] });
+        return ensureCors(jsonResponse(requestId, { employers: [], request_id: requestId }, 200, "return get_employers empty"));
       }
 
-      // Buscar dados das empresas - filtrar pelo mesmo union_entity_id para isolamento
       let query = supabase
         .from("employers")
         .select("id, name, cnpj, trade_name, union_entity_id, phone, email")
         .in("id", employerIds)
         .order("name");
 
-      // Se o escritório tem um sindicato vinculado, filtrar apenas empresas do mesmo sindicato
-      if (office?.union_entity_id) {
-        query = query.eq("union_entity_id", office.union_entity_id);
+      if (officeRes.data?.union_entity_id) {
+        query = query.eq("union_entity_id", officeRes.data.union_entity_id);
       }
 
-      const { data: employers, error: employersError } = await query;
-
-      if (employersError) {
-        console.error(`[accounting-office-portal-auth][${requestId}] Error fetching employers:`, employersError);
-        return corsError("Erro ao buscar empresas", 500);
+      const employersRes = await withTimeout(query, 15000, "db:employers:in_ids");
+      if (employersRes.error) {
+        console.error(`[accounting-office-portal-auth][${requestId}] employersError:`, employersRes.error);
+        throw new AppError("Erro ao buscar empresas", { status: 500, code: "db_employers_error", expose: false });
       }
 
-      // Registrar log
-      await supabase.from("accounting_office_portal_logs").insert({
-        accounting_office_id,
-        action: "view_employers",
-        ip_address: req.headers.get("x-forwarded-for") || "unknown",
-        user_agent: req.headers.get("user-agent") || "unknown",
-      });
+      try {
+        await withTimeout(
+          supabase.from("accounting_office_portal_logs").insert({
+            accounting_office_id: accountingOfficeId,
+            action: "view_employers",
+            ip_address: req.headers.get("x-forwarded-for") || "unknown",
+            user_agent: req.headers.get("user-agent") || "unknown",
+            details: { request_id: requestId },
+          }),
+          15000,
+          "db:accounting_office_portal_logs:view_employers",
+        );
+      } catch (e) {
+        console.error(`[accounting-office-portal-auth][${requestId}] warn portal_logs view_employers failed:`, e);
+      }
 
       const elapsed = Date.now() - startTime;
-      console.log(`[accounting-office-portal-auth][${requestId}] get_employers OK in ${elapsed}ms`);
-
-      return corsResponse({ employers });
+      return ensureCors(
+        jsonResponse(
+          requestId,
+          { employers: employersRes.data ?? [], request_id: requestId, elapsed_ms: elapsed },
+          200,
+          "return get_employers success",
+        ),
+      );
     }
 
     if (action === "get_contributions") {
-      if (!accounting_office_id) {
-        return corsError("ID do escritório não informado", 400);
+      const accountingOfficeId = typeof body.accounting_office_id === "string" ? body.accounting_office_id : "";
+      if (!accountingOfficeId) {
+        throw new AppError("ID do escritório não informado", { status: 400, code: "missing_accounting_office_id", expose: true });
       }
 
-      // Buscar o escritório para obter o union_entity_id
-      const { data: office } = await supabase
-        .from("accounting_offices")
-        .select("union_entity_id")
-        .eq("id", accounting_office_id)
-        .maybeSingle();
+      const officeRes = await withTimeout(
+        supabase.from("accounting_offices").select("union_entity_id, clinic_id").eq("id", accountingOfficeId).maybeSingle(),
+        15000,
+        "db:accounting_offices:union_clinic",
+      );
 
-      // Buscar empresas vinculadas
-      const { data: links, error: linksError } = await supabase
-        .from("accounting_office_employers")
-        .select("employer_id")
-        .eq("accounting_office_id", accounting_office_id);
+      const linksRes = await withTimeout(
+        supabase
+          .from("accounting_office_employers")
+          .select("employer_id")
+          .eq("accounting_office_id", accountingOfficeId),
+        15000,
+        "db:accounting_office_employers",
+      );
 
-      if (linksError) {
-        return corsError("Erro ao buscar empresas vinculadas", 500);
+      if (linksRes.error) {
+        console.error(`[accounting-office-portal-auth][${requestId}] linksError:`, linksRes.error);
+        throw new AppError("Erro ao buscar empresas vinculadas", { status: 500, code: "db_links_error", expose: false });
       }
 
-      const employerIds = links?.map(l => l.employer_id) || [];
-
+      const employerIds = linksRes.data?.map((l) => l.employer_id) ?? [];
       if (employerIds.length === 0) {
-        return corsResponse({ contributions: [] });
+        return ensureCors(jsonResponse(requestId, { contributions: [], request_id: requestId }, 200, "return get_contributions empty"));
       }
 
-      // Se o escritório tem um sindicato vinculado, filtrar apenas empresas do mesmo sindicato
       let filteredEmployerIds = employerIds;
-      if (office?.union_entity_id) {
-        const { data: validEmployers } = await supabase
-          .from("employers")
-          .select("id")
-          .in("id", employerIds)
-          .eq("union_entity_id", office.union_entity_id);
-        
-        filteredEmployerIds = validEmployers?.map(e => e.id) || [];
+      if (officeRes.data?.union_entity_id) {
+        const validEmployers = await withTimeout(
+          supabase
+            .from("employers")
+            .select("id")
+            .in("id", employerIds)
+            .eq("union_entity_id", officeRes.data.union_entity_id),
+          15000,
+          "db:employers:filter_union",
+        );
+        if (!validEmployers.error) {
+          filteredEmployerIds = validEmployers.data?.map((e) => e.id) ?? [];
+        }
       }
 
       if (filteredEmployerIds.length === 0) {
-        return corsResponse({ contributions: [] });
+        return ensureCors(jsonResponse(requestId, { contributions: [], request_id: requestId }, 200, "return get_contributions none_after_filter"));
       }
-
-      // Buscar configuração de ocultação de pendências (usar clinic_id do escritório)
-      const { data: officeData } = await supabase
-        .from("accounting_offices")
-        .select("clinic_id")
-        .eq("id", accounting_office_id)
-        .maybeSingle();
 
       let hidePendingBeforeDate: string | null = null;
-      if (officeData?.clinic_id) {
-        const { data: clinicData } = await supabase
-          .from("clinics")
-          .select("hide_pending_before_date")
-          .eq("id", officeData.clinic_id)
-          .maybeSingle();
-        
-        hidePendingBeforeDate = clinicData?.hide_pending_before_date || null;
+      if (officeRes.data?.clinic_id) {
+        const clinicRes = await withTimeout(
+          supabase.from("clinics").select("hide_pending_before_date").eq("id", officeRes.data.clinic_id).maybeSingle(),
+          15000,
+          "db:clinics:hide_pending",
+        );
+        if (!clinicRes.error) hidePendingBeforeDate = (clinicRes.data?.hide_pending_before_date as string | null) ?? null;
       }
 
-      // Buscar contribuições de todas as empresas vinculadas com informação de negociação
-      const { data: contributions, error } = await supabase
-        .from("employer_contributions")
-        .select(`
-          *,
-          employer:employers(id, name, cnpj),
-          contribution_type:contribution_types(name),
-          negotiation:debt_negotiations(id, negotiation_code, status, installments_count)
-        `)
-        .in("employer_id", filteredEmployerIds)
-        .order("competence_year", { ascending: false })
-        .order("competence_month", { ascending: false });
+      const contribRes = await withTimeout(
+        supabase
+          .from("employer_contributions")
+          .select(`
+            *,
+            employer:employers(id, name, cnpj),
+            contribution_type:contribution_types(name),
+            negotiation:debt_negotiations(id, negotiation_code, status, installments_count)
+          `)
+          .in("employer_id", filteredEmployerIds)
+          .order("competence_year", { ascending: false })
+          .order("competence_month", { ascending: false }),
+        15000,
+        "db:employer_contributions",
+      );
 
-      if (error) {
-        console.error(`[accounting-office-portal-auth][${requestId}] Error fetching contributions:`, error);
-        return corsError("Erro ao buscar contribuições", 500);
+      if (contribRes.error) {
+        console.error(`[accounting-office-portal-auth][${requestId}] contributionsError:`, contribRes.error);
+        throw new AppError("Erro ao buscar contribuições", { status: 500, code: "db_contributions_error", expose: false });
       }
 
-      // Filtrar contribuições ocultadas (pendentes/vencidas anteriores à data configurada)
-      let filteredContributions = contributions || [];
+      let filtered = contribRes.data ?? [];
       if (hidePendingBeforeDate) {
         const hideDate = new Date(hidePendingBeforeDate);
-        filteredContributions = filteredContributions.filter(c => {
-          // Ocultar apenas pendentes/vencidas anteriores à data
-          if ((c.status === 'pending' || c.status === 'overdue') && c.due_date) {
+        filtered = filtered.filter((c: any) => {
+          if ((c.status === "pending" || c.status === "overdue") && c.due_date) {
             const dueDate = new Date(c.due_date);
             return dueDate >= hideDate;
           }
-          return true; // Manter pagas, canceladas, awaiting_value, etc.
+          return true;
         });
       }
 
-      // Registrar log
-      await supabase.from("accounting_office_portal_logs").insert({
-        accounting_office_id,
-        action: "view_contributions",
-        ip_address: req.headers.get("x-forwarded-for") || "unknown",
-        user_agent: req.headers.get("user-agent") || "unknown",
-      });
+      try {
+        await withTimeout(
+          supabase.from("accounting_office_portal_logs").insert({
+            accounting_office_id: accountingOfficeId,
+            action: "view_contributions",
+            ip_address: req.headers.get("x-forwarded-for") || "unknown",
+            user_agent: req.headers.get("user-agent") || "unknown",
+            details: { request_id: requestId },
+          }),
+          15000,
+          "db:accounting_office_portal_logs:view_contributions",
+        );
+      } catch (e) {
+        console.error(`[accounting-office-portal-auth][${requestId}] warn portal_logs view_contributions failed:`, e);
+      }
 
       const elapsed = Date.now() - startTime;
-      console.log(`[accounting-office-portal-auth][${requestId}] get_contributions OK in ${elapsed}ms`);
-
-      return corsResponse({ contributions: filteredContributions });
+      return ensureCors(
+        jsonResponse(
+          requestId,
+          { contributions: filtered, request_id: requestId, elapsed_ms: elapsed },
+          200,
+          "return get_contributions success",
+        ),
+      );
     }
 
-    console.log(`[accounting-office-portal-auth][${requestId}] Unknown action: ${action}`);
-    return corsError("Ação não reconhecida", 400);
+    throw new AppError("Ação não reconhecida", { status: 400, code: "unknown_action", expose: true });
+  } catch (err) {
+    // 2) ÚNICO catch no topo: erros sync/async/db/timeout
+    const elapsed = Date.now() - startTime;
 
-  } catch (error: any) {
-    console.error(`[accounting-office-portal-auth][${requestId}] Error:`, error);
-    return corsError("Erro interno do servidor", 500);
+    const appErr = err instanceof AppError ? err : null;
+    const timeout = isTimeoutError(err);
+
+    if (!appErr) {
+      console.error(`[accounting-office-portal-auth][${requestId}] catch internal_error elapsed=${elapsed}ms`, err);
+    } else {
+      console.error(`[accounting-office-portal-auth][${requestId}] catch ${appErr.code} status=${appErr.status} elapsed=${elapsed}ms`, appErr.message);
+    }
+
+    const status = appErr?.status ?? (timeout ? 504 : 500);
+    const code = appErr?.code ?? (timeout ? "timeout" : "internal_error");
+
+    // 4) NÃO mascarar: erro interno vem com code + request_id (mensagem pública genérica)
+    const message = appErr?.expose
+      ? appErr.message
+      : timeout
+        ? "Tempo excedido ao processar a solicitação"
+        : "Erro interno do servidor";
+
+    return ensureCors(
+      jsonResponse(
+        requestId,
+        {
+          success: false,
+          error: message,
+          code,
+          request_id: requestId,
+          elapsed_ms: elapsed,
+        },
+        status,
+        "return catch",
+      ),
+    );
   }
 });
