@@ -28,6 +28,7 @@ interface MemberData {
   email: string | null;
   phone: string;
   cpf: string | null;
+  photo_url?: string | null;
 }
 
 interface FiliacaoData {
@@ -61,6 +62,8 @@ interface FiliacaoData {
   matricula?: string | null;
   created_at: string;
   aprovado_at?: string | null;
+  foto_url?: string | null;
+  documento_foto_url?: string | null;
 }
 
 interface Props {

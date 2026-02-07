@@ -46,6 +46,7 @@ interface MemberData {
   state?: string | null;
   zip_code?: string | null;
   registration_number?: string | null;
+  photo_url?: string | null;
 }
 
 interface FiliacaoData {
@@ -79,6 +80,8 @@ interface FiliacaoData {
   matricula?: string | null;
   created_at: string;
   aprovado_at?: string | null;
+  foto_url?: string | null;
+  documento_foto_url?: string | null;
 }
 
 interface DependentData {
@@ -215,6 +218,7 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
       matricula: member.registration_number,
       created_at: new Date().toISOString(),
       aprovado_at: new Date().toISOString(), // Assume filiado se está na base
+      foto_url: member.photo_url,
     };
     setFiliacaoData(filiacaoFromPatient);
     setHasFullFiliacaoRecord(false);
