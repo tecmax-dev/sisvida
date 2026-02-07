@@ -2,12 +2,28 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
+// ============ CORS CENTRALIZADO ============
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
+
+// Helpers para garantir CORS em TODAS as respostas
+function corsResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function corsError(message: string, status = 500): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 interface SendAccessCodeRequest {
   type: "accounting_office" | "employer";
@@ -93,35 +109,38 @@ ${logoSection}
 </html>`;
 };
 
-const handler = async (req: Request): Promise<Response> => {
-  console.log("send-portal-access-code: Received request");
+// ============ SUPABASE CLIENT (module-level para reduzir cold start) ============
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+const handler = async (req: Request): Promise<Response> => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startTime = Date.now();
+  const origin = req.headers.get("origin") || "unknown";
+  
+  console.log(`[send-portal-access-code][${requestId}] ${req.method} from ${origin}`);
+
+  // Preflight CORS
   if (req.method === "OPTIONS") {
+    console.log(`[send-portal-access-code][${requestId}] Preflight OK`);
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const data: SendAccessCodeRequest = await req.json();
-    console.log("send-portal-access-code: Processing request for", data.type, data.entityId);
+    console.log(`[send-portal-access-code][${requestId}] Processing: type=${data.type}, entityId=${data.entityId}, whatsappOnly=${data.whatsappOnly}`);
 
     if (!data.type || !data.entityId || !data.recipientName || !data.clinicName || !data.clinicSlug) {
-      return new Response(
-        JSON.stringify({ error: "Campos obrigatorios nao preenchidos" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`[send-portal-access-code][${requestId}] Missing required fields`);
+      return corsError("Campos obrigatorios nao preenchidos", 400);
     }
 
     if (!data.whatsappOnly && data.recipientEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(data.recipientEmail)) {
-        return new Response(
-          JSON.stringify({ error: "Email do destinatario invalido" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[send-portal-access-code][${requestId}] Invalid email: ${data.recipientEmail}`);
+        return corsError("Email do destinatario invalido", 400);
       }
     }
 
@@ -135,13 +154,16 @@ const handler = async (req: Request): Promise<Response> => {
         .from("accounting_offices")
         .select("access_code, email, phone, clinic_id")
         .eq("id", data.entityId)
-        .single();
+        .maybeSingle();
 
       if (fetchError || !office) {
-        return new Response(
-          JSON.stringify({ error: "Escritorio nao encontrado" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[send-portal-access-code][${requestId}] Accounting office not found: ${data.entityId}`);
+        return corsError("Escritorio nao encontrado", 404);
+      }
+
+      if (!office.access_code) {
+        console.log(`[send-portal-access-code][${requestId}] No access code for accounting office: ${data.entityId}`);
+        return corsError("Codigo de acesso nao configurado para este escritorio", 400);
       }
 
       accessCode = office.access_code;
@@ -161,13 +183,11 @@ const handler = async (req: Request): Promise<Response> => {
         .from("employers")
         .select("access_code, cnpj, email, phone, clinic_id")
         .eq("id", data.entityId)
-        .single();
+        .maybeSingle();
 
       if (fetchError || !employer) {
-        return new Response(
-          JSON.stringify({ error: "Empresa nao encontrada" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[send-portal-access-code][${requestId}] Employer not found: ${data.entityId}`);
+        return corsError("Empresa nao encontrada", 404);
       }
 
       if (!employer.access_code) {
@@ -179,6 +199,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         await supabase.from("employers").update({ access_code: newCode }).eq("id", data.entityId);
         accessCode = newCode;
+        console.log(`[send-portal-access-code][${requestId}] Generated new access code for employer: ${data.entityId}`);
       } else {
         accessCode = employer.access_code;
       }
@@ -197,18 +218,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // WhatsApp only - retorna dados sem enviar email
     if (data.whatsappOnly) {
-      return new Response(
-        JSON.stringify({ success: true, accessCode, identifier, portalUrl }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const elapsed = Date.now() - startTime;
+      console.log(`[send-portal-access-code][${requestId}] WhatsApp only response in ${elapsed}ms`);
+      return corsResponse({ success: true, accessCode, identifier, portalUrl });
     }
 
     if (!data.recipientEmail) {
-      return new Response(
-        JSON.stringify({ error: "Email do destinatario e obrigatorio para envio por e-mail" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`[send-portal-access-code][${requestId}] Email required but not provided`);
+      return corsError("Email do destinatario e obrigatorio para envio por e-mail", 400);
     }
 
     // Busca logo do sindicato
@@ -218,7 +237,7 @@ const handler = async (req: Request): Promise<Response> => {
         .from('union_entities')
         .select('logo_url')
         .eq('clinic_id', clinicId)
-        .single();
+        .maybeSingle();
       
       if (unionData?.logo_url) {
         logoUrl = unionData.logo_url;
@@ -229,17 +248,18 @@ const handler = async (req: Request): Promise<Response> => {
     const portalName = data.type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
     const subject = `Seu Codigo de Acesso - ${portalName}`;
 
+    // Verificar configuração SMTP
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPassword = Deno.env.get("SMTP_PASSWORD");
     const smtpFrom = Deno.env.get("SMTP_FROM");
 
+    console.log(`[send-portal-access-code][${requestId}] SMTP config: host=${smtpHost ? 'SET' : 'MISSING'}, user=${smtpUser ? 'SET' : 'MISSING'}, from=${smtpFrom ? 'SET' : 'MISSING'}`);
+
     if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
-      return new Response(
-        JSON.stringify({ error: "Configuracao SMTP nao encontrada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.error(`[send-portal-access-code][${requestId}] SMTP configuration incomplete`);
+      return corsError("Configuracao SMTP nao encontrada", 500);
     }
 
     const client = new SMTPClient({
@@ -255,6 +275,8 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     try {
+      console.log(`[send-portal-access-code][${requestId}] Sending email to: ${data.recipientEmail}`);
+      
       await client.send({
         from: smtpFrom,
         to: data.recipientEmail,
@@ -263,14 +285,14 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       await client.close();
-      console.log("send-portal-access-code: Email sent successfully via SMTP");
+      
+      const elapsed = Date.now() - startTime;
+      console.log(`[send-portal-access-code][${requestId}] Email sent successfully in ${elapsed}ms`);
 
-      return new Response(
-        JSON.stringify({ success: true, message: "Email enviado com sucesso" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return corsResponse({ success: true, message: "Email enviado com sucesso" });
+
     } catch (smtpError: any) {
-      console.error("send-portal-access-code: SMTP error:", smtpError);
+      console.error(`[send-portal-access-code][${requestId}] SMTP error:`, smtpError?.message || smtpError);
       try { await client.close(); } catch (_) {}
       
       let errorMessage = "Erro ao enviar email";
@@ -278,19 +300,16 @@ const handler = async (req: Request): Promise<Response> => {
         errorMessage = "Falha na autenticacao SMTP.";
       } else if (smtpError.message?.includes("connection")) {
         errorMessage = "Nao foi possivel conectar ao servidor SMTP.";
+      } else if (smtpError.message) {
+        errorMessage = `Erro SMTP: ${smtpError.message}`;
       }
       
-      return new Response(
-        JSON.stringify({ error: errorMessage }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return corsError(errorMessage, 500);
     }
+
   } catch (error: any) {
-    console.error("send-portal-access-code: Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Erro interno" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error(`[send-portal-access-code][${requestId}] Error:`, error?.message || error);
+    return corsError(error?.message || "Erro interno", 500);
   }
 };
 
