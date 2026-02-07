@@ -115,9 +115,15 @@ export function useContributionsReport(clinicId: string | undefined) {
           .range(from, from + PAGE_SIZE - 1);
 
         // Aplicar filtro de status NO BANCO (não no frontend)
+        // Statuses válidos para relatório: paid, pending, overdue, cancelled
+        // Statuses especiais (não devem aparecer no relatório geral): awaiting_value, negotiated
         if (filters.status === "hide_cancelled") {
-          query = query.neq("status", "cancelled");
-        } else if (filters.status !== "all") {
+          // Mostrar apenas paid, pending, overdue (ocultar cancelled, awaiting_value, negotiated)
+          query = query.in("status", ["paid", "pending", "overdue"]);
+        } else if (filters.status === "all") {
+          // Mostrar todos os status principais (ocultar apenas awaiting_value e negotiated)
+          query = query.in("status", ["paid", "pending", "overdue", "cancelled"]);
+        } else {
           query = query.eq("status", filters.status);
         }
 
