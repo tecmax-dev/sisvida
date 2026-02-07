@@ -56,6 +56,7 @@ interface FiliacaoFull {
   empresa_cnpj?: string | null;
   empresa_nome_fantasia?: string | null;
   empresa_endereco?: string | null;
+  empresa_matricula?: string | null;
   forma_pagamento?: string | null;
   documento_foto_url?: string | null;
   documento_rg_url?: string | null;
