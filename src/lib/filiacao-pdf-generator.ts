@@ -36,6 +36,7 @@ interface Filiacao {
   data_admissao?: string | null;
   empresa_razao_social?: string | null;
   empresa_cnpj?: string | null;
+  empresa_matricula?: string | null;
   forma_pagamento?: string | null;
   assinatura_digital_url?: string | null;
   assinatura_aceite_desconto?: boolean | null;
@@ -331,6 +332,7 @@ async function buildFiliacaoPDF(
   yPos += lineHeight;
   
   drawField("CNPJ", formatCNPJ(filiacao.empresa_cnpj || ""), col1X, yPos);
+  drawField("Matrícula Empresa", filiacao.empresa_matricula || "", col3X, yPos);
   yPos += lineHeight;
 
   drawField("Segmento", filiacao.empresa_segmento || "Não Informado", col1X, yPos);
