@@ -1042,6 +1042,40 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "update_negotiation_invoice": {
+        // Atualizar boleto de parcela de negociação - com tratamento gracioso de erros Lytex
+        if (!params.invoiceId || !params.installmentId) {
+          throw new Error("invoiceId e installmentId são obrigatórios");
+        }
+
+        let lytexUpdated = false;
+        let lytexError: string | null = null;
+
+        try {
+          await updateInvoice({
+            invoiceId: params.invoiceId,
+            value: params.value,
+            dueDate: params.dueDate,
+            description: params.description,
+          });
+          lytexUpdated = true;
+          console.log("[Lytex] Boleto de negociação atualizado com sucesso");
+        } catch (err: any) {
+          lytexError = err?.message || "Erro ao atualizar boleto na Lytex";
+          console.warn("[Lytex] Não foi possível atualizar na Lytex:", lytexError);
+        }
+
+        result = { 
+          success: true, 
+          lytexUpdated, 
+          lytexError,
+          message: lytexUpdated 
+            ? "Boleto atualizado com sucesso" 
+            : "Lytex recusou a alteração, atualize apenas localmente"
+        };
+        break;
+      }
+
       case "sync_status": {
         // Sincronizar status de uma contribuição
         if (!params.contributionId) {

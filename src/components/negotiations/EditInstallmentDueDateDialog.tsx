@@ -93,24 +93,29 @@ export default function EditInstallmentDueDateDialog({
         try {
           const valueInCents = Math.round(Number(installment.value) * 100);
           
+          // Use update_negotiation_invoice for negotiation installments
           const { data, error } = await supabase.functions.invoke("lytex-api", {
             body: {
-              action: "updateInvoice",
+              action: "update_negotiation_invoice",
               invoiceId: installment.lytex_invoice_id,
+              installmentId: installment.id,
               dueDate: newDueDate,
               value: valueInCents,
             },
           });
 
           if (error) {
-            lytexError = error.message || "Erro ao atualizar no Lytex";
-            console.error("[EditDueDate] Lytex error:", error);
-          } else if (data?.error || !data?.success) {
-            lytexError = data?.error || data?.message || "Lytex recusou a alteração";
-            console.error("[EditDueDate] Lytex refused:", data);
-          } else {
+            lytexError = error.message || "Erro ao comunicar com Lytex";
+            console.error("[EditDueDate] Lytex edge function error:", error);
+          } else if (data?.lytexUpdated) {
             lytexUpdated = true;
             console.log("[EditDueDate] Lytex updated successfully");
+          } else if (data?.lytexError) {
+            lytexError = data.lytexError;
+            console.warn("[EditDueDate] Lytex refused update:", data.lytexError);
+          } else if (!data?.success) {
+            lytexError = data?.error || data?.message || "Lytex recusou a alteração";
+            console.error("[EditDueDate] Lytex refused:", data);
           }
         } catch (err: any) {
           lytexError = err.message || "Erro de comunicação com Lytex";
