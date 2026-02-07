@@ -72,6 +72,7 @@ import {
   HelpCircle,
   Headphones,
   Info,
+  WifiOff,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
@@ -83,6 +84,7 @@ import { UnionContentList } from "@/components/union/UnionContentList";
 import { AlbumManagementTab } from "@/components/union/AlbumManagementTab";
 import { ImportUrlButton } from "@/components/union/ImportUrlButton";
 import { HelpContentManagement } from "@/components/union/HelpContentManagement";
+import { AppAvailabilityToggle } from "@/components/union/AppAvailabilityToggle";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployerCategory {
@@ -141,7 +143,7 @@ const defaultFormData: FormData = {
   cct_category_id: null,
 };
 
-type TabType = ContentType | "ouvidoria" | "push" | "tabs" | "cct-categories";
+type TabType = ContentType | "ouvidoria" | "push" | "tabs" | "cct-categories" | "availability";
 
 export default function UnionAppContentPage() {
   const navigate = useNavigate();
@@ -343,6 +345,9 @@ export default function UnionAppContentPage() {
   }
 
   const renderContent = () => {
+    if (activeTab === "availability") {
+      return <AppAvailabilityToggle />;
+    }
     if (activeTab === "cct-categories") {
       return <CctCategoriesManagement />;
     }
@@ -476,6 +481,25 @@ export default function UnionAppContentPage() {
             <FileText className="h-4 w-4" />
             <span className="flex-1 text-left">Categorias CCT</span>
           </button>
+          
+          {/* Separator for availability */}
+          <div className="my-3 border-t" />
+          
+          {/* Availability Toggle */}
+          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Controle
+          </div>
+          <button
+            onClick={() => setActiveTab("availability")}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
+              activeTab === "availability"
+                ? "bg-amber-500 text-white"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <WifiOff className="h-4 w-4" />
+            <span className="flex-1 text-left">Disponibilidade</span>
+          </button>
         </nav>
       </aside>
 
@@ -494,7 +518,9 @@ export default function UnionAppContentPage() {
                       ? "Push Notifications"
                       : activeTab === "tabs"
                         ? "Abas do App"
-                        : "Categorias CCT"
+                        : activeTab === "availability"
+                          ? "Disponibilidade do App"
+                          : "Categorias CCT"
                 }
               </h2>
               <p className="text-muted-foreground">
@@ -506,7 +532,9 @@ export default function UnionAppContentPage() {
                       ? "Envie notificações push para os usuários"
                       : activeTab === "tabs"
                         ? "Configure as abas visíveis no aplicativo"
-                        : "Organize as categorias de CCT"
+                        : activeTab === "availability"
+                          ? "Controle o acesso dos usuários ao aplicativo"
+                          : "Organize as categorias de CCT"
                 }
               </p>
             </div>
