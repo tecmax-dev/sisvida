@@ -451,15 +451,7 @@ async function buildFiliacaoPDF(
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...COLORS.black);
-  doc.text("Autorização de Desconto", margin + 20, row1Y + 2);
-
-  // Date below title
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  const stubDataFormatada = filiacao.aprovado_at
-    ? formatDateLong(filiacao.aprovado_at)
-    : formatDateLong(new Date().toISOString());
-  doc.text(stubDataFormatada, margin + 20, row1Y + 8);
+  doc.text("Autorização de Desconto", margin + 20, row1Y + 4);
   
   const descontoFolha = filiacao.forma_pagamento === "desconto_folha";
   
