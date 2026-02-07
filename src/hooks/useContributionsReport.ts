@@ -92,7 +92,8 @@ export function useContributionsReport(clinicId: string | undefined) {
     setError(null);
 
     try {
-      console.log("[useContributionsReport] Buscando com filtros:", filters);
+      console.log("[useContributionsReport] Fetching with filters:", JSON.stringify(filters, null, 2));
+      console.log("[useContributionsReport] Date range:", filters.startDate, "to", filters.endDate);
 
       let allData: ContributionReportItem[] = [];
       let from = 0;
@@ -222,7 +223,11 @@ export function useContributionsReport(clinicId: string | undefined) {
         }
       }
 
-      console.log(`[useContributionsReport] Total encontrado: ${allData.length} contribuições`);
+      console.log(`[useContributionsReport] Total found: ${allData.length} contributions`);
+      if (filters.employerId) {
+        console.log(`[useContributionsReport] Filtered by employer: ${filters.employerId}`);
+      }
+      console.log("[useContributionsReport] Status filter used:", filters.status);
       
       setContributions(allData);
       setLastFilters(filters);

@@ -47,7 +47,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { endOfMonth, format, startOfYear } from "date-fns";
+import { endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EmployerSearchCombobox } from "./EmployerSearchCombobox";
 import { generateContributionsReport } from "@/lib/contributions-report-pdf";
@@ -96,21 +96,31 @@ export default function UnionContributionsReportsTab({
   const { session } = useAuth();
   
   // LocalStorage key for persisting filters - with version to invalidate old cache
-  const STORAGE_VERSION = "v2"; // Increment to invalidate old saved filters
+  // CRITICAL: Increment version when default filters change to force users to get new defaults
+  const STORAGE_VERSION = "v3"; // v3: Force due_date filter + 5 year range
   const STORAGE_KEY = `union-contributions-report-filters-${clinicId}-${STORAGE_VERSION}`;
   
-  // Helper to get saved filters from localStorage
+  // Helper to get saved filters from localStorage - with aggressive cleanup of old versions
   const getSavedFilters = useCallback(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        console.log("[UnionContributionsReportsTab] Loaded saved filters:", parsed);
+        return parsed;
       }
-      // Clean up old version keys
-      const oldKey = `union-contributions-report-filters-${clinicId}`;
-      if (localStorage.getItem(oldKey)) {
-        localStorage.removeItem(oldKey);
-      }
+      // Clean up ALL old version keys
+      const keysToClean = [
+        `union-contributions-report-filters-${clinicId}`,
+        `union-contributions-report-filters-${clinicId}-v1`,
+        `union-contributions-report-filters-${clinicId}-v2`,
+      ];
+      keysToClean.forEach(key => {
+        if (localStorage.getItem(key)) {
+          console.log("[UnionContributionsReportsTab] Removing old filter key:", key);
+          localStorage.removeItem(key);
+        }
+      });
     } catch (e) {
       console.warn("Erro ao recuperar filtros salvos:", e);
     }
@@ -120,11 +130,10 @@ export default function UnionContributionsReportsTab({
   // Date helpers - stable references
   const toInputDate = useCallback((d: Date) => format(d, "yyyy-MM-dd"), []);
   
-  // Calculate default date range - 5 years back to cover historical data
+  // Calculate default date range - go back to 2020 to cover all historical data
   const getDefaultStartDate = useCallback(() => {
-    const date = new Date();
-    date.setFullYear(date.getFullYear() - 5);
-    return format(startOfYear(date), "yyyy-MM-dd");
+    // Start from 2020-01-01 to capture all historical overdue contributions
+    return "2020-01-01";
   }, []);
   
   // Initialize states from localStorage or defaults
@@ -256,16 +265,30 @@ export default function UnionContributionsReportsTab({
   // Fetch on mount and when filters change
   const handleSearch = useCallback(() => {
     const filters = buildFilters();
-    console.log("[UnionContributionsReportsTab] Buscando com filtros:", filters);
+    console.log("[UnionContributionsReportsTab] Searching with filters:", JSON.stringify(filters, null, 2));
     fetchContributions(filters);
   }, [buildFilters, fetchContributions]);
 
-  // Initial fetch
+  // Initial fetch on mount
   useEffect(() => {
     if (clinicId) {
+      console.log("[UnionContributionsReportsTab] Initial fetch for clinic:", clinicId);
       handleSearch();
     }
-  }, [clinicId]); // Only on mount
+  }, [clinicId]); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // Auto-search when employer is selected/changed
+  useEffect(() => {
+    // Only auto-search if we have contributions loaded (not first load)
+    if (clinicId && contributions.length >= 0 && selectedEmployer !== undefined) {
+      console.log("[UnionContributionsReportsTab] Employer changed, auto-searching:", selectedEmployer?.id);
+      // Small delay to ensure state is updated
+      const timeout = setTimeout(() => {
+        handleSearch();
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectedEmployer?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Contributions to display (already filtered by the hook at database level)
   const displayContributions = useMemo(() => {
