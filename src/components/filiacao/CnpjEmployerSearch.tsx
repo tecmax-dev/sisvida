@@ -11,6 +11,7 @@ interface Employer {
   cnpj: string | null;
   trade_name: string | null;
   address?: string | null;
+  registration_number?: string | null;
 }
 
 interface CnpjEmployerSearchProps {
@@ -21,6 +22,7 @@ interface CnpjEmployerSearchProps {
     razao_social: string;
     nome_fantasia?: string;
     endereco?: string;
+    matricula?: string;
   }) => void;
   className?: string;
 }
@@ -85,7 +87,7 @@ export function CnpjEmployerSearch({
       
       const { data, error } = await supabase
         .from("employers")
-        .select("id, name, cnpj, trade_name, address")
+        .select("id, name, cnpj, trade_name, address, registration_number")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .or(orParts.join(","))
@@ -190,7 +192,7 @@ export function CnpjEmployerSearch({
             
             const { data, error } = await supabase
               .from("employers")
-              .select("id, name, cnpj, trade_name, address")
+              .select("id, name, cnpj, trade_name, address, registration_number")
               .eq("clinic_id", clinicId || "")
               .eq("is_active", true)
               .or(orParts.join(","))
@@ -267,6 +269,7 @@ export function CnpjEmployerSearch({
       razao_social: employer.name,
       nome_fantasia: employer.trade_name || "",
       endereco: employer.address || "",
+      matricula: employer.registration_number || "",
     });
   };
 
