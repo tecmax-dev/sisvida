@@ -92,7 +92,11 @@ const formatPhone = (phone: string) => {
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "";
   try {
-    return format(new Date(dateStr + "T12:00:00"), "dd/MM/yyyy");
+    // Handle both date-only (YYYY-MM-DD) and full timestamp formats
+    const dateToFormat = dateStr.includes("T") 
+      ? new Date(dateStr) 
+      : new Date(dateStr + "T12:00:00");
+    return format(dateToFormat, "dd/MM/yyyy");
   } catch {
     return "";
   }
@@ -101,7 +105,11 @@ const formatDate = (dateStr: string | null | undefined): string => {
 const formatDateLong = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "";
   try {
-    return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    // Handle both date-only and full timestamp formats
+    const dateToFormat = dateStr.includes("T") 
+      ? new Date(dateStr) 
+      : new Date(dateStr + "T12:00:00");
+    return format(dateToFormat, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   } catch {
     return "";
   }
@@ -354,20 +362,16 @@ async function buildFiliacaoPDF(
     ? formatDateLong(filiacao.aprovado_at)
     : formatDateLong(new Date().toISOString());
 
-  yPos += 30;
+  yPos += 20;
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.black);
   doc.text(`${cidade.toUpperCase()}, ${dataFormatada}`, pageWidth / 2, yPos, { align: "center" });
 
-  yPos += 35;
+  // Add more space for signature area to avoid overlap
+  yPos += 45;
 
-  // Signature line first (draw background)
-  doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.4);
-  doc.line(pageWidth / 2 - 65, yPos, pageWidth / 2 + 65, yPos);
-
-  // Add digital signature if exists (as image over the line)
+  // Add digital signature if exists (positioned above the line with proper spacing)
   if (filiacao.assinatura_digital_url) {
     try {
       // Check if it's a data URL (base64) or a regular URL
@@ -379,13 +383,19 @@ async function buildFiliacaoPDF(
       }
       
       if (sigBase64 && sigBase64.startsWith("data:image")) {
-        // Position signature centered above the line
-        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 35, yPos - 28, 70, 24);
+        // Position signature centered above the signature line
+        // Smaller size to prevent overlap with surrounding text
+        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 30, yPos - 22, 60, 18);
       }
     } catch (e) {
       console.warn("Failed to load signature:", e);
     }
   }
+
+  // Signature line
+  doc.setDrawColor(...COLORS.black);
+  doc.setLineWidth(0.4);
+  doc.line(pageWidth / 2 - 65, yPos, pageWidth / 2 + 65, yPos);
 
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.black);
