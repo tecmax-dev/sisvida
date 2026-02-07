@@ -70,6 +70,7 @@ interface FiliacaoData {
   data_admissao?: string | null;
   empresa_razao_social?: string | null;
   empresa_cnpj?: string | null;
+  empresa_matricula?: string | null;
   forma_pagamento?: string | null;
   assinatura_digital_url?: string | null;
   assinatura_aceite_desconto?: boolean | null;
