@@ -117,22 +117,31 @@ export function SindSystemPageHeader({
           <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
         </div>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-2 text-slate-700 border-slate-300 hover:bg-slate-50">
-            Opções
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {onBack && (
-            <DropdownMenuItem onClick={onBack} className="cursor-pointer">
-              <RotateCw className="h-4 w-4 mr-2" />
-              Voltar
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2 text-slate-700 border-slate-300 hover:bg-slate-50">
+              Opções
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="cursor-pointer text-slate-400" disabled>
+              Sem opções disponíveis
             </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {onBack && (
+          <Button 
+            variant="outline" 
+            onClick={onBack}
+            className="gap-2 text-slate-700 border-slate-300 hover:bg-slate-50"
+          >
+            <RotateCw className="h-4 w-4" />
+            Voltar
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
