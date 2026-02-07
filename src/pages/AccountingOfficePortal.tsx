@@ -540,8 +540,8 @@ export default function AccountingOfficePortal() {
             subtitle="Gerenciamento e consultas."
           />
 
-          {/* 3 Service Cards - SindSystem style */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          {/* 4 Service Cards - SindSystem style */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
             <SindSystemServiceCard
               icon={<Barcode className="h-12 w-12" />}
               title="BOLETOS"
@@ -562,6 +562,13 @@ export default function AccountingOfficePortal() {
               description="Listagem de documentos coletivos."
               onClick={() => setActiveView("documents")}
               color="orange"
+            />
+            <SindSystemServiceCard
+              icon={<Handshake className="h-12 w-12" />}
+              title="AGENDAR HOMOLOGAÇÃO"
+              description="Agendamento de homologações."
+              onClick={() => setActiveView("homologacao")}
+              color="blue"
             />
           </div>
         </SindSystemMain>
@@ -709,8 +716,37 @@ export default function AccountingOfficePortal() {
     );
   }
 
-  // Homologacao Booking View
-  if (activeView === "homologacao" && selectedEmployerForHomologacao && clinic?.id) {
+  // Homologacao View - Seleção de empresa ou agendamento
+  if (activeView === "homologacao") {
+    // Se já selecionou uma empresa, mostra o formulário de agendamento
+    if (selectedEmployerForHomologacao && clinic?.id) {
+      return (
+        <SindSystemContainer>
+          <SindSystemHeader
+            logoUrl={clinic?.logo_url}
+            entityName={accountingOffice?.name || "Escritório"}
+            entityEmail={accountingOffice?.email}
+            onLogout={handleLogout}
+          />
+          
+          <SindSystemMain>
+            <PortalHomologacaoBooking
+              employer={selectedEmployerForHomologacao}
+              clinicId={clinic.id}
+              onBack={() => {
+                setSelectedEmployerForHomologacao(null);
+              }}
+              onSuccess={() => {
+                setSelectedEmployerForHomologacao(null);
+                setActiveView("home");
+              }}
+            />
+          </SindSystemMain>
+        </SindSystemContainer>
+      );
+    }
+
+    // Mostrar lista de empresas para seleção
     return (
       <SindSystemContainer>
         <SindSystemHeader
@@ -721,18 +757,60 @@ export default function AccountingOfficePortal() {
         />
         
         <SindSystemMain>
-          <PortalHomologacaoBooking
-            employer={selectedEmployerForHomologacao}
-            clinicId={clinic.id}
-            onBack={() => {
-              setSelectedEmployerForHomologacao(null);
-              setActiveView("employers");
-            }}
-            onSuccess={() => {
-              setSelectedEmployerForHomologacao(null);
-              setActiveView("employers");
-            }}
+          <SindSystemPageHeader
+            icon={<Handshake className="h-6 w-6 text-blue-500" />}
+            title="Agendar Homologação"
+            subtitle="Selecione uma empresa para agendar a homologação"
+            onBack={() => setActiveView("home")}
           />
+
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-medium text-slate-700 flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-slate-500" />
+                Selecione a empresa
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Escolha a empresa para agendar a homologação de rescisão.
+              </p>
+            </div>
+            
+            {employers.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">
+                <Building2 className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                <p>Nenhuma empresa vinculada.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {employers.map((employer) => (
+                  <button
+                    key={employer.id}
+                    onClick={() => setSelectedEmployerForHomologacao(employer)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-medium text-slate-900 text-sm truncate">
+                          {employer.trade_name || employer.name}
+                        </h4>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">
+                          {formatCNPJ(employer.cnpj)}
+                        </p>
+                      </div>
+                    </div>
+                    <Handshake className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <SindSystemBackButton onClick={() => setActiveView("home")} />
+          </div>
         </SindSystemMain>
       </SindSystemContainer>
     );

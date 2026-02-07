@@ -32,13 +32,15 @@ import {
   ChevronRight,
   Sun,
   Search,
-  Bell
+  Bell,
+  Calendar
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
+import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 
 interface Clinic {
   id: string;
@@ -124,7 +126,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   },
 };
 
-type ActiveView = "home" | "contributions" | "documents" | "history";
+type ActiveView = "home" | "contributions" | "documents" | "history" | "homologacao";
 type ContributionTab = "pending" | "overdue" | "paid" | "all";
 
 export default function EmployerPortal() {
@@ -711,7 +713,7 @@ export default function EmployerPortal() {
             </div>
 
             {/* Main Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Contribuições Card */}
               <button
                 onClick={() => setActiveView("contributions")}
@@ -760,6 +762,20 @@ export default function EmployerPortal() {
                   <div className="text-center">
                     <h3 className="text-lg font-bold uppercase tracking-wide">Histórico Financeiro</h3>
                     <p className="text-sm text-white/80 mt-1">Listagem de todo o seu histórico.</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Agendar Homologação Card */}
+              <button
+                onClick={() => setActiveView("homologacao")}
+                className="group h-48 rounded-xl bg-[#2c7be5] hover:bg-[#2566bf] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <Calendar className="h-14 w-14 text-white/90" />
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold uppercase tracking-wide">Agendar Homologação</h3>
+                    <p className="text-sm text-white/80 mt-1">Agendamento de homologações.</p>
                   </div>
                 </div>
               </button>
@@ -1148,6 +1164,19 @@ export default function EmployerPortal() {
               </Button>
             </div>
           </>
+        )}
+
+        {activeView === "homologacao" && employer && clinic?.id && (
+          <PortalHomologacaoBooking
+            employer={{
+              id: employer.id,
+              name: employer.name,
+              cnpj: employer.cnpj,
+            }}
+            clinicId={clinic.id}
+            onBack={() => setActiveView("home")}
+            onSuccess={() => setActiveView("home")}
+          />
         )}
       </main>
     </div>
