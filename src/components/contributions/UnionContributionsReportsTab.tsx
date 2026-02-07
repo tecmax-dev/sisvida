@@ -727,12 +727,26 @@ export default function UnionContributionsReportsTab({
                     <TableRow key={contribution.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium text-sm truncate max-w-[200px]">
-                            {contribution.employers?.trade_name || contribution.employers?.name || "-"}
+                          <p className="font-medium text-sm">
+                            {contribution.employers?.name || "-"}
                           </p>
-                          <span className="text-xs font-mono text-muted-foreground">
-                            {contribution.employers?.cnpj ? formatCNPJ(contribution.employers.cnpj) : "-"}
-                          </span>
+                          {contribution.employers?.trade_name && contribution.employers.trade_name !== contribution.employers.name && (
+                            <p className="text-xs text-muted-foreground truncate max-w-[250px]">
+                              {contribution.employers.trade_name}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {contribution.employers?.cnpj && (
+                              <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                                {formatCNPJ(contribution.employers.cnpj)}
+                              </span>
+                            )}
+                            {contribution.employers?.registration_number && (
+                              <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                                Mat: {contribution.employers.registration_number}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
