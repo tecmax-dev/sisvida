@@ -1,11 +1,36 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// ============================================================================
+// CORS HEADERS - CENTRALIZADOS (não duplicar em nenhum outro lugar)
+// ============================================================================
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
+
+// ============================================================================
+// SUPABASE CLIENT - Inicializado no nível do módulo para evitar cold start
+// ============================================================================
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// ============================================================================
+// HELPER: Resposta com CORS garantido (usar em TODAS as respostas)
+// ============================================================================
+function corsResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function corsError(message: string, status = 500): Response {
+  console.error(`[Lytex] Erro (${status}):`, message);
+  return corsResponse({ error: message }, status);
+}
 
 // Cache para tokens de acesso (primário e secundário)
 let accessTokenPrimary: string | null = null;
@@ -710,35 +735,41 @@ async function cancelInvoice(params: { invoiceId: string; dueDate?: string; valu
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startTime = Date.now();
+  const origin = req.headers.get("Origin") || req.headers.get("origin") || "unknown";
+  const method = req.method;
+  
+  console.log(`[Lytex][${requestId}] ====== NOVA REQUISIÇÃO ======`);
+  console.log(`[Lytex][${requestId}] Method: ${method}, Origin: ${origin}`);
+  console.log(`[Lytex][${requestId}] URL: ${req.url}`);
+  
+  // CORS Preflight - resposta imediata
+  if (method === "OPTIONS") {
+    console.log(`[Lytex][${requestId}] Preflight OPTIONS - respondendo com CORS headers`);
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Verificar autenticação
+    // Verificar autenticação (usando supabase do nível do módulo)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.warn(`[Lytex][${requestId}] Requisição sem Authorization header`);
+      return corsError("Não autorizado", 401);
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Token inválido" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.warn(`[Lytex][${requestId}] Token inválido:`, authError?.message);
+      return corsError("Token inválido", 401);
     }
 
+    console.log(`[Lytex][${requestId}] Usuário autenticado: ${user.email}`);
+
     const { action, ...params } = await req.json();
+    console.log(`[Lytex][${requestId}] Action: ${action}`);
 
     let result: any;
 
@@ -3301,22 +3332,24 @@ Deno.serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: "Ação inválida" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.warn(`[Lytex][${requestId}] Ação não reconhecida: ${action}`);
+        return corsError("Ação inválida", 400);
     }
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const elapsed = Date.now() - startTime;
+    console.log(`[Lytex][${requestId}] ✓ Sucesso em ${elapsed}ms`);
+    return corsResponse(result);
 
   } catch (error: unknown) {
+    const elapsed = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
-    console.error("[Lytex] Erro:", errorMessage);
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error(`[Lytex][${requestId}] ✗ Erro após ${elapsed}ms:`, errorMessage);
+    if (errorStack) {
+      console.error(`[Lytex][${requestId}] Stack:`, errorStack);
+    }
+    
+    return corsError(errorMessage);
   }
 });
