@@ -111,8 +111,15 @@ export default function UnionContributionsReportsTab({
     return null;
   }, [STORAGE_KEY]);
 
-  // Date helpers
-  const toInputDate = (d: Date) => format(d, "yyyy-MM-dd");
+  // Date helpers - stable references
+  const toInputDate = useCallback((d: Date) => format(d, "yyyy-MM-dd"), []);
+  
+  // Calculate default date range - 5 years back to cover historical data
+  const getDefaultStartDate = useCallback(() => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - 5);
+    return format(startOfYear(date), "yyyy-MM-dd");
+  }, []);
   
   // Initialize states from localStorage or defaults
   const savedFilters = getSavedFilters();
@@ -132,11 +139,13 @@ export default function UnionContributionsReportsTab({
   const [originFilter, setOriginFilter] = useState<string>(
     savedFilters?.originFilter || "all"
   );
+  // Default to due_date filter type to properly show overdue contributions
   const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">(
-    savedFilters?.dateFilterType || "competence"
+    savedFilters?.dateFilterType || "due_date"
   );
+  // Use wider date range by default to capture historical overdue contributions
   const [startDate, setStartDate] = useState<string>(
-    savedFilters?.startDate || toInputDate(startOfYear(new Date()))
+    savedFilters?.startDate || getDefaultStartDate()
   );
   const [endDate, setEndDate] = useState<string>(
     savedFilters?.endDate || toInputDate(endOfMonth(new Date()))
@@ -179,7 +188,8 @@ export default function UnionContributionsReportsTab({
     // For "defaulting" report type, force status to show only pending/overdue
     let effectiveStatus = statusFilter;
     if (reportType === 'defaulting') {
-      effectiveStatus = 'all'; // We'll filter in display
+      // Use special filter that will be handled to show both pending and overdue
+      effectiveStatus = 'defaulting'; 
     }
 
     return {
@@ -192,6 +202,20 @@ export default function UnionContributionsReportsTab({
       origin: originFilter !== "all" ? originFilter : undefined,
     };
   }, [startDate, endDate, dateFilterType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, reportType]);
+
+  // Reset filters to defaults
+  const handleResetFilters = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setReportType("general");
+    setStatusFilter("hide_cancelled");
+    setSelectedEmployer(null);
+    setSelectedContributionTypes([]);
+    setOriginFilter("all");
+    setDateFilterType("due_date");
+    setStartDate(getDefaultStartDate());
+    setEndDate(toInputDate(endOfMonth(new Date())));
+    toast.success("Filtros resetados");
+  }, [STORAGE_KEY, getDefaultStartDate, toInputDate]);
 
   // Toggle contribution type selection
   const toggleContributionType = (typeId: string) => {
@@ -237,13 +261,11 @@ export default function UnionContributionsReportsTab({
     }
   }, [clinicId]); // Only on mount
 
-  // Filter contributions for defaulting report
+  // Contributions to display (already filtered by the hook at database level)
   const displayContributions = useMemo(() => {
-    if (reportType === 'defaulting') {
-      return contributions.filter(c => c.status === 'pending' || c.status === 'overdue');
-    }
+    // No additional filtering needed - the hook already handles status filtering at database level
     return contributions;
-  }, [contributions, reportType]);
+  }, [contributions]);
 
   // Recalculate summary for display
   const displaySummary = useMemo(() => {
