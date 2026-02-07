@@ -8,17 +8,23 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Initialize Supabase client at module level for faster cold starts
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 serve(async (req) => {
+  const startTime = Date.now();
+  console.log("[employer-portal-auth] Request received");
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { action, cnpj, access_code, employer_id, contribution_id, reason, union_entity_id } = await req.json();
+    const body = await req.json();
+    const { action, cnpj, access_code, employer_id, contribution_id, reason, union_entity_id } = body;
+    console.log("[employer-portal-auth] Action:", action, "Time:", Date.now() - startTime, "ms");
 
     // Limpar CNPJ (apenas números)
     const cleanCnpj = cnpj?.replace(/\D/g, "");
@@ -32,14 +38,27 @@ serve(async (req) => {
         );
       }
 
-      // Buscar empresa - agora incluindo union_entity_id e category_id para isolamento e filtragem de CCTs
+      // Buscar empresa - usa índice idx_employers_cnpj_access
+      console.log("[employer-portal-auth] Querying employer by CNPJ:", cleanCnpj);
+      const queryStart = Date.now();
+      
       const { data: employer, error } = await supabase
         .from("employers")
         .select("id, name, cnpj, clinic_id, access_code, access_code_expires_at, union_entity_id, category_id")
         .eq("cnpj", cleanCnpj)
-        .single();
+        .maybeSingle();
 
-      if (error || !employer) {
+      console.log("[employer-portal-auth] Query completed in:", Date.now() - queryStart, "ms");
+
+      if (error) {
+        console.error("[employer-portal-auth] DB error:", error);
+        return new Response(
+          JSON.stringify({ error: "Erro ao consultar banco de dados" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!employer) {
         return new Response(
           JSON.stringify({ error: "CNPJ não encontrado" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -281,9 +300,9 @@ serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("[employer-portal-auth] Error:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
+      JSON.stringify({ error: "Erro interno do servidor", details: String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
