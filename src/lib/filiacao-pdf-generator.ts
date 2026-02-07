@@ -51,6 +51,8 @@ interface Filiacao {
   empresa_cidade?: string | null;
   empresa_uf?: string | null;
   empresa_telefone?: string | null;
+  foto_url?: string | null;
+  documento_foto_url?: string | null;
 }
 
 interface Sindicato {
@@ -259,10 +261,52 @@ async function buildFiliacaoPDF(
 
   yPos += 12;
 
+  // Member photo (positioned on the right side)
+  const photoSize = 30; // 30x30mm photo
+  const photoX = pageWidth - margin - photoSize;
+  const photoY = yPos - 2;
+  const photoUrl = filiacao.foto_url || filiacao.documento_foto_url;
+  
+  if (photoUrl) {
+    try {
+      const photoBase64 = await loadImageAsBase64(photoUrl);
+      if (photoBase64) {
+        // Draw photo border
+        doc.setDrawColor(...COLORS.gray);
+        doc.setLineWidth(0.5);
+        doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
+        
+        // Draw photo
+        doc.addImage(photoBase64, "JPEG", photoX, photoY, photoSize, photoSize);
+      }
+    } catch (e) {
+      console.warn("Failed to load member photo:", e);
+    }
+  } else {
+    // Draw placeholder box with initials if no photo
+    doc.setDrawColor(...COLORS.gray);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(photoX, photoY, photoSize, photoSize, "FD");
+    
+    // Add initials
+    const initials = filiacao.nome
+      .split(" ")
+      .filter(n => n.length > 0)
+      .slice(0, 2)
+      .map(n => n[0].toUpperCase())
+      .join("");
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...COLORS.gray);
+    doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 4, { align: "center" });
+    doc.setTextColor(...COLORS.black);
+  }
+
   // Grid layout for member data (matching model - 3 columns)
+  // Adjust col3X to leave space for photo
   const col1X = margin;
   const col2X = margin + 62;
-  const col3X = margin + 125;
+  const col3X = margin + 115; // Reduced to make room for photo
   const lineHeight = 8;
 
   const drawField = (label: string, value: string, x: number, y: number, maxWidth?: number) => {

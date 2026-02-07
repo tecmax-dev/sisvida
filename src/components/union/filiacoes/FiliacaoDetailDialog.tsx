@@ -73,6 +73,7 @@ interface FiliacaoFull {
   rejeitado_at?: string | null;
   motivo_rejeicao?: string | null;
   matricula?: string | null;
+  foto_url?: string | null;
 }
 
 interface Props {

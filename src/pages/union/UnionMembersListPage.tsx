@@ -1243,6 +1243,7 @@ export default function UnionMembersListPage() {
             state: selectedMemberForFiliacao.state,
             zip_code: selectedMemberForFiliacao.zip_code,
             registration_number: selectedMemberForFiliacao.registration_number,
+            photo_url: selectedMemberForFiliacao.photo_url,
           }}
           clinicId={currentClinic?.id || ""}
         />
