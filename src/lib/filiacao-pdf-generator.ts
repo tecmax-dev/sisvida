@@ -432,7 +432,7 @@ async function buildFiliacaoPDF(
   doc.setLineWidth(0.3);
   doc.rect(margin, stubStartY, pageWidth - margin * 2, stubHeight - 12);
 
-  // Row 1: Logo + Autorização + Checkboxes + Matrícula
+  // Row 1: Logo + Title in left section | Date/Local in middle | Checkboxes + Matrícula + Assinatura on right
   const row1Y = stubStartY + 8;
 
   // Small logo in stub
@@ -440,101 +440,131 @@ async function buildFiliacaoPDF(
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", margin + 3, row1Y - 4, 16, 16);
+        doc.addImage(logoBase64, "PNG", margin + 3, row1Y - 4, 14, 14);
       }
     } catch (e) {
       console.warn("Failed to load stub logo:", e);
     }
   }
 
-  // "Autorização de Desconto" title
-  doc.setFontSize(12);
+  // "Autorização de Desconto" title - positioned after logo
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...COLORS.black);
-  doc.text("Autorização de Desconto", margin + 24, row1Y + 4);
+  doc.text("Autorização de Desconto", margin + 20, row1Y + 2);
 
-  // "Desconto em Folha:" with checkboxes
-  doc.setFontSize(10);
-  doc.text("Desconto em Folha:", margin + 85, row1Y + 4);
+  // Date below title
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  const stubDataFormatada = filiacao.aprovado_at
+    ? formatDateLong(filiacao.aprovado_at)
+    : formatDateLong(new Date().toISOString());
+  doc.text(stubDataFormatada, margin + 20, row1Y + 8);
   
   const descontoFolha = filiacao.forma_pagamento === "desconto_folha";
   
+  // Middle section - Desconto em Folha checkboxes (centered)
+  const midSectionX = margin + 75;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("Desconto em Folha:", midSectionX, row1Y + 2);
+  
   // Sim checkbox
-  doc.setLineWidth(0.4);
+  doc.setLineWidth(0.3);
   doc.setDrawColor(...COLORS.black);
-  doc.rect(margin + 133, row1Y, 4, 4);
+  doc.rect(midSectionX + 28, row1Y - 1, 3.5, 3.5);
   if (descontoFolha) {
     doc.setFillColor(...COLORS.black);
-    doc.rect(margin + 133.5, row1Y + 0.5, 3, 3, "F");
+    doc.rect(midSectionX + 28.3, row1Y - 0.7, 2.9, 2.9, "F");
   }
   doc.setFont("helvetica", "normal");
-  doc.text("Sim", margin + 139, row1Y + 3);
+  doc.text("Sim", midSectionX + 33, row1Y + 2);
 
   // Não checkbox
-  doc.rect(margin + 152, row1Y, 4, 4);
+  doc.rect(midSectionX + 42, row1Y - 1, 3.5, 3.5);
   if (!descontoFolha) {
     doc.setFillColor(...COLORS.black);
-    doc.rect(margin + 152.5, row1Y + 0.5, 3, 3, "F");
+    doc.rect(midSectionX + 42.3, row1Y - 0.7, 2.9, 2.9, "F");
   }
-  doc.text("Não", margin + 158, row1Y + 3);
+  doc.text("Não", midSectionX + 47, row1Y + 2);
 
-  // Vertical separator for Matrícula box
+  // Right section - Vertical separator for Matrícula + Assinatura box
+  const rightSectionX = pageWidth - margin - 45;
   doc.setLineWidth(0.3);
-  doc.line(pageWidth - margin - 38, stubStartY + 2, pageWidth - margin - 38, row1Y + 16);
+  doc.line(rightSectionX, stubStartY + 2, rightSectionX, stubStartY + stubHeight - 14);
 
   // Matrícula box on right
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("Matrícula:", pageWidth - margin - 34, row1Y);
+  doc.setFontSize(8);
+  doc.text("Matrícula:", rightSectionX + 3, row1Y);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text(filiacao.matricula || "", pageWidth - margin - 34, row1Y + 7);
-
-  // Assinatura area on far right
-  doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("Assinatura:", pageWidth - margin - 34, row1Y + 16);
-  doc.setLineWidth(0.3);
-  doc.line(pageWidth - margin - 34, row1Y + 24, pageWidth - margin - 2, row1Y + 24);
+  doc.text(filiacao.matricula || "", rightSectionX + 3, row1Y + 5);
+
+  // Assinatura area on right - with mini signature
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("Assinatura:", rightSectionX + 3, row1Y + 12);
+  
+  // Add mini digital signature in stub if exists
+  if (filiacao.assinatura_digital_url) {
+    try {
+      let stubSigBase64 = filiacao.assinatura_digital_url;
+      if (!stubSigBase64.startsWith("data:")) {
+        stubSigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url) || "";
+      }
+      if (stubSigBase64 && stubSigBase64.startsWith("data:image")) {
+        // Mini signature in stub (reduced size)
+        doc.addImage(stubSigBase64, "PNG", rightSectionX + 3, row1Y + 14, 28, 10);
+      }
+    } catch (e) {
+      console.warn("Failed to load stub signature:", e);
+    }
+  }
+  
+  // Signature line in stub
+  doc.setLineWidth(0.2);
+  doc.line(rightSectionX + 3, row1Y + 25, rightSectionX + 40, row1Y + 25);
 
   // Row 2: Nome completo
-  const row2Y = row1Y + 15;
-  doc.setFontSize(9);
+  const row2Y = row1Y + 12;
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.text("Nome completo:", margin + 3, row2Y);
   doc.setFont("helvetica", "normal");
-  doc.text(filiacao.nome, margin + 3, row2Y + 5);
+  doc.text(filiacao.nome, margin + 3, row2Y + 4);
 
   // Row 3: Empresa onde trabalha + Table
-  const row3Y = row2Y + 15;
+  const row3Y = row2Y + 12;
   
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
   doc.text("Empresa onde trabalha:", margin + 3, row3Y);
   doc.setFont("helvetica", "normal");
-  doc.text(filiacao.empresa_razao_social || "", margin + 3, row3Y + 5);
+  doc.text(filiacao.empresa_razao_social || "", margin + 3, row3Y + 4);
 
-  // Table for Nº Registro, Local, Inscrição
+  // Table for Nº Registro, Local, Inscrição - positioned to the right of empresa
   const tableX = margin + 68;
-  const cellWidth = 32;
+  const cellWidth = 28;
   
   // Draw table borders
   doc.setLineWidth(0.2);
-  doc.rect(tableX, row3Y - 4, cellWidth, 12);
-  doc.rect(tableX + cellWidth, row3Y - 4, cellWidth, 12);
-  doc.rect(tableX + cellWidth * 2, row3Y - 4, cellWidth, 12);
+  doc.rect(tableX, row3Y - 3, cellWidth, 10);
+  doc.rect(tableX + cellWidth, row3Y - 3, cellWidth, 10);
+  doc.rect(tableX + cellWidth * 2, row3Y - 3, cellWidth, 10);
 
   // Table headers
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("Nº Registro:", tableX + 2, row3Y);
-  doc.text("Local:", tableX + cellWidth + 2, row3Y);
-  doc.text("Inscrição:", tableX + cellWidth * 2 + 2, row3Y);
+  doc.setFontSize(7);
+  doc.text("Nº Registro:", tableX + 1, row3Y);
+  doc.text("Local:", tableX + cellWidth + 1, row3Y);
+  doc.text("Inscrição:", tableX + cellWidth * 2 + 1, row3Y);
 
   // Table values
   doc.setFont("helvetica", "normal");
-  doc.text("...", tableX + 2, row3Y + 5);
-  doc.text((filiacao.cidade || "").toUpperCase(), tableX + cellWidth + 2, row3Y + 5);
-  doc.text(formatDate(filiacao.aprovado_at || filiacao.created_at), tableX + cellWidth * 2 + 2, row3Y + 5);
+  doc.text("...", tableX + 1, row3Y + 4);
+  doc.text((filiacao.cidade || "").toUpperCase(), tableX + cellWidth + 1, row3Y + 4);
+  doc.text(formatDate(filiacao.aprovado_at || filiacao.created_at), tableX + cellWidth * 2 + 1, row3Y + 4);
 
   // VIA EMPRESA footer bar (red)
   const footerY = pageHeight - 8;
