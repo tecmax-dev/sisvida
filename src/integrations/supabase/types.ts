@@ -1855,6 +1855,10 @@ export type Database = {
       clinics: {
         Row: {
           address: string | null
+          app_unavailable: boolean
+          app_unavailable_at: string | null
+          app_unavailable_by: string | null
+          app_unavailable_message: string | null
           birthday_enabled: boolean | null
           birthday_message: string | null
           blocked_at: string | null
@@ -1897,6 +1901,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          app_unavailable?: boolean
+          app_unavailable_at?: string | null
+          app_unavailable_by?: string | null
+          app_unavailable_message?: string | null
           birthday_enabled?: boolean | null
           birthday_message?: string | null
           blocked_at?: string | null
@@ -1939,6 +1947,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          app_unavailable?: boolean
+          app_unavailable_at?: string | null
+          app_unavailable_by?: string | null
+          app_unavailable_message?: string | null
           birthday_enabled?: boolean | null
           birthday_message?: string | null
           blocked_at?: string | null
