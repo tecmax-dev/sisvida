@@ -49,65 +49,6 @@ const ROOT_ROUTES: Record<string, string> = {
 };
 
 export function GlobalBackButton() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
-
-  // Não exibir em rotas excluídas exatas
-  if (EXCLUDED_ROUTES.includes(pathname)) {
-    return null;
-  }
-
-  // Não exibir em rotas com prefixos excluídos (páginas públicas)
-  if (EXCLUDED_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
-    return null;
-  }
-
-  // Não exibir em páginas de ajuda/docs
-  if (pathname.startsWith("/ajuda")) {
-    return null;
-  }
-
-  const handleBack = () => {
-    // Se for uma rota raiz, ir para o destino definido
-    if (ROOT_ROUTES[pathname]) {
-      navigate(ROOT_ROUTES[pathname]);
-      return;
-    }
-
-    // Se houver histórico, voltar
-    if (window.history.length > 2) {
-      navigate(-1);
-    } else {
-      // Fallback: ir para a página anterior na hierarquia da URL
-      const segments = pathname.split("/").filter(Boolean);
-      if (segments.length > 1) {
-        segments.pop();
-        navigate("/" + segments.join("/"));
-      } else {
-        navigate("/");
-      }
-    }
-  };
-
-  // Detectar se está em uma rota com sidebar (dashboard, union, admin)
-  const hasSidebar = pathname.startsWith("/dashboard") || 
-                     pathname.startsWith("/union") || 
-                     pathname.startsWith("/admin");
-
-  return (
-    <div 
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all"
-    >
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleBack}
-        className="gap-2 bg-background/95 backdrop-blur-sm shadow-sm hover:shadow-md transition-all border-border h-8"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span className="hidden sm:inline">Voltar</span>
-      </Button>
-    </div>
-  );
+  // Botão voltar global desativado
+  return null;
 }
