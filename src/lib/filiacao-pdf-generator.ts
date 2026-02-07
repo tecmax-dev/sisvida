@@ -357,19 +357,23 @@ async function buildFiliacaoPDF(
   }
 
   // ========== DATE AND SIGNATURE ==========
+  // Calculate maximum Y position to avoid overlapping with stub area
+  const stubY = pageHeight - 70; // Stub starts here
+  const maxSignatureY = stubY - 20; // Leave 20pt margin before stub
+  
   const cidade = sindicato?.cidade || filiacao.cidade || "";
   const dataFormatada = filiacao.aprovado_at
     ? formatDateLong(filiacao.aprovado_at)
     : formatDateLong(new Date().toISOString());
 
-  yPos += 20;
+  yPos += 15;
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.black);
   doc.text(`${cidade.toUpperCase()}, ${dataFormatada}`, pageWidth / 2, yPos, { align: "center" });
 
-  // Add more space for signature area to avoid overlap
-  yPos += 45;
+  // Position signature line - ensure it doesn't exceed max position
+  const signatureLineY = Math.min(yPos + 40, maxSignatureY);
 
   // Add digital signature if exists (positioned above the line with proper spacing)
   if (filiacao.assinatura_digital_url) {
@@ -384,8 +388,17 @@ async function buildFiliacaoPDF(
       
       if (sigBase64 && sigBase64.startsWith("data:image")) {
         // Position signature centered above the signature line
-        // Smaller size to prevent overlap with surrounding text
-        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 30, yPos - 22, 60, 18);
+        // Smaller and positioned to not overlap with stub
+        const sigHeight = 16;
+        const sigWidth = 55;
+        doc.addImage(
+          sigBase64, 
+          "PNG", 
+          pageWidth / 2 - sigWidth / 2, 
+          signatureLineY - sigHeight - 2, 
+          sigWidth, 
+          sigHeight
+        );
       }
     } catch (e) {
       console.warn("Failed to load signature:", e);
@@ -395,14 +408,13 @@ async function buildFiliacaoPDF(
   // Signature line
   doc.setDrawColor(...COLORS.black);
   doc.setLineWidth(0.4);
-  doc.line(pageWidth / 2 - 65, yPos, pageWidth / 2 + 65, yPos);
+  doc.line(pageWidth / 2 - 65, signatureLineY, pageWidth / 2 + 65, signatureLineY);
 
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.black);
-  doc.text("Assinatura do Sócio", pageWidth / 2, yPos + 6, { align: "center" });
+  doc.text("Assinatura do Sócio", pageWidth / 2, signatureLineY + 6, { align: "center" });
 
-  // ========== BOTTOM STUB (VIA EMPRESA) - Matching model exactly ==========
-  const stubY = pageHeight - 65;
+  // ========== BOTTOM STUB (VIA EMPRESA) - Fixed position from bottom ==========
 
   // Dashed line separator
   doc.setDrawColor(...COLORS.gray);
