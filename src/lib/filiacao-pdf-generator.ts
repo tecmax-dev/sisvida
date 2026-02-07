@@ -366,7 +366,7 @@ async function buildFiliacaoPDF(
     ? formatDateLong(filiacao.aprovado_at)
     : formatDateLong(new Date().toISOString());
 
-  yPos += 15;
+  yPos += 22;
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.black);
