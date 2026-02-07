@@ -584,13 +584,13 @@ export default function UnionContributionsReportsTab({
         </Card>
       </div>
 
-      {/* Report Table */}
+      {/* Summary by Employer Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              {currentReportType?.label || "Relatório"}
+              <Building2 className="h-4 w-4" />
+              Resumo por Empresa
             </CardTitle>
             <CardDescription>
               {loading ? (
@@ -600,8 +600,7 @@ export default function UnionContributionsReportsTab({
                 </span>
               ) : (
                 <>
-                  {displayContributions.length} contribuições no período selecionado
-                  {selectedEmployer && ` • Empresa: ${selectedEmployer.name}`}
+                  {displayByEmployerReport.length} empresas no período selecionado
                 </>
               )}
             </CardDescription>
@@ -695,6 +694,104 @@ export default function UnionContributionsReportsTab({
           )}
         </CardContent>
       </Card>
+
+      {/* Detailed Contributions Table */}
+      {!loading && displayContributions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <List className="h-4 w-4" />
+              Listagem Detalhada
+            </CardTitle>
+            <CardDescription>
+              {displayContributions.length} contribuições encontradas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-auto" style={{ maxHeight: "600px" }}>
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-center">Competência</TableHead>
+                    <TableHead className="text-center">Vencimento</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Pagamento</TableHead>
+                    <TableHead className="text-right">Valor Pago</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayContributions.map((contribution) => (
+                    <TableRow key={contribution.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-sm truncate max-w-[200px]">
+                            {contribution.employers?.trade_name || contribution.employers?.name || "-"}
+                          </p>
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {contribution.employers?.cnpj ? formatCNPJ(contribution.employers.cnpj) : "-"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {contribution.contribution_types?.name || "-"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-sm">
+                        {String(contribution.competence_month).padStart(2, "0")}/{contribution.competence_year}
+                      </TableCell>
+                      <TableCell className="text-center text-sm">
+                        {contribution.due_date 
+                          ? format(new Date(contribution.due_date + "T12:00:00"), "dd/MM/yyyy")
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(contribution.value)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {contribution.status === "paid" && (
+                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                            Pago
+                          </Badge>
+                        )}
+                        {contribution.status === "pending" && (
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                            Pendente
+                          </Badge>
+                        )}
+                        {contribution.status === "overdue" && (
+                          <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100">
+                            Vencido
+                          </Badge>
+                        )}
+                        {contribution.status === "cancelled" && (
+                          <Badge variant="secondary">
+                            Cancelado
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center text-sm">
+                        {contribution.paid_at 
+                          ? format(new Date(contribution.paid_at), "dd/MM/yyyy")
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-emerald-600">
+                        {contribution.paid_value ? formatCurrency(contribution.paid_value) : "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="px-4 py-2 border-t bg-muted/30 text-xs text-muted-foreground">
+              {displayContributions.length} registro(s)
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
