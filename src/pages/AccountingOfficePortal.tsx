@@ -58,6 +58,11 @@ interface Employer {
   city?: string | null;
   state?: string | null;
   is_active?: boolean;
+  category_id?: string | null;
+  category?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface Contribution {
@@ -136,6 +141,9 @@ export default function AccountingOfficePortal() {
 
   // Employer selecionado para homologação
   const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
+
+  // Employer selecionado para documentos (CCTs por categoria)
+  const [selectedEmployerForDocuments, setSelectedEmployerForDocuments] = useState<Employer | null>(null);
 
   // Restaurar sessão do sessionStorage
   useEffect(() => {
@@ -596,7 +604,7 @@ export default function AccountingOfficePortal() {
     );
   }
 
-  // Documents View - Convenções Coletivas
+  // Documents View - Convenções Coletivas por Categoria da Empresa
   if (activeView === "documents") {
     return (
       <SindSystemContainer>
@@ -610,17 +618,91 @@ export default function AccountingOfficePortal() {
         <SindSystemMain>
           <SindSystemPageHeader
             icon={<FolderOpen className="h-6 w-6 text-amber-500" />}
-            title="Documentos Coletivos."
-            subtitle="Listagem de documentos coletivos."
-            onBack={() => setActiveView("home")}
+            title="Documentos Coletivos"
+            subtitle={selectedEmployerForDocuments 
+              ? `Convenções para: ${selectedEmployerForDocuments.name}` 
+              : "Selecione uma empresa para ver as convenções coletivas"}
+            onBack={() => {
+              if (selectedEmployerForDocuments) {
+                setSelectedEmployerForDocuments(null);
+              } else {
+                setActiveView("home");
+              }
+            }}
           />
 
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            {clinic?.id && <PortalConventionsSection clinicId={clinic.id} />}
-          </div>
+          {!selectedEmployerForDocuments ? (
+            // Mostrar lista de empresas para seleção
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-medium text-slate-700 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-slate-500" />
+                  Selecione a empresa
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  As convenções coletivas serão exibidas de acordo com o segmento da empresa selecionada.
+                </p>
+              </div>
+              
+              {employers.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">
+                  <Building2 className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                  <p>Nenhuma empresa vinculada.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {employers.map((employer) => (
+                    <button
+                      key={employer.id}
+                      onClick={() => setSelectedEmployerForDocuments(employer)}
+                      className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors text-left group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-slate-900 text-sm truncate">
+                            {employer.trade_name || employer.name}
+                          </h4>
+                          <p className="text-xs text-slate-500 truncate mt-0.5">
+                            {formatCNPJ(employer.cnpj)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {employer.category?.name && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">
+                            {employer.category.name}
+                          </span>
+                        )}
+                        <FileText className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors flex-shrink-0" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Mostrar convenções filtradas pela categoria
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              {clinic?.id && (
+                <PortalConventionsSection 
+                  clinicId={clinic.id} 
+                  employerCategoryId={selectedEmployerForDocuments.category_id}
+                />
+              )}
+            </div>
+          )}
 
           <div className="mt-6">
-            <SindSystemBackButton onClick={() => setActiveView("home")} />
+            <SindSystemBackButton onClick={() => {
+              if (selectedEmployerForDocuments) {
+                setSelectedEmployerForDocuments(null);
+              } else {
+                setActiveView("home");
+              }
+            }} />
           </div>
         </SindSystemMain>
       </SindSystemContainer>

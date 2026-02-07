@@ -344,7 +344,7 @@ serve(async (req) => {
 
       let query = supabase
         .from("employers")
-        .select("id, name, cnpj, trade_name, union_entity_id, phone, email")
+        .select("id, name, cnpj, trade_name, union_entity_id, phone, email, category_id, category:employer_categories(id, name)")
         .in("id", employerIds)
         .order("name");
 
