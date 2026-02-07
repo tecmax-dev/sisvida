@@ -280,7 +280,15 @@ async function buildFiliacaoPDF(
   yPos += 12;
 
   // Company data (matching model layout)
-  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos, 120);
+  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos, 90);
+  // Format CNPJ for display
+  const formatCNPJ = (cnpj: string) => {
+    if (!cnpj) return "";
+    const cleaned = cnpj.replace(/\D/g, "");
+    if (cleaned.length !== 14) return cnpj;
+    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  };
+  drawField("CNPJ", formatCNPJ(filiacao.empresa_cnpj || ""), col3X, yPos);
   yPos += lineHeight;
 
   drawField("Segmento", filiacao.empresa_segmento || "Comércio Varejista", col1X, yPos);
