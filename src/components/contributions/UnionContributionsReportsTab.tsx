@@ -95,8 +95,9 @@ export default function UnionContributionsReportsTab({
 }: UnionContributionsReportsTabProps) {
   const { session } = useAuth();
   
-  // LocalStorage key for persisting filters
-  const STORAGE_KEY = `union-contributions-report-filters-${clinicId}`;
+  // LocalStorage key for persisting filters - with version to invalidate old cache
+  const STORAGE_VERSION = "v2"; // Increment to invalidate old saved filters
+  const STORAGE_KEY = `union-contributions-report-filters-${clinicId}-${STORAGE_VERSION}`;
   
   // Helper to get saved filters from localStorage
   const getSavedFilters = useCallback(() => {
@@ -105,11 +106,16 @@ export default function UnionContributionsReportsTab({
       if (saved) {
         return JSON.parse(saved);
       }
+      // Clean up old version keys
+      const oldKey = `union-contributions-report-filters-${clinicId}`;
+      if (localStorage.getItem(oldKey)) {
+        localStorage.removeItem(oldKey);
+      }
     } catch (e) {
       console.warn("Erro ao recuperar filtros salvos:", e);
     }
     return null;
-  }, [STORAGE_KEY]);
+  }, [STORAGE_KEY, clinicId]);
 
   // Date helpers - stable references
   const toInputDate = useCallback((d: Date) => format(d, "yyyy-MM-dd"), []);
