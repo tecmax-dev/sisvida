@@ -154,6 +154,7 @@ export default function UnionContributionsPageRedesign() {
   const [fixingTypes, setFixingTypes] = useState(false);
   const [fetchingPaid, setFetchingPaid] = useState(false);
   const [importingExternal, setImportingExternal] = useState(false);
+  const [resolvingDuplicates, setResolvingDuplicates] = useState(false);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
   const [currentActionType, setCurrentActionType] = useState<LytexActionType>("import");
 
@@ -612,6 +613,40 @@ export default function UnionContributionsPageRedesign() {
     }
   };
 
+  const handleResolveDuplicates = async () => {
+    if (!currentClinic) return;
+    
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setResolvingDuplicates(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "resolve_duplicates",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.resolved > 0 || data?.cancelled > 0) {
+        toast.success(`${data.resolved} grupo(s) resolvido(s), ${data.cancelled} duplicata(s) cancelada(s)!`);
+        fetchData();
+      } else if (data?.duplicateGroups === 0) {
+        toast.info("Nenhuma duplicata encontrada");
+      } else {
+        toast.info("Nenhuma duplicata resolvida");
+      }
+    } catch (error) {
+      const { message } = extractFunctionsError(error);
+      console.error("Error resolving duplicates:", error);
+      toast.error(`Erro ao resolver duplicatas: ${message}`);
+    } finally {
+      setResolvingDuplicates(false);
+    }
+  };
+
   if (loading && !yearDetectionDone) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -647,9 +682,9 @@ export default function UnionContributionsPageRedesign() {
                   variant="outline" 
                   size="sm"
                   className="h-9"
-                  disabled={importing || extractingRegistrations || fixingTypes}
+                  disabled={importing || extractingRegistrations || fixingTypes || resolvingDuplicates}
                 >
-                  {importing || extractingRegistrations || fixingTypes ? (
+                  {importing || extractingRegistrations || fixingTypes || resolvingDuplicates ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
@@ -683,6 +718,11 @@ export default function UnionContributionsPageRedesign() {
                 <DropdownMenuItem onClick={handleImportExternalPaidInvoices} disabled={importingExternal} className="text-blue-600">
                   <CloudDownload className="h-4 w-4 mr-2" />
                   Importar Boletos Externos Pagos
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleResolveDuplicates} disabled={resolvingDuplicates} className="text-orange-600">
+                  <Users className="h-4 w-4 mr-2" />
+                  {resolvingDuplicates ? "Resolvendo Duplicatas..." : "Resolver Duplicatas de Boleto"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
                   <FileBarChart className="h-4 w-4 mr-2" />

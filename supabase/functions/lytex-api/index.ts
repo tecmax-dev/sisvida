@@ -3388,6 +3388,133 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "resolve_duplicates": {
+        // NOVA AÇÃO: Resolver contribuições duplicadas com o mesmo lytex_invoice_id
+        // Mantém apenas UMA contribuição ativa por invoice_id (a mais recente ou a com due_date menor)
+        if (!params.clinicId) {
+          throw new Error("clinicId é obrigatório");
+        }
+
+        console.log("[Lytex] Iniciando resolução de duplicatas de invoice_id...");
+
+        // Buscar todas as contribuições com lytex_invoice_id não nulo e não canceladas
+        const { data: allContribs, error: contribsErr } = await supabase
+          .from("employer_contributions")
+          .select(`
+            id,
+            lytex_invoice_id,
+            status,
+            paid_at,
+            due_date,
+            created_at,
+            competence_month,
+            competence_year,
+            employer:employers(name)
+          `)
+          .eq("clinic_id", params.clinicId)
+          .not("lytex_invoice_id", "is", null)
+          .neq("status", "cancelled");
+
+        if (contribsErr) {
+          throw new Error(`Erro ao carregar contribuições: ${contribsErr.message}`);
+        }
+
+        // Agrupar por lytex_invoice_id
+        const byInvoiceId = new Map<string, any[]>();
+        for (const c of allContribs || []) {
+          if (!c.lytex_invoice_id) continue;
+          const existing = byInvoiceId.get(c.lytex_invoice_id) || [];
+          existing.push(c);
+          byInvoiceId.set(c.lytex_invoice_id, existing);
+        }
+
+        // Filtrar apenas as duplicatas (mais de 1 por invoice_id)
+        const duplicateGroups = Array.from(byInvoiceId.entries())
+          .filter(([_, contribs]) => contribs.length > 1);
+
+        console.log(`[Lytex] Encontrados ${duplicateGroups.length} grupos com duplicatas`);
+
+        let resolved = 0;
+        let cancelled = 0;
+        let errors = 0;
+        const details: Array<{
+          lytexInvoiceId: string;
+          keptId: string;
+          cancelledIds: string[];
+          employerName?: string;
+          reason: string;
+        }> = [];
+
+        for (const [invoiceId, contribs] of duplicateGroups) {
+          try {
+            // Estratégia de seleção: manter a que está PAGA, ou a mais antiga (created_at)
+            // Se nenhuma está paga, mantém a com due_date mais antigo (presumindo que é a original)
+            const sorted = [...contribs].sort((a, b) => {
+              // Prioridade 1: status 'paid' ganha
+              if (a.status === 'paid' && b.status !== 'paid') return -1;
+              if (b.status === 'paid' && a.status !== 'paid') return 1;
+              // Prioridade 2: data de criação mais antiga
+              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            });
+
+            const toKeep = sorted[0];
+            const toCancel = sorted.slice(1);
+
+            if (toCancel.length > 0) {
+              const cancelIds = toCancel.map((c: any) => c.id);
+              
+              // Cancelar as duplicatas
+              const { error: cancelErr } = await supabase
+                .from("employer_contributions")
+                .update({ 
+                  status: "cancelled", 
+                  notes: `Cancelado automaticamente: duplicata de invoice_id ${invoiceId}`,
+                  updated_at: new Date().toISOString(),
+                })
+                .in("id", cancelIds);
+
+              if (cancelErr) {
+                console.error(`[Lytex] Erro ao cancelar duplicatas para ${invoiceId}:`, cancelErr);
+                errors++;
+                details.push({
+                  lytexInvoiceId: invoiceId,
+                  keptId: toKeep.id,
+                  cancelledIds: [],
+                  employerName: toKeep.employer?.name,
+                  reason: `Erro ao cancelar: ${cancelErr.message}`,
+                });
+              } else {
+                resolved++;
+                cancelled += cancelIds.length;
+                details.push({
+                  lytexInvoiceId: invoiceId,
+                  keptId: toKeep.id,
+                  cancelledIds: cancelIds,
+                  employerName: toKeep.employer?.name,
+                  reason: `Mantido ${toKeep.status}, cancelados ${cancelIds.length} duplicatas`,
+                });
+                console.log(`[Lytex] Invoice ${invoiceId}: mantido ${toKeep.id}, cancelados ${cancelIds.length}`);
+              }
+            }
+          } catch (groupErr: any) {
+            errors++;
+            console.error(`[Lytex] Erro ao processar grupo ${invoiceId}:`, groupErr);
+          }
+        }
+
+        console.log(`[Lytex] Resolução concluída: ${resolved} grupos resolvidos, ${cancelled} contribuições canceladas, ${errors} erros`);
+
+        result = {
+          success: true,
+          duplicateGroups: duplicateGroups.length,
+          resolved,
+          cancelled,
+          errors,
+          details: details.slice(0, 100),
+        };
+        break;
+      }
+
       default:
         console.warn(`[Lytex][${requestId}] Ação não reconhecida: ${action}`);
         return corsError("Ação inválida", 400);
