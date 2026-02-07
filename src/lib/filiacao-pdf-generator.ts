@@ -126,31 +126,30 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 function drawHeaderDecoration(doc: jsPDF) {
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Main red curved shape on left side (larger, sweeping curve)
+  // Main red curved shape on left side (smaller to avoid overlap)
   doc.setFillColor(...COLORS.red);
   
-  // Draw the main red curve using bezier approach
-  // Outer red curve
-  doc.triangle(0, 0, 70, 0, 0, 90, "F");
+  // Draw the main red curve - outer
+  doc.triangle(0, 0, 55, 0, 0, 70, "F");
   
   // Gold accent curve (inner)
   doc.setFillColor(...COLORS.gold);
-  doc.triangle(0, 0, 55, 0, 0, 70, "F");
+  doc.triangle(0, 0, 42, 0, 0, 55, "F");
   
   // Darker red inner layer
   doc.setFillColor(...COLORS.darkRed);
-  doc.triangle(0, 0, 38, 0, 0, 50, "F");
+  doc.triangle(0, 0, 28, 0, 0, 38, "F");
 
-  // Red line under title extending across page
+  // Red line under title extending across page (starting after logo area)
   doc.setFillColor(...COLORS.red);
   doc.setLineWidth(2.5);
   doc.setDrawColor(...COLORS.red);
-  doc.line(55, 28, pageWidth - 10, 28);
+  doc.line(48, 28, pageWidth - 10, 28);
   
   // Gold accent line
   doc.setLineWidth(1);
   doc.setDrawColor(...COLORS.gold);
-  doc.line(55, 31, pageWidth - 10, 31);
+  doc.line(48, 31, pageWidth - 10, 31);
 }
 
 async function buildFiliacaoPDF(
@@ -167,24 +166,28 @@ async function buildFiliacaoPDF(
   // ========== HEADER DECORATION (curved red/gold shape) ==========
   drawHeaderDecoration(doc);
 
-  // Logo on top-left (positioned over the curve)
+  // Logo on top-left (positioned over the curve - smaller to fit)
   if (sindicato?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", 6, 4, 32, 32);
+        doc.addImage(logoBase64, "PNG", 5, 4, 28, 28);
       }
     } catch (e) {
       console.warn("Failed to load logo:", e);
     }
   }
 
-  // Sindicato name (right-aligned, bold, dark red - matching model style)
-  doc.setFontSize(13);
+  // Sindicato name (positioned after curves, bold, dark red)
+  // Start text at x=52 to avoid overlap with colored bars
+  doc.setFontSize(12);
   doc.setTextColor(...COLORS.red);
   doc.setFont("helvetica", "bold");
   const sindicatoName = sindicato?.razao_social?.toUpperCase() || "SINDICATO";
-  doc.text(sindicatoName, pageWidth - margin, 18, { align: "right" });
+  // Use maxWidth to prevent text from going too far left
+  const textStartX = 52;
+  const maxTextWidth = pageWidth - textStartX - margin;
+  doc.text(sindicatoName, textStartX, 18, { maxWidth: maxTextWidth });
 
   // CNPJ below title (centered)
   if (sindicato?.cnpj) {
@@ -359,24 +362,33 @@ async function buildFiliacaoPDF(
 
   yPos += 35;
 
-  // Add digital signature if exists
+  // Signature line first (draw background)
+  doc.setDrawColor(...COLORS.black);
+  doc.setLineWidth(0.4);
+  doc.line(pageWidth / 2 - 65, yPos, pageWidth / 2 + 65, yPos);
+
+  // Add digital signature if exists (as image over the line)
   if (filiacao.assinatura_digital_url) {
     try {
-      const sigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url);
-      if (sigBase64) {
-        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 40, yPos - 30, 80, 25);
+      // Check if it's a data URL (base64) or a regular URL
+      let sigBase64 = filiacao.assinatura_digital_url;
+      
+      // If it's not already a data URL, load it
+      if (!sigBase64.startsWith("data:")) {
+        sigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url) || "";
+      }
+      
+      if (sigBase64 && sigBase64.startsWith("data:image")) {
+        // Position signature centered above the line
+        doc.addImage(sigBase64, "PNG", pageWidth / 2 - 35, yPos - 28, 70, 24);
       }
     } catch (e) {
       console.warn("Failed to load signature:", e);
     }
   }
 
-  // Signature line
-  doc.setDrawColor(...COLORS.black);
-  doc.setLineWidth(0.4);
-  doc.line(pageWidth / 2 - 65, yPos, pageWidth / 2 + 65, yPos);
-
   doc.setFontSize(11);
+  doc.setTextColor(...COLORS.black);
   doc.text("Assinatura do Sócio", pageWidth / 2, yPos + 6, { align: "center" });
 
   // ========== BOTTOM STUB (VIA EMPRESA) - Matching model exactly ==========
