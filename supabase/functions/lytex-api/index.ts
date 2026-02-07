@@ -2992,6 +2992,231 @@ Deno.serve(async (req) => {
           }
         }
 
+          // ====== NOVO: conciliar também parcelas de negociações (negotiation_installments) ======
+          // Motivo: /sindicato possui boletos de negociações (parcelas) que não estão em employer_contributions.
+          // Sem este bloco, mesmo com pagamento na Lytex, o sistema continua exibindo como pendente.
+          try {
+            let instQuery = supabase
+              .from("negotiation_installments")
+              .select(`
+                id,
+                negotiation_id,
+                installment_number,
+                lytex_invoice_id,
+                status,
+                paid_at,
+                paid_value,
+                value,
+                due_date,
+                debt_negotiations!inner(
+                  clinic_id,
+                  negotiation_code,
+                  employers(name, cnpj)
+                )
+              `)
+              .eq("debt_negotiations.clinic_id", params.clinicId)
+              .not("lytex_invoice_id", "is", null);
+
+            if (onlyPending) {
+              instQuery = instQuery.in("status", ["pending", "overdue", "processing"]);
+            }
+
+            if (daysBack && typeof daysBack === "number" && daysBack > 0) {
+              const cutoffDate = new Date();
+              cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+              const cutoffStr = cutoffDate.toISOString().split("T")[0];
+              instQuery = instQuery.gte("due_date", cutoffStr);
+            }
+
+            const { data: pendingInstallments, error: instErr } = await instQuery;
+
+            if (instErr) {
+              throw new Error(`Erro ao carregar parcelas de negociação: ${instErr.message}`);
+            }
+
+            console.log(`[Lytex] Encontradas ${pendingInstallments?.length || 0} parcelas de negociação para verificar`);
+
+            const installmentsByInvoiceId = new Map<string, any[]>();
+            for (const inst of pendingInstallments || []) {
+              if (!inst.lytex_invoice_id) continue;
+              const existing = installmentsByInvoiceId.get(inst.lytex_invoice_id) || [];
+              existing.push(inst);
+              installmentsByInvoiceId.set(inst.lytex_invoice_id, existing);
+            }
+
+            const installmentInvoiceIds = Array.from(installmentsByInvoiceId.keys());
+            const seenInstallmentInvoiceIds = new Set<string>();
+
+            for (let i = 0; i < installmentInvoiceIds.length; i += BATCH_SIZE) {
+              const batch = installmentInvoiceIds.slice(i, i + BATCH_SIZE);
+
+              await Promise.all(
+                batch.map(async (invoiceId: string) => {
+                  try {
+                    if (seenInstallmentInvoiceIds.has(invoiceId)) return;
+                    seenInstallmentInvoiceIds.add(invoiceId);
+
+                    const installments = installmentsByInvoiceId.get(invoiceId) || [];
+                    const activeInstallments = installments.filter((x: any) => x.status !== "cancelled");
+
+                    // Proteção: múltiplas parcelas ativas com o mesmo invoice_id
+                    if (activeInstallments.length > 1) {
+                      skippedDuplicates++;
+                      console.warn(
+                        `[Lytex] ⚠️ PULANDO invoice ${invoiceId} (negociação): ${activeInstallments.length} parcelas ativas detectadas. Requer revisão manual.`
+                      );
+
+                      conciliationDetails.push({
+                        lytexInvoiceId: invoiceId,
+                        contributionId: activeInstallments[0]?.id,
+                        employerName: activeInstallments[0]?.debt_negotiations?.employers?.name || "Desconhecido",
+                        result: "skipped_duplicate",
+                        reason: `${activeInstallments.length} parcelas ativas com o mesmo invoice_id (negociação). Revisão manual necessária.`,
+                      });
+
+                      await supabase.from("lytex_conciliation_logs").insert({
+                        clinic_id: params.clinicId,
+                        sync_log_id: syncLogPaid?.id,
+                        contribution_id: activeInstallments[0]?.id,
+                        lytex_invoice_id: invoiceId,
+                        previous_status: activeInstallments[0]?.status,
+                        new_status: activeInstallments[0]?.status,
+                        conciliation_result: "skipped_duplicate",
+                        conciliation_reason: `Negociação: múltiplas parcelas ativas (${activeInstallments.length}) com o mesmo invoice_id`,
+                        raw_lytex_data: {
+                          entity: "negotiation_installments",
+                          activeInstallmentIds: activeInstallments.map((x: any) => x.id),
+                        },
+                      });
+                      return;
+                    }
+
+                    if (activeInstallments.length === 0) return;
+
+                    const inst = activeInstallments[0];
+
+                    if (inst.status === "paid" && inst.paid_at) {
+                      alreadyConciliated++;
+                      return;
+                    }
+
+                    const fetchResult = await fetchInvoiceFromAnySource(invoiceId, tokenPrimary, tokenSecondary);
+
+                    if (!fetchResult.found || !fetchResult.invoice) {
+                      notFoundInAnyIntegration++;
+                      return;
+                    }
+
+                    const invoice = fetchResult.invoice;
+                    const invoiceSource = fetchResult.source || "primary";
+
+                    if (invoiceSource === "primary") foundInPrimary++;
+                    else foundInSecondary++;
+
+                    totalFound++;
+
+                    const mappedStatus = mapLytexInvoiceStatus(invoice);
+                    if (mappedStatus !== "paid") {
+                      pendingInLytex++;
+                      return;
+                    }
+
+                    const employerName =
+                      inst?.debt_negotiations?.employers?.name || invoice.client?.name || "Desconhecido";
+
+                    const paidAt = extractPaidDate(invoice);
+                    const paidValueCents = extractPaidValueCents(invoice);
+                    const paymentMethod = extractPaymentMethod(invoice);
+
+                    // negotiation_installments.value / paid_value são em REAIS (numeric)
+                    const paidValueReais =
+                      typeof paidValueCents === "number" ? paidValueCents / 100 : inst.value;
+
+                    const { error: updateErr } = await supabase
+                      .from("negotiation_installments")
+                      .update({
+                        status: "paid",
+                        paid_at: paidAt || new Date().toISOString(),
+                        paid_value: paidValueReais,
+                        payment_method: paymentMethod,
+                      })
+                      .eq("id", inst.id);
+
+                    if (updateErr) {
+                      errors++;
+                      conciliationDetails.push({
+                        lytexInvoiceId: invoiceId,
+                        contributionId: inst.id,
+                        employerName,
+                        result: "error",
+                        reason: `Negociação: ${updateErr.message}`,
+                        source: invoiceSource,
+                      });
+
+                      await supabase.from("lytex_conciliation_logs").insert({
+                        clinic_id: params.clinicId,
+                        sync_log_id: syncLogPaid?.id,
+                        contribution_id: inst.id,
+                        lytex_invoice_id: invoiceId,
+                        lytex_transaction_id: invoice.transactionId,
+                        previous_status: inst.status,
+                        new_status: "paid",
+                        lytex_paid_at: paidAt,
+                        lytex_paid_value: paidValueCents,
+                        lytex_payment_method: paymentMethod,
+                        conciliation_result: "error",
+                        conciliation_reason: `Negociação: ${updateErr.message}`,
+                        raw_lytex_data: { ...invoice, entity: "negotiation_installments" },
+                      });
+                      return;
+                    }
+
+                    conciliated++;
+                    conciliationDetails.push({
+                      lytexInvoiceId: invoiceId,
+                      contributionId: inst.id,
+                      employerName,
+                      result: "conciliated",
+                      paidAt: paidAt || undefined,
+                      paidValue: paidValueCents || undefined,
+                      paymentMethod: paymentMethod || undefined,
+                      source: invoiceSource,
+                      dueDate: inst.due_date || undefined,
+                      originalValue: typeof inst.value === "number" ? Math.round(inst.value * 100) : undefined,
+                      competence: inst?.debt_negotiations?.negotiation_code
+                        ? `NEG ${inst.debt_negotiations.negotiation_code} - Parcela ${inst.installment_number}`
+                        : undefined,
+                    });
+
+                    await supabase.from("lytex_conciliation_logs").insert({
+                      clinic_id: params.clinicId,
+                      sync_log_id: syncLogPaid?.id,
+                      contribution_id: inst.id,
+                      lytex_invoice_id: invoiceId,
+                      lytex_transaction_id: invoice.transactionId,
+                      previous_status: inst.status,
+                      new_status: "paid",
+                      lytex_paid_at: paidAt,
+                      lytex_paid_value: paidValueCents,
+                      lytex_payment_method: paymentMethod,
+                      conciliation_result: "conciliated",
+                      conciliation_reason: `Negociação: baixa automática via sync (${invoiceSource}) - status Lytex: ${invoice.status}`,
+                      raw_lytex_data: { ...invoice, entity: "negotiation_installments" },
+                    });
+                  } catch (err: any) {
+                    console.error(
+                      `[Lytex] Erro ao verificar fatura ${invoiceId} (negociação):`,
+                      err?.message
+                    );
+                  }
+                })
+              );
+            }
+          } catch (negErr: any) {
+            console.error("[Lytex] Erro ao conciliar parcelas de negociação:", negErr?.message);
+            // Não falhar a conciliação principal por causa de negociações
+          }
+
           console.log(`[Lytex] Conciliação concluída: ${conciliated} novos (${foundInPrimary} primária, ${foundInSecondary} secundária), ${alreadyConciliated} já conciliados, ${skippedDuplicates} duplicatas puladas, ${pendingInLytex} pendentes na Lytex, ${notFoundInAnyIntegration} não encontrados, ${errors} erros`);
 
           // Atualizar log final
