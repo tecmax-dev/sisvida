@@ -94,23 +94,75 @@ export default function UnionContributionsReportsTab({
   clinicLogo,
 }: UnionContributionsReportsTabProps) {
   const { session } = useAuth();
-  const [reportType, setReportType] = useState<ReportType>("general");
   
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
-  const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
-  const [selectedContributionTypes, setSelectedContributionTypes] = useState<string[]>([]);
-  const [originFilter, setOriginFilter] = useState<string>("all");
-  const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">("competence");
+  // LocalStorage key for persisting filters
+  const STORAGE_KEY = `union-contributions-report-filters-${clinicId}`;
+  
+  // Helper to get saved filters from localStorage
+  const getSavedFilters = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn("Erro ao recuperar filtros salvos:", e);
+    }
+    return null;
+  }, [STORAGE_KEY]);
 
-  // Date range - default to current year
+  // Date helpers
   const toInputDate = (d: Date) => format(d, "yyyy-MM-dd");
-  const currentYear = new Date().getFullYear();
-  const [startDate, setStartDate] = useState<string>(toInputDate(startOfYear(new Date())));
-  const [endDate, setEndDate] = useState<string>(toInputDate(endOfMonth(new Date())));
+  
+  // Initialize states from localStorage or defaults
+  const savedFilters = getSavedFilters();
+  
+  const [reportType, setReportType] = useState<ReportType>(
+    savedFilters?.reportType || "general"
+  );
+  const [statusFilter, setStatusFilter] = useState<string>(
+    savedFilters?.statusFilter || "hide_cancelled"
+  );
+  const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(
+    savedFilters?.selectedEmployer || null
+  );
+  const [selectedContributionTypes, setSelectedContributionTypes] = useState<string[]>(
+    savedFilters?.selectedContributionTypes || []
+  );
+  const [originFilter, setOriginFilter] = useState<string>(
+    savedFilters?.originFilter || "all"
+  );
+  const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">(
+    savedFilters?.dateFilterType || "competence"
+  );
+  const [startDate, setStartDate] = useState<string>(
+    savedFilters?.startDate || toInputDate(startOfYear(new Date()))
+  );
+  const [endDate, setEndDate] = useState<string>(
+    savedFilters?.endDate || toInputDate(endOfMonth(new Date()))
+  );
 
   // Track if user manually touched dates
   const dateTouchedRef = useRef(false);
+
+  // Auto-save filters to localStorage whenever they change
+  useEffect(() => {
+    const filtersToSave = {
+      reportType,
+      statusFilter,
+      selectedEmployer,
+      selectedContributionTypes,
+      originFilter,
+      dateFilterType,
+      startDate,
+      endDate,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtersToSave));
+    } catch (e) {
+      console.warn("Erro ao salvar filtros:", e);
+    }
+  }, [reportType, statusFilter, selectedEmployer, selectedContributionTypes, originFilter, dateFilterType, startDate, endDate, STORAGE_KEY]);
 
   // Use the hook for data fetching with SQL filters
   const {
