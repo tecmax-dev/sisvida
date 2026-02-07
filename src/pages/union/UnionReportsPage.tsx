@@ -5,7 +5,7 @@ import { fetchAllEmployers } from "@/lib/supabase-helpers";
 import { Loader2, FileBarChart, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
+import UnionContributionsReportsTab from "@/components/contributions/UnionContributionsReportsTab";
 
 interface Employer {
   id: string;
@@ -18,6 +18,7 @@ interface Employer {
   state: string | null;
   category_id?: string | null;
   registration_number?: string | null;
+  trade_name?: string | null;
 }
 
 interface ContributionType {
@@ -28,29 +29,8 @@ interface ContributionType {
   is_active: boolean;
 }
 
-interface Contribution {
-  id: string;
-  employer_id: string;
-  contribution_type_id: string;
-  competence_month: number;
-  competence_year: number;
-  value: number;
-  due_date: string;
-  status: string;
-  lytex_invoice_id: string | null;
-  lytex_invoice_url: string | null;
-  paid_at: string | null;
-  paid_value: number | null;
-  payment_method: string | null;
-  notes: string | null;
-  created_at: string;
-  employers?: Employer;
-  contribution_types?: ContributionType;
-}
-
 export default function UnionReportsPage() {
   const { currentClinic } = useAuth();
-  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,24 +46,9 @@ export default function UnionReportsPage() {
     setLoading(true);
 
     try {
-      // Fetch ALL contributions (not filtered by year - let the component filter)
-      const { data: contribData, error: contribError } = await supabase
-        .from("employer_contributions")
-        .select(`
-          *,
-          employers (id, name, cnpj, email, phone, address, city, state, category_id, registration_number),
-          contribution_types (id, name, description, default_value, is_active)
-        `)
-        .eq("clinic_id", currentClinic.id)
-        .order("competence_year", { ascending: false })
-        .order("competence_month", { ascending: false });
-
-      if (contribError) throw contribError;
-      setContributions(contribData || []);
-
       // Fetch employers - using pagination to avoid 1000 limit
       const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
-        select: "id, name, cnpj, email, phone, address, city, state, category_id, registration_number"
+        select: "id, name, cnpj, email, phone, address, city, state, category_id, registration_number, trade_name"
       });
       if (employersResult.error) throw employersResult.error;
       setEmployers(employersResult.data);
@@ -146,33 +111,13 @@ export default function UnionReportsPage() {
         </p>
       </div>
 
-      {contributions.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileBarChart className="h-5 w-5 text-blue-500" />
-              Sem Dados
-            </CardTitle>
-            <CardDescription>
-              Nenhuma contribuição encontrada
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12 text-muted-foreground">
-              <FileBarChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Aguarde o lançamento de contribuições para visualizar os relatórios</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <ContributionsReportsTab
-          contributions={contributions}
-          employers={employers}
-          contributionTypes={contributionTypes}
-          clinicName={currentClinic?.name}
-          clinicLogo={currentClinic?.logo_url || undefined}
-        />
-      )}
+      <UnionContributionsReportsTab
+        clinicId={currentClinic.id}
+        employers={employers}
+        contributionTypes={contributionTypes}
+        clinicName={currentClinic?.name}
+        clinicLogo={currentClinic?.logo_url || undefined}
+      />
     </div>
   );
 }
