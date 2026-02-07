@@ -215,14 +215,33 @@ async function buildFiliacaoPDF(
 
   yPos += 10;
 
-  // "Filiado desde" date
+  // "Filiado desde" date with badge style
   const filiadoDesde = filiacao.aprovado_at
     ? formatDate(filiacao.aprovado_at)
     : formatDate(filiacao.created_at);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...COLORS.gray);
-  doc.text(`Filiado desde ${filiadoDesde}`, pageWidth / 2, yPos, { align: "center" });
+  
+  const badgeText = `Filiado desde ${filiadoDesde}`;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  
+  // Calculate badge dimensions
+  const badgeTextWidth = doc.getTextWidth(badgeText);
+  const badgePadding = 8;
+  const badgeWidth = badgeTextWidth + badgePadding * 2;
+  const badgeHeight = 8;
+  const badgeX = pageWidth / 2 - badgeWidth / 2;
+  const badgeY = yPos - 5;
+  
+  // Draw badge background (gold/amber color)
+  doc.setFillColor(180, 140, 60); // Gold color
+  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, "F");
+  
+  // Badge text (white)
+  doc.setTextColor(255, 255, 255);
+  doc.text(badgeText, pageWidth / 2, yPos, { align: "center" });
+  
+  // Reset text color
+  doc.setTextColor(...COLORS.black);
 
   yPos += 18;
 
