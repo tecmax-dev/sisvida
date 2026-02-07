@@ -24,6 +24,7 @@ import {
   Users,
   CalendarCheck,
   Signature,
+  Eye,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF, generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
@@ -101,6 +102,7 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [viewingPDF, setViewingPDF] = useState(false);
   const [whatsappPhone, setWhatsappPhone] = useState(member.phone || "");
   const [emailAddress, setEmailAddress] = useState(member.email || "");
   const [filiacaoData, setFiliacaoData] = useState<FiliacaoData | null>(null);
@@ -226,6 +228,37 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
   const formatCPF = (cpf: string) => {
     const cleaned = cpf.replace(/\D/g, "");
     return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  };
+
+  // View PDF in new tab
+  const handleViewPDF = async () => {
+    setViewingPDF(true);
+    try {
+      if (!filiacaoData) {
+        toast({
+          title: "Ficha de filiação não encontrada",
+          description: "Este associado não possui ficha de filiação cadastrada.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const blob = await generateFiliacaoPDFBlob(filiacaoData, dependents, sindicato);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      
+      // Clean up after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error: any) {
+      console.error("Error viewing PDF:", error);
+      toast({
+        title: "Erro ao visualizar PDF",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setViewingPDF(false);
+    }
   };
 
   // Generate and download PDF
@@ -448,21 +481,36 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
 
             <Separator />
 
-            {/* Download PDF */}
+            {/* View & Download PDF */}
             <div className="space-y-2">
-              <Button
-                onClick={handleDownloadPDF}
-                disabled={generatingPDF || !hasFiliacaoData}
-                className="w-full"
-                variant="outline"
-              >
-                {generatingPDF ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Baixar Ficha de Filiação (PDF)
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleViewPDF}
+                  disabled={viewingPDF || !hasFiliacaoData}
+                  className="flex-1"
+                  variant="default"
+                >
+                  {viewingPDF ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Eye className="h-4 w-4 mr-2" />
+                  )}
+                  Visualizar
+                </Button>
+                <Button
+                  onClick={handleDownloadPDF}
+                  disabled={generatingPDF || !hasFiliacaoData}
+                  className="flex-1"
+                  variant="outline"
+                >
+                  {generatingPDF ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Baixar PDF
+                </Button>
+              </div>
             </div>
 
             <Separator />
