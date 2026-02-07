@@ -1,10 +1,33 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
+// ============ CORS CENTRALIZADO ============
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
+
+// Helpers para garantir CORS em TODAS as respostas
+function corsResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function corsError(message: string, status = 500): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// ============ SUPABASE CLIENT (module-level para reduzir cold start) ============
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 function extractEmailFromText(input: unknown): string | null {
   if (typeof input !== "string") return null;
@@ -16,18 +39,22 @@ function normalizeAccessCode(input: unknown): string {
   return typeof input === "string" ? input.trim().toUpperCase() : "";
 }
 
-
 serve(async (req) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startTime = Date.now();
+  const origin = req.headers.get("origin") || "unknown";
+  
+  console.log(`[accounting-office-portal-auth][${requestId}] ${req.method} from ${origin}`);
+
+  // Preflight CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    console.log(`[accounting-office-portal-auth][${requestId}] Preflight OK`);
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const { action, email, access_code, accounting_office_id } = await req.json();
+    console.log(`[accounting-office-portal-auth][${requestId}] Action: ${action}`);
 
     // Normalizações
     const cleanEmail = (typeof email === "string" ? email : "").toLowerCase().trim();
@@ -36,10 +63,8 @@ serve(async (req) => {
     if (action === "login") {
       // Validar email e código de acesso
       if (!cleanEmail || !cleanAccessCode) {
-        return new Response(
-          JSON.stringify({ error: "E-mail e código de acesso são obrigatórios" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[accounting-office-portal-auth][${requestId}] Missing credentials`);
+        return corsError("E-mail e código de acesso são obrigatórios", 400);
       }
 
       const officeSelect = "id, name, email, clinic_id, access_code, access_code_expires_at, is_active, union_entity_id";
@@ -71,40 +96,30 @@ serve(async (req) => {
       }
 
       if (!office) {
-        return new Response(
-          JSON.stringify({ error: "E-mail não encontrado" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[accounting-office-portal-auth][${requestId}] Email not found: ${cleanEmail}`);
+        return corsError("E-mail não encontrado", 404);
       }
 
       if (!office.is_active) {
-        return new Response(
-          JSON.stringify({ error: "Escritório inativo. Entre em contato com o sindicato." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[accounting-office-portal-auth][${requestId}] Office inactive: ${office.id}`);
+        return corsError("Escritório inativo. Entre em contato com o sindicato.", 403);
       }
 
       const storedAccessCode = normalizeAccessCode(office.access_code);
       if (!storedAccessCode) {
-        return new Response(
-          JSON.stringify({ error: "Código de acesso não configurado. Entre em contato com o sindicato." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[accounting-office-portal-auth][${requestId}] No access code configured for office: ${office.id}`);
+        return corsError("Código de acesso não configurado. Entre em contato com o sindicato.", 403);
       }
 
       if (storedAccessCode !== cleanAccessCode) {
-        return new Response(
-          JSON.stringify({ error: "Código de acesso inválido" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[accounting-office-portal-auth][${requestId}] Invalid access code for office: ${office.id}`);
+        return corsError("Código de acesso inválido", 401);
       }
 
       // Verificar expiração
       if (office.access_code_expires_at && new Date(office.access_code_expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: "Código de acesso expirado. Solicite um novo código." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`[accounting-office-portal-auth][${requestId}] Access code expired for office: ${office.id}`);
+        return corsError("Código de acesso expirado. Solicite um novo código.", 401);
       }
 
       // Buscar dados do sindicato vinculado (se houver)
@@ -114,7 +129,7 @@ serve(async (req) => {
           .from("union_entities")
           .select("id, razao_social, nome_fantasia, cnpj, entity_type")
           .eq("id", office.union_entity_id)
-          .single();
+          .maybeSingle();
         unionEntity = entity;
       }
 
@@ -136,29 +151,26 @@ serve(async (req) => {
       // Gerar token de sessão simples (base64 do office_id + timestamp)
       const sessionToken = btoa(`${office.id}:${Date.now()}`);
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          accounting_office: {
-            id: office.id,
-            name: office.name,
-            email: office.email,
-            clinic_id: office.clinic_id,
-            union_entity_id: office.union_entity_id,
-          },
-          union_entity: unionEntity,
-          session_token: sessionToken,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const elapsed = Date.now() - startTime;
+      console.log(`[accounting-office-portal-auth][${requestId}] Login successful for office: ${office.id} in ${elapsed}ms`);
+
+      return corsResponse({
+        success: true,
+        accounting_office: {
+          id: office.id,
+          name: office.name,
+          email: office.email,
+          clinic_id: office.clinic_id,
+          union_entity_id: office.union_entity_id,
+        },
+        union_entity: unionEntity,
+        session_token: sessionToken,
+      });
     }
 
     if (action === "get_employers") {
       if (!accounting_office_id) {
-        return new Response(
-          JSON.stringify({ error: "ID do escritório não informado" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return corsError("ID do escritório não informado", 400);
       }
 
       // Buscar o escritório para obter o union_entity_id
@@ -166,7 +178,7 @@ serve(async (req) => {
         .from("accounting_offices")
         .select("union_entity_id")
         .eq("id", accounting_office_id)
-        .single();
+        .maybeSingle();
 
       // Buscar empresas vinculadas
       const { data: links, error: linksError } = await supabase
@@ -175,20 +187,14 @@ serve(async (req) => {
         .eq("accounting_office_id", accounting_office_id);
 
       if (linksError) {
-        console.error("Error fetching employer links:", linksError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar empresas vinculadas" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error(`[accounting-office-portal-auth][${requestId}] Error fetching employer links:`, linksError);
+        return corsError("Erro ao buscar empresas vinculadas", 500);
       }
 
       const employerIds = links?.map(l => l.employer_id) || [];
 
       if (employerIds.length === 0) {
-        return new Response(
-          JSON.stringify({ employers: [] }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return corsResponse({ employers: [] });
       }
 
       // Buscar dados das empresas - filtrar pelo mesmo union_entity_id para isolamento
@@ -206,11 +212,8 @@ serve(async (req) => {
       const { data: employers, error: employersError } = await query;
 
       if (employersError) {
-        console.error("Error fetching employers:", employersError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar empresas" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error(`[accounting-office-portal-auth][${requestId}] Error fetching employers:`, employersError);
+        return corsError("Erro ao buscar empresas", 500);
       }
 
       // Registrar log
@@ -221,18 +224,15 @@ serve(async (req) => {
         user_agent: req.headers.get("user-agent") || "unknown",
       });
 
-      return new Response(
-        JSON.stringify({ employers }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const elapsed = Date.now() - startTime;
+      console.log(`[accounting-office-portal-auth][${requestId}] get_employers OK in ${elapsed}ms`);
+
+      return corsResponse({ employers });
     }
 
     if (action === "get_contributions") {
       if (!accounting_office_id) {
-        return new Response(
-          JSON.stringify({ error: "ID do escritório não informado" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return corsError("ID do escritório não informado", 400);
       }
 
       // Buscar o escritório para obter o union_entity_id
@@ -240,7 +240,7 @@ serve(async (req) => {
         .from("accounting_offices")
         .select("union_entity_id")
         .eq("id", accounting_office_id)
-        .single();
+        .maybeSingle();
 
       // Buscar empresas vinculadas
       const { data: links, error: linksError } = await supabase
@@ -249,19 +249,13 @@ serve(async (req) => {
         .eq("accounting_office_id", accounting_office_id);
 
       if (linksError) {
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar empresas vinculadas" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return corsError("Erro ao buscar empresas vinculadas", 500);
       }
 
       const employerIds = links?.map(l => l.employer_id) || [];
 
       if (employerIds.length === 0) {
-        return new Response(
-          JSON.stringify({ contributions: [] }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return corsResponse({ contributions: [] });
       }
 
       // Se o escritório tem um sindicato vinculado, filtrar apenas empresas do mesmo sindicato
@@ -277,10 +271,7 @@ serve(async (req) => {
       }
 
       if (filteredEmployerIds.length === 0) {
-        return new Response(
-          JSON.stringify({ contributions: [] }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return corsResponse({ contributions: [] });
       }
 
       // Buscar configuração de ocultação de pendências (usar clinic_id do escritório)
@@ -288,7 +279,7 @@ serve(async (req) => {
         .from("accounting_offices")
         .select("clinic_id")
         .eq("id", accounting_office_id)
-        .single();
+        .maybeSingle();
 
       let hidePendingBeforeDate: string | null = null;
       if (officeData?.clinic_id) {
@@ -296,7 +287,7 @@ serve(async (req) => {
           .from("clinics")
           .select("hide_pending_before_date")
           .eq("id", officeData.clinic_id)
-          .single();
+          .maybeSingle();
         
         hidePendingBeforeDate = clinicData?.hide_pending_before_date || null;
       }
@@ -315,11 +306,8 @@ serve(async (req) => {
         .order("competence_month", { ascending: false });
 
       if (error) {
-        console.error("Error fetching contributions:", error);
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar contribuições" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.error(`[accounting-office-portal-auth][${requestId}] Error fetching contributions:`, error);
+        return corsError("Erro ao buscar contribuições", 500);
       }
 
       // Filtrar contribuições ocultadas (pendentes/vencidas anteriores à data configurada)
@@ -344,21 +332,17 @@ serve(async (req) => {
         user_agent: req.headers.get("user-agent") || "unknown",
       });
 
-      return new Response(
-        JSON.stringify({ contributions: filteredContributions }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const elapsed = Date.now() - startTime;
+      console.log(`[accounting-office-portal-auth][${requestId}] get_contributions OK in ${elapsed}ms`);
+
+      return corsResponse({ contributions: filteredContributions });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Ação não reconhecida" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Error:", error);
-    return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.log(`[accounting-office-portal-auth][${requestId}] Unknown action: ${action}`);
+    return corsError("Ação não reconhecida", 400);
+
+  } catch (error: any) {
+    console.error(`[accounting-office-portal-auth][${requestId}] Error:`, error);
+    return corsError("Erro interno do servidor", 500);
   }
 });
