@@ -2,27 +2,115 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
-// ============ CORS CENTRALIZADO ============
-const corsHeaders = {
+const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": [
+    "authorization",
+    "x-client-info",
+    "apikey",
+    "content-type",
+    "x-request-id",
+    "x-supabase-client-platform",
+    "x-supabase-client-platform-version",
+    "x-supabase-client-runtime",
+    "x-supabase-client-runtime-version",
+  ].join(", "),
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
 
-// Helpers para garantir CORS em TODAS as respostas
-function corsResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+type JsonRecord = Record<string, unknown>;
+
+class AppError extends Error {
+  status: number;
+  code: string;
+  expose: boolean;
+
+  constructor(message: string, opts: { status: number; code: string; expose?: boolean }) {
+    super(message);
+    this.name = "AppError";
+    this.status = opts.status;
+    this.code = opts.code;
+    this.expose = opts.expose ?? true;
+  }
+}
+
+function ensureCors(res: Response): Response {
+  for (const [k, v] of Object.entries(corsHeaders)) res.headers.set(k, v);
+  return res;
+}
+
+function jsonResponse(requestId: string, payload: unknown, status = 200, logLabel = "return"): Response {
+  console.log(`[send-portal-access-code][${requestId}] ${logLabel} status=${status}`);
+  return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
   });
 }
 
-function corsError(message: string, status = 500): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+function preflightResponse(requestId: string): Response {
+  console.log(`[send-portal-access-code][${requestId}] return preflight 204`);
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
   });
+}
+
+function getRequestId(req: Request): string {
+  const headerId = req.headers.get("x-request-id")?.trim();
+  if (headerId) return headerId;
+  return crypto.randomUUID();
+}
+
+function isTimeoutError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("timeout:");
+}
+
+function classifySmtpError(err: unknown): { code: string; status: number; message: string; expose: boolean } | null {
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+
+  if (lower.includes("timeout:") && lower.includes("smtp")) {
+    return { code: "smtp_timeout", status: 504, message: "Tempo excedido ao enviar e-mail", expose: false };
+  }
+  if (lower.includes("auth") || lower.includes("authentication") || lower.includes("535")) {
+    return { code: "smtp_auth_failed", status: 502, message: "Falha na autenticação SMTP", expose: false };
+  }
+  if (lower.includes("connection") || lower.includes("connect") || lower.includes("econn") || lower.includes("tls")) {
+    return { code: "smtp_connection_failed", status: 502, message: "Falha de conexão com o servidor SMTP", expose: false };
+  }
+
+  // denomailer pode propagar mensagens variadas
+  if (lower.includes("smtp")) {
+    return { code: "smtp_error", status: 502, message: "Erro ao enviar e-mail", expose: false };
+  }
+
+  return null;
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(`timeout:${label}:${ms}ms`)), ms);
+    }),
+  ]);
+}
+
+async function safeJson(req: Request, requestId: string): Promise<JsonRecord> {
+  const text = await req.text();
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object") return parsed as JsonRecord;
+    throw new Error("json_not_object");
+  } catch (err) {
+    console.error(`[send-portal-access-code][${requestId}] bad_json:`, err);
+    throw new AppError("JSON inválido", { status: 400, code: "bad_json", expose: true });
+  }
 }
 
 interface SendAccessCodeRequest {
@@ -46,14 +134,14 @@ const generateEmailHtml = (
   portalUrl: string,
   accessCode: string,
   identifier: string,
-  logoUrl?: string
+  logoUrl?: string,
 ): string => {
   const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
   const identifierLabel = type === "accounting_office" ? "E-mail" : "CNPJ";
 
-  const logoSection = logoUrl 
+  const logoSection = logoUrl
     ? `<img src="${logoUrl}" alt="Logo" style="max-height: 50px; max-width: 180px; margin-bottom: 12px;" />`
-    : '';
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -109,38 +197,45 @@ ${logoSection}
 </html>`;
 };
 
-// ============ SUPABASE CLIENT (module-level para reduzir cold start) ============
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-const handler = async (req: Request): Promise<Response> => {
-  const requestId = crypto.randomUUID().slice(0, 8);
-  const startTime = Date.now();
-  const origin = req.headers.get("origin") || "unknown";
-  
-  console.log(`[send-portal-access-code][${requestId}] ${req.method} from ${origin}`);
-
-  // Preflight CORS
+serve(async (req) => {
+  // 1) OPTIONS tem que ser a PRIMEIRA instrução (sem Supabase/SMTP/async extra)
+  const requestId = getRequestId(req);
   if (req.method === "OPTIONS") {
-    console.log(`[send-portal-access-code][${requestId}] Preflight OK`);
-    return new Response("ok", { headers: corsHeaders });
+    return ensureCors(preflightResponse(requestId));
   }
 
-  try {
-    const data: SendAccessCodeRequest = await req.json();
-    console.log(`[send-portal-access-code][${requestId}] Processing: type=${data.type}, entityId=${data.entityId}, whatsappOnly=${data.whatsappOnly}`);
+  const startTime = Date.now();
+  const origin = req.headers.get("origin") || "unknown";
+  console.log(`[send-portal-access-code][${requestId}] start method=${req.method} origin=${origin}`);
 
-    if (!data.type || !data.entityId || !data.recipientName || !data.clinicName || !data.clinicSlug) {
-      console.log(`[send-portal-access-code][${requestId}] Missing required fields`);
-      return corsError("Campos obrigatorios nao preenchidos", 400);
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new AppError("Configuração do backend ausente", {
+        status: 500,
+        code: "missing_backend_config",
+        expose: false,
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = await safeJson(req, requestId);
+    const data = body as unknown as SendAccessCodeRequest;
+
+    console.log(
+      `[send-portal-access-code][${requestId}] payload type=${(data as any)?.type} entityId=${(data as any)?.entityId} whatsappOnly=${(data as any)?.whatsappOnly}`,
+    );
+
+    if (!data?.type || !data?.entityId || !data?.recipientName || !data?.clinicName || !data?.clinicSlug) {
+      throw new AppError("Campos obrigatórios não preenchidos", { status: 400, code: "missing_fields", expose: true });
     }
 
     if (!data.whatsappOnly && data.recipientEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(data.recipientEmail)) {
-        console.log(`[send-portal-access-code][${requestId}] Invalid email: ${data.recipientEmail}`);
-        return corsError("Email do destinatario invalido", 400);
+        throw new AppError("Email do destinatário inválido", { status: 400, code: "invalid_email", expose: true });
       }
     }
 
@@ -150,97 +245,144 @@ const handler = async (req: Request): Promise<Response> => {
     let clinicId: string | undefined = data.clinicId;
 
     if (data.type === "accounting_office") {
-      const { data: office, error: fetchError } = await supabase
-        .from("accounting_offices")
-        .select("access_code, email, phone, clinic_id")
-        .eq("id", data.entityId)
-        .maybeSingle();
+      const officeRes = await withTimeout(
+        supabase
+          .from("accounting_offices")
+          .select("access_code, email, phone, clinic_id")
+          .eq("id", data.entityId)
+          .maybeSingle(),
+        15000,
+        "db:accounting_offices",
+      );
 
-      if (fetchError || !office) {
-        console.log(`[send-portal-access-code][${requestId}] Accounting office not found: ${data.entityId}`);
-        return corsError("Escritorio nao encontrado", 404);
+      if (officeRes.error || !officeRes.data) {
+        console.error(`[send-portal-access-code][${requestId}] db office error:`, officeRes.error);
+        throw new AppError("Escritório não encontrado", { status: 404, code: "office_not_found", expose: true });
       }
+
+      const office = officeRes.data as any;
 
       if (!office.access_code) {
-        console.log(`[send-portal-access-code][${requestId}] No access code for accounting office: ${data.entityId}`);
-        return corsError("Codigo de acesso nao configurado para este escritorio", 400);
+        throw new AppError("Código de acesso não configurado para este escritório", {
+          status: 400,
+          code: "access_code_missing",
+          expose: true,
+        });
       }
 
-      accessCode = office.access_code;
+      accessCode = String(office.access_code);
       identifier = data.recipientEmail || office.email;
       clinicId = clinicId || office.clinic_id;
       portalUrl = `${req.headers.get("origin") || "https://app.eclini.com.br"}/portal-contador/${data.clinicSlug}`;
 
       if (data.updateEmail && data.recipientEmail && data.recipientEmail !== office.email) {
-        await supabase.from("accounting_offices").update({ email: data.recipientEmail.toLowerCase().trim() }).eq("id", data.entityId);
+        await withTimeout(
+          supabase.from("accounting_offices").update({ email: data.recipientEmail.toLowerCase().trim() }).eq("id", data.entityId),
+          15000,
+          "db:accounting_offices:update_email",
+        );
       }
 
       if (data.updatePhone && data.phone && data.phone !== office.phone) {
-        await supabase.from("accounting_offices").update({ phone: data.phone }).eq("id", data.entityId);
+        await withTimeout(
+          supabase.from("accounting_offices").update({ phone: data.phone }).eq("id", data.entityId),
+          15000,
+          "db:accounting_offices:update_phone",
+        );
       }
     } else {
-      const { data: employer, error: fetchError } = await supabase
-        .from("employers")
-        .select("access_code, cnpj, email, phone, clinic_id")
-        .eq("id", data.entityId)
-        .maybeSingle();
+      const employerRes = await withTimeout(
+        supabase
+          .from("employers")
+          .select("access_code, cnpj, email, phone, clinic_id")
+          .eq("id", data.entityId)
+          .maybeSingle(),
+        15000,
+        "db:employers",
+      );
 
-      if (fetchError || !employer) {
-        console.log(`[send-portal-access-code][${requestId}] Employer not found: ${data.entityId}`);
-        return corsError("Empresa nao encontrada", 404);
+      if (employerRes.error || !employerRes.data) {
+        console.error(`[send-portal-access-code][${requestId}] db employer error:`, employerRes.error);
+        throw new AppError("Empresa não encontrada", { status: 404, code: "employer_not_found", expose: true });
       }
+
+      const employer = employerRes.data as any;
 
       if (!employer.access_code) {
+        // gera um código simples (mantém comportamento atual)
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         let newCode = "";
-        for (let i = 0; i < 6; i++) {
-          newCode += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        
-        await supabase.from("employers").update({ access_code: newCode }).eq("id", data.entityId);
+        for (let i = 0; i < 6; i++) newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+
+        await withTimeout(
+          supabase.from("employers").update({ access_code: newCode }).eq("id", data.entityId),
+          15000,
+          "db:employers:update_access_code",
+        );
+
         accessCode = newCode;
-        console.log(`[send-portal-access-code][${requestId}] Generated new access code for employer: ${data.entityId}`);
+        console.log(`[send-portal-access-code][${requestId}] generated employer access_code employerId=${data.entityId}`);
       } else {
-        accessCode = employer.access_code;
+        accessCode = String(employer.access_code);
       }
 
-      const cleanCnpj = employer.cnpj.replace(/\D/g, "");
-      identifier = cleanCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+      const cleanCnpj = String(employer.cnpj || "").replace(/\D/g, "");
+      identifier = cleanCnpj.length === 14
+        ? cleanCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")
+        : cleanCnpj;
+
       clinicId = clinicId || employer.clinic_id;
       portalUrl = `${req.headers.get("origin") || "https://app.eclini.com.br"}/portal-empresa/${data.clinicSlug}`;
 
       if (data.updateEmail && data.recipientEmail && data.recipientEmail !== employer.email) {
-        await supabase.from("employers").update({ email: data.recipientEmail.toLowerCase().trim() }).eq("id", data.entityId);
+        await withTimeout(
+          supabase.from("employers").update({ email: data.recipientEmail.toLowerCase().trim() }).eq("id", data.entityId),
+          15000,
+          "db:employers:update_email",
+        );
       }
 
       if (data.updatePhone && data.phone && data.phone !== employer.phone) {
-        await supabase.from("employers").update({ phone: data.phone }).eq("id", data.entityId);
+        await withTimeout(
+          supabase.from("employers").update({ phone: data.phone }).eq("id", data.entityId),
+          15000,
+          "db:employers:update_phone",
+        );
       }
     }
 
-    // WhatsApp only - retorna dados sem enviar email
     if (data.whatsappOnly) {
       const elapsed = Date.now() - startTime;
-      console.log(`[send-portal-access-code][${requestId}] WhatsApp only response in ${elapsed}ms`);
-      return corsResponse({ success: true, accessCode, identifier, portalUrl });
+      return ensureCors(
+        jsonResponse(
+          requestId,
+          { success: true, accessCode, identifier, portalUrl, request_id: requestId, elapsed_ms: elapsed },
+          200,
+          "return whatsappOnly",
+        ),
+      );
     }
 
     if (!data.recipientEmail) {
-      console.log(`[send-portal-access-code][${requestId}] Email required but not provided`);
-      return corsError("Email do destinatario e obrigatorio para envio por e-mail", 400);
+      throw new AppError("Email do destinatário é obrigatório para envio por e-mail", {
+        status: 400,
+        code: "email_required",
+        expose: true,
+      });
     }
 
-    // Busca logo do sindicato
+    // Busca logo (best-effort)
     let logoUrl: string | undefined;
     if (clinicId) {
-      const { data: unionData } = await supabase
-        .from('union_entities')
-        .select('logo_url')
-        .eq('clinic_id', clinicId)
-        .maybeSingle();
-      
-      if (unionData?.logo_url) {
-        logoUrl = unionData.logo_url;
+      try {
+        const unionRes = await withTimeout(
+          supabase.from("union_entities").select("logo_url").eq("clinic_id", clinicId).maybeSingle(),
+          15000,
+          "db:union_entities:logo",
+        );
+        if (!unionRes.error && unionRes.data?.logo_url) logoUrl = String(unionRes.data.logo_url);
+      } catch (e) {
+        console.error(`[send-portal-access-code][${requestId}] warn logo fetch failed:`, e);
       }
     }
 
@@ -248,69 +390,102 @@ const handler = async (req: Request): Promise<Response> => {
     const portalName = data.type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
     const subject = `Seu Codigo de Acesso - ${portalName}`;
 
-    // Verificar configuração SMTP
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
     const smtpUser = Deno.env.get("SMTP_USER");
     const smtpPassword = Deno.env.get("SMTP_PASSWORD");
     const smtpFrom = Deno.env.get("SMTP_FROM");
 
-    console.log(`[send-portal-access-code][${requestId}] SMTP config: host=${smtpHost ? 'SET' : 'MISSING'}, user=${smtpUser ? 'SET' : 'MISSING'}, from=${smtpFrom ? 'SET' : 'MISSING'}`);
+    console.log(
+      `[send-portal-access-code][${requestId}] smtp_config host=${smtpHost ? "SET" : "MISSING"} user=${smtpUser ? "SET" : "MISSING"} from=${smtpFrom ? "SET" : "MISSING"} port=${smtpPort}`,
+    );
 
     if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
-      console.error(`[send-portal-access-code][${requestId}] SMTP configuration incomplete`);
-      return corsError("Configuracao SMTP nao encontrada", 500);
+      throw new AppError("Configuração SMTP não encontrada", { status: 500, code: "smtp_config_missing", expose: false });
     }
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpHost,
-        port: smtpPort,
-        tls: smtpPort === 465,
-        auth: {
-          username: smtpUser,
-          password: smtpPassword,
-        },
-      },
-    });
-
+    let client: SMTPClient | null = null;
     try {
-      console.log(`[send-portal-access-code][${requestId}] Sending email to: ${data.recipientEmail}`);
-      
-      await client.send({
-        from: smtpFrom,
-        to: data.recipientEmail,
-        subject: subject,
-        html: html,
+      client = new SMTPClient({
+        connection: {
+          hostname: smtpHost,
+          port: smtpPort,
+          tls: smtpPort === 465,
+          auth: {
+            username: smtpUser,
+            password: smtpPassword,
+          },
+        },
       });
 
-      await client.close();
-      
-      const elapsed = Date.now() - startTime;
-      console.log(`[send-portal-access-code][${requestId}] Email sent successfully in ${elapsed}ms`);
-
-      return corsResponse({ success: true, message: "Email enviado com sucesso" });
-
-    } catch (smtpError: any) {
-      console.error(`[send-portal-access-code][${requestId}] SMTP error:`, smtpError?.message || smtpError);
-      try { await client.close(); } catch (_) {}
-      
-      let errorMessage = "Erro ao enviar email";
-      if (smtpError.message?.includes("authentication")) {
-        errorMessage = "Falha na autenticacao SMTP.";
-      } else if (smtpError.message?.includes("connection")) {
-        errorMessage = "Nao foi possivel conectar ao servidor SMTP.";
-      } else if (smtpError.message) {
-        errorMessage = `Erro SMTP: ${smtpError.message}`;
+      console.log(`[send-portal-access-code][${requestId}] smtp_send to=${data.recipientEmail}`);
+      await withTimeout(
+        client.send({
+          from: smtpFrom,
+          to: data.recipientEmail,
+          subject,
+          html,
+        }),
+        20000,
+        "smtp:send",
+      );
+    } finally {
+      if (client) {
+        try {
+          await withTimeout(client.close(), 8000, "smtp:close");
+        } catch (e) {
+          console.error(`[send-portal-access-code][${requestId}] warn smtp_close failed:`, e);
+        }
       }
-      
-      return corsError(errorMessage, 500);
     }
 
-  } catch (error: any) {
-    console.error(`[send-portal-access-code][${requestId}] Error:`, error?.message || error);
-    return corsError(error?.message || "Erro interno", 500);
-  }
-};
+    const elapsed = Date.now() - startTime;
+    return ensureCors(
+      jsonResponse(
+        requestId,
+        { success: true, message: "Email enviado com sucesso", request_id: requestId, elapsed_ms: elapsed },
+        200,
+        "return success",
+      ),
+    );
+  } catch (err) {
+    // 2) ÚNICO catch no topo: erros sync/async/db/smtp/timeout
+    const elapsed = Date.now() - startTime;
 
-serve(handler);
+    const appErr = err instanceof AppError ? err : null;
+    const timeout = isTimeoutError(err);
+    const smtp = classifySmtpError(err);
+
+    if (!appErr) {
+      console.error(`[send-portal-access-code][${requestId}] catch internal_error elapsed=${elapsed}ms`, err);
+    } else {
+      console.error(`[send-portal-access-code][${requestId}] catch ${appErr.code} status=${appErr.status} elapsed=${elapsed}ms`, appErr.message);
+    }
+
+    const status = appErr?.status ?? smtp?.status ?? (timeout ? 504 : 500);
+    const code = appErr?.code ?? smtp?.code ?? (timeout ? "timeout" : "internal_error");
+
+    const message = appErr?.expose
+      ? appErr.message
+      : smtp
+        ? smtp.message
+        : timeout
+          ? "Tempo excedido ao processar a solicitação"
+          : "Erro interno do servidor";
+
+    return ensureCors(
+      jsonResponse(
+        requestId,
+        {
+          success: false,
+          error: message,
+          code,
+          request_id: requestId,
+          elapsed_ms: elapsed,
+        },
+        status,
+        "return catch",
+      ),
+    );
+  }
+});
