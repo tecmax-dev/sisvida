@@ -9046,6 +9046,7 @@ export type Database = {
           empresa: string | null
           empresa_cnpj: string | null
           empresa_endereco: string | null
+          empresa_matricula: string | null
           empresa_nome_fantasia: string | null
           empresa_razao_social: string | null
           estado_civil: string | null
@@ -9098,6 +9099,7 @@ export type Database = {
           empresa?: string | null
           empresa_cnpj?: string | null
           empresa_endereco?: string | null
+          empresa_matricula?: string | null
           empresa_nome_fantasia?: string | null
           empresa_razao_social?: string | null
           estado_civil?: string | null
@@ -9150,6 +9152,7 @@ export type Database = {
           empresa?: string | null
           empresa_cnpj?: string | null
           empresa_endereco?: string | null
+          empresa_matricula?: string | null
           empresa_nome_fantasia?: string | null
           empresa_razao_social?: string | null
           estado_civil?: string | null

@@ -82,6 +82,7 @@ interface EmployerData {
   razao_social: string;
   nome_fantasia?: string;
   endereco?: string;
+  matricula?: string;
 }
 
 interface MobileFiliacaoFormProps {
@@ -364,6 +365,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           empresa_razao_social: employerData?.razao_social || null,
           empresa_nome_fantasia: employerData?.nome_fantasia || null,
           empresa_endereco: employerData?.endereco || null,
+          empresa_matricula: employerData?.matricula || null,
           empresa: employerData?.razao_social || null,
           forma_pagamento: data.forma_pagamento || null,
           documento_foto_url: fotoUrl,
