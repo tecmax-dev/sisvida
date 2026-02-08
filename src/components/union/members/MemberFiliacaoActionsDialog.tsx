@@ -114,13 +114,94 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
   const [dataLoaded, setDataLoaded] = useState(false);
   const [hasFullFiliacaoRecord, setHasFullFiliacaoRecord] = useState(false); // True if from sindical_associados
 
+  // Helpers
+  const isBlankSignatureDataUrl = (value: string) => {
+    if (!value?.startsWith("data:image")) return false;
+    const b64 = value.split(",")[1] || "";
+    // ~2000 bytes => ~2667 base64 chars; keep a small safety margin
+    return b64.length < 2700;
+  };
+
+  const enrichFiliacaoWithPatientExtras = async (input: FiliacaoData): Promise<FiliacaoData> => {
+    const normalizedCpf = (input.cpf || member.cpf || "").replace(/\D/g, "");
+    if (!normalizedCpf) return input;
+
+    const cpfCandidates = Array.from(
+      new Set([
+        normalizedCpf,
+        (input.cpf || "").trim(),
+        (member.cpf || "").trim(),
+      ].filter(Boolean))
+    );
+
+    const orFilter = cpfCandidates.map((c) => `cpf.eq.${c}`).join(",");
+
+    const { data: patients } = await supabase
+      .from("patients")
+      .select("id, signature_url, signature_accepted_at, signature_accepted, photo_url, cpf, created_at")
+      .eq("clinic_id", clinicId)
+      .or(orFilter)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    const normalize = (v: string | null) => (v || "").replace(/\D/g, "");
+    const matching = (patients || []).filter((p) => normalize(p.cpf) === normalizedCpf);
+
+    const patientWithPhoto = matching.find((p) => !!p.photo_url);
+    const patientWithSignature = matching.find((p) => {
+      const sig = p.signature_url;
+      if (!sig) return false;
+      if (sig.startsWith("blob:")) return false;
+      if (sig.startsWith("data:")) return !isBlankSignatureDataUrl(sig);
+      return true;
+    });
+
+    let result: FiliacaoData = { ...input };
+
+    // Photo
+    if (!result.foto_url && !result.documento_foto_url) {
+      const photoUrl = patientWithPhoto?.photo_url || member.photo_url;
+      if (photoUrl) result.foto_url = photoUrl;
+    }
+
+    // Signature
+    if (!result.assinatura_digital_url && patientWithSignature?.signature_url) {
+      let signatureUrl = patientWithSignature.signature_url;
+
+      // If signature is stored as a private storage path, generate a signed URL
+      if (signatureUrl && !signatureUrl.startsWith("data:") && !signatureUrl.startsWith("http")) {
+        const { data: signed } = await supabase.storage
+          .from("patient-signatures")
+          .createSignedUrl(signatureUrl, 60 * 10);
+
+        if (signed?.signedUrl) signatureUrl = signed.signedUrl;
+      }
+
+      // Ignore blank data-URLs
+      if (!signatureUrl.startsWith("data:") || !isBlankSignatureDataUrl(signatureUrl)) {
+        result = {
+          ...result,
+          assinatura_digital_url: signatureUrl,
+          assinatura_aceite_at: patientWithSignature.signature_accepted_at,
+          assinatura_aceite_desconto: true,
+        };
+      }
+    }
+
+    return result;
+  };
+
   // Fetch filiacao data when dialog opens
   const fetchFiliacaoData = async () => {
     if (dataLoaded) return;
-    
+
     setLoading(true);
     try {
-      // First try to find by CPF in sindical_associados
+      let baseFiliacao: FiliacaoData | null = null;
+      let baseDependents: DependentData[] = [];
+      let fullRecord = false;
+
+      // 1) Try sindical_associados
       if (member.cpf) {
         const normalizedCpf = member.cpf.replace(/\D/g, "");
         const { data: filiacao } = await supabase
@@ -132,23 +213,32 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
           .maybeSingle();
 
         if (filiacao) {
-          setFiliacaoData(filiacao);
-          setHasFullFiliacaoRecord(true);
+          baseFiliacao = filiacao as unknown as FiliacaoData;
+          fullRecord = true;
 
-          // Fetch dependents from sindical_associado_dependentes
           const { data: deps } = await supabase
             .from("sindical_associado_dependentes")
             .select("*")
             .eq("associado_id", filiacao.id);
-          setDependents(deps || []);
-        } else {
-          // No sindical_associados record found - create filiacao data from patient record
-          await buildFiliacaoFromPatient();
+
+          baseDependents = (deps || []) as unknown as DependentData[];
         }
-      } else {
-        // No CPF - build from patient data anyway
-        await buildFiliacaoFromPatient();
       }
+
+      // 2) Fallback: build from patient
+      if (!baseFiliacao) {
+        const { filiacao, dependents } = await buildFiliacaoFromPatient();
+        baseFiliacao = filiacao;
+        baseDependents = dependents;
+        fullRecord = false;
+      }
+
+      // 3) Enrich photo/signature from patient registry (prevents PDFs without assets)
+      baseFiliacao = await enrichFiliacaoWithPatientExtras(baseFiliacao);
+
+      setFiliacaoData(baseFiliacao);
+      setDependents(baseDependents);
+      setHasFullFiliacaoRecord(fullRecord);
 
       // Fetch sindicato info
       const { data: sind } = await supabase
@@ -166,7 +256,7 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
           .select("logo_url, city, state_code")
           .eq("id", clinicId)
           .maybeSingle();
-        
+
         setSindicato({
           ...sind,
           logo_url: sind.logo_url || clinic?.logo_url,
@@ -183,22 +273,21 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
     }
   };
 
-  const buildFiliacaoFromPatient = async () => {
+  const buildFiliacaoFromPatient = async (): Promise<{ filiacao: FiliacaoData; dependents: DependentData[] }> => {
     // Fetch dependents from patient_dependents
     const { data: patientDeps } = await supabase
       .from("patient_dependents")
       .select("id, name, relationship, birth_date, cpf")
       .eq("patient_id", member.id)
       .eq("is_active", true);
-    
-    const mappedDeps: DependentData[] = (patientDeps || []).map(d => ({
+
+    const mappedDeps: DependentData[] = (patientDeps || []).map((d) => ({
       id: d.id,
       nome: d.name,
       grau_parentesco: d.relationship || "Dependente",
       data_nascimento: d.birth_date,
       cpf: d.cpf,
     }));
-    setDependents(mappedDeps);
 
     // Build filiacao data from patient record
     const filiacaoFromPatient: FiliacaoData = {
@@ -220,8 +309,8 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
       aprovado_at: new Date().toISOString(), // Assume filiado se está na base
       foto_url: member.photo_url,
     };
-    setFiliacaoData(filiacaoFromPatient);
-    setHasFullFiliacaoRecord(false);
+
+    return { filiacao: filiacaoFromPatient, dependents: mappedDeps };
   };
 
   // Load data when dialog opens
