@@ -46,15 +46,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Fetch associado data
+    // Fetch patient (sócio) data from patients table
     const { data: associado, error: assocError } = await supabase
-      .from('sindical_associados')
-      .select('id, nome, email, cpf, telefone, assinatura_digital_url, assinatura_aceite_desconto')
+      .from('patients')
+      .select('id, name, email, cpf, phone, signature_url, signature_accepted')
       .eq('id', associadoId)
+      .eq('clinic_id', clinicId)
       .single();
 
     if (assocError || !associado) {
-      console.error('Associado not found:', assocError);
+      console.error('Sócio not found:', assocError);
       return new Response(
         JSON.stringify({ error: 'Sócio não encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -69,7 +70,7 @@ serve(async (req) => {
     }
 
     // Check if already signed
-    if (associado.assinatura_aceite_desconto) {
+    if (associado.signature_accepted) {
       return new Response(
         JSON.stringify({ error: 'Sócio já possui autorização de desconto assinada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -134,7 +135,7 @@ ${logoSection}
 <h1 style="color: white; margin: 0; font-size: 22px;">${unionName}</h1>
 </div>
 <div style="padding: 32px;">
-<h2 style="color: #1f2937; margin: 0 0 16px;">Olá, ${associado.nome}!</h2>
+<h2 style="color: #1f2937; margin: 0 0 16px;">Olá, ${associado.name}!</h2>
 <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
   Recebemos uma solicitação para que você autorize o desconto em folha de pagamento 
   referente à sua contribuição sindical.

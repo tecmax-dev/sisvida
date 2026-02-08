@@ -15,10 +15,10 @@ interface TokenData {
   email: string;
   expires_at: string;
   used_at: string | null;
-  associado: {
-    nome: string;
+  patient: {
+    name: string;
     cpf: string;
-    empresa_razao_social: string | null;
+    employer_name: string | null;
   };
   union_entity: {
     razao_social: string;
@@ -83,10 +83,10 @@ export default function SignatureAuthorizationPage() {
           return;
         }
 
-        // Fetch associado data
-        const { data: associado } = await supabase
-          .from('sindical_associados')
-          .select('nome, cpf, empresa_razao_social')
+        // Fetch patient (sócio) data
+        const { data: patient } = await supabase
+          .from('patients')
+          .select('name, cpf, employer_name')
           .eq('id', tokenRecord.associado_id)
           .single();
 
@@ -99,7 +99,7 @@ export default function SignatureAuthorizationPage() {
 
         setTokenData({
           ...tokenRecord,
-          associado: associado!,
+          patient: patient!,
           union_entity: unionEntity,
         });
       } catch (err) {
@@ -217,13 +217,13 @@ export default function SignatureAuthorizationPage() {
 
     setSubmitting(true);
     try {
-      // Update associado with signature
+      // Update patient with signature
       const { error: updateError } = await supabase
-        .from('sindical_associados')
+        .from('patients')
         .update({
-          assinatura_digital_url: signatureData,
-          assinatura_aceite_desconto: true,
-          assinatura_aceite_at: new Date().toISOString(),
+          signature_url: signatureData,
+          signature_accepted: true,
+          signature_accepted_at: new Date().toISOString(),
         })
         .eq('id', tokenData.associado_id);
 
@@ -333,16 +333,16 @@ export default function SignatureAuthorizationPage() {
               <div className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Nome:</span>
-                  <span className="font-medium">{tokenData?.associado.nome}</span>
+                  <span className="font-medium">{tokenData?.patient.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">CPF:</span>
-                  <span className="font-mono">{formatCPF(tokenData?.associado.cpf || "")}</span>
+                  <span className="font-mono">{formatCPF(tokenData?.patient.cpf || "")}</span>
                 </div>
-                {tokenData?.associado.empresa_razao_social && (
+                {tokenData?.patient.employer_name && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Empresa:</span>
-                    <span>{tokenData.associado.empresa_razao_social}</span>
+                    <span>{tokenData.patient.employer_name}</span>
                   </div>
                 )}
               </div>
