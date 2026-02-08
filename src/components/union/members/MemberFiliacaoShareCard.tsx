@@ -129,44 +129,46 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
     };
     
     // Normalize CPF for lookup (remove formatting)
-    const normalizedCpf = member.cpf?.replace(/\D/g, "") || "";
+    const normalizedCpf = (filiacao.cpf || member.cpf || "").replace(/\D/g, "");
     
-    // Get patient data (signature, photo) by CPF + clinic_id for accurate matching
-    // This handles cases where member.id might not match the patient record
-    const { data: patients } = await supabase
-      .from("patients")
-      .select("id, signature_url, signature_accepted_at, photo_url, cpf")
-      .eq("clinic_id", clinicId)
-      .order("created_at", { ascending: false });
+    if (normalizedCpf) {
+      // Get patient data (signature, photo) by CPF + clinic_id for accurate matching
+      // Query all patients with this CPF in this clinic, ordered by most recent
+      const { data: patients } = await supabase
+        .from("patients")
+        .select("id, signature_url, signature_accepted_at, signature_accepted, photo_url, cpf, created_at")
+        .eq("clinic_id", clinicId)
+        .order("created_at", { ascending: false });
 
-    // Find patient by normalized CPF
-    const patient = patients?.find(p => 
-      p.cpf?.replace(/\D/g, "") === normalizedCpf
-    );
-
-    // Add signature from patient if not in filiacao
-    if (!filiacaoWithExtras.assinatura_digital_url && patient?.signature_url) {
-      filiacaoWithExtras = {
-        ...filiacaoWithExtras,
-        assinatura_digital_url: patient.signature_url,
-        assinatura_aceite_at: patient.signature_accepted_at,
-        assinatura_aceite_desconto: true,
-      };
-    }
-
-    // Add photo from patient if not in filiacao (for members registered outside public form)
-    if (!filiacaoWithExtras.foto_url && !filiacaoWithExtras.documento_foto_url) {
-      if (patient?.photo_url) {
+      // Find patient with matching CPF that has the most data
+      const matchingPatients = patients?.filter(p => 
+        p.cpf?.replace(/\D/g, "") === normalizedCpf
+      ) || [];
+      
+      // Priority: patient with signature > patient with photo > most recent
+      const patientWithSignature = matchingPatients.find(p => p.signature_url);
+      const patientWithPhoto = matchingPatients.find(p => p.photo_url);
+      const mostRecentPatient = matchingPatients[0];
+      
+      // Get signature from any patient record that has it
+      if (!filiacaoWithExtras.assinatura_digital_url && patientWithSignature?.signature_url) {
         filiacaoWithExtras = {
           ...filiacaoWithExtras,
-          foto_url: patient.photo_url,
+          assinatura_digital_url: patientWithSignature.signature_url,
+          assinatura_aceite_at: patientWithSignature.signature_accepted_at,
+          assinatura_aceite_desconto: true,
         };
-      } else if (member.photo_url) {
-        // Also check member.photo_url as fallback
-        filiacaoWithExtras = {
-          ...filiacaoWithExtras,
-          foto_url: member.photo_url,
-        };
+      }
+
+      // Get photo from any patient record that has it
+      if (!filiacaoWithExtras.foto_url && !filiacaoWithExtras.documento_foto_url) {
+        const photoUrl = patientWithPhoto?.photo_url || mostRecentPatient?.photo_url || member.photo_url;
+        if (photoUrl) {
+          filiacaoWithExtras = {
+            ...filiacaoWithExtras,
+            foto_url: photoUrl,
+          };
+        }
       }
     }
 
