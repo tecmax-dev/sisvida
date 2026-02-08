@@ -83,6 +83,7 @@ import { SendSignatureRequestDialog } from "@/components/union/members/SendSigna
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Pen } from "lucide-react";
+import { extractFunctionsError } from "@/lib/functionsError";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -558,12 +559,15 @@ export default function UnionMembersListPage() {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-signature-request', {
+      const { data, error } = await supabase.functions.invoke("send-signature-request", {
         body: {
           associadoId: member.id,
           clinicId: currentClinic.id,
         },
       });
+
+      // Auditoria no console (body completo)
+      console.log("[send-signature-request] response", { data, error, memberId: member.id });
 
       if (error) throw error;
 
@@ -571,11 +575,13 @@ export default function UnionMembersListPage() {
         title: "Solicitação enviada!",
         description: `Email enviado para ${member.email}`,
       });
-    } catch (error: any) {
-      console.error('Error sending signature request:', error);
+    } catch (err: any) {
+      const extracted = extractFunctionsError(err);
+      console.error("[send-signature-request] error", extracted);
+
       toast({
         title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar a solicitação.",
+        description: extracted.message,
         variant: "destructive",
       });
     }
