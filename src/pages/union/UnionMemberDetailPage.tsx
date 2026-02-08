@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save } from "lucide-react";
+import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -181,6 +181,10 @@ export default function UnionMemberDetailPage() {
   const [unionObservations, setUnionObservations] = useState("");
   const [unionJoinedAt, setUnionJoinedAt] = useState<string | null>(null);
   const [savingUnion, setSavingUnion] = useState(false);
+  
+  // Signature data
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [signatureAcceptedAt, setSignatureAcceptedAt] = useState<string | null>(null);
 
   // Patient state
   const [isPatientActive, setIsPatientActive] = useState(true);
@@ -300,6 +304,10 @@ export default function UnionMemberDetailPage() {
         setUnionPaymentMethod(data.union_payment_method || "");
         setUnionObservations(data.union_observations || "");
         setUnionJoinedAt(data.union_joined_at);
+        
+        // Signature data
+        setSignatureUrl((data as any).signature_url || null);
+        setSignatureAcceptedAt((data as any).signature_accepted_at || null);
 
         setIsPatientActive(data.is_active ?? true);
         setPatientPhotoUrl(data.photo_url || null);
@@ -934,6 +942,40 @@ export default function UnionMemberDetailPage() {
                     rows={3}
                     disabled={!canManageMembers()}
                   />
+                </div>
+
+                {/* Digital Signature Section */}
+                <div className="border-t pt-6 mt-6">
+                  <h4 className="font-medium text-sm mb-4 flex items-center gap-2">
+                    <Pen className="h-4 w-4 text-violet-600" />
+                    Assinatura Digital - Autorização de Desconto
+                  </h4>
+                  
+                  {signatureUrl ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>
+                          Assinatura registrada em{" "}
+                          {signatureAcceptedAt
+                            ? format(new Date(signatureAcceptedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                            : "-"}
+                        </span>
+                      </div>
+                      <div className="border rounded-lg p-4 bg-muted/30">
+                        <Label className="text-xs text-muted-foreground mb-2 block">Assinatura do Sócio</Label>
+                        <img
+                          src={signatureUrl}
+                          alt="Assinatura digital"
+                          className="max-h-24 bg-white rounded border p-2"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground bg-muted/30 px-4 py-3 rounded-lg border border-dashed">
+                      Nenhuma assinatura digital registrada. Envie uma solicitação de assinatura ao sócio.
+                    </div>
+                  )}
                 </div>
 
                 {canManageMembers() && (
