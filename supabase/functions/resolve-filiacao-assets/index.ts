@@ -184,6 +184,7 @@ async function resolveImage(
   if (input.startsWith("http")) {
     const storageRef = parseStorageUrlToRef(input);
     if (storageRef) {
+      console.log("[resolve-filiacao-assets] downloading from storage URL", { requestId, label, bucket: storageRef.bucket, path: storageRef.path });
       const out = await downloadStorageToDataUrl(supabaseAdmin, storageRef);
       const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
       const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
@@ -197,8 +198,10 @@ async function resolveImage(
     return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
   }
 
-  // Storage path (bucketHint)
-  const out = await downloadStorageToDataUrl(supabaseAdmin, { bucket: bucketHint, path: input });
+  // Storage path (bucketHint) - use correct bucket based on label
+  const actualBucket = label === "signature" ? "patient-signatures" : bucketHint;
+  console.log("[resolve-filiacao-assets] downloading from storage path", { requestId, label, bucket: actualBucket, path: input });
+  const out = await downloadStorageToDataUrl(supabaseAdmin, { bucket: actualBucket, path: input });
   const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
   const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
   return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
