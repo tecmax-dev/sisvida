@@ -86,9 +86,16 @@ export default function SignatureAuthorizationPage() {
         // Fetch patient (sócio) data
         const { data: patient } = await supabase
           .from('patients')
-          .select('name, cpf, employer_name')
+          .select('name, cpf, employer_name, signature_accepted')
           .eq('id', tokenRecord.patient_id)
           .maybeSingle();
+
+        // Check if patient already signed
+        if (patient?.signature_accepted) {
+          setError("Esta autorização já foi assinada anteriormente. Não é necessário assinar novamente.");
+          setLoading(false);
+          return;
+        }
 
         // Fetch union entity
         const { data: unionEntity } = await supabase
