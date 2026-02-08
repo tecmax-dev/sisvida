@@ -280,39 +280,7 @@ export default function UnionContributionsReportsTab({
     fetchContributions(filters);
   }, [buildFilters, fetchContributions]);
 
-  // Track if initial load has happened
-  const initialLoadDone = useRef(false);
-  
-  // Initial fetch on mount
-  useEffect(() => {
-    if (clinicId) {
-      console.log("[UnionContributionsReportsTab] Initial fetch for clinic:", clinicId);
-      handleSearch();
-      initialLoadDone.current = true;
-    }
-  }, [clinicId]); // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // Auto-search when any filter changes (employer, report type, dates, status, etc.)
-  useEffect(() => {
-    // Only auto-search after initial load
-    if (clinicId && initialLoadDone.current) {
-      console.log("[UnionContributionsReportsTab] Filters changed, auto-searching...", {
-        employer: selectedEmployer?.id,
-        reportType,
-        statusFilter,
-        dateFilterType,
-        startDate,
-        endDate,
-        origin: originFilter,
-        contributionTypes: selectedContributionTypes.length
-      });
-      // Small delay to batch multiple filter changes
-      const timeout = setTimeout(() => {
-        handleSearch();
-      }, 300);
-      return () => clearTimeout(timeout);
-    }
-  }, [selectedEmployer?.id, reportType, statusFilter, dateFilterType, startDate, endDate, originFilter, selectedContributionTypes.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // NO auto-search on mount or filter changes - user must click "Pesquisar" button
 
   // Contributions to display (already filtered by the hook at database level)
   const displayContributions = useMemo(() => {
