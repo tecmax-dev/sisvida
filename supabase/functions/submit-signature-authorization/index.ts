@@ -17,14 +17,30 @@ function isValidToken(token: unknown): token is string {
   return typeof token === "string" && /^[0-9a-f]{32,128}$/i.test(token);
 }
 
-function isValidSignatureData(data: unknown): data is string {
+type ParsedImageDataUrl = {
+  mime: "image/png" | "image/jpeg";
+  base64: string;
+};
+
+function parseImageDataUrl(input: unknown): ParsedImageDataUrl | null {
+  if (typeof input !== "string") return null;
+
   // Accept PNG/JPEG data URLs
-  return (
-    typeof data === "string" &&
-    data.startsWith("data:image/") &&
-    data.includes(";base64,") &&
-    data.length > 100
-  );
+  const match = input.match(/^data:(image\/(?:png|jpeg));base64,(.+)$/i);
+  if (!match) return null;
+
+  const mime = match[1].toLowerCase() as ParsedImageDataUrl["mime"];
+  const base64 = match[2];
+  if (!base64 || base64.length < 50) return null;
+
+  return { mime, base64 };
+}
+
+function decodeBase64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
 }
 
 Deno.serve(async (req) => {
@@ -37,8 +53,8 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const token = body?.token;
-    const signatureData = body?.signatureData;
     const accepted = body?.accepted;
+    const parsedSignature = parseImageDataUrl(body?.signatureData);
 
     if (!isValidToken(token)) {
       return json(400, { error: "Token inválido" });
@@ -48,8 +64,14 @@ Deno.serve(async (req) => {
       return json(400, { error: "Você precisa aceitar os termos" });
     }
 
-    if (!isValidSignatureData(signatureData)) {
+    if (!parsedSignature) {
       return json(400, { error: "Assinatura inválida" });
+    }
+
+    // Reject very small/empty signatures (common when canvas export fails)
+    const signatureBytes = decodeBase64ToBytes(parsedSignature.base64);
+    if (signatureBytes.byteLength < 2_000) {
+      return json(400, { error: "Assinatura muito pequena ou vazia" });
     }
 
     const supabase = createClient(
@@ -84,11 +106,27 @@ Deno.serve(async (req) => {
 
     const nowIso = new Date().toISOString();
 
-    // 2) Update patient signature
+    // 2) Upload signature to storage (do NOT store base64 in DB)
+    const ext = parsedSignature.mime === "image/jpeg" ? "jpg" : "png";
+    const signaturePath = `${tokenRecord.clinic_id}/${tokenRecord.patient_id}/signature-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("patient-signatures")
+      .upload(signaturePath, signatureBytes, {
+        contentType: parsedSignature.mime,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("[submit-signature-authorization] signature upload error", uploadError);
+      return json(500, { error: "Erro ao salvar assinatura" });
+    }
+
+    // 3) Update patient signature (store only the storage path)
     const { error: patientError } = await supabase
       .from("patients")
       .update({
-        signature_url: signatureData,
+        signature_url: signaturePath,
         signature_accepted: true,
         signature_accepted_at: nowIso,
       })
