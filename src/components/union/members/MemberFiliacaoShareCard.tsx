@@ -121,14 +121,14 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
       logoUrl = clinic?.logo_url;
     }
 
-    // If no signature in sindical_associados, try to fetch from patients table
+    // If no signature in sindical_associados, try to fetch from patients table by ID
     let filiacaoWithSignature = filiacao;
     if (!filiacao.assinatura_digital_url) {
+      // First try by patient ID (member.id), then fallback to CPF
       const { data: patient } = await supabase
         .from("patients")
         .select("signature_url, signature_accepted_at")
-        .eq("cpf", member.cpf?.replace(/\D/g, ""))
-        .eq("clinic_id", clinicId)
+        .eq("id", member.id)
         .maybeSingle();
 
       if (patient?.signature_url) {
