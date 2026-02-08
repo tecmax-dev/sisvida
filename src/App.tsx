@@ -75,6 +75,7 @@ const ClinicPresentationPage = lazy(() => import("./pages/public/ClinicPresentat
 const NegotiationPreviewPage = lazy(() => import("./pages/public/NegotiationPreviewPage"));
 const ApresentacaoEcliniPage = lazy(() => import("./pages/ApresentacaoEcliniPage"));
 const TutorialSindicatoPage = lazy(() => import("./pages/TutorialSindicatoPage"));
+const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
 
@@ -386,6 +387,8 @@ function App() {
                 <Route path="/tutorial-sindicato" element={<TutorialSindicatoPage />} />
                 <Route path="/tutorial-sindical" element={<TutorialSindicatoPage />} />
                 <Route path="/negociacao-espelho/:token" element={<NegotiationPreviewPage />} />
+                {/* Signature Authorization Page - Public */}
+                <Route path="/assinar/:token" element={<SignatureAuthorizationPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
