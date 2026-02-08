@@ -95,7 +95,7 @@ serve(async (req) => {
     const { error: insertError } = await supabase
       .from('signature_request_tokens')
       .insert({
-        associado_id: associadoId,
+        patient_id: associadoId,
         clinic_id: clinicId,
         token,
         email: associado.email,

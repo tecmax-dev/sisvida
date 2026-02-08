@@ -9003,7 +9003,6 @@ export type Database = {
       }
       signature_request_tokens: {
         Row: {
-          associado_id: string
           clinic_id: string
           created_at: string
           created_by: string | null
@@ -9011,12 +9010,12 @@ export type Database = {
           expires_at: string
           id: string
           ip_address: string | null
+          patient_id: string
           token: string
           used_at: string | null
           user_agent: string | null
         }
         Insert: {
-          associado_id: string
           clinic_id: string
           created_at?: string
           created_by?: string | null
@@ -9024,12 +9023,12 @@ export type Database = {
           expires_at: string
           id?: string
           ip_address?: string | null
+          patient_id: string
           token: string
           used_at?: string | null
           user_agent?: string | null
         }
         Update: {
-          associado_id?: string
           clinic_id?: string
           created_at?: string
           created_by?: string | null
@@ -9037,23 +9036,24 @@ export type Database = {
           expires_at?: string
           id?: string
           ip_address?: string | null
+          patient_id?: string
           token?: string
           used_at?: string | null
           user_agent?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "signature_request_tokens_associado_id_fkey"
-            columns: ["associado_id"]
-            isOneToOne: false
-            referencedRelation: "sindical_associados"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "signature_request_tokens_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_request_tokens_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
