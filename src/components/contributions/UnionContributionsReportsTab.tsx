@@ -269,26 +269,39 @@ export default function UnionContributionsReportsTab({
     fetchContributions(filters);
   }, [buildFilters, fetchContributions]);
 
+  // Track if initial load has happened
+  const initialLoadDone = useRef(false);
+  
   // Initial fetch on mount
   useEffect(() => {
     if (clinicId) {
       console.log("[UnionContributionsReportsTab] Initial fetch for clinic:", clinicId);
       handleSearch();
+      initialLoadDone.current = true;
     }
   }, [clinicId]); // eslint-disable-line react-hooks/exhaustive-deps
   
-  // Auto-search when employer is selected/changed
+  // Auto-search when any filter changes (employer, report type, dates, status, etc.)
   useEffect(() => {
-    // Only auto-search if we have contributions loaded (not first load)
-    if (clinicId && contributions.length >= 0 && selectedEmployer !== undefined) {
-      console.log("[UnionContributionsReportsTab] Employer changed, auto-searching:", selectedEmployer?.id);
-      // Small delay to ensure state is updated
+    // Only auto-search after initial load
+    if (clinicId && initialLoadDone.current) {
+      console.log("[UnionContributionsReportsTab] Filters changed, auto-searching...", {
+        employer: selectedEmployer?.id,
+        reportType,
+        statusFilter,
+        dateFilterType,
+        startDate,
+        endDate,
+        origin: originFilter,
+        contributionTypes: selectedContributionTypes.length
+      });
+      // Small delay to batch multiple filter changes
       const timeout = setTimeout(() => {
         handleSearch();
-      }, 100);
+      }, 300);
       return () => clearTimeout(timeout);
     }
-  }, [selectedEmployer?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedEmployer?.id, reportType, statusFilter, dateFilterType, startDate, endDate, originFilter, selectedContributionTypes.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Contributions to display (already filtered by the hook at database level)
   const displayContributions = useMemo(() => {
