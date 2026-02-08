@@ -92,8 +92,13 @@ export function useContributionsReport(clinicId: string | undefined) {
     setError(null);
 
     try {
-      console.log("[useContributionsReport] Fetching with filters:", JSON.stringify(filters, null, 2));
+      console.log("[useContributionsReport] ========== STARTING FETCH ==========");
+      console.log("[useContributionsReport] Clinic ID:", clinicId);
+      console.log("[useContributionsReport] Filters:", JSON.stringify(filters, null, 2));
       console.log("[useContributionsReport] Date range:", filters.startDate, "to", filters.endDate);
+      console.log("[useContributionsReport] Date filter type:", filters.dateFilterType);
+      console.log("[useContributionsReport] Status filter:", filters.status);
+      console.log("[useContributionsReport] Employer ID:", filters.employerId || "ALL");
 
       let allData: ContributionReportItem[] = [];
       let from = 0;
