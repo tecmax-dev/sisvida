@@ -119,10 +119,63 @@ const formatDateLong = (dateStr: string | null | undefined): string => {
   }
 };
 
+function describeImageInput(input: unknown): "none" | "dataurl" | "blob" | "http" | "path" {
+  if (!input || typeof input !== "string") return "none";
+  if (input.startsWith("data:image/")) return "dataurl";
+  if (input.startsWith("blob:")) return "blob";
+  if (input.startsWith("http")) return "http";
+  return "path";
+}
+
+function decodeBase64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function dataUrlToBytes(dataUrl: string): { mime: string; bytes: Uint8Array } {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/i);
+  if (!match) throw new Error("DATA_URL_INVALIDA");
+  const mime = match[1].toLowerCase();
+  const base64 = match[2];
+  return { mime, bytes: decodeBase64ToBytes(base64) };
+}
+
+function getPngDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.length < 24) return null;
+  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  for (let i = 0; i < sig.length; i++) if (bytes[i] !== sig[i]) return null;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: dv.getUint32(16), height: dv.getUint32(20) };
+}
+
+function requireEmbeddedDataUrl(label: string, input: string | null | undefined) {
+  if (!input) throw new Error(`${label}_AUSENTE`);
+  if (input.startsWith("blob:")) throw new Error(`${label}_BLOB_URL_PROIBIDA`);
+  if (!input.startsWith("data:image/")) {
+    throw new Error(`${label}_NAO_EMBUTIDA: esperado data:image/*;base64,...`);
+  }
+
+  const { mime, bytes } = dataUrlToBytes(input);
+  const dims = mime === "image/png" ? getPngDimensions(bytes) : null;
+
+  return {
+    dataUrl: input,
+    mime,
+    bytes: bytes.byteLength,
+    pngDims: dims,
+  };
+}
+
 async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url) return null;
-  // Blob URLs are local-only (not fetchable by backend and often break in jsPDF pipelines)
-  if (url.startsWith("blob:")) return null;
+
+  // Blob URLs are local-only and PROIBIDAS
+  if (url.startsWith("blob:")) {
+    throw new Error("BLOB_URL_PROIBIDA");
+  }
+
   if (url.startsWith("data:image/")) return url;
 
   // Prefer backend function to avoid CORS issues (and support more hosts)
@@ -141,8 +194,8 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
       // Fallback (best-effort)
       return `data:image/png;base64,${data.base64}`;
     }
-  } catch {
-    // ignore and fall back to direct fetch
+  } catch (err) {
+    console.warn("[FiliacaoPDF][generator] loadImageAsBase64 via function failed", err);
   }
 
   // Fallback to direct fetch
@@ -299,41 +352,30 @@ async function buildFiliacaoPDF(
   const photoX = pageWidth - margin - photoSize;
   const photoY = yPos - 2;
   const photoUrl = filiacao.foto_url || filiacao.documento_foto_url;
-  
-  if (photoUrl) {
-    try {
-      const photoBase64 = await loadImageAsBase64(photoUrl);
-      if (photoBase64) {
-        // Draw photo border
-        doc.setDrawColor(...COLORS.gray);
-        doc.setLineWidth(0.5);
-        doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
-        
-        // Draw photo
-        doc.addImage(photoBase64, getPdfImageFormat(photoBase64), photoX, photoY, photoSize, photoSize);
-      }
-    } catch (e) {
-      console.warn("Failed to load member photo:", e);
-    }
-  } else {
-    // Draw placeholder box with initials if no photo
-    doc.setDrawColor(...COLORS.gray);
-    doc.setFillColor(240, 240, 240);
-    doc.rect(photoX, photoY, photoSize, photoSize, "FD");
-    
-    // Add initials
-    const initials = filiacao.nome
-      .split(" ")
-      .filter(n => n.length > 0)
-      .slice(0, 2)
-      .map(n => n[0].toUpperCase())
-      .join("");
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...COLORS.gray);
-    doc.text(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 4, { align: "center" });
-    doc.setTextColor(...COLORS.black);
-  }
+
+  // AUDIT: payload snapshot (do not silence)
+  console.log("[FiliacaoPDF][generator] payload", {
+    cpf: filiacao.cpf,
+    foto_url_type: describeImageInput(filiacao.foto_url),
+    documento_foto_url_type: describeImageInput(filiacao.documento_foto_url),
+    assinatura_digital_url_type: describeImageInput(filiacao.assinatura_digital_url),
+  });
+
+  // STRICT: photo must be embedded as data URL
+  const photoAudit = requireEmbeddedDataUrl("FOTO", photoUrl);
+  console.log("[FiliacaoPDF][generator] FOTO", {
+    mime: photoAudit.mime,
+    bytes: photoAudit.bytes,
+    pngDims: photoAudit.pngDims,
+  });
+
+  // Draw photo border
+  doc.setDrawColor(...COLORS.gray);
+  doc.setLineWidth(0.5);
+  doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
+
+  // Draw photo
+  doc.addImage(photoAudit.dataUrl, getPdfImageFormat(photoAudit.dataUrl), photoX, photoY, photoSize, photoSize);
 
   // Grid layout for member data (matching model - 3 columns)
   // Adjust col3X to leave space for photo (30mm photo + margin)
@@ -500,32 +542,30 @@ async function buildFiliacaoPDF(
 
   // Add digital signature if exists (positioned above the line with proper spacing)
   if (filiacao.assinatura_digital_url) {
-    try {
-      // Check if it's a data URL (base64) or a regular URL
-      let sigBase64 = filiacao.assinatura_digital_url;
-      
-      // If it's not already a data URL, load it
-      if (!sigBase64.startsWith("data:")) {
-        sigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url) || "";
-      }
-      
-      if (sigBase64 && sigBase64.startsWith("data:image")) {
-        // Position signature centered above the signature line
-        // Smaller and positioned to not overlap with stub
-        const sigHeight = 16;
-        const sigWidth = 55;
-        doc.addImage(
-          sigBase64,
-          getPdfImageFormat(sigBase64),
-          pageWidth / 2 - sigWidth / 2,
-          signatureLineY - sigHeight - 2,
-          sigWidth,
-          sigHeight
-        );
-      }
-    } catch (e) {
-      console.warn("Failed to load signature:", e);
+    const sigAudit = requireEmbeddedDataUrl("ASSINATURA", filiacao.assinatura_digital_url);
+
+    // Extra guard against blank PNG signatures (1x1)
+    if (sigAudit.mime === "image/png" && sigAudit.pngDims && (sigAudit.pngDims.width <= 2 || sigAudit.pngDims.height <= 2)) {
+      throw new Error(`ASSINATURA_INVALIDA_PNG_${sigAudit.pngDims.width}x${sigAudit.pngDims.height}`);
     }
+
+    console.log("[FiliacaoPDF][generator] ASSINATURA", {
+      mime: sigAudit.mime,
+      bytes: sigAudit.bytes,
+      pngDims: sigAudit.pngDims,
+    });
+
+    // Position signature centered above the signature line
+    const sigHeight = 16;
+    const sigWidth = 55;
+    doc.addImage(
+      sigAudit.dataUrl,
+      getPdfImageFormat(sigAudit.dataUrl),
+      pageWidth / 2 - sigWidth / 2,
+      signatureLineY - sigHeight - 2,
+      sigWidth,
+      sigHeight
+    );
   }
 
   // Signature line
@@ -623,18 +663,31 @@ async function buildFiliacaoPDF(
   
   // Add mini digital signature in stub if exists
   if (filiacao.assinatura_digital_url) {
-    try {
-      let stubSigBase64 = filiacao.assinatura_digital_url;
-      if (!stubSigBase64.startsWith("data:")) {
-        stubSigBase64 = await loadImageAsBase64(filiacao.assinatura_digital_url) || "";
-      }
-      if (stubSigBase64 && stubSigBase64.startsWith("data:image")) {
-        // Mini signature in stub (reduced size)
-        doc.addImage(stubSigBase64, getPdfImageFormat(stubSigBase64), rightSectionX + 3, row1Y + 14, 28, 10);
-      }
-    } catch (e) {
-      console.warn("Failed to load stub signature:", e);
+    const stubSigAudit = requireEmbeddedDataUrl("ASSINATURA_STUB", filiacao.assinatura_digital_url);
+
+    if (
+      stubSigAudit.mime === "image/png" &&
+      stubSigAudit.pngDims &&
+      (stubSigAudit.pngDims.width <= 2 || stubSigAudit.pngDims.height <= 2)
+    ) {
+      throw new Error(`ASSINATURA_STUB_INVALIDA_PNG_${stubSigAudit.pngDims.width}x${stubSigAudit.pngDims.height}`);
     }
+
+    console.log("[FiliacaoPDF][generator] ASSINATURA_STUB", {
+      mime: stubSigAudit.mime,
+      bytes: stubSigAudit.bytes,
+      pngDims: stubSigAudit.pngDims,
+    });
+
+    // Mini signature in stub (reduced size)
+    doc.addImage(
+      stubSigAudit.dataUrl,
+      getPdfImageFormat(stubSigAudit.dataUrl),
+      rightSectionX + 3,
+      row1Y + 14,
+      28,
+      10
+    );
   }
   
   // Signature line in stub

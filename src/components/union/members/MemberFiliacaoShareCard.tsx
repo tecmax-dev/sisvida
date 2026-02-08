@@ -20,6 +20,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
+import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
 
 interface MemberData {
@@ -206,17 +207,32 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
     setGeneratingPDF(true);
     try {
       const { filiacao, dependents, sindicato } = await fetchFiliacaoData();
-      
+
       if (!filiacao) {
-        toast({ 
+        toast({
           title: "Ficha de filiação não encontrada",
           description: "Este associado não possui ficha de filiação cadastrada.",
-          variant: "destructive" 
+          variant: "destructive",
         });
         return;
       }
 
-      await generateFichaFiliacaoPDF(filiacao, dependents, sindicato);
+      const assets = await prepareMemberImagesForFiliacaoPdf({
+        clinicId,
+        cpf: filiacao.cpf,
+        photoUrl: filiacao.foto_url || filiacao.documento_foto_url || null,
+        signatureUrl: filiacao.assinatura_digital_url || null,
+        memberPhotoFallback: member.photo_url || null,
+      });
+
+      const pdfFiliacao = {
+        ...filiacao,
+        foto_url: assets.photoDataUrl,
+        documento_foto_url: null,
+        assinatura_digital_url: assets.signatureDataUrl,
+      };
+
+      await generateFichaFiliacaoPDF(pdfFiliacao, dependents, sindicato);
       toast({ title: "PDF gerado com sucesso!" });
     } catch (error: any) {
       console.error("Error generating PDF:", error);

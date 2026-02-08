@@ -22,6 +22,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
+import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -152,20 +153,30 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
         console.error("Error fetching filiacao:", filiacaoError);
       }
 
-      if (filiacao) {
-        // Fetch dependents from sindical_associado_dependentes
-        const { data: dependents } = await supabase
-          .from("sindical_associado_dependentes")
-          .select("*")
-          .eq("associado_id", filiacao.id);
+        if (filiacao) {
+          // Fetch dependents from sindical_associado_dependentes
+          const { data: dependents } = await supabase
+            .from("sindical_associado_dependentes")
+            .select("*")
+            .eq("associado_id", filiacao.id);
 
-        return generateFiliacaoPDFBlob(
-          filiacao,
-          dependents || [],
-          sindicato,
-          cardExpiresAt
-        );
-      }
+          const assets = await prepareMemberImagesForFiliacaoPdf({
+            clinicId,
+            cpf: filiacao.cpf,
+            photoUrl: (filiacao as any).foto_url || (filiacao as any).documento_foto_url || null,
+            signatureUrl: (filiacao as any).assinatura_digital_url || null,
+            memberPhotoFallback: null,
+          });
+
+          const pdfFiliacao = {
+            ...(filiacao as any),
+            foto_url: assets.photoDataUrl,
+            documento_foto_url: null,
+            assinatura_digital_url: assets.signatureDataUrl,
+          };
+
+          return generateFiliacaoPDFBlob(pdfFiliacao, dependents || [], sindicato, cardExpiresAt);
+        }
     }
 
     // Build filiacao from member data (patient record)
@@ -211,14 +222,25 @@ export function BulkFiliacaoGeneratorDialog({ open, onOpenChange, clinicId }: Pr
       matricula: patientData.registration_number,
       created_at: new Date().toISOString(),
       aprovado_at: new Date().toISOString(),
+      foto_url: patientData.photo_url || null,
+      assinatura_digital_url: (patientData as any).signature_url || null,
     };
 
-    return generateFiliacaoPDFBlob(
-      filiacaoFromPatient,
-      mappedDeps,
-      sindicato,
-      cardExpiresAt
-    );
+    const assets = await prepareMemberImagesForFiliacaoPdf({
+      clinicId,
+      cpf: filiacaoFromPatient.cpf,
+      photoUrl: filiacaoFromPatient.foto_url || null,
+      signatureUrl: filiacaoFromPatient.assinatura_digital_url || null,
+      memberPhotoFallback: null,
+    });
+
+    const pdfFiliacao = {
+      ...filiacaoFromPatient,
+      foto_url: assets.photoDataUrl,
+      assinatura_digital_url: assets.signatureDataUrl,
+    };
+
+    return generateFiliacaoPDFBlob(pdfFiliacao, mappedDeps, sindicato, cardExpiresAt);
   };
 
   const handleGenerateAll = async () => {

@@ -30,6 +30,7 @@ import {
   Users,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
+import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
 
 interface FiliacaoFull {
   id: string;
@@ -172,7 +173,7 @@ export function FiliacaoDetailDialog({
 
   const handleDownloadPDF = async () => {
     if (!data) return;
-    
+
     setGeneratingPDF(true);
     try {
       // Fetch sindicato info
@@ -180,12 +181,30 @@ export function FiliacaoDetailDialog({
         .from("union_entities")
         .select("razao_social")
         .single();
-      
-      await generateFichaFiliacaoPDF(data, dependents, sindicato);
+
+      const clinicId = (data as any).clinic_id as string | undefined;
+      if (!clinicId) throw new Error("clinic_id ausente na filiação");
+
+      const assets = await prepareMemberImagesForFiliacaoPdf({
+        clinicId,
+        cpf: data.cpf,
+        photoUrl: data.foto_url || data.documento_foto_url || null,
+        signatureUrl: data.assinatura_digital_url || null,
+        memberPhotoFallback: null,
+      });
+
+      const pdfFiliacao = {
+        ...data,
+        foto_url: assets.photoDataUrl,
+        documento_foto_url: null,
+        assinatura_digital_url: assets.signatureDataUrl,
+      };
+
+      await generateFichaFiliacaoPDF(pdfFiliacao as any, dependents, sindicato);
       toast({ title: "PDF gerado com sucesso!" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating PDF:", error);
-      toast({ title: "Erro ao gerar PDF", variant: "destructive" });
+      toast({ title: "Erro ao gerar PDF", description: error.message, variant: "destructive" });
     } finally {
       setGeneratingPDF(false);
     }
