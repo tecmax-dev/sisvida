@@ -121,8 +121,28 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
       logoUrl = clinic?.logo_url;
     }
 
+    // If no signature in sindical_associados, try to fetch from patients table
+    let filiacaoWithSignature = filiacao;
+    if (!filiacao.assinatura_digital_url) {
+      const { data: patient } = await supabase
+        .from("patients")
+        .select("signature_url, signature_accepted_at")
+        .eq("cpf", member.cpf?.replace(/\D/g, ""))
+        .eq("clinic_id", clinicId)
+        .maybeSingle();
+
+      if (patient?.signature_url) {
+        filiacaoWithSignature = {
+          ...filiacao,
+          assinatura_digital_url: patient.signature_url,
+          assinatura_aceite_at: patient.signature_accepted_at,
+          assinatura_aceite_desconto: true,
+        };
+      }
+    }
+
     return {
-      filiacao,
+      filiacao: filiacaoWithSignature,
       dependents: dependents || [],
       sindicato: sindicato ? { ...sindicato, logo_url: logoUrl } : null,
     };
