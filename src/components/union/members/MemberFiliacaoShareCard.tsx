@@ -128,12 +128,21 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
       documento_foto_url: (filiacao as any).documento_foto_url || null,
     };
     
-    // Get patient data (signature, photo) by member.id
-    const { data: patient } = await supabase
+    // Normalize CPF for lookup (remove formatting)
+    const normalizedCpf = member.cpf?.replace(/\D/g, "") || "";
+    
+    // Get patient data (signature, photo) by CPF + clinic_id for accurate matching
+    // This handles cases where member.id might not match the patient record
+    const { data: patients } = await supabase
       .from("patients")
-      .select("signature_url, signature_accepted_at, photo_url")
-      .eq("id", member.id)
-      .maybeSingle();
+      .select("id, signature_url, signature_accepted_at, photo_url, cpf")
+      .eq("clinic_id", clinicId)
+      .order("created_at", { ascending: false });
+
+    // Find patient by normalized CPF
+    const patient = patients?.find(p => 
+      p.cpf?.replace(/\D/g, "") === normalizedCpf
+    );
 
     // Add signature from patient if not in filiacao
     if (!filiacaoWithExtras.assinatura_digital_url && patient?.signature_url) {
