@@ -63,48 +63,57 @@ function isDataImageUrl(url: string) {
   return url.startsWith("data:image/");
 }
 
-async function convertAnyUrlToDataUrlStrict(label: "foto" | "assinatura", url: string): Promise<string> {
-  if (isBlobUrl(url)) {
-    throw new Error(`${label.toUpperCase()}_BLOB_URL_PROIBIDA`);
-  }
+async function resolveFiliacaoAssetsViaBackend(params: {
+  cpf: string;
+  photoUrl: string;
+  signatureUrl: string | null;
+}): Promise<{
+  photoDataUrl: string;
+  photoBytes: number;
+  signatureDataUrl: string | null;
+  signatureBytes: number | null;
+  signatureInvalidReason: string | null;
+}> {
+  // Defensive client-side guard (backend também valida)
+  if (isBlobUrl(params.photoUrl)) throw new Error("FOTO_BLOB_URL_PROIBIDA");
+  if (params.signatureUrl && isBlobUrl(params.signatureUrl)) throw new Error("ASSINATURA_BLOB_URL_PROIBIDA");
 
-  if (isDataImageUrl(url)) return url;
-
-  let resolvedUrl = url;
-
-  // If it's a storage path, try to convert to signed/public URL.
-  if (!resolvedUrl.startsWith("http")) {
-    // 1) Try private signatures bucket
-    const { data: signed } = await supabase.storage
-      .from("patient-signatures")
-      .createSignedUrl(resolvedUrl, 60 * 10);
-
-    if (signed?.signedUrl) {
-      resolvedUrl = signed.signedUrl;
-    } else {
-      // 2) Try public patient photos bucket
-      const { data: pub } = supabase.storage.from("patient-photos").getPublicUrl(resolvedUrl);
-      if (pub?.publicUrl) resolvedUrl = pub.publicUrl;
-    }
-  }
-
-  const { data, error } = await supabase.functions.invoke("fetch-image-base64", {
-    body: { url: resolvedUrl },
+  const { data, error } = await supabase.functions.invoke("resolve-filiacao-assets", {
+    body: {
+      cpf: params.cpf,
+      photo_url: params.photoUrl,
+      signature_url: params.signatureUrl,
+    },
   });
 
   if (error) {
-    const msg = (error as any)?.message || "Erro ao converter imagem";
-    throw new Error(`${label.toUpperCase()}_CONVERSAO_FALHOU: ${msg}`);
+    throw new Error((error as any)?.message || "Erro ao resolver imagens");
   }
 
-  if (!data?.base64 || typeof data.base64 !== "string") {
-    throw new Error(`${label.toUpperCase()}_CONVERSAO_FALHOU: resposta inválida`);
+  if (!data?.photo?.dataUrl || typeof data.photo.dataUrl !== "string") {
+    throw new Error("FOTO_NAO_RESOLVIDA");
   }
 
-  const contentType = (typeof data.contentType === "string" && data.contentType) ? data.contentType : "image/png";
-  const base64 = data.base64;
+  if (!data.photo.dataUrl.startsWith("data:image/")) {
+    throw new Error("FOTO_NAO_EMBUTIDA");
+  }
 
-  return `data:${contentType};base64,${base64}`;
+  const photoBytes = typeof data.photo.bytes === "number" ? data.photo.bytes : dataUrlToBytes(data.photo.dataUrl).bytes.byteLength;
+
+  const signatureDataUrl = typeof data?.signature?.dataUrl === "string" && data.signature.dataUrl.startsWith("data:image/")
+    ? data.signature.dataUrl
+    : null;
+
+  const signatureBytes = typeof data?.signature?.bytes === "number" ? data.signature.bytes : (signatureDataUrl ? dataUrlToBytes(signatureDataUrl).bytes.byteLength : null);
+  const signatureInvalidReason = typeof data?.signature?.invalidReason === "string" ? data.signature.invalidReason : null;
+
+  return {
+    photoDataUrl: data.photo.dataUrl,
+    photoBytes,
+    signatureDataUrl,
+    signatureBytes,
+    signatureInvalidReason,
+  };
 }
 
 type SignatureValidation =
@@ -185,23 +194,25 @@ export async function prepareMemberImagesForFiliacaoPdf(params: {
     throw new Error("FOTO_OBRIGATORIA_AUSENTE_PARA_PDF");
   }
 
-  const photoDataUrl = await convertAnyUrlToDataUrlStrict("foto", photoResolvedUrl);
-  const { bytes: photoBytesArr } = dataUrlToBytes(photoDataUrl);
+  // Resolve/converte dentro do backend (service role + auditoria + validação de assinatura)
+  const resolved = await resolveFiliacaoAssetsViaBackend({
+    cpf: cpfNormalized,
+    photoUrl: photoResolvedUrl,
+    signatureUrl: signatureResolvedUrl,
+  });
 
-  let signatureDataUrl: string | null = null;
-  let signatureBytes: number | null = null;
-  let signatureInvalidReason: string | null = null;
+  const photoDataUrl = resolved.photoDataUrl;
+  const photoBytes = resolved.photoBytes;
 
-  if (signatureResolvedUrl) {
-    const sigData = await convertAnyUrlToDataUrlStrict("assinatura", signatureResolvedUrl);
-    const validation = validateSignatureDataUrl(sigData);
-    if (validation.ok === true) {
-      signatureDataUrl = sigData;
-      signatureBytes = dataUrlToBytes(sigData).bytes.byteLength;
-    }
+  let signatureDataUrl: string | null = resolved.signatureDataUrl;
+  let signatureBytes: number | null = resolved.signatureBytes;
+  let signatureInvalidReason: string | null = resolved.signatureInvalidReason;
 
+  // Fallback extra: validação client-side (defesa em profundidade)
+  if (signatureDataUrl) {
+    const validation = validateSignatureDataUrl(signatureDataUrl);
     if (validation.ok === false) {
-      signatureInvalidReason = validation.reason;
+      signatureInvalidReason = signatureInvalidReason || validation.reason;
       signatureDataUrl = null;
       signatureBytes = null;
     }
@@ -216,7 +227,7 @@ export async function prepareMemberImagesForFiliacaoPdf(params: {
     photoResolvedUrl,
     signatureResolvedUrl,
     photoDataUrl,
-    photoBytes: photoBytesArr.byteLength,
+    photoBytes,
     signatureDataUrl,
     signatureBytes,
     signatureInvalidReason,
