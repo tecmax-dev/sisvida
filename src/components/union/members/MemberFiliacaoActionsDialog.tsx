@@ -27,6 +27,7 @@ import {
   Eye,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF, generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
+import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -323,6 +324,54 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
     return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   };
 
+  const preparePdfFiliacao = async () => {
+    if (!filiacaoData) throw new Error("Ficha de filiação não encontrada");
+
+    const assets = await prepareMemberImagesForFiliacaoPdf({
+      clinicId,
+      cpf: filiacaoData.cpf,
+      photoUrl: filiacaoData.foto_url || filiacaoData.documento_foto_url || null,
+      signatureUrl: filiacaoData.assinatura_digital_url || null,
+      memberPhotoFallback: member.photo_url || null,
+    });
+
+    // Logs obrigatórios (auditoria)
+    console.log("[FiliacaoPDF] CPF:", assets.cpf);
+    console.log("[FiliacaoPDF] ORIGINAL filiacao.foto_url:", assets.photoOriginalUrl);
+    console.log("[FiliacaoPDF] ORIGINAL filiacao.assinatura_digital_url:", assets.signatureOriginalUrl);
+    console.log("[FiliacaoPDF] patients.photo_url:", assets.patientPhotoUrl);
+    console.log("[FiliacaoPDF] patients.signature_url:", assets.patientSignatureUrl);
+    console.log("[FiliacaoPDF] RESOLVED photoUrl:", assets.photoResolvedUrl);
+    console.log("[FiliacaoPDF] RESOLVED signatureUrl:", assets.signatureResolvedUrl);
+    console.log("[FiliacaoPDF] FINAL photoDataUrl:", assets.photoDataUrl);
+    console.log("[FiliacaoPDF] FINAL signatureDataUrl:", assets.signatureDataUrl);
+    console.log("[FiliacaoPDF] BYTES:", { photo: assets.photoBytes, signature: assets.signatureBytes });
+
+    if (assets.signatureInvalidReason) {
+      console.warn("[FiliacaoPDF] Assinatura inválida — omitindo do PDF:", {
+        cpf: assets.cpf,
+        reason: assets.signatureInvalidReason,
+        signatureUrl: assets.signatureResolvedUrl,
+      });
+
+      toast({
+        title: "Assinatura inválida",
+        description: assets.signatureInvalidReason,
+        variant: "destructive",
+      });
+    }
+
+    return {
+      pdfFiliacao: {
+        ...filiacaoData,
+        foto_url: assets.photoDataUrl,
+        documento_foto_url: null,
+        assinatura_digital_url: assets.signatureDataUrl,
+      },
+      assets,
+    };
+  };
+
   // View PDF in new tab
   const handleViewPDF = async () => {
     setViewingPDF(true);
@@ -336,10 +385,11 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
         return;
       }
 
-      const blob = await generateFiliacaoPDFBlob(filiacaoData, dependents, sindicato);
+      const { pdfFiliacao } = await preparePdfFiliacao();
+      const blob = await generateFiliacaoPDFBlob(pdfFiliacao, dependents, sindicato);
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
-      
+
       // Clean up after a delay
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error: any) {
@@ -367,7 +417,8 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
         return;
       }
 
-      await generateFichaFiliacaoPDF(filiacaoData, dependents, sindicato);
+      const { pdfFiliacao } = await preparePdfFiliacao();
+      await generateFichaFiliacaoPDF(pdfFiliacao, dependents, sindicato);
       toast({ title: "PDF gerado com sucesso!" });
     } catch (error: any) {
       console.error("Error generating PDF:", error);
@@ -387,8 +438,8 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
       throw new Error("Ficha de filiação não encontrada");
     }
 
-    const blob = await generateFiliacaoPDFBlob(filiacaoData, dependents, sindicato);
-    
+    const { pdfFiliacao } = await preparePdfFiliacao();
+    const blob = await generateFiliacaoPDFBlob(pdfFiliacao, dependents, sindicato);
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {

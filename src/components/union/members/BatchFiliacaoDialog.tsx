@@ -27,6 +27,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
+import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
 
 interface MemberWithCard {
@@ -261,7 +262,23 @@ export function BatchFiliacaoDialog({ open, onOpenChange, clinicId }: Props) {
       };
     }
 
-    return { filiacaoData, dependents };
+    // Prepare strict embedded images (foto obrigatória; assinatura opcional)
+    const assets = await prepareMemberImagesForFiliacaoPdf({
+      clinicId,
+      cpf: filiacaoData.cpf,
+      photoUrl: filiacaoData.foto_url || filiacaoData.documento_foto_url || null,
+      signatureUrl: filiacaoData.assinatura_digital_url || null,
+      memberPhotoFallback: null,
+    });
+
+    const pdfFiliacao = {
+      ...filiacaoData,
+      foto_url: assets.photoDataUrl,
+      documento_foto_url: null,
+      assinatura_digital_url: assets.signatureDataUrl,
+    };
+
+    return { filiacaoData: pdfFiliacao, dependents };
   };
 
   const handleProcess = async () => {
