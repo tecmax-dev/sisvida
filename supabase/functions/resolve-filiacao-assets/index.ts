@@ -44,13 +44,13 @@ function isDataImageUrl(input: string) {
   return input.startsWith("data:image/");
 }
 
-type StorageRef = { bucket: string; path: string };
+type StorageRef = { bucket: string; path: string; isPublic: boolean };
 
 function parseStorageUrlToRef(url: string): StorageRef | null {
   // Expected patterns:
-  // /storage/v1/object/public/<bucket>/<path>
-  // /storage/v1/object/sign/<bucket>/<path>
-  // /storage/v1/object/<bucket>/<path>
+  // /storage/v1/object/public/<bucket>/<path> - PUBLIC
+  // /storage/v1/object/sign/<bucket>/<path> - SIGNED (treat as public fetch)
+  // /storage/v1/object/<bucket>/<path> - PRIVATE
   try {
     const u = new URL(url);
     const parts = u.pathname.split("/").filter(Boolean);
@@ -70,14 +70,15 @@ function parseStorageUrlToRef(url: string): StorageRef | null {
       const bucket = after[1];
       const path = after.slice(2).join("/");
       if (!bucket || !path) return null;
-      return { bucket, path };
+      // Public URLs should be fetched via HTTP, not storage API
+      return { bucket, path, isPublic: true };
     }
 
-    // /object/<bucket>/<path>
+    // /object/<bucket>/<path> - private
     const bucket = after[0];
     const path = after.slice(1).join("/");
     if (!bucket || !path) return null;
-    return { bucket, path };
+    return { bucket, path, isPublic: false };
   } catch {
     return null;
   }
@@ -180,11 +181,22 @@ async function resolveImage(
     return { contentType, bytes: bytes.byteLength, dataUrl: input, pngDims };
   }
 
-  // If it's a full storage URL from our backend, prefer storage download (service role)
+  // If it's a full storage URL from our backend
   if (input.startsWith("http")) {
     const storageRef = parseStorageUrlToRef(input);
-    if (storageRef) {
-      console.log("[resolve-filiacao-assets] downloading from storage URL", { requestId, label, bucket: storageRef.bucket, path: storageRef.path });
+    
+    // If it's a PUBLIC storage URL, fetch via HTTP (don't use storage API)
+    if (storageRef && storageRef.isPublic) {
+      console.log("[resolve-filiacao-assets] fetching public storage URL via HTTP", { requestId, label, url: input });
+      const out = await fetchPublicImageToDataUrl(input, requestId);
+      const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
+      const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
+      return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
+    }
+    
+    // If it's a PRIVATE storage URL, use storage API with service role
+    if (storageRef && !storageRef.isPublic) {
+      console.log("[resolve-filiacao-assets] downloading from private storage URL", { requestId, label, bucket: storageRef.bucket, path: storageRef.path });
       const out = await downloadStorageToDataUrl(supabaseAdmin, storageRef);
       const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
       const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
