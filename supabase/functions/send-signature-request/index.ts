@@ -434,8 +434,8 @@ serve(async (req) => {
       },
     });
 
-    // Encode subject with RFC 2047 for UTF-8 support
-    const subjectText = `${unionName} - Autorizacao de Desconto em Folha`;
+    // Short subject to avoid truncation
+    const subjectText = "SECMI - Autorizacao de Desconto em Folha";
 
     try {
       await client.send({
