@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.submit-signature-authorization]
 verify_jwt = false
+
+[functions.fetch-image-base64]
+verify_jwt = false
+
+[functions.resolve-filiacao-assets]
+verify_jwt = false
