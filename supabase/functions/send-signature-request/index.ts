@@ -408,7 +408,12 @@ Ou copie e cole este link no seu navegador:<br>
         from: smtpFrom,
         to: associado.email,
         subject: `${unionName} - Autorização de Desconto em Folha`,
-        html: emailHtml,
+        content: emailHtml,
+        mimeContent: [{
+          mimeType: "text/html; charset=UTF-8",
+          content: emailHtml,
+          transferEncoding: "base64",
+        }],
       });
 
       await client.close();
