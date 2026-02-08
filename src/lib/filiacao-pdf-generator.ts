@@ -531,7 +531,8 @@ async function buildFiliacaoPDF(
     ? formatDateLong(filiacao.aprovado_at)
     : formatDateLong(new Date().toISOString());
 
-  yPos += 22;
+  // Increase spacing to avoid overlap with previous section
+  yPos += 35;
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.black);
@@ -702,14 +703,35 @@ async function buildFiliacaoPDF(
   doc.setFont("helvetica", "normal");
   doc.text(filiacao.nome, margin + 3, row2Y + 4);
 
-  // Row 3: Empresa onde trabalha + Table
+  // Row 3: Empresa onde trabalha + CNPJ + Endereço
   const row3Y = row2Y + 12;
   
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.text("Empresa onde trabalha:", margin + 3, row3Y);
+  doc.text("Empresa:", margin + 3, row3Y);
   doc.setFont("helvetica", "normal");
-  doc.text(filiacao.empresa_razao_social || "", margin + 3, row3Y + 4);
+  // Truncate company name if too long
+  const empresaNomeStub = (filiacao.empresa_razao_social || "").substring(0, 35);
+  doc.text(empresaNomeStub, margin + 3, row3Y + 4);
+  
+  // CNPJ da empresa
+  doc.setFont("helvetica", "bold");
+  doc.text("CNPJ:", margin + 3, row3Y + 9);
+  doc.setFont("helvetica", "normal");
+  doc.text(formatCNPJ(filiacao.empresa_cnpj || ""), margin + 14, row3Y + 9);
+  
+  // Endereço da empresa (simplified)
+  const enderecoEmpresaStub = [
+    filiacao.empresa_endereco,
+    filiacao.empresa_bairro,
+    filiacao.empresa_cidade ? `${filiacao.empresa_cidade}-${filiacao.empresa_uf || ""}` : ""
+  ].filter(Boolean).join(", ").substring(0, 50);
+  if (enderecoEmpresaStub) {
+    doc.setFont("helvetica", "bold");
+    doc.text("End:", margin + 50, row3Y + 9);
+    doc.setFont("helvetica", "normal");
+    doc.text(enderecoEmpresaStub, margin + 60, row3Y + 9);
+  }
 
   // Table for Nº Registro, Local, Inscrição - positioned to the right of empresa
   const tableX = margin + 68;
