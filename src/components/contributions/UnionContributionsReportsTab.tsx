@@ -102,26 +102,36 @@ export default function UnionContributionsReportsTab({
   
   // Helper to get saved filters from localStorage - with aggressive cleanup of old versions
   const getSavedFilters = useCallback(() => {
+    // ALWAYS clean up old version keys first
+    const keysToClean = [
+      `union-contributions-report-filters-${clinicId}`,
+      `union-contributions-report-filters-${clinicId}-v1`,
+      `union-contributions-report-filters-${clinicId}-v2`,
+      `union-contributions-report-filters-${clinicId}-v3`,
+    ];
+    keysToClean.forEach(key => {
+      try {
+        if (localStorage.getItem(key)) {
+          console.log("[UnionContributionsReportsTab] Removing old filter key:", key);
+          localStorage.removeItem(key);
+        }
+      } catch (e) { /* ignore */ }
+    });
+    
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         console.log("[UnionContributionsReportsTab] Loaded saved filters:", parsed);
-        return parsed;
+        
+        // FORCE critical defaults - always use due_date filter and wide date range
+        // This ensures ALL overdue contributions are captured for ALL companies
+        return {
+          ...parsed,
+          dateFilterType: "due_date", // ALWAYS use due_date for accurate overdue detection
+          startDate: "2019-01-01", // ALWAYS start from 2019 to capture all history
+        };
       }
-      // Clean up ALL old version keys
-      const keysToClean = [
-        `union-contributions-report-filters-${clinicId}`,
-        `union-contributions-report-filters-${clinicId}-v1`,
-        `union-contributions-report-filters-${clinicId}-v2`,
-        `union-contributions-report-filters-${clinicId}-v3`,
-      ];
-      keysToClean.forEach(key => {
-        if (localStorage.getItem(key)) {
-          console.log("[UnionContributionsReportsTab] Removing old filter key:", key);
-          localStorage.removeItem(key);
-        }
-      });
     } catch (e) {
       console.warn("Erro ao recuperar filtros salvos:", e);
     }
