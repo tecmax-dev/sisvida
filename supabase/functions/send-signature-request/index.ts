@@ -343,51 +343,82 @@ serve(async (req) => {
     );
 
     const logoSection = logoUrl
-      ? `<img src="${logoUrl}" alt="Logo" style="max-height: 60px; max-width: 200px; margin-bottom: 16px;" />`
+      ? `<img src="${logoUrl}" alt="Logo" style="max-width:200px;max-height:60px;display:block;margin-bottom:16px;">`
       : "";
 
     const emailHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Autorização de Desconto em Folha</title>
+  <meta charset="UTF-8">
+  <title>Autorizacao de Desconto em Folha</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
-<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-<div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 32px; text-align: center;">
-${logoSection}
-<h1 style="color: white; margin: 0; font-size: 22px;">${unionName}</h1>
-</div>
-<div style="padding: 32px;">
-<h2 style="color: #1f2937; margin: 0 0 16px;">Olá, ${associado.name}!</h2>
-<p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-Recebemos uma solicitação para que você autorize o desconto em folha de pagamento
-referente à sua contribuição sindical.
-</p>
-<p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-Para completar sua autorização, clique no botão abaixo e assine digitalmente:
-</p>
-<div style="text-align: center; margin: 32px 0;">
-<a href="${signatureUrl}" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
-Assinar Autorização
-</a>
-</div>
-<p style="color: #6b7280; font-size: 14px;">
-Ou copie e cole este link no seu navegador:<br>
-<a href="${signatureUrl}" style="color: #7c3aed; word-break: break-all;">${signatureUrl}</a>
-</p>
-<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-<p style="color: #92400e; margin: 0; font-size: 14px;">
-<strong>⚠️ Importante:</strong> Este link é válido por 7 dias e é de uso único.
-</p>
-</div>
-</div>
-<div style="text-align: center; padding: 24px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
-<p style="color: #9ca3af; font-size: 12px; margin: 0;">Este é um email automático. Por favor, não responda.</p>
-<p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0;">${unionName}</p>
-</div>
-</div>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+        <tr>
+          <td align="center" style="background-color:#7c3aed;padding:32px;">
+            ${logoSection}
+            <h1 style="color:#ffffff;font-size:20px;margin:0;">
+              ${unionName}
+            </h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;color:#1f2937;font-size:16px;line-height:1.6;">
+            <p style="margin-top:0;">
+              Ola, <strong>${associado.name}</strong>!
+            </p>
+            <p>
+              Recebemos uma solicitacao para que voce autorize o desconto em folha de pagamento
+              referente a sua contribuicao sindical.
+            </p>
+            <p>
+              Para completar sua autorizacao, clique no botao abaixo e assine digitalmente:
+            </p>
+            <table cellpadding="0" cellspacing="0" align="center" style="margin:24px auto;">
+              <tr>
+                <td align="center" bgcolor="#7c3aed" style="border-radius:6px;">
+                  <a href="${signatureUrl}"
+                     style="display:inline-block;padding:14px 28px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">
+                    Assinar Autorizacao
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="font-size:14px;color:#4b5563;">
+              Ou copie e cole este link no seu navegador:<br>
+              <a href="${signatureUrl}"
+                 style="color:#7c3aed;word-break:break-all;">
+                ${signatureUrl}
+              </a>
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fef3c7;margin-top:24px;">
+              <tr>
+                <td style="padding:16px;border-left:4px solid #f59e0b;">
+                  <p style="margin:0;font-size:14px;color:#92400e;">
+                    <strong>Importante:</strong> Este link e valido por 7 dias e e de uso unico.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="background-color:#f9fafb;padding:24px;border-top:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">
+              Este e um email automatico. Por favor, nao responda.
+            </p>
+            <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">
+              ${unionName}
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>`;
 
