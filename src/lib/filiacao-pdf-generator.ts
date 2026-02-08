@@ -35,9 +35,19 @@ interface Filiacao {
   uf?: string | null;
   cargo?: string | null;
   data_admissao?: string | null;
+  // Company fields - matching actual database columns
+  empresa?: string | null; // legacy field
   empresa_razao_social?: string | null;
+  empresa_nome_fantasia?: string | null;
   empresa_cnpj?: string | null;
   empresa_matricula?: string | null;
+  empresa_endereco?: string | null;
+  // These may not exist in DB but could be passed from linked employer
+  empresa_segmento?: string | null;
+  empresa_bairro?: string | null;
+  empresa_cidade?: string | null;
+  empresa_uf?: string | null;
+  empresa_telefone?: string | null;
   forma_pagamento?: string | null;
   assinatura_digital_url?: string | null;
   assinatura_aceite_desconto?: boolean | null;
@@ -46,12 +56,6 @@ interface Filiacao {
   created_at: string;
   aprovado_at?: string | null;
   cns?: string | null;
-  empresa_segmento?: string | null;
-  empresa_endereco?: string | null;
-  empresa_bairro?: string | null;
-  empresa_cidade?: string | null;
-  empresa_uf?: string | null;
-  empresa_telefone?: string | null;
   foto_url?: string | null;
   documento_foto_url?: string | null;
 }
@@ -468,32 +472,40 @@ async function buildFiliacaoPDF(
   yPos += 10;
 
   // Company data layout - use same columns as personal data
+  // Use fallbacks: empresa_razao_social > empresa_nome_fantasia > empresa
   const profCol1Width = 90;
   const profCol2X = col1X + 95;
   const profCol2Width = pageWidth - margin - profCol2X;
 
-  drawField("Empresa", filiacao.empresa_razao_social || "", col1X, yPos, profCol1Width);
+  const empresaNome = filiacao.empresa_razao_social || filiacao.empresa_nome_fantasia || filiacao.empresa || "";
+  drawField("Empresa", empresaNome, col1X, yPos, profCol1Width);
   yPos += lineHeight;
   
   drawField("CNPJ", formatCNPJ(filiacao.empresa_cnpj || ""), col1X, yPos, profCol1Width);
   drawField("Matr. Empresa", filiacao.empresa_matricula || "", profCol2X, yPos, profCol2Width);
   yPos += lineHeight;
 
-  drawField("Segmento", filiacao.empresa_segmento || "", col1X, yPos, profCol1Width);
-  drawField("Bairro", filiacao.empresa_bairro || "", profCol2X, yPos, profCol2Width);
+  // Endereço da empresa (pode incluir segmento se existir)
+  const enderecoEmpresa = filiacao.empresa_endereco || "";
+  drawField("Endereço", enderecoEmpresa, col1X, yPos, profCol1Width);
+  // Segmento é opcional - só mostra se existir
+  if (filiacao.empresa_segmento) {
+    drawField("Segmento", filiacao.empresa_segmento, profCol2X, yPos, profCol2Width);
+  }
   yPos += lineHeight;
 
-  drawField("Endereço", filiacao.empresa_endereco || "", col1X, yPos, profCol1Width);
-  drawField("Telefone", formatPhone(filiacao.empresa_telefone || ""), profCol2X, yPos, profCol2Width);
-  yPos += lineHeight;
-
+  // Cidade/UF e Telefone
   const empresaCidade = filiacao.empresa_cidade || filiacao.cidade || "";
   const empresaUf = filiacao.empresa_uf || filiacao.uf || "";
-  drawField("Cidade", `${empresaCidade} - ${empresaUf}`, col1X, yPos, profCol1Width);
-  drawField("Admissão", filiacao.data_admissao ? formatDate(filiacao.data_admissao) : "", profCol2X, yPos, profCol2Width);
+  const cidadeUfText = empresaCidade && empresaUf ? `${empresaCidade} - ${empresaUf}` : empresaCidade || empresaUf;
+  drawField("Cidade", cidadeUfText, col1X, yPos, profCol1Width);
+  if (filiacao.empresa_telefone) {
+    drawField("Telefone", formatPhone(filiacao.empresa_telefone), profCol2X, yPos, profCol2Width);
+  }
   yPos += lineHeight;
 
-  drawField("Função/Cargo", filiacao.cargo || "", col1X, yPos, profCol1Width);
+  drawField("Admissão", filiacao.data_admissao ? formatDate(filiacao.data_admissao) : "", col1X, yPos, profCol1Width);
+  drawField("Função/Cargo", filiacao.cargo || "", profCol2X, yPos, profCol2Width);
   yPos += 20;
 
   // ========== WATERMARK (Logo in center, faded) - Large like model ==========
