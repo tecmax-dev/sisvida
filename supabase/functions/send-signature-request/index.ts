@@ -403,11 +403,14 @@ Ou copie e cole este link no seu navegador:<br>
       },
     });
 
+    // Encode subject with RFC 2047 for UTF-8 support
+    const subjectText = `${unionName} - Autorizacao de Desconto em Folha`;
+
     try {
       await client.send({
         from: smtpFrom,
         to: associado.email,
-        subject: `${unionName} - Autorização de Desconto em Folha`,
+        subject: subjectText,
         content: emailHtml,
         mimeContent: [{
           mimeType: "text/html; charset=UTF-8",
