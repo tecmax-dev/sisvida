@@ -7190,6 +7190,9 @@ export type Database = {
           religion: string | null
           rg: string | null
           send_notifications: boolean | null
+          signature_accepted: boolean | null
+          signature_accepted_at: string | null
+          signature_url: string | null
           skin_color: string | null
           state: string | null
           street: string | null
@@ -7255,6 +7258,9 @@ export type Database = {
           religion?: string | null
           rg?: string | null
           send_notifications?: boolean | null
+          signature_accepted?: boolean | null
+          signature_accepted_at?: string | null
+          signature_url?: string | null
           skin_color?: string | null
           state?: string | null
           street?: string | null
@@ -7320,6 +7326,9 @@ export type Database = {
           religion?: string | null
           rg?: string | null
           send_notifications?: boolean | null
+          signature_accepted?: boolean | null
+          signature_accepted_at?: string | null
+          signature_url?: string | null
           skin_color?: string | null
           state?: string | null
           street?: string | null
