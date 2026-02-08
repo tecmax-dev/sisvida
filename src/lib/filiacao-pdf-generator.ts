@@ -303,29 +303,44 @@ async function buildFiliacaoPDF(
   }
 
   // Grid layout for member data (matching model - 3 columns)
-  // Adjust col3X to leave space for photo
+  // Adjust col3X to leave space for photo (30mm photo + margin)
   const col1X = margin;
-  const col2X = margin + 62;
-  const col3X = margin + 115; // Reduced to make room for photo
-  const lineHeight = 8;
+  const col2X = margin + 55;
+  const col3X = margin + 105; // Reduced to make room for photo
+  const maxCol3X = photoX - 5; // Don't overlap with photo
+  const lineHeight = 7; // Reduced line height for better spacing
+
+  // Truncate text to fit within maxWidth (no wrapping)
+  const truncateText = (text: string, maxWidth: number): string => {
+    if (!text) return "";
+    let truncated = text;
+    while (doc.getTextWidth(truncated) > maxWidth && truncated.length > 0) {
+      truncated = truncated.slice(0, -1);
+    }
+    if (truncated.length < text.length && truncated.length > 3) {
+      truncated = truncated.slice(0, -3) + "...";
+    }
+    return truncated;
+  };
 
   const drawField = (label: string, value: string, x: number, y: number, maxWidth?: number) => {
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(...COLORS.black);
     doc.text(`${label}:`, x, y);
     doc.setFont("helvetica", "normal");
     const labelWidth = doc.getTextWidth(`${label}: `);
     const displayValue = value || "";
     if (maxWidth) {
-      doc.text(displayValue, x + labelWidth, y, { maxWidth: maxWidth - labelWidth });
+      const truncatedValue = truncateText(displayValue, maxWidth - labelWidth);
+      doc.text(truncatedValue, x + labelWidth, y);
     } else {
       doc.text(displayValue, x + labelWidth, y);
     }
   };
 
-  // Row 1 - Nome Completo + Matrícula
-  drawField("Nome Completo", filiacao.nome, col1X, yPos, 58);
+  // Row 1 - Nome Completo (spans to col2) + Matrícula
+  drawField("Nome Completo", filiacao.nome, col1X, yPos, 48);
   drawField("Matrícula", filiacao.matricula || "", col2X, yPos);
   yPos += lineHeight;
 
@@ -336,30 +351,31 @@ async function buildFiliacaoPDF(
   yPos += lineHeight;
 
   // Row 3
-  drawField("E-mail", filiacao.email || "", col1X, yPos, 58);
+  drawField("E-mail", filiacao.email || "", col1X, yPos, 48);
   drawField("CPF", formatCPF(filiacao.cpf), col2X, yPos);
-  drawField("RG", filiacao.rg || "", col3X, yPos);
+  drawField("RG", filiacao.rg || "", col3X, yPos, maxCol3X - col3X);
   yPos += lineHeight;
 
   // Row 4
   const endereco = [filiacao.logradouro, filiacao.numero].filter(Boolean).join(", ");
-  drawField("Endereço", endereco, col1X, yPos, 58);
-  drawField("Bairro", filiacao.bairro || "", col2X, yPos);
-  drawField("Cidade", `${filiacao.cidade || ""} - ${filiacao.uf || ""}`, col3X, yPos);
+  drawField("Endereço", endereco, col1X, yPos, 48);
+  drawField("Bairro", filiacao.bairro || "", col2X, yPos, 45);
+  drawField("Cidade", `${filiacao.cidade || ""} - ${filiacao.uf || ""}`, col3X, yPos, maxCol3X - col3X);
   yPos += lineHeight;
 
   // Row 5
   drawField("CNS", filiacao.cns || "", col1X, yPos);
-  drawField("Nome da mãe", filiacao.nome_mae || "", col2X, yPos, 60);
+  drawField("Nome da mãe", filiacao.nome_mae || "", col2X, yPos, 50);
   yPos += lineHeight;
 
   // Row 6
-  drawField("Nome do pai", filiacao.nome_pai || "", col1X, yPos, 58);
+  drawField("Nome do pai", filiacao.nome_pai || "", col1X, yPos, 48);
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
   doc.text("Filiado:", col3X, yPos);
   doc.setFont("helvetica", "normal");
   doc.text(" Sim", col3X + doc.getTextWidth("Filiado: "), yPos);
-  yPos += 16;
+  yPos += 14;
 
   // ========== DADOS PROFISSIONAIS SECTION ==========
   doc.setFontSize(14);
@@ -369,32 +385,32 @@ async function buildFiliacaoPDF(
   doc.setDrawColor(...COLORS.lightGray);
   doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
 
-  yPos += 12;
+  yPos += 10;
 
   // Company data (matching model layout exactly)
-  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos, 110);
+  drawField("Nome Empresas", filiacao.empresa_razao_social || "", col1X, yPos, 95);
   yPos += lineHeight;
   
   drawField("CNPJ", formatCNPJ(filiacao.empresa_cnpj || ""), col1X, yPos);
   drawField("Matrícula Empresa", filiacao.empresa_matricula || "", col3X, yPos);
   yPos += lineHeight;
 
-  drawField("Segmento", filiacao.empresa_segmento || "Não Informado", col1X, yPos);
+  drawField("Segmento", filiacao.empresa_segmento || "Não Informado", col1X, yPos, 48);
   drawField("Bairro", filiacao.empresa_bairro || "", col3X, yPos);
   yPos += lineHeight;
 
-  drawField("Endereço", filiacao.empresa_endereco || "", col1X, yPos, 100);
+  drawField("Endereço", filiacao.empresa_endereco || "", col1X, yPos, 95);
   drawField("Telefone", formatPhone(filiacao.empresa_telefone || ""), col3X, yPos);
   yPos += lineHeight;
 
   const empresaCidade = filiacao.empresa_cidade || filiacao.cidade || "";
   const empresaUf = filiacao.empresa_uf || filiacao.uf || "";
-  drawField("Cidade", `${empresaCidade} - ${empresaUf}`, col1X, yPos);
+  drawField("Cidade", `${empresaCidade} - ${empresaUf}`, col1X, yPos, 48);
   drawField("Admissão", filiacao.data_admissao ? formatDate(filiacao.data_admissao) : "", col3X, yPos);
   yPos += lineHeight;
 
-  drawField("Funções", filiacao.cargo || "", col1X, yPos);
-  yPos += 25;
+  drawField("Funções", filiacao.cargo || "", col1X, yPos, 95);
+  yPos += 20;
 
   // ========== WATERMARK (Logo in center, faded) - Large like model ==========
   if (sindicato?.logo_url) {
