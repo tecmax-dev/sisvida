@@ -220,33 +220,35 @@ export default function SignatureAuthorizationPage() {
       return;
     }
 
-    if (!tokenData) return;
+    if (!tokenData || !token) return;
 
     setSubmitting(true);
     try {
-      // Update patient with signature
-      const { error: updateError } = await supabase
-        .from('patients')
-        .update({
-          signature_url: signatureData,
-          signature_accepted: true,
-          signature_accepted_at: new Date().toISOString(),
-        })
-        .eq('id', tokenData.patient_id);
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "submit-signature-authorization",
+        {
+          body: {
+            token,
+            signatureData,
+            accepted: true,
+          },
+        }
+      );
 
-      if (updateError) throw updateError;
+      if (invokeError) {
+        console.error("Error invoking submit-signature-authorization:", invokeError);
+        throw invokeError;
+      }
 
-      // Mark token as used
-      await supabase
-        .from('signature_request_tokens')
-        .update({ used_at: new Date().toISOString() })
-        .eq('id', tokenData.id);
+      if (!data?.success) {
+        throw new Error(data?.error || "Erro ao salvar assinatura");
+      }
 
       setSuccess(true);
       toast.success("Autorização assinada com sucesso!");
     } catch (err: any) {
-      console.error('Error submitting signature:', err);
-      toast.error("Erro ao salvar assinatura. Tente novamente.");
+      console.error("Error submitting signature:", err);
+      toast.error(err?.message || "Erro ao salvar assinatura. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
