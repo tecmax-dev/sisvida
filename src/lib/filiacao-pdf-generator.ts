@@ -524,22 +524,24 @@ async function buildFiliacaoPDF(
   // ========== DATE AND SIGNATURE ==========
   // Calculate maximum Y position to avoid overlapping with stub area
   const stubY = pageHeight - 70; // Stub starts here
-  const maxSignatureY = stubY - 20; // Leave 20pt margin before stub
+  const maxDateY = stubY - 55; // Date must be at least 55pt above stub
   
   const cidade = sindicato?.cidade || filiacao.cidade || "";
   const dataFormatada = filiacao.aprovado_at
     ? formatDateLong(filiacao.aprovado_at)
     : formatDateLong(new Date().toISOString());
 
-  // Increase spacing to avoid overlap with previous section
-  yPos += 35;
+  // Cap yPos to ensure date doesn't overlap with stub
+  yPos = Math.min(yPos + 8, maxDateY);
+  
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.black);
   doc.text(`${cidade.toUpperCase()}, ${dataFormatada}`, pageWidth / 2, yPos, { align: "center" });
 
   // Position signature line - ensure it doesn't exceed max position
-  const signatureLineY = Math.min(yPos + 40, maxSignatureY);
+  const maxSignatureY = stubY - 12;
+  const signatureLineY = Math.min(yPos + 35, maxSignatureY);
 
   // Add digital signature if exists (positioned above the line with proper spacing)
   if (filiacao.assinatura_digital_url) {
