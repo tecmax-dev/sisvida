@@ -546,6 +546,41 @@ export default function UnionMembersListPage() {
     }
   };
 
+  // Enviar solicitação de assinatura digital
+  const handleSendSignatureRequest = async (member: UnionMember) => {
+    if (!currentClinic || !member.email) {
+      toast({
+        title: "Erro",
+        description: "Email do sócio não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('send-signature-request', {
+        body: {
+          associadoId: member.id,
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Solicitação enviada!",
+        description: `Email enviado para ${member.email}`,
+      });
+    } catch (error: any) {
+      console.error('Error sending signature request:', error);
+      toast({
+        title: "Erro ao enviar",
+        description: error.message || "Não foi possível enviar a solicitação.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Stats
   const activeCount = useMemo(() => members.filter((m) => m.is_active !== false).length, [members]);
   const inactiveCount = useMemo(() => totalMembers - activeCount, [totalMembers, activeCount]);
@@ -966,7 +1001,16 @@ export default function UnionMembersListPage() {
                                 Notificar Carteirinha
                               </DropdownMenuItem>
                             )}
-                            {canManageMembers && (
+                            {member.email && canManageMembers() && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendSignatureRequest(member)}
+                                className="text-violet-600"
+                              >
+                                <Pen className="h-4 w-4 mr-2" />
+                                Solicitar Assinatura
+                              </DropdownMenuItem>
+                            )}
+                            {canManageMembers() && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setSelectedMemberForDelete(member);
