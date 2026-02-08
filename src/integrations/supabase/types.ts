@@ -8992,6 +8992,63 @@ export type Database = {
           },
         ]
       }
+      signature_request_tokens: {
+        Row: {
+          associado_id: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          token: string
+          used_at: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          associado_id: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          token: string
+          used_at?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          associado_id?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          token?: string
+          used_at?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_request_tokens_associado_id_fkey"
+            columns: ["associado_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_associados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_request_tokens_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sindical_associado_dependentes: {
         Row: {
           associado_id: string
@@ -15318,6 +15375,7 @@ export type Database = {
         }[]
       }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
+      generate_signature_token: { Args: never; Returns: string }
       generate_tiss_guide_number: {
         Args: { p_clinic_id: string; p_guide_type: string }
         Returns: string

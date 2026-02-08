@@ -79,8 +79,10 @@ import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFi
 import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDialog";
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
 import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
+import { SendSignatureRequestDialog } from "@/components/union/members/SendSignatureRequestDialog";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
+import { Pen } from "lucide-react";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -192,6 +194,9 @@ export default function UnionMembersListPage() {
   // Delete member dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedMemberForDelete, setSelectedMemberForDelete] = useState<UnionMember | null>(null);
+
+  // Signature request dialog state
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -565,7 +570,15 @@ export default function UnionMembersListPage() {
           <RealtimeIndicator className="mt-1" />
         </div>
         {canManageMembers() && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={() => setSignatureDialogOpen(true)}
+              className="gap-2"
+            >
+              <Pen className="h-4 w-4" />
+              Solicitar Assinatura
+            </Button>
             <Button
               variant="outline"
               onClick={() => setImportDialogOpen(true)}
@@ -1283,6 +1296,12 @@ export default function UnionMembersListPage() {
           onSuccess={fetchMembers}
         />
       )}
+
+      {/* Send Signature Request Dialog */}
+      <SendSignatureRequestDialog
+        open={signatureDialogOpen}
+        onOpenChange={setSignatureDialogOpen}
+      />
     </div>
   );
 }
