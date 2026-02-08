@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 // Brand Colors matching the SECMI model - dark red/maroon with gold accents
 const COLORS = {
@@ -119,10 +120,34 @@ const formatDateLong = (dateStr: string | null | undefined): string => {
 };
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
+  if (!url) return null;
+  if (url.startsWith("data:image/")) return url;
+
+  // Prefer backend function to avoid CORS issues (and support more hosts)
+  try {
+    const { data, error } = await supabase.functions.invoke("fetch-image-base64", {
+      body: { url },
+    });
+
+    if (!error && data?.base64) {
+      if (typeof data.base64 === "string" && data.base64.startsWith("data:image/")) {
+        return data.base64;
+      }
+      if (data.contentType) {
+        return `data:${data.contentType};base64,${data.base64}`;
+      }
+      // Fallback (best-effort)
+      return `data:image/png;base64,${data.base64}`;
+    }
+  } catch {
+    // ignore and fall back to direct fetch
+  }
+
+  // Fallback to direct fetch
   try {
     const response = await fetch(url);
     const blob = await response.blob();
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = () => resolve(null);
@@ -131,6 +156,12 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function getPdfImageFormat(dataUrl: string): "PNG" | "JPEG" {
+  const match = dataUrl.match(/^data:image\/(png|jpe?g)/i);
+  if (!match) return "PNG";
+  return match[1].toLowerCase() === "png" ? "PNG" : "JPEG";
 }
 
 // Draw curved header decoration matching the model (red + gold curves on left)
@@ -182,7 +213,7 @@ async function buildFiliacaoPDF(
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", 5, 4, 28, 28);
+        doc.addImage(logoBase64, getPdfImageFormat(logoBase64), 5, 4, 28, 28);
       }
     } catch (e) {
       console.warn("Failed to load logo:", e);
@@ -277,7 +308,7 @@ async function buildFiliacaoPDF(
         doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
         
         // Draw photo
-        doc.addImage(photoBase64, "JPEG", photoX, photoY, photoSize, photoSize);
+        doc.addImage(photoBase64, getPdfImageFormat(photoBase64), photoX, photoY, photoSize, photoSize);
       }
     } catch (e) {
       console.warn("Failed to load member photo:", e);
@@ -482,11 +513,11 @@ async function buildFiliacaoPDF(
         const sigHeight = 16;
         const sigWidth = 55;
         doc.addImage(
-          sigBase64, 
-          "PNG", 
-          pageWidth / 2 - sigWidth / 2, 
-          signatureLineY - sigHeight - 2, 
-          sigWidth, 
+          sigBase64,
+          getPdfImageFormat(sigBase64),
+          pageWidth / 2 - sigWidth / 2,
+          signatureLineY - sigHeight - 2,
+          sigWidth,
           sigHeight
         );
       }
@@ -530,7 +561,7 @@ async function buildFiliacaoPDF(
     try {
       const logoBase64 = await loadImageAsBase64(sindicato.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", margin + 3, row1Y - 4, 14, 14);
+        doc.addImage(logoBase64, getPdfImageFormat(logoBase64), margin + 3, row1Y - 4, 14, 14);
       }
     } catch (e) {
       console.warn("Failed to load stub logo:", e);
@@ -597,7 +628,7 @@ async function buildFiliacaoPDF(
       }
       if (stubSigBase64 && stubSigBase64.startsWith("data:image")) {
         // Mini signature in stub (reduced size)
-        doc.addImage(stubSigBase64, "PNG", rightSectionX + 3, row1Y + 14, 28, 10);
+        doc.addImage(stubSigBase64, getPdfImageFormat(stubSigBase64), rightSectionX + 3, row1Y + 14, 28, 10);
       }
     } catch (e) {
       console.warn("Failed to load stub signature:", e);

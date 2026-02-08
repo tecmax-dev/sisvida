@@ -130,37 +130,59 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
     
     // Normalize CPF for lookup (remove formatting)
     const normalizedCpf = (filiacao.cpf || member.cpf || "").replace(/\D/g, "");
-    
+
     if (normalizedCpf) {
-      // Get patient data (signature, photo) by CPF + clinic_id for accurate matching
-      // Query all patients with this CPF in this clinic, ordered by most recent
+      const cpfCandidates = Array.from(
+        new Set([
+          normalizedCpf,
+          (filiacao.cpf || "").trim(),
+          (member.cpf || "").trim(),
+        ].filter(Boolean))
+      );
+
+      // Query only relevant patients (avoid the 1000-row default limit)
+      const orFilter = cpfCandidates.map((c) => `cpf.eq.${c}`).join(",");
+
       const { data: patients } = await supabase
         .from("patients")
         .select("id, signature_url, signature_accepted_at, signature_accepted, photo_url, cpf, created_at")
         .eq("clinic_id", clinicId)
-        .order("created_at", { ascending: false });
+        .or(orFilter)
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-      // Find patient with matching CPF that has the most data
-      const matchingPatients = patients?.filter(p => 
-        p.cpf?.replace(/\D/g, "") === normalizedCpf
-      ) || [];
-      
+      const normalize = (v: string | null) => (v || "").replace(/\D/g, "");
+      const matchingPatients = (patients || []).filter((p) => normalize(p.cpf) === normalizedCpf);
+
       // Priority: patient with signature > patient with photo > most recent
-      const patientWithSignature = matchingPatients.find(p => p.signature_url);
-      const patientWithPhoto = matchingPatients.find(p => p.photo_url);
+      const patientWithSignature = matchingPatients.find((p) => p.signature_url);
+      const patientWithPhoto = matchingPatients.find((p) => p.photo_url);
       const mostRecentPatient = matchingPatients[0];
-      
-      // Get signature from any patient record that has it
+
+      // Get signature from patient record
       if (!filiacaoWithExtras.assinatura_digital_url && patientWithSignature?.signature_url) {
+        let signatureUrl = patientWithSignature.signature_url;
+
+        // If signature is stored as a private storage path, generate a signed URL
+        if (signatureUrl && !signatureUrl.startsWith("data:") && !signatureUrl.startsWith("http")) {
+          const { data: signed, error: signedError } = await supabase.storage
+            .from("patient-signatures")
+            .createSignedUrl(signatureUrl, 60 * 10);
+
+          if (!signedError && signed?.signedUrl) {
+            signatureUrl = signed.signedUrl;
+          }
+        }
+
         filiacaoWithExtras = {
           ...filiacaoWithExtras,
-          assinatura_digital_url: patientWithSignature.signature_url,
+          assinatura_digital_url: signatureUrl,
           assinatura_aceite_at: patientWithSignature.signature_accepted_at,
           assinatura_aceite_desconto: true,
         };
       }
 
-      // Get photo from any patient record that has it
+      // Get photo from patient record
       if (!filiacaoWithExtras.foto_url && !filiacaoWithExtras.documento_foto_url) {
         const photoUrl = patientWithPhoto?.photo_url || mostRecentPatient?.photo_url || member.photo_url;
         if (photoUrl) {
