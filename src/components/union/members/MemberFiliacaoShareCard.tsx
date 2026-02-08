@@ -121,28 +121,48 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
       logoUrl = clinic?.logo_url;
     }
 
-    // If no signature in sindical_associados, try to fetch from patients table by ID
-    let filiacaoWithSignature = filiacao;
-    if (!filiacao.assinatura_digital_url) {
-      // First try by patient ID (member.id), then fallback to CPF
-      const { data: patient } = await supabase
-        .from("patients")
-        .select("signature_url, signature_accepted_at")
-        .eq("id", member.id)
-        .maybeSingle();
+    // Fetch patient data for signature and photo
+    let filiacaoWithExtras: FiliacaoData = {
+      ...filiacao,
+      foto_url: (filiacao as any).foto_url || null,
+      documento_foto_url: (filiacao as any).documento_foto_url || null,
+    };
+    
+    // Get patient data (signature, photo) by member.id
+    const { data: patient } = await supabase
+      .from("patients")
+      .select("signature_url, signature_accepted_at, photo_url")
+      .eq("id", member.id)
+      .maybeSingle();
 
-      if (patient?.signature_url) {
-        filiacaoWithSignature = {
-          ...filiacao,
-          assinatura_digital_url: patient.signature_url,
-          assinatura_aceite_at: patient.signature_accepted_at,
-          assinatura_aceite_desconto: true,
+    // Add signature from patient if not in filiacao
+    if (!filiacaoWithExtras.assinatura_digital_url && patient?.signature_url) {
+      filiacaoWithExtras = {
+        ...filiacaoWithExtras,
+        assinatura_digital_url: patient.signature_url,
+        assinatura_aceite_at: patient.signature_accepted_at,
+        assinatura_aceite_desconto: true,
+      };
+    }
+
+    // Add photo from patient if not in filiacao (for members registered outside public form)
+    if (!filiacaoWithExtras.foto_url && !filiacaoWithExtras.documento_foto_url) {
+      if (patient?.photo_url) {
+        filiacaoWithExtras = {
+          ...filiacaoWithExtras,
+          foto_url: patient.photo_url,
+        };
+      } else if (member.photo_url) {
+        // Also check member.photo_url as fallback
+        filiacaoWithExtras = {
+          ...filiacaoWithExtras,
+          foto_url: member.photo_url,
         };
       }
     }
 
     return {
-      filiacao: filiacaoWithSignature,
+      filiacao: filiacaoWithExtras,
       dependents: dependents || [],
       sindicato: sindicato ? { ...sindicato, logo_url: logoUrl } : null,
     };
