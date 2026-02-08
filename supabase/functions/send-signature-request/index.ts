@@ -442,12 +442,7 @@ serve(async (req) => {
         from: smtpFrom,
         to: associado.email,
         subject: subjectText,
-        content: emailHtml,
-        mimeContent: [{
-          mimeType: "text/html; charset=UTF-8",
-          content: emailHtml,
-          transferEncoding: "base64",
-        }],
+        html: emailHtml,
       });
 
       await client.close();
