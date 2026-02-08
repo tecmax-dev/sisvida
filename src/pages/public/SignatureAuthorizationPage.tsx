@@ -10,7 +10,7 @@ import { Loader2, CheckCircle, XCircle, AlertTriangle, Pen, Trash2 } from "lucid
 
 interface TokenData {
   id: string;
-  associado_id: string;
+  patient_id: string;
   clinic_id: string;
   email: string;
   expires_at: string;
@@ -54,14 +54,14 @@ export default function SignatureAuthorizationPage() {
           .from('signature_request_tokens')
           .select(`
             id,
-            associado_id,
+            patient_id,
             clinic_id,
             email,
             expires_at,
             used_at
           `)
           .eq('token', token)
-          .single();
+          .maybeSingle();
 
         if (tokenError || !tokenRecord) {
           setError("Link inválido ou expirado");
@@ -87,15 +87,15 @@ export default function SignatureAuthorizationPage() {
         const { data: patient } = await supabase
           .from('patients')
           .select('name, cpf, employer_name')
-          .eq('id', tokenRecord.associado_id)
-          .single();
+          .eq('id', tokenRecord.patient_id)
+          .maybeSingle();
 
         // Fetch union entity
         const { data: unionEntity } = await supabase
           .from('union_entities')
           .select('razao_social, logo_url')
           .eq('clinic_id', tokenRecord.clinic_id)
-          .single();
+          .maybeSingle();
 
         setTokenData({
           ...tokenRecord,
@@ -225,7 +225,7 @@ export default function SignatureAuthorizationPage() {
           signature_accepted: true,
           signature_accepted_at: new Date().toISOString(),
         })
-        .eq('id', tokenData.associado_id);
+        .eq('id', tokenData.patient_id);
 
       if (updateError) throw updateError;
 
