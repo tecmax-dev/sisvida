@@ -71,9 +71,18 @@ interface FiliacaoData {
   uf?: string | null;
   cargo?: string | null;
   data_admissao?: string | null;
+  employer_id?: string | null;
+  empresa?: string | null;
   empresa_razao_social?: string | null;
+  empresa_nome_fantasia?: string | null;
   empresa_cnpj?: string | null;
+  empresa_endereco?: string | null;
+  empresa_bairro?: string | null;
+  empresa_cidade?: string | null;
+  empresa_uf?: string | null;
+  empresa_cep?: string | null;
   empresa_matricula?: string | null;
+  empresa_telefone?: string | null;
   forma_pagamento?: string | null;
   assinatura_digital_url?: string | null;
   assinatura_aceite_desconto?: boolean | null;
@@ -185,6 +194,35 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
           assinatura_digital_url: signatureUrl,
           assinatura_aceite_at: patientWithSignature.signature_accepted_at,
           assinatura_aceite_desconto: true,
+        };
+      }
+    }
+
+    // ========== ENRICH EMPLOYER DATA ==========
+    // If employer data is missing but employer_id exists, fetch from employers table
+    const hasEmployerData = result.empresa_razao_social || result.empresa_cnpj || result.empresa;
+    const employerId = (input as any).employer_id;
+    
+    if (!hasEmployerData && employerId) {
+      const { data: employer } = await supabase
+        .from("employers")
+        .select("id, name, trade_name, cnpj, address, neighborhood, city, state, cep, phone, registration_number")
+        .eq("id", employerId)
+        .maybeSingle();
+
+      if (employer) {
+        result = {
+          ...result,
+          empresa_razao_social: employer.name,
+          empresa_nome_fantasia: employer.trade_name,
+          empresa_cnpj: employer.cnpj,
+          empresa_endereco: employer.address,
+          empresa_bairro: employer.neighborhood,
+          empresa_cidade: employer.city,
+          empresa_uf: employer.state,
+          empresa_cep: employer.cep,
+          empresa_telefone: employer.phone,
+          empresa_matricula: result.empresa_matricula || employer.registration_number,
         };
       }
     }
