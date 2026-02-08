@@ -121,6 +121,8 @@ const formatDateLong = (dateStr: string | null | undefined): string => {
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
   if (!url) return null;
+  // Blob URLs are local-only (not fetchable by backend and often break in jsPDF pipelines)
+  if (url.startsWith("blob:")) return null;
   if (url.startsWith("data:image/")) return url;
 
   // Prefer backend function to avoid CORS issues (and support more hosts)
