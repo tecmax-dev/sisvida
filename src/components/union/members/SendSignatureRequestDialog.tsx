@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { extractFunctionsError } from "@/lib/functionsError";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   Mail, 
@@ -135,30 +136,39 @@ export function SendSignatureRequestDialog({ open, onOpenChange }: Props) {
     setSending(true);
     setSendProgress({ sent: 0, total: selectedIds.size });
 
-    const selectedMembers = members.filter(m => selectedIds.has(m.id));
+    const selectedMembers = members.filter((m) => selectedIds.has(m.id));
     let successCount = 0;
     let errorCount = 0;
+    let lastErrorMsg: string | null = null;
 
     for (const member of selectedMembers) {
       try {
-        const { error } = await supabase.functions.invoke('send-signature-request', {
+        const { data, error } = await supabase.functions.invoke("send-signature-request", {
           body: {
             associadoId: member.id,
             clinicId: currentClinic.id,
           },
         });
 
+        console.log("[send-signature-request] response", {
+          data,
+          error,
+          memberId: member.id,
+        });
+
         if (error) throw error;
         successCount++;
       } catch (err) {
-        console.error(`Error sending to ${member.nome}:`, err);
+        const extracted = extractFunctionsError(err);
+        lastErrorMsg = extracted.message;
+        console.error(`[send-signature-request] error sending to ${member.nome}:`, extracted);
         errorCount++;
       }
 
-      setSendProgress(p => ({ ...p, sent: p.sent + 1 }));
-      
+      setSendProgress((p) => ({ ...p, sent: p.sent + 1 }));
+
       // Small delay between emails
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     setSending(false);
@@ -167,7 +177,7 @@ export function SendSignatureRequestDialog({ open, onOpenChange }: Props) {
       toast.success(`${successCount} email(s) enviado(s) com sucesso!`);
     }
     if (errorCount > 0) {
-      toast.error(`${errorCount} email(s) falharam`);
+      toast.error(`${errorCount} email(s) falharam${lastErrorMsg ? `: ${lastErrorMsg}` : ""}`);
     }
 
     if (successCount > 0) {
