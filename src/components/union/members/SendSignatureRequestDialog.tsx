@@ -156,12 +156,21 @@ export function SendSignatureRequestDialog({ open, onOpenChange }: Props) {
           memberId: member.id,
         });
 
-        if (error) throw error;
+        if (error) {
+          const extracted = extractFunctionsError(error);
+          throw new Error(extracted.message);
+        }
+        
+        // Check for error in function response body
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+        
         successCount++;
       } catch (err) {
-        const extracted = extractFunctionsError(err);
-        lastErrorMsg = extracted.message;
-        console.error(`[send-signature-request] error sending to ${member.nome}:`, extracted);
+        const errMsg = err instanceof Error ? err.message : "Erro desconhecido";
+        lastErrorMsg = errMsg;
+        console.error(`[send-signature-request] error sending to ${member.nome}:`, errMsg);
         errorCount++;
       }
 
