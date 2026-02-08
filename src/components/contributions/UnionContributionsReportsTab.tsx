@@ -97,7 +97,7 @@ export default function UnionContributionsReportsTab({
   
   // LocalStorage key for persisting filters - with version to invalidate old cache
   // CRITICAL: Increment version when default filters change to force users to get new defaults
-  const STORAGE_VERSION = "v3"; // v3: Force due_date filter + 5 year range
+  const STORAGE_VERSION = "v4"; // v4: Force due_date filter + extended range from 2019
   const STORAGE_KEY = `union-contributions-report-filters-${clinicId}-${STORAGE_VERSION}`;
   
   // Helper to get saved filters from localStorage - with aggressive cleanup of old versions
@@ -114,6 +114,7 @@ export default function UnionContributionsReportsTab({
         `union-contributions-report-filters-${clinicId}`,
         `union-contributions-report-filters-${clinicId}-v1`,
         `union-contributions-report-filters-${clinicId}-v2`,
+        `union-contributions-report-filters-${clinicId}-v3`,
       ];
       keysToClean.forEach(key => {
         if (localStorage.getItem(key)) {
@@ -130,10 +131,10 @@ export default function UnionContributionsReportsTab({
   // Date helpers - stable references
   const toInputDate = useCallback((d: Date) => format(d, "yyyy-MM-dd"), []);
   
-  // Calculate default date range - go back to 2020 to cover all historical data
+  // Calculate default date range - go back to 2019 to cover ALL historical data
   const getDefaultStartDate = useCallback(() => {
-    // Start from 2020-01-01 to capture all historical overdue contributions
-    return "2020-01-01";
+    // Start from 2019-01-01 to capture ALL historical overdue contributions including 2021
+    return "2019-01-01";
   }, []);
   
   // Initialize states from localStorage or defaults
