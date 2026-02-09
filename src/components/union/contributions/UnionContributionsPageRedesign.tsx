@@ -125,6 +125,7 @@ export default function UnionContributionsPageRedesign() {
   const [categories, setCategories] = useState<{ id: string; name: string; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState<number>(getInitialYear());
+  const [allPeriodsMode, setAllPeriodsMode] = useState(false);
   const [yearDetectionDone, setYearDetectionDone] = useState(false);
   
   // UI state
@@ -199,7 +200,7 @@ export default function UnionContributionsPageRedesign() {
     if (currentClinic && yearDetectionDone) {
       fetchData();
     }
-  }, [currentClinic, yearFilter, yearDetectionDone]);
+  }, [currentClinic, yearFilter, allPeriodsMode, yearDetectionDone]);
 
   useEffect(() => {
     if (currentClinic) {
@@ -223,7 +224,8 @@ export default function UnionContributionsPageRedesign() {
     setLoading(true);
 
     try {
-      const contribResult = await fetchAllContributions<Contribution>(currentClinic.id, yearFilter);
+      const effectiveYear = allPeriodsMode ? null : yearFilter;
+      const contribResult = await fetchAllContributions<Contribution>(currentClinic.id, effectiveYear);
       if (contribResult.error) throw contribResult.error;
       setContributions(contribResult.data);
 
@@ -794,6 +796,7 @@ export default function UnionContributionsPageRedesign() {
             syncing={syncing}
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilter}
+            onAllPeriodsChange={setAllPeriodsMode}
             clinicId={currentClinic.id}
             onOpenNegotiation={(employerId?: string) => {
               setNegotiationEmployerId(employerId);
