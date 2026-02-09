@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowLeft, Check, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
@@ -145,6 +146,7 @@ export default function MobileFirstAccessPage() {
         .from('patients')
         .select('id, name, birth_date, password_hash')
         .or(`cpf.eq.${normalizedCpf},cpf.eq.${cpf}`)
+        .eq('clinic_id', SINDICATO_CLINIC_ID)
         .eq('is_active', true);
 
       if (error) throw error;
