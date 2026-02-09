@@ -64,6 +64,60 @@ export async function fetchAllEmployers<T = {
 }
 
 /**
+ * Fetches all employer contributions for a clinic and year using pagination.
+ * Returns the complete list bypassing the 1000 row default limit.
+ */
+export async function fetchAllContributions<T = Record<string, unknown>>(
+  clinicId: string,
+  yearFilter: number,
+  options?: {
+    select?: string;
+  }
+): Promise<{ data: T[]; error: Error | null }> {
+  const PAGE_SIZE = 1000;
+  const select = options?.select || `
+    *,
+    employers (id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number),
+    contribution_types (id, name, description, default_value, is_active),
+    patients:member_id (id, name, cpf)
+  `;
+
+  let allData: T[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  try {
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("employer_contributions")
+        .select(select)
+        .eq("clinic_id", clinicId)
+        .eq("competence_year", yearFilter)
+        .order("competence_month", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...(data as T[])];
+        from += PAGE_SIZE;
+        hasMore = data.length === PAGE_SIZE;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return { data: allData, error: null };
+  } catch (error) {
+    console.error("Error fetching all contributions:", error);
+    return { data: [], error: error as Error };
+  }
+}
+
+/**
  * Fetches all patients for a clinic using pagination.
  * Returns the complete list bypassing the 1000 row default limit.
  *
