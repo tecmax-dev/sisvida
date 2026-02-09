@@ -137,8 +137,16 @@ export default function MobileDependentsPage() {
     }
   };
 
-  const isOverAgeLimit = (birthDate: string | null): boolean => {
-    const age = getAgeNumber(birthDate);
+  // Only "child" dependents are subject to max age rule (filho/filha).
+  // Cônjuges, pais, etc. are exempt.
+  const isAgeRestrictedRelationship = (relationship: string | null): boolean => {
+    const rel = (relationship || "").toLowerCase().trim();
+    return rel.startsWith("filh") || rel === "child";
+  };
+
+  const isOverAgeLimit = (dep: Dependent): boolean => {
+    if (!isAgeRestrictedRelationship(dep.relationship)) return false;
+    const age = getAgeNumber(dep.birth_date);
     return age !== null && age > DEPENDENT_MAX_AGE;
   };
 
@@ -171,7 +179,7 @@ export default function MobileDependentsPage() {
 
   const getStatusBadge = (dependent: Dependent) => {
     // Check if dependent is over age limit
-    const overAge = isOverAgeLimit(dependent.birth_date);
+    const overAge = isOverAgeLimit(dependent);
     
     if (overAge) {
       return (
@@ -298,7 +306,7 @@ export default function MobileDependentsPage() {
           ) : (
             <div className="space-y-3">
               {dependents.map((dependent) => {
-                const overAge = isOverAgeLimit(dependent.birth_date);
+                const overAge = isOverAgeLimit(dependent);
                 
                 return (
                   <Card
@@ -395,7 +403,7 @@ export default function MobileDependentsPage() {
           {selectedDependent && (
             <div className="space-y-4">
               {/* Warning for dependents over age limit */}
-              {isOverAgeLimit(selectedDependent.birth_date) && (
+              {isOverAgeLimit(selectedDependent) && (
                 <Alert className="bg-amber-50 border-amber-200">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-sm text-amber-700">
@@ -415,7 +423,7 @@ export default function MobileDependentsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Idade</p>
-                  <p className={`font-medium ${isOverAgeLimit(selectedDependent.birth_date) ? 'text-amber-700' : ''}`}>
+                  <p className={`font-medium ${isOverAgeLimit(selectedDependent) ? 'text-amber-700' : ''}`}>
                     {getAge(selectedDependent.birth_date)}
                   </p>
                 </div>
