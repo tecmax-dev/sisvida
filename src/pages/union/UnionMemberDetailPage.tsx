@@ -647,6 +647,7 @@ export default function UnionMemberDetailPage() {
           union_contribution_value: null,
           union_payment_method: null,
           union_observations: null,
+          password_hash: null,
         })
         .eq("id", id);
 
