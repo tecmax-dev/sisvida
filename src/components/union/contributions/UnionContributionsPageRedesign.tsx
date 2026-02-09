@@ -30,7 +30,7 @@ import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { toast } from "sonner";
 import { extractFunctionsError } from "@/lib/functionsError";
-import { fetchAllEmployers } from "@/lib/supabase-helpers";
+import { fetchAllEmployers, fetchAllContributions } from "@/lib/supabase-helpers";
 import { formatCompetence } from "@/lib/competence-format";
 
 // Existing components from dashboard pattern
@@ -223,21 +223,9 @@ export default function UnionContributionsPageRedesign() {
     setLoading(true);
 
     try {
-      const { data: contribData, error: contribError } = await supabase
-        .from("employer_contributions")
-        .select(`
-          *,
-          employers (id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number),
-          contribution_types (id, name, description, default_value, is_active),
-          patients:member_id (id, name, cpf)
-        `)
-        .eq("clinic_id", currentClinic.id)
-        .eq("competence_year", yearFilter)
-        .order("competence_month", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (contribError) throw contribError;
-      setContributions(contribData || []);
+      const contribResult = await fetchAllContributions<Contribution>(currentClinic.id, yearFilter);
+      if (contribResult.error) throw contribResult.error;
+      setContributions(contribResult.data);
 
       const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
         select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number"
