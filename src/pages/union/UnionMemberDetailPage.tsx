@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send } from "lucide-react";
+import { extractFunctionsError } from "@/lib/functionsError";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -185,6 +186,7 @@ export default function UnionMemberDetailPage() {
   // Signature data
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [signatureAcceptedAt, setSignatureAcceptedAt] = useState<string | null>(null);
+  const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
 
   // Patient state
   const [isPatientActive, setIsPatientActive] = useState(true);
@@ -972,8 +974,38 @@ export default function UnionMemberDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground bg-muted/30 px-4 py-3 rounded-lg border border-dashed">
-                      Nenhuma assinatura digital registrada. Envie uma solicitação de assinatura ao sócio.
+                    <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground bg-muted/30 px-4 py-3 rounded-lg border border-dashed">
+                        Nenhuma assinatura digital registrada.
+                      </div>
+                      {canManageMembers() && formData.email && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={sendingSignatureRequest}
+                          onClick={async () => {
+                            if (!currentClinic || !id) return;
+                            setSendingSignatureRequest(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("send-signature-request", {
+                                body: { associadoId: id, clinicId: currentClinic.id },
+                              });
+                              if (error) throw error;
+                              if (data?.error) throw new Error(data.error);
+                              toast({ title: "Solicitação enviada!", description: `Email enviado para ${formData.email}` });
+                            } catch (err: any) {
+                              const extracted = extractFunctionsError(err);
+                              toast({ title: "Erro ao enviar", description: extracted.message, variant: "destructive" });
+                            } finally {
+                              setSendingSignatureRequest(false);
+                            }
+                          }}
+                          className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50"
+                        >
+                          {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          Solicitar Assinatura por Email
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
