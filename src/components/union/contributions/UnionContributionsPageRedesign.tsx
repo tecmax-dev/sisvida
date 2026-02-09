@@ -540,6 +540,9 @@ export default function UnionContributionsPageRedesign() {
         body: {
           action: "fetch_paid_invoices",
           clinicId: currentClinic.id,
+          mode: "manual",
+          daysBack: null,
+          onlyPending: true,
         },
       });
 
@@ -565,12 +568,23 @@ export default function UnionContributionsPageRedesign() {
 
       if (error) throw error;
 
-      if (data?.updated > 0) {
-        toast.success(`${data.updated} pagamento(s) conciliado(s)!`);
+      if (data?.conciliated > 0) {
+        toast.success(`${data.conciliated} boleto(s) conciliado(s) automaticamente!`);
         fetchData();
+      } else if (data?.alreadyConciliated > 0 && data?.pendingInLytex > 0) {
+        toast.info(`${data.alreadyConciliated} já conciliados, ${data.pendingInLytex} ainda pendentes na Lytex`);
+      } else if (data?.alreadyConciliated > 0) {
+        toast.info(`Todos os ${data.alreadyConciliated} boletos pagos já estavam conciliados`);
+      } else if (data?.pendingInLytex > 0) {
+        toast.info(`${data.pendingInLytex} boleto(s) ainda pendente(s) na Lytex (não pagos)`);
       } else {
-        toast.info("Nenhum pagamento novo encontrado");
+        toast.info("Nenhum boleto pago encontrado para conciliar");
       }
+      
+      if (data?.skippedDuplicates > 0) {
+        console.warn(`[Lytex] ${data.skippedDuplicates} boletos com duplicidade ignorados`);
+      }
+      console.log("Busca de pagamentos:", data);
     } catch (error) {
       const { message } = extractFunctionsError(error);
       console.error("Error fetching paid invoices:", error);
