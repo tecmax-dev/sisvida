@@ -157,15 +157,16 @@ serve(async (req) => {
 
       let office: any = null;
 
-      // 1) Email exato
+      // 1) Email exato — busca todos (pode haver duplicatas ativo/inativo)
       const exact = await withTimeout(
-        supabase.from("accounting_offices").select(officeSelect).eq("email", cleanEmail).maybeSingle(),
+        supabase.from("accounting_offices").select(officeSelect).eq("email", cleanEmail).order("is_active", { ascending: false }).limit(5),
         15000,
         "db:accounting_offices:exact",
       );
 
-      if (!exact.error && exact.data) {
-        office = exact.data;
+      if (!exact.error && exact.data?.length) {
+        // Prioriza registro ativo
+        office = exact.data.find((o: any) => o.is_active) ?? exact.data[0];
       } else {
         // 2) Fallback: e-mails com lixo (ex.: "email: x@y.com")
         const cand = await withTimeout(
@@ -175,11 +176,12 @@ serve(async (req) => {
         );
 
         if (!cand.error && cand.data?.length) {
-          office =
-            cand.data.find((c: any) => {
-              const extracted = extractEmailFromText(c.email);
-              return extracted === cleanEmail;
-            }) ?? null;
+          const matches = cand.data.filter((c: any) => {
+            const extracted = extractEmailFromText(c.email);
+            return extracted === cleanEmail;
+          });
+          // Prioriza registro ativo entre os matches
+          office = matches.find((o: any) => o.is_active) ?? matches[0] ?? null;
         }
       }
 
