@@ -69,7 +69,7 @@ export async function fetchAllEmployers<T = {
  */
 export async function fetchAllContributions<T = Record<string, unknown>>(
   clinicId: string,
-  yearFilter: number,
+  yearFilter?: number | null,
   options?: {
     select?: string;
   }
@@ -88,14 +88,22 @@ export async function fetchAllContributions<T = Record<string, unknown>>(
 
   try {
     while (hasMore) {
-      const { data, error } = await supabase
+      let query = supabase
         .from("employer_contributions")
         .select(select)
-        .eq("clinic_id", clinicId)
-        .eq("competence_year", yearFilter)
+        .eq("clinic_id", clinicId);
+
+      if (yearFilter != null) {
+        query = query.eq("competence_year", yearFilter);
+      }
+
+      query = query
+        .order("competence_year", { ascending: false })
         .order("competence_month", { ascending: false })
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;

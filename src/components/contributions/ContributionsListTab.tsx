@@ -134,6 +134,7 @@ interface ContributionsListTabProps {
   syncing: boolean;
   yearFilter: number;
   onYearFilterChange: (year: number) => void;
+  onAllPeriodsChange?: (allPeriods: boolean) => void;
   clinicId: string;
   /** Callback to open negotiation dialog, optionally with pre-selected employer */
   onOpenNegotiation?: (employerId?: string) => void;
@@ -196,6 +197,7 @@ export default function ContributionsListTab({
   onYearFilterChange,
   clinicId,
   onOpenNegotiation,
+  onAllPeriodsChange,
 }: ContributionsListTabProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -448,8 +450,11 @@ export default function ContributionsListTab({
   const handleCompetenceChange = (value: string) => {
     setCompetenceFilter(value);
     setCurrentPage(1);
-    // Also update yearFilter for the parent component (reports sync)
-    if (value !== "all") {
+    if (value === "all") {
+      onAllPeriodsChange?.(true);
+    } else {
+      onAllPeriodsChange?.(false);
+      // Also update yearFilter for the parent component (reports sync)
       const [, year] = value.split("/").map(Number);
       if (year && year !== yearFilter) {
         onYearFilterChange(year);
