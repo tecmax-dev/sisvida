@@ -1,0 +1,1 @@
+ALTER TABLE public.patient_dependents ADD COLUMN IF NOT EXISTS cpf_photo_url TEXT;
