@@ -85,10 +85,32 @@ interface PendingApproval {
 }
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
+  // Portuguese
   'filho': 'Filho(a)',
+  'filha': 'Filha',
+  'filho(a)': 'Filho(a)',
   'conjuge': 'Cônjuge',
+  'cônjuge': 'Cônjuge',
+  'cônjuge)': 'Cônjuge',
+  'esposo': 'Esposo',
+  'esposa': 'Esposa',
   'pai': 'Pai',
   'mae': 'Mãe',
+  'mãe': 'Mãe',
+  'irmao': 'Irmão(ã)',
+  'irmão': 'Irmão(ã)',
+  'neto(a)': 'Neto(a)',
+  'outro': 'Outro',
+  // English
+  'child': 'Filho(a)',
+  'spouse': 'Cônjuge',
+  'father': 'Pai',
+  'mother': 'Mãe',
+  'parent': 'Pai/Mãe',
+  'sibling': 'Irmão(ã)',
+  'grandchild': 'Neto(a)',
+  'grandparent': 'Avô/Avó',
+  'other': 'Outro',
 };
 
 export default function DependentApprovalsPage() {
@@ -613,7 +635,7 @@ export default function DependentApprovalsPage() {
                       </TableCell>
                       <TableCell>
                         {approval.dependent?.relationship 
-                          ? RELATIONSHIP_LABELS[approval.dependent.relationship] || approval.dependent.relationship
+                          ? RELATIONSHIP_LABELS[approval.dependent.relationship.toLowerCase().trim()] || approval.dependent.relationship
                           : '-'}
                       </TableCell>
                       <TableCell>
