@@ -24,6 +24,8 @@ interface PayslipImageViewerProps {
   imageUrl: string | null;
   patientName: string;
   loading?: boolean;
+  /** Custom title prefix. Defaults to "Contracheque" */
+  titlePrefix?: string;
 }
 
 export function PayslipImageViewer({
@@ -32,6 +34,7 @@ export function PayslipImageViewer({
   imageUrl,
   patientName,
   loading = false,
+  titlePrefix = 'Contracheque',
 }: PayslipImageViewerProps) {
   const [rotation, setRotation] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -70,7 +73,7 @@ export function PayslipImageViewer({
     const ext = (withoutQuery.split('.').pop() || 'jpg').toLowerCase();
     const link = document.createElement('a');
     link.href = imageUrl;
-    link.download = `contracheque-${safeName}.${ext}`;
+    link.download = `${titlePrefix.toLowerCase().replace(/\s+/g, '-')}-${safeName}.${ext}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -92,7 +95,7 @@ export function PayslipImageViewer({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Contracheque - {patientName}</span>
+            <span>{titlePrefix} - {patientName}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -175,7 +178,7 @@ export function PayslipImageViewer({
               <div className="w-full p-2">
                 <iframe
                   src={imageUrl}
-                  title={`Contracheque de ${patientName}`}
+                  title={`${titlePrefix} de ${patientName}`}
                   className="w-full rounded border bg-background"
                   style={{
                     height: isFullscreen ? '82vh' : '60vh',
@@ -191,7 +194,7 @@ export function PayslipImageViewer({
               >
                 <img
                   src={imageUrl}
-                  alt={`Contracheque de ${patientName}`}
+                  alt={`${titlePrefix} de ${patientName}`}
                   className="max-w-full max-h-full object-contain rounded shadow-lg"
                   style={{
                     maxHeight: isFullscreen ? '80vh' : '55vh',

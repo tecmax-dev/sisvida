@@ -696,7 +696,8 @@ export default function DependentApprovalsPage() {
         open={photoDialogOpen}
         onOpenChange={setPhotoDialogOpen}
         imageUrl={selectedPhotoUrl}
-        patientName="Documento do Dependente"
+        patientName={selectedApproval?.dependent?.name || "Dependente"}
+        titlePrefix="Documento"
         loading={loadingPhoto}
       />
 
