@@ -47,21 +47,38 @@ function formatWhatsAppPhone(phone: string): string {
 }
 
 // Format reminder message
-export function formatReminderMessage(appointment: HomologacaoAppointment): string {
+export function formatReminderMessage(appointment: HomologacaoAppointment, recipientType?: "company" | "manager" | "professional"): string {
   const date = format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy");
   const time = appointment.start_time?.slice(0, 5) || "";
-  
+
+  const greeting = recipientType === "professional"
+    ? `Prezado(a) ${appointment.professional?.name || "Profissional"},`
+    : recipientType === "manager"
+    ? "Prezado(a) Gestor(a),"
+    : "Prezado(a),";
+
+  const instruction = recipientType === "professional"
+    ? "Você possui uma homologação agendada. Confira os detalhes abaixo:"
+    : recipientType === "manager"
+    ? "Segue lembrete de uma homologação sob sua gestão:"
+    : "Este é um lembrete do agendamento de homologação:";
+
   return `🔔 *Lembrete de Homologação*
 
-Prezado(a),
+${greeting}
 
-Este é um lembrete do agendamento de homologação:
+${instruction}
 
 📋 *Funcionário:* ${appointment.employee_name}
 🏢 *Empresa:* ${appointment.company_name}
 📅 *Data:* ${date}
 🕐 *Horário:* ${time}
 ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.name}` : ""}
+
+📍 *Local:* Rua Coronel Paiva, 99, Centro
+   Ilhéus - BA
+   _(Ao lado da Sorveteria Chiquinho)_
+📞 *Telefone:* (73) 3231-1784
 
 Por favor, compareça no horário agendado com toda a documentação necessária.
 

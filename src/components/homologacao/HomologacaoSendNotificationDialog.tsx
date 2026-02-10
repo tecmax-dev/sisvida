@@ -198,10 +198,16 @@ export function HomologacaoSendNotificationDialog({
       for (const party of parties) {
         if (!party.checked || !party.phone) continue;
 
+        const partyMessage = customMessage || (
+          type === "reminder"
+            ? formatReminderMessage(appointment as any, party.key as any)
+            : formatProtocolMessage(appointment as any)
+        );
+
         const result = await sendWhatsAppViaEvolution(
           currentClinic.id,
           party.phone,
-          message
+          partyMessage
         );
 
         await logHomologacaoNotification(
@@ -211,7 +217,7 @@ export function HomologacaoSendNotificationDialog({
           result.success ? "sent" : "failed",
           party.phone,
           undefined,
-          message,
+          partyMessage,
           result.error,
           type === "protocol"
         );
