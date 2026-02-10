@@ -168,16 +168,37 @@ export default function MobileDependentsPage() {
   };
 
   const getRelationshipLabel = (relationship: string | null): string => {
+    const rel = (relationship || "").toLowerCase().trim();
     const labels: Record<string, string> = {
+      // English
       spouse: "Cônjuge",
       child: "Filho(a)",
       parent: "Pai/Mãe",
+      father: "Pai",
+      mother: "Mãe",
       sibling: "Irmão(ã)",
       grandchild: "Neto(a)",
       grandparent: "Avô/Avó",
       other: "Outro",
+      // Portuguese
+      "cônjuge": "Cônjuge",
+      "cônjuge)": "Cônjuge",
+      conjuge: "Cônjuge",
+      esposo: "Esposo",
+      esposa: "Esposa",
+      filho: "Filho(a)",
+      "filho(a)": "Filho(a)",
+      filha: "Filha",
+      pai: "Pai",
+      "mãe": "Mãe",
+      mae: "Mãe",
+      irmao: "Irmão(ã)",
+      "irmão": "Irmão(ã)",
+      "neto(a)": "Neto(a)",
+      "avô/avó": "Avô/Avó",
+      outro: "Outro",
     };
-    return labels[relationship || ""] || relationship || "Não informado";
+    return labels[rel] || relationship || "Não informado";
   };
 
   const getStatusBadge = (dependent: Dependent) => {
