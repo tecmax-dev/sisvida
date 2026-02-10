@@ -247,6 +247,7 @@ export default function DependentApprovalsPage() {
       if (dependentError) throw dependentError;
 
       // Auto-create digital card for the dependent inheriting titular's expiry date
+      let cardNumber: string | null = null;
       try {
         const titularPatientId = selectedApproval.patient_id;
 
@@ -273,10 +274,11 @@ export default function DependentApprovalsPage() {
 
             if (dependentPatient) {
               // Generate card number
-              const { data: cardNumber } = await supabase.rpc('generate_card_number', {
+              const { data: generatedCardNumber } = await supabase.rpc('generate_card_number', {
                 p_clinic_id: currentClinic.id,
                 p_patient_id: dependentPatient.id,
               });
+              cardNumber = generatedCardNumber;
 
               if (cardNumber) {
                 // Check if card already exists
@@ -322,7 +324,8 @@ export default function DependentApprovalsPage() {
       
       // Send WhatsApp notification to requester
       if (selectedApproval.requester_phone) {
-        const message = `✅ *Cadastro Aprovado!*\n\nOlá! O cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* foi *aprovado* com sucesso!\n\nEle(a) já pode realizar agendamentos pelo WhatsApp ou pelo sistema.\n\nAtenciosamente,\n${currentClinic.name}`;
+        const cardInfo = cardNumber ? `\n\n🪪 *Carteirinha Digital:* ${cardNumber}` : '';
+        const message = `✅ *Cadastro Aprovado!*\n\nOlá! O cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* foi *aprovado* com sucesso!${cardInfo}\n\nEle(a) já pode realizar agendamentos pelo WhatsApp ou pelo sistema.\n\nAtenciosamente,\n${currentClinic.name}`;
 
         const result = await sendWhatsAppMessage({
           phone: selectedApproval.requester_phone,
