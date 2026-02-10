@@ -384,12 +384,11 @@ async function generateGeneralReport(data: ReportData, config: ReportConfig) {
     doc.addPage("landscape");
     addHeader(doc, config, "Relatório Geral de Contribuições - Detalhamento", logoBase64);
     
-    const detailData = data.contributions.map((c, i) => [
-      String(i + 1),
-      c.employers?.name?.substring(0, 25) || "-",
+    const detailData = data.contributions.map((c) => [
+      c.employers?.name?.substring(0, 30) || "-",
       formatCNPJ(c.employers?.cnpj || ""),
       formatCompetence(c.competence_month, c.competence_year),
-      c.contribution_types?.name?.substring(0, 20) || "-",
+      c.contribution_types?.name?.substring(0, 15) || "-",
       format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
       formatCurrency(c.value),
       getStatusLabel(c.status),
@@ -399,30 +398,20 @@ async function generateGeneralReport(data: ReportData, config: ReportConfig) {
     
     autoTable(doc, {
       startY: 55,
-      head: [["#", "Empresa", "CNPJ", "Comp.", "Tipo", "Vencimento", "Valor", "Status", "Dt. Pagamento", "Valor Pago"]],
+      head: [["Empresa", "CNPJ", "Comp.", "Tipo", "Vencimento", "Valor", "Status", "Dt. Pagamento", "Valor Pago"]],
       body: detailData,
       theme: "plain",
-      styles: { fontSize: 7, cellPadding: 3 },
+      styles: { fontSize: 7, cellPadding: 2 },
       headStyles: { 
         fillColor: COLORS.primary, 
         textColor: COLORS.white,
         fontStyle: "bold",
-        fontSize: 8
+        fontSize: 7
       },
       bodyStyles: { textColor: [51, 51, 51] },
       alternateRowStyles: { fillColor: COLORS.light },
-      columnStyles: {
-        0: { cellWidth: 10, halign: "center" },
-        1: { cellWidth: 45 },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 22 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 25, halign: "right" },
-        7: { cellWidth: 20, halign: "center" },
-        8: { cellWidth: 25 },
-        9: { cellWidth: 25, halign: "right" },
-      },
+      margin: { left: 10, right: 10 },
+      tableWidth: "auto",
       didDrawPage: (tableData) => {
         addFooter(doc, config, tableData.pageNumber, doc.getNumberOfPages());
       },
