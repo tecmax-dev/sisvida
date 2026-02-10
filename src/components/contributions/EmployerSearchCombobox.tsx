@@ -76,36 +76,39 @@ export function EmployerSearchCombobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn(
-            "w-full justify-between h-10 bg-background",
-            !selectedEmployer && "text-muted-foreground"
-          )}
-        >
-          <div className="flex items-center gap-2 truncate">
-            <Building2 className="h-4 w-4 shrink-0 text-amber-600" />
-            {selectedEmployer ? (
-              <span className="truncate">{selectedEmployer.name}</span>
-            ) : (
-              <span>{placeholder}</span>
+      <div className="relative w-full">
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className={cn(
+              "w-full justify-between h-10 bg-background",
+              !selectedEmployer && "text-muted-foreground"
             )}
-          </div>
-          <div className="flex items-center gap-1">
-            {selectedEmployer && (
-              <X 
-                className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" 
-                onClick={handleClear}
-              />
-            )}
+          >
+            <div className="flex items-center gap-2 truncate">
+              <Building2 className="h-4 w-4 shrink-0 text-amber-600" />
+              {selectedEmployer ? (
+                <span className="truncate">{selectedEmployer.name}</span>
+              ) : (
+                <span>{placeholder}</span>
+              )}
+            </div>
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-          </div>
-        </Button>
-      </PopoverTrigger>
+          </Button>
+        </PopoverTrigger>
+        {selectedEmployer && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-accent z-10"
+          >
+            <X className="h-4 w-4 opacity-50 hover:opacity-100" />
+          </button>
+        )}
+      </div>
       <PopoverContent className="w-[400px] p-0" align="start">
         <Command shouldFilter={false}>
           <div className="flex items-center border-b px-3">
