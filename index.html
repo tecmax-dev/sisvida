@@ -25,6 +25,36 @@
     <meta name="application-name" content="Eclini" />
     <!-- Manifest injetado automaticamente pelo vite-plugin-pwa -->
     
+    <!-- Dynamic PWA branding for sindicato routes (iOS uses apple-touch-icon, not manifest) -->
+    <script>
+      (function() {
+        var path = window.location.pathname;
+        var isSindicato = path.startsWith('/app') || path.startsWith('/sindicato');
+        if (isSindicato) {
+          // Swap apple-touch-icon for sindicato icon
+          var atIcon = document.querySelector('link[rel="apple-touch-icon"]');
+          if (atIcon) atIcon.setAttribute('href', '/apple-touch-icon-sindicato.png');
+          // Swap favicon
+          var favicon = document.querySelector('link[rel="icon"]');
+          if (favicon) favicon.setAttribute('href', '/apple-touch-icon-sindicato.png');
+          // Swap app title for iOS
+          var appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+          if (appTitle) appTitle.setAttribute('content', 'SECMI');
+          var appName = document.querySelector('meta[name="application-name"]');
+          if (appName) appName.setAttribute('content', 'SECMI');
+          // Use sindicato manifest
+          var existingManifest = document.querySelector('link[rel="manifest"]');
+          if (existingManifest) existingManifest.setAttribute('href', '/manifest-sindicato.webmanifest');
+          else {
+            var m = document.createElement('link');
+            m.rel = 'manifest';
+            m.href = '/manifest-sindicato.webmanifest';
+            document.head.appendChild(m);
+          }
+        }
+      })();
+    </script>
+    
     <!-- Splash Screen Background Color for PWA -->
     <style>
       html, body, #root {
