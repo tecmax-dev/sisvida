@@ -15438,6 +15438,20 @@ export type Database = {
           used: number
         }[]
       }
+      get_patient_dependent_requests: {
+        Args: { p_patient_id: string }
+        Returns: {
+          created_at: string
+          dependent_cpf: string
+          dependent_id: string
+          dependent_name: string
+          dependent_relationship: string
+          id: string
+          rejection_reason: string
+          reviewed_at: string
+          status: string
+        }[]
+      }
       get_patient_dependents: {
         Args: { p_patient_id: string }
         Returns: {

@@ -245,6 +245,80 @@ export default function DependentApprovalsPage() {
         .eq('id', selectedApproval.dependent_id);
       
       if (dependentError) throw dependentError;
+
+      // Auto-create digital card for the dependent inheriting titular's expiry date
+      try {
+        const titularPatientId = selectedApproval.patient_id;
+
+        // Get titular's active card to inherit expiry date
+        const { data: titularCard } = await supabase
+          .from('patient_cards')
+          .select('expires_at')
+          .eq('patient_id', titularPatientId)
+          .eq('clinic_id', currentClinic.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (titularCard?.expires_at) {
+          // Find the patient record created by the sync trigger for this dependent
+          const dependentCpf = selectedApproval.dependent?.cpf;
+          if (dependentCpf) {
+            const cleanCpf = dependentCpf.replace(/\D/g, '');
+            const { data: dependentPatient } = await supabase
+              .from('patients')
+              .select('id')
+              .eq('clinic_id', currentClinic.id)
+              .ilike('cpf', `%${cleanCpf}%`)
+              .maybeSingle();
+
+            if (dependentPatient) {
+              // Generate card number
+              const { data: cardNumber } = await supabase.rpc('generate_card_number', {
+                p_clinic_id: currentClinic.id,
+                p_patient_id: dependentPatient.id,
+              });
+
+              if (cardNumber) {
+                // Check if card already exists
+                const { data: existingCard } = await supabase
+                  .from('patient_cards')
+                  .select('id')
+                  .eq('patient_id', dependentPatient.id)
+                  .eq('clinic_id', currentClinic.id)
+                  .eq('is_active', true)
+                  .maybeSingle();
+
+                if (!existingCard) {
+                  await supabase.from('patient_cards').insert({
+                    clinic_id: currentClinic.id,
+                    patient_id: dependentPatient.id,
+                    card_number: cardNumber,
+                    issued_at: new Date().toISOString(),
+                    expires_at: titularCard.expires_at,
+                    is_active: true,
+                  });
+
+                  // Also update dependent record with card info
+                  await supabase
+                    .from('patient_dependents')
+                    .update({
+                      card_number: cardNumber,
+                      card_expires_at: titularCard.expires_at,
+                    })
+                    .eq('id', selectedApproval.dependent_id);
+
+                  console.log(`[Approval] Card created for dependent ${dependentCpf}: ${cardNumber}, expires: ${titularCard.expires_at}`);
+                }
+              }
+            }
+          }
+        } else {
+          console.warn('[Approval] Titular has no active card - dependent card not created');
+        }
+      } catch (cardError) {
+        console.error('[Approval] Error creating dependent card:', cardError);
+        // Don't fail the approval if card creation fails
+      }
       
       // Send WhatsApp notification to requester
       if (selectedApproval.requester_phone) {
@@ -269,7 +343,7 @@ export default function DependentApprovalsPage() {
 
       toast({
         title: "Aprovado!",
-        description: `Dependente ${selectedApproval.dependent?.name} foi ativado com sucesso`,
+        description: `Dependente ${selectedApproval.dependent?.name} foi ativado com sucesso e carteirinha emitida automaticamente.`,
       });
 
       setApprovalDialogOpen(false);
