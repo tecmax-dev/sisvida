@@ -97,6 +97,8 @@ export async function sendWhatsAppViaEvolution(
   phone: string, 
   message: string
 ): Promise<SendWhatsAppResult> {
+  console.log(`[sendWhatsAppViaEvolution] Iniciando envio: clinicId=${clinicId}, phone=${phone}, msgLen=${message.length}`);
+  
   try {
     const { data, error } = await supabase.functions.invoke('send-whatsapp', {
       body: {
@@ -107,19 +109,25 @@ export async function sendWhatsAppViaEvolution(
       },
     });
 
+    console.log('[sendWhatsAppViaEvolution] Response:', { data, error: error?.message });
+
     if (error) {
-      console.error('Error invoking send-whatsapp function:', error);
-      return { success: false, error: error.message || 'Erro ao enviar mensagem' };
+      const errMsg = error.message || JSON.stringify(error) || 'Erro ao invocar função';
+      console.error('[sendWhatsAppViaEvolution] Invoke error:', errMsg);
+      return { success: false, error: errMsg };
     }
 
     if (data && !data.success) {
+      console.error('[sendWhatsAppViaEvolution] Function returned error:', data.error);
       return { success: false, error: data.error || 'Erro ao enviar mensagem' };
     }
 
+    console.log('[sendWhatsAppViaEvolution] Mensagem enviada com sucesso');
     return { success: true };
   } catch (err: any) {
-    console.error('Error sending WhatsApp via Evolution:', err);
-    return { success: false, error: err.message || 'Erro ao enviar mensagem' };
+    const errMsg = err?.message || JSON.stringify(err) || 'Erro desconhecido';
+    console.error('[sendWhatsAppViaEvolution] Exception:', errMsg, err);
+    return { success: false, error: errMsg };
   }
 }
 
