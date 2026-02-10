@@ -54,10 +54,14 @@ interface Dependent {
 
 interface DependentRequest {
   id: string;
-  type: "inclusion" | "alteration" | "removal";
-  status: "pending" | "approved" | "rejected";
+  dependent_id: string;
+  dependent_name: string;
+  dependent_cpf: string | null;
+  dependent_relationship: string | null;
+  status: string;
+  rejection_reason: string | null;
   created_at: string;
-  notes: string | null;
+  reviewed_at: string | null;
 }
 
 export default function MobileDependentsPage() {
@@ -96,16 +100,15 @@ export default function MobileDependentsPage() {
         setDependents(dependentsData || []);
       }
 
-      // Simulated requests - in production this would come from a dedicated table
-      const pendingDependents: typeof dependentsData = [];
-      const simulatedRequests: DependentRequest[] = pendingDependents.map((d) => ({
-        id: d.id,
-        type: "inclusion" as const,
-        status: "pending" as const,
-        created_at: d.created_at,
-        notes: null,
-      }));
-      setRequests(simulatedRequests);
+      // Load real requests from pending_dependent_approvals via RPC
+      const { data: requestsData, error: requestsError } = await supabase
+        .rpc("get_patient_dependent_requests", { p_patient_id: authPatientId });
+
+      if (requestsError) {
+        console.error("Error fetching requests:", requestsError);
+      } else {
+        setRequests((requestsData as DependentRequest[]) || []);
+      }
     } catch (err) {
       console.error("Error loading data:", err);
       toast({
@@ -530,17 +533,13 @@ export default function MobileDependentsPage() {
                 {requests.map((request) => (
                   <Card key={request.id}>
                     <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-sm">
-                            {request.type === "inclusion"
-                              ? "Inclusão"
-                              : request.type === "alteration"
-                                ? "Alteração"
-                                : "Remoção"}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {request.dependent_name || "Dependente"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {format(parseISO(request.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                            Inclusão • {format(parseISO(request.created_at), "dd/MM/yyyy 'às' HH:mm")}
                           </p>
                         </div>
                         <Badge
@@ -551,6 +550,7 @@ export default function MobileDependentsPage() {
                                 ? "destructive"
                                 : "secondary"
                           }
+                          className="ml-2"
                         >
                           {request.status === "approved"
                             ? "Aprovada"
@@ -559,6 +559,16 @@ export default function MobileDependentsPage() {
                               : "Pendente"}
                         </Badge>
                       </div>
+                      {request.rejection_reason && (
+                        <p className="text-xs text-red-600 mt-1">
+                          Motivo: {request.rejection_reason}
+                        </p>
+                      )}
+                      {request.reviewed_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Analisado em: {format(parseISO(request.reviewed_at), "dd/MM/yyyy")}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
