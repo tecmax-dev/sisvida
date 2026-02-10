@@ -67,9 +67,11 @@ export function EmployerSearchCombobox({
   };
 
   const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     onSelect(null);
     setSearch("");
+    setOpen(false);
   };
 
   return (
