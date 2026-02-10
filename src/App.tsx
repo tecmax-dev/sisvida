@@ -203,6 +203,7 @@ import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
 import UnionNotifyAppPage from "./pages/union/UnionNotifyAppPage";
 import PopupNoticesPage from "./pages/union/PopupNoticesPage";
+import UnionDependentApprovalsPage from "./pages/union/UnionDependentApprovalsPage";
 // Legal Module pages
 import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
 import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
@@ -601,6 +602,7 @@ function App() {
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
                   <Route path="filiacoes" element={<UnionFiliacoesPage />} />
+                  <Route path="aprovacao-dependentes" element={<UnionDependentApprovalsPage />} />
                   {/* Homologação module routes - movido do dashboard */}
                   <Route path="homologacao" element={<HomologacaoAgendaPage />} />
                   <Route path="homologacao/profissionais" element={<HomologacaoProfissionaisPage />} />
