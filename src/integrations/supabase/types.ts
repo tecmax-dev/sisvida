@@ -6648,6 +6648,7 @@ export type Database = {
           card_number: string | null
           clinic_id: string
           cpf: string | null
+          cpf_photo_url: string | null
           created_at: string
           id: string
           inactivated_at: string | null
@@ -6668,6 +6669,7 @@ export type Database = {
           card_number?: string | null
           clinic_id: string
           cpf?: string | null
+          cpf_photo_url?: string | null
           created_at?: string
           id?: string
           inactivated_at?: string | null
@@ -6688,6 +6690,7 @@ export type Database = {
           card_number?: string | null
           clinic_id?: string
           cpf?: string | null
+          cpf_photo_url?: string | null
           created_at?: string
           id?: string
           inactivated_at?: string | null
