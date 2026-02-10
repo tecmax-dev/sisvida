@@ -2,35 +2,35 @@ import { useState, useCallback, useEffect } from "react";
 import { Quote, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useEmblaCarousel from "embla-carousel-react";
-import andreaMatos from "@/assets/testimonials/andrea-matos.jpg";
-import danielaSales from "@/assets/testimonials/daniela-sales.png";
-import joseAlcides from "@/assets/testimonials/jose-alcides.png";
-import julianeLeite from "@/assets/testimonials/juliane-leite.png";
+import carlaMendes from "@/assets/testimonials/carla-mendes.jpg";
+import ricardoOliveira from "@/assets/testimonials/ricardo-oliveira.jpg";
+import fernandaLima from "@/assets/testimonials/fernanda-lima.jpg";
+import marcosSilva from "@/assets/testimonials/marcos-silva.jpg";
 
 const testimonials = [
   {
-    name: "Andrea Matos",
-    role: "Enfermeira Esteta",
-    image: andreaMatos,
-    quote: "Com o Eclini, a gente realmente conseguiu melhorar os processos internos. O sistema tem 'travas' boas, que conseguem garantir que as coisas não saiam do padrão, não saiam do combinado e também mantenham tudo mais organizado."
+    name: "Dra. Carla Mendes",
+    role: "Dermatologista",
+    image: carlaMendes,
+    quote: "O Eclini transformou a rotina da minha clínica. Antes eu perdia tempo com papelada e controles manuais, agora tudo é automatizado. A agenda integrada com o prontuário eletrônico me dá muito mais agilidade nos atendimentos."
   },
   {
-    name: "Daniela Sales",
-    role: "Terapeuta Holística",
-    image: danielaSales,
-    quote: "Sem sombra de dúvidas, o Eclini é um dos pontos principais para a organização da nossa empresa e até para o próprio crescimento dela."
+    name: "Dr. Ricardo Oliveira",
+    role: "Ortopedista",
+    image: ricardoOliveira,
+    quote: "Depois que adotamos o Eclini, nosso faturamento melhorou 40%. O controle financeiro é impecável e a gestão de convênios ficou muito mais simples. Recomendo para qualquer clínica que queira crescer de forma organizada."
   },
   {
-    name: "Dr. José Alcides",
-    role: "Clínico Geral",
-    image: joseAlcides,
-    quote: "Hoje, o Eclini nos ajuda em tudo, principalmente na gestão. Depois de alguns anos de sistema, conseguimos melhorar, principalmente, o controle financeiro e os relatórios de agendamento."
+    name: "Fernanda Lima",
+    role: "Nutricionista",
+    image: fernandaLima,
+    quote: "A praticidade do sistema é incrível. Consigo acessar o histórico completo dos meus pacientes de qualquer lugar, agendar retornos e enviar lembretes automáticos. Meus pacientes adoram a experiência."
   },
   {
-    name: "Juliane Leite",
-    role: "Dentista",
-    image: julianeLeite,
-    quote: "Com o Eclini, conseguimos ter controle dos retornos de consultas e facilidade na busca por atendimentos recentes. Hoje, os profissionais agradecem pelas ferramentas disponibilizadas."
+    name: "Marcos Silva",
+    role: "Psicólogo",
+    image: marcosSilva,
+    quote: "O que mais me impressiona no Eclini é a segurança dos dados. Trabalho com informações sensíveis e sei que tudo está protegido. Além disso, o prontuário digital facilita muito o acompanhamento das sessões."
   }
 ];
 
