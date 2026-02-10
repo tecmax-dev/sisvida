@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function jsonOk(payload: unknown) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,16 +28,11 @@ serve(async (req) => {
     // ==================== LOGIN ====================
     if (action === "login") {
       if (!cpf || !password) {
-        return new Response(
-          JSON.stringify({ error: "CPF e senha são obrigatórios" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "CPF e senha são obrigatórios", code: "missing_credentials" });
       }
 
-      // Normalize CPF (remove formatting)
       const normalizedCpf = cpf.replace(/\D/g, "");
 
-      // Verify password via RPC
       const { data: patientData, error: rpcError } = await supabase.rpc("verify_patient_password", {
         p_cpf: normalizedCpf,
         p_password: password,
@@ -38,31 +40,20 @@ serve(async (req) => {
 
       if (rpcError) {
         console.error("[member-portal-auth] RPC error:", rpcError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao verificar credenciais" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao verificar credenciais", code: "rpc_error" });
       }
 
       if (!patientData || patientData.length === 0) {
-        return new Response(
-          JSON.stringify({ error: "CPF ou senha incorretos" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "CPF ou senha incorretos", code: "invalid_credentials" });
       }
 
-      // Get the patient for the target clinic if multiple exist
       const targetClinicId = clinic_id || "89e7585e-7bce-4e58-91fa-c37080d1170d";
       const patient = patientData.find((p: any) => p.clinic_id === targetClinicId) ?? patientData[0];
 
       if (!patient?.is_active) {
-        return new Response(
-          JSON.stringify({ error: "Conta inativa. Entre em contato com o sindicato." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Conta inativa. Entre em contato com o sindicato.", code: "account_inactive" });
       }
 
-      // Get full patient data
       const { data: fullPatient, error: patientError } = await supabase
         .from("patients")
         .select("id, name, cpf, email, phone, photo_url, registration_number, clinic_id")
@@ -70,49 +61,43 @@ serve(async (req) => {
         .single();
 
       if (patientError || !fullPatient) {
-        return new Response(
-          JSON.stringify({ error: "Erro ao carregar dados do sócio" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao carregar dados do sócio", code: "db_error" });
       }
 
-      // Log access
-      await supabase.from("audit_logs").insert({
-        action: "member_portal_login",
-        entity_type: "patient",
-        entity_id: fullPatient.id,
-        user_id: fullPatient.id,
-        details: { cpf: normalizedCpf, portal: "member" },
-      });
+      // Log access (best-effort)
+      try {
+        await supabase.from("audit_logs").insert({
+          action: "member_portal_login",
+          entity_type: "patient",
+          entity_id: fullPatient.id,
+          user_id: fullPatient.id,
+          details: { cpf: normalizedCpf, portal: "member" },
+        });
+      } catch (e) {
+        console.error("[member-portal-auth] warn audit_log failed:", e);
+      }
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          member: {
-            id: fullPatient.id,
-            name: fullPatient.name,
-            cpf: fullPatient.cpf,
-            email: fullPatient.email,
-            phone: fullPatient.phone,
-            photo_url: fullPatient.photo_url,
-            registration_number: fullPatient.registration_number,
-            clinic_id: fullPatient.clinic_id,
-          },
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({
+        success: true,
+        member: {
+          id: fullPatient.id,
+          name: fullPatient.name,
+          cpf: fullPatient.cpf,
+          email: fullPatient.email,
+          phone: fullPatient.phone,
+          photo_url: fullPatient.photo_url,
+          registration_number: fullPatient.registration_number,
+          clinic_id: fullPatient.clinic_id,
+        },
+      });
     }
 
     // ==================== GET CONTRIBUTIONS ====================
     if (action === "get_contributions") {
       if (!member_id) {
-        return new Response(
-          JSON.stringify({ error: "ID do sócio é obrigatório" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "ID do sócio é obrigatório", code: "missing_member_id" });
       }
 
-      // Get contributions linked to this member (PF contributions)
       const { data: contributions, error: contribError } = await supabase
         .from("employer_contributions")
         .select(`
@@ -135,13 +120,9 @@ serve(async (req) => {
 
       if (contribError) {
         console.error("[member-portal-auth] Error fetching contributions:", contribError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao carregar contribuições" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao carregar contribuições", code: "db_error" });
       }
 
-      // Transform to expected format
       const formatted = (contributions || []).map((c: any) => ({
         id: c.id,
         amount: c.value,
@@ -156,22 +137,15 @@ serve(async (req) => {
         contribution_type: c.contribution_types,
       }));
 
-      return new Response(
-        JSON.stringify({ contributions: formatted }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({ contributions: formatted });
     }
 
     // ==================== GET CARD DATA ====================
     if (action === "get_card") {
       if (!member_id) {
-        return new Response(
-          JSON.stringify({ error: "ID do sócio é obrigatório" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "ID do sócio é obrigatório", code: "missing_member_id" });
       }
 
-      // Get patient card
       const { data: card, error: cardError } = await supabase
         .from("patient_cards")
         .select("*")
@@ -181,22 +155,13 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      return new Response(
-        JSON.stringify({ card }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({ card });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Ação inválida" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonOk({ success: false, error: "Ação inválida", code: "unknown_action" });
 
   } catch (err) {
     console.error("[member-portal-auth] Error:", err);
-    return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonOk({ success: false, error: "Erro interno do servidor", code: "internal_error" });
   }
 });
