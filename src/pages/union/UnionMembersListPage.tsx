@@ -54,6 +54,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -198,6 +207,11 @@ export default function UnionMembersListPage() {
 
   // Signature request dialog state
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+
+  // Delete dependent state
+  const [deleteDependentDialogOpen, setDeleteDependentDialogOpen] = useState(false);
+  const [dependentToDelete, setDependentToDelete] = useState<any>(null);
+  const [isDeletingDependent, setIsDeletingDependent] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"titulares" | "dependentes" | "contribuicoes">(getInitialTab);
@@ -438,6 +452,36 @@ export default function UnionMembersListPage() {
       setDependentsLoading(false);
     }
   }, [currentClinic, debouncedDependentsSearch, page, showInactive]);
+
+  const handleDeleteDependent = async (mode: "inactivate" | "delete") => {
+    if (!dependentToDelete) return;
+    setIsDeletingDependent(true);
+    try {
+      if (mode === "delete") {
+        const { error } = await supabase
+          .from("patient_dependents")
+          .delete()
+          .eq("id", dependentToDelete.id);
+        if (error) throw error;
+        toast({ title: "Dependente excluído permanentemente." });
+      } else {
+        const { error } = await supabase
+          .from("patient_dependents")
+          .update({ is_active: false })
+          .eq("id", dependentToDelete.id);
+        if (error) throw error;
+        toast({ title: "Dependente inativado com sucesso." });
+      }
+      setDeleteDependentDialogOpen(false);
+      setDependentToDelete(null);
+      fetchDependents();
+    } catch (error) {
+      console.error("Error deleting dependent:", error);
+      toast({ title: "Erro ao processar dependente.", variant: "destructive" });
+    } finally {
+      setIsDeletingDependent(false);
+    }
+  };
 
   const fetchInsurancePlans = async () => {
     if (!currentClinic) return;
@@ -1194,18 +1238,33 @@ export default function UnionMembersListPage() {
                         </button>
                       </TableCell>
                       <TableCell className="py-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() =>
-                            navigate(
-                              `/union/socios/${dep.patient_id}?tab=dependentes&editDependent=${dep.id}`
-                            )
-                          }
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              navigate(
+                                `/union/socios/${dep.patient_id}?tab=dependentes&editDependent=${dep.id}`
+                              )
+                            }
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          {canManageMembers && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setDependentToDelete(dep);
+                                setDeleteDependentDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1352,6 +1411,33 @@ export default function UnionMembersListPage() {
         open={signatureDialogOpen}
         onOpenChange={setSignatureDialogOpen}
       />
+
+      {/* Delete Dependent Dialog */}
+      <AlertDialog open={deleteDependentDialogOpen} onOpenChange={setDeleteDependentDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover dependente?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?</p>
+                <p><strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado.</p>
+                <p><strong>Excluir permanentemente:</strong> Remove todos os dados. Esta ação não pode ser desfeita.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={isDeletingDependent}>Cancelar</AlertDialogCancel>
+            <Button variant="outline" onClick={() => handleDeleteDependent("inactivate")} disabled={isDeletingDependent}>
+              {isDeletingDependent ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <UserX className="h-4 w-4 mr-1" />}
+              Inativar
+            </Button>
+            <Button variant="destructive" onClick={() => handleDeleteDependent("delete")} disabled={isDeletingDependent}>
+              {isDeletingDependent ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Excluir Permanentemente
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
