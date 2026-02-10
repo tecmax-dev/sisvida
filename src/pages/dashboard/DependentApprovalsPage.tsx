@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { PayslipImageViewer } from "@/components/patients/PayslipImageViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -614,29 +615,13 @@ export default function DependentApprovalsPage() {
       </Card>
 
       {/* Photo Viewer Dialog */}
-      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Foto do CPF</DialogTitle>
-            <DialogDescription>
-              Verifique a foto do documento CPF enviada pelo titular
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center py-4">
-            {loadingPhoto ? (
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            ) : selectedPhotoUrl ? (
-              <img 
-                src={selectedPhotoUrl} 
-                alt="Foto do CPF" 
-                className="max-w-full max-h-96 rounded-lg object-contain"
-              />
-            ) : (
-              <p className="text-muted-foreground">Nenhuma foto disponível</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PayslipImageViewer
+        open={photoDialogOpen}
+        onOpenChange={setPhotoDialogOpen}
+        imageUrl={selectedPhotoUrl}
+        patientName="Documento do Dependente"
+        loading={loadingPhoto}
+      />
 
       {/* Approval Confirmation Dialog */}
       <AlertDialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
