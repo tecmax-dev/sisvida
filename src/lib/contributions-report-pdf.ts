@@ -382,7 +382,7 @@ async function generateGeneralReport(data: ReportData, config: ReportConfig) {
   // Detailed contributions list with payment date
   if (data.contributions.length > 0) {
     doc.addPage("landscape");
-    addHeader(doc, config, "Relatório Geral de Contribuições - Detalhamento", logoBase64);
+    addHeader(doc, config, "Relatório Geral - Detalhamento", logoBase64);
     
     const detailData = data.contributions.map((c) => [
       c.employers?.name?.substring(0, 30) || "-",
