@@ -183,12 +183,27 @@ export default function DependentApprovalsPage() {
     setPhotoDialogOpen(true);
     
     try {
-      const { data, error } = await supabase.storage
-        .from('dependent-cpf-photos')
-        .createSignedUrl(photoUrl, 300); // 5 minutes
-      
-      if (error) throw error;
-      setSelectedPhotoUrl(data.signedUrl);
+      // If it's already a full URL (from dependent-documents public bucket), use directly
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        setSelectedPhotoUrl(photoUrl);
+      } else {
+        // Try signed URL from dependent-cpf-photos bucket (legacy)
+        const { data, error } = await supabase.storage
+          .from('dependent-cpf-photos')
+          .createSignedUrl(photoUrl, 300);
+        
+        if (error) {
+          // Fallback: try dependent-documents bucket
+          const { data: data2, error: error2 } = await supabase.storage
+            .from('dependent-documents')
+            .createSignedUrl(photoUrl, 300);
+          
+          if (error2) throw error2;
+          setSelectedPhotoUrl(data2.signedUrl);
+        } else {
+          setSelectedPhotoUrl(data.signedUrl);
+        }
+      }
     } catch (error) {
       console.error('Error getting photo URL:', error);
       toast({
