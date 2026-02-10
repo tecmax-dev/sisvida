@@ -147,7 +147,7 @@ serve(async (req) => {
           jsonResponse(
             requestId,
             { success: false, error: "E-mail e código de acesso são obrigatórios", code: "missing_credentials", request_id: requestId },
-            400,
+            200,
             "return login missing_credentials",
           ),
         );
@@ -190,7 +190,7 @@ serve(async (req) => {
           jsonResponse(
             requestId,
             { success: false, error: "E-mail não encontrado", code: "email_not_found", request_id: requestId },
-            404,
+            200,
             "return login email_not_found",
           ),
         );
@@ -201,7 +201,7 @@ serve(async (req) => {
           jsonResponse(
             requestId,
             { success: false, error: "Escritório inativo. Entre em contato com o sindicato.", code: "office_inactive", request_id: requestId },
-            403,
+            200,
             "return login office_inactive",
           ),
         );
@@ -218,7 +218,7 @@ serve(async (req) => {
               code: "access_code_missing",
               request_id: requestId,
             },
-            403,
+            200,
             "return login access_code_missing",
           ),
         );
@@ -229,7 +229,7 @@ serve(async (req) => {
           jsonResponse(
             requestId,
             { success: false, error: "Código de acesso inválido", code: "invalid_access_code", request_id: requestId },
-            401,
+            200,
             "return login invalid_access_code",
           ),
         );
@@ -240,7 +240,7 @@ serve(async (req) => {
           jsonResponse(
             requestId,
             { success: false, error: "Código de acesso expirado. Solicite um novo código.", code: "access_code_expired", request_id: requestId },
-            401,
+            200,
             "return login access_code_expired",
           ),
         );
@@ -522,7 +522,7 @@ serve(async (req) => {
       console.error(`[accounting-office-portal-auth][${requestId}] catch ${appErr.code} status=${appErr.status} elapsed=${elapsed}ms`, appErr.message);
     }
 
-    const status = appErr?.status ?? (timeout ? 504 : 500);
+    const status = 200;
     const code = appErr?.code ?? (timeout ? "timeout" : "internal_error");
 
     // 4) NÃO mascarar: erro interno vem com code + request_id (mensagem pública genérica)

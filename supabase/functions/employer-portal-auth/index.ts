@@ -8,6 +8,13 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+function jsonOk(payload: unknown) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 // Initialize Supabase client at module level for faster cold starts
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,15 +37,10 @@ serve(async (req) => {
     const cleanCnpj = cnpj?.replace(/\D/g, "");
 
     if (action === "login") {
-      // Validar CNPJ e código de acesso
       if (!cleanCnpj || !access_code) {
-        return new Response(
-          JSON.stringify({ error: "CNPJ e código de acesso são obrigatórios" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "CNPJ e código de acesso são obrigatórios", code: "missing_credentials" });
       }
 
-      // Buscar empresa - usa índice idx_employers_cnpj_access
       console.log("[employer-portal-auth] Querying employer by CNPJ:", cleanCnpj);
       const queryStart = Date.now();
       
@@ -52,39 +54,23 @@ serve(async (req) => {
 
       if (error) {
         console.error("[employer-portal-auth] DB error:", error);
-        return new Response(
-          JSON.stringify({ error: "Erro ao consultar banco de dados" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao consultar banco de dados", code: "db_error" });
       }
 
       if (!employer) {
-        return new Response(
-          JSON.stringify({ error: "CNPJ não encontrado" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "CNPJ não encontrado", code: "cnpj_not_found" });
       }
 
       if (!employer.access_code) {
-        return new Response(
-          JSON.stringify({ error: "Código de acesso não configurado. Entre em contato com o sindicato." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Código de acesso não configurado. Entre em contato com o sindicato.", code: "access_code_missing" });
       }
 
       if (employer.access_code !== access_code.toUpperCase()) {
-        return new Response(
-          JSON.stringify({ error: "Código de acesso inválido" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Código de acesso inválido", code: "invalid_access_code" });
       }
 
-      // Verificar expiração
       if (employer.access_code_expires_at && new Date(employer.access_code_expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: "Código de acesso expirado. Solicite um novo código." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Código de acesso expirado. Solicite um novo código.", code: "access_code_expired" });
       }
 
       // Buscar dados do sindicato vinculado (se houver)
@@ -98,51 +84,51 @@ serve(async (req) => {
         unionEntity = entity;
       }
 
-      // Atualizar último acesso
-      await supabase
-        .from("employers")
-        .update({ portal_last_access_at: new Date().toISOString() })
-        .eq("id", employer.id);
+      // Atualizar último acesso (best-effort)
+      try {
+        await supabase
+          .from("employers")
+          .update({ portal_last_access_at: new Date().toISOString() })
+          .eq("id", employer.id);
+      } catch (e) {
+        console.error("[employer-portal-auth] warn update_last_access failed:", e);
+      }
 
-      // Registrar log
-      await supabase.from("employer_portal_logs").insert({
-        employer_id: employer.id,
-        action: "login",
-        ip_address: req.headers.get("x-forwarded-for") || "unknown",
-        user_agent: req.headers.get("user-agent") || "unknown",
-        details: { union_entity_id: employer.union_entity_id },
-      });
+      // Registrar log (best-effort)
+      try {
+        await supabase.from("employer_portal_logs").insert({
+          employer_id: employer.id,
+          action: "login",
+          ip_address: req.headers.get("x-forwarded-for") || "unknown",
+          user_agent: req.headers.get("user-agent") || "unknown",
+          details: { union_entity_id: employer.union_entity_id },
+        });
+      } catch (e) {
+        console.error("[employer-portal-auth] warn portal_logs insert failed:", e);
+      }
 
-      // Gerar token de sessão simples (base64 do employer_id + timestamp)
       const sessionToken = btoa(`${employer.id}:${Date.now()}`);
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          employer: {
-            id: employer.id,
-            name: employer.name,
-            cnpj: employer.cnpj,
-            clinic_id: employer.clinic_id,
-            union_entity_id: employer.union_entity_id,
-            category_id: employer.category_id,
-          },
-          union_entity: unionEntity,
-          session_token: sessionToken,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({
+        success: true,
+        employer: {
+          id: employer.id,
+          name: employer.name,
+          cnpj: employer.cnpj,
+          clinic_id: employer.clinic_id,
+          union_entity_id: employer.union_entity_id,
+          category_id: employer.category_id,
+        },
+        union_entity: unionEntity,
+        session_token: sessionToken,
+      });
     }
 
     if (action === "get_contributions") {
       if (!employer_id) {
-        return new Response(
-          JSON.stringify({ error: "ID da empresa não informado" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "ID da empresa não informado", code: "missing_employer_id" });
       }
 
-      // Verificar que a empresa pertence ao sindicato correto (se especificado)
       if (union_entity_id) {
         const { data: employer } = await supabase
           .from("employers")
@@ -151,21 +137,16 @@ serve(async (req) => {
           .single();
         
         if (employer && employer.union_entity_id !== union_entity_id) {
-          return new Response(
-            JSON.stringify({ error: "Acesso não autorizado a esta empresa" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          return jsonOk({ success: false, error: "Acesso não autorizado a esta empresa", code: "unauthorized" });
         }
       }
 
-      // Buscar o clinic_id da empresa para verificar configuração de ocultação
       const { data: employerData } = await supabase
         .from("employers")
         .select("clinic_id")
         .eq("id", employer_id)
         .single();
 
-      // Buscar configuração de ocultação de pendências
       let hidePendingBeforeDate: string | null = null;
       if (employerData?.clinic_id) {
         const { data: clinicData } = await supabase
@@ -177,7 +158,6 @@ serve(async (req) => {
         hidePendingBeforeDate = clinicData?.hide_pending_before_date || null;
       }
 
-      // Buscar contribuições com informação de negociação
       let query = supabase
         .from("employer_contributions")
         .select(`
@@ -192,49 +172,41 @@ serve(async (req) => {
         .order("competence_month", { ascending: false });
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar contribuições" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao buscar contribuições", code: "db_error" });
       }
 
-      // Filtrar contribuições ocultadas (pendentes/vencidas anteriores à data configurada)
       let filteredContributions = contributions || [];
       if (hidePendingBeforeDate) {
         const hideDate = new Date(hidePendingBeforeDate);
         filteredContributions = filteredContributions.filter(c => {
-          // Ocultar apenas pendentes/vencidas anteriores à data
           if ((c.status === 'pending' || c.status === 'overdue') && c.due_date) {
             const dueDate = new Date(c.due_date);
             return dueDate >= hideDate;
           }
-          return true; // Manter pagas, canceladas, awaiting_value, etc.
+          return true;
         });
       }
 
-      // Registrar log
-      await supabase.from("employer_portal_logs").insert({
-        employer_id,
-        action: "view_contributions",
-        ip_address: req.headers.get("x-forwarded-for") || "unknown",
-        user_agent: req.headers.get("user-agent") || "unknown",
-      });
+      // Registrar log (best-effort)
+      try {
+        await supabase.from("employer_portal_logs").insert({
+          employer_id,
+          action: "view_contributions",
+          ip_address: req.headers.get("x-forwarded-for") || "unknown",
+          user_agent: req.headers.get("user-agent") || "unknown",
+        });
+      } catch (e) {
+        console.error("[employer-portal-auth] warn portal_logs view_contributions failed:", e);
+      }
 
-      return new Response(
-        JSON.stringify({ contributions: filteredContributions }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({ contributions: filteredContributions });
     }
 
     if (action === "request_reissue") {
       if (!employer_id || !contribution_id) {
-        return new Response(
-          JSON.stringify({ error: "Dados incompletos para solicitação" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Dados incompletos para solicitação", code: "missing_data" });
       }
 
-      // Criar solicitação de 2ª via
       const { data, error } = await supabase
         .from("contribution_reissue_requests")
         .insert({
@@ -247,33 +219,28 @@ serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: "Erro ao criar solicitação" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao criar solicitação", code: "db_error" });
       }
 
-      // Registrar log
-      await supabase.from("employer_portal_logs").insert({
-        employer_id,
-        action: "request_reissue",
-        ip_address: req.headers.get("x-forwarded-for") || "unknown",
-        user_agent: req.headers.get("user-agent") || "unknown",
-        details: { contribution_id, request_id: data.id },
-      });
+      // Registrar log (best-effort)
+      try {
+        await supabase.from("employer_portal_logs").insert({
+          employer_id,
+          action: "request_reissue",
+          ip_address: req.headers.get("x-forwarded-for") || "unknown",
+          user_agent: req.headers.get("user-agent") || "unknown",
+          details: { contribution_id, request_id: data.id },
+        });
+      } catch (e) {
+        console.error("[employer-portal-auth] warn portal_logs request_reissue failed:", e);
+      }
 
-      return new Response(
-        JSON.stringify({ success: true, request: data }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({ success: true, request: data });
     }
 
     if (action === "get_reissue_requests") {
       if (!employer_id) {
-        return new Response(
-          JSON.stringify({ error: "ID da empresa não informado" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "ID da empresa não informado", code: "missing_employer_id" });
       }
 
       const { data: requests, error } = await supabase
@@ -283,27 +250,15 @@ serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: "Erro ao buscar solicitações" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonOk({ success: false, error: "Erro ao buscar solicitações", code: "db_error" });
       }
 
-      return new Response(
-        JSON.stringify({ requests }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonOk({ requests });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Ação não reconhecida" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonOk({ success: false, error: "Ação não reconhecida", code: "unknown_action" });
   } catch (error) {
     console.error("[employer-portal-auth] Error:", error);
-    return new Response(
-      JSON.stringify({ error: "Erro interno do servidor", details: String(error) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonOk({ success: false, error: "Erro interno do servidor", code: "internal_error" });
   }
 });
