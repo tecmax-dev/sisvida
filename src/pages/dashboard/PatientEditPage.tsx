@@ -288,6 +288,15 @@ export default function PatientEditPage() {
           notes: data.notes || '',
           maxAppointmentsPerMonth: (data as any).max_appointments_per_month ?? null,
         };
+        // Clear any stale localStorage draft BEFORE setting state
+        // This prevents useAutoSave from restoring an old draft that would
+        // overwrite changes made by other users (e.g., non-admin edits)
+        try {
+          localStorage.removeItem(`patient-edit-draft:${id}`);
+        } catch {
+          // ignore
+        }
+
         setFormData(loadedData);
         setInitialData(loadedData);
         
