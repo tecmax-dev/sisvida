@@ -857,6 +857,7 @@ export default function EmployerDetailPage() {
         <TabsContent value="contributions">
           <EmployerContributionsTab
             contributions={contributions}
+            contributionTypes={contributionTypes}
             stats={stats}
             currentClinic={currentClinic}
             employer={employer}
