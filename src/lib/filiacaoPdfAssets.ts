@@ -65,23 +65,28 @@ function isDataImageUrl(url: string) {
 
 async function resolveFiliacaoAssetsViaBackend(params: {
   cpf: string;
-  photoUrl: string;
+  photoUrl: string | null;
   signatureUrl: string | null;
 }): Promise<{
-  photoDataUrl: string;
-  photoBytes: number;
+  photoDataUrl: string | null;
+  photoBytes: number | null;
   signatureDataUrl: string | null;
   signatureBytes: number | null;
   signatureInvalidReason: string | null;
 }> {
   // Defensive client-side guard (backend também valida)
-  if (isBlobUrl(params.photoUrl)) throw new Error("FOTO_BLOB_URL_PROIBIDA");
+  if (params.photoUrl && isBlobUrl(params.photoUrl)) throw new Error("FOTO_BLOB_URL_PROIBIDA");
   if (params.signatureUrl && isBlobUrl(params.signatureUrl)) throw new Error("ASSINATURA_BLOB_URL_PROIBIDA");
+
+  // Se não há nem foto nem assinatura, não chamar backend
+  if (!params.photoUrl && !params.signatureUrl) {
+    return { photoDataUrl: null, photoBytes: null, signatureDataUrl: null, signatureBytes: null, signatureInvalidReason: null };
+  }
 
   const { data, error } = await supabase.functions.invoke("resolve-filiacao-assets", {
     body: {
       cpf: params.cpf,
-      photo_url: params.photoUrl,
+      photo_url: params.photoUrl || null,
       signature_url: params.signatureUrl,
     },
   });
@@ -90,15 +95,13 @@ async function resolveFiliacaoAssetsViaBackend(params: {
     throw new Error((error as any)?.message || "Erro ao resolver imagens");
   }
 
-  if (!data?.photo?.dataUrl || typeof data.photo.dataUrl !== "string") {
-    throw new Error("FOTO_NAO_RESOLVIDA");
+  // Photo é opcional agora
+  let photoDataUrl: string | null = null;
+  let photoBytes: number | null = null;
+  if (data?.photo?.dataUrl && typeof data.photo.dataUrl === "string" && data.photo.dataUrl.startsWith("data:image/")) {
+    photoDataUrl = data.photo.dataUrl;
+    photoBytes = typeof data.photo.bytes === "number" ? data.photo.bytes : dataUrlToBytes(photoDataUrl).bytes.byteLength;
   }
-
-  if (!data.photo.dataUrl.startsWith("data:image/")) {
-    throw new Error("FOTO_NAO_EMBUTIDA");
-  }
-
-  const photoBytes = typeof data.photo.bytes === "number" ? data.photo.bytes : dataUrlToBytes(data.photo.dataUrl).bytes.byteLength;
 
   const signatureDataUrl = typeof data?.signature?.dataUrl === "string" && data.signature.dataUrl.startsWith("data:image/")
     ? data.signature.dataUrl
@@ -108,7 +111,7 @@ async function resolveFiliacaoAssetsViaBackend(params: {
   const signatureInvalidReason = typeof data?.signature?.invalidReason === "string" ? data.signature.invalidReason : null;
 
   return {
-    photoDataUrl: data.photo.dataUrl,
+    photoDataUrl,
     photoBytes,
     signatureDataUrl,
     signatureBytes,
@@ -190,44 +193,8 @@ export async function prepareMemberImagesForFiliacaoPdf(params: {
 
   const signatureResolvedUrl = patientSignatureUrl || params.signatureUrl || null;
 
-  // Se não há foto, resolver apenas assinatura (não bloquear PDF)
-  if (!photoResolvedUrl) {
-    let sigDataUrl: string | null = null;
-    let sigBytes: number | null = null;
-    let sigInvalidReason: string | null = null;
-
-    if (signatureResolvedUrl) {
-      try {
-        const resolved = await resolveFiliacaoAssetsViaBackend({
-          cpf: cpfNormalized,
-          photoUrl: signatureResolvedUrl, // use as dummy to resolve signature
-          signatureUrl: signatureResolvedUrl,
-        });
-        sigDataUrl = resolved.signatureDataUrl;
-        sigBytes = resolved.signatureBytes;
-        sigInvalidReason = resolved.signatureInvalidReason;
-      } catch {
-        // signature resolution failed, continue without
-      }
-    }
-
-    return {
-      cpf: cpfNormalized,
-      photoOriginalUrl,
-      signatureOriginalUrl,
-      patientPhotoUrl,
-      patientSignatureUrl,
-      photoResolvedUrl: null,
-      signatureResolvedUrl,
-      photoDataUrl: null,
-      photoBytes: null,
-      signatureDataUrl: sigDataUrl,
-      signatureBytes: sigBytes,
-      signatureInvalidReason: sigInvalidReason,
-    };
-  }
-
   // Resolve/converte dentro do backend (service role + auditoria + validação de assinatura)
+  // Foto é opcional — backend aceita photo_url null
   const resolved = await resolveFiliacaoAssetsViaBackend({
     cpf: cpfNormalized,
     photoUrl: photoResolvedUrl,

@@ -270,8 +270,9 @@ Deno.serve(async (req) => {
       return json(400, { error: "CPF inválido" });
     }
 
-    if (typeof photoUrl !== "string" || !photoUrl.trim()) {
-      return json(400, { error: "photo_url é obrigatório" });
+    // photo_url agora é opcional
+    if (photoUrl !== null && photoUrl !== undefined && typeof photoUrl !== "string") {
+      return json(400, { error: "photo_url inválido" });
     }
 
     if (typeof signatureUrl !== "string" && signatureUrl !== null && signatureUrl !== undefined) {
@@ -300,14 +301,24 @@ Deno.serve(async (req) => {
       signature_url: signatureUrl ?? null,
     });
 
-    const photoResolved = await resolveImage("photo", supabaseAdmin, photoUrl, requestId, "patient-photos");
-    console.log("[resolve-filiacao-assets] photo.resolved", {
-      requestId,
-      contentType: photoResolved.contentType,
-      bytes: photoResolved.bytes,
-      pngDims: photoResolved.pngDims,
-      kind: "dataurl",
-    });
+    // Photo é opcional
+    let photoResolved: ResolveResult | null = null;
+    if (typeof photoUrl === "string" && photoUrl.trim()) {
+      photoResolved = await resolveImage("photo", supabaseAdmin, photoUrl, requestId, "patient-photos");
+      console.log("[resolve-filiacao-assets] photo.resolved", {
+        requestId,
+        contentType: photoResolved.contentType,
+        bytes: photoResolved.bytes,
+        pngDims: photoResolved.pngDims,
+        kind: "dataurl",
+      });
+    } else {
+      console.log("[resolve-filiacao-assets] photo.resolved", {
+        requestId,
+        kind: "none",
+        reason: "sem foto",
+      });
+    }
 
     let signatureResolved: ResolveResult | null = null;
     let signatureInvalidReason: string | null = null;
@@ -342,10 +353,10 @@ Deno.serve(async (req) => {
       requestId,
       cpf,
       photo: {
-        kind: "dataurl",
-        contentType: photoResolved.contentType,
-        bytes: photoResolved.bytes,
-        dataUrl: photoResolved.dataUrl,
+        kind: photoResolved ? "dataurl" : "none",
+        contentType: photoResolved?.contentType ?? null,
+        bytes: photoResolved?.bytes ?? null,
+        dataUrl: photoResolved?.dataUrl ?? null,
       },
       signature: {
         kind: signatureResolved ? "dataurl" : "none",
