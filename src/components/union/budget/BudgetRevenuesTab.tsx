@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { BudgetRevenue, revenueTypeLabels } from "@/types/unionBudget";
 import { toast } from "sonner";
+import { BudgetRevenueDialog } from "./BudgetRevenueDialog";
 
 interface BudgetRevenuesTabProps {
   revenues: BudgetRevenue[];
@@ -25,11 +26,11 @@ export function BudgetRevenuesTab({
   onUpdate,
   onDelete,
 }: BudgetRevenuesTabProps) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingRevenue, setEditingRevenue] = useState<BudgetRevenue | undefined>();
+
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const totalBudgeted = revenues.reduce((sum, r) => sum + (r.total_amount || 0), 0);
@@ -37,7 +38,24 @@ export function BudgetRevenuesTab({
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta receita?')) {
       onDelete(id);
-      toast.success('Receita excluída com sucesso');
+    }
+  };
+
+  const handleOpenCreate = () => {
+    setEditingRevenue(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (revenue: BudgetRevenue) => {
+    setEditingRevenue(revenue);
+    setDialogOpen(true);
+  };
+
+  const handleSave = (data: Partial<BudgetRevenue>) => {
+    if ((data as any).id) {
+      onUpdate(data as Partial<BudgetRevenue> & { id: string });
+    } else {
+      onCreate(data);
     }
   };
 
@@ -51,7 +69,7 @@ export function BudgetRevenuesTab({
           </p>
         </div>
         {isEditable && (
-          <Button onClick={() => {}}>
+          <Button onClick={handleOpenCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Receita
           </Button>
@@ -89,14 +107,10 @@ export function BudgetRevenuesTab({
                     {isEditable && (
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(revenue)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDelete(revenue.id)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(revenue.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -109,6 +123,13 @@ export function BudgetRevenuesTab({
           </Table>
         </CardContent>
       </Card>
+
+      <BudgetRevenueDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        revenue={editingRevenue}
+        onSave={handleSave}
+      />
     </div>
   );
 }

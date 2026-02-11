@@ -165,7 +165,7 @@ export function BudgetExerciseCard({ exercise }: BudgetExerciseCardProps) {
           )}
 
           {/* Action */}
-          <Link to={`/union/orcamento/${exercise.id}`}>
+          <Link to={`/union/financeiro/orcamento/${exercise.id}`}>
             <Button variant="outline" className="w-full mt-2">
               Acessar Exercício
               <ChevronRight className="h-4 w-4 ml-2" />

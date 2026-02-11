@@ -68,7 +68,7 @@ export default function UnionBudgetDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <p className="text-muted-foreground mb-4">Exercício não encontrado</p>
-        <Link to="/union/orcamento">
+        <Link to="/union/financeiro/orcamento">
           <Button variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
@@ -84,7 +84,7 @@ export default function UnionBudgetDetailPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <Link to="/union/orcamento">
+            <Link to="/union/financeiro/orcamento">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar

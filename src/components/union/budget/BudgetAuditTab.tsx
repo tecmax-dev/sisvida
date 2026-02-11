@@ -75,7 +75,7 @@ export function BudgetAuditTab({
         const { data, error } = await (supabase as any)
           .from('union_budget_audit_logs')
           .select('*')
-          .eq('exercise_id', exerciseId)
+          .eq('budget_exercise_id', exerciseId)
           .eq('clinic_id', clinicId)
           .order('performed_at', { ascending: false })
           .limit(100);
