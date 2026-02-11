@@ -365,21 +365,35 @@ async function buildFiliacaoPDF(
     assinatura_digital_url_type: describeImageInput(filiacao.assinatura_digital_url),
   });
 
-  // STRICT: photo must be embedded as data URL
-  const photoAudit = requireEmbeddedDataUrl("FOTO", photoUrl);
-  console.log("[FiliacaoPDF][generator] FOTO", {
-    mime: photoAudit.mime,
-    bytes: photoAudit.bytes,
-    pngDims: photoAudit.pngDims,
-  });
+  // Photo: optional — draw placeholder if absent
+  if (photoUrl && photoUrl.startsWith("data:image/")) {
+    const photoAudit = requireEmbeddedDataUrl("FOTO", photoUrl);
+    console.log("[FiliacaoPDF][generator] FOTO", {
+      mime: photoAudit.mime,
+      bytes: photoAudit.bytes,
+      pngDims: photoAudit.pngDims,
+    });
 
-  // Draw photo border
-  doc.setDrawColor(...COLORS.gray);
-  doc.setLineWidth(0.5);
-  doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
+    // Draw photo border
+    doc.setDrawColor(...COLORS.gray);
+    doc.setLineWidth(0.5);
+    doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
 
-  // Draw photo
-  doc.addImage(photoAudit.dataUrl, getPdfImageFormat(photoAudit.dataUrl), photoX, photoY, photoSize, photoSize);
+    // Draw photo
+    doc.addImage(photoAudit.dataUrl, getPdfImageFormat(photoAudit.dataUrl), photoX, photoY, photoSize, photoSize);
+  } else {
+    console.log("[FiliacaoPDF][generator] FOTO ausente, desenhando placeholder");
+    // Draw placeholder border
+    doc.setDrawColor(...COLORS.gray);
+    doc.setLineWidth(0.5);
+    doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
+    // Placeholder text
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(...COLORS.gray);
+    doc.text("Sem foto", photoX + photoSize / 2, photoY + photoSize / 2, { align: "center" });
+    doc.setTextColor(...COLORS.black);
+  }
 
   // Grid layout for member data (matching model - 3 columns)
   // Adjust col3X to leave space for photo (30mm photo + margin)
