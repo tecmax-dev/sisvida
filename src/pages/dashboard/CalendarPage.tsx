@@ -2371,15 +2371,13 @@ const updateData: Record<string, any> = {
     for (let i = 0; i < eligibleAppointments.length; i++) {
       const appointment = eligibleAppointments[i];
       const displayName = getAppointmentDisplayName(appointment);
-      // Usar telefone do join do appointment (não do array patients que tem limite de 1000)
-      const aptPatientPhone = (appointment as any).patient?.phone;
-      const fallbackPhone = patients.find(p => p.id === appointment.patient_id)?.phone;
-      const phoneToUse = aptPatientPhone || fallbackPhone;
+      // CRITICAL: usar dados do JOIN (appointment.patient.phone), NÃO do array patients (limitado a 1000)
+      const phoneToUse = appointment.patient?.phone;
 
-      console.log(`[BULK REMINDER] [${i+1}/${eligibleAppointments.length}] ${displayName} | aptPatient.phone=${aptPatientPhone} | fallback=${fallbackPhone} | using=${phoneToUse}`);
+      console.log(`[BULK REMINDER] [${i+1}/${eligibleAppointments.length}] ${displayName} | phone=${phoneToUse} | apt.id=${appointment.id}`);
 
       if (!phoneToUse) {
-        console.warn(`[BULK REMINDER] [${i+1}] SKIP - no phone for ${displayName} (apt.id=${appointment.id})`);
+        console.warn(`[BULK REMINDER] [${i+1}] SKIP - no phone for ${displayName}`);
         errorCount++;
         continue;
       }
