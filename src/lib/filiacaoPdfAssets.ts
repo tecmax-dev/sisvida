@@ -190,8 +190,41 @@ export async function prepareMemberImagesForFiliacaoPdf(params: {
 
   const signatureResolvedUrl = patientSignatureUrl || params.signatureUrl || null;
 
+  // Se não há foto, resolver apenas assinatura (não bloquear PDF)
   if (!photoResolvedUrl) {
-    throw new Error("FOTO_OBRIGATORIA_AUSENTE_PARA_PDF");
+    let sigDataUrl: string | null = null;
+    let sigBytes: number | null = null;
+    let sigInvalidReason: string | null = null;
+
+    if (signatureResolvedUrl) {
+      try {
+        const resolved = await resolveFiliacaoAssetsViaBackend({
+          cpf: cpfNormalized,
+          photoUrl: signatureResolvedUrl, // use as dummy to resolve signature
+          signatureUrl: signatureResolvedUrl,
+        });
+        sigDataUrl = resolved.signatureDataUrl;
+        sigBytes = resolved.signatureBytes;
+        sigInvalidReason = resolved.signatureInvalidReason;
+      } catch {
+        // signature resolution failed, continue without
+      }
+    }
+
+    return {
+      cpf: cpfNormalized,
+      photoOriginalUrl,
+      signatureOriginalUrl,
+      patientPhotoUrl,
+      patientSignatureUrl,
+      photoResolvedUrl: null,
+      signatureResolvedUrl,
+      photoDataUrl: null,
+      photoBytes: null,
+      signatureDataUrl: sigDataUrl,
+      signatureBytes: sigBytes,
+      signatureInvalidReason: sigInvalidReason,
+    };
   }
 
   // Resolve/converte dentro do backend (service role + auditoria + validação de assinatura)
