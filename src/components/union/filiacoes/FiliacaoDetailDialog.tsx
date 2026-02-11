@@ -180,7 +180,7 @@ export function FiliacaoDetailDialog({
       const sindicatoId = (data as any).sindicato_id;
       let sindicatoQuery = supabase
         .from("union_entities")
-        .select("razao_social, clinic_id");
+        .select("razao_social, clinic_id, logo_url, cnpj, cidade, estado");
 
       if (sindicatoId) {
         sindicatoQuery = sindicatoQuery.eq("id", sindicatoId);
@@ -209,7 +209,15 @@ export function FiliacaoDetailDialog({
         assinatura_digital_url: assets.signatureDataUrl,
       };
 
-      await generateFichaFiliacaoPDF(pdfFiliacao as any, dependents, sindicato);
+      const sindicatoForPdf = sindicato ? {
+        razao_social: sindicato.razao_social,
+        logo_url: sindicato.logo_url,
+        cnpj: sindicato.cnpj,
+        cidade: sindicato.cidade,
+        uf: (sindicato as any).estado || null,
+      } : undefined;
+
+      await generateFichaFiliacaoPDF(pdfFiliacao as any, dependents, sindicatoForPdf);
       toast({ title: "PDF gerado com sucesso!" });
     } catch (error: any) {
       console.error("Error generating PDF:", error);
