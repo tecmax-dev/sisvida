@@ -176,11 +176,20 @@ export function FiliacaoDetailDialog({
 
     setGeneratingPDF(true);
     try {
-      // Fetch sindicato info including clinic_id
-      const { data: sindicato } = await supabase
+      // Fetch sindicato info using the associado's sindicato_id
+      const sindicatoId = (data as any).sindicato_id;
+      let sindicatoQuery = supabase
         .from("union_entities")
-        .select("razao_social, clinic_id")
-        .single();
+        .select("razao_social, clinic_id");
+
+      if (sindicatoId) {
+        sindicatoQuery = sindicatoQuery.eq("id", sindicatoId);
+      }
+
+      const { data: sindicato } = await sindicatoQuery
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       const clinicId = sindicato?.clinic_id || (data as any).clinic_id;
       if (!clinicId) throw new Error("clinic_id ausente na filiação");
