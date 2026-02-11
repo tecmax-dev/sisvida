@@ -1742,21 +1742,23 @@ const updateData: Record<string, any> = {
 
       // Send WhatsApp confirmation when status is confirmed
       if (newStatus === "confirmed" && currentClinic) {
-        const patient = patients.find(p => p.id === appointment.patient_id);
-        const professional = professionals.find(p => p.id === appointment.professional_id);
+        // CRITICAL: usar dados do JOIN (appointment.patient), NÃO do array patients (limitado a 1000)
+        const patientPhone = appointment.patient?.phone || patients.find(p => p.id === appointment.patient_id)?.phone;
+        const patientName = appointment.patient?.name || patients.find(p => p.id === appointment.patient_id)?.name || 'Paciente';
+        const professionalName = appointment.professional?.name || professionals.find(p => p.id === appointment.professional_id)?.name;
         
-        if (patient?.phone) {
+        if (patientPhone) {
           const formattedDate = new Date(appointment.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR');
           const message = formatAppointmentConfirmation(
-            patient.name,
+            patientName,
             currentClinic.name,
             formattedDate,
             appointment.start_time,
-            professional?.name
+            professionalName
           );
           
           sendWhatsAppMessage({
-            phone: patient.phone,
+            phone: patientPhone,
             message,
             clinicId: currentClinic.id,
             type: 'confirmation',
