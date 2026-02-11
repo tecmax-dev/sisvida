@@ -1,5 +1,14 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,6 +47,15 @@ import {
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Filter, X, LayoutGrid, List } from "lucide-react";
 
 // Format currency from cents
 function formatCurrency(cents: number): string {
@@ -112,6 +130,7 @@ interface Contribution {
 
 interface EmployerContributionsTabProps {
   contributions: Contribution[];
+  contributionTypes?: { id: string; name: string }[];
   stats: {
     total: number;
     paid: number;
@@ -324,6 +343,7 @@ function ContributionCard({
 
 export default function EmployerContributionsTab({
   contributions,
+  contributionTypes = [],
   stats,
   currentClinic,
   employer,
@@ -341,7 +361,12 @@ export default function EmployerContributionsTab({
   onOpenNegotiationDialog,
 }: EmployerContributionsTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [dueDateFrom, setDueDateFrom] = useState("");
+  const [dueDateTo, setDueDateTo] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [overdueCollapsed, setOverdueCollapsed] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Check if there are overdue or pending contributions for negotiation
   const hasNegotiableContributions = useMemo(() => {
@@ -366,14 +391,40 @@ export default function EmployerContributionsTab({
     return counts;
   }, [contributions]);
 
-  // Filter contributions by status
+  // Filter contributions by status + type + date range
   const displayContributions = useMemo(() => {
-    if (statusFilter === "all") return contributions;
-    if (statusFilter === "pending") {
-      return contributions.filter(c => c.status === "pending" || c.status === "awaiting_value" || c.status === "processing");
+    let result = contributions;
+    
+    if (statusFilter !== "all") {
+      if (statusFilter === "pending") {
+        result = result.filter(c => c.status === "pending" || c.status === "awaiting_value" || c.status === "processing");
+      } else {
+        result = result.filter(c => c.status === statusFilter);
+      }
     }
-    return contributions.filter(c => c.status === statusFilter);
-  }, [contributions, statusFilter]);
+
+    if (typeFilter !== "all") {
+      result = result.filter(c => c.contribution_type_id === typeFilter);
+    }
+
+    if (dueDateFrom) {
+      result = result.filter(c => c.due_date >= dueDateFrom);
+    }
+
+    if (dueDateTo) {
+      result = result.filter(c => c.due_date <= dueDateTo);
+    }
+
+    return result;
+  }, [contributions, statusFilter, typeFilter, dueDateFrom, dueDateTo]);
+
+  const hasActiveAdvancedFilters = typeFilter !== "all" || dueDateFrom !== "" || dueDateTo !== "";
+
+  const clearAdvancedFilters = () => {
+    setTypeFilter("all");
+    setDueDateFrom("");
+    setDueDateTo("");
+  };
 
   // Separate contributions by status for display
   const { activeContributions, overdueContributions } = useMemo(() => {
@@ -456,7 +507,90 @@ export default function EmployerContributionsTab({
           onClick={() => setStatusFilter("cancelled")}
           variant="muted"
         />
+        {/* Filter toggle + view mode */}
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="text-xs gap-1 h-8"
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filtros
+            {hasActiveAdvancedFilters && (
+              <span className="ml-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 text-[10px] flex items-center justify-center">!</span>
+            )}
+          </Button>
+          <Button
+            variant={viewMode === "grid" ? "default" : "outline"}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setViewMode("grid")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* Advanced Filters Panel */}
+      {showFilters && (
+        <Card>
+          <CardContent className="p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {contributionTypes.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Tipo de Contribuição</Label>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {contributionTypes.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label className="text-xs">Vencimento de</Label>
+                <Input
+                  type="date"
+                  value={dueDateFrom}
+                  onChange={(e) => setDueDateFrom(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Vencimento até</Label>
+                <Input
+                  type="date"
+                  value={dueDateTo}
+                  onChange={(e) => setDueDateTo(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              {hasActiveAdvancedFilters && (
+                <div className="flex items-end">
+                  <Button variant="ghost" size="sm" onClick={clearAdvancedFilters} className="text-xs gap-1 h-8 text-destructive hover:text-destructive">
+                    <X className="h-3.5 w-3.5" />
+                    Limpar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards - 3 columns */}
       <div className="grid grid-cols-3 gap-3">
@@ -577,7 +711,7 @@ export default function EmployerContributionsTab({
         </div>
       </div>
 
-      {/* Main Contributions Grid */}
+      {/* Main Contributions */}
       {activeContributions.length === 0 && overdueContributions.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -585,8 +719,76 @@ export default function EmployerContributionsTab({
             <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
           </CardContent>
         </Card>
+      ) : viewMode === "list" ? (
+        /* ===== LIST VIEW ===== */
+        <Card>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs w-10"></TableHead>
+                    <TableHead className="text-xs">Tipo</TableHead>
+                    <TableHead className="text-xs">Competência</TableHead>
+                    <TableHead className="text-xs">Vencimento</TableHead>
+                    <TableHead className="text-xs text-right">Valor</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Dt. Pagamento</TableHead>
+                    <TableHead className="text-xs text-right">Valor Pago</TableHead>
+                    <TableHead className="text-xs text-center">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayContributions.map(contrib => {
+                    const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+                    const StatusIcon = statusConfig.icon;
+                    const isEligible = !!(contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled");
+                    return (
+                      <TableRow key={contrib.id} className="hover:bg-muted/50">
+                        <TableCell className="py-2">
+                          {isEligible ? (
+                            <Checkbox
+                              checked={selectedContributionIds.has(contrib.id)}
+                              onCheckedChange={() => toggleSelection(contrib.id)}
+                            />
+                          ) : (
+                            <Checkbox disabled className="opacity-30" />
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm font-medium">{contrib.contribution_types?.name || "-"}</TableCell>
+                        <TableCell className="py-2 text-sm">{formatCompetence(contrib.competence_month, contrib.competence_year)}</TableCell>
+                        <TableCell className={`py-2 text-sm ${contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
+                          {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm text-right font-medium">{formatCurrency(contrib.value)}</TableCell>
+                        <TableCell className="py-2">
+                          <Badge className={`${statusConfig.color} text-[10px] gap-0.5 h-5`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {statusConfig.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2 text-sm text-emerald-600">
+                          {contrib.paid_at ? format(parseDateOnlyToLocalNoon(contrib.paid_at), "dd/MM/yyyy") : "-"}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm text-right text-emerald-600 font-medium">
+                          {contrib.paid_value ? formatCurrency(contrib.paid_value) : "-"}
+                        </TableCell>
+                        <TableCell className="py-2 text-center">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onViewContribution(contrib)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
       ) : (
         <>
+          {/* ===== GRID VIEW ===== */}
           {/* Active Contributions */}
           {activeContributions.length > 0 && (
             <div>
@@ -615,7 +817,6 @@ export default function EmployerContributionsTab({
               </ScrollArea>
             </div>
           )}
-
           {/* Overdue Contributions - At Bottom, Collapsible */}
           {overdueContributions.length > 0 && statusFilter !== "overdue" && (
             <Collapsible open={!overdueCollapsed} onOpenChange={(open) => setOverdueCollapsed(!open)}>
