@@ -2366,12 +2366,20 @@ const updateData: Record<string, any> = {
     let successCount = 0;
     let errorCount = 0;
 
-    for (const appointment of eligibleAppointments) {
+    console.log(`[BULK REMINDER] Starting bulk send for ${eligibleAppointments.length} appointments`);
+
+    for (let i = 0; i < eligibleAppointments.length; i++) {
+      const appointment = eligibleAppointments[i];
       const displayName = getAppointmentDisplayName(appointment);
       // Usar telefone do join do appointment (não do array patients que tem limite de 1000)
-      const phoneToUse = (appointment as any).patient?.phone || patients.find(p => p.id === appointment.patient_id)?.phone;
+      const aptPatientPhone = (appointment as any).patient?.phone;
+      const fallbackPhone = patients.find(p => p.id === appointment.patient_id)?.phone;
+      const phoneToUse = aptPatientPhone || fallbackPhone;
+
+      console.log(`[BULK REMINDER] [${i+1}/${eligibleAppointments.length}] ${displayName} | aptPatient.phone=${aptPatientPhone} | fallback=${fallbackPhone} | using=${phoneToUse}`);
 
       if (!phoneToUse) {
+        console.warn(`[BULK REMINDER] [${i+1}] SKIP - no phone for ${displayName} (apt.id=${appointment.id})`);
         errorCount++;
         continue;
       }
@@ -2399,6 +2407,7 @@ const updateData: Record<string, any> = {
           directReplyEnabled
         );
 
+        console.log(`[BULK REMINDER] [${i+1}] Invoking send-whatsapp for ${phoneToUse}...`);
         const { data, error } = await supabase.functions.invoke('send-whatsapp', {
           body: { 
             phone: phoneToUse, 
@@ -2408,10 +2417,14 @@ const updateData: Record<string, any> = {
           },
         });
 
+        console.log(`[BULK REMINDER] [${i+1}] Result: error=${JSON.stringify(error)}, data.success=${data?.success}, data.error=${data?.error}`);
+
         if (error) {
+          console.error(`[BULK REMINDER] [${i+1}] INVOKE ERROR:`, error);
           errorCount++;
         } else if (data?.success) {
           successCount++;
+          console.log(`[BULK REMINDER] [${i+1}] SUCCESS ✓`);
           
           // Marcar reminder_sent = true no agendamento
           await supabase
@@ -2437,12 +2450,14 @@ const updateData: Record<string, any> = {
               });
           }
         } else {
+          console.error(`[BULK REMINDER] [${i+1}] FAILED - data:`, JSON.stringify(data));
           errorCount++;
         }
 
         // Delay de 2s entre mensagens para evitar throttling da Evolution API
         await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch {
+      } catch (err) {
+        console.error(`[BULK REMINDER] [${i+1}] CATCH ERROR:`, err);
         errorCount++;
       }
     }
