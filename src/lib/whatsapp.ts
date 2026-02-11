@@ -15,6 +15,7 @@ interface SendWhatsAppParams {
   message: string;
   clinicId: string;
   type?: 'reminder' | 'confirmation' | 'custom';
+  imageUrl?: string;
 }
 
 interface SendWhatsAppDocumentParams {

@@ -28,6 +28,7 @@ interface SendWelcomeWhatsAppDialogProps {
   clinicId: string;
   entityName: string;
   appUrl: string;
+  headerImageUrl?: string;
 }
 
 export function SendWelcomeWhatsAppDialog({
@@ -37,6 +38,7 @@ export function SendWelcomeWhatsAppDialog({
   clinicId,
   entityName,
   appUrl,
+  headerImageUrl,
 }: SendWelcomeWhatsAppDialogProps) {
   const { toast } = useToast();
   const [phone, setPhone] = useState("");
@@ -87,6 +89,7 @@ export function SendWelcomeWhatsAppDialog({
         message,
         clinicId,
         type: "custom",
+        imageUrl: headerImageUrl,
       });
 
       if (result.success) {
