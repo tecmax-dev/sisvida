@@ -2367,9 +2367,9 @@ const updateData: Record<string, any> = {
     let errorCount = 0;
 
     for (const appointment of eligibleAppointments) {
-      const patient = patients.find(p => p.id === appointment.patient_id);
       const displayName = getAppointmentDisplayName(appointment);
-      const phoneToUse = patient?.phone;
+      // Usar telefone do join do appointment (não do array patients que tem limite de 1000)
+      const phoneToUse = (appointment as any).patient?.phone || patients.find(p => p.id === appointment.patient_id)?.phone;
 
       if (!phoneToUse) {
         errorCount++;
