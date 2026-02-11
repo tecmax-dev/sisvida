@@ -99,6 +99,13 @@ export function useHomologacaoAppointments() {
     }
   }, [currentClinic?.id, invalidate]);
 
+  const confirmAppointment = useCallback(async (id: string): Promise<boolean> => {
+    return updateAppointment(id, {
+      status: "confirmed",
+      confirmed_at: new Date().toISOString(),
+    });
+  }, [updateAppointment]);
+
   const cancelAppointment = useCallback(async (
     id: string, 
     reason?: string
@@ -195,6 +202,7 @@ export function useHomologacaoAppointments() {
     refetch,
     invalidate,
     updateAppointment,
+    confirmAppointment,
     cancelAppointment,
     completeAppointment,
     deleteAppointment,

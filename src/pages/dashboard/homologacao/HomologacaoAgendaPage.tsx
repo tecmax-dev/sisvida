@@ -45,6 +45,7 @@ import {
 import { 
   formatReminderMessage, 
   formatProtocolMessage,
+  formatConfirmationMessage,
   logHomologacaoNotification,
   sendWhatsAppViaEvolution,
 } from "@/lib/homologacaoUtils";
@@ -120,6 +121,7 @@ export default function HomologacaoAgendaPage() {
     isUpdating,
     invalidate,
     updateAppointment,
+    confirmAppointment,
     cancelAppointment,
     completeAppointment,
     deleteAppointment,
@@ -275,6 +277,42 @@ export default function HomologacaoAgendaPage() {
   const handleOpenHistory = (apt: HomologacaoAppointment) => {
     setSelectedAppointment(apt);
     setHistoryOpen(true);
+  };
+
+  // Confirm appointment + send WhatsApp confirmation
+  const handleConfirmAppointment = async (apt: HomologacaoAppointment) => {
+    if (!currentClinic?.id) {
+      toast.error("Clínica não encontrada");
+      return;
+    }
+
+    // 1. Update status to confirmed
+    const success = await confirmAppointment(apt.id);
+    if (!success) return;
+
+    toast.success("Agendamento confirmado!");
+
+    // 2. Send WhatsApp confirmation message
+    const message = formatConfirmationMessage(apt);
+    const result = await sendWhatsAppViaEvolution(currentClinic.id, apt.company_phone, message);
+
+    await logHomologacaoNotification(
+      apt.id,
+      currentClinic.id,
+      "whatsapp",
+      result.success ? "sent" : "failed",
+      apt.company_phone,
+      undefined,
+      message,
+      result.error,
+      false
+    );
+
+    if (result.success) {
+      toast.success("Confirmação enviada via WhatsApp");
+    } else {
+      toast.error(result.error || "Erro ao enviar confirmação via WhatsApp");
+    }
   };
 
   // Quick WhatsApp send via Evolution API
@@ -525,6 +563,12 @@ export default function HomologacaoAgendaPage() {
                   Ver Histórico de Envios
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {apt.status === 'scheduled' && (
+                  <DropdownMenuItem onClick={() => handleConfirmAppointment(apt)} className="text-blue-600">
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Confirmar
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => handleComplete(apt)} className="text-green-600">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Marcar Atendido
