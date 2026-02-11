@@ -62,6 +62,36 @@ serve(async (req) => {
       
       if (!patient?.phone || !clinic?.id) continue;
 
+      // Skip dependents whose titular has a valid card
+      if (patient?.cpf) {
+        const cleanCpf = patient.cpf.replace(/\D/g, "");
+        const { data: depRecord } = await supabase
+          .from("patient_dependents")
+          .select("patient_id")
+          .eq("clinic_id", clinic.id)
+          .eq("is_active", true)
+          .or(`cpf.eq.${cleanCpf},cpf.eq.${cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (depRecord?.patient_id) {
+          // This patient is a dependent — check if titular's card is still valid
+          const { data: titularCard } = await supabase
+            .from("patient_cards")
+            .select("id, expires_at")
+            .eq("patient_id", depRecord.patient_id)
+            .eq("is_active", true)
+            .gte("expires_at", new Date().toISOString())
+            .limit(1)
+            .maybeSingle();
+
+          if (titularCard) {
+            console.log(`Skipping dependent ${patient.name} — titular card is still valid`);
+            continue;
+          }
+        }
+      }
+
       // Check if clinic has Evolution API configured
       const { data: evolutionConfig } = await supabase
         .from("evolution_configs")
