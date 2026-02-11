@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
+import { syncAssociadoToPatient } from "@/lib/sync-associado-to-patient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -145,6 +146,11 @@ export default function UnionAssociadosPage() {
         .eq("id", associado.id);
       
       if (error) throw error;
+
+      // Sync to patients table so member appears in /union/socios
+      if (clinicId) {
+        await syncAssociadoToPatient(associado.id, clinicId);
+      }
 
       return associado.id;
     },

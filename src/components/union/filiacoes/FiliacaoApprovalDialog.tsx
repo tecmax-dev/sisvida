@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle, XCircle, Mail, MessageCircle } from "lucide-react";
+import { syncAssociadoToPatient } from "@/lib/sync-associado-to-patient";
 
 interface Props {
   filiacao: { id: string; nome: string; cpf: string } | null;
@@ -69,6 +70,27 @@ export function FiliacaoApprovalDialog({
           .eq("id", filiacao.id);
 
         if (updateError) throw updateError;
+
+        // Sync to patients table so member appears in /union/socios
+        try {
+          const { data: assocData } = await supabase
+            .from("sindical_associados")
+            .select("sindicato_id")
+            .eq("id", filiacao.id)
+            .single();
+          if (assocData?.sindicato_id) {
+            const { data: ueData } = await supabase
+              .from("union_entities")
+              .select("clinic_id")
+              .eq("id", assocData.sindicato_id)
+              .single();
+            if (ueData?.clinic_id) {
+              await syncAssociadoToPatient(filiacao.id, ueData.clinic_id);
+            }
+          }
+        } catch (syncErr) {
+          console.error("Error syncing to patients:", syncErr);
+        }
 
         // Send notifications
         if (sendEmail || sendWhatsApp) {
