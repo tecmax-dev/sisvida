@@ -88,7 +88,7 @@ export default function PatientPayslipHistoryPage() {
 
       if (error) {
         console.error("Error loading patient:", error);
-        navigate("/dashboard/patients");
+        navigate(-1);
         return;
       }
       setPatient(data);
@@ -189,7 +189,7 @@ export default function PatientPayslipHistoryPage() {
         </div>
         <Button 
           variant="outline" 
-          onClick={() => navigate(`/dashboard/patients/${patientId}`)}
+          onClick={() => navigate(`/union/socios/${patientId}`)}
           className="gap-2"
         >
           <CreditCard className="h-4 w-4" />

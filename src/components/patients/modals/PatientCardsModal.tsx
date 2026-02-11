@@ -157,7 +157,7 @@ export function PatientCardsModal({
                     className="w-full gap-2"
                     onClick={() => {
                       onOpenChange(false);
-                      navigate(`/dashboard/patients/${patientId}/contracheques`);
+                      navigate(`/union/socios/${patientId}/auditoria`);
                     }}
                   >
                     <History className="h-4 w-4" />
