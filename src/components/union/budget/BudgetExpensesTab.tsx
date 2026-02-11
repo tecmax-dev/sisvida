@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { BudgetExpense, expenseTypeLabels } from "@/types/unionBudget";
 import { toast } from "sonner";
+import { BudgetExpenseDialog } from "./BudgetExpenseDialog";
 
 interface BudgetExpensesTabProps {
   expenses: BudgetExpense[];
@@ -24,11 +26,11 @@ export function BudgetExpensesTab({
   onUpdate,
   onDelete,
 }: BudgetExpensesTabProps) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<BudgetExpense | undefined>();
+
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const totalBudgeted = expenses.reduce((sum, e) => sum + (e.total_amount || 0), 0);
@@ -36,7 +38,24 @@ export function BudgetExpensesTab({
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta despesa?')) {
       onDelete(id);
-      toast.success('Despesa excluída com sucesso');
+    }
+  };
+
+  const handleOpenCreate = () => {
+    setEditingExpense(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (expense: BudgetExpense) => {
+    setEditingExpense(expense);
+    setDialogOpen(true);
+  };
+
+  const handleSave = (data: Partial<BudgetExpense>) => {
+    if ((data as any).id) {
+      onUpdate(data as Partial<BudgetExpense> & { id: string });
+    } else {
+      onCreate(data);
     }
   };
 
@@ -50,7 +69,7 @@ export function BudgetExpensesTab({
           </p>
         </div>
         {isEditable && (
-          <Button onClick={() => {}}>
+          <Button onClick={handleOpenCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Despesa
           </Button>
@@ -88,14 +107,10 @@ export function BudgetExpensesTab({
                     {isEditable && (
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(expense)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDelete(expense.id)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(expense.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -108,6 +123,13 @@ export function BudgetExpensesTab({
           </Table>
         </CardContent>
       </Card>
+
+      <BudgetExpenseDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        expense={editingExpense}
+        onSave={handleSave}
+      />
     </div>
   );
 }
