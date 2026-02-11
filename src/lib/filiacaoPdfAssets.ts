@@ -16,8 +16,8 @@ export type FiliacaoPdfPreparedAssets = {
   signatureResolvedUrl: string | null;
 
   // Final embeddable values
-  photoDataUrl: string;
-  photoBytes: number;
+  photoDataUrl: string | null;
+  photoBytes: number | null;
   signatureDataUrl: string | null;
   signatureBytes: number | null;
   signatureInvalidReason: string | null;
