@@ -103,25 +103,24 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-sm p-0 overflow-hidden rounded-2xl">
-        {/* Close button */}
+      <DialogContent className="max-w-[90vw] sm:max-w-sm p-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col">
+        {/* Close button - always visible */}
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+          className="absolute top-2 right-2 z-50 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg"
+          aria-label="Fechar"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
 
         {/* Image */}
         {currentNotice.image_url && (
-          <div className="w-full">
-            <AspectRatio ratio={494 / 741}>
-              <img
-                src={currentNotice.image_url}
-                alt={currentNotice.title}
-                className="w-full h-full object-cover"
-              />
-            </AspectRatio>
+          <div className="w-full flex-shrink-0 overflow-hidden" style={{ maxHeight: '55vh' }}>
+            <img
+              src={currentNotice.image_url}
+              alt={currentNotice.title}
+              className="w-full h-full object-cover"
+            />
           </div>
         )}
 
