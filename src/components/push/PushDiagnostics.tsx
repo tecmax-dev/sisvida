@@ -96,7 +96,7 @@ export function PushDiagnostics({ patientId, clinicId }: PushDiagnosticsProps) {
 
       const appScope = appSW?.scope || null;
       const appOk = !!appSW && (appScope?.endsWith('/') ?? false);
-      const appHasPushManager = !!appSW?.pushManager;
+      const appHasPushManager = !!(appSW as any)?.pushManager;
 
       swInfo = { appSW, appScope, appOk, appHasPushManager, registrations };
 
