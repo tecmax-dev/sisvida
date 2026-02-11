@@ -53,7 +53,7 @@ serve(async (req) => {
       const smtpHost = Deno.env.get("SMTP_HOST");
       const smtpPort = Deno.env.get("SMTP_PORT");
       const smtpUser = Deno.env.get("SMTP_USER");
-      const smtpPass = Deno.env.get("SMTP_PASS");
+      const smtpPass = Deno.env.get("SMTP_PASSWORD");
       const smtpFrom = Deno.env.get("SMTP_FROM");
 
       if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
