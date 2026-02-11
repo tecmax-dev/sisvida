@@ -436,6 +436,11 @@ export default function UnionMembersListPage() {
         const orParts: string[] = [`name.ilike.${text}`];
         if (searchDigits.length >= 3) {
           orParts.push(`cpf.ilike.%${searchDigits}%`);
+          // Also search formatted CPF (XXX.XXX.XXX-XX) since DB may store either format
+          if (searchDigits.length === 11) {
+            const formatted = searchDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            orParts.push(`cpf.ilike.%${formatted}%`);
+          }
         }
         query = query.or(orParts.join(","));
       }
