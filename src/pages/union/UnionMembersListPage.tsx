@@ -1345,6 +1345,7 @@ export default function UnionMembersListPage() {
         clinicId={currentClinic?.id || ""}
         entityName={currentClinic?.name || "Sindicato"}
         appUrl="https://app.eclini.com.br/app/instalar"
+        headerImageUrl="https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-headers/header_bem_vindo_socio_secmi.png"
       />
 
       {/* Filiacao Actions Dialog */}

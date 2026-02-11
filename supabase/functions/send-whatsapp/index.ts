@@ -61,7 +61,7 @@ serve(async (req) => {
     }
 
     // 3. Parse request body
-    const { phone, message, clinicId, type = 'custom' }: WhatsAppRequest = await req.json();
+    const { phone, message, clinicId, type = 'custom', imageUrl }: WhatsAppRequest = await req.json();
 
     if (!phone || !message || !clinicId) {
       return new Response(
@@ -174,8 +174,8 @@ serve(async (req) => {
     }
 
     const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
-    // Priority: whatsapp_header_image_url > union_entity logo > clinic logo > default
-    const logoUrl = clinicProviderData?.whatsapp_header_image_url || unionLogo || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
+    // Priority: explicit imageUrl > whatsapp_header_image_url > union_entity logo > clinic logo > default
+    const logoUrl = imageUrl || clinicProviderData?.whatsapp_header_image_url || unionLogo || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
 
     console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}, logo: ${logoUrl}`);
 
