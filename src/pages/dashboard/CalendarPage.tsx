@@ -2412,12 +2412,36 @@ const updateData: Record<string, any> = {
           errorCount++;
         } else if (data?.success) {
           successCount++;
+          
+          // Marcar reminder_sent = true no agendamento
+          await supabase
+            .from('appointments')
+            .update({ reminder_sent: true })
+            .eq('id', appointment.id);
+
+          // Se direct reply habilitado, registrar pending_confirmation
+          if (directReplyEnabled) {
+            const formattedPhone = phoneToUse.replace(/\D/g, '');
+            const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
+            const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.start_time}`);
+            const expiresAt = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000);
+            
+            await supabase
+              .from('pending_confirmations')
+              .insert({
+                clinic_id: currentClinic?.id,
+                appointment_id: appointment.id,
+                phone: phoneWithCountry,
+                expires_at: expiresAt.toISOString(),
+                status: 'pending'
+              });
+          }
         } else {
           errorCount++;
         }
 
-        // Pequeno delay para não sobrecarregar a API
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Delay de 2s entre mensagens para evitar throttling da Evolution API
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch {
         errorCount++;
       }
