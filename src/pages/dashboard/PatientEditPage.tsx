@@ -466,10 +466,7 @@ export default function PatientEditPage() {
     debounceMs: 3000,
     enabled: !loading && !!id && !!currentClinic,
     validateBeforeSave,
-    storageKey: id ? `patient-edit-draft:${id}` : undefined,
-    onRestoreDraft: (draft) => {
-      setFormData(draft);
-    },
+    // Cache/draft desabilitado para edições de cadastro - garante consistência entre usuários
   });
 
   const handleTabChange = (tab: PatientTab) => {
