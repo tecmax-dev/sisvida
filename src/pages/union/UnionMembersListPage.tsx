@@ -1344,7 +1344,7 @@ export default function UnionMembersListPage() {
         member={selectedMemberForWelcome}
         clinicId={currentClinic?.id || ""}
         entityName={currentClinic?.name || "Sindicato"}
-        appUrl="https://sisvida.lovable.app/sindicato/instalar"
+        appUrl="https://app.eclini.com.br/app/instalar"
       />
 
       {/* Filiacao Actions Dialog */}
