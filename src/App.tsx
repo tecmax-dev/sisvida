@@ -579,6 +579,7 @@ function App() {
                   <Route path="socios/novo" element={<UnionMemberNewPage />} />
                   <Route path="socios/contracheques" element={<UnionPayslipApprovalsPage />} />
                   <Route path="socios/:id" element={<UnionMemberDetailPage />} />
+                  <Route path="socios/:id/auditoria" element={<PatientPayslipHistoryPage />} />
                   <Route path="contribuicoes" element={<UnionContributionsPage />} />
                   <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro" element={<UnionFinancialsPage />} />
