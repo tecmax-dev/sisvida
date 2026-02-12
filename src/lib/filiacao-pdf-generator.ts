@@ -645,7 +645,7 @@ async function buildFiliacaoPDF(
   doc.setTextColor(...COLORS.black);
   doc.text("Autorização de Desconto", margin + 20, row1Y + 4);
   
-  const descontoFolha = filiacao.forma_pagamento === "desconto_folha";
+  const descontoFolha = filiacao.forma_pagamento === "desconto_folha" || filiacao.assinatura_aceite_desconto === true;
   
   // Middle section - Desconto em Folha checkboxes (centered)
   const midSectionX = margin + 75;
