@@ -6,7 +6,7 @@
     "distDir": "https://sisvida.lovable.app/app/login"
   },
   "package": {
-    "productName": "SECMI",
+    "productName": "Eclini",
     "version": "1.0.0"
   },
   "tauri": {
@@ -22,7 +22,8 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "app.lovable.secmi",
+      "identifier": "com.tecmax.eclini",
+      "publisher": "Tecmax",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -38,7 +39,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "SECMI - Sindicato",
+        "title": "Eclini",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
