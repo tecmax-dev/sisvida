@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.resolve-filiacao-assets]
 verify_jwt = false
+
+[functions.send-signature-whatsapp]
+verify_jwt = false
