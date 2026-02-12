@@ -170,8 +170,8 @@ async function normalizeImageOrientation(dataUrl: string): Promise<string> {
         const ctx = canvas.getContext("2d");
         if (!ctx) { resolve(dataUrl); return; }
         ctx.drawImage(img, 0, 0);
-        // Re-encode as PNG to strip EXIF and bake orientation
-        const normalized = canvas.toDataURL("image/png");
+        // Re-encode as JPEG to strip EXIF, bake orientation, and keep file small
+        const normalized = canvas.toDataURL("image/jpeg", 0.7);
         resolve(normalized);
       } catch {
         resolve(dataUrl); // fallback to original on any error
@@ -410,7 +410,7 @@ async function buildFiliacaoPDF(
     doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
 
     // Draw photo (using normalized orientation)
-    doc.addImage(normalizedPhotoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
+    doc.addImage(normalizedPhotoDataUrl, "JPEG", photoX, photoY, photoSize, photoSize);
   } else {
     console.log("[FiliacaoPDF][generator] FOTO ausente, desenhando placeholder");
     // Draw placeholder border
