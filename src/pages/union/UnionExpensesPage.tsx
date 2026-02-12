@@ -31,6 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UnionTransactionDialog } from "@/components/union/financials/UnionTransactionDialog";
 import { UnionCheckLiquidationDialog } from "@/components/union/financials/UnionCheckLiquidationDialog";
 import { UnionCheckPrintDialog } from "@/components/union/financials/UnionCheckPrintDialog";
+import { UnionCopyExpensesDialog } from "@/components/union/financials/UnionCopyExpensesDialog";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,6 +56,7 @@ import {
   Calendar,
   Building2,
   Tag,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +68,7 @@ export default function UnionExpensesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [checkDialogOpen, setCheckDialogOpen] = useState(false);
   const [checkPrintDialogOpen, setCheckPrintDialogOpen] = useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -466,6 +469,10 @@ export default function UnionExpensesPage() {
           </Button>
           {canManageExpenses() && (
             <>
+              <Button variant="outline" size="sm" className="h-9" onClick={() => setCopyDialogOpen(true)}>
+                <Copy className="h-4 w-4 mr-1.5" />
+                Copiar Despesas
+              </Button>
               <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckPrintDialogOpen(true)}>
                 <Printer className="h-4 w-4 mr-1.5" />
                 Cópia Cheque
@@ -766,6 +773,12 @@ export default function UnionExpensesPage() {
       <UnionCheckPrintDialog
         open={checkPrintDialogOpen}
         onOpenChange={setCheckPrintDialogOpen}
+        clinicId={clinicId}
+      />
+
+      <UnionCopyExpensesDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
         clinicId={clinicId}
       />
     </div>
