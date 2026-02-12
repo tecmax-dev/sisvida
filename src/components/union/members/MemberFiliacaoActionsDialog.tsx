@@ -49,6 +49,8 @@ interface MemberData {
   registration_number?: string | null;
   photo_url?: string | null;
   signature_accepted?: boolean | null;
+  employer_name?: string | null;
+  employer_cnpj?: string | null;
 }
 
 interface FiliacaoData {
@@ -200,23 +202,31 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
     }
 
     // ========== ENRICH EMPLOYER DATA ==========
-    // If employer data is missing but employer_id exists, fetch from employers table
-    const hasEmployerData = result.empresa_razao_social || result.empresa_cnpj || result.empresa;
+    // Try to find full employer data from employers table
+    const hasFullEmployerData = result.empresa_endereco || result.empresa_bairro;
     const employerId = (input as any).employer_id;
+    const employerCnpj = result.empresa_cnpj || member.employer_cnpj;
     
-    if (!hasEmployerData && employerId) {
-      const { data: employer } = await supabase
+    if (!hasFullEmployerData && (employerId || employerCnpj)) {
+      let employerQuery = supabase
         .from("employers")
-        .select("id, name, trade_name, cnpj, address, neighborhood, city, state, cep, phone, registration_number")
-        .eq("id", employerId)
-        .maybeSingle();
+        .select("id, name, trade_name, cnpj, address, neighborhood, city, state, cep, phone, registration_number");
+      
+      if (employerId) {
+        employerQuery = employerQuery.eq("id", employerId);
+      } else if (employerCnpj) {
+        const cleanCnpj = employerCnpj.replace(/\D/g, "");
+        employerQuery = employerQuery.or(`cnpj.eq.${cleanCnpj},cnpj.eq.${employerCnpj}`);
+      }
+
+      const { data: employer } = await employerQuery.limit(1).maybeSingle();
 
       if (employer) {
         result = {
           ...result,
-          empresa_razao_social: employer.name,
-          empresa_nome_fantasia: employer.trade_name,
-          empresa_cnpj: employer.cnpj,
+          empresa_razao_social: result.empresa_razao_social || employer.name,
+          empresa_nome_fantasia: result.empresa_nome_fantasia || employer.trade_name,
+          empresa_cnpj: result.empresa_cnpj || employer.cnpj,
           empresa_endereco: employer.address,
           empresa_bairro: employer.neighborhood,
           empresa_cidade: employer.city,
@@ -348,9 +358,13 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
       created_at: new Date().toISOString(),
       aprovado_at: new Date().toISOString(), // Assume filiado se está na base
       foto_url: member.photo_url,
+      // Employer data directly from patient record
+      empresa_razao_social: member.employer_name || undefined,
+      empresa: member.employer_name || undefined,
+      empresa_cnpj: member.employer_cnpj || undefined,
       // If signature was accepted, mark as desconto_folha
       forma_pagamento: member.signature_accepted ? "desconto_folha" : undefined,
-      assinatura_aceite_desconto: member.signature_accepted || undefined,
+      assinatura_aceite_desconto: member.signature_accepted === true ? true : undefined,
     };
 
     return { filiacao: filiacaoFromPatient, dependents: mappedDeps };
