@@ -154,6 +154,34 @@ function getPngDimensions(bytes: Uint8Array): { width: number; height: number } 
   return { width: dv.getUint32(16), height: dv.getUint32(20) };
 }
 
+/**
+ * Normalize image orientation via canvas.
+ * Modern browsers auto-apply EXIF rotation when drawing to canvas,
+ * so this effectively "bakes in" the correct orientation.
+ */
+async function normalizeImageOrientation(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(dataUrl); return; }
+        ctx.drawImage(img, 0, 0);
+        // Re-encode as PNG to strip EXIF and bake orientation
+        const normalized = canvas.toDataURL("image/png");
+        resolve(normalized);
+      } catch {
+        resolve(dataUrl); // fallback to original on any error
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function requireEmbeddedDataUrl(label: string, input: string | null | undefined) {
   if (!input) throw new Error(`${label}_AUSENTE`);
   if (input.startsWith("blob:")) throw new Error(`${label}_BLOB_URL_PROIBIDA`);
@@ -368,6 +396,8 @@ async function buildFiliacaoPDF(
   // Photo: optional — draw placeholder if absent
   if (photoUrl && photoUrl.startsWith("data:image/")) {
     const photoAudit = requireEmbeddedDataUrl("FOTO", photoUrl);
+    // Normalize EXIF orientation (fixes rotated mobile photos)
+    const normalizedPhotoDataUrl = await normalizeImageOrientation(photoAudit.dataUrl);
     console.log("[FiliacaoPDF][generator] FOTO", {
       mime: photoAudit.mime,
       bytes: photoAudit.bytes,
@@ -379,8 +409,8 @@ async function buildFiliacaoPDF(
     doc.setLineWidth(0.5);
     doc.rect(photoX - 0.5, photoY - 0.5, photoSize + 1, photoSize + 1);
 
-    // Draw photo
-    doc.addImage(photoAudit.dataUrl, getPdfImageFormat(photoAudit.dataUrl), photoX, photoY, photoSize, photoSize);
+    // Draw photo (using normalized orientation)
+    doc.addImage(normalizedPhotoDataUrl, "PNG", photoX, photoY, photoSize, photoSize);
   } else {
     console.log("[FiliacaoPDF][generator] FOTO ausente, desenhando placeholder");
     // Draw placeholder border
