@@ -48,6 +48,7 @@ interface MemberData {
   zip_code?: string | null;
   registration_number?: string | null;
   photo_url?: string | null;
+  signature_accepted?: boolean | null;
 }
 
 interface FiliacaoData {
@@ -347,6 +348,9 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
       created_at: new Date().toISOString(),
       aprovado_at: new Date().toISOString(), // Assume filiado se está na base
       foto_url: member.photo_url,
+      // If signature was accepted, mark as desconto_folha
+      forma_pagamento: member.signature_accepted ? "desconto_folha" : undefined,
+      assinatura_aceite_desconto: member.signature_accepted || undefined,
     };
 
     return { filiacao: filiacaoFromPatient, dependents: mappedDeps };
