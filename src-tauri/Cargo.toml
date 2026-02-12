@@ -1,8 +1,8 @@
 [package]
-name = "secmi"
+name = "eclini"
 version = "1.0.0"
-description = "SECMI - Aplicativo do Sindicato"
-authors = ["SECMI"]
+description = "Eclini - Sistema de Gestão"
+authors = ["Tecmax"]
 license = ""
 repository = ""
 edition = "2021"
