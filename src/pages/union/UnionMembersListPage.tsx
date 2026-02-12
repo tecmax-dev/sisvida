@@ -121,6 +121,8 @@ interface UnionMember {
   inactivation_reason?: string | null;
   photo_url?: string | null;
   signature_accepted?: boolean | null;
+  employer_name?: string | null;
+  employer_cnpj?: string | null;
 }
 
 // Formatação de CPF: 000.000.000-00
@@ -310,6 +312,8 @@ export default function UnionMembersListPage() {
           max_appointments_per_month,
           photo_url,
           signature_accepted,
+          employer_name,
+          employer_cnpj,
           insurance_plan:insurance_plans ( name ),
           patient_dependents ( id ),
           patient_cards ( card_number, expires_at, is_active )
@@ -1375,6 +1379,8 @@ export default function UnionMembersListPage() {
             registration_number: selectedMemberForFiliacao.registration_number,
             photo_url: selectedMemberForFiliacao.photo_url,
             signature_accepted: selectedMemberForFiliacao.signature_accepted,
+            employer_name: selectedMemberForFiliacao.employer_name,
+            employer_cnpj: selectedMemberForFiliacao.employer_cnpj,
           }}
           clinicId={currentClinic?.id || ""}
         />
