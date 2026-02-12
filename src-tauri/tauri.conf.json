@@ -2,8 +2,8 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "https://sisvida.lovable.app",
-    "distDir": "https://sisvida.lovable.app"
+    "devPath": "https://sisvida.lovable.app/app/login",
+    "distDir": "https://sisvida.lovable.app/app/login"
   },
   "package": {
     "productName": "SECMI",
