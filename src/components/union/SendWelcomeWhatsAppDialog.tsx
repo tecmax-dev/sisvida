@@ -127,7 +127,7 @@ export function SendWelcomeWhatsAppDialog({
             <div className="h-9 w-9 rounded-full bg-green-500/10 flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-green-600" />
             </div>
-            Enviar Boas-Vindas
+            Enviar Boas-Vindas via WhatsApp
           </DialogTitle>
           <DialogDescription>
             Envie uma mensagem de boas-vindas via WhatsApp para{" "}
