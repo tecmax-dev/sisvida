@@ -40,6 +40,18 @@ interface MemberWithoutSignature {
   telefone: string | null;
 }
 
+// Maps patients row to the member interface
+function mapPatientToMember(p: any): MemberWithoutSignature {
+  return {
+    id: p.id,
+    nome: p.name,
+    email: p.email,
+    cpf: p.cpf || "",
+    empresa_razao_social: p.employer_name || null,
+    telefone: p.phone || null,
+  };
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,27 +75,17 @@ export function SendSignatureRequestDialog({ open, onOpenChange }: Props) {
     const fetchMembers = async () => {
       setLoading(true);
       try {
-        const { data: unionEntity } = await supabase
-          .from("union_entities")
-          .select("id")
-          .eq("clinic_id", currentClinic.id)
-          .single();
-
-        if (!unionEntity) {
-          toast.error("Entidade sindical não encontrada");
-          return;
-        }
-
         const { data, error } = await supabase
-          .from("sindical_associados")
-          .select("id, nome, email, cpf, empresa_razao_social, telefone")
-          .eq("sindicato_id", unionEntity.id)
-          .eq("status", "ativo")
-          .or("assinatura_aceite_desconto.is.null,assinatura_aceite_desconto.eq.false")
-          .order("nome");
+          .from("patients")
+          .select("id, name, email, cpf, phone, employer_name, signature_accepted")
+          .eq("clinic_id", currentClinic.id)
+          .eq("is_union_member", true)
+          .eq("is_active", true)
+          .or("signature_accepted.is.null,signature_accepted.eq.false")
+          .order("name");
 
         if (error) throw error;
-        setMembers(data || []);
+        setMembers((data || []).map(mapPatientToMember));
       } catch (err) {
         console.error("Error fetching members:", err);
         toast.error("Erro ao carregar sócios");
