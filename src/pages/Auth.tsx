@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -472,10 +472,15 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-        extraParams: {
-          prompt: 'select_account',
+      // Usar supabase.auth diretamente para garantir que prompt=select_account
+      // seja repassado ao Google (o broker do lovable.auth não repassa extraParams)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
 
