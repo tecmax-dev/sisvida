@@ -132,6 +132,7 @@ export default function MobileBookingPage() {
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   // Category state removed - showing all professionals
   
   // useRef para clinicId - evita race condition e garante valor consistente no submit
@@ -220,7 +221,33 @@ export default function MobileBookingPage() {
       // Guardar clinicId no ref para uso no submit
       clinicIdRef.current = data.clinicId;
 
-      // Setar profissionais
+      // Buscar feriados da clínica
+      try {
+        const { data: holidays } = await supabase
+          .from("clinic_holidays")
+          .select("holiday_date, is_recurring, recurring_month, recurring_day")
+          .eq("clinic_id", data.clinicId);
+        
+        if (holidays && holidays.length > 0) {
+          const dates = new Set<string>();
+          holidays.forEach(h => {
+            if (h.is_recurring && h.recurring_month && h.recurring_day) {
+              // Para feriados recorrentes, gerar datas para os próximos 12 meses
+              const now = new Date();
+              for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+                const m = String(h.recurring_month).padStart(2, '0');
+                const d = String(h.recurring_day).padStart(2, '0');
+                dates.add(`${y}-${m}-${d}`);
+              }
+            } else {
+              dates.add(h.holiday_date);
+            }
+          });
+          setHolidayDates(dates);
+        }
+      } catch (err) {
+        console.error("[MobileBooking] Erro ao buscar feriados:", err);
+      }
       setProfessionals(data.professionals || []);
 
       // Setar dependentes
@@ -253,13 +280,14 @@ export default function MobileBookingPage() {
     
     const dayName = dayMap[getDay(date)];
     const dateStr = format(date, "yyyy-MM-dd");
+
+    // Verificar se é feriado
+    if (holidayDates.has(dateStr)) return false;
     
     // Check if this date is within any active block and the day is enabled
     return blocks.some(block => {
-      // Check if day of week matches
       if (!block.days.includes(dayName)) return false;
       
-      // Check date range if specified
       if (block.start_date && block.end_date) {
         return dateStr >= block.start_date && dateStr <= block.end_date;
       }
