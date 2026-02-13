@@ -99,25 +99,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.info("[AUTH-PANIC] loadUserData start", { userId });
     
     try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Fetch profile and super_admin status in parallel
+      const [profileResult, saResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('super_admins').select('id').eq('user_id', userId).maybeSingle(),
+      ]);
       
-      if (profileData) {
-        setProfile(profileData as Profile);
+      if (profileResult.data) {
+        setProfile(profileResult.data as Profile);
       }
 
-      const { data: saData } = await supabase
-        .from('super_admins')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      setIsSuperAdmin(!!saData);
+      const isSA = !!saResult.data;
+      setIsSuperAdmin(isSA);
 
-      const { data: rolesData } = await supabase
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select(`
           clinic_id,
@@ -132,6 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         `)
         .eq('user_id', userId);
 
+      if (rolesError) {
+        console.error('[AUTH-PANIC] rolesData error:', rolesError);
+      }
+
       if (rolesData && rolesData.length > 0) {
         const roles = rolesData
           .filter((item) => item.clinic)
@@ -143,37 +142,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clinic: item.clinic as unknown as Clinic,
           }));
 
-        setUserRoles(roles);
-        if (!currentClinic && roles[0]?.clinic) {
-          setCurrentClinic(roles[0].clinic);
-        }
-      } else if (saData) {
-        const { data: clinics } = await supabase
-          .from('clinics')
-          .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
-          .order('name');
-
-        if (clinics) {
-          const roles: UserRole[] = clinics.map((c) => ({
-            clinic_id: c.id,
-            role: 'admin' as const,
-            access_group_id: null,
-            professional_id: null,
-            clinic: c as Clinic,
-          }));
-
+        if (roles.length > 0) {
           setUserRoles(roles);
           if (!currentClinic && roles[0]?.clinic) {
             setCurrentClinic(roles[0].clinic);
           }
+        } else if (isSA) {
+          // Roles existed but clinic join filtered them out - fallback for super admin
+          await loadAllClinicsForSuperAdmin();
         }
+      } else if (isSA) {
+        await loadAllClinicsForSuperAdmin();
       }
 
       setRolesLoaded(true);
       console.info("[AUTH-PANIC] loadUserData complete");
     } catch (err) {
       console.error('[AUTH-PANIC] loadUserData error:', err);
+      // Reset dataLoadedRef so it can be retried
+      dataLoadedRef.current = false;
       setRolesLoaded(true);
+    }
+  }, [currentClinic]);
+
+  const loadAllClinicsForSuperAdmin = useCallback(async () => {
+    const { data: clinics } = await supabase
+      .from('clinics')
+      .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
+      .order('name');
+
+    if (clinics && clinics.length > 0) {
+      const roles: UserRole[] = clinics.map((c) => ({
+        clinic_id: c.id,
+        role: 'admin' as const,
+        access_group_id: null,
+        professional_id: null,
+        clinic: c as Clinic,
+      }));
+
+      setUserRoles(roles);
+      if (!currentClinic && roles[0]?.clinic) {
+        setCurrentClinic(roles[0].clinic);
+      }
     }
   }, [currentClinic]);
 
