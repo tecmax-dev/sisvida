@@ -221,34 +221,25 @@ export default function MobileBookingPage() {
       // Guardar clinicId no ref para uso no submit
       clinicIdRef.current = data.clinicId;
 
-      // Buscar feriados da clínica
-      try {
-        const { data: holidays } = await supabase
-          .from("clinic_holidays")
-          .select("holiday_date, is_recurring, recurring_month, recurring_day")
-          .eq("clinic_id", data.clinicId);
-        
-        if (holidays && holidays.length > 0) {
-          const dates = new Set<string>();
-          holidays.forEach(h => {
-            if (h.is_recurring && h.recurring_month && h.recurring_day) {
-              // Para feriados recorrentes, gerar datas para os próximos 12 meses
-              const now = new Date();
-              for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
-                const m = String(h.recurring_month).padStart(2, '0');
-                const d = String(h.recurring_day).padStart(2, '0');
-                dates.add(`${y}-${m}-${d}`);
-              }
-            } else {
-              dates.add(h.holiday_date);
+      // Processar feriados retornados pela Edge Function
+      if (data.holidays && data.holidays.length > 0) {
+        const dates = new Set<string>();
+        data.holidays.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            const now = new Date();
+            for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+              const m = String(h.recurring_month).padStart(2, '0');
+              const d = String(h.recurring_day).padStart(2, '0');
+              dates.add(`${y}-${m}-${d}`);
             }
-          });
-          setHolidayDates(dates);
-        }
-      } catch (err) {
-        console.error("[MobileBooking] Erro ao buscar feriados:", err);
+          } else {
+            dates.add(h.holiday_date);
+          }
+        });
+        setHolidayDates(dates);
       }
-      setProfessionals(data.professionals || []);
+
+      // Setar profissionais
 
       // Setar dependentes
       setDependents(data.dependents || []);

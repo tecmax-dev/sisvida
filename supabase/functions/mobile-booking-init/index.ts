@@ -108,7 +108,8 @@ serve(async (req) => {
       clinicConfigResult,
       professionalsResult,
       patientResult,
-      dependentsResult
+      dependentsResult,
+      holidaysResult
     ] = await Promise.all([
       // Query 1: Config da clínica
       supabase
@@ -146,7 +147,13 @@ serve(async (req) => {
         .single(),
 
       // Query 4: Dependentes via RPC
-      supabase.rpc("get_patient_dependents", { p_patient_id: patientId })
+      supabase.rpc("get_patient_dependents", { p_patient_id: patientId }),
+
+      // Query 5: Feriados da clínica
+      supabase
+        .from("clinic_holidays")
+        .select("holiday_date, is_recurring, recurring_month, recurring_day")
+        .eq("clinic_id", clinicId)
     ]);
 
     // Processar resultados
@@ -190,6 +197,14 @@ serve(async (req) => {
 
     const dependents = dependentsResult.data || [];
 
+    // Processar feriados
+    const holidays = (holidaysResult.data || []).map((h: any) => ({
+      holiday_date: h.holiday_date,
+      is_recurring: h.is_recurring,
+      recurring_month: h.recurring_month,
+      recurring_day: h.recurring_day,
+    }));
+
     // Log de performance
     const elapsed = Date.now() - startTime;
     console.log(`[mobile-booking-init] Completed in ${elapsed}ms (patient: ${patientId})`);
@@ -204,6 +219,7 @@ serve(async (req) => {
         noActiveCard: false,
         cardExpired: false,
         bookingMonthsAhead,
+        holidays,
         _debug: { elapsed_ms: elapsed }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
