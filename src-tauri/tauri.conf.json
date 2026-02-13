@@ -2,8 +2,8 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "https://sisvida.lovable.app/app/login",
-    "distDir": "https://sisvida.lovable.app/app/login"
+    "devPath": "https://sisvida.lovable.app/auth",
+    "distDir": "https://sisvida.lovable.app/auth"
   },
   "package": {
     "productName": "Eclini",
