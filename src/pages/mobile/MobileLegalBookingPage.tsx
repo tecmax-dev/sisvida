@@ -95,7 +95,7 @@ export default function MobileLegalBookingPage() {
   const [uploadingPayslip, setUploadingPayslip] = useState(false);
   const [payslipFile, setPayslipFile] = useState<File | null>(null);
   const [payslipSubmitted, setPayslipSubmitted] = useState(false);
-  
+  const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -258,6 +258,33 @@ export default function MobileLegalBookingPage() {
       if (serviceTypesData && serviceTypesData.length === 1) {
         setSelectedServiceTypeId(serviceTypesData[0].id);
       }
+
+      // Buscar feriados da clínica
+      try {
+        const { data: holidays } = await supabase
+          .from("clinic_holidays")
+          .select("holiday_date, is_recurring, recurring_month, recurring_day")
+          .eq("clinic_id", authClinicId);
+        
+        if (holidays && holidays.length > 0) {
+          const dates = new Set<string>();
+          holidays.forEach(h => {
+            if (h.is_recurring && h.recurring_month && h.recurring_day) {
+              const now = new Date();
+              for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+                const m = String(h.recurring_month).padStart(2, '0');
+                const d = String(h.recurring_day).padStart(2, '0');
+                dates.add(`${y}-${m}-${d}`);
+              }
+            } else {
+              dates.add(h.holiday_date);
+            }
+          });
+          setHolidayDates(dates);
+        }
+      } catch (err) {
+        console.error("[MobileLegalBooking] Erro ao buscar feriados:", err);
+      }
     } catch (err) {
       console.error("Error loading data:", err);
       toast({
@@ -281,6 +308,10 @@ export default function MobileLegalBookingPage() {
     
     const profSchedules = getProfessionalSchedules(selectedProfessionalId);
     if (profSchedules.length === 0) return false;
+
+    // Verificar se é feriado
+    const dateStr = format(date, "yyyy-MM-dd");
+    if (holidayDates.has(dateStr)) return false;
     
     const dayOfWeek = date.getDay();
     return profSchedules.some(s => s.day_of_week === dayOfWeek && s.is_active);
