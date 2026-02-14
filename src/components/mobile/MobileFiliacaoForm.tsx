@@ -321,6 +321,15 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       return;
     }
 
+    if (!employerData || !employerData.cnpj) {
+      toast({
+        title: "Empresa obrigatória",
+        description: "Por favor, informe a empresa onde trabalha.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!signatureUrl) {
       toast({
         title: "Assinatura obrigatória",
