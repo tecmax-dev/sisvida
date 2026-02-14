@@ -237,6 +237,8 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "view_catalog",
     "view_budgets",
     "manage_budgets",
+    // NOTE: receptionist does NOT have view_medical_records, manage_medical_records,
+    // view_prescriptions, manage_prescriptions - these require explicit access group assignment
   ],
   professional: [
     "view_dashboard",

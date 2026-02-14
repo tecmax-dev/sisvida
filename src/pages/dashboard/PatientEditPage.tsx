@@ -133,7 +133,7 @@ export default function PatientEditPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentClinic } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, currentRole } = usePermissions();
   const { openModal, closeModal, isModalOpen, getModalData } = useModal();
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
@@ -171,16 +171,20 @@ export default function PatientEditPage() {
   // Apenas admins podem desbloquear pacientes (owner, admin ou super admin)
   const canUnblockPatients = isAdmin;
   
+  // Secretárias (receptionist) NUNCA podem acessar prontuário/odontograma,
+  // mesmo que tenham grupo de acesso configurado incorretamente.
+  const isReceptionist = currentRole === 'receptionist';
+  
   // Determine which tabs to hide based on permissions
   const hiddenTabs: PatientTab[] = [];
-  if (!canViewMedicalRecords) {
+  if (!canViewMedicalRecords || isReceptionist) {
     hiddenTabs.push('prontuario', 'anexos');
   }
-  if (!canViewPrescriptions) {
+  if (!canViewPrescriptions || isReceptionist) {
     hiddenTabs.push('prescricoes');
   }
-  // Odontograma visible only for admins
-  if (!canManagePatients) {
+  // Odontograma: requires explicit permission AND cannot be receptionist
+  if (!canManagePatients || isReceptionist) {
     hiddenTabs.push('odontograma');
   }
 
