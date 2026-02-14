@@ -1647,51 +1647,42 @@ export default function CalendarPage() {
         }
       }
 
-      // Check waiting list and notify first patient
-      if (currentClinic) {
-        const { data: waitingPatients } = await supabase
-          .from('waiting_list')
-          .select('*, patient:patients(id, name, phone)')
-          .eq('clinic_id', currentClinic.id)
-          .eq('is_active', true)
-          .order('created_at', { ascending: true });
+      // Check waiting list and auto-notify first matching patient
+      if (currentClinic && cancellingAppointment) {
+        try {
+          const { notifyNextInWaitingList } = await import('@/lib/waitingListUtils');
+          const result = await notifyNextInWaitingList(
+            currentClinic.id,
+            currentClinic.name,
+            {
+              appointmentDate: cancellingAppointment.appointment_date,
+              startTime: cancellingAppointment.start_time,
+              professionalId: cancellingAppointment.professional_id,
+              professionalName: cancellingAppointment.professional?.name || 'Profissional',
+            }
+          );
 
-        if (waitingPatients && waitingPatients.length > 0) {
-          const firstWaiting = waitingPatients[0];
-          const formattedDate = new Date(cancellingAppointment.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR');
-          
-          // Try to send WhatsApp notification
-          if (firstWaiting.patient?.phone) {
-            const message = `Olá ${firstWaiting.patient.name}! 🎉\n\n` +
-              `Temos uma boa notícia! Uma vaga abriu para o dia ${formattedDate} às ${cancellingAppointment.start_time.slice(0, 5)}.\n\n` +
-              `Entre em contato conosco o mais rápido possível para confirmar o agendamento.\n\n` +
-              `Atenciosamente,\n${currentClinic.name}`;
-
-            sendWhatsAppMessage({
-              phone: firstWaiting.patient.phone,
-              message,
-              clinicId: currentClinic.id,
-              type: 'custom',
-            }).then(result => {
-              if (result.success) {
-                toast({
-                  title: "Lista de espera notificada",
-                  description: `${firstWaiting.patient.name} foi notificado sobre a vaga disponível.`,
-                });
-              }
-            }).catch(err => {
-              console.error('Error sending waiting list notification:', err);
+          if (result.notified) {
+            toast({
+              title: "Lista de espera notificada",
+              description: `${result.patientName} foi notificado sobre a vaga disponível via WhatsApp.`,
+            });
+          } else if (result.waitingCount > 0) {
+            toast({
+              title: "Agendamento cancelado",
+              description: `Vaga liberada! ${result.waitingCount} paciente(s) na lista de espera.`,
+            });
+          } else {
+            toast({
+              title: "Agendamento cancelado",
+              description: "A consulta foi cancelada com sucesso.",
             });
           }
-
+        } catch (err) {
+          console.error('[CalendarPage] Error notifying waiting list:', err);
           toast({
             title: "Agendamento cancelado",
-            description: `Vaga liberada! ${waitingPatients.length} paciente(s) na lista de espera.`,
-          });
-        } else {
-          toast({
-            title: "Agendamento cancelado",
-            description: "A consulta foi cancelada com sucesso.",
+            description: "A consulta foi cancelada, mas houve erro ao verificar a lista de espera.",
           });
         }
       } else {
@@ -1785,10 +1776,45 @@ const updateData: Record<string, any> = {
         }
       }
 
-      toast({
-        title: "Status atualizado",
-        description: `Agendamento marcado como ${statusConfig[newStatus as keyof typeof statusConfig]?.label || newStatus}.`,
-      });
+      // When marking as no_show, also check waiting list
+      if (newStatus === 'no_show' && currentClinic) {
+        try {
+          const { notifyNextInWaitingList } = await import('@/lib/waitingListUtils');
+          const result = await notifyNextInWaitingList(
+            currentClinic.id,
+            currentClinic.name,
+            {
+              appointmentDate: appointment.appointment_date,
+              startTime: appointment.start_time,
+              professionalId: appointment.professional_id,
+              professionalName: appointment.professional?.name || 'Profissional',
+            }
+          );
+
+          if (result.notified) {
+            toast({
+              title: "Falta registrada + Lista de espera notificada",
+              description: `${result.patientName} foi notificado sobre a vaga disponível.`,
+            });
+          } else {
+            toast({
+              title: "Status atualizado",
+              description: `Agendamento marcado como ${statusConfig[newStatus as keyof typeof statusConfig]?.label || newStatus}.`,
+            });
+          }
+        } catch (err) {
+          console.error('[CalendarPage] Error notifying waiting list on no_show:', err);
+          toast({
+            title: "Status atualizado",
+            description: `Agendamento marcado como ${statusConfig[newStatus as keyof typeof statusConfig]?.label || newStatus}.`,
+          });
+        }
+      } else {
+        toast({
+          title: "Status atualizado",
+          description: `Agendamento marcado como ${statusConfig[newStatus as keyof typeof statusConfig]?.label || newStatus}.`,
+        });
+      }
 
       fetchAppointments();
     } catch (error: any) {

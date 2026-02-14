@@ -83,6 +83,14 @@ interface WaitingListEntry {
   notified_at: string | null;
   preferred_dates: string[] | null;
   preferred_times: string[] | null;
+  notification_status: string | null;
+  offered_appointment_date: string | null;
+  offered_appointment_time: string | null;
+  offered_professional_id: string | null;
+  offered_professional_name: string | null;
+  slot_offered_at: string | null;
+  confirmed_at: string | null;
+  skipped_at: string | null;
   patient: { id: string; name: string; phone: string };
   professional: { name: string } | null;
 }
@@ -130,8 +138,16 @@ function WaitingListContent() {
         notified_at,
         preferred_dates,
         preferred_times,
-        patient:patients (id, name, phone),
-        professional:professionals (name)
+        notification_status,
+        offered_appointment_date,
+        offered_appointment_time,
+        offered_professional_id,
+        offered_professional_name,
+        slot_offered_at,
+        confirmed_at,
+        skipped_at,
+        patient:patients!waiting_list_patient_id_fkey (id, name, phone),
+        professional:professionals!waiting_list_professional_id_fkey (name)
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('is_active', true)
@@ -247,17 +263,73 @@ function WaitingListContent() {
   };
 
   const handleSchedulePatient = async (entry: WaitingListEntry) => {
-    // Mark as inactive (will be scheduled through calendar)
+    // Mark as inactive and confirmed
     await supabase
       .from('waiting_list')
-      .update({ is_active: false })
+      .update({ 
+        is_active: false, 
+        notification_status: 'confirmed',
+        confirmed_at: new Date().toISOString(),
+      })
       .eq('id', entry.id);
 
     toast({ 
-      title: "Paciente movido para agendamento", 
+      title: "Paciente confirmado!", 
       description: "Acesse a agenda para criar a consulta" 
     });
     fetchWaitingList();
+  };
+
+  const handleSkipPatient = async (entry: WaitingListEntry) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Mark current patient as skipped, reset slot offer
+      await supabase
+        .from('waiting_list')
+        .update({ 
+          notification_status: 'skipped',
+          skipped_at: new Date().toISOString(),
+          skipped_by: user?.id || null,
+          is_active: false,
+        })
+        .eq('id', entry.id);
+
+      // Auto-notify next in line if there's an offered slot
+      if (entry.offered_appointment_date && entry.offered_appointment_time && entry.offered_professional_name && currentClinic) {
+        const { notifyNextInWaitingList } = await import('@/lib/waitingListUtils');
+        const result = await notifyNextInWaitingList(
+          currentClinic.id,
+          currentClinic.name,
+          {
+            appointmentDate: entry.offered_appointment_date,
+            startTime: entry.offered_appointment_time,
+            professionalId: entry.offered_professional_id || '',
+            professionalName: entry.offered_professional_name,
+          }
+        );
+
+        if (result.notified) {
+          toast({
+            title: "Próximo da fila notificado",
+            description: `${result.patientName} foi notificado sobre a vaga.`,
+          });
+        } else {
+          toast({
+            title: "Paciente pulado",
+            description: result.waitingCount > 0 
+              ? "Não foi possível notificar o próximo. Verifique a lista."
+              : "Não há mais pacientes na lista de espera.",
+          });
+        }
+      } else {
+        toast({ title: "Paciente removido da fila" });
+      }
+
+      fetchWaitingList();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
   };
 
   const resetForm = () => {
@@ -416,68 +488,106 @@ function WaitingListContent() {
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
                       {index + 1}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{entry.patient.name}</h3>
-                      <p className="text-sm text-muted-foreground">{entry.patient.phone}</p>
-                      {entry.professional && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Preferência: {entry.professional.name}
-                        </p>
-                      )}
-                      {entry.preferred_times && entry.preferred_times.length > 0 && (
-                        <div className="flex gap-1 mt-2">
-                          {entry.preferred_times.map((time) => (
-                            <Badge key={time} variant="secondary" className="text-xs">
-                              {time}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      {entry.notes && (
-                        <p className="text-sm text-muted-foreground mt-2 italic">
-                          {entry.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {entry.notified_at && (
-                      <Badge variant="outline" className="text-xs">
-                        <Bell className="h-3 w-3 mr-1" />
-                        Notificado
-                      </Badge>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleNotifyPatient(entry)}
-                    >
-                      <Send className="h-4 w-4 mr-1" />
-                      Notificar
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleSchedulePatient(entry)}
-                    >
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Agendar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => setDeleteId(entry.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground">
-                    Na lista desde {new Date(entry.created_at).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
+                     <div>
+                       <h3 className="font-semibold text-foreground">{entry.patient.name}</h3>
+                       <p className="text-sm text-muted-foreground">{entry.patient.phone}</p>
+                       {entry.professional && (
+                         <p className="text-sm text-muted-foreground mt-1">
+                           Preferência: {entry.professional.name}
+                         </p>
+                       )}
+                       {entry.preferred_times && entry.preferred_times.length > 0 && (
+                         <div className="flex gap-1 mt-2">
+                           {entry.preferred_times.map((time) => (
+                             <Badge key={time} variant="secondary" className="text-xs">
+                               {time}
+                             </Badge>
+                           ))}
+                         </div>
+                       )}
+                       {/* Slot offered info */}
+                       {entry.notification_status === 'notified' && entry.offered_appointment_date && (
+                         <div className="mt-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                           <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                             🔔 Vaga oferecida
+                           </p>
+                           <p className="text-xs text-amber-700 dark:text-amber-400">
+                             {new Date(entry.offered_appointment_date + 'T12:00:00').toLocaleDateString('pt-BR')} às {entry.offered_appointment_time?.slice(0, 5)} — {entry.offered_professional_name}
+                           </p>
+                           {entry.slot_offered_at && (
+                             <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                               Notificado em {new Date(entry.slot_offered_at).toLocaleString('pt-BR')}
+                             </p>
+                           )}
+                         </div>
+                       )}
+                       {entry.notes && (
+                         <p className="text-sm text-muted-foreground mt-2 italic">
+                           {entry.notes}
+                         </p>
+                       )}
+                     </div>
+                   </div>
+                   <div className="flex items-center gap-2 flex-wrap">
+                     {/* Status badge */}
+                     {entry.notification_status === 'notified' && (
+                       <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                         <Bell className="h-3 w-3 mr-1" />
+                         Aguardando resposta
+                       </Badge>
+                     )}
+                     {entry.notified_at && entry.notification_status !== 'notified' && (
+                       <Badge variant="outline" className="text-xs">
+                         <Bell className="h-3 w-3 mr-1" />
+                         Notificado
+                       </Badge>
+                     )}
+
+                     {/* Skip button - only for notified entries */}
+                     {entry.notification_status === 'notified' && (
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                         onClick={() => handleSkipPatient(entry)}
+                       >
+                         <User className="h-4 w-4 mr-1" />
+                         Pular → Próximo
+                       </Button>
+                     )}
+
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => handleNotifyPatient(entry)}
+                     >
+                       <Send className="h-4 w-4 mr-1" />
+                       Notificar
+                     </Button>
+                     <Button
+                       variant="default"
+                       size="sm"
+                       onClick={() => handleSchedulePatient(entry)}
+                     >
+                       <CheckCircle2 className="h-4 w-4 mr-1" />
+                       Confirmar
+                     </Button>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="text-destructive"
+                       onClick={() => setDeleteId(entry.id)}
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 </div>
+                 <div className="mt-4 pt-4 border-t border-border">
+                   <p className="text-xs text-muted-foreground">
+                     Na lista desde {new Date(entry.created_at).toLocaleDateString('pt-BR')}
+                     {entry.notification_status === 'notified' && ' • 🟡 Aguardando confirmação'}
+                   </p>
+                 </div>
               </CardContent>
             </Card>
           ))}
