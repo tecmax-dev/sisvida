@@ -16,11 +16,12 @@ export default function PatientOdontogramPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, currentRole } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
 
-  const isAdmin = hasPermission('manage_patients');
+  const isReceptionist = currentRole === 'receptionist';
+  const isAdmin = hasPermission('manage_patients') && !isReceptionist;
 
   useEffect(() => {
     if (!isAdmin) {
