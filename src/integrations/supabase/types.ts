@@ -14200,18 +14200,26 @@ export type Database = {
       waiting_list: {
         Row: {
           clinic_id: string
+          confirmed_at: string | null
           created_at: string
           id: string
           is_active: boolean | null
           notes: string | null
           notification_sent: boolean | null
           notification_sent_at: string | null
+          notification_status: string | null
           notified_at: string | null
+          offered_appointment_date: string | null
+          offered_appointment_time: string | null
+          offered_professional_id: string | null
+          offered_professional_name: string | null
           patient_id: string
           preferred_dates: string[] | null
           preferred_times: string[] | null
           professional_id: string | null
           queue_id: string | null
+          skipped_at: string | null
+          skipped_by: string | null
           slot_expires_at: string | null
           slot_offered_at: string | null
           ticket_number: number | null
@@ -14219,18 +14227,26 @@ export type Database = {
         }
         Insert: {
           clinic_id: string
+          confirmed_at?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
           notes?: string | null
           notification_sent?: boolean | null
           notification_sent_at?: string | null
+          notification_status?: string | null
           notified_at?: string | null
+          offered_appointment_date?: string | null
+          offered_appointment_time?: string | null
+          offered_professional_id?: string | null
+          offered_professional_name?: string | null
           patient_id: string
           preferred_dates?: string[] | null
           preferred_times?: string[] | null
           professional_id?: string | null
           queue_id?: string | null
+          skipped_at?: string | null
+          skipped_by?: string | null
           slot_expires_at?: string | null
           slot_offered_at?: string | null
           ticket_number?: number | null
@@ -14238,18 +14254,26 @@ export type Database = {
         }
         Update: {
           clinic_id?: string
+          confirmed_at?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
           notes?: string | null
           notification_sent?: boolean | null
           notification_sent_at?: string | null
+          notification_status?: string | null
           notified_at?: string | null
+          offered_appointment_date?: string | null
+          offered_appointment_time?: string | null
+          offered_professional_id?: string | null
+          offered_professional_name?: string | null
           patient_id?: string
           preferred_dates?: string[] | null
           preferred_times?: string[] | null
           professional_id?: string | null
           queue_id?: string | null
+          skipped_at?: string | null
+          skipped_by?: string | null
           slot_expires_at?: string | null
           slot_offered_at?: string | null
           ticket_number?: number | null
@@ -14261,6 +14285,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiting_list_offered_professional_id_fkey"
+            columns: ["offered_professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
           {
