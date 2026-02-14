@@ -94,7 +94,6 @@ export function BudgetRevenueDialog({ open, onOpenChange, revenue, onSave, isSav
       month_07: Number(form.month_07), month_08: Number(form.month_08),
       month_09: Number(form.month_09), month_10: Number(form.month_10),
       month_11: Number(form.month_11), month_12: Number(form.month_12),
-      total_amount: totalAmount,
       is_locked: false,
     };
 
