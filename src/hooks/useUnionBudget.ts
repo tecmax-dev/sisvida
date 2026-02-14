@@ -225,7 +225,8 @@ export function useUnionBudgetDetail(exerciseId: string | undefined, clinicId: s
 
   const createRevenueMutation = useMutation({
     mutationFn: async (revenue: Partial<BudgetRevenue>) => {
-      const { data, error } = await db.from("union_budget_revenues").insert({ ...revenue, budget_version_id: currentVersion?.id, clinic_id: clinicId, created_by: user?.id }).select().single();
+      const { total_amount, id, created_at, updated_at, category_name, chart_account_name, cost_center_name, ...cleanRevenue } = revenue as any;
+      const { data, error } = await db.from("union_budget_revenues").insert({ ...cleanRevenue, budget_version_id: currentVersion?.id, clinic_id: clinicId, created_by: user?.id }).select().single();
       if (error) throw error;
       return data;
     },
@@ -235,7 +236,8 @@ export function useUnionBudgetDetail(exerciseId: string | undefined, clinicId: s
 
   const updateRevenueMutation = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<BudgetRevenue> & { id: string }) => {
-      const { data, error } = await db.from("union_budget_revenues").update(updates).eq("id", id).select().single();
+      const { total_amount, created_at, updated_at, category_name, chart_account_name, cost_center_name, ...cleanUpdates } = updates as any;
+      const { data, error } = await db.from("union_budget_revenues").update(cleanUpdates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -251,7 +253,8 @@ export function useUnionBudgetDetail(exerciseId: string | undefined, clinicId: s
 
   const createExpenseMutation = useMutation({
     mutationFn: async (expense: Partial<BudgetExpense>) => {
-      const { data, error } = await db.from("union_budget_expenses").insert({ ...expense, budget_version_id: currentVersion?.id, clinic_id: clinicId, created_by: user?.id }).select().single();
+      const { total_amount, id, created_at, updated_at, category_name, chart_account_name, cost_center_name, supplier_name, ...cleanExpense } = expense as any;
+      const { data, error } = await db.from("union_budget_expenses").insert({ ...cleanExpense, budget_version_id: currentVersion?.id, clinic_id: clinicId, created_by: user?.id }).select().single();
       if (error) throw error;
       return data;
     },
@@ -261,7 +264,8 @@ export function useUnionBudgetDetail(exerciseId: string | undefined, clinicId: s
 
   const updateExpenseMutation = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<BudgetExpense> & { id: string }) => {
-      const { data, error } = await db.from("union_budget_expenses").update(updates).eq("id", id).select().single();
+      const { total_amount, created_at, updated_at, category_name, chart_account_name, cost_center_name, supplier_name, ...cleanUpdates } = updates as any;
+      const { data, error } = await db.from("union_budget_expenses").update(cleanUpdates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
