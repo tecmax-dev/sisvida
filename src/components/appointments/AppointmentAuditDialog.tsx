@@ -81,16 +81,63 @@ export function AppointmentAuditDialog({
       if (appError) throw appError;
       setAppointmentDetails(appointment);
 
-      // Evento de criação
-      // Usar parseISO para datas no formato YYYY-MM-DD para evitar timezone shift
+      // 2. Buscar detalhes do usuário que criou o agendamento
+      let creatorName = 'Sócio (App PWA)';
+      let creatorRole = 'Sócio';
+      let creatorEmail = '';
+      let createdVia = 'App Mobile (PWA)';
+
+      if (appointment.created_by) {
+        // Agendamento feito pelo painel - buscar dados do usuário
+        const [profileResult, roleResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('user_id', appointment.created_by)
+            .maybeSingle(),
+          supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', appointment.created_by)
+            .eq('clinic_id', appointment.clinic_id)
+            .maybeSingle(),
+        ]);
+
+        const profile = profileResult.data;
+        const userRole = roleResult.data;
+
+        creatorName = profile?.name || 'Usuário do Sistema';
+        creatorEmail = profile?.email || '';
+        createdVia = 'Painel do Sistema';
+
+        const roleLabels: Record<string, string> = {
+          owner: 'Proprietário',
+          admin: 'Administrador',
+          receptionist: 'Recepcionista',
+          secretary: 'Secretário(a)',
+          professional: 'Profissional',
+        };
+        creatorRole = roleLabels[userRole?.role || ''] || userRole?.role || 'Operador';
+      }
+
+      // Evento de criação com dados completos do criador
       const appointmentDateParsed = parseISO(appointment.appointment_date);
+      const createdAtDate = new Date(appointment.created_at);
       
+      const creationDetails = [
+        `Consulta agendada para ${format(appointmentDateParsed, "dd/MM/yyyy", { locale: ptBR })} às ${appointment.start_time?.substring(0, 5)} com ${appointment.professional?.name || 'Profissional'}`,
+        `👤 Criado por: ${creatorName}${creatorRole ? ` (${creatorRole})` : ''}`,
+        `📱 Via: ${createdVia}`,
+        creatorEmail ? `📧 ${creatorEmail}` : '',
+        `🕐 Acesso em: ${format(createdAtDate, "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`,
+      ].filter(Boolean).join('\n');
+
       auditEvents.push({
         id: `creation-${appointment.id}`,
-        timestamp: new Date(appointment.created_at),
+        timestamp: createdAtDate,
         type: 'creation',
         title: 'Agendamento Criado',
-        description: `Consulta agendada para ${format(appointmentDateParsed, "dd/MM/yyyy", { locale: ptBR })} às ${appointment.start_time?.substring(0, 5)} com ${appointment.professional?.name || 'Profissional'}`,
+        description: creationDetails,
         icon: <Calendar className="h-4 w-4" />,
         color: 'bg-blue-500',
       });
@@ -322,9 +369,9 @@ export function AppointmentAuditDialog({
                         {format(event.timestamp, "dd/MM/yyyy HH:mm", { locale: ptBR })}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">
+                    <div className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">
                       {event.description}
-                    </p>
+                    </div>
                   </div>
                 </div>
               ))}
