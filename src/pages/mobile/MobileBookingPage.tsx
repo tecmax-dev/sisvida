@@ -240,6 +240,7 @@ export default function MobileBookingPage() {
       }
 
       // Setar profissionais
+      setProfessionals(data.professionals || []);
 
       // Setar dependentes
       setDependents(data.dependents || []);
