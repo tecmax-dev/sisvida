@@ -145,6 +145,7 @@ export type Permission =
   | "view_audit"
   // Union Module permissions
   | "union_module_access"
+  | "manage_card_expiry"
   // Legacy aliases (for backward compatibility)
   | "manage_cash_registers"
   | "manage_categories"

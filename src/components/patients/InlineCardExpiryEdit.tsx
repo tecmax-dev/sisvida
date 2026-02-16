@@ -7,6 +7,7 @@ import { format, parseISO, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface InlineCardExpiryEditProps {
   entityId: string;
@@ -24,6 +25,8 @@ export function InlineCardExpiryEdit({
   onUpdate,
 }: InlineCardExpiryEditProps) {
   const { toast } = useToast();
+  const { hasPermission, isAdmin } = usePermissions();
+  const canEditExpiry = isAdmin || hasPermission("manage_card_expiry");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newDate, setNewDate] = useState("");
@@ -50,10 +53,10 @@ export function InlineCardExpiryEdit({
   }, [isEditing]);
 
   const handleStartEdit = () => {
+    if (!canEditExpiry) return;
     if (currentExpiryDate) {
       setNewDate(currentExpiryDate.split("T")[0]);
     } else {
-      // Default to 1 year from now
       const oneYearFromNow = new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
       setNewDate(oneYearFromNow.toISOString().split("T")[0]);
@@ -212,6 +215,9 @@ export function InlineCardExpiryEdit({
   }
 
   if (!currentExpiryDate) {
+    if (!canEditExpiry) {
+      return <span className="text-muted-foreground text-sm">—</span>;
+    }
     return (
       <button
         onClick={handleStartEdit}
@@ -227,21 +233,29 @@ export function InlineCardExpiryEdit({
     locale: ptBR,
   });
 
+  const badgeContent = (
+    <Badge
+      variant={isExpired ? "destructive" : isExpiringSoon ? "secondary" : "outline"}
+      className={`text-xs ${
+        isExpiringSoon && !isExpired ? "bg-warning text-warning-foreground" : ""
+      }`}
+    >
+      {isExpired && <AlertCircle className="h-3 w-3 mr-1" />}
+      {isExpired ? "Vencida" : formattedDate}
+    </Badge>
+  );
+
+  if (!canEditExpiry) {
+    return <span>{badgeContent}</span>;
+  }
+
   return (
     <button
       onClick={handleStartEdit}
       className="cursor-pointer hover:opacity-80 transition-opacity"
       title="Clique para editar validade"
     >
-      <Badge
-        variant={isExpired ? "destructive" : isExpiringSoon ? "secondary" : "outline"}
-        className={`text-xs ${
-          isExpiringSoon && !isExpired ? "bg-warning text-warning-foreground" : ""
-        }`}
-      >
-        {isExpired && <AlertCircle className="h-3 w-3 mr-1" />}
-        {isExpired ? "Vencida" : formattedDate}
-      </Badge>
+      {badgeContent}
     </button>
   );
 }
