@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true, // Tomar controle imediatamente - atualizações mais rápidas
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260215a', revision: null }
+          { url: '/cache-bust-v20260216b', revision: null }
         ],
         runtimeCaching: [
           // Popup notices - SEMPRE buscar da rede (sem cache)
