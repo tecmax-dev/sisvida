@@ -115,11 +115,11 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
 
         {/* Image */}
         {currentNotice.image_url && (
-          <div className="w-full flex-shrink-0 overflow-hidden" style={{ maxHeight: '55vh' }}>
+        <div className="w-full flex-shrink-0 overflow-hidden flex items-center justify-center bg-white">
             <img
               src={currentNotice.image_url}
               alt={currentNotice.title}
-              className="w-full h-full object-cover"
+              className="w-full max-h-[50vh] object-contain"
             />
           </div>
         )}
