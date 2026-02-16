@@ -103,7 +103,7 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[90vw] sm:max-w-sm p-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[90vw] sm:max-w-sm p-0 overflow-y-auto rounded-2xl max-h-[85vh] flex flex-col [&>button:last-child]:hidden">
         {/* Close button - always visible */}
         <button
           onClick={handleDismiss}
@@ -115,11 +115,11 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
 
         {/* Image */}
         {currentNotice.image_url && (
-        <div className="w-full flex-shrink-0 overflow-hidden flex items-center justify-center bg-white">
+        <div className="w-full flex-shrink-0">
             <img
               src={currentNotice.image_url}
               alt={currentNotice.title}
-              className="w-full max-h-[50vh] object-contain"
+              className="w-full h-auto object-contain"
             />
           </div>
         )}
