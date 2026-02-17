@@ -50,6 +50,7 @@ interface AppointmentRow {
   professional_specialty: string;
   procedure_name: string | null;
   procedure_price: number | null;
+  insurance_plan_name: string | null;
 }
 
 interface Professional {
@@ -162,7 +163,7 @@ function AppointmentReportsContent() {
           status,
           type,
           notes,
-          patient:patients!appointments_patient_id_fkey(name),
+          patient:patients!appointments_patient_id_fkey(name, insurance_plan_id, insurance_plan:insurance_plans(name)),
           professional:professionals!appointments_professional_id_fkey(name, specialty),
           procedure:procedures!appointments_procedure_id_fkey(name, price)
         `)
@@ -196,6 +197,7 @@ function AppointmentReportsContent() {
           professional_specialty: a.professional?.specialty || "—",
           procedure_name: a.procedure?.name || null,
           procedure_price: a.procedure?.price ?? null,
+          insurance_plan_name: a.patient?.insurance_plan?.name || null,
         }))
         .filter((r) => {
           if (specialty !== "all" && r.professional_specialty !== specialty) return false;
@@ -278,12 +280,13 @@ function AppointmentReportsContent() {
       a.professional_specialty,
       STATUS_LABELS[a.status] || a.status,
       TYPE_LABELS[a.type] || a.type,
+      a.insurance_plan_name || "Particular",
       a.procedure_price != null ? `R$ ${a.procedure_price.toFixed(2)}` : "—",
     ]);
 
     autoTable(doc, {
       startY: filters.length > 0 ? 40 : 36,
-      head: [["Data", "Horário", "Paciente", "Profissional", "Especialidade", "Status", "Tipo", "Valor"]],
+      head: [["Data", "Horário", "Paciente", "Profissional", "Especialidade", "Status", "Tipo", "Convênio", "Valor"]],
       body: tableData,
       theme: "striped",
       headStyles: { fillColor: [0, 128, 128], fontSize: 8 },
@@ -484,6 +487,7 @@ function AppointmentReportsContent() {
                       <TableHead>Especialidade</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Tipo</TableHead>
+                      <TableHead>Convênio</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -505,6 +509,7 @@ function AppointmentReportsContent() {
                           </Badge>
                         </TableCell>
                         <TableCell>{TYPE_LABELS[a.type] || a.type}</TableCell>
+                        <TableCell>{a.insurance_plan_name || "Particular"}</TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           {a.procedure_price != null ? `R$ ${a.procedure_price.toFixed(2)}` : "—"}
                         </TableCell>
