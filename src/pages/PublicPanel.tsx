@@ -6,8 +6,45 @@ import { Logo } from "@/components/layout/Logo";
 import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
 import { PanelBanner } from "@/hooks/usePanelBanners";
 
+// Play a notification chime using Web Audio API
+const playNotificationChime = (): Promise<void> => {
+  return new Promise((resolve) => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Play a pleasant two-tone chime
+      const playTone = (freq: number, startTime: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.4, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      const now = audioCtx.currentTime;
+      playTone(880, now, 0.3);        // A5
+      playTone(1100, now + 0.15, 0.3); // ~C#6
+      playTone(1320, now + 0.3, 0.4);  // E6
+
+      setTimeout(() => {
+        resolve();
+      }, 800);
+    } catch {
+      resolve();
+    }
+  });
+};
+
 // Text-to-speech function for call announcements
-const speakCallAnnouncement = (text: string) => {
+const speakCallAnnouncement = async (text: string) => {
+  // Play chime first
+  await playNotificationChime();
+
   if ('speechSynthesis' in window) {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
@@ -71,10 +108,21 @@ export default function PublicPanel() {
   const lastCallIdRef = useRef<string | null>(null);
   const hasInitializedRef = useRef(false);
 
+  const audioUnlockedRef = useRef(false);
+
+  // Unlock audio context on first user interaction
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      ctx.resume().then(() => ctx.close());
+      audioUnlockedRef.current = true;
+    } catch {}
+  }, []);
+
   // Load voices for TTS
   useEffect(() => {
     if ('speechSynthesis' in window) {
-      // Voices may load asynchronously
       window.speechSynthesis.getVoices();
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
@@ -233,7 +281,7 @@ export default function PublicPanel() {
         </div>
         <div className="flex items-center gap-6">
           <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
+            onClick={() => { unlockAudio(); setSoundEnabled(!soundEnabled); }}
             className="text-slate-400 hover:text-white transition-colors p-2"
             title={soundEnabled ? "Desativar som" : "Ativar som"}
           >
