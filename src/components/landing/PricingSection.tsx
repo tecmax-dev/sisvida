@@ -62,7 +62,15 @@ export function PricingSection() {
         })
       );
 
-      setPlans(plansWithFeatures.reverse());
+      // Sort: Essence first, Sob Medida last
+      const sorted = plansWithFeatures.sort((a, b) => {
+        const aIsSobMedida = a.name === 'Sob Medida' || Number(a.monthly_price) <= 0;
+        const bIsSobMedida = b.name === 'Sob Medida' || Number(b.monthly_price) <= 0;
+        if (aIsSobMedida && !bIsSobMedida) return 1;
+        if (!aIsSobMedida && bIsSobMedida) return -1;
+        return a.monthly_price - b.monthly_price;
+      });
+      setPlans(sorted);
     } catch (error) {
       console.error("Error fetching plans:", error);
     } finally {
