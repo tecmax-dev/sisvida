@@ -11,25 +11,25 @@ const playNotificationChime = (): Promise<void> => {
   return new Promise((resolve) => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Play a pleasant two-tone chime
-      const playTone = (freq: number, startTime: number, duration: number) => {
+      const now = audioCtx.currentTime;
+
+      // "Ding-dong" hospital-style bell
+      const playBell = (freq: number, start: number, dur: number) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.4, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-        osc.start(startTime);
-        osc.stop(startTime + duration);
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.5, start);
+        gain.gain.exponentialRampToValueAtTime(0.005, start + dur);
+        osc.start(start);
+        osc.stop(start + dur);
       };
 
-      const now = audioCtx.currentTime;
-      playTone(880, now, 0.3);        // A5
-      playTone(1100, now + 0.15, 0.3); // ~C#6
-      playTone(1320, now + 0.3, 0.4);  // E6
+      // Classic two-tone "ding-dong"
+      playBell(950, now, 0.5);
+      playBell(630, now + 0.5, 0.7);
 
       setTimeout(() => {
         resolve();
