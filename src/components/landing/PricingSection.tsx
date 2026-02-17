@@ -138,6 +138,7 @@ export function PricingSection() {
           {plans.map((plan, i) => {
             const isPopular = i === popularIndex && plans.length > 1;
             const monthlyPrice = plan.monthly_price;
+            const isSobMedida = plan.name === 'Sob Medida';
             const priceValue = isYearly ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
             const formattedPrice = priceValue.toLocaleString('pt-BR', {
               minimumFractionDigits: 2,
@@ -176,15 +177,21 @@ export function PricingSection() {
                 </div>
 
                 <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                      R$
-                    </span>
-                    <span className="text-5xl font-bold">{formattedPrice}</span>
-                  </div>
-                  <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                    /mês {isYearly && priceValue > 0 && "(cobrado anualmente)"}
-                  </span>
+                  {isSobMedida ? (
+                    <span className="text-3xl font-bold">Sob Medida</span>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                          R$
+                        </span>
+                        <span className="text-5xl font-bold">{formattedPrice}</span>
+                      </div>
+                      <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                        /mês {isYearly && priceValue > 0 && "(cobrado anualmente)"}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-8">
@@ -206,8 +213,8 @@ export function PricingSection() {
                   }`}
                   asChild
                 >
-                  <Link to="/cadastro">
-                    {priceValue === 0 ? "Começar grátis" : "Testar grátis"}
+                  <Link to={isSobMedida ? "https://wa.me/5500000000000" : "/cadastro"}>
+                    {isSobMedida ? "Vamos conversar" : "Testar grátis"}
                   </Link>
                 </Button>
               </div>
