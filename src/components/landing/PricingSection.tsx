@@ -62,7 +62,7 @@ export function PricingSection() {
         })
       );
 
-      setPlans(plansWithFeatures);
+      setPlans(plansWithFeatures.reverse());
     } catch (error) {
       console.error("Error fetching plans:", error);
     } finally {
