@@ -88,6 +88,12 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
       navigate("/app/autorizacoes");
       return;
     }
+
+    // Se configurado para navegar para inclusão de dependente
+    if (currentNotice?.navigate_to_dependents) {
+      navigate("/app/dependentes");
+      return;
+    }
     
     // Se tem link configurado
     if (currentNotice?.button_link) {

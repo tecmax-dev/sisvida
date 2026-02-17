@@ -34,6 +34,7 @@ export function PopupNoticeFormDialog({
   const [showOncePerSession, setShowOncePerSession] = useState(true);
   const [navigateToBooking, setNavigateToBooking] = useState(false);
   const [navigateToAuthorizations, setNavigateToAuthorizations] = useState(false);
+  const [navigateToDependents, setNavigateToDependents] = useState(false);
   const [priority, setPriority] = useState(0);
   const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -64,6 +65,7 @@ export function PopupNoticeFormDialog({
       setShowOncePerSession(editingNotice.show_once_per_session);
       setNavigateToBooking(editingNotice.navigate_to_booking || false);
       setNavigateToAuthorizations(editingNotice.navigate_to_authorizations || false);
+      setNavigateToDependents(editingNotice.navigate_to_dependents || false);
       setPriority(editingNotice.priority);
       setStartsAt(isoToLocalDatetime(editingNotice.starts_at));
       setExpiresAt(isoToLocalDatetime(editingNotice.expires_at));
@@ -82,6 +84,7 @@ export function PopupNoticeFormDialog({
     setShowOncePerSession(true);
     setNavigateToBooking(false);
     setNavigateToAuthorizations(false);
+    setNavigateToDependents(false);
     setPriority(0);
     setStartsAt("");
     setExpiresAt("");
@@ -114,11 +117,12 @@ export function PopupNoticeFormDialog({
       message: message || null,
       image_url: imageUrl || null,
       button_text: buttonText || "Entendi",
-      button_link: (navigateToBooking || navigateToAuthorizations) ? null : (buttonLink || null),
+      button_link: (navigateToBooking || navigateToAuthorizations || navigateToDependents) ? null : (buttonLink || null),
       is_active: isActive,
       show_once_per_session: showOncePerSession,
       navigate_to_booking: navigateToBooking,
       navigate_to_authorizations: navigateToAuthorizations,
+      navigate_to_dependents: navigateToDependents,
       priority,
       starts_at: localDatetimeToIso(startsAt),
       expires_at: localDatetimeToIso(expiresAt),
@@ -293,8 +297,8 @@ export function PopupNoticeFormDialog({
                 checked={navigateToBooking} 
                 onCheckedChange={(checked) => {
                   setNavigateToBooking(checked);
-                  if (checked) setNavigateToAuthorizations(false);
-                }} 
+                  if (checked) { setNavigateToAuthorizations(false); setNavigateToDependents(false); }
+                }}
               />
             </div>
 
@@ -309,7 +313,23 @@ export function PopupNoticeFormDialog({
                 checked={navigateToAuthorizations} 
                 onCheckedChange={(checked) => {
                   setNavigateToAuthorizations(checked);
-                  if (checked) setNavigateToBooking(false);
+                  if (checked) { setNavigateToBooking(false); setNavigateToDependents(false); }
+                }} 
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Abrir inclusão de dependente</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ao clicar no botão, abre a página de dependentes
+                </p>
+              </div>
+              <Switch 
+                checked={navigateToDependents} 
+                onCheckedChange={(checked) => {
+                  setNavigateToDependents(checked);
+                  if (checked) { setNavigateToBooking(false); setNavigateToAuthorizations(false); }
                 }} 
               />
             </div>

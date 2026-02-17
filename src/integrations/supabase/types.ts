@@ -7693,6 +7693,7 @@ export type Database = {
           message: string | null
           navigate_to_authorizations: boolean | null
           navigate_to_booking: boolean | null
+          navigate_to_dependents: boolean | null
           priority: number
           show_once_per_session: boolean
           starts_at: string | null
@@ -7712,6 +7713,7 @@ export type Database = {
           message?: string | null
           navigate_to_authorizations?: boolean | null
           navigate_to_booking?: boolean | null
+          navigate_to_dependents?: boolean | null
           priority?: number
           show_once_per_session?: boolean
           starts_at?: string | null
@@ -7731,6 +7733,7 @@ export type Database = {
           message?: string | null
           navigate_to_authorizations?: boolean | null
           navigate_to_booking?: boolean | null
+          navigate_to_dependents?: boolean | null
           priority?: number
           show_once_per_session?: boolean
           starts_at?: string | null
