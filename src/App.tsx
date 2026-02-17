@@ -123,6 +123,7 @@ import AnamneseTemplatesPage from "./pages/dashboard/AnamneseTemplatesPage";
 import DynamicAnamnesisPage from "./pages/dashboard/DynamicAnamnesisPage";
 import WaitingListPage from "./pages/dashboard/WaitingListPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
+import AppointmentReportsPage from "./pages/dashboard/AppointmentReportsPage";
 import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
 import PrescriptionPage from "./pages/dashboard/PrescriptionPage";
 import FinancialsPage from "./pages/dashboard/FinancialsPage";
@@ -524,6 +525,7 @@ function App() {
                   <Route path="anamnesis-dynamic" element={<DynamicAnamnesisPage />} />
                   <Route path="waiting-list" element={<WaitingListPage />} />
                   <Route path="reports" element={<ReportsPage />} />
+                  <Route path="reports/appointments" element={<AppointmentReportsPage />} />
                   <Route path="subscription" element={<SubscriptionPage />} />
                   <Route path="prescriptions" element={<PrescriptionPage />} />
                   <Route path="financials" element={<FinancialsPage />} />
