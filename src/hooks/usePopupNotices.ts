@@ -14,6 +14,7 @@ export interface PopupNotice {
   show_once_per_session: boolean;
   navigate_to_booking: boolean;
   navigate_to_authorizations: boolean;
+  navigate_to_dependents: boolean;
   priority: number;
   starts_at: string | null;
   expires_at: string | null;
