@@ -169,6 +169,7 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/stock", icon: Warehouse, label: "Estoque", permission: "view_stock" },
       { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
       { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
+      { href: "/dashboard/reports/appointments", icon: Calendar, label: "Relatório Consultas", permission: "view_reports" },
       { href: "/dashboard/marketing", icon: Megaphone, label: "Marketing", permission: "view_marketing" },
       { href: "/dashboard/users", icon: UserCog, label: "Usuários", permission: "manage_users" },
       { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
