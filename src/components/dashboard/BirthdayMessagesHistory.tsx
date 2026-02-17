@@ -35,6 +35,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface BirthdayLog {
@@ -67,6 +68,8 @@ export default function BirthdayMessagesHistory() {
   // Test mode state
   const [testPhone, setTestPhone] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
+  const [showAllLogs, setShowAllLogs] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
 
   useRealtimeSubscription({
     table: 'birthday_message_logs',
@@ -428,104 +431,120 @@ Equipe {clinica}`;
         </div>
       </CardHeader>
       <CardContent className="pt-4 space-y-4">
-        {/* Test Section */}
-        <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20">
-          <div className="flex items-center gap-2 mb-2">
-            <TestTube2 className="h-4 w-4 text-primary" />
-            <Label className="text-sm font-medium">Testar Envio</Label>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Envie uma mensagem de teste para validar a configuração. Apenas números (DDD + número). Ex: 11999999999
-          </p>
-          <div className="flex gap-2">
-            <Input
-              type="tel"
-              placeholder="Ex: 11999999999"
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, '').slice(0, 13))}
-              className="flex-1"
-              maxLength={13}
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleTestSend}
-              disabled={sendingTest || !testPhone.trim()}
-              className="gap-2 shrink-0"
-            >
-              {sendingTest ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              Enviar Teste
+        {/* Test Section - Collapsible */}
+        <Collapsible open={testOpen} onOpenChange={setTestOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between gap-2 text-muted-foreground hover:text-foreground h-8 px-2">
+              <div className="flex items-center gap-2">
+                <TestTube2 className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">Testar Envio</span>
+              </div>
+              <span className="text-xs">{testOpen ? '▲' : '▼'}</span>
             </Button>
-          </div>
-           <p className="text-xs text-muted-foreground mt-2 italic">
-             O envio de teste não consome créditos do sistema.
-           </p>
-        </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20 mt-1">
+              <p className="text-xs text-muted-foreground mb-3">
+                Envie uma mensagem de teste para validar a configuração. Ex: 11999999999
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="tel"
+                  placeholder="Ex: 11999999999"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                  className="flex-1 h-8 text-sm"
+                  maxLength={13}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleTestSend}
+                  disabled={sendingTest || !testPhone.trim()}
+                  className="gap-1.5 shrink-0 h-8"
+                >
+                  {sendingTest ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         {loading ? (
           <div className="flex items-center justify-center py-6">
             <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : logs.length > 0 ? (
-          <Accordion type="single" collapsible className="w-full" defaultValue={groupedLogs[0]?.key}>
-            {groupedLogs.map((group) => {
-              const successCount = group.logs.filter(l => l.success).length;
-              const failCount = group.logs.length - successCount;
-              
-              return (
-                <AccordionItem key={group.key} value={group.key} className="border-border/50">
-                  <AccordionTrigger className="py-2 hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-2">
-                      <span className="text-sm font-medium">{group.label}</span>
-                      <div className="flex items-center gap-2">
-                        {successCount > 0 && (
-                          <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {successCount}
-                          </Badge>
-                        )}
-                        {failCount > 0 && (
-                          <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            {failCount}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-1 pt-1">
-                      {group.logs.map((log) => (
-                        <div
-                          key={log.id}
-                          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/30 transition-colors"
-                        >
-                          {log.success ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-                          ) : (
-                            <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+          <>
+            <Accordion type="single" collapsible className="w-full" defaultValue={groupedLogs[0]?.key}>
+              {(showAllLogs ? groupedLogs : groupedLogs.slice(0, 3)).map((group) => {
+                const successCount = group.logs.filter(l => l.success).length;
+                const failCount = group.logs.length - successCount;
+                
+                return (
+                  <AccordionItem key={group.key} value={group.key} className="border-border/50">
+                    <AccordionTrigger className="py-2 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-2">
+                        <span className="text-sm font-medium">{group.label}</span>
+                        <div className="flex items-center gap-2">
+                          {successCount > 0 && (
+                            <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              {successCount}
+                            </Badge>
                           )}
-                          <span className="text-sm truncate flex-1">{log.patient_name}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {format(new Date(log.sent_at), "HH:mm")}
-                          </span>
+                          {failCount > 0 && (
+                            <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              {failCount}
+                            </Badge>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-0.5 pt-1">
+                        {group.logs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/30 transition-colors"
+                          >
+                            {log.success ? (
+                              <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
+                            ) : (
+                              <XCircle className="h-3 w-3 text-destructive shrink-0" />
+                            )}
+                            <span className="text-xs truncate flex-1">{log.patient_name}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              {format(new Date(log.sent_at), "HH:mm")}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+            {groupedLogs.length > 3 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllLogs(!showAllLogs)}
+                className="w-full text-xs text-muted-foreground h-7"
+              >
+                {showAllLogs ? 'Mostrar menos' : `Ver mais ${groupedLogs.length - 3} dia(s)`}
+              </Button>
+            )}
+          </>
         ) : (
-          <div className="text-center py-6">
-            <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-2">
-              <Cake className="h-5 w-5 text-muted-foreground/50" />
-            </div>
-            <p className="text-sm text-muted-foreground">
+          <div className="text-center py-4">
+            <Cake className="h-5 w-5 text-muted-foreground/40 mx-auto mb-1" />
+            <p className="text-xs text-muted-foreground">
               Nenhuma mensagem enviada ainda
             </p>
           </div>
