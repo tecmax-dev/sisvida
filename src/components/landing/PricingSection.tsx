@@ -138,7 +138,7 @@ export function PricingSection() {
           {plans.map((plan, i) => {
             const isPopular = i === popularIndex && plans.length > 1;
             const monthlyPrice = plan.monthly_price;
-            const isSobMedida = plan.name === 'Sob Medida';
+            const isSobMedida = plan.name === 'Sob Medida' || plan.monthly_price === 0;
             const priceValue = isYearly ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
             const formattedPrice = priceValue.toLocaleString('pt-BR', {
               minimumFractionDigits: 2,
