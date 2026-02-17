@@ -213,7 +213,7 @@ export function PricingSection() {
                   }`}
                   asChild
                 >
-                  <Link to={isSobMedida ? "https://wa.me/5500000000000" : "/cadastro"}>
+                  <Link to={isSobMedida ? "https://wa.me/557131449898" : "/cadastro"}>
                     {isSobMedida ? "Vamos conversar" : "Testar grátis"}
                   </Link>
                 </Button>
