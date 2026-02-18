@@ -1208,6 +1208,13 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     
     // CHECK FOR BOOKING HANDOFF
     if (aiData.handoff_to_booking === true) {
+      // SAFETY CHECK: Never proceed with booking handoff if booking is disabled
+      if (config.booking_enabled === false) {
+        console.log('[ai-booking] handoff_to_booking=true but booking_enabled=false - blocking handoff');
+        await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
+        return;
+      }
+
       console.log('[ai-booking] AI requested handoff to booking flow');
       
       // Clear the AI conversation to avoid confusion

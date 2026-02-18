@@ -777,25 +777,23 @@ Digite o número da opção desejada.`;
         );
       }
 
-      console.log('[ai-assistant] Booking intent detected but booking disabled - sending app update notification');
+      console.log('[ai-assistant] Booking intent detected but booking disabled - sending app only notification');
       return new Response(
         JSON.stringify({
-          response: `⚠️ *Agendamento Temporariamente Suspenso*
+          response: `⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp está suspenso no momento, mas temos uma *novidade ainda melhor* para você!
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-📲 *NOVO APP DO SINDICATO*
-Agora você pode agendar suas consultas pelo nosso aplicativo:
-• Agendamento rápido 24h
-• Carteirinha digital
-• Gestão de dependentes
-• Notificações de consultas
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/sindicato
 
-📥 *Instale agora:*
-👉 Android: https://n9.cl/c2riv
-👉 iPhone: https://n9.cl/d6sl2
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
-*Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial.`,
+📥 *Ainda não instalou?*
+👉 https://app.eclini.com.br/sindicato/instalar
+
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
           handoff_to_booking: false,
           action: 'booking_disabled_redirect',
         }),
@@ -883,22 +881,20 @@ O agendamento por WhatsApp está COMPLETAMENTE DESATIVADO. Esta é a regra mais 
 ### RESPOSTA OBRIGATÓRIA (COPIE EXATAMENTE):
 Sempre que detectar QUALQUER intenção de agendamento, responda EXATAMENTE com esta mensagem, sem modificações:
 
-"⚠️ *Agendamento Temporariamente Suspenso*
+"⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp está suspenso no momento, mas temos uma *novidade ainda melhor* para você!
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-📲 *NOVO APP DO SINDICATO*
-Agora você pode agendar suas consultas pelo nosso aplicativo:
-• Agendamento rápido 24h
-• Carteirinha digital
-• Gestão de dependentes
-• Notificações de consultas
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/sindicato
 
-📥 *Instale agora:*
-👉 Android: https://n9.cl/c2riv
-👉 iPhone: https://n9.cl/d6sl2
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
-*Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial."
+📥 *Ainda não instalou?*
+👉 https://app.eclini.com.br/sindicato/instalar
+
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial"
 
 ### SE INSISTIREM:
 Repita a mesma mensagem. NÃO tente ajudar de outra forma. NÃO há alternativa.`;
