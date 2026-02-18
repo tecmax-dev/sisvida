@@ -801,31 +801,21 @@ _Digite o número da opção desejada._`,
 
 _Digite o número da opção desejada._`,
 
-  // Booking maintenance message - promotes new app (plain text, no logo)
-  bookingMaintenance: `Olá! 👋
+  // Booking maintenance message - app only redirect
+  bookingMaintenance: `⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-✨ *NOVO APP DO SINDICATO* ✨
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/sindicato
 
-Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com ainda mais praticidade:
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
-📱 *Benefícios do App:*
-• Agendamento rápido em poucos toques
-• Carteirinha digital sempre à mão
-• Gestão de dependentes
-• Notificações de consultas
-• Funciona offline após instalado
+📥 *Ainda não instalou?*
+👉 https://app.eclini.com.br/sindicato/instalar
 
-📥 *Instale agora:*
-https://app.eclini.com.br/sindicato/instalar
-
-⚠️ *Dica de instalação:*
-• iPhone: abra pelo *Safari*
-• Android: abra pelo *Chrome*
-• Toque em "Adicionar à Tela Inicial"
-
-Aproveite essa novidade! 🎉`,
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
 
   // Helper function to get the appropriate menu based on booking_enabled
   getMainMenu: (bookingEnabled: boolean) => bookingEnabled 
@@ -1084,20 +1074,20 @@ async function handleAIBookingFlow(
       .eq('clinic_id', clinicId)
       .eq('phone', phone);
 
-    const appBlockMsg = `⚠️ *Agendamento disponível somente pelo aplicativo*
+    const appBlockMsg = `⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp está desativado para esta unidade.
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-📲 *Agende pelo app do Sindicato:*
-• Agendamento rápido 24h por dia
-• Carteirinha digital
-• Gestão de dependentes
-• Notificações de consultas
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/sindicato
 
-📥 *Instale agora:*
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
+
+📥 *Ainda não instalou?*
 👉 https://app.eclini.com.br/sindicato/instalar
 
-_Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
     await sendWhatsAppMessage(config, phone, appBlockMsg);
     return;
@@ -6674,20 +6664,20 @@ serve(async (req) => {
             .eq('clinic_id', clinicId)
             .in('phone', phoneCandidates);
 
-          const appOnlyMsg = `⚠️ *Agendamento disponível somente pelo aplicativo*
+          const appOnlyMsg = `⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp está desativado para esta unidade.
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-📲 *Agende pelo app do Sindicato:*
-• Agendamento rápido 24h por dia
-• Carteirinha digital
-• Gestão de dependentes
-• Notificações de consultas
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/sindicato
 
-📥 *Instale agora:*
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
+
+📥 *Ainda não instalou?*
 👉 https://app.eclini.com.br/sindicato/instalar
 
-_Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
           await sendWhatsAppMessage(configData, phone, appOnlyMsg);
 

@@ -1242,14 +1242,20 @@ Agora você pode agendar suas consultas pelo nosso aplicativo:
 
     // DEFINITIVE SAFETY NET: If booking is disabled, NEVER allow any booking-related handoff or message
     // This catches any case where the AI ignores the system prompt instructions
-    const APP_ONLY_MESSAGE = `⚠️ *Agendamento disponível somente pelo aplicativo*
+    const APP_ONLY_MESSAGE = `⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp está desativado.
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-📲 *Agende pelo app do Sindicato:*
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/sindicato
+
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
+
+📥 *Ainda não instalou?*
 👉 https://app.eclini.com.br/sindicato/instalar
 
-_Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
     if (!isBookingEnabled) {
       // ABSOLUTE BLOCK: When booking is disabled, filter ALL booking-related content from AI response
