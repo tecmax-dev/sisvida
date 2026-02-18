@@ -37,6 +37,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface Block {
   id: string;
@@ -54,6 +55,7 @@ interface Professional {
 
 export default function HomologacaoBloqueiosPage() {
   const { currentClinic } = useAuth();
+  const clinicId = currentClinic?.id || SINDICATO_CLINIC_ID;
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -68,37 +70,35 @@ export default function HomologacaoBloqueiosPage() {
 
   // Fetch blocks
   const { data: blocks, isLoading } = useQuery({
-    queryKey: ["homologacao-blocks", currentClinic?.id],
+    queryKey: ["homologacao-blocks", clinicId],
     queryFn: async () => {
-      if (!currentClinic?.id) return [];
       const { data, error } = await supabase
         .from("homologacao_blocks")
         .select("*")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", clinicId)
         .order("block_date", { ascending: false });
       
       if (error) throw error;
       return data as Block[];
     },
-    enabled: !!currentClinic?.id,
+    enabled: !!clinicId,
   });
 
   // Fetch professionals
   const { data: professionals } = useQuery({
-    queryKey: ["homologacao-professionals", currentClinic?.id],
+    queryKey: ["homologacao-professionals", clinicId],
     queryFn: async () => {
-      if (!currentClinic?.id) return [];
       const { data, error } = await supabase
         .from("homologacao_professionals")
         .select("id, name")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("name");
       
       if (error) throw error;
       return data as Professional[];
     },
-    enabled: !!currentClinic?.id,
+    enabled: !!clinicId,
   });
 
   // Create mutation
@@ -111,7 +111,7 @@ export default function HomologacaoBloqueiosPage() {
           reason: data.reason || null,
           block_type: data.block_type,
           professional_id: data.professional_id || null,
-          clinic_id: currentClinic?.id,
+          clinic_id: clinicId,
         });
       if (error) throw error;
     },
