@@ -145,17 +145,22 @@ export default function AccountingOfficePortal() {
   // Employer selecionado para documentos (CCTs por categoria)
   const [selectedEmployerForDocuments, setSelectedEmployerForDocuments] = useState<Employer | null>(null);
 
-  // Restaurar sessão do sessionStorage
+  // Restaurar sessão do localStorage (persistente entre abas e recarregamentos)
   useEffect(() => {
-    const savedSession = sessionStorage.getItem("accounting_office_session");
+    const savedSession = localStorage.getItem("accounting_office_session");
     if (savedSession) {
       try {
         const session = JSON.parse(savedSession);
-        setAccountingOffice(session.accountingOffice);
-        setIsAuthenticated(true);
-        loadData(session.accountingOffice.id);
+        // Validar que a sessão tem os dados mínimos necessários
+        if (session?.accountingOffice?.id && session?.accountingOffice?.clinic_id) {
+          setAccountingOffice(session.accountingOffice);
+          setIsAuthenticated(true);
+          loadData(session.accountingOffice.id);
+        } else {
+          localStorage.removeItem("accounting_office_session");
+        }
       } catch (e) {
-        sessionStorage.removeItem("accounting_office_session");
+        localStorage.removeItem("accounting_office_session");
       }
     }
   }, []);
@@ -183,16 +188,28 @@ export default function AccountingOfficePortal() {
   };
 
   const getInvokeErrorMessage = (err: any): string | null => {
+    // Caso 1: FunctionsHttpError com body parseável
     const body = err?.context?.body;
     if (typeof body === "string") {
       try {
         const parsed = JSON.parse(body);
         if (typeof parsed?.error === "string" && parsed.error.trim()) return parsed.error;
+        if (typeof parsed?.message === "string" && parsed.message.trim()) return parsed.message;
       } catch {
         // ignore
       }
+      // body é string plana não-JSON
+      if (body.trim()) return body.trim();
     }
-    if (typeof err?.message === "string" && err.message.trim()) return err.message;
+    // Caso 2: erro tem message diretamente
+    if (typeof err?.message === "string" && err.message.trim()) {
+      // Filtrar mensagens genéricas do SDK que não ajudam o usuário
+      const msg = err.message.trim();
+      if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("networkerror")) {
+        return "Erro de conexão. Verifique sua internet e tente novamente.";
+      }
+      return msg;
+    }
     return null;
   };
 
@@ -221,10 +238,11 @@ export default function AccountingOfficePortal() {
       setAccountingOffice(data.accounting_office);
       setIsAuthenticated(true);
 
-      sessionStorage.setItem(
+      localStorage.setItem(
         "accounting_office_session",
         JSON.stringify({
           accountingOffice: data.accounting_office,
+          savedAt: Date.now(),
         })
       );
 
@@ -285,7 +303,7 @@ export default function AccountingOfficePortal() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("accounting_office_session");
+    localStorage.removeItem("accounting_office_session");
     setIsAuthenticated(false);
     setAccountingOffice(null);
     setEmployers([]);
