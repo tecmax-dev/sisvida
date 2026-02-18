@@ -1063,36 +1063,44 @@ async function handleAIBookingFlow(
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
 
   // =========================================================================
-  // CRITICAL: Check if booking is disabled FIRST - block ALL booking attempts
+  // CRITICAL: Check if booking is disabled FIRST - block ALL attempts unconditionally
+  // This includes: active sessions, CPF inputs, AI conversation, keywords — EVERYTHING
   // =========================================================================
   if (config.booking_enabled === false) {
-    // Check if message contains ANY booking-related keywords
-    const bookingKeywords = [
-      'agendar', 'agendamento', 'agenda', 'marcar', 'marcação', 'remarcar',
-      'consulta', 'consultas', 'médico', 'medico', 'doutor', 'doutora',
-      'dr.', 'dra.', 'dr ', 'dra ', 'dentista', 'pediatra', 'clínico', 
-      'clinico', 'ginecologista', 'especialista',
-      'alcides', 'juliane', 'uiara', 'tiuba', 'dione',
-      'horário', 'horario', 'horários', 'horarios', 'hora', 'horas',
-      'vaga', 'vagas', 'disponível', 'disponivel', 'disponibilidade',
-      'atende', 'atendimento', 'quando atende',
-      'quero agendar', 'preciso agendar', 'gostaria de agendar',
-      'quero marcar', 'preciso marcar', 'gostaria de marcar',
-      'tem vaga', 'tem horario', 'tem horário',
-      'próxima data', 'proxima data', 'data disponível', 'data disponivel'
-    ];
-    
-    const messageLower = messageText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const keywordsNormalized = bookingKeywords.map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-    const isBookingRequest = keywordsNormalized.some(kw => messageLower.includes(kw)) || 
-                             messageText.trim() === '6' ||
-                             messageText.replace(/\D/g, '').length === 11; // CPF attempt
-    
-    if (isBookingRequest) {
-      console.log(`[ai-booking] BLOCKED: Booking disabled for clinic ${clinicId}. Message: "${messageText.substring(0, 50)}..."`);
-      await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
-      return;
-    }
+    console.log(`[ai-booking] ABSOLUTE BLOCK: booking_enabled=false for clinic ${clinicId}. Terminating all booking flows.`);
+
+    // Expire any active booking sessions so they don't resume
+    await supabase
+      .from('whatsapp_booking_sessions')
+      .update({ state: 'FINISHED', expires_at: new Date().toISOString() })
+      .eq('clinic_id', clinicId)
+      .eq('phone', phone)
+      .neq('state', 'FINISHED');
+
+    // Expire any active AI conversations so they don't resume
+    await supabase
+      .from('whatsapp_ai_conversations')
+      .update({ expires_at: new Date().toISOString() })
+      .eq('clinic_id', clinicId)
+      .eq('phone', phone);
+
+    const appBlockMsg = `⚠️ *Agendamento disponível somente pelo aplicativo*
+
+O agendamento por WhatsApp está desativado para esta unidade.
+
+📲 *Agende pelo app do Sindicato:*
+• Agendamento rápido 24h por dia
+• Carteirinha digital
+• Gestão de dependentes
+• Notificações de consultas
+
+📥 *Instale agora:*
+👉 https://app.eclini.com.br/sindicato/instalar
+
+_Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
+
+    await sendWhatsAppMessage(config, phone, appBlockMsg);
+    return;
   }
   // =========================================================================
 
@@ -6643,6 +6651,61 @@ serve(async (req) => {
         }
 
         console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
+
+        // =========================================================================
+        // DEFINITIVE GATE: If booking_enabled=false, block ALL booking flows here.
+        // This is the last line of defense before any session/AI flow is invoked.
+        // =========================================================================
+        if (configData.booking_enabled === false) {
+          console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false for clinic ${clinicId}. Killing all active sessions.`);
+
+          // Expire active booking sessions
+          await supabase
+            .from('whatsapp_booking_sessions')
+            .update({ state: 'FINISHED', expires_at: new Date().toISOString() })
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .neq('state', 'FINISHED');
+
+          // Expire active AI conversations
+          await supabase
+            .from('whatsapp_ai_conversations')
+            .update({ expires_at: new Date().toISOString() })
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates);
+
+          const appOnlyMsg = `⚠️ *Agendamento disponível somente pelo aplicativo*
+
+O agendamento por WhatsApp está desativado para esta unidade.
+
+📲 *Agende pelo app do Sindicato:*
+• Agendamento rápido 24h por dia
+• Carteirinha digital
+• Gestão de dependentes
+• Notificações de consultas
+
+📥 *Instale agora:*
+👉 https://app.eclini.com.br/sindicato/instalar
+
+_Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
+
+          await sendWhatsAppMessage(configData, phone, appOnlyMsg);
+
+          await supabase.from('whatsapp_incoming_logs').insert({
+            clinic_id: clinicId,
+            phone,
+            message_text: messageText,
+            raw_payload: payload,
+            processed: true,
+            processed_action: 'booking_blocked_app_only',
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, message: 'Booking blocked - app only' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // =========================================================================
 
         // Check if clinic uses AI booking
         const { data: clinicSettings } = await supabase
