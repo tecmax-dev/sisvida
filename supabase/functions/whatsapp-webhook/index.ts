@@ -807,12 +807,12 @@ _Digite o número da opção desejada._`,
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/sindicato
+👉 https://app.eclini.com.br/sindicato/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
@@ -1079,12 +1079,12 @@ async function handleAIBookingFlow(
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/sindicato
+👉 https://app.eclini.com.br/sindicato/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
@@ -6676,12 +6676,12 @@ serve(async (req) => {
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/sindicato
+👉 https://app.eclini.com.br/sindicato/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;

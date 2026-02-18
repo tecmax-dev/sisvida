@@ -739,7 +739,7 @@ Como posso ajudar? Escolha uma opção:
 6️⃣ Segunda via de boleto (empresa)
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 Digite o número da opção desejada.`;
 
@@ -785,12 +785,12 @@ Digite o número da opção desejada.`;
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/sindicato
+👉 https://app.eclini.com.br/sindicato/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
@@ -886,12 +886,12 @@ Sempre que detectar QUALQUER intenção de agendamento, responda EXATAMENTE com 
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/sindicato
+👉 https://app.eclini.com.br/sindicato/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial"
@@ -934,7 +934,7 @@ Como posso ajudar? Escolha uma opção:
 6️⃣ Segunda via de boleto (empresa)
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 Digite o número da opção desejada."
 
@@ -1008,9 +1008,8 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 - Nível 04 (R$2.050): Encarregado de Loja, Subgerente e Gerente
 
 ## APLICATIVO DO SINDICATO
-- Android: https://n9.cl/c2riv
-- iPhone: https://n9.cl/d6sl2
-- Instalação universal: https://app.eclini.com.br/sindicato/instalar
+- Instalação universal: https://app.eclini.com.br/sindicato/app/instalar
+- Link direto (app instalado): https://app.eclini.com.br/sindicato/app
 
 ## HOMOLOGAÇÃO
 Link: https://app.eclini.com.br/homologacao/sindicato
@@ -1243,12 +1242,12 @@ Agora você pode agendar suas consultas pelo nosso aplicativo:
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/sindicato
+👉 https://app.eclini.com.br/sindicato/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://app.eclini.com.br/sindicato/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
