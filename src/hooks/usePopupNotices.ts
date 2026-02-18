@@ -15,6 +15,7 @@ export interface PopupNotice {
   navigate_to_booking: boolean;
   navigate_to_authorizations: boolean;
   navigate_to_dependents: boolean;
+  navigate_to_card_renewal: boolean;
   priority: number;
   starts_at: string | null;
   expires_at: string | null;

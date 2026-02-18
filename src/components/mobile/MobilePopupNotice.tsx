@@ -94,6 +94,12 @@ export function MobilePopupNotice({ notices }: MobilePopupNoticeProps) {
       navigate("/app/dependentes");
       return;
     }
+
+    // Se configurado para navegar para atualização de carteirinha
+    if (currentNotice?.navigate_to_card_renewal) {
+      navigate("/app/carteirinha");
+      return;
+    }
     
     // Se tem link configurado
     if (currentNotice?.button_link) {
