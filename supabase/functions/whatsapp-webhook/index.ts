@@ -2902,10 +2902,40 @@ async function handleMainMenu(
     else if (choice === '3') intent = 'reschedule';
     else if (choice === '4') intent = 'list';
   } else {
-    // Without booking: 1=cancel, 2=reschedule, 3=list
+    // Without booking: 1=cancel, 2=reschedule, 3=list, 6=boleto
     if (choice === '1') intent = 'cancel';
     else if (choice === '2') intent = 'reschedule';
     else if (choice === '3') intent = 'list';
+    else if (choice === '6') {
+      // Option 6 = boleto flow when booking is disabled
+      console.log('[menu] Option 6 selected with booking disabled - redirecting to boleto flow');
+      const supabaseUrlEnv = Deno.env.get('SUPABASE_URL') || '';
+      try {
+        const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''}`,
+          },
+          body: JSON.stringify({
+            clinic_id: config.clinic_id,
+            phone,
+            evolution_config: config,
+          }),
+        });
+        if (boletoResponse.ok) {
+          console.log('[menu] Boleto flow initiated from option 6 (no booking)');
+        } else {
+          const errorText = await boletoResponse.text();
+          console.error('[menu] Boleto flow error from option 6:', errorText);
+          await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.');
+        }
+      } catch (boletoError) {
+        console.error('[menu] Exception calling boleto flow from option 6:', boletoError);
+        await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.');
+      }
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
   }
   
   // Try AI for natural language if no intent yet
