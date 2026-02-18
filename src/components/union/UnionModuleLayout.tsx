@@ -40,14 +40,19 @@ export function UnionModuleLayout() {
   const { user, profile, currentClinic, signOut } = useAuth();
   const { hasUnionAccess, permissionsLoading } = useUnionPermissions();
   const { isUnionEntityAdmin, loading: isLoadingUnionEntity } = useUnionEntity();
-  const { hasUnionEntity, isLoading: isLoadingUnionEntityCheck } = useClinicHasUnionEntity();
+  // Note: useClinicHasUnionEntity is NOT used for the access guard here.
+  // It's only needed by the sidebar to show/hide the union module link.
+  // Including its isLoading in the guard caused false redirects when currentClinic is null
+  // (query stays disabled/loading forever in sindicato routes).
+  useClinicHasUnionEntity(); // keep hook alive for sidebar caching only
 
   useEffect(() => {
     localStorage.setItem("union-sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  // Wait for all permission/entity checks to complete before redirecting
-  const isCheckingAccess = permissionsLoading || isLoadingUnionEntity || isLoadingUnionEntityCheck;
+  // Only block on permissions and entity admin checks — NOT on useClinicHasUnionEntity
+  // which may never resolve when currentClinic is null in /sindicato routes.
+  const isCheckingAccess = permissionsLoading || isLoadingUnionEntity;
 
   // Redirect if no access: user must have explicit union permissions OR be union entity admin
   // Having a clinic linked to a union entity is NOT enough - user must have specific permissions
