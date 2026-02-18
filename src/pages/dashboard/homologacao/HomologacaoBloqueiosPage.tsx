@@ -104,6 +104,13 @@ export default function HomologacaoBloqueiosPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      console.log("[Bloqueios] INSERT payload:", {
+        block_date: format(data.block_date, "yyyy-MM-dd"),
+        reason: data.reason || null,
+        block_type: data.block_type,
+        professional_id: data.professional_id || null,
+        clinic_id: clinicId,
+      });
       const { error } = await supabase
         .from("homologacao_blocks")
         .insert({
@@ -113,14 +120,19 @@ export default function HomologacaoBloqueiosPage() {
           professional_id: data.professional_id || null,
           clinic_id: clinicId,
         });
-      if (error) throw error;
+      if (error) {
+        console.error("[Bloqueios] INSERT error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      console.log("[Bloqueios] INSERT success — invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
       toast.success("Bloqueio criado com sucesso!");
       closeDialog();
     },
     onError: (error) => {
+      console.error("[Bloqueios] CREATE BLOCK ERROR:", error);
       toast.error("Erro ao criar bloqueio: " + error.message);
     },
   });
