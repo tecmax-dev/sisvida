@@ -38,17 +38,21 @@ export function UnionModuleLayout() {
   });
   const location = useLocation();
   const { user, profile, currentClinic, signOut } = useAuth();
-  const { hasUnionAccess } = useUnionPermissions();
-  const { isUnionEntityAdmin } = useUnionEntity();
-  const { hasUnionEntity, isLoading: isLoadingUnionEntity } = useClinicHasUnionEntity();
+  const { hasUnionAccess, permissionsLoading } = useUnionPermissions();
+  const { isUnionEntityAdmin, loading: isLoadingUnionEntity } = useUnionEntity();
+  const { hasUnionEntity, isLoading: isLoadingUnionEntityCheck } = useClinicHasUnionEntity();
 
   useEffect(() => {
     localStorage.setItem("union-sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
+  // Wait for all permission/entity checks to complete before redirecting
+  const isCheckingAccess = permissionsLoading || isLoadingUnionEntity || isLoadingUnionEntityCheck;
+
   // Redirect if no access: user must have explicit union permissions OR be union entity admin
   // Having a clinic linked to a union entity is NOT enough - user must have specific permissions
-  if (!isLoadingUnionEntity && !hasUnionAccess() && !isUnionEntityAdmin) {
+  // Only redirect after all checks are complete to avoid premature redirects during loading
+  if (!isCheckingAccess && !hasUnionAccess() && !isUnionEntityAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 

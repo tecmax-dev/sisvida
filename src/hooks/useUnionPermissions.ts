@@ -43,7 +43,7 @@ export type UnionPermission =
   | "union_view_audit";
 
 export function useUnionPermissions() {
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, permissionsLoading } = usePermissions();
   const { isSuperAdmin, userRoles } = useAuth();
   
   // Check if user has entidade_sindical_admin role (using type assertion for union entity role)
@@ -110,6 +110,8 @@ export function useUnionPermissions() {
   const canViewAudit = (): boolean => hasUnionPermission("union_view_audit");
 
   return {
+    // Loading state - important to wait before checking access
+    permissionsLoading,
     // Main access check
     hasUnionAccess,
     hasUnionPermission,
