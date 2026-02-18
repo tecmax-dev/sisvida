@@ -69,16 +69,35 @@ export default defineConfig(({ mode }) => ({
         dir: "ltr",
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2,webmanifest}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
-        cleanupOutdatedCaches: true, // Limpar caches antigos automaticamente
-        skipWaiting: true, // Ativar novo SW imediatamente
-        clientsClaim: true, // Tomar controle imediatamente - atualizações mais rápidas
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        // CRÍTICO: Nunca cachear rotas de OAuth ou redirecionamentos especiais
+        navigateFallbackDenylist: [
+          /^\/~oauth/,
+          /^\/auth\/callback/,
+          /^\/sindicato\/instalar/,
+        ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260216c', revision: null }
+          { url: '/cache-bust-v20260218a', revision: null },
+          { url: '/manifest-sindicato.webmanifest', revision: '20260218a' },
         ],
         runtimeCaching: [
+          // Manifests - sempre da rede (crítico para instalação do PWA)
+          {
+            urlPattern: /\.webmanifest$/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "manifest-cache",
+              networkTimeoutSeconds: 3,
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // Popup notices - SEMPRE buscar da rede (sem cache)
           {
             urlPattern: /popup_notices/i,
@@ -93,7 +112,7 @@ export default defineConfig(({ mode }) => ({
               networkTimeoutSeconds: 5,
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 30, // 30 segundos
+                maxAgeSeconds: 30,
               },
               cacheableResponse: {
                 statuses: [0, 200],
