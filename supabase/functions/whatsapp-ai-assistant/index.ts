@@ -1078,37 +1078,43 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
     // return the maintenance message immediately without calling the AI
     if (!isBookingEnabled) {
       // Comprehensive list of booking-related keywords in Portuguese
+      // EXPANDED: comprehensive list covering ALL medical scheduling keywords
+      // Any match = MANDATORY APP_ONLY_MESSAGE, no handoff to human in medical context
       const bookingKeywords = [
         // Verbos de agendamento
-        'agendar', 'agendamento', 'agenda', 'marcar', 'marcação', 'remarcar',
-        'desmarcar', 'cancelar consulta', 'cancelar agendamento',
-        // Palavras médicas
-        'consulta', 'consultas', 'médico', 'medico', 'doutor', 'doutora',
-        'dr.', 'dra.', 'dr ', 'dra ', 'dentista', 'pediatra', 'clínico', 
-        'clinico', 'ginecologista', 'especialista',
+        'agendar', 'agendamento', 'agenda', 'marcar', 'marcacao', 'remarcar',
+        'desmarcar', 'cancelar consulta', 'cancelar agendamento', 'reagendar',
+        'retornar', 'retorno',
+        // Palavras médicas - QUALQUER menção = bloqueio
+        'consulta', 'consultas', 'medico', 'medicos', 'doutor', 'doutora',
+        'dr.', 'dra.', 'dr ', 'dra ', 'dentista', 'pediatra', 'clinico', 
+        'clinica geral', 'ginecologista', 'especialista', 'ortopedista',
+        'cardiologista', 'nutricionist', 'fisioterapeuta', 'psicologo',
+        'psicologa', 'pediatrico',
         // Nomes de profissionais do SECMI
-        'alcides', 'juliane', 'uiara', 'tiuba', 'dione',
+        'alcides', 'juliane', 'uiara', 'tiuba',
         // Horários e disponibilidade
-        'horário', 'horario', 'horários', 'horarios', 'hora', 'horas',
-        'vaga', 'vagas', 'disponível', 'disponivel', 'disponibilidade',
-        'atende', 'atendimento', 'quando atende',
+        'horario', 'horarios', 'vaga', 'vagas', 'disponivel', 'disponibilidade',
+        'atende', 'quando atende', 'dias de atendimento',
         // Frases comuns
         'quero agendar', 'preciso agendar', 'gostaria de agendar',
         'quero marcar', 'preciso marcar', 'gostaria de marcar',
-        'tem vaga', 'tem horario', 'tem horário',
-        'próxima data', 'proxima data', 'data disponível', 'data disponivel'
+        'tem vaga', 'tem horario', 'proxima data', 'proxima semana',
+        'data disponivel', 'quero consulta', 'preciso de consulta',
+        'ir ao medico', 'ver medico', 'exame', 'exames',
+        // Numeric options that mean booking when booking is disabled
+        // (options 1-4 are booking in this context)
       ];
       
       const messageLower = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const keywordsNormalized = bookingKeywords.map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
       // Note: message '6' is NOT included here because when booking is disabled,
       // option 6 = boleto (handled above as HANDOFF_BOLETO, not a booking request)
-      const isBookingRequest = keywordsNormalized.some(kw => messageLower.includes(kw));
+      // Options 1-4 also trigger the block since they map to booking when booking is disabled
+      const isBookingMenuOption = /^[1-4]$/.test(message.trim());
+      const isBookingRequest = isBookingMenuOption || keywordsNormalized.some(kw => messageLower.includes(kw));
       
-      if (isBookingRequest) {
-        console.log(`[ai-assistant] BLOCKED: Booking request detected while disabled. Message: "${message.substring(0, 50)}..."`);
-        return new Response(JSON.stringify({ 
-          response: `⚠️ *Agendamento somente pelo aplicativo*
+      const APP_ONLY_RESPONSE = `⚠️ *Agendamento somente pelo aplicativo*
 
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
@@ -1121,7 +1127,12 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 👉 https://app.eclini.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
-• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
+      
+      if (isBookingRequest) {
+        console.log(`[ai-assistant] BLOCKED (booking disabled): detected booking intent. Message: "${message.substring(0, 60)}"`);
+        return new Response(JSON.stringify({ 
+          response: APP_ONLY_RESPONSE,
           booking_blocked: true
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
