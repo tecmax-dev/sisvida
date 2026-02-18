@@ -1,3 +1,4 @@
+// whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -801,7 +802,7 @@ _Digite o número da opção desejada._`,
 
 _Digite o número da opção desejada._`,
 
-  // Booking maintenance message - app only redirect
+  // Booking app-only message (v2 - force redeploy)
   bookingMaintenance: `⚠️ *Agendamento somente pelo aplicativo*
 
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
@@ -6689,7 +6690,8 @@ serve(async (req) => {
 
           // Detect booking intent keywords
           const bookingIntentRegex = /\b(agendar|agendamento|consulta|marcar|desmarcar|cancelar|remarcar|reagendar|horario|horário|médico|medico|dentista|exame|profissional|disponível|disponivel|vaga|vagas|atendimento|especialidade)\b/i;
-          const hasBookingIntent = bookingIntentRegex.test(msgLower) || /^\d$/.test(msgLower.trim());
+          // Note: '6' = boleto (should NOT be blocked). Only block booking keywords, not numeric options.
+          const hasBookingIntent = bookingIntentRegex.test(msgLower);
 
           if (hasBookingIntent) {
             console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false, booking intent detected for clinic ${clinicId}. Message: "${messageText}"`);
