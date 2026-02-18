@@ -37,6 +37,7 @@ import FinanceiroArticle from "./pages/docs/articles/FinanceiroArticles";
 import AtendimentoArticle from "./pages/docs/articles/AtendimentoArticles";
 import WhatsAppArticle from "./pages/docs/articles/WhatsAppArticles";
 import ConfiguracoesArticle from "./pages/docs/articles/ConfiguracoesArticles";
+import HomologacaoArticle from "./pages/docs/articles/HomologacaoArticles";
 import GenericArticle from "./pages/docs/articles/GenericArticle";
 
 // Páginas com lazy loading - Auth & Setup
@@ -415,6 +416,8 @@ function App() {
                   <Route path="whatsapp/:articleSlug" element={<WhatsAppArticle />} />
                   <Route path="configuracoes" element={<CategoryPage />} />
                   <Route path="configuracoes/:articleSlug" element={<ConfiguracoesArticle />} />
+                  <Route path="homologacao" element={<CategoryPage />} />
+                  <Route path="homologacao/:articleSlug" element={<HomologacaoArticle />} />
                   <Route path=":categoryId" element={<CategoryPage />} />
                   <Route path=":categoryId/:articleSlug" element={<GenericArticle />} />
                 </Route>
