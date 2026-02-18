@@ -1252,21 +1252,41 @@ O agendamento por WhatsApp está desativado.
 _Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
 
     if (!isBookingEnabled) {
-      // Block HANDOFF_BOOKING even if AI generated it
-      if (finalResponse.includes('HANDOFF_BOOKING')) {
-        console.log('[ai-assistant] SAFETY NET: Blocked HANDOFF_BOOKING while booking disabled');
-        return new Response(JSON.stringify({
-          response: APP_ONLY_MESSAGE,
-          handoff_to_booking: false,
-          booking_blocked: true,
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+      // ABSOLUTE BLOCK: When booking is disabled, filter ALL booking-related content from AI response
+      // This is a broad net that catches any AI response mentioning scheduling/booking
+      const responseNormalized = finalResponse.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      const bookingSignals = [
+        'handoff_booking',
+        'encaminhando',
+        'agendamento',
+        'agendar',
+        'consulta',
+        'marcar',
+        'horario',
+        'profissional',
+        'dr.',
+        'dra.',
+        'doutor',
+        'doutora',
+        'dentista',
+        'pediatra',
+        'clinico',
+        'ginecologista',
+        'alcides',
+        'juliane',
+        'uiara',
+        'vaga',
+        'disponivel',
+        'transferir para o setor',
+        'atendente de agendamento',
+      ];
 
-      // Block any AI response that contains booking-related intent
-      const bookingResponseKeywords = ['encaminhando você para o agendamento', 'HANDOFF_BOOKING', 'agendar sua consulta pelo whatsapp', 'iniciar o agendamento'];
-      const hasBookingContent = bookingResponseKeywords.some(kw => finalResponse.toLowerCase().includes(kw.toLowerCase()));
-      if (hasBookingContent) {
-        console.log('[ai-assistant] SAFETY NET: Blocked booking-related AI response while disabled');
+      const hasBookingSignal = bookingSignals.some(signal => responseNormalized.includes(signal));
+
+      if (hasBookingSignal) {
+        console.log('[ai-assistant] ABSOLUTE BLOCK: AI response contains booking signal while disabled. Suppressing.');
         return new Response(JSON.stringify({
           response: APP_ONLY_MESSAGE,
           handoff_to_booking: false,
