@@ -31,6 +31,7 @@ import tutorialProntuario from "@/assets/docs/tutorial-prontuario-pt.png";
 import tutorialAtendimento from "@/assets/docs/tutorial-atendimento-pt.png";
 import tutorialConfiguracoes from "@/assets/docs/tutorial-configuracoes-pt.png";
 import tutorialLogin from "@/assets/docs/tutorial-login-pt.png";
+import tutorialAtendimento2 from "@/assets/docs/tutorial-atendimento-pt.png";
 
 interface TutorialCategory {
   id: string;
@@ -116,6 +117,16 @@ const categories: TutorialCategory[] = [
     bgColor: "bg-slate-500/10 border-slate-500/20",
     articles: 4,
     image: tutorialConfiguracoes,
+  },
+  {
+    id: "homologacao",
+    title: "Homologação",
+    description: "Gerencie agenda, profissionais, serviços e bloqueios do módulo de homologação",
+    icon: Stethoscope,
+    color: "text-teal-600",
+    bgColor: "bg-teal-500/10 border-teal-500/20",
+    articles: 5,
+    image: tutorialAtendimento2,
   },
 ];
 

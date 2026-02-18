@@ -13,7 +13,8 @@ import {
   Play,
   ChevronRight,
   Search,
-  Home
+  Home,
+  ClipboardCheck
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -102,6 +103,19 @@ const docsCategories = [
       { slug: "usuarios-permissoes", title: "Usuários e Permissões" },
       { slug: "personalizando-documentos", title: "Personalizando Documentos" },
       { slug: "backup-seguranca", title: "Backup e Segurança" },
+    ]
+  },
+  {
+    id: "homologacao",
+    title: "Homologação",
+    icon: ClipboardCheck,
+    description: "Agenda médica e gestão de atendimentos",
+    articles: [
+      { slug: "agenda-homologacao", title: "Agenda" },
+      { slug: "profissionais-homologacao", title: "Profissionais" },
+      { slug: "servicos-homologacao", title: "Serviços" },
+      { slug: "bloqueios-homologacao", title: "Bloqueios" },
+      { slug: "configuracoes-homologacao", title: "Configurações" },
     ]
   },
 ];
