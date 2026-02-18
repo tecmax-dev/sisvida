@@ -779,7 +779,7 @@ Se precisar de ajuda, entre em contato conosco.`,
 
   dependentCardExpired: (dependentName: string, expiryDate: string) => {
     const firstName = dependentName.split(' ')[0];
-    return `Ops! A carteirinha de *${firstName}* está vencida desde *${expiryDate}*. 😕\n\nEntre em contato com a clínica para renovar, depois é só voltar aqui! 💪`;
+    return `Ops! A carteirinha de *${firstName}* está vencida desde *${expiryDate}*. 😕\n\nEntre em contato com o Sindicato para renovar, depois é só voltar aqui! 💪`;
   },
 
   // Main menu after identity confirmed - dynamic based on booking_enabled
