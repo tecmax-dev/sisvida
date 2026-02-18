@@ -1240,52 +1240,43 @@ Agora você pode agendar suas consultas pelo nosso aplicativo:
     const finalResponse = assistantMessage?.content || 'Desculpe, não consegui processar sua mensagem.';
     console.log('[ai-assistant] Final response:', finalResponse.substring(0, 100));
 
-    // Check if AI wants to handoff to booking system
-    if (finalResponse.includes('HANDOFF_BOOKING')) {
-      console.log('[ai-assistant] AI requested handoff to booking flow - checking booking_enabled');
-      
-      // Check if booking is enabled for this clinic
-      const { data: evolutionConfig } = await supabase
-        .from('evolution_configs')
-        .select('booking_enabled')
-        .eq('clinic_id', clinic_id)
-        .maybeSingle();
-      
-      const isBookingEnabled = evolutionConfig?.booking_enabled !== false;
-      
-      if (!isBookingEnabled) {
-        console.log('[ai-assistant] Booking disabled - redirecting to app');
-        return new Response(JSON.stringify({ 
-          response: `Olá! 👋
+    // DEFINITIVE SAFETY NET: If booking is disabled, NEVER allow any booking-related handoff or message
+    // This catches any case where the AI ignores the system prompt instructions
+    const APP_ONLY_MESSAGE = `⚠️ *Agendamento disponível somente pelo aplicativo*
 
-O agendamento por WhatsApp foi desativado temporariamente, mas temos uma *novidade ainda melhor* para você!
+O agendamento por WhatsApp está desativado.
 
-✨ *NOVO APP DO SINDICATO* ✨
+📲 *Agende pelo app do Sindicato:*
+👉 https://app.eclini.com.br/sindicato/instalar
 
-Agora você pode agendar suas consultas diretamente pelo nosso aplicativo, com ainda mais praticidade:
+_Dica: Abra pelo Chrome (Android) ou Safari (iPhone) e adicione à tela inicial._`;
 
-📱 *Benefícios do App:*
-• Agendamento rápido em poucos toques
-• Carteirinha digital sempre à mão
-• Gestão de dependentes
-• Notificações de consultas
-• Funciona offline após instalado
-
-📥 *Instale agora:*
-https://app.eclini.com.br/sindicato/instalar
-
-⚠️ *Dica de instalação:*
-• iPhone: abra pelo *Safari*
-• Android: abra pelo *Chrome*
-• Toque em "Adicionar à Tela Inicial"
-
-Aproveite essa novidade! 🎉`,
-          handoff_to_booking: false
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    if (!isBookingEnabled) {
+      // Block HANDOFF_BOOKING even if AI generated it
+      if (finalResponse.includes('HANDOFF_BOOKING')) {
+        console.log('[ai-assistant] SAFETY NET: Blocked HANDOFF_BOOKING while booking disabled');
+        return new Response(JSON.stringify({
+          response: APP_ONLY_MESSAGE,
+          handoff_to_booking: false,
+          booking_blocked: true,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-      
+
+      // Block any AI response that contains booking-related intent
+      const bookingResponseKeywords = ['encaminhando você para o agendamento', 'HANDOFF_BOOKING', 'agendar sua consulta pelo whatsapp', 'iniciar o agendamento'];
+      const hasBookingContent = bookingResponseKeywords.some(kw => finalResponse.toLowerCase().includes(kw.toLowerCase()));
+      if (hasBookingContent) {
+        console.log('[ai-assistant] SAFETY NET: Blocked booking-related AI response while disabled');
+        return new Response(JSON.stringify({
+          response: APP_ONLY_MESSAGE,
+          handoff_to_booking: false,
+          booking_blocked: true,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // Check if AI wants to handoff to booking system (only reaches here if booking IS enabled)
+    if (finalResponse.includes('HANDOFF_BOOKING')) {
       console.log('[ai-assistant] Booking enabled - proceeding with handoff');
       return new Response(JSON.stringify({ 
         response: null,
