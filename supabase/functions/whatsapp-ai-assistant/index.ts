@@ -1236,6 +1236,34 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     const finalResponse = assistantMessage?.content || 'Desculpe, não consegui processar sua mensagem.';
     console.log('[ai-assistant] Final response:', finalResponse.substring(0, 100));
 
+    // Check HANDOFF_BOLETO FIRST - before any booking block filters
+    // This ensures option 6 always works regardless of booking_enabled status
+    if (finalResponse.includes('HANDOFF_BOLETO')) {
+      console.log('[ai-assistant] AI requested handoff to boleto flow (checked BEFORE booking block)');
+      return new Response(JSON.stringify({ 
+        response: null,
+        handoff_to_boleto: true,
+        action: 'start_boleto_flow'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check HANDOFF_BOOKING before booking block too
+    if (finalResponse.includes('HANDOFF_BOOKING')) {
+      if (isBookingEnabled) {
+        console.log('[ai-assistant] Booking enabled - proceeding with handoff');
+        return new Response(JSON.stringify({ 
+          response: null,
+          handoff_to_booking: true,
+          action: 'start_booking_flow'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // If booking disabled, fall through to the booking block below
+    }
+
     // DEFINITIVE SAFETY NET: If booking is disabled, NEVER allow any booking-related handoff or message
     // This catches any case where the AI ignores the system prompt instructions
     const APP_ONLY_MESSAGE = `⚠️ *Agendamento somente pelo aplicativo*
@@ -1255,7 +1283,6 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
     if (!isBookingEnabled) {
       // ABSOLUTE BLOCK: When booking is disabled, filter ALL booking-related content from AI response
-      // This is a broad net that catches any AI response mentioning scheduling/booking
       const responseNormalized = finalResponse.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       
@@ -1295,30 +1322,6 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           booking_blocked: true,
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-    }
-
-    // Check if AI wants to handoff to booking system (only reaches here if booking IS enabled)
-    if (finalResponse.includes('HANDOFF_BOOKING')) {
-      console.log('[ai-assistant] Booking enabled - proceeding with handoff');
-      return new Response(JSON.stringify({ 
-        response: null,
-        handoff_to_booking: true,
-        action: 'start_booking_flow'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Check if AI wants to handoff to boleto system
-    if (finalResponse.includes('HANDOFF_BOLETO')) {
-      console.log('[ai-assistant] AI requested handoff to boleto flow');
-      return new Response(JSON.stringify({ 
-        response: null,
-        handoff_to_boleto: true,
-        action: 'start_boleto_flow'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
     return new Response(JSON.stringify({ 
