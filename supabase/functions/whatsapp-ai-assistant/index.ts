@@ -1101,27 +1101,27 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
       
       const messageLower = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const keywordsNormalized = bookingKeywords.map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-      const isBookingRequest = keywordsNormalized.some(kw => messageLower.includes(kw)) || message.trim() === '6';
+      // Note: message '6' is NOT included here because when booking is disabled,
+      // option 6 = boleto (handled above as HANDOFF_BOLETO, not a booking request)
+      const isBookingRequest = keywordsNormalized.some(kw => messageLower.includes(kw));
       
       if (isBookingRequest) {
         console.log(`[ai-assistant] BLOCKED: Booking request detected while disabled. Message: "${message.substring(0, 50)}..."`);
         return new Response(JSON.stringify({ 
-          response: `⚠️ *Agendamento Temporariamente Suspenso*
+          response: `⚠️ *Agendamento somente pelo aplicativo*
 
-O agendamento por WhatsApp está suspenso no momento, mas temos uma *novidade ainda melhor* para você!
+O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
-📲 *NOVO APP DO SINDICATO*
-Agora você pode agendar suas consultas pelo nosso aplicativo:
-• Agendamento rápido 24h
-• Carteirinha digital
-• Gestão de dependentes
-• Notificações de consultas
+📲 *Abrir o app agora:*
+👉 https://app.eclini.com.br/app
 
-📥 *Instale agora:*
-👉 Android: https://n9.cl/c2riv
-👉 iPhone: https://n9.cl/d6sl2
+_(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
-*Dica:* Abra pelo Safari (iPhone) ou Chrome (Android) e adicione à tela inicial.`,
+📥 *Ainda não instalou?*
+👉 https://app.eclini.com.br/app/instalar
+
+• iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
+• Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
           booking_blocked: true
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
