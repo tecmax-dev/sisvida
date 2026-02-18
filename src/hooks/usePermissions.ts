@@ -278,19 +278,25 @@ export function usePermissions() {
   const { user, userRoles, currentClinic, isSuperAdmin } = useAuth();
 
   // Get current role for the current clinic
-  const currentUserRole = userRoles.find((r) => r.clinic_id === currentClinic?.id);
+  // Also try SINDICATO_CLINIC_ID as fallback for /sindicato routes where currentClinic may differ
+  const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+  const currentUserRole =
+    userRoles.find((r) => r.clinic_id === currentClinic?.id) ||
+    userRoles.find((r) => r.clinic_id === SINDICATO_CLINIC_ID);
   const currentRole = currentUserRole?.role || null;
   const accessGroupId = currentUserRole?.access_group_id || null;
+  // Use the resolved clinic id for permission queries (may differ from currentClinic in /sindicato)
+  const resolvedClinicId = currentUserRole?.clinic_id || currentClinic?.id;
 
   // Fetch permissions from database when user has an access_group_id
   const { data: dbPermissions, isLoading: permissionsLoading } = useQuery({
-    queryKey: ['user-permissions', user?.id, currentClinic?.id, accessGroupId],
+    queryKey: ['user-permissions', user?.id, resolvedClinicId, accessGroupId],
     queryFn: async () => {
-      if (!user?.id || !currentClinic?.id) return null;
+      if (!user?.id || !resolvedClinicId) return null;
       
       const { data, error } = await supabase.rpc('get_user_permissions', {
         _user_id: user.id,
-        _clinic_id: currentClinic.id
+        _clinic_id: resolvedClinicId
       });
 
       if (error) {
@@ -300,7 +306,7 @@ export function usePermissions() {
 
       return new Set(data?.map((p: { permission_key: string }) => p.permission_key) || []);
     },
-    enabled: !!user?.id && !!currentClinic?.id && !!accessGroupId,
+    enabled: !!user?.id && !!resolvedClinicId && !!accessGroupId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
