@@ -6681,43 +6681,10 @@ serve(async (req) => {
           }
         }
 
-        // ===== EXISTING BOOKING FLOW =====
-        // Check if clinic has whatsapp_booking feature in their plan
-        const { data: hasBookingFeature } = await supabase
-          .from('subscriptions')
-          .select(`
-            plan_id,
-            status,
-            subscription_plans!inner (
-              plan_features!inner (
-                system_features!inner (
-                  key
-                )
-              )
-            )
-          `)
-          .eq('clinic_id', clinicId)
-          .in('status', ['active', 'trial'])
-          .eq('subscription_plans.plan_features.system_features.key', 'whatsapp_booking')
-          .maybeSingle();
-
-        if (!hasBookingFeature) {
-          console.log(`[webhook] Clinic ${clinicId} does NOT have whatsapp_booking feature - blocking booking flow`);
-          await sendWhatsAppMessage(
-            configData, 
-            phone, 
-            `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
-          );
-          return new Response(
-            JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
-
         // =========================================================================
         // DEFINITIVE GATE: If booking_enabled=false, block BOOKING-RELATED messages.
+        // THIS RUNS FIRST - before any feature/plan checks - to guarantee the correct
+        // "Agendamento somente pelo aplicativo" message is always shown when booking is disabled.
         // Non-booking messages (greetings, farewells, general questions) pass through
         // to the AI assistant for normal handling.
         // =========================================================================
@@ -6792,6 +6759,42 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           }
         }
         // =========================================================================
+
+        // ===== EXISTING BOOKING FLOW =====
+        // Check if clinic has whatsapp_booking feature in their plan
+        // (only runs after booking_enabled=false gate above, so booking disabled clinics always get correct message)
+        const { data: hasBookingFeature } = await supabase
+          .from('subscriptions')
+          .select(`
+            plan_id,
+            status,
+            subscription_plans!inner (
+              plan_features!inner (
+                system_features!inner (
+                  key
+                )
+              )
+            )
+          `)
+          .eq('clinic_id', clinicId)
+          .in('status', ['active', 'trial'])
+          .eq('subscription_plans.plan_features.system_features.key', 'whatsapp_booking')
+          .maybeSingle();
+
+        if (!hasBookingFeature) {
+          console.log(`[webhook] Clinic ${clinicId} does NOT have whatsapp_booking feature - blocking booking flow`);
+          await sendWhatsAppMessage(
+            configData, 
+            phone, 
+            `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
+          );
+          return new Response(
+            JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
 
         // Check if clinic uses AI booking
         const { data: clinicSettings } = await supabase
