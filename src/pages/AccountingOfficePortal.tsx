@@ -218,39 +218,57 @@ export default function AccountingOfficePortal() {
     setIsLoading(true);
 
     try {
-      const cleanEmail = email.trim();
-      const cleanAccessCode = accessCode.trim();
+      // Sanitizar rigorosamente: remover espaços e converter código para maiúsculas
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanAccessCode = accessCode.trim().toUpperCase().replace(/\s+/g, "");
+
+      if (!cleanEmail || !cleanAccessCode) {
+        toast.error("Preencha o e-mail e o código de acesso.");
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("accounting-office-portal-auth", {
         body: { action: "login", email: cleanEmail, access_code: cleanAccessCode },
       });
 
+      // Erro de transporte (rede, CORS, timeout)
       if (error) {
-        toast.error(getInvokeErrorMessage(error) || "Erro ao fazer login.");
+        const msg = getInvokeErrorMessage(error);
+        toast.error(msg || "Erro de conexão. Verifique sua internet e tente novamente.");
         return;
       }
 
-      if (data?.error) {
-        toast.error(data.error);
+      // Backend retornou success: false com mensagem de erro (HTTP 200 mas lógica negada)
+      if (!data?.success || data?.error) {
+        const errMsg = data?.error || "Credenciais inválidas. Verifique seu e-mail e código de acesso.";
+        toast.error(errMsg);
         return;
       }
 
-      setAccountingOffice(data.accounting_office);
+      // Garantir que os dados retornados são válidos antes de usar
+      const office = data.accounting_office;
+      if (!office?.id || !office?.clinic_id) {
+        toast.error("Resposta inválida do servidor. Tente novamente.");
+        return;
+      }
+
+      setAccountingOffice(office);
       setIsAuthenticated(true);
 
       localStorage.setItem(
         "accounting_office_session",
         JSON.stringify({
-          accountingOffice: data.accounting_office,
+          accountingOffice: office,
           savedAt: Date.now(),
         })
       );
 
       toast.success("Login realizado com sucesso!");
-      loadData(data.accounting_office.id);
+      loadData(office.id);
     } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error(error?.message || "Erro ao fazer login. Tente novamente.");
+      console.error("[PortalContador] Login error:", error);
+      const msg = getInvokeErrorMessage(error);
+      toast.error(msg || "Erro ao fazer login. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
