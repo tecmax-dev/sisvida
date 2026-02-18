@@ -6723,22 +6723,24 @@ serve(async (req) => {
         // =========================================================================
         if (configData.booking_enabled === false) {
           const msgTrimmed = (messageText || '').trim();
-          const msgLower = msgTrimmed.toLowerCase();
+          const msgLower = msgTrimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
           // ---------------------------------------------------------------
-          // Regras quando agendamento está DESATIVADO:
-          //   Opção 5 = Outros assuntos → passa para IA (atendimento humano)
+          // REGRA ABSOLUTA quando agendamento está DESATIVADO:
+          //   Opção 5 = Outros assuntos → passa para IA (atendimento humano geral)
           //   Opção 6 = Boleto → já capturado acima por isBoletoRequest
-          //   Qualquer outra coisa relacionada a agendamento → mensagem do app
+          //   QUALQUER outra menção a consulta/médico/agendamento → APP_ONLY_MESSAGE
+          //   Sem exceções. Sem handoff humano em contexto médico.
           // ---------------------------------------------------------------
 
-          // Opção 5 = outros assuntos → deixa a IA tratar
+          // Opção 5 = outros assuntos → deixa a IA tratar (atendimento geral, não médico)
           if (msgTrimmed === '5') {
             console.log(`[webhook] booking_enabled=false but option '5' (outros assuntos) - passing to AI assistant`);
             // fall through to AI handling below
           } else {
-            // Detect booking intent: keywords OR numeric menu options 1-4 (when booking disabled)
-            const bookingIntentRegex = /\b(agendar|agendamento|consulta|marcar|desmarcar|cancelar|remarcar|reagendar|horario|horário|médico|medico|dentista|exame|profissional|disponível|disponivel|vaga|vagas|atendimento|especialidade)\b/i;
+            // EXPANDED booking intent detection - covers ALL medical/scheduling keywords
+            // including doctor names, specialties, scheduling verbs, and menu options 1-4
+            const bookingIntentRegex = /\b(agendar|agendamento|agenda|consulta|consultas|marcar|desmarcar|cancelar|remarcar|reagendar|retorno|retornar|horario|horarios|medico|medicos|doutor|doutora|dentista|exame|exames|profissional|disponivel|disponibilidade|vaga|vagas|atendimento|especialidade|pediatra|clinico|ginecologista|especialista|ortopedista|cardiologista|alcides|juliane|uiara|tiuba|dr |dra |dr\.|dra\.|pediatrico|nutricionist|fisioterapeuta|psicologo|psicologa|data|datas|quando atende|proxima data|proximos dias|proxima semana|tem vaga|tem horario|quero agendar|preciso agendar|gostaria de agendar|quero marcar|preciso marcar|quero consulta|preciso de consulta|quero ver medico|ir ao medico)\b/i;
             const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed); // options 1-4 are booking-related when booking disabled
             const hasBookingIntent = bookingIntentRegex.test(msgLower) || isBookingMenuOption;
 
