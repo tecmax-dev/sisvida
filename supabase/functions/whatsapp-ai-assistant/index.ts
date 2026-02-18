@@ -1037,7 +1037,8 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
 - Salário de padeiro: não representamos essa categoria (apenas Sindipan)
 - Falar com atendente: peça para aguardar e transfira (horário: 09:00-16:00, exceto almoço)
 - Sábados e domingos: não há atendimento humano
-- Problemas com agendamento no app: peça CPF do titular para verificar`;
+- Problemas com agendamento no app: peça CPF do titular para verificar
+- DESPEDIDAS: Quando o usuário se despedir (tchau, obrigado, até logo, etc.), responda APENAS com uma frase curta de despedida (ex: "Disponha! Até mais! 👋"). NUNCA repita dados de contato na despedida - o sistema já envia essas informações automaticamente.`;
 
     // Build messages array with history
     const messages: any[] = [
