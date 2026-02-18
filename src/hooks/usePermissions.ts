@@ -289,6 +289,10 @@ export function usePermissions() {
   const resolvedClinicId = currentUserRole?.clinic_id || currentClinic?.id;
 
   // Fetch permissions from database when user has an access_group_id
+  // Use isLoading (not isFetching) so background refetches don't temporarily revoke access.
+  // isLoading is only true when there is NO cached data yet — isFetching is true even during
+  // background refetches where cached data still exists, which caused false redirects
+  // after mutations triggered a re-render in the UnionModuleLayout guard.
   const { data: dbPermissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ['user-permissions', user?.id, resolvedClinicId, accessGroupId],
     queryFn: async () => {
@@ -351,8 +355,11 @@ export function usePermissions() {
 
     // If user has an access_group_id, ALWAYS use database permissions
     if (accessGroupId) {
-      // While loading, deny access to prevent flickering
-      if (permissionsLoading) return false;
+      // Only block when there is NO cached data at all (first load).
+      // During background refetches, permissionsLoading stays false because isLoading
+      // is false when cached data exists. This prevents false access revocation
+      // after mutations trigger re-renders (post-mutation race condition fix).
+      if (permissionsLoading && !dbPermissions) return false;
 
       // Check both the original permission and the resolved one
       return (
