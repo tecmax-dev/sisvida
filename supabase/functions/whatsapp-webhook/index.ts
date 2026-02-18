@@ -1058,6 +1058,39 @@ async function handleAIBookingFlow(
   // This includes: active sessions, CPF inputs, AI conversation, keywords — EVERYTHING
   // =========================================================================
   if (config.booking_enabled === false) {
+    const msgTrimmed = (messageText || '').trim();
+
+    // Exception: option '6' = boleto flow. Allow it to pass through to boleto-whatsapp-flow.
+    if (msgTrimmed === '6') {
+      console.log(`[ai-booking] booking_enabled=false but message is '6' (boleto) - redirecting to boleto flow instead of blocking`);
+      const supabaseUrlEnv = Deno.env.get('SUPABASE_URL') || '';
+      try {
+        const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''}`,
+          },
+          body: JSON.stringify({
+            clinic_id: clinicId,
+            phone,
+            evolution_config: config,
+          }),
+        });
+        if (boletoResponse.ok) {
+          console.log('[ai-booking] Boleto flow initiated successfully from option 6 (booking disabled)');
+        } else {
+          const errorText = await boletoResponse.text();
+          console.error('[ai-booking] Boleto flow error:', errorText);
+          await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.');
+        }
+      } catch (boletoError) {
+        console.error('[ai-booking] Exception calling boleto flow:', boletoError);
+        await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.');
+      }
+      return;
+    }
+
     console.log(`[ai-booking] ABSOLUTE BLOCK: booking_enabled=false for clinic ${clinicId}. Terminating all booking flows.`);
 
     // Expire any active booking sessions so they don't resume
