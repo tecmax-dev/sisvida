@@ -6622,7 +6622,10 @@ serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        const isBoletoRequest = /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
+        // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
+        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && configData.booking_enabled === false
+          ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim())
+          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
 
         if (activeBoletoSession || isBoletoRequest) {
           console.log(`[webhook] Routing to boleto flow - active session: ${!!activeBoletoSession}, is request: ${isBoletoRequest}`);
@@ -6719,25 +6722,38 @@ serve(async (req) => {
         // to the AI assistant for normal handling.
         // =========================================================================
         if (configData.booking_enabled === false) {
-          const msgLower = (messageText || '').toLowerCase().trim();
+          const msgTrimmed = (messageText || '').trim();
+          const msgLower = msgTrimmed.toLowerCase();
 
-          // Detect booking intent keywords
-          const bookingIntentRegex = /\b(agendar|agendamento|consulta|marcar|desmarcar|cancelar|remarcar|reagendar|horario|horário|médico|medico|dentista|exame|profissional|disponível|disponivel|vaga|vagas|atendimento|especialidade)\b/i;
-          // Note: '6' = boleto (should NOT be blocked). Only block booking keywords, not numeric options.
-          const hasBookingIntent = bookingIntentRegex.test(msgLower);
+          // ---------------------------------------------------------------
+          // Regras quando agendamento está DESATIVADO:
+          //   Opção 5 = Outros assuntos → passa para IA (atendimento humano)
+          //   Opção 6 = Boleto → já capturado acima por isBoletoRequest
+          //   Qualquer outra coisa relacionada a agendamento → mensagem do app
+          // ---------------------------------------------------------------
 
-          if (hasBookingIntent) {
-            console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false, booking intent detected for clinic ${clinicId}. Message: "${messageText}"`);
+          // Opção 5 = outros assuntos → deixa a IA tratar
+          if (msgTrimmed === '5') {
+            console.log(`[webhook] booking_enabled=false but option '5' (outros assuntos) - passing to AI assistant`);
+            // fall through to AI handling below
+          } else {
+            // Detect booking intent: keywords OR numeric menu options 1-4 (when booking disabled)
+            const bookingIntentRegex = /\b(agendar|agendamento|consulta|marcar|desmarcar|cancelar|remarcar|reagendar|horario|horário|médico|medico|dentista|exame|profissional|disponível|disponivel|vaga|vagas|atendimento|especialidade)\b/i;
+            const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed); // options 1-4 are booking-related when booking disabled
+            const hasBookingIntent = bookingIntentRegex.test(msgLower) || isBookingMenuOption;
 
-            // Expire active booking sessions
-            await supabase
-              .from('whatsapp_booking_sessions')
-              .update({ state: 'FINISHED', expires_at: new Date().toISOString() })
-              .eq('clinic_id', clinicId)
-              .in('phone', phoneCandidates)
-              .neq('state', 'FINISHED');
+            if (hasBookingIntent) {
+              console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false, booking intent detected for clinic ${clinicId}. Message: "${messageText}"`);
 
-            const appOnlyMsg = `⚠️ *Agendamento somente pelo aplicativo*
+              // Expire active booking sessions
+              await supabase
+                .from('whatsapp_booking_sessions')
+                .update({ state: 'FINISHED', expires_at: new Date().toISOString() })
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .neq('state', 'FINISHED');
+
+              const appOnlyMsg = `⚠️ *Agendamento somente pelo aplicativo*
 
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
@@ -6752,24 +6768,25 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-            await sendWhatsAppMessage(configData, phone, appOnlyMsg);
+              await sendWhatsAppMessage(configData, phone, appOnlyMsg);
 
-            await supabase.from('whatsapp_incoming_logs').insert({
-              clinic_id: clinicId,
-              phone,
-              message_text: messageText,
-              raw_payload: payload,
-              processed: true,
-              processed_action: 'booking_blocked_app_only',
-            });
+              await supabase.from('whatsapp_incoming_logs').insert({
+                clinic_id: clinicId,
+                phone,
+                message_text: messageText,
+                raw_payload: payload,
+                processed: true,
+                processed_action: 'booking_blocked_app_only',
+              });
 
-            return new Response(
-              JSON.stringify({ success: true, message: 'Booking blocked - app only' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          } else {
-            // Non-booking message: let AI assistant handle it normally (farewells, questions, etc.)
-            console.log(`[webhook] booking_enabled=false but no booking intent detected - passing to AI. Message: "${messageText}"`);
+              return new Response(
+                JSON.stringify({ success: true, message: 'Booking blocked - app only' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            } else {
+              // Non-booking message (greetings, farewells, etc.): let AI handle
+              console.log(`[webhook] booking_enabled=false but no booking intent - passing to AI. Message: "${messageText}"`);
+            }
           }
         }
         // =========================================================================
