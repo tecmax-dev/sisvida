@@ -65,7 +65,7 @@ export default function HomologacaoBloqueiosPage() {
     block_date: new Date(),
     reason: "",
     block_type: "block",
-    professional_id: "",
+    professional_id: "all",
   });
 
   // Fetch blocks
@@ -104,35 +104,23 @@ export default function HomologacaoBloqueiosPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      console.log("[Bloqueios] INSERT payload:", {
-        block_date: format(data.block_date, "yyyy-MM-dd"),
-        reason: data.reason || null,
-        block_type: data.block_type,
-        professional_id: data.professional_id || null,
-        clinic_id: clinicId,
-      });
       const { error } = await supabase
         .from("homologacao_blocks")
         .insert({
           block_date: format(data.block_date, "yyyy-MM-dd"),
           reason: data.reason || null,
           block_type: data.block_type,
-          professional_id: data.professional_id || null,
+          professional_id: data.professional_id === "all" ? null : (data.professional_id || null),
           clinic_id: clinicId,
         });
-      if (error) {
-        console.error("[Bloqueios] INSERT error:", error);
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
-      console.log("[Bloqueios] INSERT success — invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
       toast.success("Bloqueio criado com sucesso!");
       closeDialog();
     },
     onError: (error) => {
-      console.error("[Bloqueios] CREATE BLOCK ERROR:", error);
       toast.error("Erro ao criar bloqueio: " + error.message);
     },
   });
@@ -160,7 +148,7 @@ export default function HomologacaoBloqueiosPage() {
       block_date: new Date(),
       reason: "",
       block_type: "block",
-      professional_id: "",
+      professional_id: "all",
     });
     setIsDialogOpen(true);
   };
@@ -350,7 +338,7 @@ export default function HomologacaoBloqueiosPage() {
                   <SelectValue placeholder="Todos os profissionais" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os profissionais</SelectItem>
+                  <SelectItem value="all">Todos os profissionais</SelectItem>
                   {professionals?.map((prof) => (
                     <SelectItem key={prof.id} value={prof.id}>
                       {prof.name}
