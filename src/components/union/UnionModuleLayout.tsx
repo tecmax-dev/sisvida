@@ -54,10 +54,26 @@ export function UnionModuleLayout() {
   // which may never resolve when currentClinic is null in /sindicato routes.
   const isCheckingAccess = permissionsLoading || isLoadingUnionEntity;
 
+  const accessResult = hasUnionAccess();
+  console.log("[UnionModuleLayout] guard state:", {
+    isCheckingAccess,
+    permissionsLoading,
+    isLoadingUnionEntity,
+    hasUnionAccess: accessResult,
+    isUnionEntityAdmin,
+    currentClinic: currentClinic?.id,
+  });
+
   // Redirect if no access: user must have explicit union permissions OR be union entity admin
   // Having a clinic linked to a union entity is NOT enough - user must have specific permissions
   // Only redirect after all checks are complete to avoid premature redirects during loading
-  if (!isCheckingAccess && !hasUnionAccess() && !isUnionEntityAdmin) {
+  if (!isCheckingAccess && !accessResult && !isUnionEntityAdmin) {
+    console.error("[UnionModuleLayout] REDIRECTING to /dashboard — access denied", {
+      permissionsLoading,
+      isLoadingUnionEntity,
+      hasUnionAccess: accessResult,
+      isUnionEntityAdmin,
+    });
     return <Navigate to="/dashboard" replace />;
   }
 
