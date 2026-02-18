@@ -6761,40 +6761,76 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         // =========================================================================
 
         // ===== EXISTING BOOKING FLOW =====
-        // Check if clinic has whatsapp_booking feature in their plan
-        // (only runs after booking_enabled=false gate above, so booking disabled clinics always get correct message)
-        const { data: hasBookingFeature } = await supabase
-          .from('subscriptions')
-          .select(`
-            plan_id,
-            status,
-            subscription_plans!inner (
-              plan_features!inner (
-                system_features!inner (
-                  key
+        // CRITICAL: When booking_enabled=false, SKIP the plan feature check entirely.
+        // The DEFINITIVE GATE above already handled all booking-related messages (sent app-only message or exited).
+        // If we reach here with booking_enabled=false, the message is non-booking (option 5, greeting, farewell)
+        // and should go directly to the AI assistant — NOT blocked by the plan check.
+        if (configData.booking_enabled !== false) {
+          // Check if clinic has whatsapp_booking feature in their plan
+          const { data: hasBookingFeature } = await supabase
+            .from('subscriptions')
+            .select(`
+              plan_id,
+              status,
+              subscription_plans!inner (
+                plan_features!inner (
+                  system_features!inner (
+                    key
+                  )
                 )
               )
-            )
-          `)
-          .eq('clinic_id', clinicId)
-          .in('status', ['active', 'trial'])
-          .eq('subscription_plans.plan_features.system_features.key', 'whatsapp_booking')
-          .maybeSingle();
+            `)
+            .eq('clinic_id', clinicId)
+            .in('status', ['active', 'trial'])
+            .eq('subscription_plans.plan_features.system_features.key', 'whatsapp_booking')
+            .maybeSingle();
 
-        if (!hasBookingFeature) {
-          console.log(`[webhook] Clinic ${clinicId} does NOT have whatsapp_booking feature - blocking booking flow`);
-          await sendWhatsAppMessage(
-            configData, 
-            phone, 
-            `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
-          );
+          if (!hasBookingFeature) {
+            console.log(`[webhook] Clinic ${clinicId} does NOT have whatsapp_booking feature - blocking booking flow`);
+            await sendWhatsAppMessage(
+              configData,
+              phone,
+              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
+            );
+            return new Response(
+              JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
+        } else {
+          // booking_enabled=false: skip plan check, route non-booking messages directly to AI assistant
+          console.log(`[webhook] booking_enabled=false for clinic ${clinicId} - skipping plan check, routing non-booking message to AI`);
+          const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+          try {
+            await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                clinic_id: clinicId,
+                phone,
+                message: messageText,
+                evolution_config: {
+                  api_url: configData.api_url,
+                  api_key: configData.api_key,
+                  instance_name: configData.instance_name,
+                },
+                booking_enabled: false,
+              }),
+            });
+          } catch (aiErr) {
+            console.error('[webhook] Error calling AI assistant (non-booking path):', aiErr);
+          }
           return new Response(
-            JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
+            JSON.stringify({ success: true, message: 'Non-booking message routed to AI' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-
-        console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
 
         // Check if clinic uses AI booking
         const { data: clinicSettings } = await supabase
