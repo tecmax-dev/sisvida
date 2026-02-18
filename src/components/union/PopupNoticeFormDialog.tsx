@@ -35,6 +35,7 @@ export function PopupNoticeFormDialog({
   const [navigateToBooking, setNavigateToBooking] = useState(false);
   const [navigateToAuthorizations, setNavigateToAuthorizations] = useState(false);
   const [navigateToDependents, setNavigateToDependents] = useState(false);
+  const [navigateToCardRenewal, setNavigateToCardRenewal] = useState(false);
   const [priority, setPriority] = useState(0);
   const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -66,6 +67,7 @@ export function PopupNoticeFormDialog({
       setNavigateToBooking(editingNotice.navigate_to_booking || false);
       setNavigateToAuthorizations(editingNotice.navigate_to_authorizations || false);
       setNavigateToDependents(editingNotice.navigate_to_dependents || false);
+      setNavigateToCardRenewal(editingNotice.navigate_to_card_renewal || false);
       setPriority(editingNotice.priority);
       setStartsAt(isoToLocalDatetime(editingNotice.starts_at));
       setExpiresAt(isoToLocalDatetime(editingNotice.expires_at));
@@ -85,6 +87,7 @@ export function PopupNoticeFormDialog({
     setNavigateToBooking(false);
     setNavigateToAuthorizations(false);
     setNavigateToDependents(false);
+    setNavigateToCardRenewal(false);
     setPriority(0);
     setStartsAt("");
     setExpiresAt("");
@@ -117,12 +120,13 @@ export function PopupNoticeFormDialog({
       message: message || null,
       image_url: imageUrl || null,
       button_text: buttonText || "Entendi",
-      button_link: (navigateToBooking || navigateToAuthorizations || navigateToDependents) ? null : (buttonLink || null),
+      button_link: (navigateToBooking || navigateToAuthorizations || navigateToDependents || navigateToCardRenewal) ? null : (buttonLink || null),
       is_active: isActive,
       show_once_per_session: showOncePerSession,
       navigate_to_booking: navigateToBooking,
       navigate_to_authorizations: navigateToAuthorizations,
       navigate_to_dependents: navigateToDependents,
+      navigate_to_card_renewal: navigateToCardRenewal,
       priority,
       starts_at: localDatetimeToIso(startsAt),
       expires_at: localDatetimeToIso(expiresAt),
@@ -329,7 +333,23 @@ export function PopupNoticeFormDialog({
                 checked={navigateToDependents} 
                 onCheckedChange={(checked) => {
                   setNavigateToDependents(checked);
-                  if (checked) { setNavigateToBooking(false); setNavigateToAuthorizations(false); }
+                  if (checked) { setNavigateToBooking(false); setNavigateToAuthorizations(false); setNavigateToCardRenewal(false); }
+                }} 
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Abrir atualização de carteirinha</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ao clicar no botão, abre a página da carteirinha
+                </p>
+              </div>
+              <Switch 
+                checked={navigateToCardRenewal} 
+                onCheckedChange={(checked) => {
+                  setNavigateToCardRenewal(checked);
+                  if (checked) { setNavigateToBooking(false); setNavigateToAuthorizations(false); setNavigateToDependents(false); }
                 }} 
               />
             </div>

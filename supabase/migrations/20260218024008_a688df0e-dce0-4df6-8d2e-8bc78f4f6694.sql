@@ -1,0 +1,1 @@
+ALTER TABLE public.popup_notices ADD COLUMN IF NOT EXISTS navigate_to_card_renewal boolean NOT NULL DEFAULT false;
