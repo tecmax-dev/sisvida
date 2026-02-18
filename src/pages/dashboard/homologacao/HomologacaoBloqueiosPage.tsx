@@ -62,7 +62,7 @@ export default function HomologacaoBloqueiosPage() {
   const [formData, setFormData] = useState({
     block_date: new Date(),
     reason: "",
-    block_type: "full_day",
+    block_type: "block",
     professional_id: "",
   });
 
@@ -147,7 +147,7 @@ export default function HomologacaoBloqueiosPage() {
     setFormData({
       block_date: new Date(),
       reason: "",
-      block_type: "full_day",
+      block_type: "block",
       professional_id: "",
     });
     setIsDialogOpen(true);
@@ -169,12 +169,10 @@ export default function HomologacaoBloqueiosPage() {
 
   const getBlockTypeBadge = (type: string) => {
     switch (type) {
-      case "full_day":
-        return <Badge variant="destructive">Dia Inteiro</Badge>;
-      case "partial":
-        return <Badge variant="secondary">Parcial</Badge>;
+      case "block":
+        return <Badge variant="destructive">Bloqueio</Badge>;
       case "holiday":
-        return <Badge className="bg-purple-500">Feriado</Badge>;
+        return <Badge className="bg-purple-500 text-white">Feriado</Badge>;
       default:
         return <Badge>{type}</Badge>;
     }
@@ -324,8 +322,7 @@ export default function HomologacaoBloqueiosPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="full_day">Dia Inteiro</SelectItem>
-                  <SelectItem value="partial">Parcial</SelectItem>
+                  <SelectItem value="block">Bloqueio de Agenda</SelectItem>
                   <SelectItem value="holiday">Feriado</SelectItem>
                 </SelectContent>
               </Select>
