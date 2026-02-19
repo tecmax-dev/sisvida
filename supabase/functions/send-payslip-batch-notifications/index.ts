@@ -170,11 +170,25 @@ serve(async (req) => {
         continue;
       }
 
+      // Get patient's active card
+      const { data: activeCard } = await supabase
+        .from('patient_cards')
+        .select('expires_at, card_number')
+        .eq('patient_id', patientId)
+        .eq('is_active', true)
+        .order('expires_at', { ascending: false })
+        .limit(1)
+        .single();
+
       const firstName = patient.name.split(' ')[0];
+      const cardLine = activeCard?.expires_at
+        ? `\n🪪 Sua carteirinha digital está válida até *${new Date(activeCard.expires_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}*.`
+        : '';
+
       const message = `📄 Olá, ${firstName}!
 
 Seu *contracheque* foi atualizado pelo ${clinic.name}.
-
+${cardLine}
 ✅ O documento já está disponível na sua área do associado.
 
 Em caso de dúvidas, entre em contato conosco.
