@@ -236,6 +236,31 @@ export function usePatientAttachments(patientId: string) {
     if (uploadedFiles.length > 0) {
       toast.success(`${uploadedFiles.length} arquivo(s) enviado(s)`);
       await fetchAttachments(folderId);
+
+      // Check if files were uploaded to a "Contra cheques" folder
+      if (folderId) {
+        const targetFolder = folders.find(f => f.id === folderId);
+        const isContraChequeFolder = targetFolder &&
+          targetFolder.name.toLowerCase().includes('contra') &&
+          targetFolder.name.toLowerCase().includes('cheque');
+
+        if (isContraChequeFolder) {
+          // Send WhatsApp notification to the patient (fire and forget)
+          supabase.functions.invoke('send-payslip-upload-notification', {
+            body: {
+              clinic_id: currentClinic.id,
+              patient_id: patientId,
+              file_name: uploadedFiles[0]?.file_name,
+            }
+          }).then(({ error }) => {
+            if (error) {
+              console.error("Error sending payslip notification:", error);
+            } else {
+              console.log("Payslip upload notification sent successfully");
+            }
+          });
+        }
+      }
     }
 
     return uploadedFiles;

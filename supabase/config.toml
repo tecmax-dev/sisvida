@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.send-signature-whatsapp]
 verify_jwt = false
+
+[functions.send-payslip-upload-notification]
+verify_jwt = false
+
+[functions.send-payslip-batch-notifications]
+verify_jwt = false
