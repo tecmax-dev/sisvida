@@ -648,7 +648,7 @@ export default function BulkContributionDialog({
 
         {step === "config" && (
           <>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 py-4 overflow-y-auto flex-1 pr-1">
               {/* Config Section */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
