@@ -121,17 +121,21 @@ export function useContributionsReport(clinicId: string | undefined) {
           .range(from, from + PAGE_SIZE - 1);
 
         // Aplicar filtro de status NO BANCO (não no frontend)
-        // Statuses válidos para relatório: paid, pending, overdue, cancelled
-        // Statuses especiais (não devem aparecer no relatório geral): awaiting_value, negotiated
+        // Regra: qualquer contribuição com value > 0 deve aparecer no relatório,
+        // independente do status (pending, overdue, awaiting_value, negotiated, etc.)
         if (filters.status === "hide_cancelled") {
-          // Mostrar apenas paid, pending, overdue (ocultar cancelled, awaiting_value, negotiated)
-          query = query.in("status", ["paid", "pending", "overdue"]);
+          // Ocultar cancelled; mostrar paid, pending, overdue, negotiated e awaiting_value com valor
+          query = query
+            .in("status", ["paid", "pending", "overdue", "negotiated", "awaiting_value"])
+            .gt("value", 0);
         } else if (filters.status === "all") {
-          // Mostrar todos os status principais (ocultar apenas awaiting_value e negotiated)
-          query = query.in("status", ["paid", "pending", "overdue", "cancelled"]);
+          // Mostrar todos incluindo awaiting_value e negotiated quando têm valor preenchido
+          query = query.gt("value", 0);
         } else if (filters.status === "defaulting") {
-          // Relatório de inadimplência: mostrar apenas pending e overdue
-          query = query.in("status", ["pending", "overdue"]);
+          // Relatório de inadimplência: pending, overdue e awaiting_value com valor > 0
+          query = query
+            .in("status", ["pending", "overdue", "awaiting_value"])
+            .gt("value", 0);
         } else {
           query = query.eq("status", filters.status);
         }
