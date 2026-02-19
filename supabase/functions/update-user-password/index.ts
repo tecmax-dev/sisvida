@@ -40,18 +40,39 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is super admin
+    // Check if user is super admin OR has manage_users permission via access group
     const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
-    const { data: superAdmin, error: saError } = await adminClient
+    const { data: superAdmin } = await adminClient
       .from("super_admins")
       .select("id")
       .eq("user_id", currentUser.id)
       .maybeSingle();
 
-    if (saError || !superAdmin) {
-      console.error("Super admin check failed:", saError);
+    // Also check if user has manage_users permission via access group
+    let hasPermission = !!superAdmin;
+    if (!hasPermission) {
+      const { data: userRole } = await adminClient
+        .from("user_roles")
+        .select("access_group_id, role")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+      if (userRole?.access_group_id) {
+        const { data: perm } = await adminClient
+          .from("access_group_permissions")
+          .select("id")
+          .eq("access_group_id", userRole.access_group_id)
+          .eq("permission_key", "manage_users")
+          .maybeSingle();
+        hasPermission = !!perm;
+      } else if (userRole?.role === 'owner' || userRole?.role === 'admin') {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
       return new Response(
-        JSON.stringify({ error: "Acesso negado: apenas Super Admins podem alterar senhas" }),
+        JSON.stringify({ error: "Acesso negado: sem permissão para alterar senhas" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

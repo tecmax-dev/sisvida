@@ -24,10 +24,13 @@ import {
   Briefcase,
   Phone,
   Send,
+  Key,
 } from "lucide-react";
 import { UserDialog } from "@/components/users/UserDialog";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { SendUserWelcomeDialog } from "@/components/users/SendUserWelcomeDialog";
+import { EditUserPasswordDialog } from "@/components/admin/EditUserPasswordDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -84,6 +87,7 @@ const roleBadgeColors: Record<string, string> = {
 export default function UsersManagementPage() {
   const { currentClinic, userRoles, user } = useAuth();
   const { logAction } = useAuditLog();
+  const { hasPermission, isAdmin: isAdminByPermission } = usePermissions();
   const [users, setUsers] = useState<ClinicUserWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,10 +97,13 @@ export default function UsersManagementPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
   const [welcomeUser, setWelcomeUser] = useState<ClinicUserWithStatus | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<ClinicUserWithStatus | null>(null);
 
-  // Check if current user is admin of the clinic
+  // Check if current user is admin of the clinic OR has manage_users permission
   const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
-  const isAdmin = currentUserRole?.role === 'owner' || currentUserRole?.role === 'admin';
+  const isAdmin = currentUserRole?.role === 'owner' || currentUserRole?.role === 'admin' || hasPermission('manage_users');
+  const canChangePassword = isAdminByPermission || hasPermission('manage_users');
 
   useEffect(() => {
     if (currentClinic && isAdmin) {
@@ -189,6 +196,11 @@ export default function UsersManagementPage() {
   const handleSendWelcome = (clinicUser: ClinicUserWithStatus) => {
     setWelcomeUser(clinicUser);
     setWelcomeDialogOpen(true);
+  };
+
+  const handleChangePassword = (clinicUser: ClinicUserWithStatus) => {
+    setPasswordUser(clinicUser);
+    setPasswordDialogOpen(true);
   };
 
   const filteredUsers = users.filter(u => 
@@ -511,6 +523,14 @@ export default function UsersManagementPage() {
                               <Send className="h-4 w-4 mr-2" />
                               Enviar Boas-Vindas
                             </DropdownMenuItem>
+                            {canChangePassword && clinicUser.user_id !== user?.id && (
+                              <DropdownMenuItem
+                                onClick={() => handleChangePassword(clinicUser)}
+                              >
+                                <Key className="h-4 w-4 mr-2" />
+                                Alterar Senha
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -552,6 +572,20 @@ export default function UsersManagementPage() {
         } : null}
         clinicId={currentClinic?.id || ''}
         clinicName={currentClinic?.name || ''}
+      />
+
+      <EditUserPasswordDialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => {
+          setPasswordDialogOpen(open);
+          if (!open) setPasswordUser(null);
+        }}
+        user={passwordUser ? {
+          user_id: passwordUser.user_id,
+          name: passwordUser.profile?.name || 'Usuário',
+          email: passwordUser.email || '',
+        } : null}
+        onSuccess={() => {}}
       />
     </div>
   );
