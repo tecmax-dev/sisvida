@@ -30,6 +30,7 @@ interface PatientFormFieldsProps {
   onCnpjLookup?: () => void;
   cnpjLoading?: boolean;
   isAdmin?: boolean;
+  canChangePassword?: boolean;
   clinicDefaultLimit?: number | null;
 }
 
@@ -158,6 +159,7 @@ export function PatientFormFields({
   onCnpjLookup,
   cnpjLoading,
   isAdmin = false,
+  canChangePassword = false,
   clinicDefaultLimit,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
@@ -753,10 +755,9 @@ export function PatientFormFields({
         />
       </div>
 
-      {/* Admin-only: Limite de Consultas e Senha do App */}
+      {/* Admin-only: Limite de Consultas */}
       {isAdmin && (
         <div className="border-t pt-4 mt-4 space-y-6">
-          {/* Limite de Consultas */}
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -792,39 +793,41 @@ export function PatientFormFields({
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Senha do App Mobile */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Senha do App Mobile</p>
-                <p className="text-xs text-muted-foreground">
-                  Defina uma senha para o sócio acessar o app
-                </p>
-              </div>
+      {/* Senha do App Mobile - visível para admins e usuários com permissão change_password */}
+      {(isAdmin || canChangePassword) && (
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="mobilePassword">Nova Senha</Label>
-                <Input
-                  id="mobilePassword"
-                  type="password"
-                  value={formData.mobilePassword || ''}
-                  onChange={(e) => updateField('mobilePassword', e.target.value)}
-                  placeholder="Deixe vazio para manter atual"
-                  className="mt-1"
-                  autoComplete="new-password"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Mínimo 6 caracteres. Deixe vazio para não alterar.
-                </p>
-              </div>
+            <div>
+              <p className="text-sm font-medium">Senha do App Mobile</p>
+              <p className="text-xs text-muted-foreground">
+                Defina uma senha para o sócio acessar o app
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="mobilePassword">Nova Senha</Label>
+              <Input
+                id="mobilePassword"
+                type="password"
+                value={formData.mobilePassword || ''}
+                onChange={(e) => updateField('mobilePassword', e.target.value)}
+                placeholder="Deixe vazio para manter atual"
+                className="mt-1"
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Mínimo 6 caracteres. Deixe vazio para não alterar.
+              </p>
             </div>
           </div>
         </div>
