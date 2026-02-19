@@ -20,7 +20,8 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Send
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,7 @@ export default function UnionPayslipApprovalsPage() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [newExpiresAt, setNewExpiresAt] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isSendingBatch, setIsSendingBatch] = useState(false);
 
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
@@ -205,6 +207,39 @@ export default function UnionPayslipApprovalsPage() {
     }
   };
 
+  const handleSendBatchNotifications = async () => {
+    if (!currentClinic) return;
+    setIsSendingBatch(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-payslip-batch-notifications', {
+        body: { clinic_id: currentClinic.id }
+      });
+
+      if (error) throw error;
+
+      if (data?.sent > 0) {
+        toast({
+          title: "Notificações enviadas",
+          description: `✅ ${data.sent} sócio(s) notificado(s) sobre contracheques atualizados hoje.${data.no_phone > 0 ? ` ${data.no_phone} sem telefone.` : ''}`,
+        });
+      } else {
+        toast({
+          title: "Nenhuma notificação enviada",
+          description: data?.message || "Nenhum contracheque atualizado hoje ou nenhum sócio com telefone.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error sending batch notifications:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao enviar notificações",
+        description: error.message || "Não foi possível enviar as notificações em lote.",
+      });
+    } finally {
+      setIsSendingBatch(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -267,10 +302,27 @@ export default function UnionPayslipApprovalsPage() {
             Gerencie as solicitações de validação de contracheques dos sócios
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendBatchNotifications}
+            disabled={isSendingBatch}
+            className="gap-2"
+            title="Enviar WhatsApp para todos os sócios com contracheques atualizados hoje"
+          >
+            {isSendingBatch ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Notificar Hoje
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
