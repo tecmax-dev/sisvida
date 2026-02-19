@@ -679,7 +679,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, clinic_id, phone, conversation_history } = await req.json();
+    const { message, clinic_id, phone, conversation_history, evolution_config } = await req.json();
 
     if (!message || !clinic_id) {
       return new Response(JSON.stringify({ 
@@ -691,6 +691,21 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Helper: send WhatsApp message directly (used when called from webhook non-booking path)
+    const sendDirectWhatsApp = async (text: string): Promise<void> => {
+      if (!evolution_config || !phone) return;
+      try {
+        const dest = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
+        await fetch(`${evolution_config.api_url}/message/sendText/${evolution_config.instance_name}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: evolution_config.api_key },
+          body: JSON.stringify({ number: dest, text }),
+        });
+      } catch (e) {
+        console.error('[ai-assistant] sendDirectWhatsApp error:', e);
+      }
+    };
 
     // Fetch booking flag once for early routing decisions (menu + option 6)
     const { data: evolutionConfigEarly, error: evolutionConfigEarlyError } = await supabase
@@ -743,6 +758,7 @@ Como posso ajudar? Escolha uma opção:
 
 Digite o número da opção desejada.`;
 
+      await sendDirectWhatsApp(menuText);
       return new Response(
         JSON.stringify({ response: menuText, handoff_to_booking: false, action: 'show_menu' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1318,6 +1334,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
       if (hasBookingSignal) {
         console.log('[ai-assistant] ABSOLUTE BLOCK: AI response contains booking signal while disabled. Suppressing.');
+        await sendDirectWhatsApp(APP_ONLY_MESSAGE);
         return new Response(JSON.stringify({
           response: APP_ONLY_MESSAGE,
           handoff_to_booking: false,
@@ -1326,6 +1343,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       }
     }
 
+    await sendDirectWhatsApp(finalResponse);
     return new Response(JSON.stringify({ 
       response: finalResponse,
       tool_calls_made: iterations
