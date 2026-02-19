@@ -258,9 +258,13 @@ export default function PFContributionsReportsTab({
   }, [yearFilter, monthFilter]);
 
   const handleExportCSV = () => {
-    let csvContent = "Sócio,CPF,Qtd,Total,Pago,Pendente,Vencido\n";
-    byMemberReport.forEach((row) => {
-      csvContent += `"${row.member.name}","${row.member.cpf}",${row.count},${row.total / 100},${row.paid / 100},${row.pending / 100},${row.overdue / 100}\n`;
+    let csvContent = "Sócio,CPF,Competência,Tipo,Vencimento,Valor,Status,Pago em,Valor Pago\n";
+    filteredContributions.forEach((c) => {
+      const competence = `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`;
+      const dueDate = c.due_date ? format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy") : "-";
+      const paidAt = c.paid_at ? format(new Date(c.paid_at), "dd/MM/yyyy") : "-";
+      const statusLabel = c.status === "paid" ? "Pago" : c.status === "pending" ? "Pendente" : c.status === "overdue" ? "Vencido" : c.status === "cancelled" ? "Cancelado" : c.status;
+      csvContent += `"${c.patients?.name || "-"}","${c.patients?.cpf || "-"}","${competence}","${c.contribution_types?.name || "-"}","${dueDate}","${(c.value / 100).toFixed(2)}","${statusLabel}","${paidAt}","${c.paid_at ? ((c.paid_value || c.value) / 100).toFixed(2) : "-"}"\n`;
     });
     const filename = `contribuicoes-pf-${yearFilter}${monthFilter !== "all" ? `-${monthFilter.padStart(2, "0")}` : ""}.csv`;
 
