@@ -157,6 +157,7 @@ export default function UnionMemberDetailPage() {
   const { currentClinic, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
   const { canManageMembers } = useUnionPermissions();
+  const canChangePassword = isAdmin || hasPermission("change_password");
   const { openModal, closeModal, isModalOpen, getModalData } = useModal();
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
@@ -827,6 +828,7 @@ export default function UnionMemberDetailPage() {
                 onCnpjLookup={handleCnpjLookup}
                 cnpjLoading={cnpjLoading}
                 isAdmin={isAdmin}
+                canChangePassword={canChangePassword}
                 clinicDefaultLimit={clinicDefaultLimit}
               />
             </form>
