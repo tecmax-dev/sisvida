@@ -791,6 +791,7 @@ export default function UnionContributionsPageRedesign() {
             onOpenCreate={() => setCreateDialogOpen(true)}
             onOpenCreatePF={() => setCreatePFDialogOpen(true)}
             onOpenCreateWithoutValue={() => setCreateWithoutValueDialogOpen(true)}
+            onOpenBulkGenerate={() => setBulkDialogOpen(true)}
             onSyncAll={handleSyncAll}
             generatingInvoice={generatingInvoice}
             syncing={syncing}

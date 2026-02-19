@@ -54,11 +54,13 @@ import {
   Link2,
   CheckSquare,
   Handshake,
+  FileStack,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
@@ -129,6 +131,7 @@ interface ContributionsListTabProps {
   onOpenCreate: () => void;
   onOpenCreatePF: () => void;
   onOpenCreateWithoutValue?: () => void;
+  onOpenBulkGenerate?: () => void;
   onSyncAll: () => void;
   generatingInvoice: boolean;
   syncing: boolean;
@@ -190,6 +193,7 @@ export default function ContributionsListTab({
   onOpenCreate,
   onOpenCreatePF,
   onOpenCreateWithoutValue,
+  onOpenBulkGenerate,
   onSyncAll,
   generatingInvoice,
   syncing,
@@ -746,6 +750,15 @@ export default function ContributionsListTab({
                   <Link2 className="h-4 w-4 mr-2" />
                   Sem Valor (Gera Link)
                 </DropdownMenuItem>
+              )}
+              {onOpenBulkGenerate && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onOpenBulkGenerate}>
+                    <FileStack className="h-4 w-4 mr-2" />
+                    Gerar em Lote
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
