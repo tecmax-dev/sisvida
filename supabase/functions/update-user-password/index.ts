@@ -48,7 +48,7 @@ serve(async (req) => {
       .eq("user_id", currentUser.id)
       .maybeSingle();
 
-    // Also check if user has manage_users permission via access group
+    // Also check if user has manage_users or change_password permission via access group
     let hasPermission = !!superAdmin;
     if (!hasPermission) {
       const { data: userRole } = await adminClient
@@ -58,13 +58,13 @@ serve(async (req) => {
         .maybeSingle();
 
       if (userRole?.access_group_id) {
-        const { data: perm } = await adminClient
+        // Accept either manage_users OR change_password permission
+        const { data: perms } = await adminClient
           .from("access_group_permissions")
-          .select("id")
+          .select("permission_key")
           .eq("access_group_id", userRole.access_group_id)
-          .eq("permission_key", "manage_users")
-          .maybeSingle();
-        hasPermission = !!perm;
+          .in("permission_key", ["manage_users", "change_password"]);
+        hasPermission = (perms?.length ?? 0) > 0;
       } else if (userRole?.role === 'owner' || userRole?.role === 'admin') {
         hasPermission = true;
       }
