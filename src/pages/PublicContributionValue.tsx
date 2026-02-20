@@ -52,7 +52,9 @@ function formatCNPJ(cnpj: string): string {
 }
 
 export default function PublicContributionValue() {
-  const { token } = useParams<{ token: string }>();
+  const { token, "*": splatToken } = useParams<{ token?: string; "*"?: string }>();
+  // Support both normal :token and splat /* (for legacy tokens containing slashes)
+  const rawToken = token || splatToken || "";
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [contribution, setContribution] = useState<ContributionData | null>(null);
@@ -62,16 +64,19 @@ export default function PublicContributionValue() {
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token) {
+    if (rawToken) {
       loadContribution();
     }
-  }, [token]);
+  }, [rawToken]);
 
   const loadContribution = async () => {
     setLoading(true);
     setError(null);
     
     try {
+      // Decode token in case it was URL-encoded (handles legacy base64 tokens with special chars)
+      const decodedToken = rawToken ? decodeURIComponent(rawToken) : rawToken;
+
       const { data, error: fetchError } = await supabase
         .from("employer_contributions")
         .select(`
@@ -86,7 +91,7 @@ export default function PublicContributionValue() {
           contribution_type:contribution_types(name, default_value),
           clinic:clinics(name, logo_url)
         `)
-        .eq("public_access_token", token)
+        .eq("public_access_token", decodedToken)
         .single();
 
       if (fetchError || !data) {
@@ -137,7 +142,7 @@ export default function PublicContributionValue() {
           contribution_id: contribution.id,
           value: valueInCents,
           portal_type: "public_token",
-          portal_id: token,
+          portal_id: rawToken,
         },
       });
 

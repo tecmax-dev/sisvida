@@ -456,6 +456,7 @@ function App() {
                 <Route path="/card/:token" element={<CardValidation />} />
                 {/* Public Contribution Value */}
                 <Route path="/contribuicao/:token" element={<PublicContributionValue />} />
+                <Route path="/contribuicao/*" element={<PublicContributionValue />} />
                 {/* Homologação Public Routes */}
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
                 <Route path="/homologacao/:slug" element={<HomologacaoClinicBooking />} />
