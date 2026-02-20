@@ -45,14 +45,16 @@ export interface ContributionReportItem {
 }
 
 export interface ReportSummary {
-  total: number;
-  paid: number;
+  total: number;        // soma dos valores originais (value)
+  totalCharged: number; // soma real cobrada: paid_value para pagos + value para pendentes/vencidos
+  paid: number;         // soma dos paid_value dos pagos
   pending: number;
   overdue: number;
   cancelled: number;
   count: number;
   totalFees: number;
   totalNet: number;
+  totalSurcharge: number; // juros/multa = paid_value - value (quando positivo)
 }
 
 export interface ByEmployerReportItem {
@@ -251,9 +253,22 @@ export function useContributionsReport(clinicId: string | undefined) {
   // Calcular sumário
   const summary = useMemo((): ReportSummary => {
     const total = contributions.reduce((acc, c) => acc + c.value, 0);
-    const paid = contributions
-      .filter((c) => c.status === "paid")
-      .reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    
+    const paidContributions = contributions.filter((c) => c.status === "paid");
+    const paid = paidContributions.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    
+    // totalCharged: valor real cobrado (paid_value para pagos, value para demais)
+    const totalCharged = contributions.reduce((acc, c) => {
+      if (c.status === "paid") return acc + (c.paid_value || c.value);
+      return acc + c.value;
+    }, 0);
+
+    // totalSurcharge: acréscimos (juros/multa) = diferença entre o que foi pago e o valor original
+    const totalSurcharge = paidContributions.reduce((acc, c) => {
+      const surcharge = (c.paid_value || c.value) - c.value;
+      return acc + (surcharge > 0 ? surcharge : 0);
+    }, 0);
+
     const pending = contributions
       .filter((c) => c.status === "pending")
       .reduce((acc, c) => acc + c.value, 0);
@@ -265,19 +280,20 @@ export function useContributionsReport(clinicId: string | undefined) {
       .reduce((acc, c) => acc + c.value, 0);
     
     const totalFees = contributions.reduce((acc, c) => acc + (c.lytex_fee_amount || 0), 0);
-    const totalNet = contributions
-      .filter((c) => c.status === "paid")
+    const totalNet = paidContributions
       .reduce((acc, c) => acc + (c.net_value || c.paid_value || c.value), 0);
 
     return { 
       total, 
+      totalCharged,
       paid, 
       pending, 
       overdue, 
       cancelled,
       count: contributions.length, 
       totalFees, 
-      totalNet 
+      totalNet,
+      totalSurcharge,
     };
   }, [contributions]);
 
