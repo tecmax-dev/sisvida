@@ -291,9 +291,21 @@ export default function UnionContributionsReportsTab({
   // Recalculate summary for display
   const displaySummary = useMemo(() => {
     const total = displayContributions.reduce((acc, c) => acc + c.value, 0);
-    const paid = displayContributions
-      .filter((c) => c.status === "paid")
-      .reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    const paidContributions = displayContributions.filter((c) => c.status === "paid");
+    const paid = paidContributions.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+
+    // totalCharged: valor real cobrado (paid_value para pagos, value para pendentes/vencidos)
+    const totalCharged = displayContributions.reduce((acc, c) => {
+      if (c.status === "paid") return acc + (c.paid_value || c.value);
+      return acc + c.value;
+    }, 0);
+
+    // totalSurcharge: juros/multa acumulados nos pagamentos
+    const totalSurcharge = paidContributions.reduce((acc, c) => {
+      const surcharge = (c.paid_value || c.value) - c.value;
+      return acc + (surcharge > 0 ? surcharge : 0);
+    }, 0);
+
     const pending = displayContributions
       .filter((c) => c.status === "pending")
       .reduce((acc, c) => acc + c.value, 0);
@@ -302,18 +314,19 @@ export default function UnionContributionsReportsTab({
       .reduce((acc, c) => acc + c.value, 0);
     
     const totalFees = displayContributions.reduce((acc, c) => acc + (c.lytex_fee_amount || 0), 0);
-    const totalNet = displayContributions
-      .filter((c) => c.status === "paid")
+    const totalNet = paidContributions
       .reduce((acc, c) => acc + (c.net_value || c.paid_value || c.value), 0);
 
-    return { 
-      total, 
-      paid, 
-      pending, 
-      overdue, 
-      count: displayContributions.length, 
-      totalFees, 
-      totalNet 
+    return {
+      total,
+      totalCharged,
+      totalSurcharge,
+      paid,
+      pending,
+      overdue,
+      count: displayContributions.length,
+      totalFees,
+      totalNet,
     };
   }, [displayContributions]);
 
@@ -642,7 +655,7 @@ export default function UnionContributionsReportsTab({
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card className="border-l-4 border-l-slate-600">
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Total Bruto</p>
+            <p className="text-xs text-muted-foreground">Total Original</p>
             <p className="text-xl font-bold">{formatCurrency(displaySummary.total)}</p>
             <p className="text-xs text-muted-foreground">{displaySummary.count} contribuições</p>
           </CardContent>
@@ -651,6 +664,11 @@ export default function UnionContributionsReportsTab({
           <CardContent className="p-3">
             <p className="text-xs text-muted-foreground">Recebido</p>
             <p className="text-xl font-bold text-emerald-600">{formatCurrency(displaySummary.paid)}</p>
+            {displaySummary.totalSurcharge > 0 && (
+              <p className="text-xs text-orange-600 font-medium">
+                +{formatCurrency(displaySummary.totalSurcharge)} juros/multa
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500">
@@ -811,7 +829,7 @@ export default function UnionContributionsReportsTab({
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-center">Competência</TableHead>
                     <TableHead className="text-center">Vencimento</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Valor Original</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Pagamento</TableHead>
                     <TableHead className="text-right">Valor Pago</TableHead>
@@ -888,7 +906,16 @@ export default function UnionContributionsReportsTab({
                           : "-"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-emerald-600">
-                        {contribution.paid_value ? formatCurrency(contribution.paid_value) : "-"}
+                        {contribution.paid_value ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span>{formatCurrency(contribution.paid_value)}</span>
+                            {contribution.paid_value > contribution.value && (
+                              <span className="text-[10px] font-normal text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                                +{formatCurrency(contribution.paid_value - contribution.value)} juros
+                              </span>
+                            )}
+                          </div>
+                        ) : "-"}
                       </TableCell>
                     </TableRow>
                   ))}
