@@ -314,9 +314,9 @@ async function generateGeneralReport(data: ReportData, config: ReportConfig) {
   yPos = addSectionTitle(doc, "Resumo por Status", yPos);
   
   const statusData = [
-    ["✓ Pago", String(statusGroups.paid.length), formatCurrency(statusGroups.paid.reduce((s, c) => s + (c.paid_value || c.value), 0))],
-    ["◷ Pendente", String(statusGroups.pending.length), formatCurrency(statusGroups.pending.reduce((s, c) => s + c.value, 0))],
-    ["✗ Vencido", String(statusGroups.overdue.length), formatCurrency(statusGroups.overdue.reduce((s, c) => s + c.value, 0))],
+    ["Pago", String(statusGroups.paid.length), formatCurrency(statusGroups.paid.reduce((s, c) => s + (c.paid_value || c.value), 0))],
+    ["Pendente", String(statusGroups.pending.length), formatCurrency(statusGroups.pending.reduce((s, c) => s + c.value, 0))],
+    ["Vencido", String(statusGroups.overdue.length), formatCurrency(statusGroups.overdue.reduce((s, c) => s + c.value, 0))],
   ];
   
   autoTable(doc, {
