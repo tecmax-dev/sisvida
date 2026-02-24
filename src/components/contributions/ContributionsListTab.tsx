@@ -66,6 +66,7 @@ import {
 import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
 import { SendBoletoEmailDialog } from "./SendBoletoEmailDialog";
+import { SendOverdueNotificationDialog } from "./SendOverdueNotificationDialog";
 import { generateBoletosReport } from "@/lib/boleto-report";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
@@ -231,6 +232,7 @@ export default function ContributionsListTab({
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [overdueNotificationOpen, setOverdueNotificationOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
   const [documentTypeTab, setDocumentTypeTab] = useState<"pj" | "pf" | "awaiting">("pj");
 
@@ -705,6 +707,32 @@ export default function ContributionsListTab({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        {/* Overdue Notification Button */}
+        {documentTypeTab === "pj" && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOverdueNotificationOpen(true)}
+                  className="text-rose-600 border-rose-300 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-600 dark:hover:bg-rose-950"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Cobrar Vencidos
+                  {activeContributions.filter(c => c.status === "overdue").length > 0 && (
+                    <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">
+                      {activeContributions.filter(c => c.status === "overdue").length}
+                    </Badge>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Enviar notificação de cobrança vencida via WhatsApp ou Email
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         {/* Negotiate Button - only for PJ tab */}
         {documentTypeTab === "pj" && onOpenNegotiation && (
           <TooltipProvider>
@@ -1093,6 +1121,20 @@ export default function ContributionsListTab({
           }
         }}
         contributions={selectedContributions}
+        clinicId={clinicId}
+        preSelectedIds={selectedContributionIds}
+      />
+
+      {/* Overdue Notification Dialog */}
+      <SendOverdueNotificationDialog
+        open={overdueNotificationOpen}
+        onOpenChange={(open) => {
+          setOverdueNotificationOpen(open);
+          if (!open) {
+            setSelectedContributionIds(new Set());
+          }
+        }}
+        contributions={activeContributions}
         clinicId={clinicId}
         preSelectedIds={selectedContributionIds}
       />
