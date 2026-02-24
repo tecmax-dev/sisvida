@@ -30,7 +30,7 @@ import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { toast } from "sonner";
 import { extractFunctionsError } from "@/lib/functionsError";
-import { fetchAllEmployers, fetchAllContributions, fetchNegotiationInstallments } from "@/lib/supabase-helpers";
+import { fetchAllEmployers, fetchAllContributions } from "@/lib/supabase-helpers";
 import { formatCompetence } from "@/lib/competence-format";
 
 // Existing components from dashboard pattern
@@ -106,36 +106,6 @@ interface Contribution {
   employers?: Employer;
   patients?: Member;
   contribution_types?: ContributionType;
-  // Negotiation fields
-  is_negotiation?: boolean;
-  negotiation_code?: string;
-  installment_number?: number;
-  negotiation_id?: string;
-}
-
-interface NegotiationInstallmentData {
-  id: string;
-  negotiation_id: string;
-  installment_number: number;
-  value: number;
-  due_date: string;
-  status: string;
-  lytex_invoice_id: string | null;
-  lytex_invoice_url: string | null;
-  lytex_boleto_digitable_line: string | null;
-  lytex_pix_code: string | null;
-  lytex_pix_qrcode: string | null;
-  paid_at: string | null;
-  paid_value: number | null;
-  payment_method: string | null;
-  created_at: string;
-  negotiation: {
-    id: string;
-    clinic_id: string;
-    negotiation_code: string;
-    employer_id: string;
-    employers: Employer;
-  };
 }
 
 const getInitialYear = () => {
@@ -256,63 +226,11 @@ export default function UnionContributionsPageRedesign() {
     try {
       const effectiveYear = allPeriodsMode ? null : yearFilter;
       
-      const [contribResult, installmentsResult] = await Promise.all([
-        fetchAllContributions<Contribution>(currentClinic.id, effectiveYear),
-        fetchNegotiationInstallments<NegotiationInstallmentData>(currentClinic.id, effectiveYear)
-      ]);
+      const contribResult = await fetchAllContributions<Contribution>(currentClinic.id, effectiveYear);
 
       if (contribResult.error) throw contribResult.error;
       
-      // Process installments into Contribution format
-      const negotiationContributions: Contribution[] = (installmentsResult.data || []).map(inst => {
-        const dueDate = new Date(inst.due_date);
-        // Use due date as competence for sorting purposes
-        const competenceMonth = dueDate.getMonth() + 1;
-        const competenceYear = dueDate.getFullYear();
-        
-        return {
-          id: inst.id,
-          employer_id: inst.negotiation.employer_id,
-          contribution_type_id: "negotiation", // Virtual ID
-          competence_month: competenceMonth,
-          competence_year: competenceYear,
-          value: inst.value,
-          due_date: inst.due_date,
-          status: inst.status,
-          lytex_invoice_id: inst.lytex_invoice_id,
-          lytex_invoice_url: inst.lytex_invoice_url,
-          lytex_boleto_digitable_line: inst.lytex_boleto_digitable_line,
-          lytex_pix_code: inst.lytex_pix_code,
-          lytex_pix_qrcode: inst.lytex_pix_qrcode,
-          paid_at: inst.paid_at,
-          paid_value: inst.paid_value,
-          payment_method: inst.payment_method,
-          notes: `Parcela ${inst.installment_number} - ${inst.negotiation.negotiation_code}`,
-          created_at: inst.created_at,
-          employers: inst.negotiation.employers,
-          contribution_types: {
-            id: "negotiation",
-            name: "Acordo",
-            description: "Parcela de Acordo",
-            default_value: 0,
-            is_active: true
-          },
-          is_negotiation: true,
-          negotiation_code: inst.negotiation.negotiation_code,
-          installment_number: inst.installment_number,
-          negotiation_id: inst.negotiation.id
-        };
-      });
-
-      // Combine and sort
-      const allContributions = [...contribResult.data, ...negotiationContributions].sort((a, b) => {
-        // Sort by year desc, month desc, due_date desc
-        if (a.competence_year !== b.competence_year) return b.competence_year - a.competence_year;
-        if (a.competence_month !== b.competence_month) return b.competence_month - a.competence_month;
-        return new Date(b.due_date).getTime() - new Date(a.due_date).getTime();
-      });
-
-      setContributions(allContributions);
+      setContributions(contribResult.data);
 
       const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
         select: "id, name, cnpj, trade_name, email, phone, address, city, state, category_id, registration_number"

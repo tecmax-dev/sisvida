@@ -74,9 +74,6 @@ interface Contribution {
   employers?: Employer;
   patients?: Member;
   contribution_types?: ContributionType;
-  is_negotiation?: boolean;
-  negotiation_code?: string;
-  installment_number?: number;
 }
 
 interface UnionContributionsTableProps {
@@ -278,29 +275,12 @@ export default function UnionContributionsTable({
 
                     {/* Type Badge */}
                     <TableCell>
-                      {contribution.is_negotiation ? (
-                        <div className="flex flex-col gap-1">
-                          <Badge
-                            variant="outline"
-                            className="text-xs font-medium bg-indigo-500/10 text-indigo-700 border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-400 dark:border-indigo-600 w-fit"
-                          >
-                            Acordo
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground font-mono">
-                            {contribution.negotiation_code}
-                            {contribution.installment_number !== undefined && 
-                              ` (${contribution.installment_number === 0 ? 'Entrada' : `P.${contribution.installment_number}`})`
-                            }
-                          </span>
-                        </div>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="text-xs font-medium bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-600"
-                        >
-                          {contribution.contribution_types?.name?.substring(0, 8) || "N/A"}
-                        </Badge>
-                      )}
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-medium bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-600"
+                      >
+                        {contribution.contribution_types?.name?.substring(0, 8) || "N/A"}
+                      </Badge>
                     </TableCell>
 
                     {/* Company/Member Info */}
@@ -353,11 +333,7 @@ export default function UnionContributionsTable({
 
                     {/* Competence */}
                     <TableCell className="text-center font-mono text-sm">
-                      {contribution.is_negotiation ? (
-                        <span className="text-muted-foreground">-</span>
-                      ) : (
-                        formatCompetence(contribution.competence_month, contribution.competence_year)
-                      )}
+                      {formatCompetence(contribution.competence_month, contribution.competence_year)}
                     </TableCell>
 
                     {/* Due Date */}
