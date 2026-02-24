@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { 
   Clock, 
   Plus, 
@@ -112,15 +112,67 @@ function WaitingListContent() {
   const [preferredTimes, setPreferredTimes] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [patientPopoverOpen, setPatientPopoverOpen] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [patientSearchLoading, setPatientSearchLoading] = useState(false);
+  const [selectedPatientData, setSelectedPatientData] = useState<Patient | null>(null);
+  const patientSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectedPatientName = useMemo(() => {
-    return patients.find(p => p.id === selectedPatient)?.name || "";
-  }, [patients, selectedPatient]);
+  const selectedPatientName = selectedPatientData?.name || "";
+
+  // Search patients on-demand (server-side) to handle clinics with thousands of patients
+  const searchPatients = useCallback(async (term: string) => {
+    if (!currentClinic || !term.trim() || term.trim().length < 2) {
+      setPatients([]);
+      return;
+    }
+    setPatientSearchLoading(true);
+    try {
+      const searchTerm = term.trim();
+      const searchDigits = searchTerm.replace(/\D/g, "");
+      
+      let cpfFormatted = "";
+      if (searchDigits.length === 11) {
+        cpfFormatted = searchDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
+      
+      const cpfFilter = cpfFormatted
+        ? `cpf.ilike.%${searchDigits}%,cpf.ilike.%${cpfFormatted}%`
+        : searchDigits.length >= 3
+          ? `cpf.ilike.%${searchDigits}%`
+          : "";
+      
+      const orFilters = [`name.ilike.%${searchTerm}%`, cpfFilter].filter(Boolean).join(",");
+      
+      const { data } = await supabase
+        .from("patients")
+        .select("id, name, phone, cpf")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .or(orFilters)
+        .order("name")
+        .limit(30);
+      
+      setPatients(data || []);
+    } catch (err) {
+      console.error("Error searching patients:", err);
+      setPatients([]);
+    } finally {
+      setPatientSearchLoading(false);
+    }
+  }, [currentClinic]);
+
+  // Debounced patient search
+  useEffect(() => {
+    if (patientSearchTimer.current) clearTimeout(patientSearchTimer.current);
+    patientSearchTimer.current = setTimeout(() => {
+      searchPatients(patientSearch);
+    }, 300);
+    return () => { if (patientSearchTimer.current) clearTimeout(patientSearchTimer.current); };
+  }, [patientSearch, searchPatients]);
 
   useEffect(() => {
     if (currentClinic) {
       fetchWaitingList();
-      fetchPatients();
       fetchProfessionals();
     }
   }, [currentClinic]);
@@ -158,18 +210,6 @@ function WaitingListContent() {
     }
     setEntries(data as WaitingListEntry[] || []);
     setLoading(false);
-  };
-
-  const fetchPatients = async () => {
-    if (!currentClinic) return;
-
-    const { data } = await supabase
-      .from('patients')
-      .select('id, name, phone, cpf')
-      .eq('clinic_id', currentClinic.id)
-      .order('name');
-
-    setPatients(data || []);
   };
 
   const fetchProfessionals = async () => {
@@ -334,9 +374,12 @@ function WaitingListContent() {
 
   const resetForm = () => {
     setSelectedPatient("");
+    setSelectedPatientData(null);
     setSelectedProfessional("");
     setPreferredTimes([]);
     setNotes("");
+    setPatientSearch("");
+    setPatients([]);
   };
 
   const togglePreferredTime = (time: string) => {
@@ -385,35 +428,53 @@ function WaitingListContent() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar paciente..." />
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Digite nome ou CPF para buscar..." 
+                        value={patientSearch}
+                        onValueChange={setPatientSearch}
+                      />
                       <CommandList>
-                        <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
-                        <CommandGroup>
-                          {patients.map((patient) => (
-                            <CommandItem
-                              key={patient.id}
-                              value={`${patient.name} ${patient.cpf || ''}`}
-                              onSelect={() => {
-                                setSelectedPatient(patient.id);
-                                setPatientPopoverOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedPatient === patient.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{patient.name}</span>
-                                {patient.cpf && (
-                                  <span className="text-xs text-muted-foreground">{patient.cpf}</span>
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
+                        {patientSearchLoading ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            <span className="ml-2 text-sm text-muted-foreground">Buscando...</span>
+                          </div>
+                        ) : patientSearch.trim().length < 2 ? (
+                          <div className="py-6 text-center text-sm text-muted-foreground">
+                            Digite ao menos 2 caracteres para buscar
+                          </div>
+                        ) : (
+                          <>
+                            <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              {patients.map((patient) => (
+                                <CommandItem
+                                  key={patient.id}
+                                  value={patient.id}
+                                  onSelect={() => {
+                                    setSelectedPatient(patient.id);
+                                    setSelectedPatientData(patient);
+                                    setPatientPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedPatient === patient.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{patient.name}</span>
+                                    {patient.cpf && (
+                                      <span className="text-xs text-muted-foreground">{patient.cpf}</span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </>
+                        )}
                       </CommandList>
                     </Command>
                   </PopoverContent>
