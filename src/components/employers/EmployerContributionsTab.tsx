@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
+import { supabase } from "@/integrations/supabase/client";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
 import {
   Table,
@@ -929,6 +930,163 @@ export default function EmployerContributionsTab({
           )}
         </>
       )}
+
+      {/* Negotiation Installments Section */}
+      <NegotiationInstallmentsSection employerId={employer?.id} clinicId={currentClinic?.id} />
     </div>
+  );
+}
+
+// ===== Negotiation Installments Section =====
+
+interface NegotiationInstallment {
+  id: string;
+  installment_number: number;
+  value: number;
+  due_date: string;
+  status: string;
+  paid_at: string | null;
+  paid_value: number | null;
+  lytex_invoice_url: string | null;
+  negotiation: {
+    id: string;
+    negotiation_code: string;
+  };
+}
+
+function NegotiationInstallmentsSection({ employerId, clinicId }: { employerId?: string; clinicId?: string }) {
+  const [installments, setInstallments] = useState<NegotiationInstallment[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!employerId || !clinicId) return;
+
+    const fetchInstallments = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("negotiation_installments")
+          .select(`
+            id, installment_number, value, due_date, status, paid_at, paid_value, lytex_invoice_url,
+            negotiation:debt_negotiations!inner (id, negotiation_code, clinic_id, employer_id)
+          `)
+          .eq("negotiation.clinic_id", clinicId)
+          .eq("negotiation.employer_id", employerId)
+          .order("due_date", { ascending: true });
+
+        if (!error && data) {
+          setInstallments(data as unknown as NegotiationInstallment[]);
+        }
+      } catch (err) {
+        console.error("Error fetching installments:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInstallments();
+  }, [employerId, clinicId]);
+
+  if (loading) return null;
+  if (installments.length === 0) return null;
+
+  const paid = installments.filter(i => i.status === "paid");
+  const overdue = installments.filter(i => i.status === "overdue");
+  const pending = installments.filter(i => i.status === "pending");
+  const totalValue = installments.reduce((acc, i) => acc + i.value, 0);
+  const paidValue = paid.reduce((acc, i) => acc + (i.paid_value || i.value), 0);
+
+  const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+    paid: { label: "Pago", color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800", icon: CheckCircle2 },
+    pending: { label: "Pendente", color: "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800", icon: Clock },
+    overdue: { label: "Vencido", color: "bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800", icon: AlertTriangle },
+    cancelled: { label: "Cancelado", color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700", icon: XCircle },
+  };
+
+  // Group by negotiation
+  const byNegotiation = installments.reduce((acc, inst) => {
+    const code = inst.negotiation.negotiation_code;
+    if (!acc[code]) acc[code] = [];
+    acc[code].push(inst);
+    return acc;
+  }, {} as Record<string, NegotiationInstallment[]>);
+
+  return (
+    <Card className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Handshake className="h-5 w-5 text-indigo-600" />
+          <CardTitle className="text-base">Parcelas de Negociação</CardTitle>
+        </div>
+        <CardDescription>
+          {paid.length} paga(s) • {pending.length} pendente(s) • {overdue.length} vencida(s) — Total: {formatCurrency(totalValue)} | Recebido: {formatCurrency(paidValue)}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {Object.entries(byNegotiation).map(([code, items]) => (
+          <div key={code} className="mb-4 last:mb-0">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 font-mono text-xs">
+                {code}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{items.length} parcela(s)</span>
+            </div>
+            <ScrollArea className={items.length > 6 ? "h-[250px]" : ""}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs w-16">#</TableHead>
+                    <TableHead className="text-xs">Vencimento</TableHead>
+                    <TableHead className="text-xs text-right">Valor</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Pagamento</TableHead>
+                    <TableHead className="text-xs text-right">Valor Pago</TableHead>
+                    <TableHead className="text-xs text-center w-12">Link</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map(inst => {
+                    const sc = statusConfig[inst.status] || statusConfig.pending;
+                    const StatusIcon = sc.icon;
+                    return (
+                      <TableRow key={inst.id}>
+                        <TableCell className="py-1.5 text-sm font-mono">
+                          {inst.installment_number === 0 ? "Entrada" : `P.${inst.installment_number}`}
+                        </TableCell>
+                        <TableCell className={`py-1.5 text-sm ${inst.status === "overdue" ? "text-rose-600 font-medium" : ""}`}>
+                          {format(parseDateOnlyToLocalNoon(inst.due_date), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="py-1.5 text-sm text-right font-medium">
+                          {formatCurrency(inst.value)}
+                        </TableCell>
+                        <TableCell className="py-1.5">
+                          <Badge className={`${sc.color} text-[10px] gap-0.5 h-5`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {sc.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-1.5 text-sm text-emerald-600">
+                          {inst.paid_at ? format(parseDateOnlyToLocalNoon(inst.paid_at), "dd/MM/yyyy") : "—"}
+                        </TableCell>
+                        <TableCell className="py-1.5 text-sm text-right text-emerald-600 font-medium">
+                          {inst.paid_value ? formatCurrency(inst.paid_value) : "—"}
+                        </TableCell>
+                        <TableCell className="py-1.5 text-center">
+                          {inst.lytex_invoice_url && (
+                            <a href={inst.lytex_invoice_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                              <ExternalLink className="h-4 w-4 inline" />
+                            </a>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
