@@ -23,8 +23,18 @@ serve(async (req: Request): Promise<Response> => {
     const smtpPass = Deno.env.get("SMTP_PASSWORD");
     const smtpFrom = Deno.env.get("SMTP_FROM");
 
+    console.log("SMTP config check:", {
+      host: smtpHost || "NOT SET",
+      port: smtpPort || "NOT SET",
+      user: smtpUser ? smtpUser.substring(0, 3) + "***" : "NOT SET",
+      pass: smtpPass ? "SET (" + smtpPass.length + " chars)" : "NOT SET",
+      from: smtpFrom || "NOT SET",
+    });
+
     if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
-      console.error("SMTP not configured");
+      console.error("SMTP not configured - missing:", {
+        host: !smtpHost, user: !smtpUser, pass: !smtpPass, from: !smtpFrom
+      });
       return new Response(
         JSON.stringify({ error: "Servico de email nao configurado" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -130,6 +140,8 @@ serve(async (req: Request): Promise<Response> => {
       },
     });
 
+    console.log(`Attempting SMTP send to: ${email} from: ${smtpFrom} via ${smtpHost}:${smtpPort}`);
+    
     await client.send({
       from: smtpFrom,
       to: email,
@@ -137,9 +149,11 @@ serve(async (req: Request): Promise<Response> => {
       html: htmlContent,
     });
 
+    console.log("SMTP send() completed successfully");
+
     await client.close();
 
-    console.log("Password reset email sent successfully via SMTP");
+    console.log("Password reset email sent and connection closed successfully");
 
     return new Response(
       JSON.stringify({
