@@ -82,7 +82,7 @@ import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationIns
 import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
 import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmailDialog";
-import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
+import { SendOverdueNotificationDialog } from "@/components/contributions/SendOverdueNotificationDialog";
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
 import CreateAwaitingValueDialog from "@/components/contributions/CreateAwaitingValueDialog";
@@ -1639,14 +1639,21 @@ export default function EmployerDetailPage() {
         preSelectedIds={selectedContributionIds}
       />
 
-      {/* Overdue WhatsApp Dialog */}
-      <SendOverdueWhatsAppDialog
+      {/* Overdue Notification Dialog (WhatsApp + Email) */}
+      <SendOverdueNotificationDialog
         open={overdueDialogOpen}
         onOpenChange={setOverdueDialogOpen}
-        contributions={contributions}
-        employerName={employer?.name || ""}
-        employerPhone={employer?.phone || null}
+        contributions={contributions.map((c) => ({
+          ...c,
+          employers: {
+            name: employer?.name || "",
+            cnpj: employer?.cnpj || "",
+            phone: employer?.phone,
+            email: employer?.email,
+          },
+        }))}
         clinicId={currentClinic?.id || ""}
+        preSelectedIds={selectedContributionIds}
       />
 
       {/* Email Dialog */}
