@@ -373,7 +373,6 @@ export default function DependentApprovalsPage() {
 
       setApprovalDialogOpen(false);
       setSelectedApproval(null);
-      setStatusFilter('approved');
       fetchApprovals();
     } catch (error) {
       console.error('Error approving:', error);
@@ -444,7 +443,6 @@ export default function DependentApprovalsPage() {
       setRejectionDialogOpen(false);
       setRejectionReason("");
       setSelectedApproval(null);
-      setStatusFilter('rejected');
       fetchApprovals();
     } catch (error) {
       console.error('Error rejecting:', error);
