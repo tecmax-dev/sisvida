@@ -84,6 +84,8 @@ export interface PatientFormData {
   employerName: string;
   motherName: string;
   fatherName: string;
+  jobFunction: string;
+  admissionDate: string;
   
   // Outros
   notes: string;
@@ -717,6 +719,30 @@ export function PatientFormFields({
           placeholder="Razão Social ou Nome Fantasia"
           className="mt-1"
         />
+      </div>
+
+      {/* Função e Data de Admissão */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="jobFunction">Função</Label>
+          <Input
+            id="jobFunction"
+            value={formData.jobFunction}
+            onChange={(e) => updateField('jobFunction', e.target.value)}
+            placeholder="Ex: Operador de Máquinas"
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label htmlFor="admissionDate">Data de Admissão</Label>
+          <Input
+            id="admissionDate"
+            type="date"
+            value={formData.admissionDate}
+            onChange={(e) => updateField('admissionDate', e.target.value)}
+            className="mt-1"
+          />
+        </div>
       </div>
 
       {/* Linha 10: Nome da Mãe, Nome do Pai */}

@@ -88,6 +88,8 @@ const initialFormData: PatientFormData = {
   employerName: '',
   motherName: '',
   fatherName: '',
+  jobFunction: '',
+  admissionDate: '',
   notes: '',
   maxAppointmentsPerMonth: null,
   mobilePassword: '',
@@ -227,6 +229,8 @@ export default function UnionMemberNewPage() {
           employer_name: formData.employerName?.trim() || null,
           mother_name: formData.motherName.trim() || null,
           father_name: formData.fatherName.trim() || null,
+          job_function: formData.jobFunction.trim() || null,
+          admission_date: formData.admissionDate || null,
           registration_number: regData || undefined,
           is_active: true,
         })

@@ -123,6 +123,8 @@ const initialFormData: PatientFormData = {
   employerName: '',
   motherName: '',
   fatherName: '',
+  jobFunction: '',
+  admissionDate: '',
   notes: '',
   maxAppointmentsPerMonth: null,
   mobilePassword: '',
@@ -289,6 +291,8 @@ export default function PatientEditPage() {
           employerName: (data as any).employer_name || '',
           motherName: data.mother_name || '',
           fatherName: data.father_name || '',
+          jobFunction: (data as any).job_function || '',
+          admissionDate: (data as any).admission_date || '',
           notes: data.notes || '',
           maxAppointmentsPerMonth: (data as any).max_appointments_per_month ?? null,
         };
@@ -558,6 +562,8 @@ export default function PatientEditPage() {
         employer_name: formData.employerName?.trim() || null,
         mother_name: formData.motherName.trim() || null,
         father_name: formData.fatherName.trim() || null,
+        job_function: formData.jobFunction.trim() || null,
+        admission_date: formData.admissionDate || null,
       };
 
       // Only admins can change appointment limit
