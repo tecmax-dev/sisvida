@@ -353,7 +353,7 @@ _${entityName}_`;
 
         const message = buildEmailMessage(contribs);
         const totalValue = contribs.reduce((sum, c) => sum + c.value, 0);
-        const subject = `⚠️ Notificação de Cobrança Vencida - ${contribs[0]?.employers?.name || "Empresa"} - ${formatCurrency(totalValue)}`;
+        const subject = `Notificacao de Cobranca Vencida - ${contribs[0]?.employers?.name || "Empresa"} - ${formatCurrency(totalValue)}`;
 
         try {
           const { error } = await supabase.functions.invoke("send-contribution-email", {
