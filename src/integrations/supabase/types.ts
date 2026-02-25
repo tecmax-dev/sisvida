@@ -7145,6 +7145,7 @@ export type Database = {
       patients: {
         Row: {
           address: string | null
+          admission_date: string | null
           birth_date: string | null
           birthplace: string | null
           cep: string | null
@@ -7169,6 +7170,7 @@ export type Database = {
           is_company: boolean | null
           is_foreigner: boolean | null
           is_union_member: boolean | null
+          job_function: string | null
           landline: string | null
           marital_status: string | null
           max_appointments_per_month: number | null
@@ -7213,6 +7215,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          admission_date?: string | null
           birth_date?: string | null
           birthplace?: string | null
           cep?: string | null
@@ -7237,6 +7240,7 @@ export type Database = {
           is_company?: boolean | null
           is_foreigner?: boolean | null
           is_union_member?: boolean | null
+          job_function?: string | null
           landline?: string | null
           marital_status?: string | null
           max_appointments_per_month?: number | null
@@ -7281,6 +7285,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          admission_date?: string | null
           birth_date?: string | null
           birthplace?: string | null
           cep?: string | null
@@ -7305,6 +7310,7 @@ export type Database = {
           is_company?: boolean | null
           is_foreigner?: boolean | null
           is_union_member?: boolean | null
+          job_function?: string | null
           landline?: string | null
           marital_status?: string | null
           max_appointments_per_month?: number | null
