@@ -238,6 +238,31 @@ export default function UnionFiliacoesPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Pending Alert Banner */}
+      {stats.pendentes > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+            <UserPlus className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              {stats.pendentes} {stats.pendentes === 1 ? "nova solicitação aguardando" : "novas solicitações aguardando"} aprovação
+            </p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
+              Revise e aprove as filiações pendentes abaixo
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-500/40 text-amber-700 hover:bg-amber-500/20"
+            onClick={() => setStatusFilter("pendente")}
+          >
+            Ver pendentes
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

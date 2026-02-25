@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
+import { usePendingFiliacoes } from "@/hooks/usePendingFiliacoes";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -47,6 +48,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   permission?: UnionPermission;
+  badgeKey?: string;
 }
 
 interface NavCategory {
@@ -131,7 +133,7 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/beneficios", icon: Gift, label: "Benefícios", permission: "union_view_members" },
       { href: "/union/autorizacoes", icon: FileCheck2, label: "Autorizações", permission: "union_view_members" },
       { href: "/union/associados", icon: UserPlus, label: "Filiações Públicas", permission: "union_view_members" },
-      { href: "/union/filiacoes", icon: ClipboardList, label: "Aprovação de Filiações", permission: "union_view_members" },
+      { href: "/union/filiacoes", icon: ClipboardList, label: "Aprovação de Filiações", permission: "union_view_members", badgeKey: "pendingFiliacoes" },
     ]
   },
   {
@@ -232,6 +234,7 @@ const unionNavTree: NavCategory[] = [
 export function UnionSidebar() {
   const location = useLocation();
   const { hasUnionPermission } = useUnionPermissions();
+  const { count: pendingFiliacoesCount } = usePendingFiliacoes();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
   const filteredCategories = unionNavTree
@@ -336,21 +339,29 @@ export function UnionSidebar() {
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content mt-1">
               <div className={cn("space-y-0.5 ml-4 pl-3 border-l", colors?.border || "border-sidebar-border")}>
-                {category.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ml-3",
-                      isActive(item.href)
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                ))}
+                {category.items.map((item) => {
+                  const badgeCount = item.badgeKey === "pendingFiliacoes" ? pendingFiliacoesCount : 0;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ml-3",
+                        isActive(item.href)
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate flex-1">{item.label}</span>
+                      {badgeCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white animate-pulse">
+                          {badgeCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
