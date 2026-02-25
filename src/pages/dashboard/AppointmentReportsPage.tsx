@@ -163,7 +163,9 @@ function AppointmentReportsContent() {
           status,
           type,
           notes,
+          dependent_id,
           patient:patients!appointments_patient_id_fkey(name, insurance_plan_id, insurance_plan:insurance_plans(name)),
+          dependent:patient_dependents!appointments_dependent_id_fkey(name),
           professional:professionals!appointments_professional_id_fkey(name, specialty),
           procedure:procedures!appointments_procedure_id_fkey(name, price)
         `)
@@ -192,7 +194,7 @@ function AppointmentReportsContent() {
           status: a.status,
           type: a.type,
           notes: a.notes,
-          patient_name: a.patient?.name || "—",
+          patient_name: (a.dependent_id && a.dependent?.name) ? a.dependent.name : (a.patient?.name || "—"),
           professional_name: a.professional?.name || "—",
           professional_specialty: a.professional?.specialty || "—",
           procedure_name: a.procedure?.name || null,
