@@ -404,6 +404,21 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           .insert(dependentesInsert);
       }
 
+      // Notify manager about new pending filiation (fire & forget)
+      try {
+        await supabase.functions.invoke("notify-new-filiacao", {
+          body: {
+            filiacaoId: associadoId,
+            sindicatoId: sindicato!.id,
+            nome: data.nome,
+            cpf: data.cpf.replace(/\D/g, ""),
+            empresa: employerData?.razao_social || undefined,
+          },
+        });
+      } catch (notifErr) {
+        console.error("Error notifying manager:", notifErr);
+      }
+
       setSuccess(true);
       toast({
         title: "Solicitação enviada!",
