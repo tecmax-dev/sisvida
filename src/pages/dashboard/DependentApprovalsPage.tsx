@@ -54,6 +54,7 @@ import {
   Users,
   Image as ImageIcon,
   RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -135,6 +136,10 @@ export default function DependentApprovalsPage() {
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
+
+  // Rehabilitate dialog
+  const [rehabilitateDialogOpen, setRehabilitateDialogOpen] = useState(false);
+  const [rehabilitating, setRehabilitating] = useState(false);
 
   const fetchApprovals = async () => {
     if (!currentClinic?.id) return;
@@ -456,6 +461,55 @@ export default function DependentApprovalsPage() {
     }
   };
 
+  const handleRehabilitate = async () => {
+    if (!selectedApproval || !user) return;
+
+    setRehabilitating(true);
+    try {
+      // Reset approval back to pending
+      const { error: approvalError } = await supabase
+        .from('pending_dependent_approvals')
+        .update({
+          status: 'pending',
+          rejection_reason: null,
+          reviewed_by: null,
+          reviewed_at: null,
+        })
+        .eq('id', selectedApproval.id);
+
+      if (approvalError) throw approvalError;
+
+      // Re-enable pending_approval on the dependent
+      const { error: dependentError } = await supabase
+        .from('patient_dependents')
+        .update({
+          pending_approval: true,
+          is_active: false,
+        })
+        .eq('id', selectedApproval.dependent_id);
+
+      if (dependentError) throw dependentError;
+
+      toast({
+        title: "Reabilitado!",
+        description: `Solicitação de ${selectedApproval.dependent?.name} voltou para análise.`,
+      });
+
+      setRehabilitateDialogOpen(false);
+      setSelectedApproval(null);
+      fetchApprovals();
+    } catch (error) {
+      console.error('Error rehabilitating:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao reabilitar solicitação",
+        variant: "destructive",
+      });
+    } finally {
+      setRehabilitating(false);
+    }
+  };
+
   const getAge = (birthDate: string | null) => {
     if (!birthDate) return null;
     const today = new Date();
@@ -700,6 +754,20 @@ export default function DependentApprovalsPage() {
                               </Button>
                             </>
                           )}
+                          {approval.status === 'rejected' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-blue-600 hover:bg-blue-50"
+                              onClick={() => {
+                                setSelectedApproval(approval);
+                                setRehabilitateDialogOpen(true);
+                              }}
+                              title="Reabilitar solicitação"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -787,6 +855,40 @@ export default function DependentApprovalsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rehabilitate Confirmation Dialog */}
+      <AlertDialog open={rehabilitateDialogOpen} onOpenChange={setRehabilitateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reabilitar Solicitação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja reabilitar a solicitação de <strong>{selectedApproval?.dependent?.name}</strong>?
+              <br /><br />
+              A solicitação voltará para o status <strong>Pendente</strong> para nova análise.
+              {selectedApproval?.rejection_reason && (
+                <>
+                  <br /><br />
+                  <span className="text-muted-foreground">Motivo da rejeição anterior: {selectedApproval.rejection_reason}</span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRehabilitate}
+              disabled={rehabilitating}
+            >
+              {rehabilitating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Reabilitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
