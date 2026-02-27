@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
+import sindiflexLogo from "@/assets/logo_sindiflex.png";
 
 // ─── Animated Counter ───────────────────────────────────────────────
 function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
@@ -626,19 +627,8 @@ function SindicalHeader() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-md border-b border-white/10">
       <div className="container">
         <div className="flex items-center justify-between h-16">
-          <Link to="/sindical" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
-            >
-              <Scale className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">
-              <span style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 60%), hsl(95 70% 55%))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}>SindiFlex</span>
-            </span>
+          <Link to="/sindical" className="flex items-center">
+            <img src={sindiflexLogo} alt="SindiFlex - Sistema Web para Gestão Sindical" className="h-10 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
@@ -701,13 +691,8 @@ function SindicalFooter() {
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
-              >
-                <Scale className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">SindiFlex</span>
+            <div className="mb-4">
+              <img src={sindiflexLogo} alt="SindiFlex - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
             </div>
             <p className="text-white/50 mb-6 max-w-md">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
