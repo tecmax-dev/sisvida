@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Building2, Loader2, LogIn, ArrowLeft } from "lucide-react";
+import { Loader2, LogIn, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import sindiflexLogo from "@/assets/logo_sindiflex.png";
 
 export default function UnionEntityLoginPage() {
   const navigate = useNavigate();
@@ -74,13 +75,15 @@ export default function UnionEntityLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] p-4">
       <div className="w-full max-w-md">
         <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur">
           <CardHeader className="space-y-4 text-center pb-2">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
+            <img 
+              src={sindiflexLogo} 
+              alt="SindiFlex - Sistema de Gestão Sindical" 
+              className="h-16 mx-auto object-contain"
+            />
             <div>
               <CardTitle className="text-2xl font-bold">
                 Acesso Entidade Sindical
@@ -121,7 +124,7 @@ export default function UnionEntityLoginPage() {
 
               <Button 
                 type="submit" 
-                className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                className="w-full h-11 bg-gradient-to-r from-[#0f3460] to-[#1a1a6e] hover:from-[#0d2b52] hover:to-[#15155e]"
                 disabled={loading}
               >
                 {loading ? (
@@ -141,7 +144,7 @@ export default function UnionEntityLoginPage() {
             <div className="mt-6 pt-6 border-t text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 Não possui uma conta?{" "}
-                <Link to="/sindical" className="text-emerald-600 hover:underline font-medium">
+                <Link to="/sindical" className="text-[#0f3460] hover:underline font-medium">
                   Conheça nosso sistema
                 </Link>
               </p>
@@ -158,7 +161,7 @@ export default function UnionEntityLoginPage() {
         </Card>
 
         <p className="text-center text-white/60 text-sm mt-6">
-          Sistema de Gestão Sindical
+          SindiFlex - Sistema de Gestão Sindical
         </p>
       </div>
     </div>
