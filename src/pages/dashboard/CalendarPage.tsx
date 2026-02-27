@@ -1243,8 +1243,14 @@ export default function CalendarPage() {
     if (saving) return;
     
     // Verificar se tem múltiplos horários selecionados (modo manual de recorrência)
-    const hasMultipleSlots = recurrenceConfig.enabled && Array.isArray(selectedMultipleTimes) && selectedMultipleTimes.length > 0;
-    const effectiveTime = hasMultipleSlots ? selectedMultipleTimes[0] : formTime;
+    // Só usar branch de múltiplos slots quando há 2+ horários selecionados no mesmo dia
+    const hasMultipleSlots = recurrenceConfig.enabled && Array.isArray(selectedMultipleTimes) && selectedMultipleTimes.length > 1;
+    // Se recorrência está ativa e apenas 1 horário foi selecionado via multi-select, usar esse horário como formTime
+    const effectiveTime = hasMultipleSlots 
+      ? selectedMultipleTimes[0] 
+      : (recurrenceConfig.enabled && selectedMultipleTimes.length === 1) 
+        ? selectedMultipleTimes[0] 
+        : formTime;
     
     // Validação mais robusta do horário
     const isTimeValid = effectiveTime && typeof effectiveTime === 'string' && effectiveTime.match(/^\d{2}:\d{2}$/);
@@ -1405,7 +1411,7 @@ export default function CalendarPage() {
         const dateDateStr = date.toISOString().split('T')[0];
         const conflicts = findConflictingAppointments(appointments, {
           appointmentDate: dateDateStr,
-          startTime: formTime,
+          startTime: effectiveTime,
           durationMinutes,
           professionalId: formProfessional,
         });
@@ -1433,8 +1439,8 @@ export default function CalendarPage() {
           patient_id: formPatient,
           professional_id: formProfessional,
           appointment_date: dateDateStr,
-          start_time: formTime,
-          end_time: calculateEndTime(formTime, durationMinutes),
+          start_time: effectiveTime,
+          end_time: calculateEndTime(effectiveTime, durationMinutes),
           type: formType as "first_visit" | "return" | "exam" | "procedure",
           status: "scheduled" as const,
           notes: formNotes.trim() || null,
