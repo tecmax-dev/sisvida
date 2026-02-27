@@ -740,6 +740,20 @@ function SindicalFooter() {
 
 // ─── Main Page ──────────────────────────────────────────────────────
 export default function SindicalLandingPage() {
+  // Set SindiFlex favicon only on this page
+  useEffect(() => {
+    const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const originalHref = favicon?.href || '/favicon.ico';
+    if (favicon) {
+      favicon.href = '/favicon-sindiflex.png';
+    }
+    document.title = 'SindiFlex - Sistema de Gestão Sindical';
+    return () => {
+      if (favicon) favicon.href = originalHref;
+      document.title = 'Eclini - Sistema para Clínicas';
+    };
+  }, []);
+
   return (
     <PublicPageWrapper>
       <SindicalHeader />
