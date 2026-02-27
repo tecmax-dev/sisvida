@@ -94,15 +94,13 @@ function HeroSection() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-white mb-4 tracking-tight">
-            <span className="block text-white/60 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">MÓDULOS</span>
-            SISTEMA
-            <br />
+            <span className="block text-white/60 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
             <span style={{
               background: 'linear-gradient(135deg, hsl(200 100% 60%), hsl(160 80% 55%), hsl(95 70% 55%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              SINDICAL
+              SindiFlex
             </span>
           </h1>
 
@@ -132,7 +130,7 @@ function HeroSection() {
               asChild
             >
               <a 
-                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o Sistema Sindical."
+                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o SindiFlex."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -162,23 +160,23 @@ function AboutSection() {
               SOBRE O SISTEMA
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              O que é o{" "}
-              <span style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}>
-                Sistema Sindical
-              </span>?
+            O que é o{" "}
+            <span style={{
+              background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              SindiFlex
+            </span>?
             </h2>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">Sistema Sindical é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
+              O <strong className="text-gray-900">SindiFlex é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
             </p>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">Sistema é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
+              O <strong className="text-gray-900">SindiFlex é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
             </p>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              O Sistema Sindical é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
+              O SindiFlex é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
             </p>
             <Button 
               size="lg"
@@ -446,7 +444,7 @@ function StatsSection() {
 // ─── Testimonials Section ───────────────────────────────────────────
 const testimonials = [
   {
-    quote: "O Sistema Sindical revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
+    quote: "O SindiFlex revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
     name: "Maria Santos",
     role: "Diretora Administrativa",
     org: "SINDICOMÉRCIO",
@@ -580,7 +578,7 @@ function CTASection() {
             Pronto para modernizar a gestão da sua entidade?
           </h2>
           <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto">
-            Solicite uma demonstração gratuita e descubra como o Sistema Sindical pode transformar a sua entidade.
+            Solicite uma demonstração gratuita e descubra como o SindiFlex pode transformar a sua entidade.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -589,7 +587,7 @@ function CTASection() {
               className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-white text-gray-900 hover:bg-gray-100"
               asChild
             >
-              <a href="mailto:contato@eclini.com.br?subject=Demonstração Sistema Sindical" className="flex items-center gap-2">
+              <a href="mailto:contato@eclini.com.br?subject=Demonstração SindiFlex" className="flex items-center gap-2">
                 Solicitar demonstração
                 <ArrowRight className="h-5 w-5" />
               </a>
@@ -600,7 +598,7 @@ function CTASection() {
               asChild
             >
               <a 
-                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma demonstração do Sistema Sindical."
+                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma demonstração do SindiFlex."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -635,11 +633,11 @@ function SindicalHeader() {
               <Scale className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-white">
-              Sistema <span style={{
+              <span style={{
                 background: 'linear-gradient(135deg, hsl(200 100% 60%), hsl(95 70% 55%))',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-              }}>Sindical</span>
+              }}>SindiFlex</span>
             </span>
           </Link>
 
@@ -709,7 +707,7 @@ function SindicalFooter() {
               >
                 <Scale className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold">Sistema Sindical</span>
+              <span className="text-xl font-bold">SindiFlex</span>
             </div>
             <p className="text-white/50 mb-6 max-w-md">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
@@ -748,7 +746,7 @@ function SindicalFooter() {
         </div>
 
         <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
-          <p>© {new Date().getFullYear()} Sistema Sindical. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} SindiFlex. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
