@@ -161,14 +161,17 @@ export default function UnionExpensesPage() {
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
+    const normalize = (value: unknown) => String(value ?? "").toLowerCase();
+    const searchTerm = normalize(search);
+
     return processedTransactions.filter((t) => {
-      // Text search
+      // Text search (resiliente a null/number/object)
       const matchesSearch =
-        t.description.toLowerCase().includes(search.toLowerCase()) ||
-        t.supplier?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        t.category?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        t.check_number?.toLowerCase().includes(search.toLowerCase()) ||
-        t.document_number?.toLowerCase().includes(search.toLowerCase());
+        normalize(t.description).includes(searchTerm) ||
+        normalize(t.supplier?.name).includes(searchTerm) ||
+        normalize(t.category?.name).includes(searchTerm) ||
+        normalize(t.check_number).includes(searchTerm) ||
+        normalize(t.document_number).includes(searchTerm);
 
       // Status filter
       const matchesStatus =
@@ -188,8 +191,7 @@ export default function UnionExpensesPage() {
 
       // Check number filter
       const matchesCheckNumber =
-        !checkNumberFilter || 
-        (t.check_number && t.check_number.toLowerCase().includes(checkNumberFilter.toLowerCase()));
+        !checkNumberFilter || normalize(t.check_number).includes(normalize(checkNumberFilter));
 
       // Date range filter
       let matchesDateRange = true;
