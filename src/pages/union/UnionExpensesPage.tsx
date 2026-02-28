@@ -57,6 +57,7 @@ import {
   Building2,
   Tag,
   Copy,
+  Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -272,6 +273,29 @@ export default function UnionExpensesPage() {
     },
     onError: () => {
       toast.error("Erro ao cancelar despesa");
+    },
+  });
+
+  const undoPaymentMutation = useMutation({
+    mutationFn: async (transaction: any) => {
+      const { error } = await supabase
+        .from("union_financial_transactions")
+        .update({
+          status: "pending",
+          paid_date: null,
+          liquidated_by: null,
+        })
+        .eq("id", transaction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-flow"] });
+      toast.success("Baixa desfeita! Despesa voltou ao status pendente.");
+    },
+    onError: () => {
+      toast.error("Erro ao desfazer baixa");
     },
   });
 
@@ -722,6 +746,12 @@ export default function UnionExpensesPage() {
                                   Cancelar
                                 </DropdownMenuItem>
                               </>
+                            )}
+                            {transaction.effectiveStatus === "paid" && (
+                              <DropdownMenuItem onClick={() => undoPaymentMutation.mutate(transaction)}>
+                                <Undo2 className="h-3.5 w-3.5 mr-2" />
+                                Desfazer Baixa
+                              </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
