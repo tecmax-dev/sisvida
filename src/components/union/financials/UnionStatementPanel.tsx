@@ -481,7 +481,7 @@ export function UnionStatementPanel() {
   const handleExportPDF = () => {
     if (!summary || !selectedRegister) return;
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "landscape" });
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 15;
 
@@ -530,6 +530,7 @@ export function UnionStatementPanel() {
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
       styles: { fontSize: 9 },
+      margin: { left: 10, right: 10 },
       columnStyles: { 0: { cellWidth: 40 }, 1: { halign: "right" } },
     });
 
@@ -566,16 +567,17 @@ export function UnionStatementPanel() {
       head: [["DATA", "DESCRIÇÃO", "Nº CHEQUE", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO"]],
       body: tableBody,
       theme: "grid",
-      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
-      styles: { fontSize: 7 },
+      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 3 },
+      margin: { left: 10, right: 10 },
       columnStyles: {
-        0: { cellWidth: 22 },
-        1: { cellWidth: 50 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 22, halign: "right", textColor: [220, 38, 38] },
-        5: { cellWidth: 22, halign: "right", textColor: [22, 163, 74] },
-        6: { cellWidth: 25, halign: "right" },
+        0: { cellWidth: 25 },
+        1: { cellWidth: "auto" },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 55 },
+        4: { cellWidth: 28, halign: "right", textColor: [220, 38, 38] },
+        5: { cellWidth: 28, halign: "right", textColor: [22, 163, 74] },
+        6: { cellWidth: 30, halign: "right" },
       },
     });
 
@@ -597,6 +599,7 @@ export function UnionStatementPanel() {
       theme: "grid",
       headStyles: { fillColor: [16, 185, 129], fontStyle: "bold" },
       styles: { fontSize: 9 },
+      margin: { left: 10, right: 10 },
       columnStyles: {
         0: { halign: "center" },
         1: { halign: "right" },
