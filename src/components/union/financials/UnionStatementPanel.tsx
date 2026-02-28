@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { format, parse, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,6 +87,9 @@ export function UnionStatementPanel() {
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<any>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isEditingInitialBalanceDate, setIsEditingInitialBalanceDate] = useState(false);
+  const [initialBalanceDateInput, setInitialBalanceDateInput] = useState("");
+  const [savingInitialBalanceDate, setSavingInitialBalanceDate] = useState(false);
   const queryClient = useQueryClient();
 
   const invalidateAll = useCallback(() => {
@@ -245,6 +248,56 @@ export function UnionStatementPanel() {
   const selectedRegister = useMemo(() => {
     return cashRegisters?.find((r) => r.id === cashRegisterId);
   }, [cashRegisters, cashRegisterId]);
+
+  const handleStartInitialBalanceDateEdit = useCallback(() => {
+    if (!selectedRegister) return;
+
+    const currentDate = (selectedRegister as any)?.initial_balance_date
+      ? String((selectedRegister as any).initial_balance_date).slice(0, 10)
+      : format(subDays(startDate, 1), "yyyy-MM-dd");
+
+    setInitialBalanceDateInput(currentDate);
+    setIsEditingInitialBalanceDate(true);
+  }, [selectedRegister, startDate]);
+
+  const handleCancelInitialBalanceDateEdit = useCallback(() => {
+    setIsEditingInitialBalanceDate(false);
+    setInitialBalanceDateInput("");
+  }, []);
+
+  const handleSaveInitialBalanceDate = useCallback(async () => {
+    if (!selectedRegister || !initialBalanceDateInput) return;
+
+    setSavingInitialBalanceDate(true);
+    try {
+      const { error } = await supabase
+        .from("union_cash_registers")
+        .update({ initial_balance_date: initialBalanceDateInput })
+        .eq("id", selectedRegister.id);
+
+      if (error) throw error;
+
+      toast.success("Data do saldo atualizada");
+      setIsEditingInitialBalanceDate(false);
+      invalidateAll();
+    } catch (err: any) {
+      toast.error("Erro ao atualizar data: " + err.message);
+    } finally {
+      setSavingInitialBalanceDate(false);
+    }
+  }, [initialBalanceDateInput, invalidateAll, selectedRegister]);
+
+  const handleInitialBalanceDateKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        void handleSaveInitialBalanceDate();
+      } else if (e.key === "Escape") {
+        handleCancelInitialBalanceDateEdit();
+      }
+    },
+    [handleCancelInitialBalanceDateEdit, handleSaveInitialBalanceDate]
+  );
 
   // Fetch transactions for the period and cash register
   const { data: transactions, isLoading: loadingTransactions } = useQuery({
@@ -868,42 +921,52 @@ export function UnionStatementPanel() {
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-transparent hover:border-input hover:bg-muted/50 cursor-pointer text-sm transition-colors"
-                              title="Clique para alterar a data do saldo inicial"
-                            >
-                              {format(subDays(startDate, 1), "dd/MM/yyyy")}
-                              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={(selectedRegister as any)?.initial_balance_date ? parseDateOnlyToLocalNoon((selectedRegister as any).initial_balance_date as string) : subDays(startDate, 1)}
-                              onSelect={async (date) => {
-                                if (!date || !isValid(date) || !selectedRegister) return;
-                                try {
-                                  const newDateStr = format(date, "yyyy-MM-dd");
-                                  const { error } = await supabase
-                                    .from("union_cash_registers")
-                                    .update({ initial_balance_date: newDateStr })
-                                    .eq("id", selectedRegister.id);
-                                  if (error) throw error;
-                                  toast.success("Data do saldo atualizada");
-                                  invalidateAll();
-                                } catch (err: any) {
-                                  toast.error("Erro ao atualizar data: " + err.message);
-                                }
-                              }}
-                              locale={ptBR}
-                              initialFocus
-                              className="pointer-events-auto"
+                        {isEditingInitialBalanceDate ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="date"
+                              value={initialBalanceDateInput}
+                              onChange={(e) => setInitialBalanceDateInput(e.target.value)}
+                              onKeyDown={handleInitialBalanceDateKeyDown}
+                              className="h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              disabled={savingInitialBalanceDate}
                             />
-                          </PopoverContent>
-                        </Popover>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => void handleSaveInitialBalanceDate()}
+                              disabled={savingInitialBalanceDate || !initialBalanceDateInput}
+                              title="Salvar data"
+                            >
+                              {savingInitialBalanceDate ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={handleCancelInitialBalanceDateEdit}
+                              disabled={savingInitialBalanceDate}
+                              title="Cancelar"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-transparent hover:border-input hover:bg-muted/50 cursor-pointer text-sm transition-colors"
+                            title="Clique para alterar a data do saldo inicial"
+                            onClick={handleStartInitialBalanceDateEdit}
+                          >
+                            {format(subDays(startDate, 1), "dd/MM/yyyy")}
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(summary.initialBalance)}
