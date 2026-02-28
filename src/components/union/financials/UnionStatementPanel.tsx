@@ -54,6 +54,8 @@ interface Transaction {
   type: string;
   amount: number;
   status: string;
+  supplier_name?: string;
+  check_number?: string;
 }
 
 interface DailyGroup {
@@ -248,7 +250,7 @@ export function UnionStatementPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("union_financial_transactions")
-        .select("id, paid_date, due_date, description, type, amount, status")
+        .select("id, paid_date, due_date, description, type, amount, status, check_number, supplier_id, union_suppliers(name)")
         .eq("clinic_id", clinicId!)
         .eq("cash_register_id", cashRegisterId)
         .eq("status", "paid")
@@ -258,13 +260,15 @@ export function UnionStatementPanel() {
         .order("created_at");
 
       if (error) throw error;
-      return data.map((t) => ({
+      return data.map((t: any) => ({
         id: t.id,
         date: t.paid_date || t.due_date || "",
         description: t.description || "Sem descrição",
         type: t.type,
         amount: Number(t.amount) || 0,
         status: t.status,
+        supplier_name: t.union_suppliers?.name || undefined,
+        check_number: t.check_number || undefined,
       }));
     },
     enabled: !!clinicId && !!cashRegisterId,
@@ -879,7 +883,15 @@ export function UnionStatementPanel() {
                             <TableCell className="font-medium">
                               {idx === 0 ? format(group.date, "dd/MM/yyyy") : ""}
                             </TableCell>
-                            <TableCell className="uppercase text-sm">{t.description}</TableCell>
+                            <TableCell className="text-sm">
+                              <div className="uppercase">{t.description}</div>
+                              {(t.supplier_name || t.check_number) && (
+                                <div className="text-xs text-muted-foreground mt-0.5 flex gap-3">
+                                  {t.supplier_name && <span>Fornecedor: {t.supplier_name}</span>}
+                                  {t.check_number && <span>Cheque: {t.check_number}</span>}
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right text-red-600">
                               {t.type === "expense" ? formatCurrency(t.amount) : ""}
                             </TableCell>
