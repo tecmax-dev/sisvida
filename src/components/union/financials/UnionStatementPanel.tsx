@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { format, parse, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,6 +84,7 @@ export function UnionStatementPanel() {
   const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
   const [isMigrating, setIsMigrating] = useState(false);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [editTransaction, setEditTransaction] = useState<any>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -910,6 +911,23 @@ export function UnionStatementPanel() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem
+                                    onClick={async () => {
+                                      // Fetch full transaction data for editing
+                                      const { data: fullTx } = await supabase
+                                        .from("union_financial_transactions")
+                                        .select("*")
+                                        .eq("id", t.id)
+                                        .single();
+                                      if (fullTx) {
+                                        setEditTransaction(fullTx);
+                                        setTransactionDialogOpen(true);
+                                      }
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
                                     onClick={() => estornoMutation.mutate(t)}
                                     disabled={estornoMutation.isPending}
                                   >
@@ -994,10 +1012,15 @@ export function UnionStatementPanel() {
       {clinicId && (
         <UnionTransactionDialog
           open={transactionDialogOpen}
-          onOpenChange={setTransactionDialogOpen}
+          onOpenChange={(open) => {
+            setTransactionDialogOpen(open);
+            if (!open) setEditTransaction(null);
+          }}
+          transaction={editTransaction}
           clinicId={clinicId}
           cashRegisterId={cashRegisterId || undefined}
           onSuccess={() => {
+            setEditTransaction(null);
             queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
             queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
             queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
