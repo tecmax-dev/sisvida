@@ -46,8 +46,18 @@ export function UnionSupplierCombobox({
 }: UnionSupplierComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [commandKey, setCommandKey] = useState(0);
   const [defaultsDialogOpen, setDefaultsDialogOpen] = useState(false);
   const [selectedSupplierForDefaults, setSelectedSupplierForDefaults] = useState<Supplier | null>(null);
+
+  // Force reset Command internal state when popover opens
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setSearch("");
+      setCommandKey(prev => prev + 1);
+    }
+    setOpen(isOpen);
+  };
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ["union-suppliers", clinicId],
     queryFn: async () => {
@@ -82,7 +92,7 @@ export function UnionSupplierCombobox({
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -109,7 +119,7 @@ export function UnionSupplierCombobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
-          <Command shouldFilter={false}>
+          <Command key={commandKey} shouldFilter={false}>
             <CommandInput
               placeholder="Buscar por nome ou CNPJ..."
               value={search}
