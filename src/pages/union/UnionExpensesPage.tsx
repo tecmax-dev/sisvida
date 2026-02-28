@@ -32,6 +32,7 @@ import { UnionTransactionDialog } from "@/components/union/financials/UnionTrans
 import { UnionCheckLiquidationDialog } from "@/components/union/financials/UnionCheckLiquidationDialog";
 import { UnionCheckPrintDialog } from "@/components/union/financials/UnionCheckPrintDialog";
 import { UnionCopyExpensesDialog } from "@/components/union/financials/UnionCopyExpensesDialog";
+import { UnionBatchCheckPrintDialog } from "@/components/union/financials/UnionBatchCheckPrintDialog";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,6 +71,7 @@ export default function UnionExpensesPage() {
   const [checkDialogOpen, setCheckDialogOpen] = useState(false);
   const [checkPrintDialogOpen, setCheckPrintDialogOpen] = useState(false);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [batchPrintDialogOpen, setBatchPrintDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -513,6 +515,10 @@ export default function UnionExpensesPage() {
                 <Printer className="h-4 w-4 mr-1.5" />
                 Cópia Cheque
               </Button>
+              <Button variant="outline" size="sm" className="h-9" onClick={() => setBatchPrintDialogOpen(true)}>
+                <Printer className="h-4 w-4 mr-1.5" />
+                Lote Cheques
+              </Button>
               <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckDialogOpen(true)}>
                 <FileCheck className="h-4 w-4 mr-1.5" />
                 Liquidar Cheque
@@ -825,6 +831,12 @@ export default function UnionExpensesPage() {
       <UnionCopyExpensesDialog
         open={copyDialogOpen}
         onOpenChange={setCopyDialogOpen}
+        clinicId={clinicId}
+      />
+
+      <UnionBatchCheckPrintDialog
+        open={batchPrintDialogOpen}
+        onOpenChange={setBatchPrintDialogOpen}
         clinicId={clinicId}
       />
     </div>
