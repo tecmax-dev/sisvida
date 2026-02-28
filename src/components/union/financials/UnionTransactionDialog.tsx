@@ -45,6 +45,7 @@ interface UnionTransactionDialogProps {
   transaction?: any | null;
   clinicId: string;
   defaultType?: "income" | "expense";
+  cashRegisterId?: string;
   onSuccess: () => void;
 }
 
@@ -74,6 +75,7 @@ export function UnionTransactionDialog({
   transaction,
   clinicId,
   defaultType = "expense",
+  cashRegisterId: defaultCashRegisterId,
   onSuccess,
 }: UnionTransactionDialogProps) {
   const queryClient = useQueryClient();
@@ -244,7 +246,7 @@ export function UnionTransactionDialog({
         description: "",
         amount: "",
         category_id: "",
-        cash_register_id: "",
+        cash_register_id: defaultCashRegisterId || "",
         supplier_id: "",
         payment_method: "pix",
         status: "pending",
@@ -261,7 +263,7 @@ export function UnionTransactionDialog({
       setPaidDate(undefined);
       setValuesOpen(false);
     }
-  }, [transaction, open, defaultType]);
+  }, [transaction, open, defaultType, defaultCashRegisterId]);
 
   // Sync amount with gross_value when not using decomposed values
   useEffect(() => {
@@ -356,7 +358,26 @@ export function UnionTransactionDialog({
       } else {
         const { error } = await supabase.from("union_financial_transactions").insert(data);
         if (error) throw error;
-        toast.success(type === "income" ? "Receita lançada!" : "Despesa lançada!");
+
+        // Update cash register balance when transaction is paid
+        if (data.status === "paid" && data.cash_register_id) {
+          const balanceChange = type === "income" ? finalAmount : -finalAmount;
+          const { data: register } = await supabase
+            .from("union_cash_registers")
+            .select("current_balance")
+            .eq("id", data.cash_register_id)
+            .single();
+          
+          if (register) {
+            const newBalance = Number(register.current_balance || 0) + balanceChange;
+            await supabase
+              .from("union_cash_registers")
+              .update({ current_balance: newBalance })
+              .eq("id", data.cash_register_id);
+          }
+        }
+
+        toast.success(type === "expense" ? "Débito lançado!" : "Crédito lançado!");
       }
 
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
@@ -398,10 +419,10 @@ export function UnionTransactionDialog({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {transaction ? "Editar Transação" : type === "income" ? "Nova Receita" : "Nova Despesa"}
+              {transaction ? "Editar Lançamento" : type === "expense" ? "Novo Débito" : "Novo Crédito"}
             </DialogTitle>
             <DialogDescription>
-              Lance {type === "income" ? "receitas" : "despesas"} do módulo sindical
+              Lance {type === "expense" ? "débitos (saídas)" : "créditos (entradas)"} no portador selecionado
             </DialogDescription>
           </DialogHeader>
 
@@ -438,13 +459,13 @@ export function UnionTransactionDialog({
             {!transaction && (
               <Tabs value={type} onValueChange={(v) => setType(v as "income" | "expense")}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="income" className="gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Receita
-                  </TabsTrigger>
                   <TabsTrigger value="expense" className="gap-2">
                     <TrendingDown className="h-4 w-4" />
-                    Despesa
+                    Débito
+                  </TabsTrigger>
+                  <TabsTrigger value="income" className="gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Crédito
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -457,7 +478,7 @@ export function UnionTransactionDialog({
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={type === "income" ? "Ex: Mensalidade Sindical" : "Ex: Material de Escritório"}
+                  placeholder={type === "expense" ? "Ex: Pagamento Fornecedor" : "Ex: Mensalidade Sindical"}
                   required
                 />
               </div>
@@ -667,7 +688,7 @@ export function UnionTransactionDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="paid">{type === "income" ? "Recebido" : "Pago"}</SelectItem>
+                    <SelectItem value="paid">{type === "expense" ? "Pago" : "Recebido"}</SelectItem>
                     <SelectItem value="cancelled">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
@@ -675,7 +696,7 @@ export function UnionTransactionDialog({
 
               {formData.status === "paid" && (
                 <div>
-                  <Label>Data do {type === "income" ? "Recebimento" : "Pagamento"}</Label>
+                  <Label>Data do {type === "expense" ? "Pagamento" : "Recebimento"}</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
