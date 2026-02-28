@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/table";
 import { format, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { UnionTransactionDialog } from "./UnionTransactionDialog";
 
 interface Transaction {
   id: string;
@@ -62,6 +63,8 @@ export function UnionStatementPanel() {
   const [startDate, setStartDate] = useState<Date>(() => startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
   const [isMigrating, setIsMigrating] = useState(false);
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Use unified hook with fallback
   const {
@@ -506,11 +509,17 @@ export function UnionStatementPanel() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Movimentação e Saldo</h1>
-        <p className="text-muted-foreground">
-          Extrato detalhado de movimentações por portador
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Movimentação e Saldo</h1>
+          <p className="text-muted-foreground">
+            Extrato detalhado de movimentações por portador
+          </p>
+        </div>
+        <Button onClick={() => setTransactionDialogOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Lançamento
+        </Button>
       </div>
 
       {/* Migration Alert */}
@@ -788,6 +797,19 @@ export function UnionStatementPanel() {
             </Card>
           )}
         </>
+      )}
+      {/* Transaction Dialog */}
+      {clinicId && (
+        <UnionTransactionDialog
+          open={transactionDialogOpen}
+          onOpenChange={setTransactionDialogOpen}
+          clinicId={clinicId}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
+            queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
+            queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
+          }}
+        />
       )}
     </div>
   );
