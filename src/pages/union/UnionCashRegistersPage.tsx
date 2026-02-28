@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateBR } from "@/lib/date";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +31,7 @@ import {
 const typeLabels: Record<string, string> = {
   cash: "Dinheiro",
   bank: "Conta Bancária",
+  bank_account: "Conta Bancária",
   credit_card: "Cartão de Crédito",
   investment: "Aplicação",
   other: "Outro",
@@ -38,6 +40,7 @@ const typeLabels: Record<string, string> = {
 const typeIcons: Record<string, React.ReactNode> = {
   cash: <Wallet className="h-5 w-5" />,
   bank: <Building2 className="h-5 w-5" />,
+  bank_account: <Building2 className="h-5 w-5" />,
   credit_card: <CreditCard className="h-5 w-5" />,
   investment: <TrendingUp className="h-5 w-5" />,
   other: <Wallet className="h-5 w-5" />,
@@ -193,6 +196,11 @@ export default function UnionCashRegistersPage() {
               <p className="text-2xl font-bold mt-2">
                 {formatCurrency(Number(register.current_balance))}
               </p>
+              {register.initial_balance_date && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Saldo inicial: {formatCurrency(Number(register.initial_balance))} em {formatDateBR(register.initial_balance_date)}
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}
