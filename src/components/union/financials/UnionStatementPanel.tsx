@@ -361,7 +361,7 @@ export function UnionStatementPanel() {
       const dateStr = t.date;
       if (!groups.has(dateStr)) {
         groups.set(dateStr, {
-          date: parseISO(dateStr),
+          date: parseDateOnlyToLocalNoon(dateStr),
           dateStr,
           transactions: [],
           totalDebit: 0,
