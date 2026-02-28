@@ -165,6 +165,14 @@ export function UnionBatchCheckPrintDialog({
       currency: "BRL",
     }).format(value);
 
+  const escapeHtml = (value: unknown) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
   // Fetch clinic data for print
   const { data: clinic } = useQuery({
     queryKey: ["clinic-for-batch-print", clinicId],
@@ -275,8 +283,8 @@ export function UnionBatchCheckPrintDialog({
                       .map(
                         (e) => `
                       <tr>
-                        <td class="font-medium">${e.description}</td>
-                        <td>${e.supplier?.name || "-"}</td>
+                        <td class="font-medium">${escapeHtml(e.description)}</td>
+                        <td>${escapeHtml(e.supplier?.name || "-")}</td>
                         <td>${formatDateBR(e.due_date) || "-"}</td>
                         <td>${formatDateBR(e.paid_date) || "-"}</td>
                         <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
@@ -402,7 +410,7 @@ export function UnionBatchCheckPrintDialog({
             .card-sub { font-size: 9px; color: #94a3b8; margin-top: 1px; }
             
             .table-container { border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
-            table { width: 100%; border-collapse: collapse; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             th {
               background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
               color: white;
@@ -414,14 +422,13 @@ export function UnionBatchCheckPrintDialog({
               text-align: left;
             }
             th:last-child { text-align: center; }
-            td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; line-height: 1.25; }
+            td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
             tr:last-child td { border-bottom: none; }
             tr:nth-child(even) { background: #fafbfc; }
             .text-right { text-align: right; }
             .text-center { text-align: center; }
             .font-medium { font-weight: 500; }
             .font-semibold { font-weight: 600; }
-            td { word-break: break-word; }
             
             .status { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; text-transform: uppercase; }
             .status-paid { background: #d1fae5; color: #047857; }
