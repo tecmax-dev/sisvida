@@ -867,7 +867,44 @@ export function UnionStatementPanel() {
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>{format(subDays(startDate, 1), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-transparent hover:border-input hover:bg-muted/50 cursor-pointer text-sm transition-colors"
+                              title="Clique para alterar a data do saldo inicial"
+                            >
+                              {format(subDays(startDate, 1), "dd/MM/yyyy")}
+                              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={(selectedRegister as any)?.initial_balance_date ? parseDateOnlyToLocalNoon((selectedRegister as any).initial_balance_date as string) : subDays(startDate, 1)}
+                              onSelect={async (date) => {
+                                if (!date || !isValid(date) || !selectedRegister) return;
+                                try {
+                                  const newDateStr = format(date, "yyyy-MM-dd");
+                                  const { error } = await supabase
+                                    .from("union_cash_registers")
+                                    .update({ initial_balance_date: newDateStr })
+                                    .eq("id", selectedRegister.id);
+                                  if (error) throw error;
+                                  toast.success("Data do saldo atualizada");
+                                  invalidateAll();
+                                } catch (err: any) {
+                                  toast.error("Erro ao atualizar data: " + err.message);
+                                }
+                              }}
+                              locale={ptBR}
+                              initialFocus
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(summary.initialBalance)}
                       </TableCell>
