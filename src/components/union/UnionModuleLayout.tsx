@@ -10,14 +10,12 @@ import { UserMenu } from "@/components/layout/UserMenu";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
+import sindiflexLogo from "@/assets/logo_sindiflex.png";
 import {
   Menu,
   X,
   PanelLeftClose,
   PanelLeft,
-  LayoutDashboard,
-  Building2,
   ArrowLeft,
 } from "lucide-react";
 import {
@@ -94,16 +92,12 @@ export function UnionModuleLayout() {
           >
             {!sidebarCollapsed && (
               <div className="flex-1 flex flex-col items-center gap-1">
-                <Logo size="md" customSrc={ecliniDashboardLogo} />
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Building2 className="h-3.5 w-3.5 text-purple-300" />
-                  <span className="text-xs font-medium text-purple-200">Módulo Sindical</span>
-                </div>
+                <img src={sindiflexLogo} alt="SindiFlex" className="h-10 object-contain" />
               </div>
             )}
             {sidebarCollapsed && (
               <div className="w-full flex flex-col items-center">
-                <Building2 className="h-6 w-6 text-purple-300" />
+                <img src={sindiflexLogo} alt="SindiFlex" className="h-6 object-contain" />
               </div>
             )}
             {/* Mobile close button */}
@@ -175,9 +169,9 @@ export function UnionModuleLayout() {
             </button>
             
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-purple-500" />
+              <img src={sindiflexLogo} alt="SindiFlex" className="h-7 object-contain" />
               <h1 className="text-lg font-semibold text-foreground">
-                Módulo Sindical
+                SindiFlex
               </h1>
               {currentClinic && (
                 <span className="text-sm text-muted-foreground hidden sm:inline">
