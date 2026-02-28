@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
+import { formatDateBR } from "@/lib/date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -461,11 +462,11 @@ export function UnionStatementPanel() {
     yPos += 10;
 
     // Previous balance table
-    const prevBalanceDate = subDays(startDate, 1);
+    const prevBalanceDateStr = (selectedRegister as any)?.initial_balance_date ? formatDateBR((selectedRegister as any).initial_balance_date) : format(subDays(startDate, 1), "dd/MM/yyyy");
     autoTable(doc, {
       startY: yPos,
       head: [["DATA", "SALDO ANTERIOR"]],
-      body: [[format(prevBalanceDate, "dd/MM/yyyy"), formatCurrency(summary.initialBalance)]],
+      body: [[prevBalanceDateStr, formatCurrency(summary.initialBalance)]],
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
       styles: { fontSize: 9 },
@@ -576,7 +577,8 @@ export function UnionStatementPanel() {
 
     // Previous balance
     wsData.push(["DATA", "SALDO ANTERIOR"]);
-    wsData.push([format(subDays(startDate, 1), "dd/MM/yyyy"), summary.initialBalance]);
+    const prevBalanceDateExcel = (selectedRegister as any)?.initial_balance_date ? formatDateBR((selectedRegister as any).initial_balance_date) : format(subDays(startDate, 1), "dd/MM/yyyy");
+    wsData.push([prevBalanceDateExcel, summary.initialBalance]);
     wsData.push([]);
 
     // Transactions header
@@ -858,7 +860,7 @@ export function UnionStatementPanel() {
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>{format(subDays(startDate, 1), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{(selectedRegister as any)?.initial_balance_date ? formatDateBR((selectedRegister as any).initial_balance_date) : format(subDays(startDate, 1), "dd/MM/yyyy")}</TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(summary.initialBalance)}
                       </TableCell>
