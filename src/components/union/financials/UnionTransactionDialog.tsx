@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -26,7 +25,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, CalendarIcon, ChevronDown, Calculator, AlertTriangle, Loader2 } from "lucide-react";
+import { CalendarIcon, ChevronDown, Calculator, AlertTriangle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -81,8 +80,8 @@ export function UnionTransactionDialog({
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<"income" | "expense">(defaultType);
-  const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
-  const [paidDate, setPaidDate] = useState<Date | undefined>();
+  const [documentDate, setDocumentDate] = useState<Date | undefined>(new Date());
+  const [launchDate, setLaunchDate] = useState<Date | undefined>(new Date());
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [defaultsSelectorOpen, setDefaultsSelectorOpen] = useState(false);
@@ -95,11 +94,12 @@ export function UnionTransactionDialog({
     cash_register_id: "",
     supplier_id: "",
     payment_method: "pix",
-    status: "pending",
     notes: "",
     document_number: "",
-    document_type: "",
+    document_type: "outros",
     check_number: "",
+    quantity: "1",
+    block: "",
     gross_value: "",
     fine_value: "",
     interest_value: "",
@@ -115,7 +115,7 @@ export function UnionTransactionDialog({
     return gross + fine + interest - discount;
   }, [formData.gross_value, formData.fine_value, formData.interest_value, formData.discount_value]);
 
-  // Use unified hook with fallback and migration capability
+  // Use unified hook with fallback
   const {
     categories: allCategories,
     categoriesSource,
@@ -134,15 +134,12 @@ export function UnionTransactionDialog({
     return allCategories.filter((c: any) => c.type === type);
   }, [allCategories, type]);
 
-  // Use cash registers from the hook directly
   const cashRegisters = allCashRegisters;
 
-  // Check if we're using fallback data (clinic data instead of union data)
   const usingFallbackCategories = categoriesSource === "clinic";
   const usingFallbackCashRegisters = cashRegistersSource === "clinic";
   const requiresMigration = usingFallbackCategories || usingFallbackCashRegisters;
 
-  // Auto-migrate when dialog opens if needed
   const handleMigration = async () => {
     setIsMigrating(true);
     try {
@@ -161,7 +158,6 @@ export function UnionTransactionDialog({
     setSupplierDialogOpen(false);
   };
 
-  // Handle supplier selection - check for defaults
   const { data: suppliers } = useQuery({
     queryKey: ["union-suppliers", clinicId],
     queryFn: async () => {
@@ -180,7 +176,6 @@ export function UnionTransactionDialog({
     setFormData({ ...formData, supplier_id: supplierId });
     
     if (supplierId && !transaction) {
-      // Check if supplier has defaults configured
       const { data: defaults } = await supabase
         .from("union_supplier_defaults")
         .select("id")
@@ -198,7 +193,6 @@ export function UnionTransactionDialog({
     }
   };
 
-  // Handle defaults selection
   const handleDefaultsSelect = (data: {
     description: string;
     category_id: string;
@@ -224,19 +218,19 @@ export function UnionTransactionDialog({
         cash_register_id: transaction.cash_register_id || "",
         supplier_id: transaction.supplier_id || "",
         payment_method: transaction.payment_method || "pix",
-        status: transaction.status || "pending",
         notes: transaction.notes || "",
         document_number: transaction.document_number || "",
-        document_type: transaction.document_type || "",
+        document_type: transaction.document_type || "outros",
         check_number: transaction.check_number || "",
+        quantity: "1",
+        block: "",
         gross_value: transaction.gross_value?.toString() || transaction.amount?.toString() || "",
         fine_value: transaction.fine_value?.toString() || "",
         interest_value: transaction.interest_value?.toString() || "",
         discount_value: transaction.discount_value?.toString() || "",
       });
-      setDueDate(transaction.due_date ? parseDateOnlyToLocalNoon(transaction.due_date) : new Date());
-      setPaidDate(transaction.paid_date ? parseDateOnlyToLocalNoon(transaction.paid_date) : undefined);
-      // Open values section if there are decomposed values
+      setDocumentDate(transaction.due_date ? parseDateOnlyToLocalNoon(transaction.due_date) : new Date());
+      setLaunchDate(transaction.paid_date ? parseDateOnlyToLocalNoon(transaction.paid_date) : new Date());
       if (transaction.fine_value || transaction.interest_value || transaction.discount_value) {
         setValuesOpen(true);
       }
@@ -249,18 +243,19 @@ export function UnionTransactionDialog({
         cash_register_id: defaultCashRegisterId || "",
         supplier_id: "",
         payment_method: "pix",
-        status: "pending",
         notes: "",
         document_number: "",
-        document_type: "",
+        document_type: "outros",
         check_number: "",
+        quantity: "1",
+        block: "",
         gross_value: "",
         fine_value: "",
         interest_value: "",
         discount_value: "",
       });
-      setDueDate(new Date());
-      setPaidDate(undefined);
+      setDocumentDate(new Date());
+      setLaunchDate(new Date());
       setValuesOpen(false);
     }
   }, [transaction, open, defaultType, defaultCashRegisterId]);
@@ -276,7 +271,6 @@ export function UnionTransactionDialog({
     e.preventDefault();
     if (!clinicId) return;
 
-    // Block if using fallback data - must migrate first
     if (requiresMigration) {
       toast.error("É necessário migrar os dados financeiros antes de lançar transações. Clique em 'Migrar Dados'.");
       return;
@@ -296,7 +290,6 @@ export function UnionTransactionDialog({
     let netValue: number | null = null;
 
     if (valuesOpen && formData.gross_value) {
-      // Using decomposed values
       grossValue = parseFloat(formData.gross_value.replace(",", ".") || "0");
       fineValue = parseFloat(formData.fine_value.replace(",", ".") || "0") || null;
       interestValue = parseFloat(formData.interest_value.replace(",", ".") || "0") || null;
@@ -304,7 +297,6 @@ export function UnionTransactionDialog({
       netValue = calculatedNetValue;
       finalAmount = netValue;
     } else {
-      // Using simple amount
       finalAmount = parseFloat(formData.amount.replace(",", ".") || "0");
     }
 
@@ -313,7 +305,6 @@ export function UnionTransactionDialog({
       return;
     }
 
-    // Validate check number when payment method is check
     if (formData.payment_method === "check" && !formData.check_number.trim()) {
       toast.error("Número do cheque é obrigatório para pagamentos em cheque");
       return;
@@ -321,6 +312,8 @@ export function UnionTransactionDialog({
 
     setLoading(true);
     try {
+      const launchDateFormatted = launchDate ? format(launchDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+
       const data: any = {
         clinic_id: clinicId,
         type,
@@ -330,15 +323,13 @@ export function UnionTransactionDialog({
         cash_register_id: formData.cash_register_id || null,
         supplier_id: type === "expense" ? (formData.supplier_id || null) : null,
         payment_method: formData.payment_method,
-        status: formData.status,
+        status: "paid",
         notes: formData.notes || null,
         document_number: formData.document_number || null,
         document_type: formData.document_type || null,
         check_number: formData.check_number || null,
-        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        paid_date: formData.status === "paid" 
-          ? format(paidDate || new Date(), "yyyy-MM-dd") 
-          : (paidDate ? format(paidDate, "yyyy-MM-dd") : null),
+        due_date: documentDate ? format(documentDate, "yyyy-MM-dd") : launchDateFormatted,
+        paid_date: launchDateFormatted,
       };
 
       // Add decomposed values if using them
@@ -361,8 +352,8 @@ export function UnionTransactionDialog({
         const { error } = await supabase.from("union_financial_transactions").insert(data);
         if (error) throw error;
 
-        // Update cash register balance when transaction is paid
-        if (data.status === "paid" && data.cash_register_id) {
+        // Always update cash register balance (all transactions are "paid")
+        if (data.cash_register_id) {
           const balanceChange = type === "income" ? finalAmount : -finalAmount;
           const { data: register } = await supabase
             .from("union_cash_registers")
@@ -384,11 +375,12 @@ export function UnionTransactionDialog({
 
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
       console.error("Transaction save error:", error);
-      // Provide more specific error messages
       if (error?.message?.includes("foreign key constraint")) {
         if (error.message.includes("category_id")) {
           toast.error("Categoria inválida. Por favor, migre os dados financeiros primeiro.");
@@ -418,13 +410,13 @@ export function UnionTransactionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {transaction ? "Editar Lançamento" : type === "expense" ? "Novo Débito" : "Novo Crédito"}
+              {transaction ? "Editar Lançamento" : "Cadastro fluxo de caixa"}
             </DialogTitle>
             <DialogDescription>
-              Lance {type === "expense" ? "débitos (saídas)" : "créditos (entradas)"} no portador selecionado
+              Para cadastrar, preenchar todos os dados e depois clique em cadastrar
             </DialogDescription>
           </DialogHeader>
 
@@ -458,145 +450,35 @@ export function UnionTransactionDialog({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!transaction && (
-              <Tabs value={type} onValueChange={(v) => setType(v as "income" | "expense")}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="expense" className="gap-2">
-                    <TrendingDown className="h-4 w-4" />
-                    Débito
-                  </TabsTrigger>
-                  <TabsTrigger value="income" className="gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Crédito
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="description">Descrição *</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={type === "expense" ? "Ex: Pagamento Fornecedor" : "Ex: Mensalidade Sindical"}
-                  required
-                />
-              </div>
-
-              {/* Simple Amount (when not using decomposed values) */}
-              {!valuesOpen && (
-                <div>
-                  <Label htmlFor="amount">Valor (R$) *</Label>
-                  <Input
-                    id="amount"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value, gross_value: e.target.value })}
-                    placeholder="0,00"
-                    required
-                  />
-                </div>
-              )}
-
+            {/* Row 1: Portador, Centro de custo (categoria), Fornecedor */}
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label>Data de Vencimento</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      locale={ptBR}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Decomposed Values Section */}
-              <div className="col-span-2">
-                <Collapsible open={valuesOpen} onOpenChange={setValuesOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button type="button" variant="ghost" className="w-full justify-between p-2 h-auto">
-                      <span className="flex items-center gap-2 text-sm font-medium">
-                        <Calculator className="h-4 w-4" />
-                        Decomposição de Valores
-                      </span>
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", valuesOpen && "rotate-180")} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 border rounded-md bg-muted/30">
-                      <div>
-                        <Label className="text-xs">Valor Bruto *</Label>
-                        <Input
-                          value={formData.gross_value}
-                          onChange={(e) => setFormData({ ...formData, gross_value: e.target.value })}
-                          placeholder="0,00"
-                          className="h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Multa</Label>
-                        <Input
-                          value={formData.fine_value}
-                          onChange={(e) => setFormData({ ...formData, fine_value: e.target.value })}
-                          placeholder="0,00"
-                          className="h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Juros</Label>
-                        <Input
-                          value={formData.interest_value}
-                          onChange={(e) => setFormData({ ...formData, interest_value: e.target.value })}
-                          placeholder="0,00"
-                          className="h-9"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Desconto</Label>
-                        <Input
-                          value={formData.discount_value}
-                          onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                          placeholder="0,00"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="col-span-2 md:col-span-4 pt-2 border-t">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Valor Líquido:</span>
-                          <span className={cn("text-lg font-bold", type === "expense" ? "text-rose-600" : "text-emerald-600")}>
-                            {formatCurrency(calculatedNetValue)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                <Label>Portador <span className="text-destructive">*</span></Label>
+                <Select
+                  value={formData.cash_register_id}
+                  onValueChange={(value) => setFormData({ ...formData, cash_register_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cashRegisters?.map((register) => (
+                      <SelectItem key={register.id} value={register.id}>
+                        {register.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <Label>Categoria</Label>
+                <Label>Centro de custo <span className="text-destructive">*</span></Label>
                 <Select
                   value={formData.category_id}
                   onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
+                    <SelectValue placeholder="..." />
                   </SelectTrigger>
                   <SelectContent>
                     {categories?.map((category) => (
@@ -615,129 +497,49 @@ export function UnionTransactionDialog({
               </div>
 
               <div>
-                <Label>Conta Bancária</Label>
-                <Select
-                  value={formData.cash_register_id}
-                  onValueChange={(value) => setFormData({ ...formData, cash_register_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cashRegisters?.map((register) => (
-                      <SelectItem key={register.id} value={register.id}>
-                        {register.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Fornecedor</Label>
+                <UnionSupplierCombobox
+                  value={formData.supplier_id}
+                  onChange={handleSupplierChange}
+                  clinicId={clinicId}
+                  placeholder="..."
+                  onAddNew={() => setSupplierDialogOpen(true)}
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Descrição */}
+            <div>
+              <Label htmlFor="description">Descrição <span className="text-destructive">*</span></Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="DESCRIÇÃO"
+                required
+              />
+            </div>
+
+            {/* Row 3: Quantidade, Tipo de Documento, Nº documento, Bloco, Data documento, Data lançamento, Valor */}
+            <div className="grid grid-cols-7 gap-3">
+              <div>
+                <Label className="text-xs">Quantidade</Label>
+                <Input
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                  placeholder="1"
+                  className="h-9"
+                />
               </div>
 
-              {type === "expense" && (
-                <div>
-                  <Label>Fornecedor</Label>
-                  <UnionSupplierCombobox
-                    value={formData.supplier_id}
-                    onChange={handleSupplierChange}
-                    clinicId={clinicId}
-                    placeholder="Buscar fornecedor..."
-                    onAddNew={() => setSupplierDialogOpen(true)}
-                  />
-                </div>
-              )}
-
               <div>
-                <Label>Forma de Pagamento</Label>
-                <Select
-                  value={formData.payment_method}
-                  onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((method) => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Check Number - shows when payment method is check */}
-              {formData.payment_method === "check" && (
-                <div>
-                  <Label htmlFor="check_number">Nº do Cheque *</Label>
-                  <Input
-                    id="check_number"
-                    value={formData.check_number}
-                    onChange={(e) => setFormData({ ...formData, check_number: e.target.value })}
-                    placeholder="Ex: 001234"
-                    required
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, status: value });
-                    if (value === "paid" && !paidDate) {
-                      setPaidDate(new Date());
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="paid">{type === "expense" ? "Pago" : "Recebido"}</SelectItem>
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.status === "paid" && (
-                <div>
-                  <Label>Data do {type === "expense" ? "Pagamento" : "Recebimento"}</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !paidDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {paidDate ? format(paidDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={paidDate}
-                        onSelect={setPaidDate}
-                        locale={ptBR}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-
-              <div>
-                <Label>Tipo de Documento</Label>
+                <Label className="text-xs">Tipo de Documento</Label>
                 <Select
                   value={formData.document_type}
                   onValueChange={(value) => setFormData({ ...formData, document_type: value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="OUTROS" />
                   </SelectTrigger>
                   <SelectContent>
                     {DOCUMENT_TYPES.map((dt) => (
@@ -750,24 +552,208 @@ export function UnionTransactionDialog({
               </div>
 
               <div>
-                <Label htmlFor="document_number">Nº do Documento</Label>
+                <Label className="text-xs">Nº documento <span className="text-destructive">*</span></Label>
                 <Input
-                  id="document_number"
                   value={formData.document_number}
                   onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-                  placeholder="Opcional"
+                  placeholder="EX: NF-000"
+                  className="h-9"
                 />
               </div>
 
-              <div className="col-span-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={2}
+              <div>
+                <Label className="text-xs">Bloco</Label>
+                <Input
+                  value={formData.block}
+                  onChange={(e) => setFormData({ ...formData, block: e.target.value })}
+                  placeholder="00"
+                  className="h-9"
                 />
               </div>
+
+              <div>
+                <Label className="text-xs">Data documento <span className="text-destructive">*</span></Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-9 text-xs",
+                        !documentDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-1 h-3 w-3" />
+                      {documentDate ? format(documentDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={documentDate}
+                      onSelect={setDocumentDate}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label className="text-xs">Data lançamento <span className="text-destructive">*</span></Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-9 text-xs",
+                        !launchDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-1 h-3 w-3" />
+                      {launchDate ? format(launchDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={launchDate}
+                      onSelect={setLaunchDate}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label className="text-xs">Valor <span className="text-destructive">*</span></Label>
+                <Input
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value, gross_value: e.target.value })}
+                  placeholder="0,00"
+                  className="h-9"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Row 4: Tipo (CRÉDITO/DÉBITO), Forma de pagamento/Recebimento, Nº de cheque/Vale */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Tipo <span className="text-destructive">*</span></Label>
+                <Select
+                  value={type}
+                  onValueChange={(value) => setType(value as "income" | "expense")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">CRÉDITO</SelectItem>
+                    <SelectItem value="expense">DÉBITO</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Forma de pagamento/Recebimento <span className="text-destructive">*</span></Label>
+                <Select
+                  value={formData.payment_method}
+                  onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((method) => (
+                      <SelectItem key={method.value} value={method.value}>
+                        {method.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Nº de cheque/ Vale</Label>
+                <Input
+                  value={formData.check_number}
+                  onChange={(e) => setFormData({ ...formData, check_number: e.target.value })}
+                  placeholder=""
+                />
+              </div>
+            </div>
+
+            {/* Decomposed Values Section */}
+            <Collapsible open={valuesOpen} onOpenChange={setValuesOpen}>
+              <CollapsibleTrigger asChild>
+                <Button type="button" variant="ghost" className="w-full justify-between p-2 h-auto">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <Calculator className="h-4 w-4" />
+                    Decomposição de Valores
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", valuesOpen && "rotate-180")} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 border rounded-md bg-muted/30">
+                  <div>
+                    <Label className="text-xs">Valor Bruto *</Label>
+                    <Input
+                      value={formData.gross_value}
+                      onChange={(e) => setFormData({ ...formData, gross_value: e.target.value })}
+                      placeholder="0,00"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Multa</Label>
+                    <Input
+                      value={formData.fine_value}
+                      onChange={(e) => setFormData({ ...formData, fine_value: e.target.value })}
+                      placeholder="0,00"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Juros</Label>
+                    <Input
+                      value={formData.interest_value}
+                      onChange={(e) => setFormData({ ...formData, interest_value: e.target.value })}
+                      placeholder="0,00"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Desconto</Label>
+                    <Input
+                      value={formData.discount_value}
+                      onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
+                      placeholder="0,00"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="col-span-2 md:col-span-4 pt-2 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Valor Líquido:</span>
+                      <span className={cn("text-lg font-bold", type === "expense" ? "text-rose-600" : "text-emerald-600")}>
+                        {formatCurrency(calculatedNetValue)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Observações */}
+            <div>
+              <Label htmlFor="notes">Observações</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={2}
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
@@ -775,14 +761,13 @@ export function UnionTransactionDialog({
                 Cancelar
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Salvando..." : "Salvar"}
+                {loading ? "Salvando..." : "Cadastrar"}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para novo fornecedor */}
       <UnionSupplierDialog
         open={supplierDialogOpen}
         onOpenChange={setSupplierDialogOpen}
@@ -791,7 +776,6 @@ export function UnionTransactionDialog({
         onSuccess={handleSupplierCreated}
       />
 
-      {/* Dialog para seleção de defaults do fornecedor */}
       <UnionSupplierDefaultsSelector
         open={defaultsSelectorOpen}
         onOpenChange={setDefaultsSelectorOpen}
