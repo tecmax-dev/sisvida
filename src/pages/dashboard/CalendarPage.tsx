@@ -1332,7 +1332,7 @@ export default function CalendarPage() {
     }> = [];
     
     const recurrenceGroupId = recurrenceConfig.enabled ? generateId() : null;
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = toDateKey(selectedDate);
 
     // Regra de janela: bloquear antes de tentar gravar
     if (guardBookingWindow(dateStr)) {
@@ -1392,7 +1392,7 @@ export default function CalendarPage() {
       // Regra de janela: bloquear qualquer data recorrente fora do período
       if (bookingWindowEndDateKey) {
         const outOfWindow = recurringDates
-          .map((d) => d.toISOString().split('T')[0])
+          .map((d) => toDateKey(d))
           .some((k) => k > bookingWindowEndDateKey);
 
         if (outOfWindow) {
@@ -1408,7 +1408,7 @@ export default function CalendarPage() {
       
       // Check for conflicts on all dates
       for (const date of recurringDates) {
-        const dateDateStr = date.toISOString().split('T')[0];
+        const dateDateStr = toDateKey(date);
         const conflicts = findConflictingAppointments(appointments, {
           appointmentDate: dateDateStr,
           startTime: effectiveTime,
