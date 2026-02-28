@@ -319,7 +319,7 @@ export function UnionTransactionDialog({
         amount: finalAmount,
         category_id: formData.category_id || null,
         cash_register_id: formData.cash_register_id || null,
-        supplier_id: type === "expense" ? (formData.supplier_id || null) : null,
+        supplier_id: formData.supplier_id || null,
         payment_method: formData.payment_method,
         status: "paid",
         notes: formData.notes || null,
