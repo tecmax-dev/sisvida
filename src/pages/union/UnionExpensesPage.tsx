@@ -278,14 +278,17 @@ export default function UnionExpensesPage() {
 
   const undoPaymentMutation = useMutation({
     mutationFn: async (transaction: any) => {
-      const { error } = await supabase
+      console.log("Desfazendo baixa da transação:", transaction.id, transaction);
+      const { data, error } = await supabase
         .from("union_financial_transactions")
         .update({
-          status: "pending",
-          paid_date: null,
-          liquidated_by: null,
+          status: "pending" as any,
+          paid_date: null as any,
+          liquidated_by: null as any,
         })
-        .eq("id", transaction.id);
+        .eq("id", transaction.id)
+        .select();
+      console.log("Resultado desfazer baixa:", { data, error });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -294,8 +297,9 @@ export default function UnionExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ["union-cash-flow"] });
       toast.success("Baixa desfeita! Despesa voltou ao status pendente.");
     },
-    onError: () => {
-      toast.error("Erro ao desfazer baixa");
+    onError: (err: any) => {
+      console.error("Erro ao desfazer baixa:", err);
+      toast.error("Erro ao desfazer baixa: " + (err?.message || "Erro desconhecido"));
     },
   });
 
