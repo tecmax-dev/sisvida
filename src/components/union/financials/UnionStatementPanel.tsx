@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
+import { format, parse, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal } from "lucide-react";
 import {
@@ -704,16 +704,35 @@ export function UnionStatementPanel() {
                   <Label className="text-sm font-medium text-foreground">Data Inicial</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full sm:w-[180px] justify-start text-left font-normal h-11 bg-background",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {startDate ? format(startDate, "dd/MM/yyyy") : "Selecione"}
-                      </Button>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          className="flex h-11 w-full sm:w-[180px] rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          placeholder="dd/mm/aaaa"
+                          value={format(startDate, "dd/MM/yyyy")}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // Auto-format: insert slashes
+                            const digits = val.replace(/\D/g, "");
+                            if (digits.length === 8) {
+                              const parsed = parse(digits, "ddMMyyyy", new Date());
+                              if (isValid(parsed)) {
+                                handleStartDateChange(parsed);
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            if (val.length === 8) {
+                              const parsed = parse(val, "ddMMyyyy", new Date());
+                              if (isValid(parsed)) {
+                                handleStartDateChange(parsed);
+                              }
+                            }
+                          }}
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start" sideOffset={4}>
                       <Calendar
@@ -732,16 +751,34 @@ export function UnionStatementPanel() {
                   <Label className="text-sm font-medium text-foreground">Data Final</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full sm:w-[180px] justify-start text-left font-normal h-11 bg-background",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {endDate ? format(endDate, "dd/MM/yyyy") : "Selecione"}
-                      </Button>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          className="flex h-11 w-full sm:w-[180px] rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          placeholder="dd/mm/aaaa"
+                          value={format(endDate, "dd/MM/yyyy")}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const digits = val.replace(/\D/g, "");
+                            if (digits.length === 8) {
+                              const parsed = parse(digits, "ddMMyyyy", new Date());
+                              if (isValid(parsed)) {
+                                handleEndDateChange(parsed);
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            if (val.length === 8) {
+                              const parsed = parse(val, "ddMMyyyy", new Date());
+                              if (isValid(parsed)) {
+                                handleEndDateChange(parsed);
+                              }
+                            }
+                          }}
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      </div>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start" sideOffset={4}>
                       <Calendar
