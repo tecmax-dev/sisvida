@@ -79,20 +79,20 @@ export function UnionSupplierDefaultsDialog({
     enabled: !!supplierId && open,
   });
 
-  // Fetch categories for expense - use same query key as UnionCategoriesPage
+  // Fetch all categories (expense + income)
   const { data: categories } = useQuery({
-    queryKey: ["union-financial-categories", clinicId, "expense"],
+    queryKey: ["union-financial-categories", clinicId, "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("union_financial_categories")
-        .select("id, name, color")
+        .select("id, name, color, type")
         .eq("clinic_id", clinicId)
-        .eq("type", "expense")
         .eq("is_active", true)
+        .order("type")
         .order("name");
 
       if (error) throw error;
-      return data;
+      return data as { id: string; name: string; color: string | null; type: string }[];
     },
     enabled: !!clinicId && open,
   });
@@ -195,17 +195,32 @@ export function UnionSupplierDefaultsDialog({
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-2.5 h-2.5 rounded-full"
-                              style={{ backgroundColor: cat.color || "#6b7280" }}
-                            />
-                            {cat.name}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {categories?.filter(c => c.type === "expense").length ? (
+                        <div>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Débito</div>
+                          {categories.filter(c => c.type === "expense").map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color || "#6b7280" }} />
+                                {cat.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ) : null}
+                      {categories?.filter(c => c.type === "income").length ? (
+                        <div>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Crédito</div>
+                          {categories.filter(c => c.type === "income").map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color || "#6b7280" }} />
+                                {cat.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>
