@@ -250,10 +250,15 @@ export function UnionCopyExpensesDialog({
                       {formatCurrency(Number(expense.net_value || expense.amount))}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      {expense.due_date
+                      Venc: {expense.due_date
                         ? format(parseISO(expense.due_date), "dd/MM/yyyy", { locale: ptBR })
                         : "—"}
                     </p>
+                    {expense.status === "paid" && expense.paid_date && (
+                      <p className="text-[10px] text-green-600 dark:text-green-400">
+                        Liq: {format(parseISO(expense.paid_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
                   </div>
                 </label>
               ))}
