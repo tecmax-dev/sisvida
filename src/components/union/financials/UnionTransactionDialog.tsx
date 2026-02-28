@@ -25,13 +25,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { CalendarIcon, ChevronDown, Calculator, AlertTriangle, Loader2 } from "lucide-react";
+import { ChevronDown, Calculator, AlertTriangle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { UnionSupplierCombobox } from "./UnionSupplierCombobox";
 import { UnionSupplierDialog } from "./UnionSupplierDialog";
@@ -80,8 +75,8 @@ export function UnionTransactionDialog({
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<"income" | "expense">(defaultType);
-  const [documentDate, setDocumentDate] = useState<Date | undefined>(new Date());
-  const [launchDate, setLaunchDate] = useState<Date | undefined>(new Date());
+  const [dueDateStr, setDueDateStr] = useState("");
+  const [paidDateStr, setPaidDateStr] = useState("");
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [defaultsSelectorOpen, setDefaultsSelectorOpen] = useState(false);
@@ -227,8 +222,8 @@ export function UnionTransactionDialog({
         interest_value: transaction.interest_value?.toString() || "",
         discount_value: transaction.discount_value?.toString() || "",
       });
-      setDocumentDate(transaction.due_date ? parseDateOnlyToLocalNoon(transaction.due_date) : new Date());
-      setLaunchDate(transaction.paid_date ? parseDateOnlyToLocalNoon(transaction.paid_date) : new Date());
+      setDueDateStr(transaction.due_date ? transaction.due_date.slice(0, 10) : "");
+      setPaidDateStr(transaction.paid_date ? transaction.paid_date.slice(0, 10) : "");
       if (transaction.fine_value || transaction.interest_value || transaction.discount_value) {
         setValuesOpen(true);
       }
@@ -252,8 +247,8 @@ export function UnionTransactionDialog({
         interest_value: "",
         discount_value: "",
       });
-      setDocumentDate(new Date());
-      setLaunchDate(new Date());
+      setDueDateStr("");
+      setPaidDateStr("");
       setValuesOpen(false);
     }
   }, [transaction, open, defaultType, defaultCashRegisterId]);
@@ -310,7 +305,8 @@ export function UnionTransactionDialog({
 
     setLoading(true);
     try {
-      const launchDateFormatted = launchDate ? format(launchDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+      const hasPaidDate = !!paidDateStr;
+      const status = hasPaidDate ? "paid" : "pending";
 
       const data: any = {
         clinic_id: clinicId,
@@ -321,13 +317,13 @@ export function UnionTransactionDialog({
         cash_register_id: formData.cash_register_id || null,
         supplier_id: formData.supplier_id || null,
         payment_method: formData.payment_method,
-        status: "paid",
+        status,
         notes: formData.notes || null,
         document_number: formData.document_number || null,
         document_type: formData.document_type || null,
         check_number: formData.check_number || null,
-        due_date: documentDate ? format(documentDate, "yyyy-MM-dd") : launchDateFormatted,
-        paid_date: launchDateFormatted,
+        due_date: dueDateStr || null,
+        paid_date: hasPaidDate ? paidDateStr : null,
       };
 
       // Add decomposed values if using them
@@ -350,8 +346,8 @@ export function UnionTransactionDialog({
         const { error } = await supabase.from("union_financial_transactions").insert(data);
         if (error) throw error;
 
-        // Always update cash register balance (all transactions are "paid")
-        if (data.cash_register_id) {
+        // Update cash register balance only if paid
+        if (hasPaidDate && data.cash_register_id) {
           const balanceChange = type === "income" ? finalAmount : -finalAmount;
           const { data: register } = await supabase
             .from("union_cash_registers")
@@ -570,57 +566,23 @@ export function UnionTransactionDialog({
               </div>
 
               <div>
-                <Label className="text-xs">Data documento <span className="text-destructive">*</span></Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal h-9 text-xs",
-                        !documentDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-1 h-3 w-3" />
-                      {documentDate ? format(documentDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={documentDate}
-                      onSelect={setDocumentDate}
-                      locale={ptBR}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label className="text-xs">Data de Vencimento</Label>
+                <Input
+                  type="date"
+                  value={dueDateStr}
+                  onChange={(e) => setDueDateStr(e.target.value)}
+                  className="h-9 text-xs"
+                />
               </div>
 
               <div>
-                <Label className="text-xs">Data lançamento <span className="text-destructive">*</span></Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal h-9 text-xs",
-                        !launchDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-1 h-3 w-3" />
-                      {launchDate ? format(launchDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={launchDate}
-                      onSelect={setLaunchDate}
-                      locale={ptBR}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label className="text-xs">Data de Pagamento</Label>
+                <Input
+                  type="date"
+                  value={paidDateStr}
+                  onChange={(e) => setPaidDateStr(e.target.value)}
+                  className="h-9 text-xs"
+                />
               </div>
 
               <div>
