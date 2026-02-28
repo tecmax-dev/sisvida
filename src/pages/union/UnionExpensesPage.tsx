@@ -309,6 +309,13 @@ export default function UnionExpensesPage() {
     setDialogOpen(true);
   };
 
+  const handleCopyTransaction = (transaction: any) => {
+    // Remove id and reset status to create a new copy
+    const { id, created_at, updated_at, payment_date, status, ...rest } = transaction;
+    setEditingTransaction({ ...rest, status: "pending", _isCopy: true });
+    setDialogOpen(true);
+  };
+
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -738,6 +745,10 @@ export default function UnionExpensesPage() {
                             <DropdownMenuItem onClick={() => handleEdit(transaction)}>
                               <Edit className="h-3.5 w-3.5 mr-2" />
                               Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleCopyTransaction(transaction)}>
+                              <Copy className="h-3.5 w-3.5 mr-2" />
+                              Copiar Lançamento
                             </DropdownMenuItem>
                             {(transaction.effectiveStatus === "pending" ||
                               transaction.effectiveStatus === "overdue") && (
