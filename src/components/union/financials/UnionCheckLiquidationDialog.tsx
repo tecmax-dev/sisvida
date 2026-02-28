@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -97,6 +97,16 @@ export function UnionCheckLiquidationDialog({
       return data;
     },
   });
+
+  // Auto-fill cash register from the first expense's cash_register_id
+  useEffect(() => {
+    if (expenses && expenses.length > 0 && !cashRegisterId) {
+      const firstWithRegister = expenses.find((e) => e.cash_register_id);
+      if (firstWithRegister) {
+        setCashRegisterId(firstWithRegister.cash_register_id);
+      }
+    }
+  }, [expenses]);
 
   // Calculate selected totals
   const selectedTotal = useMemo(() => {
