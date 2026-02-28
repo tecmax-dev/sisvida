@@ -963,7 +963,9 @@ export function UnionStatementPanel() {
                             title="Clique para alterar a data do saldo inicial"
                             onClick={handleStartInitialBalanceDateEdit}
                           >
-                            {format(subDays(startDate, 1), "dd/MM/yyyy")}
+                            {(selectedRegister as any)?.initial_balance_date
+                              ? formatDateBR(String((selectedRegister as any).initial_balance_date))
+                              : format(subDays(startDate, 1), "dd/MM/yyyy")}
                             <Pencil className="h-3 w-3 text-muted-foreground" />
                           </button>
                         )}
