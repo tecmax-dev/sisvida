@@ -481,7 +481,7 @@ export function UnionStatementPanel() {
   const handleExportPDF = () => {
     if (!summary || !selectedRegister) return;
 
-    const doc = new jsPDF({ orientation: "landscape" });
+    const doc = new jsPDF({ orientation: "portrait" });
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 15;
 
@@ -530,7 +530,7 @@ export function UnionStatementPanel() {
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
       styles: { fontSize: 9 },
-      margin: { left: 10, right: 10 },
+      margin: { left: 5, right: 5 },
       columnStyles: { 0: { cellWidth: 40 }, 1: { halign: "right" } },
     });
 
@@ -564,20 +564,21 @@ export function UnionStatementPanel() {
 
     autoTable(doc, {
       startY: yPos,
-      head: [["DATA", "DESCRIÇÃO", "Nº CHEQUE", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO"]],
+      head: [["DATA", "DESCRIÇÃO", "CHQ", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO"]],
       body: tableBody,
       theme: "grid",
-      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 8 },
-      styles: { fontSize: 8, cellPadding: 3 },
-      margin: { left: 10, right: 10 },
+      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 7 },
+      styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
+      margin: { left: 5, right: 5 },
+      tableWidth: "auto",
       columnStyles: {
-        0: { cellWidth: 25 },
+        0: { cellWidth: 20 },
         1: { cellWidth: "auto" },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 55 },
-        4: { cellWidth: 28, halign: "right", textColor: [220, 38, 38] },
-        5: { cellWidth: 28, halign: "right", textColor: [22, 163, 74] },
-        6: { cellWidth: 30, halign: "right" },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 22, halign: "right", textColor: [220, 38, 38] },
+        5: { cellWidth: 22, halign: "right", textColor: [22, 163, 74] },
+        6: { cellWidth: 24, halign: "right" },
       },
     });
 
@@ -597,9 +598,9 @@ export function UnionStatementPanel() {
         ],
       ],
       theme: "grid",
-      headStyles: { fillColor: [16, 185, 129], fontStyle: "bold" },
-      styles: { fontSize: 9 },
-      margin: { left: 10, right: 10 },
+      headStyles: { fillColor: [16, 185, 129], fontStyle: "bold", fontSize: 8 },
+      styles: { fontSize: 8 },
+      margin: { left: 5, right: 5 },
       columnStyles: {
         0: { halign: "center" },
         1: { halign: "right" },
