@@ -336,7 +336,9 @@ export function UnionTransactionDialog({
         document_type: formData.document_type || null,
         check_number: formData.check_number || null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        paid_date: paidDate ? format(paidDate, "yyyy-MM-dd") : null,
+        paid_date: formData.status === "paid" 
+          ? format(paidDate || new Date(), "yyyy-MM-dd") 
+          : (paidDate ? format(paidDate, "yyyy-MM-dd") : null),
       };
 
       // Add decomposed values if using them
@@ -681,7 +683,12 @@ export function UnionTransactionDialog({
                 <Label>Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, status: value });
+                    if (value === "paid" && !paidDate) {
+                      setPaidDate(new Date());
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
