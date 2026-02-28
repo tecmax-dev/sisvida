@@ -123,8 +123,6 @@ export function UnionCheckLiquidationDialog({
         .update({
           status: "paid",
           paid_date: liquidationDate,
-          liquidation_date: liquidationDate,
-          liquidated_by: session?.user?.id,
           cash_register_id: cashRegisterId,
         })
         .in("id", selectedExpenses);

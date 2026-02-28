@@ -264,7 +264,6 @@ export default function UnionIncomePage() {
         .update({
           status: "paid",
           paid_date: format(new Date(), "yyyy-MM-dd"),
-          liquidated_by: session?.user?.id,
         })
         .eq("id", transaction.id);
       if (error) throw error;
