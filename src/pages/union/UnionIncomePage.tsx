@@ -40,6 +40,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UnionTransactionDialog } from "@/components/union/financials/UnionTransactionDialog";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay, isAfter } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ptBR } from "date-fns/locale";
 import {
   Plus,
@@ -66,6 +76,7 @@ export default function UnionIncomePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [deleteConfirmTransaction, setDeleteConfirmTransaction] = useState<any>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -203,9 +214,31 @@ export default function UnionIncomePage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (transaction: any) => {
-      if (transaction.status === "paid") {
-        throw new Error("Não é possível excluir receitas já recebidas. Use o estorno.");
+      // If paid, reverse the balance effect first
+      if (transaction.status === "paid" && transaction.cash_register_id) {
+        const { data: register } = await supabase
+          .from("union_cash_registers")
+          .select("current_balance")
+          .eq("id", transaction.cash_register_id)
+          .single();
+
+        if (register) {
+          const amount = Number(transaction.net_value || transaction.amount);
+          await supabase
+            .from("union_cash_registers")
+            .update({ current_balance: register.current_balance - amount })
+            .eq("id", transaction.cash_register_id);
+        }
       }
+
+      // Bypass trigger: change status to cancelled first if paid
+      if (transaction.status === "paid") {
+        await supabase
+          .from("union_financial_transactions")
+          .update({ status: "cancelled" })
+          .eq("id", transaction.id);
+      }
+
       const { error } = await supabase
         .from("union_financial_transactions")
         .delete()
@@ -214,9 +247,12 @@ export default function UnionIncomePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+      setDeleteConfirmTransaction(null);
       toast.success("Receita excluída!");
     },
     onError: (error: Error) => {
+      setDeleteConfirmTransaction(null);
       toast.error(error.message || "Erro ao excluir receita");
     },
   });
@@ -644,8 +680,7 @@ export default function UnionIncomePage() {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => deleteMutation.mutate(transaction)}
-                                disabled={transaction.status === "paid"}
+                                onClick={() => setDeleteConfirmTransaction(transaction)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Excluir
@@ -682,6 +717,30 @@ export default function UnionIncomePage() {
           queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
         }}
       />
+
+      <AlertDialog open={!!deleteConfirmTransaction} onOpenChange={(open) => !open && setDeleteConfirmTransaction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Lançamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este lançamento? O saldo do portador será ajustado automaticamente. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmTransaction) {
+                  deleteMutation.mutate(deleteConfirmTransaction);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
