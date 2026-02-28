@@ -482,6 +482,8 @@ export function UnionStatementPanel() {
         tableBody.push([
           format(group.date, "dd/MM/yyyy"),
           t.description.toUpperCase(),
+          t.check_number || "",
+          t.supplier_name || "",
           t.type === "expense" ? formatCurrency(t.amount) : "",
           t.type === "income" ? formatCurrency(t.amount) : "",
           formatCurrency((t as any).lineBalance),
@@ -492,7 +494,7 @@ export function UnionStatementPanel() {
       tableBody.push([
         {
           content: `Total do dia ${format(group.date, "dd/MM/yyyy")}: Débito: ${formatCurrency(-group.totalDebit)} - Crédito: ${formatCurrency(group.totalCredit)} - Saldo: ${formatCurrency(group.endDayBalance)}`,
-          colSpan: 5,
+          colSpan: 7,
           styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8 },
         },
       ]);
@@ -500,17 +502,19 @@ export function UnionStatementPanel() {
 
     autoTable(doc, {
       startY: yPos,
-      head: [["DATA", "DESCRIÇÃO", "DÉBITO", "CRÉDITO", "SALDO"]],
+      head: [["DATA", "DESCRIÇÃO", "Nº CHEQUE", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO"]],
       body: tableBody,
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
-      styles: { fontSize: 8 },
+      styles: { fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 80 },
-        2: { cellWidth: 25, halign: "right", textColor: [220, 38, 38] },
-        3: { cellWidth: 25, halign: "right", textColor: [22, 163, 74] },
-        4: { cellWidth: 30, halign: "right" },
+        0: { cellWidth: 22 },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 22, halign: "right", textColor: [220, 38, 38] },
+        5: { cellWidth: 22, halign: "right", textColor: [22, 163, 74] },
+        6: { cellWidth: 25, halign: "right" },
       },
     });
 
@@ -576,13 +580,15 @@ export function UnionStatementPanel() {
     wsData.push([]);
 
     // Transactions header
-    wsData.push(["DATA", "DESCRIÇÃO", "DÉBITO", "CRÉDITO", "SALDO"]);
+    wsData.push(["DATA", "DESCRIÇÃO", "Nº CHEQUE", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO"]);
 
     dailyGroups.forEach((group) => {
       group.transactions.forEach((t) => {
         wsData.push([
           format(group.date, "dd/MM/yyyy"),
           t.description.toUpperCase(),
+          t.check_number || "",
+          t.supplier_name || "",
           t.type === "expense" ? t.amount : "",
           t.type === "income" ? t.amount : "",
           (t as any).lineBalance,
@@ -592,6 +598,8 @@ export function UnionStatementPanel() {
       // Daily subtotal
       wsData.push([
         `Total do dia ${format(group.date, "dd/MM/yyyy")}`,
+        "",
+        "",
         "",
         -group.totalDebit,
         group.totalCredit,
@@ -867,14 +875,16 @@ export function UnionStatementPanel() {
               <div className="max-h-[600px] overflow-auto">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10">
-                    <TableRow className="bg-blue-500/10">
-                      <TableHead className="font-bold w-[100px]">DATA</TableHead>
-                      <TableHead className="font-bold">DESCRIÇÃO</TableHead>
-                      <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
-                      <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
-                      <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
+                     <TableRow className="bg-blue-500/10">
+                       <TableHead className="font-bold w-[100px]">DATA</TableHead>
+                       <TableHead className="font-bold">DESCRIÇÃO</TableHead>
+                       <TableHead className="font-bold w-[100px]">Nº CHEQUE</TableHead>
+                       <TableHead className="font-bold w-[150px]">FORNECEDOR</TableHead>
+                       <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
+                       <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
+                       <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
+                       <TableHead className="w-[50px]"></TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {dailyGroups.map((group) => (
@@ -884,16 +894,10 @@ export function UnionStatementPanel() {
                             <TableCell className="font-medium">
                               {idx === 0 ? format(group.date, "dd/MM/yyyy") : ""}
                             </TableCell>
-                            <TableCell className="text-sm">
-                              <div className="uppercase">{t.description}</div>
-                              {(t.supplier_name || t.check_number) && (
-                                <div className="text-xs text-muted-foreground mt-0.5 flex gap-3">
-                                  {t.supplier_name && <span>Fornecedor: {t.supplier_name}</span>}
-                                  {t.check_number && <span>Cheque: {t.check_number}</span>}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right text-red-600">
+                            <TableCell className="text-sm uppercase">{t.description}</TableCell>
+                             <TableCell className="text-sm">{t.check_number || ""}</TableCell>
+                             <TableCell className="text-sm">{t.supplier_name || ""}</TableCell>
+                             <TableCell className="text-right text-red-600">
                               {t.type === "expense" ? formatCurrency(t.amount) : ""}
                             </TableCell>
                             <TableCell className="text-right text-emerald-600">
@@ -948,7 +952,7 @@ export function UnionStatementPanel() {
                         ))}
                         {/* Daily subtotal */}
                         <TableRow className="bg-muted/50 border-b-2">
-                          <TableCell colSpan={6} className="font-bold text-sm py-2">
+                          <TableCell colSpan={8} className="font-bold text-sm py-2">
                             Total do dia {format(group.date, "dd/MM/yyyy")}:{" "}
                             <span className="text-red-600">Débito: {formatCurrency(-group.totalDebit)}</span>
                             {" - "}
@@ -962,7 +966,7 @@ export function UnionStatementPanel() {
 
                     {dailyGroups.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                           Nenhuma movimentação encontrada no período selecionado
                         </TableCell>
                       </TableRow>
