@@ -419,7 +419,7 @@ export function UnionStatementPanel() {
     }).format(value);
 
   const handleExportPDF = () => {
-    if (!dailyGroups.length || !summary || !selectedRegister) return;
+    if (!summary || !selectedRegister) return;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -564,7 +564,7 @@ export function UnionStatementPanel() {
   };
 
   const handleExportExcel = () => {
-    if (!dailyGroups.length || !summary || !selectedRegister) return;
+    if (!summary || !selectedRegister) return;
 
     const wsData: any[] = [];
 
@@ -814,7 +814,7 @@ export function UnionStatementPanel() {
                 <Button
                   variant="outline"
                   onClick={handleExportPDF}
-                  disabled={!dailyGroups.length}
+                  disabled={!cashRegisterId || !summary}
                   className="flex-1 sm:flex-none h-11"
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -823,7 +823,7 @@ export function UnionStatementPanel() {
                 <Button
                   variant="outline"
                   onClick={handleExportExcel}
-                  disabled={!dailyGroups.length}
+                  disabled={!cashRegisterId || !summary}
                   className="flex-1 sm:flex-none h-11"
                 >
                   <FileText className="h-4 w-4 mr-2" />
