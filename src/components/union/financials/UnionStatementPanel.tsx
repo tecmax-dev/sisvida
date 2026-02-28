@@ -299,11 +299,43 @@ export function UnionStatementPanel() {
 
       if (initialBalanceDate) {
         const initDateLocalNoon = parseDateOnlyToLocalNoon(initialBalanceDate);
-        if (startDate.getTime() > initDateLocalNoon.getTime()) {
+        const startDateNoon = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 12, 0, 0, 0);
+
+        if (startDateNoon.getTime() > initDateLocalNoon.getTime()) {
           // Start date is after initial balance date - use initial balance as base
+          // and sum transactions between initial_balance_date and startDate
           base = initialBalanceValue;
-          // Only sum transactions strictly AFTER the initial balance date
           lowerBoundDate = initialBalanceDate;
+        } else if (startDateNoon.getTime() <= initDateLocalNoon.getTime()) {
+          // Start date is on or before the initial balance date
+          // Use initial balance as base, then SUBTRACT transactions between startDate and initial_balance_date
+          base = initialBalanceValue;
+
+          // Get transactions from startDate up to (but not including) startDate to subtract
+          // Actually: we need transactions between startDate and initialBalanceDate to reverse them
+          const { data: futureData, error: futureError } = await supabase
+            .from("union_financial_transactions")
+            .select("type, amount, paid_date")
+            .eq("clinic_id", clinicId!)
+            .eq("cash_register_id", cashRegisterId)
+            .eq("status", "paid")
+            .gte("paid_date", startDateOnly)
+            .lte("paid_date", initialBalanceDate);
+
+          if (futureError) throw futureError;
+
+          // Reverse the effect of these transactions to get the balance before startDate
+          let futureDelta = 0;
+          futureData?.forEach((t) => {
+            const amount = Number(t.amount) || 0;
+            if (t.type === "income") {
+              futureDelta += amount;
+            } else {
+              futureDelta -= amount;
+            }
+          });
+
+          return base - futureDelta;
         }
       }
 
@@ -462,7 +494,7 @@ export function UnionStatementPanel() {
     yPos += 10;
 
     // Previous balance table
-    const prevBalanceDateStr = (selectedRegister as any)?.initial_balance_date ? formatDateBR((selectedRegister as any).initial_balance_date) : format(subDays(startDate, 1), "dd/MM/yyyy");
+    const prevBalanceDateStr = format(subDays(startDate, 1), "dd/MM/yyyy");
     autoTable(doc, {
       startY: yPos,
       head: [["DATA", "SALDO ANTERIOR"]],
@@ -577,7 +609,7 @@ export function UnionStatementPanel() {
 
     // Previous balance
     wsData.push(["DATA", "SALDO ANTERIOR"]);
-    const prevBalanceDateExcel = (selectedRegister as any)?.initial_balance_date ? formatDateBR((selectedRegister as any).initial_balance_date) : format(subDays(startDate, 1), "dd/MM/yyyy");
+    const prevBalanceDateExcel = format(subDays(startDate, 1), "dd/MM/yyyy");
     wsData.push([prevBalanceDateExcel, summary.initialBalance]);
     wsData.push([]);
 
@@ -860,7 +892,7 @@ export function UnionStatementPanel() {
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>{(selectedRegister as any)?.initial_balance_date ? formatDateBR((selectedRegister as any).initial_balance_date) : format(subDays(startDate, 1), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{format(subDays(startDate, 1), "dd/MM/yyyy")}</TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(summary.initialBalance)}
                       </TableCell>
