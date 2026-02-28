@@ -69,10 +69,12 @@ export function UnionSupplierCombobox({
     if (!search) return suppliers;
 
     const searchLower = search.toLowerCase();
+    const searchDigits = search.replace(/\D/g, "");
     return suppliers.filter(
       (supplier) =>
         supplier.name.toLowerCase().includes(searchLower) ||
-        (supplier.cnpj && supplier.cnpj.includes(search.replace(/\D/g, "")))
+        (supplier.cnpj && supplier.cnpj.replace(/\D/g, "").includes(searchDigits)) ||
+        (supplier.cnpj && supplier.cnpj.includes(search))
     );
   }, [suppliers, search]);
 
