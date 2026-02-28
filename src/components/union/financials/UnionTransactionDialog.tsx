@@ -129,10 +129,8 @@ export function UnionTransactionDialog({
 
   const [isMigrating, setIsMigrating] = useState(false);
 
-  // Filter categories by type
-  const categories = useMemo(() => {
-    return allCategories.filter((c: any) => c.type === type);
-  }, [allCategories, type]);
+  // Show all categories (both income and expense) as cost centers
+  const categories = allCategories;
 
   const cashRegisters = allCashRegisters;
 
