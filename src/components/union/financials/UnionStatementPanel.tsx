@@ -306,36 +306,11 @@ export function UnionStatementPanel() {
           // and sum transactions between initial_balance_date and startDate
           base = initialBalanceValue;
           lowerBoundDate = initialBalanceDate;
-        } else if (startDateNoon.getTime() <= initDateLocalNoon.getTime()) {
+        } else {
           // Start date is on or before the initial balance date
-          // Use initial balance as base, then SUBTRACT transactions between startDate and initial_balance_date
-          base = initialBalanceValue;
-
-          // Get transactions from startDate up to (but not including) startDate to subtract
-          // Actually: we need transactions between startDate and initialBalanceDate to reverse them
-          const { data: futureData, error: futureError } = await supabase
-            .from("union_financial_transactions")
-            .select("type, amount, paid_date")
-            .eq("clinic_id", clinicId!)
-            .eq("cash_register_id", cashRegisterId)
-            .eq("status", "paid")
-            .gte("paid_date", startDateOnly)
-            .lte("paid_date", initialBalanceDate);
-
-          if (futureError) throw futureError;
-
-          // Reverse the effect of these transactions to get the balance before startDate
-          let futureDelta = 0;
-          futureData?.forEach((t) => {
-            const amount = Number(t.amount) || 0;
-            if (t.type === "income") {
-              futureDelta += amount;
-            } else {
-              futureDelta -= amount;
-            }
-          });
-
-          return base - futureDelta;
+          // The account had no recorded balance before its initial_balance_date
+          // So the "previous balance" is simply R$ 0,00
+          return 0;
         }
       }
 
