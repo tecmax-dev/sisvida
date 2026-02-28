@@ -143,14 +143,19 @@ export default function UnionExpensesPage() {
     if (!transactions) return [];
     const today = startOfDay(new Date());
     return transactions.map((t) => {
-      let effectiveStatus = t.status;
-      if (t.status === "pending" && t.due_date) {
-        const dueDate = startOfDay(parseISO(t.due_date));
-        if (isAfter(today, dueDate)) {
-          effectiveStatus = "overdue";
+      try {
+        let effectiveStatus = t.status;
+        if (t.status === "pending" && t.due_date) {
+          const dueDate = startOfDay(parseISO(t.due_date));
+          if (!isNaN(dueDate.getTime()) && isAfter(today, dueDate)) {
+            effectiveStatus = "overdue";
+          }
         }
+        return { ...t, effectiveStatus };
+      } catch (err) {
+        console.error("[UnionExpenses] Error processing transaction:", t.id, err);
+        return { ...t, effectiveStatus: t.status || "pending" };
       }
-      return { ...t, effectiveStatus };
     });
   }, [transactions]);
 
@@ -693,7 +698,7 @@ export default function UnionExpensesPage() {
                           transaction.effectiveStatus === "overdue" && "text-rose-600 dark:text-rose-400 font-medium"
                         )}>
                           {transaction.due_date
-                            ? format(parseISO(transaction.due_date), "dd/MM/yy", { locale: ptBR })
+                            ? (() => { try { return format(parseISO(transaction.due_date), "dd/MM/yy", { locale: ptBR }); } catch { return transaction.due_date; } })()
                             : "—"}
                         </span>
                       </div>
