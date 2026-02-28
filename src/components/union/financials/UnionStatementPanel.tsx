@@ -508,8 +508,8 @@ export function UnionStatementPanel() {
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 80 },
-        2: { cellWidth: 25, halign: "right" },
-        3: { cellWidth: 25, halign: "right" },
+        2: { cellWidth: 25, halign: "right", textColor: [220, 38, 38] },
+        3: { cellWidth: 25, halign: "right", textColor: [22, 163, 74] },
         4: { cellWidth: 30, halign: "right" },
       },
     });
