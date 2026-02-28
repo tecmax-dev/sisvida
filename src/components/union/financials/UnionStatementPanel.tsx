@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,7 +22,24 @@ import {
 } from "@/components/ui/table";
 import { format, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import jsPDF from "jspdf";
@@ -64,7 +82,106 @@ export function UnionStatementPanel() {
   const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
   const [isMigrating, setIsMigrating] = useState(false);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
+    queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
+    queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
+    queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+  }, [queryClient]);
+
+  // Estorno mutation - creates a reverse transaction
+  const estornoMutation = useMutation({
+    mutationFn: async (transaction: Transaction) => {
+      // Create reverse transaction
+      const reverseType = transaction.type === "expense" ? "income" : "expense";
+      const { error: insertError } = await supabase
+        .from("union_financial_transactions")
+        .insert({
+          clinic_id: clinicId!,
+          type: reverseType,
+          description: `ESTORNO: ${transaction.description}`,
+          amount: transaction.amount,
+          cash_register_id: cashRegisterId,
+          status: "paid",
+          paid_date: format(new Date(), "yyyy-MM-dd"),
+          due_date: format(new Date(), "yyyy-MM-dd"),
+          payment_method: "other",
+          notes: `Estorno do lançamento ID ${transaction.id}`,
+        });
+      if (insertError) throw insertError;
+
+      // Update cash register balance
+      const balanceChange = transaction.type === "expense" ? transaction.amount : -transaction.amount;
+      const { data: register } = await supabase
+        .from("union_cash_registers")
+        .select("current_balance")
+        .eq("id", cashRegisterId)
+        .single();
+
+      if (register) {
+        await supabase
+          .from("union_cash_registers")
+          .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
+          .eq("id", cashRegisterId);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Lançamento estornado com sucesso!");
+      invalidateAll();
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao estornar: " + error.message);
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (transaction: Transaction) => {
+      // If paid, reverse the balance effect first
+      if (transaction.status === "paid" && cashRegisterId) {
+        const balanceChange = transaction.type === "expense" ? transaction.amount : -transaction.amount;
+        const { data: register } = await supabase
+          .from("union_cash_registers")
+          .select("current_balance")
+          .eq("id", cashRegisterId)
+          .single();
+
+        if (register) {
+          await supabase
+            .from("union_cash_registers")
+            .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
+            .eq("id", cashRegisterId);
+        }
+      }
+
+      // Update status to cancelled first to bypass paid deletion trigger
+      if (transaction.status === "paid") {
+        const { error: statusError } = await supabase
+          .from("union_financial_transactions")
+          .update({ status: "cancelled" })
+          .eq("id", transaction.id);
+        if (statusError) throw statusError;
+      }
+
+      const { error } = await supabase
+        .from("union_financial_transactions")
+        .delete()
+        .eq("id", transaction.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lançamento excluído com sucesso!");
+      setDeleteConfirmId(null);
+      invalidateAll();
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao excluir: " + error.message);
+      setDeleteConfirmId(null);
+    },
+  });
 
   // Use unified hook with fallback
   const {
@@ -714,6 +831,7 @@ export function UnionStatementPanel() {
                       <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
                       <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
                       <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -734,11 +852,36 @@ export function UnionStatementPanel() {
                             <TableCell className="text-right font-medium">
                               {formatCurrency((t as any).lineBalance)}
                             </TableCell>
+                            <TableCell className="p-1">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => estornoMutation.mutate(t)}
+                                    disabled={estornoMutation.isPending}
+                                  >
+                                    <RotateCcw className="h-4 w-4 mr-2" />
+                                    Estornar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => setDeleteConfirmId(t.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
                           </TableRow>
                         ))}
                         {/* Daily subtotal */}
                         <TableRow className="bg-muted/50 border-b-2">
-                          <TableCell colSpan={5} className="font-bold text-sm py-2">
+                          <TableCell colSpan={6} className="font-bold text-sm py-2">
                             Total do dia {format(group.date, "dd/MM/yyyy")}:{" "}
                             <span className="text-red-600">Débito: {formatCurrency(-group.totalDebit)}</span>
                             {" - "}
@@ -752,7 +895,7 @@ export function UnionStatementPanel() {
 
                     {dailyGroups.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                           Nenhuma movimentação encontrada no período selecionado
                         </TableCell>
                       </TableRow>
@@ -813,6 +956,37 @@ export function UnionStatementPanel() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Lançamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este lançamento? O saldo do portador será ajustado automaticamente. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteConfirmId) return;
+                // Find the transaction across all groups
+                for (const group of dailyGroups) {
+                  const t = group.transactions.find((tx) => tx.id === deleteConfirmId);
+                  if (t) {
+                    deleteMutation.mutate(t);
+                    break;
+                  }
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
