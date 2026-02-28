@@ -552,13 +552,13 @@ export function UnionStatementPanel() {
         ]);
       });
 
-      // Daily subtotal row
+      // Daily subtotal row with colored values
+      const dailyBalanceColor = group.endDayBalance >= 0 ? [22, 163, 74] : [220, 38, 38];
       tableBody.push([
-        {
-          content: `Total do dia ${format(group.date, "dd/MM/yyyy")}: Débito: ${formatCurrency(-group.totalDebit)} - Crédito: ${formatCurrency(group.totalCredit)} - Saldo: ${formatCurrency(group.endDayBalance)}`,
-          colSpan: 7,
-          styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8 },
-        },
+        { content: `Total do dia ${format(group.date, "dd/MM/yyyy")}:`, colSpan: 4, styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8 } },
+        { content: formatCurrency(-group.totalDebit), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: [220, 38, 38] } },
+        { content: formatCurrency(group.totalCredit), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: [22, 163, 74] } },
+        { content: formatCurrency(group.endDayBalance), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: dailyBalanceColor } },
       ]);
     });
 
