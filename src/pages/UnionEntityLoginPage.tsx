@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,37 +37,57 @@ export default function UnionEntityLoginPage() {
       if (authError) throw authError;
 
       // Check if user is a union entity admin
-      const { data: entityData, error: entityError } = await supabase
+      const { data: entityData } = await supabase
         .from('union_entities')
         .select('id, status, razao_social')
         .eq('user_id', authData.user.id)
         .single();
 
-      if (entityError || !entityData) {
-        await supabase.auth.signOut();
-        throw new Error('Acesso não autorizado. Esta conta não está vinculada a uma entidade sindical.');
+      if (entityData) {
+        if (entityData.status !== 'ativa') {
+          await supabase.auth.signOut();
+          const statusMessages = {
+            suspensa: 'Sua conta está suspensa. Entre em contato com o suporte.',
+            em_analise: 'Sua conta ainda está em análise. Aguarde a aprovação.',
+            inativa: 'Sua conta está inativa. Entre em contato com o suporte.'
+          };
+          throw new Error(statusMessages[entityData.status as keyof typeof statusMessages] || 'Conta não ativa');
+        }
+
+        await supabase
+          .from('union_entities')
+          .update({ ultimo_acesso: new Date().toISOString() })
+          .eq('id', entityData.id);
+
+        toast.success(`Bem-vindo, ${entityData.razao_social}!`);
+        navigate('/union');
+        return;
       }
 
-      if (entityData.status !== 'ativa') {
-        await supabase.auth.signOut();
-        const statusMessages = {
-          suspensa: 'Sua conta está suspensa. Entre em contato com o suporte.',
-          em_analise: 'Sua conta ainda está em análise. Aguarde a aprovação.',
-          inativa: 'Sua conta está inativa. Entre em contato com o suporte.'
-        };
-        throw new Error(statusMessages[entityData.status as keyof typeof statusMessages] || 'Conta não ativa');
+      // Check if user has a role in the sindicato clinic (operational users)
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('id, role')
+        .eq('user_id', authData.user.id)
+        .eq('clinic_id', SINDICATO_CLINIC_ID)
+        .limit(1);
+
+      if (roleData && roleData.length > 0) {
+        // Get user profile name for welcome message
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', authData.user.id)
+          .single();
+
+        toast.success(`Bem-vindo, ${profileData?.name || 'Usuário'}!`);
+        navigate('/union');
+        return;
       }
 
-      // Update last access
-      await supabase
-        .from('union_entities')
-        .update({ ultimo_acesso: new Date().toISOString() })
-        .eq('id', entityData.id);
-
-      toast.success(`Bem-vindo, ${entityData.razao_social}!`);
-      
-      // Redirect to union module
-      navigate('/union');
+      // No access - sign out
+      await supabase.auth.signOut();
+      throw new Error('Acesso não autorizado. Esta conta não possui acesso ao módulo sindical.');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Erro ao fazer login');
@@ -99,6 +120,7 @@ export default function UnionEntityLoginPage() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // Check union entity admin
         const { data: entityData } = await supabase
           .from('union_entities')
           .select('id, status, razao_social')
@@ -111,6 +133,25 @@ export default function UnionEntityLoginPage() {
             .update({ ultimo_acesso: new Date().toISOString() })
             .eq('id', entityData.id);
           toast.success(`Bem-vindo, ${entityData.razao_social}!`);
+          navigate('/union');
+          return;
+        }
+
+        // Check sindicato clinic role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .eq('clinic_id', SINDICATO_CLINIC_ID)
+          .limit(1);
+
+        if (roleData && roleData.length > 0) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', session.user.id)
+            .single();
+          toast.success(`Bem-vindo, ${profileData?.name || 'Usuário'}!`);
           navigate('/union');
         }
       }
