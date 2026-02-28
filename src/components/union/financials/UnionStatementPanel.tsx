@@ -488,7 +488,7 @@ export function UnionStatementPanel() {
     // Header
     if (currentClinic?.logo_url) {
       try {
-        doc.addImage(currentClinic.logo_url, "PNG", 14, 10, 30, 30);
+        doc.addImage(currentClinic.logo_url, "PNG", 20, 10, 30, 30);
         yPos = 45;
       } catch (e) {
         yPos = 15;
@@ -530,7 +530,7 @@ export function UnionStatementPanel() {
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
       styles: { fontSize: 9 },
-      margin: { left: 5, right: 5 },
+      margin: { left: 20, right: 5 },
       columnStyles: { 0: { cellWidth: 40 }, 1: { halign: "right" } },
     });
 
@@ -569,7 +569,7 @@ export function UnionStatementPanel() {
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 7 },
       styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak" },
-      margin: { left: 5, right: 5 },
+      margin: { left: 20, right: 5 },
       tableWidth: "auto",
       columnStyles: {
         0: { cellWidth: 20 },
@@ -600,7 +600,7 @@ export function UnionStatementPanel() {
       theme: "grid",
       headStyles: { fillColor: [16, 185, 129], fontStyle: "bold", fontSize: 8 },
       styles: { fontSize: 8 },
-      margin: { left: 5, right: 5 },
+      margin: { left: 20, right: 5 },
       columnStyles: {
         0: { halign: "center" },
         1: { halign: "right" },
