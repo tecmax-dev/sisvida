@@ -223,7 +223,7 @@ export function UnionTransactionDialog({
         discount_value: transaction.discount_value?.toString() || "",
       });
       setDueDateStr(transaction.due_date ? transaction.due_date.slice(0, 10) : "");
-      setPaidDateStr(transaction.paid_date ? transaction.paid_date.slice(0, 10) : "");
+      setPaidDateStr(transaction._isCopy ? "" : (transaction.paid_date ? transaction.paid_date.slice(0, 10) : ""));
       if (transaction.fine_value || transaction.interest_value || transaction.discount_value) {
         setValuesOpen(true);
       }
@@ -337,7 +337,7 @@ export function UnionTransactionDialog({
         data.net_value = netValue;
       }
 
-      if (transaction) {
+      if (transaction && transaction.id) {
         const { error } = await supabase
           .from("union_financial_transactions")
           .update(data)
@@ -420,7 +420,7 @@ export function UnionTransactionDialog({
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {transaction ? "Editar Lançamento" : "Cadastro fluxo de caixa"}
+              {transaction?.id ? "Editar Lançamento" : transaction?._isCopy ? "Copiar Lançamento" : "Cadastro fluxo de caixa"}
             </DialogTitle>
             <DialogDescription>
               Para cadastrar, preenchar todos os dados e depois clique em cadastrar
