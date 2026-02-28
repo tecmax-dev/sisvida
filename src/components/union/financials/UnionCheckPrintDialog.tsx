@@ -374,18 +374,10 @@ export function UnionCheckPrintDialog({
               font-weight: 600;
             }
             
-            .truncate {
-              max-width: 180px;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            }
-            
-            .truncate-sm {
-              max-width: 120px;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
+            .cell-wrap {
+              white-space: normal;
+              overflow-wrap: anywhere;
+              word-break: break-word;
             }
             
             /* Status badges compactos */
@@ -584,8 +576,8 @@ export function UnionCheckPrintDialog({
                   <tbody>
                     ${expenses.map((e) => `
                       <tr>
-                        <td class="font-medium truncate" title="${e.description}">${e.description}</td>
-                        <td class="truncate-sm" title="${e.supplier?.name || "-"}">${e.supplier?.name || "-"}</td>
+                        <td class="font-medium cell-wrap">${e.description}</td>
+                        <td class="cell-wrap">${e.supplier?.name || "-"}</td>
                         <td>${e.due_date ? format(parseISO(e.due_date), "dd/MM/yyyy") : "-"}</td>
                         <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
                         <td class="text-center">
