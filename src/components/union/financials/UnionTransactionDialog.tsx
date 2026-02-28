@@ -326,6 +326,8 @@ export function UnionTransactionDialog({
         paid_date: hasPaidDate ? paidDateStr : null,
       };
 
+      console.log("[UnionTransaction] Payload a salvar:", JSON.stringify(data, null, 2));
+
       // Add decomposed values if using them
       if (valuesOpen && grossValue) {
         data.gross_value = grossValue;
@@ -340,20 +342,31 @@ export function UnionTransactionDialog({
           .from("union_financial_transactions")
           .update(data)
           .eq("id", transaction.id);
-        if (error) throw error;
+        if (error) {
+          console.error("[UnionTransaction] Update error:", JSON.stringify(error));
+          throw error;
+        }
         toast.success("Transação atualizada!");
       } else {
-        const { error } = await supabase.from("union_financial_transactions").insert(data);
-        if (error) throw error;
+        const { data: insertResult, error } = await supabase.from("union_financial_transactions").insert(data).select("id");
+        if (error) {
+          console.error("[UnionTransaction] Insert error:", JSON.stringify(error));
+          throw error;
+        }
+        console.log("[UnionTransaction] Inserido com sucesso:", insertResult);
 
         // Update cash register balance only if paid
         if (hasPaidDate && data.cash_register_id) {
           const balanceChange = type === "income" ? finalAmount : -finalAmount;
-          const { data: register } = await supabase
+          const { data: register, error: regError } = await supabase
             .from("union_cash_registers")
             .select("current_balance")
             .eq("id", data.cash_register_id)
             .single();
+          
+          if (regError) {
+            console.error("[UnionTransaction] Cash register fetch error:", JSON.stringify(regError));
+          }
           
           if (register) {
             const newBalance = Number(register.current_balance || 0) + balanceChange;
