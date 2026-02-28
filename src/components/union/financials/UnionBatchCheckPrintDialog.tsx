@@ -275,8 +275,8 @@ export function UnionBatchCheckPrintDialog({
                       .map(
                         (e) => `
                       <tr>
-                        <td class="font-medium truncate" title="${e.description}">${e.description}</td>
-                        <td class="truncate-sm" title="${e.supplier?.name || "-"}">${e.supplier?.name || "-"}</td>
+                        <td class="font-medium">${e.description}</td>
+                        <td>${e.supplier?.name || "-"}</td>
                         <td>${formatDateBR(e.due_date) || "-"}</td>
                         <td>${formatDateBR(e.paid_date) || "-"}</td>
                         <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
@@ -421,8 +421,7 @@ export function UnionBatchCheckPrintDialog({
             .text-center { text-align: center; }
             .font-medium { font-weight: 500; }
             .font-semibold { font-weight: 600; }
-            .truncate { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .truncate-sm { max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            td { word-break: break-word; }
             
             .status { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; text-transform: uppercase; }
             .status-paid { background: #d1fae5; color: #047857; }
