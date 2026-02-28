@@ -804,10 +804,12 @@ export function UnionStatementPanel() {
           open={transactionDialogOpen}
           onOpenChange={setTransactionDialogOpen}
           clinicId={clinicId}
+          cashRegisterId={cashRegisterId || undefined}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
             queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
             queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
+            queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
           }}
         />
       )}
