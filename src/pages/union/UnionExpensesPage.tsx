@@ -244,7 +244,6 @@ export default function UnionExpensesPage() {
         .update({
           status: "paid",
           paid_date: format(new Date(), "yyyy-MM-dd"),
-          liquidated_by: session?.user?.id,
         })
         .eq("id", transaction.id);
       if (error) throw error;
@@ -283,7 +282,6 @@ export default function UnionExpensesPage() {
         .update({
           status: "pending",
           paid_date: null,
-          liquidated_by: null,
         })
         .eq("id", transaction.id);
       if (error) throw error;
