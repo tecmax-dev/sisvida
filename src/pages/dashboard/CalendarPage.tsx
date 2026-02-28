@@ -1340,12 +1340,36 @@ export default function CalendarPage() {
       return;
     }
     
-    if (hasMultipleSlots) {
-      // Modo com múltiplos horários selecionados - criar na mesma data
-      // Verificar conflitos para cada horário
-      for (const time of selectedMultipleTimes) {
+    // Calcular todas as datas recorrentes (ou apenas a data selecionada se recorrência desabilitada)
+    const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
+
+    // Regra de janela: bloquear qualquer data recorrente fora do período
+    if (bookingWindowEndDateKey) {
+      const outOfWindow = recurringDates
+        .map((d) => toDateKey(d))
+        .some((k) => k > bookingWindowEndDateKey);
+
+      if (outOfWindow) {
+        toast({
+          title: "Período indisponível",
+          description: "Agendamento indisponível para este período",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Determinar os horários a criar: múltiplos slots ou horário único
+    const timesToCreate = hasMultipleSlots ? selectedMultipleTimes : [effectiveTime];
+
+    // Para cada data recorrente, criar agendamentos para cada horário selecionado
+    for (const date of recurringDates) {
+      const dateDateStr = toDateKey(date);
+
+      for (const time of timesToCreate) {
         const conflicts = findConflictingAppointments(appointments, {
-          appointmentDate: dateStr,
+          appointmentDate: dateDateStr,
           startTime: time,
           durationMinutes,
           professionalId: formProfessional,
@@ -1362,72 +1386,7 @@ export default function CalendarPage() {
           
           toast({
             title: "Conflito de horário",
-            description: `Conflito às ${time}: ${getConflictMessage(conflicts, patientNames)}`,
-            variant: "destructive",
-          });
-          setSaving(false);
-          return;
-        }
-        
-        appointmentsToCreate.push({
-          clinic_id: currentClinic.id,
-          patient_id: formPatient,
-          professional_id: formProfessional,
-          appointment_date: dateStr,
-          start_time: time,
-          end_time: calculateEndTime(time, durationMinutes),
-          type: formType as "first_visit" | "return" | "exam" | "procedure",
-          status: "scheduled" as const,
-          notes: formNotes.trim() || null,
-          created_by: user.id,
-          duration_minutes: durationMinutes,
-          is_recurring: true,
-          recurrence_group_id: recurrenceGroupId,
-        });
-      }
-    } else {
-      // Modo padrão - usar datas recorrentes calculadas
-      const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
-
-      // Regra de janela: bloquear qualquer data recorrente fora do período
-      if (bookingWindowEndDateKey) {
-        const outOfWindow = recurringDates
-          .map((d) => toDateKey(d))
-          .some((k) => k > bookingWindowEndDateKey);
-
-        if (outOfWindow) {
-          toast({
-            title: "Período indisponível",
-            description: "Agendamento indisponível para este período",
-            variant: "destructive",
-          });
-          setSaving(false);
-          return;
-        }
-      }
-      
-      // Check for conflicts on all dates
-      for (const date of recurringDates) {
-        const dateDateStr = toDateKey(date);
-        const conflicts = findConflictingAppointments(appointments, {
-          appointmentDate: dateDateStr,
-          startTime: effectiveTime,
-          durationMinutes,
-          professionalId: formProfessional,
-        });
-
-        if (conflicts.length > 0) {
-          const patientNames: Record<string, string> = {};
-          conflicts.forEach(c => {
-            const apt = appointments.find(a => a.id === c.id);
-            if (apt?.patient?.name) {
-              patientNames[c.id] = apt.patient.name;
-            }
-          });
-          
-          toast({
-            title: "Conflito de horário",
-            description: `Conflito em ${date.toLocaleDateString('pt-BR')}: ${getConflictMessage(conflicts, patientNames)}`,
+            description: `Conflito em ${date.toLocaleDateString('pt-BR')} às ${time}: ${getConflictMessage(conflicts, patientNames)}`,
             variant: "destructive",
           });
           setSaving(false);
@@ -1439,8 +1398,8 @@ export default function CalendarPage() {
           patient_id: formPatient,
           professional_id: formProfessional,
           appointment_date: dateDateStr,
-          start_time: effectiveTime,
-          end_time: calculateEndTime(effectiveTime, durationMinutes),
+          start_time: time,
+          end_time: calculateEndTime(time, durationMinutes),
           type: formType as "first_visit" | "return" | "exam" | "procedure",
           status: "scheduled" as const,
           notes: formNotes.trim() || null,
@@ -3701,7 +3660,7 @@ const updateData: Record<string, any> = {
                     <Button type="submit" disabled={saving}>
                       {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       {recurrenceConfig.enabled 
-                        ? `Agendar ${calculateRecurringDates(selectedDate, recurrenceConfig).length} consultas`
+                        ? `Agendar ${calculateRecurringDates(selectedDate, recurrenceConfig).length * Math.max(1, selectedMultipleTimes.length)} consultas`
                         : "Agendar"}
                     </Button>
                   </div>
