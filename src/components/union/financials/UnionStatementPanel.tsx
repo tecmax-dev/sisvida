@@ -539,9 +539,9 @@ export function UnionStatementPanel() {
       columnStyles: {
         0: { halign: "center" },
         1: { halign: "right" },
-        2: { halign: "right" },
-        3: { halign: "right" },
-        4: { halign: "right" },
+        2: { halign: "right", textColor: [220, 38, 38] },
+        3: { halign: "right", textColor: [22, 163, 74] },
+        4: { halign: "right", textColor: [37, 99, 235] },
       },
     });
 
@@ -988,7 +988,8 @@ export function UnionStatementPanel() {
                       <TableHead className="font-bold text-right">TOTAL INICIAL</TableHead>
                       <TableHead className="font-bold text-right text-red-600">TOTAL DÉBITOS</TableHead>
                       <TableHead className="font-bold text-right text-emerald-600">TOTAL CRÉDITO</TableHead>
-                      <TableHead className="font-bold text-right">TOTAL FINAL</TableHead>
+
+                      <TableHead className="font-bold text-right text-blue-600">TOTAL FINAL</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1001,7 +1002,7 @@ export function UnionStatementPanel() {
                       <TableCell className="text-right text-emerald-600">
                         {formatCurrency(summary.totalCredits)}
                       </TableCell>
-                      <TableCell className="text-right font-bold">
+                      <TableCell className="text-right font-bold text-blue-600">
                         {formatCurrency(summary.finalBalance)}
                       </TableCell>
                     </TableRow>
