@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionReconciliation, BankStatementTransaction } from "@/hooks/useUnionReconciliation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,13 +22,13 @@ import { UnionOFXImportDialog } from "@/components/union/financials/UnionOFXImpo
 import { UnionReconciliationTable } from "@/components/union/financials/UnionReconciliationTable";
 import { UnionTransactionDetailsDialog } from "@/components/union/financials/UnionTransactionDetailsDialog";
 import { UnionManualReconcileDialog } from "@/components/union/financials/UnionManualReconcileDialog";
+import { UnionGenerateEntryDialog } from "@/components/union/financials/UnionGenerateEntryDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
-  
   Clock,
   Building2,
   TrendingUp,
@@ -50,6 +50,8 @@ export default function UnionBankReconciliationPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [reconcileTx, setReconcileTx] = useState<BankStatementTransaction | null>(null);
   const [reconcileOpen, setReconcileOpen] = useState(false);
+  const [generateEntryTxs, setGenerateEntryTxs] = useState<BankStatementTransaction[]>([]);
+  const [generateEntryOpen, setGenerateEntryOpen] = useState(false);
 
   const {
     imports,
@@ -66,6 +68,8 @@ export default function UnionBankReconciliationPage() {
     isMarkingVerified,
     deleteImport,
     isDeletingImport,
+    generateEntryFromOFX,
+    isGeneratingEntry,
   } = useUnionReconciliation(clinicId);
 
   // Fetch cash registers
@@ -96,7 +100,6 @@ export default function UnionBankReconciliationPage() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-  // Stats
   const stats = {
     totalImports: imports?.length || 0,
     totalTransactions: imports?.reduce((sum, i) => sum + i.total_transactions, 0) || 0,
@@ -123,7 +126,7 @@ export default function UnionBankReconciliationPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Conciliação Bancária</h1>
           <p className="text-muted-foreground">
-            Importe extratos OFX e concilie automaticamente as despesas por cheque
+            Importe extratos OFX, concilie e gere lançamentos financeiros automaticamente
           </p>
         </div>
         <Button onClick={() => setImportDialogOpen(true)}>
@@ -300,6 +303,14 @@ export default function UnionBankReconciliationPage() {
               onMarkVerified={(txId) => {
                 markVerified({ statementTransactionId: txId, userId });
               }}
+              onGenerateEntry={(tx) => {
+                setGenerateEntryTxs([tx]);
+                setGenerateEntryOpen(true);
+              }}
+              onBatchGenerateEntry={(txs) => {
+                setGenerateEntryTxs(txs);
+                setGenerateEntryOpen(true);
+              }}
             />
           )}
         </TabsContent>
@@ -376,6 +387,19 @@ export default function UnionBankReconciliationPage() {
         }}
         isReconciling={isReconciling}
       />
+
+      {clinicId && (
+        <UnionGenerateEntryDialog
+          open={generateEntryOpen}
+          onOpenChange={setGenerateEntryOpen}
+          transactions={generateEntryTxs}
+          clinicId={clinicId}
+          onGenerate={async (entries) => {
+            await generateEntryFromOFX({ entries, userId });
+          }}
+          isGenerating={isGeneratingEntry}
+        />
+      )}
     </div>
   );
 }

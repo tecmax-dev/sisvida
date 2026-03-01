@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { GenerateEntryParams } from "@/components/union/financials/UnionGenerateEntryDialog";
 
 export interface BankStatementImport {
   id: string;
@@ -44,6 +45,9 @@ export interface BankStatementTransaction {
   reconciled_at: string | null;
   reconciliation_notes: string | null;
   created_at: string;
+  supplier_id?: string | null;
+  category_id?: string | null;
+  generated_transaction_id?: string | null;
   matched_transaction?: {
     id: string;
     description: string;
@@ -778,6 +782,117 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     },
   });
 
+  // Generate financial entries from OFX statement transactions
+  const generateEntryMutation = useMutation({
+    mutationFn: async ({
+      entries,
+      userId,
+    }: {
+      entries: GenerateEntryParams[];
+      userId: string;
+    }) => {
+      const results: string[] = [];
+
+      for (const entry of entries) {
+        // Create financial transaction
+        const { data: finTx, error: finError } = await supabase
+          .from("union_financial_transactions")
+          .insert({
+            clinic_id: clinicId!,
+            type: entry.type,
+            description: entry.description,
+            amount: entry.amount,
+            cash_register_id: entry.cashRegisterId,
+            status: "paid",
+            paid_date: entry.transactionDate,
+            due_date: entry.transactionDate,
+            payment_method: "other",
+            supplier_id: entry.supplierId,
+            category_id: entry.categoryId,
+            is_conciliated: true,
+            conciliated_at: new Date().toISOString(),
+            conciliated_by: userId,
+            notes: entry.notes || "Gerado a partir do OFX",
+          })
+          .select("id")
+          .single();
+
+        if (finError) throw finError;
+
+        // Link statement transaction to the generated financial transaction
+        const { error: linkError } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .update({
+            generated_transaction_id: finTx.id,
+            matched_transaction_id: finTx.id,
+            reconciliation_status: "manual_reconciled",
+            reconciled_by: userId,
+            reconciled_at: new Date().toISOString(),
+            reconciliation_notes: "Lançamento gerado do OFX",
+            supplier_id: entry.supplierId,
+            category_id: entry.categoryId,
+          })
+          .eq("id", entry.statementTransactionId);
+
+        if (linkError) throw linkError;
+
+        // Update cash register balance
+        const balanceChange = entry.type === "income" ? entry.amount : -entry.amount;
+        const { data: register } = await supabase
+          .from("union_cash_registers")
+          .select("current_balance")
+          .eq("id", entry.cashRegisterId)
+          .single();
+
+        if (register) {
+          await supabase
+            .from("union_cash_registers")
+            .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
+            .eq("id", entry.cashRegisterId);
+        }
+
+        results.push(finTx.id);
+      }
+
+      // Recalculate reconciled count for affected imports
+      if (entries.length > 0) {
+        const { data: stmtRow } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .select("import_id")
+          .eq("id", entries[0].statementTransactionId)
+          .single();
+
+        if (stmtRow?.import_id) {
+          const { count } = await (supabase as any)
+            .from("union_bank_statement_transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("import_id", stmtRow.import_id)
+            .in("reconciliation_status", ["auto_reconciled", "manual_reconciled"]);
+
+          await (supabase as any)
+            .from("union_bank_statement_imports")
+            .update({ transactions_reconciled: count || 0 })
+            .eq("id", stmtRow.import_id);
+        }
+      }
+
+      return results;
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
+      toast.success(`${results.length} lançamento(s) gerado(s) com sucesso!`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao gerar lançamentos");
+    },
+  });
+
   return {
     imports,
     loadingImports,
@@ -797,5 +912,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     isMarkingVerified: markVerifiedMutation.isPending,
     deleteImport: deleteImportMutation.mutateAsync,
     isDeletingImport: deleteImportMutation.isPending,
+    generateEntryFromOFX: generateEntryMutation.mutateAsync,
+    isGeneratingEntry: generateEntryMutation.isPending,
   };
 }
