@@ -734,51 +734,142 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     },
   });
 
-  // Unreconcile mutation
+  // Unreconcile mutation — resets statement tx AND removes linked financial tx if generated
   const unreconciledMutation = useMutation({
     mutationFn: async ({
-      transactionId,
+      statementTransactionIds,
       reason,
       userId,
     }: {
-      transactionId: string;
+      statementTransactionIds: string[];
       reason: string;
       userId: string;
     }) => {
-      // Remove reconciliation from financial transaction
-      const { error } = await supabase
-        .from("union_financial_transactions")
-        .update({
-          is_conciliated: false,
-          conciliated_at: null,
-          conciliated_by: null,
-        })
-        .eq("id", transactionId);
+      let deletedFinCount = 0;
 
-      if (error) throw error;
+      for (const stmtId of statementTransactionIds) {
+        // Fetch the statement transaction
+        const { data: stmtTx, error: fetchErr } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .select("id, matched_transaction_id, generated_transaction_id, import_id, cash_register_id, amount, transaction_type")
+          .eq("id", stmtId)
+          .single();
 
-      // Log audit
-      await (supabase as any).rpc("log_reconciliation_action", {
-        p_clinic_id: clinicId,
-        p_transaction_id: transactionId,
-        p_statement_transaction_id: null,
-        p_action: "unreconcile",
-        p_origin: "user",
-        p_previous_status: "reconciled",
-        p_new_status: "pending",
-        p_details: { reason },
-        p_performed_by: userId,
-      });
+        if (fetchErr) throw fetchErr;
+
+        const generatedId = stmtTx.generated_transaction_id;
+        const matchedId = stmtTx.matched_transaction_id;
+
+        // If a financial transaction was generated from OFX, delete it and reverse balance
+        if (generatedId) {
+          // Reverse balance change
+          const balanceChange = stmtTx.transaction_type === "credit" ? -stmtTx.amount : stmtTx.amount;
+          const { data: register } = await supabase
+            .from("union_cash_registers")
+            .select("current_balance")
+            .eq("id", stmtTx.cash_register_id)
+            .single();
+
+          if (register) {
+            await supabase
+              .from("union_cash_registers")
+              .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
+              .eq("id", stmtTx.cash_register_id);
+          }
+
+          // First update status to allow deletion (trigger blocks deleting paid txs)
+          await supabase
+            .from("union_financial_transactions")
+            .update({ status: "cancelled" as any })
+            .eq("id", generatedId);
+
+          // Delete the generated financial transaction (it was auto-created, safe to remove)
+          await supabase
+            .from("union_financial_transactions")
+            .delete()
+            .eq("id", generatedId);
+
+          deletedFinCount++;
+        } else if (matchedId) {
+          // If matched to an existing financial transaction, just un-flag it
+          await supabase
+            .from("union_financial_transactions")
+            .update({
+              is_conciliated: false,
+              conciliated_at: null,
+              conciliated_by: null,
+            })
+            .eq("id", matchedId);
+        }
+
+        // Reset statement transaction
+        await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .update({
+            reconciliation_status: "pending_review",
+            matched_transaction_id: null,
+            generated_transaction_id: null,
+            reconciled_by: null,
+            reconciled_at: null,
+            reconciliation_notes: null,
+            supplier_id: null,
+            category_id: null,
+          })
+          .eq("id", stmtId);
+
+        // Log audit
+        await (supabase as any).rpc("log_reconciliation_action", {
+          p_clinic_id: clinicId,
+          p_transaction_id: matchedId || generatedId,
+          p_statement_transaction_id: stmtId,
+          p_action: "undo_reconciliation",
+          p_origin: "user",
+          p_previous_status: "reconciled",
+          p_new_status: "pending_review",
+          p_details: { reason, had_generated: !!generatedId },
+          p_performed_by: userId,
+        });
+      }
+
+      // Recalculate reconciled count for affected imports
+      const { data: stmtRow } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .select("import_id")
+        .eq("id", statementTransactionIds[0])
+        .single();
+
+      if (stmtRow?.import_id) {
+        const { count } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("import_id", stmtRow.import_id)
+          .in("reconciliation_status", ["auto_reconciled", "manual_reconciled"]);
+
+        await (supabase as any)
+          .from("union_bank_statement_imports")
+          .update({ transactions_reconciled: count || 0 })
+          .eq("id", stmtRow.import_id);
+      }
+
+      return { count: statementTransactionIds.length, deletedFinCount };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
-      toast.success("Conciliação removida!");
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
+      const msg = result.count === 1
+        ? "Conciliação desfeita com sucesso!"
+        : `${result.count} conciliações desfeitas com sucesso!`;
+      toast.success(msg);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Erro ao remover conciliação");
+      toast.error(error.message || "Erro ao desfazer conciliação");
     },
   });
 

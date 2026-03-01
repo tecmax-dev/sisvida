@@ -43,21 +43,23 @@ import { BankStatementTransaction } from "@/hooks/useUnionReconciliation";
 interface UnionReconciliationTableProps {
   transactions: BankStatementTransaction[];
   onManualReconcile: (statementTxId: string) => void;
-  onUnreconcile: (txId: string) => void;
+  onUndoReconciliation: (statementTxIds: string[]) => void;
   onViewDetails: (tx: BankStatementTransaction) => void;
   onMarkVerified?: (statementTxId: string) => void;
   onGenerateEntry?: (tx: BankStatementTransaction) => void;
   onBatchGenerateEntry?: (txs: BankStatementTransaction[]) => void;
+  isUndoing?: boolean;
 }
 
 export function UnionReconciliationTable({
   transactions,
   onManualReconcile,
-  onUnreconcile,
+  onUndoReconciliation,
   onViewDetails,
   onMarkVerified,
   onGenerateEntry,
   onBatchGenerateEntry,
+  isUndoing,
 }: UnionReconciliationTableProps) {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -118,17 +120,19 @@ export function UnionReconciliationTable({
     );
   });
 
-  // Only unreconciled, non-generated transactions can be selected for batch
-  const selectableTransactions = useMemo(() => {
-    return filteredTransactions.filter(
-      (tx) =>
-        !tx.matched_transaction_id &&
-        tx.reconciliation_status !== "auto_reconciled" &&
-        tx.reconciliation_status !== "manual_reconciled" &&
-        tx.reconciliation_status !== "ignored" &&
-        !(tx as any).generated_transaction_id
-    );
-  }, [filteredTransactions]);
+  const isSelectableForGenerate = (tx: BankStatementTransaction) =>
+    !tx.matched_transaction_id &&
+    tx.reconciliation_status !== "auto_reconciled" &&
+    tx.reconciliation_status !== "manual_reconciled" &&
+    tx.reconciliation_status !== "ignored" &&
+    !(tx as any).generated_transaction_id;
+
+  const isReconciled = (tx: BankStatementTransaction) =>
+    tx.reconciliation_status === "auto_reconciled" ||
+    tx.reconciliation_status === "manual_reconciled";
+
+  const canGenerateEntry = (tx: BankStatementTransaction) =>
+    isSelectableForGenerate(tx);
 
   const stats = {
     total: transactions.length,
@@ -137,6 +141,12 @@ export function UnionReconciliationTable({
     pendingReview: transactions.filter((t) => t.reconciliation_status === "pending_review").length,
     notIdentified: transactions.filter((t) => t.reconciliation_status === "not_identified").length,
   };
+
+  const allSelectable = useMemo(() => {
+    return filteredTransactions.filter(
+      (tx) => isSelectableForGenerate(tx) || isReconciled(tx)
+    );
+  }, [filteredTransactions]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -148,10 +158,10 @@ export function UnionReconciliationTable({
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === selectableTransactions.length) {
+    if (selectedIds.size === allSelectable.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(selectableTransactions.map((t) => t.id)));
+      setSelectedIds(new Set(allSelectable.map((t) => t.id)));
     }
   };
 
@@ -160,15 +170,15 @@ export function UnionReconciliationTable({
     [transactions, selectedIds]
   );
 
-  const isSelectable = (tx: BankStatementTransaction) =>
-    !tx.matched_transaction_id &&
-    tx.reconciliation_status !== "auto_reconciled" &&
-    tx.reconciliation_status !== "manual_reconciled" &&
-    tx.reconciliation_status !== "ignored" &&
-    !(tx as any).generated_transaction_id;
+  const selectedForGenerate = useMemo(
+    () => selectedTransactions.filter(isSelectableForGenerate),
+    [selectedTransactions]
+  );
 
-  const canGenerateEntry = (tx: BankStatementTransaction) =>
-    isSelectable(tx) && !(tx as any).generated_transaction_id;
+  const selectedForUndo = useMemo(
+    () => selectedTransactions.filter(isReconciled),
+    [selectedTransactions]
+  );
 
   return (
     <div className="space-y-4">
@@ -209,13 +219,27 @@ export function UnionReconciliationTable({
             className="pl-9"
           />
         </div>
-        {selectedIds.size > 0 && onBatchGenerateEntry && (
+        {selectedForGenerate.length > 0 && onBatchGenerateEntry && (
           <Button
             size="sm"
-            onClick={() => onBatchGenerateEntry(selectedTransactions)}
+            onClick={() => onBatchGenerateEntry(selectedForGenerate)}
           >
             <FileText className="h-4 w-4 mr-2" />
-            Gerar {selectedIds.size} Lançamento(s)
+            Gerar {selectedForGenerate.length} Lançamento(s)
+          </Button>
+        )}
+        {selectedForUndo.length > 0 && (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => {
+              onUndoReconciliation(selectedForUndo.map((t) => t.id));
+              setSelectedIds(new Set());
+            }}
+            disabled={isUndoing}
+          >
+            <Unlink className="h-4 w-4 mr-2" />
+            Desfazer {selectedForUndo.length} Conciliação(ões)
           </Button>
         )}
       </div>
@@ -228,7 +252,7 @@ export function UnionReconciliationTable({
               {onBatchGenerateEntry && (
                 <TableHead className="w-10">
                   <Checkbox
-                    checked={selectableTransactions.length > 0 && selectedIds.size === selectableTransactions.length}
+                    checked={allSelectable.length > 0 && selectedIds.size === allSelectable.length}
                     onCheckedChange={toggleSelectAll}
                     aria-label="Selecionar todos"
                   />
@@ -267,7 +291,7 @@ export function UnionReconciliationTable({
                 >
                   {onBatchGenerateEntry && (
                     <TableCell>
-                      {isSelectable(tx) ? (
+                      {(isSelectableForGenerate(tx) || isReconciled(tx)) ? (
                         <Checkbox
                           checked={selectedIds.has(tx.id)}
                           onCheckedChange={() => toggleSelect(tx.id)}
@@ -365,13 +389,14 @@ export function UnionReconciliationTable({
                               Marcar como Conferida
                             </DropdownMenuItem>
                           )}
-                        {tx.matched_transaction_id && (
+                        {isReconciled(tx) && (
                           <DropdownMenuItem
-                            onClick={() => onUnreconcile(tx.matched_transaction_id!)}
+                            onClick={() => onUndoReconciliation([tx.id])}
                             className="text-rose-600"
+                            disabled={isUndoing}
                           >
                             <Unlink className="h-4 w-4 mr-2" />
-                            Desvincular
+                            Desfazer Conciliação
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

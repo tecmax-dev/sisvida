@@ -62,6 +62,7 @@ export default function UnionBankReconciliationPage() {
     reconcile,
     isReconciling,
     unreconcile,
+    isUnreconciling,
     pendingExpenses,
     pendingIncomes,
     markVerified,
@@ -293,9 +294,10 @@ export default function UnionBankReconciliationPage() {
                 setReconcileTx(tx);
                 setReconcileOpen(true);
               }}
-              onUnreconcile={(txId) => {
-                unreconcile({ transactionId: txId, reason: "Removido manualmente", userId });
+              onUndoReconciliation={(txIds) => {
+                unreconcile({ statementTransactionIds: txIds, reason: "Desfeito manualmente", userId });
               }}
+              isUndoing={isUnreconciling}
               onViewDetails={(tx) => {
                 setDetailsTx(tx);
                 setDetailsOpen(true);
