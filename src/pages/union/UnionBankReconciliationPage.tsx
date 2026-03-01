@@ -18,13 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { UnionOFXImportDialog } from "@/components/union/financials/UnionOFXImportDialog";
 import { UnionReconciliationTable } from "@/components/union/financials/UnionReconciliationTable";
 import { UnionTransactionDetailsDialog } from "@/components/union/financials/UnionTransactionDetailsDialog";
@@ -35,7 +28,7 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
-  AlertCircle,
+  
   Clock,
   Building2,
   TrendingUp,
@@ -68,7 +61,7 @@ export default function UnionBankReconciliationPage() {
     isReconciling,
     unreconcile,
     pendingExpenses,
-    batchReconcileByCheck,
+    
     deleteImport,
     isDeletingImport,
   } = useUnionReconciliation(clinicId);

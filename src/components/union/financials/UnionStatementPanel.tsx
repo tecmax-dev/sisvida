@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, Fragment } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parse, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
+import { format, parse, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2 } from "lucide-react";
 import {
@@ -998,24 +998,37 @@ export function UnionStatementPanel() {
                      <TableRow className="bg-blue-500/10">
                        <TableHead className="font-bold w-[100px]">DATA</TableHead>
                        <TableHead className="font-bold">DESCRIÇÃO</TableHead>
+                       <TableHead className="font-bold w-[90px] text-center">CONC.</TableHead>
                        <TableHead className="font-bold w-[100px]">Nº CHEQUE</TableHead>
                        <TableHead className="font-bold w-[150px]">FORNECEDOR</TableHead>
                        <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
                        <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
                        <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
-                       <TableHead className="font-bold w-[60px] text-center">CONC.</TableHead>
                        <TableHead className="w-[50px]"></TableHead>
                      </TableRow>
                   </TableHeader>
                   <TableBody>
                     {dailyGroups.map((group) => (
-                      <>
+                      <Fragment key={group.dateStr}>
                         {group.transactions.map((t, idx) => (
                           <TableRow key={t.id}>
                             <TableCell className="font-medium">
                               {idx === 0 ? format(group.date, "dd/MM/yyyy") : ""}
                             </TableCell>
                             <TableCell className="text-sm uppercase">{t.description}</TableCell>
+                            <TableCell className="text-center">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center justify-center min-w-12 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                                  t.is_conciliated
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                    : "bg-muted text-muted-foreground"
+                                )}
+                                title={t.is_conciliated ? "Conciliado" : "Não conciliado"}
+                              >
+                                {t.is_conciliated ? "SIM" : "NÃO"}
+                              </span>
+                            </TableCell>
                              <TableCell className="text-sm">{t.check_number || ""}</TableCell>
                              <TableCell className="text-sm">{t.supplier_name || ""}</TableCell>
                              <TableCell className="text-right text-red-600">
@@ -1026,17 +1039,6 @@ export function UnionStatementPanel() {
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency((t as any).lineBalance)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {t.is_conciliated ? (
-                                <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30" title="Conciliado">
-                                  <Check className="h-3 w-3 text-emerald-600" />
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted" title="Não conciliado">
-                                  <X className="h-3 w-3 text-muted-foreground" />
-                                </span>
-                              )}
                             </TableCell>
                             <TableCell className="p-1">
                               <DropdownMenu>
@@ -1093,7 +1095,7 @@ export function UnionStatementPanel() {
                             Saldo: {formatCurrency(group.endDayBalance)}
                           </TableCell>
                         </TableRow>
-                      </>
+                      </Fragment>
                     ))}
 
                     {dailyGroups.length === 0 && (
