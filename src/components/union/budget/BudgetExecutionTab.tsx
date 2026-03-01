@@ -6,6 +6,9 @@ import { BudgetExercise, BudgetRevenue, BudgetExpense, monthNames } from "@/type
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { BudgetExecutionCharts } from "./BudgetExecutionCharts";
+import { BudgetDeviationAlerts } from "./BudgetDeviationAlerts";
+import { BudgetCategoryDetail } from "./BudgetCategoryDetail";
 
 interface BudgetExecutionTabProps {
   execution: any[];
@@ -29,26 +32,18 @@ export function BudgetExecutionTab({
   clinicId,
   versionId,
 }: BudgetExecutionTabProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  // Fetch realized transactions from union_financial_transactions for the exercise period
   const { data: realizedData, isLoading: loadingRealized } = useQuery({
     queryKey: ["budget-execution-realized", clinicId, exercise.start_date, exercise.end_date],
     queryFn: async () => {
       if (!clinicId) return { revenues: [] as any[], expenses: [] as any[] };
-
       const PAGE_SIZE = 1000;
-
       const fetchAll = async (type: string) => {
         let allData: any[] = [];
         let from = 0;
         let hasMore = true;
-
         while (hasMore) {
           const { data, error } = await supabase
             .from("union_financial_transactions")
@@ -60,7 +55,6 @@ export function BudgetExecutionTab({
             .lte("paid_date", exercise.end_date)
             .not("paid_date", "is", null)
             .range(from, from + PAGE_SIZE - 1);
-
           if (error) throw error;
           allData = allData.concat(data || []);
           hasMore = (data?.length || 0) === PAGE_SIZE;
@@ -68,71 +62,48 @@ export function BudgetExecutionTab({
         }
         return allData;
       };
-
-      const [revTx, expTx] = await Promise.all([
-        fetchAll("revenue"),
-        fetchAll("expense"),
-      ]);
-
+      const [revTx, expTx] = await Promise.all([fetchAll("revenue"), fetchAll("expense")]);
       return { revenues: revTx, expenses: expTx };
     },
     enabled: !!clinicId && !!exercise,
   });
 
-  // Build monthly realized totals from actual transactions
   const getMonthFromDate = (dateStr: string): number => {
     const date = new Date(dateStr + "T12:00:00");
-    return date.getMonth() + 1; // 1-12
+    return date.getMonth() + 1;
   };
 
   const realizedByMonth = (() => {
     const map: Record<number, { revenue: number; expense: number }> = {};
-    for (let m = 1; m <= 12; m++) {
-      map[m] = { revenue: 0, expense: 0 };
-    }
-
+    for (let m = 1; m <= 12; m++) map[m] = { revenue: 0, expense: 0 };
     if (realizedData?.revenues) {
       for (const tx of realizedData.revenues) {
         if (tx.paid_date) {
           const month = getMonthFromDate(tx.paid_date);
-          if (month >= 1 && month <= 12) {
-            map[month].revenue += Number(tx.amount) || 0;
-          }
+          if (month >= 1 && month <= 12) map[month].revenue += Number(tx.amount) || 0;
         }
       }
     }
-
     if (realizedData?.expenses) {
       for (const tx of realizedData.expenses) {
         if (tx.paid_date) {
           const month = getMonthFromDate(tx.paid_date);
-          if (month >= 1 && month <= 12) {
-            map[month].expense += Number(tx.amount) || 0;
-          }
+          if (month >= 1 && month <= 12) map[month].expense += Number(tx.amount) || 0;
         }
       }
     }
-
     return map;
   })();
 
-  // Calculate execution summary by month
   const monthlyExecution = Array.from({ length: 12 }, (_, i) => {
     const month = i + 1;
-
-    const budgetedRevenue = revenues.reduce((sum, r) => sum + getMonthValue(r, month), 0);
-    const budgetedExpense = expenses.reduce((sum, e) => sum + getMonthValue(e, month), 0);
-
-    const realizedRevenue = realizedByMonth[month]?.revenue || 0;
-    const realizedExpense = realizedByMonth[month]?.expense || 0;
-
     return {
       month,
       monthName: monthNames[i],
-      budgetedRevenue,
-      realizedRevenue,
-      budgetedExpense,
-      realizedExpense,
+      budgetedRevenue: revenues.reduce((sum, r) => sum + getMonthValue(r, month), 0),
+      realizedRevenue: realizedByMonth[month]?.revenue || 0,
+      budgetedExpense: expenses.reduce((sum, e) => sum + getMonthValue(e, month), 0),
+      realizedExpense: realizedByMonth[month]?.expense || 0,
     };
   });
 
@@ -140,22 +111,17 @@ export function BudgetExecutionTab({
   const totalBudgetedExpense = expenses.reduce((sum, e) => sum + (e.total_amount || 0), 0);
   const totalRealizedRevenue = Object.values(realizedByMonth).reduce((s, m) => s + m.revenue, 0);
   const totalRealizedExpense = Object.values(realizedByMonth).reduce((s, m) => s + m.expense, 0);
-
   const revenuePercent = totalBudgetedRevenue > 0 ? Math.min((totalRealizedRevenue / totalBudgetedRevenue) * 100, 100) : 0;
   const expensePercent = totalBudgetedExpense > 0 ? Math.min((totalRealizedExpense / totalBudgetedExpense) * 100, 100) : 0;
 
   const getStatus = (data: { budgetedRevenue: number; budgetedExpense: number; realizedRevenue: number; realizedExpense: number }) => {
     const hasBudget = data.budgetedRevenue > 0 || data.budgetedExpense > 0;
     const hasRealized = data.realizedRevenue > 0 || data.realizedExpense > 0;
-
     if (!hasBudget && !hasRealized) return null;
     if (!hasRealized) return { label: "Pendente", variant: "outline" as const, className: "text-muted-foreground" };
-
     const totalBudgeted = data.budgetedRevenue + data.budgetedExpense;
     const totalRealized = data.realizedRevenue + data.realizedExpense;
-
     if (totalBudgeted === 0) return { label: "Realizado", variant: "default" as const, className: "bg-blue-100 text-blue-700" };
-
     const pct = (totalRealized / totalBudgeted) * 100;
     if (pct >= 90) return { label: "Executado", variant: "default" as const, className: "bg-green-100 text-green-700" };
     if (pct >= 50) return { label: "Em andamento", variant: "default" as const, className: "bg-yellow-100 text-yellow-700" };
@@ -245,6 +211,20 @@ export function BudgetExecutionTab({
         </Card>
       </div>
 
+      {/* Deviation Alerts */}
+      <BudgetDeviationAlerts
+        revenues={revenues}
+        expenses={expenses}
+        realizedByMonth={realizedByMonth}
+      />
+
+      {/* Charts */}
+      <BudgetExecutionCharts
+        revenues={revenues}
+        expenses={expenses}
+        realizedByMonth={realizedByMonth}
+      />
+
       {/* Monthly Execution Table */}
       <Card>
         <CardHeader>
@@ -279,9 +259,7 @@ export function BudgetExecutionTab({
                     </TableCell>
                     <TableCell className="text-center">
                       {status ? (
-                        <Badge variant={status.variant} className={status.className}>
-                          {status.label}
-                        </Badge>
+                        <Badge variant={status.variant} className={status.className}>{status.label}</Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
@@ -289,7 +267,6 @@ export function BudgetExecutionTab({
                   </TableRow>
                 );
               })}
-              {/* Total row */}
               <TableRow className="font-bold border-t-2">
                 <TableCell>Total</TableCell>
                 <TableCell className="text-right">{formatCurrency(totalBudgetedRevenue)}</TableCell>
@@ -305,6 +282,13 @@ export function BudgetExecutionTab({
           </Table>
         </CardContent>
       </Card>
+
+      {/* Category Detail */}
+      <BudgetCategoryDetail
+        revenues={revenues}
+        expenses={expenses}
+        realizedByMonth={realizedByMonth}
+      />
     </div>
   );
 }
