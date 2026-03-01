@@ -457,7 +457,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       // --- Backend validation: ensure all expenses belong to the same cash register as the statement tx ---
       const { data: stmtTx, error: stmtFetchError } = await (supabase as any)
         .from("union_bank_statement_transactions")
-        .select("cash_register_id, transaction_date")
+        .select("cash_register_id, transaction_date, check_number")
         .eq("id", statementTransactionId)
         .single();
 
@@ -467,7 +467,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       const { data: expenseRows, error: expFetchError } = await supabase
         .from("union_financial_transactions")
-        .select("id, cash_register_id, status, amount, type")
+        .select("id, cash_register_id, status, amount, type, check_number")
         .in("id", financialTransactionIds);
 
       if (expFetchError) throw expFetchError;
@@ -508,6 +508,11 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         if (wasPending) {
           updatePayload.status = "paid";
           updatePayload.paid_date = compensationDate;
+        }
+
+        // Auto-fill check_number from OFX if financial transaction has none
+        if ((!expense?.check_number || expense.check_number.trim() === "") && stmtTx.check_number) {
+          updatePayload.check_number = stmtTx.check_number;
         }
 
         const { error: finError } = await supabase

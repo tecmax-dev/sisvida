@@ -12952,6 +12952,8 @@ export type Database = {
           notes: string | null
           paid_date: string | null
           payment_method: string | null
+          recurrence_source_id: string | null
+          recurrence_type: string | null
           reversal_reason: string | null
           reversed_at: string | null
           reversed_by: string | null
@@ -12988,6 +12990,8 @@ export type Database = {
           notes?: string | null
           paid_date?: string | null
           payment_method?: string | null
+          recurrence_source_id?: string | null
+          recurrence_type?: string | null
           reversal_reason?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
@@ -13024,6 +13028,8 @@ export type Database = {
           notes?: string | null
           paid_date?: string | null
           payment_method?: string | null
+          recurrence_source_id?: string | null
+          recurrence_type?: string | null
           reversal_reason?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
@@ -13074,6 +13080,13 @@ export type Database = {
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_recurrence_source_id_fkey"
+            columns: ["recurrence_source_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_transactions"
             referencedColumns: ["id"]
           },
           {
