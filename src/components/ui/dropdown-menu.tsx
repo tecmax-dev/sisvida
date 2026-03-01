@@ -17,7 +17,7 @@ const DropdownMenu = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen && (document.hidden || document.visibilityState === "hidden" || !document.hasFocus())) {
+      if (!nextOpen && (document.hidden || document.visibilityState === "hidden")) {
         return;
       }
 
