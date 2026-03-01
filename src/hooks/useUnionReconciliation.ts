@@ -418,25 +418,25 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     },
   });
 
-  // Manual reconcile mutation
+  // Manual reconcile mutation (1:N — one statement tx to multiple expenses)
   const reconcileMutation = useMutation({
     mutationFn: async ({
       statementTransactionId,
-      financialTransactionId,
+      financialTransactionIds,
       userId,
       notes,
     }: {
       statementTransactionId: string;
-      financialTransactionId: string;
+      financialTransactionIds: string[];
       userId: string;
       notes?: string;
     }) => {
-      // Update statement transaction
+      // Update statement transaction — store first matched id for backward compat
       const { error: stmtError } = await (supabase as any)
         .from("union_bank_statement_transactions")
         .update({
           reconciliation_status: "manual_reconciled",
-          matched_transaction_id: financialTransactionId,
+          matched_transaction_id: financialTransactionIds[0],
           reconciled_by: userId,
           reconciled_at: new Date().toISOString(),
           reconciliation_notes: notes || null,
@@ -445,28 +445,30 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       if (stmtError) throw stmtError;
 
-      // Update financial transaction
-      const { error: finError } = await supabase
-        .from("union_financial_transactions")
-        .update({
-          is_conciliated: true,
-          conciliated_at: new Date().toISOString(),
-          conciliated_by: userId,
-        })
-        .eq("id", financialTransactionId);
+      // Update ALL linked financial transactions
+      for (const finId of financialTransactionIds) {
+        const { error: finError } = await supabase
+          .from("union_financial_transactions")
+          .update({
+            is_conciliated: true,
+            conciliated_at: new Date().toISOString(),
+            conciliated_by: userId,
+          })
+          .eq("id", finId);
 
-      if (finError) throw finError;
+        if (finError) throw finError;
+      }
 
       // Log audit
       await (supabase as any).rpc("log_reconciliation_action", {
         p_clinic_id: clinicId,
-        p_transaction_id: financialTransactionId,
+        p_transaction_id: financialTransactionIds[0],
         p_statement_transaction_id: statementTransactionId,
         p_action: "manual_reconcile",
         p_origin: "user",
         p_previous_status: "pending",
         p_new_status: "reconciled",
-        p_details: { notes },
+        p_details: { notes, financial_transaction_ids: financialTransactionIds, count: financialTransactionIds.length },
         p_performed_by: userId,
       });
     },

@@ -358,10 +358,10 @@ export default function UnionBankReconciliationPage() {
         onOpenChange={setReconcileOpen}
         statementTransaction={reconcileTx}
         pendingExpenses={pendingExpenses || []}
-        onReconcile={async (stmtId, finId, notes) => {
+        onReconcile={async (stmtId, finIds, notes) => {
           await reconcile({
             statementTransactionId: stmtId,
-            financialTransactionId: finId,
+            financialTransactionIds: finIds,
             userId,
             notes,
           });
