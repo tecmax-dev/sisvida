@@ -199,7 +199,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
   });
 
   // Fetch statement transactions for a specific import
-  const fetchImportTransactions = async (importId: string): Promise<BankStatementTransaction[]> => {
+  const fetchImportTransactions = useCallback(async (importId: string): Promise<BankStatementTransaction[]> => {
     const { data, error } = await (supabase as any)
       .from("union_bank_statement_transactions")
       .select("*")
@@ -212,7 +212,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     }
 
     return data as BankStatementTransaction[];
-  };
+  }, []);
 
   // Fetch pending (unreconciled) expenses for matching
   const { data: pendingExpenses } = useQuery({
