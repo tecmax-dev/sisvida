@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Link2, CheckCircle2, AlertTriangle } from "lucide-react";
-import { BankStatementTransaction } from "@/hooks/useUnionReconciliation";
+import { Search, Link2, CheckCircle2, AlertTriangle, Hash } from "lucide-react";
+import { BankStatementTransaction, normalizeCheckNumber } from "@/hooks/useUnionReconciliation";
 
 interface PendingExpense {
   id: string;
@@ -48,6 +48,26 @@ export function UnionManualReconcileDialog({
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
 
+  const statementCheckNorm = normalizeCheckNumber(statementTransaction?.check_number);
+
+  // Auto-select expenses matching the statement check number when dialog opens
+  useEffect(() => {
+    if (!open || !statementTransaction) return;
+
+    if (statementCheckNorm) {
+      const matchingIds = pendingExpenses
+        .filter((e) => normalizeCheckNumber(e.check_number) === statementCheckNorm)
+        .map((e) => e.id);
+      setSelectedExpenseIds(matchingIds);
+      setSearch(statementTransaction.check_number || "");
+    } else {
+      setSelectedExpenseIds([]);
+      setSearch("");
+    }
+    setNotes("");
+  }, [open, statementTransaction?.id]);
+
+  // Group expenses by check number for display
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
     return pendingExpenses.filter(
@@ -56,6 +76,16 @@ export function UnionManualReconcileDialog({
         e.check_number?.includes(search)
     );
   }, [pendingExpenses, search]);
+
+  // Sort: matching check numbers first
+  const sorted = useMemo(() => {
+    if (!statementCheckNorm) return filtered;
+    return [...filtered].sort((a, b) => {
+      const aMatch = normalizeCheckNumber(a.check_number) === statementCheckNorm ? 0 : 1;
+      const bMatch = normalizeCheckNumber(b.check_number) === statementCheckNorm ? 0 : 1;
+      return aMatch - bMatch;
+    });
+  }, [filtered, statementCheckNorm]);
 
   const selectedTotal = useMemo(() => {
     return pendingExpenses
@@ -110,6 +140,7 @@ export function UnionManualReconcileDialog({
             <span>{statementTransaction.transaction_date}</span>
             {statementTransaction.check_number && (
               <Badge variant="outline" className="font-mono text-xs">
+                <Hash className="h-3 w-3 mr-1" />
                 Cheque {statementTransaction.check_number}
               </Badge>
             )}
@@ -144,6 +175,11 @@ export function UnionManualReconcileDialog({
                 Diferença: {formatCurrency(difference)}
               </p>
             )}
+            {isExactMatch && selectedExpenseIds.length > 0 && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                ✓ Valor exato
+              </p>
+            )}
           </div>
         </div>
 
@@ -160,28 +196,37 @@ export function UnionManualReconcileDialog({
 
         {/* Expense list (multi-select) */}
         <ScrollArea className="h-[250px] border rounded-md">
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground text-sm">
               Nenhuma despesa pendente encontrada
             </div>
           ) : (
             <div className="divide-y">
-              {filtered.map((exp) => {
+              {sorted.map((exp) => {
                 const isSelected = selectedExpenseIds.includes(exp.id);
+                const isCheckMatch = statementCheckNorm && normalizeCheckNumber(exp.check_number) === statementCheckNorm;
                 return (
                   <button
                     key={exp.id}
                     type="button"
                     className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-center justify-between ${
                       isSelected ? "bg-primary/10 ring-1 ring-primary" : ""
-                    }`}
+                    } ${isCheckMatch && !isSelected ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}`}
                     onClick={() => toggleExpense(exp.id)}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{exp.description}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         <span>{exp.due_date}</span>
-                        {exp.check_number && <span>Cheque: {exp.check_number}</span>}
+                        {exp.check_number && (
+                          <Badge
+                            variant={isCheckMatch ? "default" : "outline"}
+                            className={`font-mono text-xs ${isCheckMatch ? "bg-emerald-600 text-white" : ""}`}
+                          >
+                            <Hash className="h-2.5 w-2.5 mr-0.5" />
+                            {exp.check_number}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-2">
