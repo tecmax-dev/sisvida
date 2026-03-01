@@ -137,7 +137,9 @@ export function UnionManualReconcileDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Vincular Despesa(s)</DialogTitle>
+          <DialogTitle>
+            {statementTransaction.transaction_type === "credit" ? "Vincular Receita(s)" : "Vincular Despesa(s)"}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Carrier context banner */}
@@ -154,8 +156,8 @@ export function UnionManualReconcileDialog({
         <div className="bg-muted/50 rounded-md p-3 text-sm">
           <p className="font-medium">{statementTransaction.description || "Sem descrição"}</p>
           <div className="flex items-center gap-3 mt-1 text-muted-foreground">
-            <span className="text-rose-600 font-medium">
-              - {formatCurrency(statementAmount)}
+            <span className={statementTransaction.transaction_type === "credit" ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
+              {statementTransaction.transaction_type === "credit" ? "+ " : "- "}{formatCurrency(statementAmount)}
             </span>
             <span>{statementTransaction.transaction_date}</span>
             {statementTransaction.check_number && (
@@ -183,7 +185,7 @@ export function UnionManualReconcileDialog({
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             )}
             <span>
-              {selectedExpenseIds.length} despesa(s) selecionada(s)
+              {selectedExpenseIds.length} {statementTransaction.transaction_type === "credit" ? "receita(s)" : "despesa(s)"} selecionada(s)
             </span>
           </div>
           <div className="text-right">
@@ -206,14 +208,14 @@ export function UnionManualReconcileDialog({
         {/* Carrier expense count */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Info className="h-3.5 w-3.5" />
-          <span>{carrierFilteredExpenses.length} despesa(s) disponíveis neste portador</span>
+          <span>{carrierFilteredExpenses.length} {statementTransaction.transaction_type === "credit" ? "receita(s)" : "despesa(s)"} disponíveis neste portador</span>
         </div>
 
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar despesa por descrição ou cheque..."
+            placeholder={`Buscar ${statementTransaction.transaction_type === "credit" ? "receita" : "despesa"} por descrição ou cheque...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -225,8 +227,8 @@ export function UnionManualReconcileDialog({
           {sorted.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground text-sm">
               {carrierFilteredExpenses.length === 0
-                ? "Nenhuma despesa pendente encontrada para este portador"
-                : "Nenhuma despesa encontrada com os filtros aplicados"}
+                ? `Nenhuma ${statementTransaction.transaction_type === "credit" ? "receita" : "despesa"} pendente encontrada para este portador`
+                : `Nenhuma ${statementTransaction.transaction_type === "credit" ? "receita" : "despesa"} encontrada com os filtros aplicados`}
             </div>
           ) : (
             <div className="divide-y">
@@ -261,7 +263,7 @@ export function UnionManualReconcileDialog({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-2">
-                      <span className="text-sm font-medium text-rose-600 whitespace-nowrap">
+                      <span className={`text-sm font-medium whitespace-nowrap ${statementTransaction.transaction_type === "credit" ? "text-emerald-600" : "text-rose-600"}`}>
                         {formatCurrency(exp.amount)}
                       </span>
                       {isSelected && (
@@ -291,7 +293,7 @@ export function UnionManualReconcileDialog({
             disabled={!canConfirm || isReconciling}
           >
             <Link2 className="h-4 w-4 mr-2" />
-            {isReconciling ? "Vinculando..." : `Vincular ${selectedExpenseIds.length} despesa(s)`}
+            {isReconciling ? "Vinculando..." : `Vincular ${selectedExpenseIds.length} ${statementTransaction.transaction_type === "credit" ? "receita(s)" : "despesa(s)"}`}
           </Button>
         </DialogFooter>
       </DialogContent>

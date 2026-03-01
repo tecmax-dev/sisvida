@@ -32,6 +32,7 @@ import {
   Unlink,
   Eye,
   Search,
+  CheckCheck,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -42,6 +43,7 @@ interface UnionReconciliationTableProps {
   onManualReconcile: (statementTxId: string) => void;
   onUnreconcile: (txId: string) => void;
   onViewDetails: (tx: BankStatementTransaction) => void;
+  onMarkVerified?: (statementTxId: string) => void;
 }
 
 export function UnionReconciliationTable({
@@ -49,6 +51,7 @@ export function UnionReconciliationTable({
   onManualReconcile,
   onUnreconcile,
   onViewDetails,
+  onMarkVerified,
 }: UnionReconciliationTableProps) {
   const [search, setSearch] = useState("");
 
@@ -253,10 +256,20 @@ export function UnionReconciliationTable({
                         </DropdownMenuItem>
                         {!tx.matched_transaction_id &&
                           tx.reconciliation_status !== "ignored" &&
-                          tx.transaction_type === "debit" && (
+                          tx.reconciliation_status !== "manual_reconciled" && (
                             <DropdownMenuItem onClick={() => onManualReconcile(tx.id)}>
                               <Link2 className="h-4 w-4 mr-2" />
-                              Vincular Despesa
+                              {tx.transaction_type === "credit" ? "Vincular Receita" : "Vincular Despesa"}
+                            </DropdownMenuItem>
+                          )}
+                        {!tx.matched_transaction_id &&
+                          tx.reconciliation_status !== "ignored" &&
+                          tx.reconciliation_status !== "auto_reconciled" &&
+                          tx.reconciliation_status !== "manual_reconciled" &&
+                          onMarkVerified && (
+                            <DropdownMenuItem onClick={() => onMarkVerified(tx.id)}>
+                              <CheckCheck className="h-4 w-4 mr-2" />
+                              Marcar como Conferida
                             </DropdownMenuItem>
                           )}
                         {tx.matched_transaction_id && (
