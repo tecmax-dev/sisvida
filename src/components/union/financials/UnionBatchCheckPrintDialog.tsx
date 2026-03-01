@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -601,7 +601,7 @@ export function UnionBatchCheckPrintDialog({
                 </div>
 
                 {/* Check list */}
-                <ScrollArea className="flex-1 min-h-0 border rounded-md">
+                <div className="flex-1 min-h-[240px] max-h-[42vh] overflow-y-auto border rounded-md">
                   <div className="divide-y">
                     {groupedByCheck.map(([checkNum, expenses]) => {
                       const total = expenses.reduce(
@@ -685,7 +685,7 @@ export function UnionBatchCheckPrintDialog({
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Print button */}
                 <div className="flex justify-between items-center pt-2">
