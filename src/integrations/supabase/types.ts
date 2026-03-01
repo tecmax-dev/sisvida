@@ -11149,6 +11149,183 @@ export type Database = {
           },
         ]
       }
+      union_bank_statement_imports: {
+        Row: {
+          account_number: string | null
+          agency: string | null
+          bank_code: string | null
+          bank_name: string | null
+          cash_register_id: string
+          clinic_id: string
+          created_at: string
+          file_hash: string
+          file_name: string
+          id: string
+          imported_at: string
+          imported_by: string | null
+          statement_end_date: string | null
+          statement_start_date: string | null
+          status: string
+          total_credits: number
+          total_debits: number
+          total_transactions: number
+          transactions_reconciled: number
+        }
+        Insert: {
+          account_number?: string | null
+          agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          cash_register_id: string
+          clinic_id: string
+          created_at?: string
+          file_hash: string
+          file_name: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          statement_end_date?: string | null
+          statement_start_date?: string | null
+          status?: string
+          total_credits?: number
+          total_debits?: number
+          total_transactions?: number
+          transactions_reconciled?: number
+        }
+        Update: {
+          account_number?: string | null
+          agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          cash_register_id?: string
+          clinic_id?: string
+          created_at?: string
+          file_hash?: string
+          file_name?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          statement_end_date?: string | null
+          statement_start_date?: string | null
+          status?: string
+          total_credits?: number
+          total_debits?: number
+          total_transactions?: number
+          transactions_reconciled?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_bank_statement_imports_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_bank_statement_imports_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_bank_statement_imports_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_bank_statement_transactions: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          check_number: string | null
+          clinic_id: string
+          created_at: string
+          description: string | null
+          document_number: string | null
+          fitid: string | null
+          id: string
+          import_id: string
+          matched_transaction_id: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciliation_notes: string | null
+          reconciliation_status: string
+          transaction_date: string
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          check_number?: string | null
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          document_number?: string | null
+          fitid?: string | null
+          id?: string
+          import_id: string
+          matched_transaction_id?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_notes?: string | null
+          reconciliation_status?: string
+          transaction_date: string
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          check_number?: string | null
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          document_number?: string | null
+          fitid?: string | null
+          id?: string
+          import_id?: string
+          matched_transaction_id?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_notes?: string | null
+          reconciliation_status?: string
+          transaction_date?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_bank_statement_transactions_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_bank_statement_transactions_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_bank_statement_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_bank_statement_transactions_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "union_bank_statement_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_benefits: {
         Row: {
           category: string | null
