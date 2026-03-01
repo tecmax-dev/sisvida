@@ -54,7 +54,7 @@ export function BudgetExecutionTab({
             .from("union_financial_transactions")
             .select("amount, paid_date, category_id, type")
             .eq("clinic_id", clinicId)
-            .eq("type", type)
+            .eq("type", type === "revenue" ? "income" : type)
             .eq("status", "paid")
             .gte("paid_date", exercise.start_date)
             .lte("paid_date", exercise.end_date)
