@@ -12955,6 +12955,7 @@ export type Database = {
           reversal_reason: string | null
           reversed_at: string | null
           reversed_by: string | null
+          source_statement_tx_id: string | null
           status: string | null
           supplier_id: string | null
           type: string
@@ -12990,6 +12991,7 @@ export type Database = {
           reversal_reason?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
+          source_statement_tx_id?: string | null
           status?: string | null
           supplier_id?: string | null
           type: string
@@ -13025,6 +13027,7 @@ export type Database = {
           reversal_reason?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
+          source_statement_tx_id?: string | null
           status?: string | null
           supplier_id?: string | null
           type?: string
@@ -13071,6 +13074,13 @@ export type Database = {
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_source_statement_tx_id_fkey"
+            columns: ["source_statement_tx_id"]
+            isOneToOne: false
+            referencedRelation: "union_bank_statement_transactions"
             referencedColumns: ["id"]
           },
           {
