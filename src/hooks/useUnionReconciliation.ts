@@ -457,15 +457,17 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       // --- Backend validation: ensure all expenses belong to the same cash register as the statement tx ---
       const { data: stmtTx, error: stmtFetchError } = await (supabase as any)
         .from("union_bank_statement_transactions")
-        .select("cash_register_id")
+        .select("cash_register_id, transaction_date")
         .eq("id", statementTransactionId)
         .single();
 
       if (stmtFetchError) throw stmtFetchError;
 
+      const compensationDate = stmtTx.transaction_date; // Data de compensação do extrato
+
       const { data: expenseRows, error: expFetchError } = await supabase
         .from("union_financial_transactions")
-        .select("id, cash_register_id")
+        .select("id, cash_register_id, status, amount, type")
         .in("id", financialTransactionIds);
 
       if (expFetchError) throw expFetchError;
@@ -491,18 +493,51 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       if (stmtError) throw stmtError;
 
-      // Update ALL linked financial transactions
+      // Update ALL linked financial transactions — mark as paid with compensation date and update balance
       for (const finId of financialTransactionIds) {
+        const expense = (expenseRows || []).find((e) => e.id === finId);
+        const wasPending = expense && expense.status === "pending";
+
+        const updatePayload: Record<string, any> = {
+          is_conciliated: true,
+          conciliated_at: new Date().toISOString(),
+          conciliated_by: userId,
+        };
+
+        // If expense was pending, mark as paid with compensation date
+        if (wasPending) {
+          updatePayload.status = "paid";
+          updatePayload.paid_date = compensationDate;
+        }
+
         const { error: finError } = await supabase
           .from("union_financial_transactions")
-          .update({
-            is_conciliated: true,
-            conciliated_at: new Date().toISOString(),
-            conciliated_by: userId,
-          })
+          .update(updatePayload)
           .eq("id", finId);
 
         if (finError) throw finError;
+
+        // If was pending, update cash register balance (newly paid = cash flow impact)
+        if (wasPending && expense) {
+          const balanceChange = expense.type === "income"
+            ? Number(expense.amount)
+            : -Number(expense.amount);
+
+          const { data: register } = await supabase
+            .from("union_cash_registers")
+            .select("current_balance")
+            .eq("id", stmtTx.cash_register_id)
+            .single();
+
+          if (register) {
+            await supabase
+              .from("union_cash_registers")
+              .update({
+                current_balance: Number(register.current_balance || 0) + balanceChange,
+              })
+              .eq("id", stmtTx.cash_register_id);
+          }
+        }
       }
 
       // Log audit
@@ -545,6 +580,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers"] });
+      queryClient.invalidateQueries({ queryKey: ["union-cash-registers-statement"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-previous-balance"] });
       toast.success("Transação conciliada com sucesso!");
     },
     onError: (error: Error) => {
