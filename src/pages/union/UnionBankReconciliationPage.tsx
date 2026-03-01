@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useUnionReconciliation, BankStatementTransaction } from "@/hooks/useUnionReconciliation";
+import { useUnionReconciliation } from "@/hooks/useUnionReconciliation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -48,8 +48,6 @@ export default function UnionBankReconciliationPage() {
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
-  const [importTransactions, setImportTransactions] = useState<BankStatementTransaction[]>([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [activeTab, setActiveTab] = useState("imports");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importToDelete, setImportToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -83,18 +81,14 @@ export default function UnionBankReconciliationPage() {
     enabled: !!clinicId,
   });
 
-  // Load transactions when an import is selected
-  useEffect(() => {
-    if (selectedImportId) {
-      setLoadingTransactions(true);
-      fetchImportTransactions(selectedImportId)
-        .then(setImportTransactions)
-        .catch(console.error)
-        .finally(() => setLoadingTransactions(false));
-    } else {
-      setImportTransactions([]);
-    }
-  }, [selectedImportId, fetchImportTransactions]);
+  const {
+    data: selectedImportTransactions = [],
+    isLoading: loadingSelectedImportTransactions,
+  } = useQuery({
+    queryKey: ["union-bank-statement-transactions", selectedImportId],
+    queryFn: () => fetchImportTransactions(selectedImportId!),
+    enabled: !!selectedImportId,
+  });
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -283,11 +277,11 @@ export default function UnionBankReconciliationPage() {
         </TabsContent>
 
         <TabsContent value="transactions">
-          {loadingTransactions ? (
+          {loadingSelectedImportTransactions ? (
             <Skeleton className="h-96" />
           ) : (
             <UnionReconciliationTable
-              transactions={importTransactions}
+              transactions={selectedImportTransactions}
               onManualReconcile={(txId) => {
                 // TODO: Open manual reconcile dialog
                 console.log("Manual reconcile:", txId);
