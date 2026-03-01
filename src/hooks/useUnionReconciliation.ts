@@ -476,6 +476,8 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
       toast.success("Transação conciliada com sucesso!");
     },
     onError: (error: Error) => {
@@ -548,6 +550,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       toast.success(`${count} despesa(s) conciliada(s) pelo cheque!`);
     },
     onError: (error: Error) => {
@@ -636,6 +639,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       toast.success("Conciliação removida!");
     },
     onError: (error: Error) => {

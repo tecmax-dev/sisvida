@@ -57,6 +57,7 @@ interface Transaction {
   status: string;
   supplier_name?: string;
   check_number?: string;
+  is_conciliated?: boolean;
 }
 
 interface DailyGroup {
@@ -305,7 +306,7 @@ export function UnionStatementPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("union_financial_transactions")
-        .select("id, paid_date, due_date, description, type, amount, status, check_number, supplier_id, union_suppliers(name)")
+        .select("id, paid_date, due_date, description, type, amount, status, check_number, is_conciliated, supplier_id, union_suppliers(name)")
         .eq("clinic_id", clinicId!)
         .eq("cash_register_id", cashRegisterId)
         .eq("status", "paid")
@@ -324,6 +325,7 @@ export function UnionStatementPanel() {
         status: t.status,
         supplier_name: t.union_suppliers?.name || undefined,
         check_number: t.check_number || undefined,
+        is_conciliated: t.is_conciliated || false,
       }));
     },
     enabled: !!clinicId && !!cashRegisterId,
@@ -549,6 +551,7 @@ export function UnionStatementPanel() {
           t.type === "expense" ? formatCurrency(t.amount) : "",
           t.type === "income" ? formatCurrency(t.amount) : "",
           formatCurrency((t as any).lineBalance),
+          t.is_conciliated ? "Sim" : "Não",
         ]);
       });
 
@@ -559,12 +562,13 @@ export function UnionStatementPanel() {
         { content: formatCurrency(-group.totalDebit), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: [220, 38, 38] } },
         { content: formatCurrency(group.totalCredit), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: [22, 163, 74] } },
         { content: formatCurrency(group.endDayBalance), styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8, halign: "right", textColor: dailyBalanceColor } },
+        { content: "", styles: { fillColor: [241, 245, 249] } },
       ]);
     });
 
     autoTable(doc, {
       startY: yPos,
-      head: [["DATA", "DESCRIÇÃO", "CHQ", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO"]],
+      head: [["DATA", "DESCRIÇÃO", "CHQ", "FORNECEDOR", "DÉBITO", "CRÉDITO", "SALDO", "CONC."]],
       body: tableBody,
       theme: "grid",
       headStyles: { fillColor: [59, 130, 246], fontStyle: "bold", fontSize: 7 },
@@ -575,10 +579,11 @@ export function UnionStatementPanel() {
         0: { cellWidth: 20 },
         1: { cellWidth: "auto" },
         2: { cellWidth: 15 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 22, halign: "right", textColor: [220, 38, 38] },
-        5: { cellWidth: 22, halign: "right", textColor: [22, 163, 74] },
-        6: { cellWidth: 24, halign: "right" },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 20, halign: "right", textColor: [220, 38, 38] },
+        5: { cellWidth: 20, halign: "right", textColor: [22, 163, 74] },
+        6: { cellWidth: 22, halign: "right" },
+        7: { cellWidth: 14, halign: "center" },
       },
     });
 
@@ -998,6 +1003,7 @@ export function UnionStatementPanel() {
                        <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
                        <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
                        <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
+                       <TableHead className="font-bold w-[60px] text-center">CONC.</TableHead>
                        <TableHead className="w-[50px]"></TableHead>
                      </TableRow>
                   </TableHeader>
@@ -1020,6 +1026,17 @@ export function UnionStatementPanel() {
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency((t as any).lineBalance)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {t.is_conciliated ? (
+                                <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30" title="Conciliado">
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted" title="Não conciliado">
+                                  <X className="h-3 w-3 text-muted-foreground" />
+                                </span>
+                              )}
                             </TableCell>
                             <TableCell className="p-1">
                               <DropdownMenu>
@@ -1067,7 +1084,7 @@ export function UnionStatementPanel() {
                         ))}
                         {/* Daily subtotal */}
                         <TableRow className="bg-muted/50 border-b-2">
-                          <TableCell colSpan={8} className="font-bold text-sm py-2">
+                          <TableCell colSpan={9} className="font-bold text-sm py-2">
                             Total do dia {format(group.date, "dd/MM/yyyy")}:{" "}
                             <span className="text-red-600">Débito: {formatCurrency(-group.totalDebit)}</span>
                             {" - "}
@@ -1081,7 +1098,7 @@ export function UnionStatementPanel() {
 
                     {dailyGroups.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                           Nenhuma movimentação encontrada no período selecionado
                         </TableCell>
                       </TableRow>
