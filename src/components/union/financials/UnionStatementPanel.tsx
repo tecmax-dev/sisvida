@@ -300,23 +300,42 @@ export function UnionStatementPanel() {
     [handleCancelInitialBalanceDateEdit, handleSaveInitialBalanceDate]
   );
 
-  // Fetch transactions for the period and cash register
+  // Fetch transactions for the period and cash register (with pagination to bypass 1000-row limit)
   const { data: transactions, isLoading: loadingTransactions } = useQuery({
     queryKey: ["union-statement-transactions", clinicId, cashRegisterId, startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_financial_transactions")
-        .select("id, paid_date, due_date, description, type, amount, status, check_number, is_conciliated, supplier_id, union_suppliers(name)")
-        .eq("clinic_id", clinicId!)
-        .eq("cash_register_id", cashRegisterId)
-        .eq("status", "paid")
-        .gte("paid_date", format(startDate, "yyyy-MM-dd"))
-        .lte("paid_date", format(endDate, "yyyy-MM-dd"))
-        .order("paid_date")
-        .order("created_at");
+      const allTransactions: any[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+      const startStr = format(startDate, "yyyy-MM-dd");
+      const endStr = format(endDate, "yyyy-MM-dd");
 
-      if (error) throw error;
-      return data.map((t: any) => ({
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("union_financial_transactions")
+          .select("id, paid_date, due_date, description, type, amount, status, check_number, is_conciliated, supplier_id, union_suppliers(name)")
+          .eq("clinic_id", clinicId!)
+          .eq("cash_register_id", cashRegisterId)
+          .eq("status", "paid")
+          .gte("paid_date", startStr)
+          .lte("paid_date", endStr)
+          .order("paid_date")
+          .order("created_at")
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allTransactions.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allTransactions.map((t: any) => ({
         id: t.id,
         date: t.paid_date || t.due_date || "",
         description: t.description || "Sem descrição",
@@ -369,25 +388,41 @@ export function UnionStatementPanel() {
         }
       }
 
-      // Get paid transactions before startDate for this register
-      let query = supabase
-        .from("union_financial_transactions")
-        .select("type, amount, paid_date")
-        .eq("clinic_id", clinicId!)
-        .eq("cash_register_id", cashRegisterId)
-        .eq("status", "paid")
-        .lt("paid_date", startDateOnly);
+      // Get paid transactions before startDate for this register (paginated)
+      const allPrev: any[] = [];
+      let prevOffset = 0;
+      const prevBatch = 1000;
+      let prevHasMore = true;
 
-      if (lowerBoundDate) {
-        query = query.gt("paid_date", lowerBoundDate);
+      while (prevHasMore) {
+        let query = supabase
+          .from("union_financial_transactions")
+          .select("type, amount, paid_date")
+          .eq("clinic_id", clinicId!)
+          .eq("cash_register_id", cashRegisterId)
+          .eq("status", "paid")
+          .lt("paid_date", startDateOnly)
+          .range(prevOffset, prevOffset + prevBatch - 1);
+
+        if (lowerBoundDate) {
+          query = query.gt("paid_date", lowerBoundDate);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allPrev.push(...data);
+          prevOffset += prevBatch;
+          prevHasMore = data.length === prevBatch;
+        } else {
+          prevHasMore = false;
+        }
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
 
       // Sum (income - expense)
       let delta = 0;
-      data?.forEach((t) => {
+      allPrev.forEach((t) => {
         const amount = Number(t.amount) || 0;
         if (t.type === "income") {
           delta += amount;
