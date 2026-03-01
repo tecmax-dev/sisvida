@@ -601,7 +601,7 @@ export function UnionBatchCheckPrintDialog({
                 </div>
 
                 {/* Check list */}
-                <ScrollArea className="flex-1 min-h-0 max-h-[320px] border rounded-md">
+                <ScrollArea className="flex-1 min-h-0 border rounded-md">
                   <div className="divide-y">
                     {groupedByCheck.map(([checkNum, expenses]) => {
                       const total = expenses.reduce(
