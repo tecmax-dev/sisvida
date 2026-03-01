@@ -202,13 +202,15 @@ export function useUnionReconciliation(clinicId: string | undefined) {
   const fetchImportTransactions = async (importId: string): Promise<BankStatementTransaction[]> => {
     const { data, error } = await (supabase as any)
       .from("union_bank_statement_transactions")
-      .select(`
-        *,
-        matched_transaction:union_financial_transactions(id, description, amount, status, check_number)
-      `)
+      .select("*")
       .eq("import_id", importId)
       .order("transaction_date", { ascending: false });
-    if (error) throw error;
+
+    if (error) {
+      console.error("Erro ao buscar transações do extrato:", error);
+      throw error;
+    }
+
     return data as BankStatementTransaction[];
   };
 
