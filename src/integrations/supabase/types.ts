@@ -11218,14 +11218,7 @@ export type Database = {
             foreignKeyName: "union_bank_statement_imports_cash_register_id_fkey"
             columns: ["cash_register_id"]
             isOneToOne: false
-            referencedRelation: "cash_register_balances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "union_bank_statement_imports_cash_register_id_fkey"
-            columns: ["cash_register_id"]
-            isOneToOne: false
-            referencedRelation: "cash_registers"
+            referencedRelation: "union_cash_registers"
             referencedColumns: ["id"]
           },
           {
@@ -11300,14 +11293,7 @@ export type Database = {
             foreignKeyName: "union_bank_statement_transactions_cash_register_id_fkey"
             columns: ["cash_register_id"]
             isOneToOne: false
-            referencedRelation: "cash_register_balances"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "union_bank_statement_transactions_cash_register_id_fkey"
-            columns: ["cash_register_id"]
-            isOneToOne: false
-            referencedRelation: "cash_registers"
+            referencedRelation: "union_cash_registers"
             referencedColumns: ["id"]
           },
           {
