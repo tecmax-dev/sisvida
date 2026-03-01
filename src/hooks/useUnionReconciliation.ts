@@ -551,6 +551,48 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     },
   });
 
+  // Delete import mutation (only if no reconciled transactions)
+  const deleteImportMutation = useMutation({
+    mutationFn: async ({ importId }: { importId: string }) => {
+      // Check if any transactions are reconciled
+      const { data: reconciled, error: checkError } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .select("id")
+        .eq("import_id", importId)
+        .in("reconciliation_status", ["auto_reconciled", "manual_reconciled"])
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (reconciled && reconciled.length > 0) {
+        throw new Error("Não é possível excluir: existem transações conciliadas neste extrato.");
+      }
+
+      // Delete transactions first
+      const { error: txDelError } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .delete()
+        .eq("import_id", importId);
+
+      if (txDelError) throw txDelError;
+
+      // Delete import record
+      const { error: impDelError } = await (supabase as any)
+        .from("union_bank_statement_imports")
+        .delete()
+        .eq("id", importId);
+
+      if (impDelError) throw impDelError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
+      toast.success("Extrato excluído com sucesso!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao excluir extrato");
+    },
+  });
+
   // Unreconcile mutation
   const unreconciledMutation = useMutation({
     mutationFn: async ({
@@ -611,5 +653,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     isBatchReconciling: batchReconcileByCheckMutation.isPending,
     unreconcile: unreconciledMutation.mutateAsync,
     isUnreconciling: unreconciledMutation.isPending,
+    deleteImport: deleteImportMutation.mutateAsync,
+    isDeletingImport: deleteImportMutation.isPending,
   };
 }
