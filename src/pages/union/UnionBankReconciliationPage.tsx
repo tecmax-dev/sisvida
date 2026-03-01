@@ -39,6 +39,7 @@ export default function UnionBankReconciliationPage() {
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   const [importTransactions, setImportTransactions] = useState<BankStatementTransaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [activeTab, setActiveTab] = useState("imports");
 
   const {
     imports,
@@ -150,7 +151,7 @@ export default function UnionBankReconciliationPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="imports" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="imports">Extratos Importados</TabsTrigger>
           <TabsTrigger value="transactions" disabled={!selectedImportId}>
@@ -182,7 +183,7 @@ export default function UnionBankReconciliationPage() {
                   className={`cursor-pointer transition-colors hover:bg-muted/50 ${
                     selectedImportId === imp.id ? "ring-2 ring-primary" : ""
                   }`}
-                  onClick={() => setSelectedImportId(imp.id)}
+                  onClick={() => { setSelectedImportId(imp.id); setActiveTab("transactions"); }}
                 >
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between">
