@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionReconciliation, BankStatementTransaction } from "@/hooks/useUnionReconciliation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +38,7 @@ import {
   Building2,
   TrendingUp,
   TrendingDown,
+  Trash2,
 } from "lucide-react";
 
 export default function UnionBankReconciliationPage() {
@@ -40,6 +51,8 @@ export default function UnionBankReconciliationPage() {
   const [importTransactions, setImportTransactions] = useState<BankStatementTransaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [activeTab, setActiveTab] = useState("imports");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [importToDelete, setImportToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const {
     imports,
@@ -50,6 +63,8 @@ export default function UnionBankReconciliationPage() {
     reconcile,
     unreconcile,
     batchReconcileByCheck,
+    deleteImport,
+    isDeletingImport,
   } = useUnionReconciliation(clinicId);
 
   // Fetch cash registers
@@ -244,6 +259,20 @@ export default function UnionBankReconciliationPage() {
                             {imp.transactions_reconciled}/{imp.total_transactions} conciliadas
                           </p>
                         </div>
+                        {imp.transactions_reconciled === 0 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setImportToDelete({ id: imp.id, name: imp.file_name });
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -282,6 +311,37 @@ export default function UnionBankReconciliationPage() {
         isImporting={isImporting}
         userId={userId}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Extrato</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o extrato <strong>{importToDelete?.name}</strong>? 
+              Todas as transações importadas serão removidas. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingImport}
+              onClick={async () => {
+                if (importToDelete) {
+                  await deleteImport({ importId: importToDelete.id });
+                  if (selectedImportId === importToDelete.id) {
+                    setSelectedImportId(null);
+                    setActiveTab("imports");
+                  }
+                  setImportToDelete(null);
+                }
+              }}
+            >
+              {isDeletingImport ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
