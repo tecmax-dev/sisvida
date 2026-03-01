@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useUnionReconciliation } from "@/hooks/useUnionReconciliation";
+import { useUnionReconciliation, BankStatementTransaction } from "@/hooks/useUnionReconciliation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { UnionOFXImportDialog } from "@/components/union/financials/UnionOFXImportDialog";
 import { UnionReconciliationTable } from "@/components/union/financials/UnionReconciliationTable";
+import { UnionTransactionDetailsDialog } from "@/components/union/financials/UnionTransactionDetailsDialog";
+import { UnionManualReconcileDialog } from "@/components/union/financials/UnionManualReconcileDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -51,6 +53,10 @@ export default function UnionBankReconciliationPage() {
   const [activeTab, setActiveTab] = useState("imports");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importToDelete, setImportToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [detailsTx, setDetailsTx] = useState<BankStatementTransaction | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [reconcileTx, setReconcileTx] = useState<BankStatementTransaction | null>(null);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   const {
     imports,
@@ -59,7 +65,9 @@ export default function UnionBankReconciliationPage() {
     isImporting,
     fetchImportTransactions,
     reconcile,
+    isReconciling,
     unreconcile,
+    pendingExpenses,
     batchReconcileByCheck,
     deleteImport,
     isDeletingImport,
@@ -283,14 +291,16 @@ export default function UnionBankReconciliationPage() {
             <UnionReconciliationTable
               transactions={selectedImportTransactions}
               onManualReconcile={(txId) => {
-                // TODO: Open manual reconcile dialog
-                console.log("Manual reconcile:", txId);
+                const tx = selectedImportTransactions.find((t) => t.id === txId) || null;
+                setReconcileTx(tx);
+                setReconcileOpen(true);
               }}
               onUnreconcile={(txId) => {
                 unreconcile({ transactionId: txId, reason: "Removido manualmente", userId });
               }}
               onViewDetails={(tx) => {
-                console.log("View details:", tx);
+                setDetailsTx(tx);
+                setDetailsOpen(true);
               }}
             />
           )}
@@ -336,6 +346,29 @@ export default function UnionBankReconciliationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UnionTransactionDetailsDialog
+        transaction={detailsTx}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+
+      <UnionManualReconcileDialog
+        open={reconcileOpen}
+        onOpenChange={setReconcileOpen}
+        statementTransaction={reconcileTx}
+        pendingExpenses={pendingExpenses || []}
+        onReconcile={async (stmtId, finId, notes) => {
+          await reconcile({
+            statementTransactionId: stmtId,
+            financialTransactionId: finId,
+            userId,
+            notes,
+          });
+          setReconcileOpen(false);
+        }}
+        isReconciling={isReconciling}
+      />
     </div>
   );
 }
