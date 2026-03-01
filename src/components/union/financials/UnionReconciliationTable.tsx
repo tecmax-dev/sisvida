@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +34,7 @@ import {
   Eye,
   Search,
   CheckCheck,
+  FileText,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,6 +46,8 @@ interface UnionReconciliationTableProps {
   onUnreconcile: (txId: string) => void;
   onViewDetails: (tx: BankStatementTransaction) => void;
   onMarkVerified?: (statementTxId: string) => void;
+  onGenerateEntry?: (tx: BankStatementTransaction) => void;
+  onBatchGenerateEntry?: (txs: BankStatementTransaction[]) => void;
 }
 
 export function UnionReconciliationTable({
@@ -52,8 +56,11 @@ export function UnionReconciliationTable({
   onUnreconcile,
   onViewDetails,
   onMarkVerified,
+  onGenerateEntry,
+  onBatchGenerateEntry,
 }: UnionReconciliationTableProps) {
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -111,6 +118,18 @@ export function UnionReconciliationTable({
     );
   });
 
+  // Only unreconciled, non-generated transactions can be selected for batch
+  const selectableTransactions = useMemo(() => {
+    return filteredTransactions.filter(
+      (tx) =>
+        !tx.matched_transaction_id &&
+        tx.reconciliation_status !== "auto_reconciled" &&
+        tx.reconciliation_status !== "manual_reconciled" &&
+        tx.reconciliation_status !== "ignored" &&
+        !(tx as any).generated_transaction_id
+    );
+  }, [filteredTransactions]);
+
   const stats = {
     total: transactions.length,
     autoReconciled: transactions.filter((t) => t.reconciliation_status === "auto_reconciled").length,
@@ -118,6 +137,38 @@ export function UnionReconciliationTable({
     pendingReview: transactions.filter((t) => t.reconciliation_status === "pending_review").length,
     notIdentified: transactions.filter((t) => t.reconciliation_status === "not_identified").length,
   };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === selectableTransactions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableTransactions.map((t) => t.id)));
+    }
+  };
+
+  const selectedTransactions = useMemo(
+    () => transactions.filter((t) => selectedIds.has(t.id)),
+    [transactions, selectedIds]
+  );
+
+  const isSelectable = (tx: BankStatementTransaction) =>
+    !tx.matched_transaction_id &&
+    tx.reconciliation_status !== "auto_reconciled" &&
+    tx.reconciliation_status !== "manual_reconciled" &&
+    tx.reconciliation_status !== "ignored" &&
+    !(tx as any).generated_transaction_id;
+
+  const canGenerateEntry = (tx: BankStatementTransaction) =>
+    isSelectable(tx) && !(tx as any).generated_transaction_id;
 
   return (
     <div className="space-y-4">
@@ -147,15 +198,26 @@ export function UnionReconciliationTable({
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por descrição, cheque..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + Batch Actions */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por descrição, cheque..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {selectedIds.size > 0 && onBatchGenerateEntry && (
+          <Button
+            size="sm"
+            onClick={() => onBatchGenerateEntry(selectedTransactions)}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Gerar {selectedIds.size} Lançamento(s)
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -163,6 +225,15 @@ export function UnionReconciliationTable({
         <Table>
           <TableHeader>
             <TableRow>
+              {onBatchGenerateEntry && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={selectableTransactions.length > 0 && selectedIds.size === selectableTransactions.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
+              )}
               <TableHead>Data</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead>Nº Cheque</TableHead>
@@ -175,7 +246,7 @@ export function UnionReconciliationTable({
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={onBatchGenerateEntry ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   Nenhuma transação encontrada
                 </TableCell>
               </TableRow>
@@ -194,6 +265,17 @@ export function UnionReconciliationTable({
                       : ""
                   }
                 >
+                  {onBatchGenerateEntry && (
+                    <TableCell>
+                      {isSelectable(tx) ? (
+                        <Checkbox
+                          checked={selectedIds.has(tx.id)}
+                          onCheckedChange={() => toggleSelect(tx.id)}
+                          aria-label="Selecionar"
+                        />
+                      ) : null}
+                    </TableCell>
+                  )}
                   <TableCell>
                     {format(parseISO(tx.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
                   </TableCell>
@@ -230,6 +312,11 @@ export function UnionReconciliationTable({
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                    ) : (tx as any).generated_transaction_id ? (
+                      <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/20">
+                        <FileText className="h-3 w-3 mr-1" />
+                        Lançamento Gerado
+                      </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -254,6 +341,12 @@ export function UnionReconciliationTable({
                           <Eye className="h-4 w-4 mr-2" />
                           Ver Detalhes
                         </DropdownMenuItem>
+                        {canGenerateEntry(tx) && onGenerateEntry && (
+                          <DropdownMenuItem onClick={() => onGenerateEntry(tx)}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Gerar Lançamento
+                          </DropdownMenuItem>
+                        )}
                         {!tx.matched_transaction_id &&
                           tx.reconciliation_status !== "ignored" &&
                           tx.reconciliation_status !== "manual_reconciled" && (

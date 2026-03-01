@@ -11234,12 +11234,14 @@ export type Database = {
         Row: {
           amount: number
           cash_register_id: string
+          category_id: string | null
           check_number: string | null
           clinic_id: string
           created_at: string
           description: string | null
           document_number: string | null
           fitid: string | null
+          generated_transaction_id: string | null
           id: string
           import_id: string
           matched_transaction_id: string | null
@@ -11247,18 +11249,21 @@ export type Database = {
           reconciled_by: string | null
           reconciliation_notes: string | null
           reconciliation_status: string
+          supplier_id: string | null
           transaction_date: string
           transaction_type: string
         }
         Insert: {
           amount: number
           cash_register_id: string
+          category_id?: string | null
           check_number?: string | null
           clinic_id: string
           created_at?: string
           description?: string | null
           document_number?: string | null
           fitid?: string | null
+          generated_transaction_id?: string | null
           id?: string
           import_id: string
           matched_transaction_id?: string | null
@@ -11266,18 +11271,21 @@ export type Database = {
           reconciled_by?: string | null
           reconciliation_notes?: string | null
           reconciliation_status?: string
+          supplier_id?: string | null
           transaction_date: string
           transaction_type: string
         }
         Update: {
           amount?: number
           cash_register_id?: string
+          category_id?: string | null
           check_number?: string | null
           clinic_id?: string
           created_at?: string
           description?: string | null
           document_number?: string | null
           fitid?: string | null
+          generated_transaction_id?: string | null
           id?: string
           import_id?: string
           matched_transaction_id?: string | null
@@ -11285,6 +11293,7 @@ export type Database = {
           reconciled_by?: string | null
           reconciliation_notes?: string | null
           reconciliation_status?: string
+          supplier_id?: string | null
           transaction_date?: string
           transaction_type?: string
         }
@@ -11297,6 +11306,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "union_bank_statement_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "union_bank_statement_transactions_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
@@ -11304,10 +11320,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "union_bank_statement_transactions_generated_transaction_id_fkey"
+            columns: ["generated_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "union_bank_statement_transactions_import_id_fkey"
             columns: ["import_id"]
             isOneToOne: false
             referencedRelation: "union_bank_statement_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_bank_statement_transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "union_suppliers"
             referencedColumns: ["id"]
           },
         ]
