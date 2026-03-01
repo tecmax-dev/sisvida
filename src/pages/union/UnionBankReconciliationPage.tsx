@@ -351,6 +351,11 @@ export default function UnionBankReconciliationPage() {
         onOpenChange={setReconcileOpen}
         statementTransaction={reconcileTx}
         pendingExpenses={pendingExpenses || []}
+        cashRegisterName={
+          reconcileTx
+            ? cashRegisters?.find((cr) => cr.id === reconcileTx.cash_register_id)?.name
+            : undefined
+        }
         onReconcile={async (stmtId, finIds, notes) => {
           await reconcile({
             statementTransactionId: stmtId,

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Link2, CheckCircle2, AlertTriangle, Hash } from "lucide-react";
+import { Search, Link2, CheckCircle2, AlertTriangle, Hash, Building2, Info } from "lucide-react";
 import { BankStatementTransaction, normalizeCheckNumber } from "@/hooks/useUnionReconciliation";
 
 interface PendingExpense {
@@ -22,6 +22,7 @@ interface PendingExpense {
   check_number: string | null;
   due_date: string;
   paid_date: string | null;
+  cash_register_id?: string | null;
 }
 
 interface Props {
@@ -31,6 +32,7 @@ interface Props {
   pendingExpenses: PendingExpense[];
   onReconcile: (statementTxId: string, financialTxIds: string[], notes?: string) => void;
   isReconciling?: boolean;
+  cashRegisterName?: string;
 }
 
 const formatCurrency = (value: number) =>
@@ -43,19 +45,27 @@ export function UnionManualReconcileDialog({
   pendingExpenses,
   onReconcile,
   isReconciling,
+  cashRegisterName,
 }: Props) {
   const [search, setSearch] = useState("");
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
 
   const statementCheckNorm = normalizeCheckNumber(statementTransaction?.check_number);
+  const statementCashRegisterId = statementTransaction?.cash_register_id;
+
+  // Filter expenses to only those belonging to the same cash register (portador)
+  const carrierFilteredExpenses = useMemo(() => {
+    if (!statementCashRegisterId) return pendingExpenses;
+    return pendingExpenses.filter((e) => e.cash_register_id === statementCashRegisterId);
+  }, [pendingExpenses, statementCashRegisterId]);
 
   // Auto-select expenses matching the statement check number when dialog opens
   useEffect(() => {
     if (!open || !statementTransaction) return;
 
     if (statementCheckNorm) {
-      const matchingIds = pendingExpenses
+      const matchingIds = carrierFilteredExpenses
         .filter((e) => normalizeCheckNumber(e.check_number) === statementCheckNorm)
         .map((e) => e.id);
       setSelectedExpenseIds(matchingIds);
@@ -67,15 +77,15 @@ export function UnionManualReconcileDialog({
     setNotes("");
   }, [open, statementTransaction?.id]);
 
-  // Group expenses by check number for display
+  // Filter by search text
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
-    return pendingExpenses.filter(
+    return carrierFilteredExpenses.filter(
       (e) =>
         e.description?.toLowerCase().includes(s) ||
         e.check_number?.includes(search)
     );
-  }, [pendingExpenses, search]);
+  }, [carrierFilteredExpenses, search]);
 
   // Sort: matching check numbers first
   const sorted = useMemo(() => {
@@ -88,10 +98,10 @@ export function UnionManualReconcileDialog({
   }, [filtered, statementCheckNorm]);
 
   const selectedTotal = useMemo(() => {
-    return pendingExpenses
+    return carrierFilteredExpenses
       .filter((e) => selectedExpenseIds.includes(e.id))
       .reduce((sum, e) => sum + e.amount, 0);
-  }, [pendingExpenses, selectedExpenseIds]);
+  }, [carrierFilteredExpenses, selectedExpenseIds]);
 
   const statementAmount = statementTransaction?.amount ?? 0;
   const difference = Math.abs(selectedTotal - statementAmount);
@@ -130,8 +140,18 @@ export function UnionManualReconcileDialog({
           <DialogTitle>Vincular Despesa(s)</DialogTitle>
         </DialogHeader>
 
+        {/* Carrier context banner */}
+        {cashRegisterName && (
+          <div className="flex items-center gap-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-2 text-sm">
+            <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
+            <span>
+              Portador: <strong>{cashRegisterName}</strong> — somente despesas deste portador são exibidas
+            </span>
+          </div>
+        )}
+
         {/* Statement transaction info */}
-        <div className="bg-muted/50 rounded-md p-3 text-sm mb-2">
+        <div className="bg-muted/50 rounded-md p-3 text-sm">
           <p className="font-medium">{statementTransaction.description || "Sem descrição"}</p>
           <div className="flex items-center gap-3 mt-1 text-muted-foreground">
             <span className="text-rose-600 font-medium">
@@ -183,6 +203,12 @@ export function UnionManualReconcileDialog({
           </div>
         </div>
 
+        {/* Carrier expense count */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Info className="h-3.5 w-3.5" />
+          <span>{carrierFilteredExpenses.length} despesa(s) disponíveis neste portador</span>
+        </div>
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -198,7 +224,9 @@ export function UnionManualReconcileDialog({
         <ScrollArea className="h-[250px] border rounded-md">
           {sorted.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground text-sm">
-              Nenhuma despesa pendente encontrada
+              {carrierFilteredExpenses.length === 0
+                ? "Nenhuma despesa pendente encontrada para este portador"
+                : "Nenhuma despesa encontrada com os filtros aplicados"}
             </div>
           ) : (
             <div className="divide-y">
@@ -227,6 +255,9 @@ export function UnionManualReconcileDialog({
                             {exp.check_number}
                           </Badge>
                         )}
+                        <Badge variant="outline" className="text-xs">
+                          {exp.status === "paid" ? "Pago" : "Pendente"}
+                        </Badge>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-2">
