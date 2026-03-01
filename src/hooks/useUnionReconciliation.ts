@@ -233,6 +233,25 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     enabled: !!clinicId,
   });
 
+  // Fetch pending (unreconciled) income for matching credits
+  const { data: pendingIncomes } = useQuery({
+    queryKey: ["union-pending-incomes-reconciliation", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_financial_transactions")
+        .select("id, description, amount, status, check_number, payment_method, due_date, paid_date, cash_register_id, type")
+        .eq("clinic_id", clinicId!)
+        .eq("type", "income")
+        .eq("is_conciliated", false)
+        .in("status", ["paid", "pending"])
+        .order("due_date", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clinicId,
+  });
+
   // Import OFX file
   const importOFXMutation = useMutation({
     mutationFn: async ({
@@ -451,7 +470,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         (e) => e.cash_register_id !== stmtTx.cash_register_id
       );
       if (mismatch) {
-        throw new Error("Não é permitido conciliar despesas de outro portador.");
+        throw new Error("Não é permitido conciliar lançamentos de outro portador.");
       }
 
       // Update statement transaction — store first matched id for backward compat
@@ -518,6 +537,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
@@ -643,6 +663,73 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     },
   });
 
+  // Mark statement transaction as verified (without linking to a financial transaction)
+  const markVerifiedMutation = useMutation({
+    mutationFn: async ({
+      statementTransactionId,
+      userId,
+      notes,
+    }: {
+      statementTransactionId: string;
+      userId: string;
+      notes?: string;
+    }) => {
+      const { error } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .update({
+          reconciliation_status: "manual_reconciled",
+          reconciled_by: userId,
+          reconciled_at: new Date().toISOString(),
+          reconciliation_notes: notes || "Marcado como conferido manualmente",
+        })
+        .eq("id", statementTransactionId);
+
+      if (error) throw error;
+
+      // Recalculate transactions_reconciled for the import
+      const { data: stmtRow } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .select("import_id")
+        .eq("id", statementTransactionId)
+        .single();
+
+      if (stmtRow?.import_id) {
+        const { count } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("import_id", stmtRow.import_id)
+          .in("reconciliation_status", ["auto_reconciled", "manual_reconciled"]);
+
+        await (supabase as any)
+          .from("union_bank_statement_imports")
+          .update({ transactions_reconciled: count || 0 })
+          .eq("id", stmtRow.import_id);
+      }
+
+      // Log audit
+      await (supabase as any).rpc("log_reconciliation_action", {
+        p_clinic_id: clinicId,
+        p_transaction_id: null,
+        p_statement_transaction_id: statementTransactionId,
+        p_action: "mark_verified",
+        p_origin: "user",
+        p_previous_status: "pending",
+        p_new_status: "reconciled",
+        p_details: { notes },
+        p_performed_by: userId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
+      queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
+      toast.success("Transação marcada como conferida!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao marcar como conferida");
+    },
+  });
+
   // Unreconcile mutation
   const unreconciledMutation = useMutation({
     mutationFn: async ({
@@ -682,6 +769,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       toast.success("Conciliação removida!");
     },
@@ -695,6 +783,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     loadingImports,
     refetchImports,
     pendingExpenses,
+    pendingIncomes,
     fetchImportTransactions,
     importOFX: importOFXMutation.mutateAsync,
     isImporting: importOFXMutation.isPending,
@@ -704,6 +793,8 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     isBatchReconciling: batchReconcileByCheckMutation.isPending,
     unreconcile: unreconciledMutation.mutateAsync,
     isUnreconciling: unreconciledMutation.isPending,
+    markVerified: markVerifiedMutation.mutateAsync,
+    isMarkingVerified: markVerifiedMutation.isPending,
     deleteImport: deleteImportMutation.mutateAsync,
     isDeletingImport: deleteImportMutation.isPending,
   };

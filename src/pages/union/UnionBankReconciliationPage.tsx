@@ -61,7 +61,9 @@ export default function UnionBankReconciliationPage() {
     isReconciling,
     unreconcile,
     pendingExpenses,
-    
+    pendingIncomes,
+    markVerified,
+    isMarkingVerified,
     deleteImport,
     isDeletingImport,
   } = useUnionReconciliation(clinicId);
@@ -295,6 +297,9 @@ export default function UnionBankReconciliationPage() {
                 setDetailsTx(tx);
                 setDetailsOpen(true);
               }}
+              onMarkVerified={(txId) => {
+                markVerified({ statementTransactionId: txId, userId });
+              }}
             />
           )}
         </TabsContent>
@@ -350,7 +355,11 @@ export default function UnionBankReconciliationPage() {
         open={reconcileOpen}
         onOpenChange={setReconcileOpen}
         statementTransaction={reconcileTx}
-        pendingExpenses={pendingExpenses || []}
+        pendingExpenses={
+          reconcileTx?.transaction_type === "credit"
+            ? (pendingIncomes || [])
+            : (pendingExpenses || [])
+        }
         cashRegisterName={
           reconcileTx
             ? cashRegisters?.find((cr) => cr.id === reconcileTx.cash_register_id)?.name
