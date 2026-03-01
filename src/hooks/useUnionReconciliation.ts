@@ -431,6 +431,29 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       userId: string;
       notes?: string;
     }) => {
+      // --- Backend validation: ensure all expenses belong to the same cash register as the statement tx ---
+      const { data: stmtTx, error: stmtFetchError } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .select("cash_register_id")
+        .eq("id", statementTransactionId)
+        .single();
+
+      if (stmtFetchError) throw stmtFetchError;
+
+      const { data: expenseRows, error: expFetchError } = await supabase
+        .from("union_financial_transactions")
+        .select("id, cash_register_id")
+        .in("id", financialTransactionIds);
+
+      if (expFetchError) throw expFetchError;
+
+      const mismatch = (expenseRows || []).find(
+        (e) => e.cash_register_id !== stmtTx.cash_register_id
+      );
+      if (mismatch) {
+        throw new Error("Não é permitido conciliar despesas de outro portador.");
+      }
+
       // Update statement transaction — store first matched id for backward compat
       const { error: stmtError } = await (supabase as any)
         .from("union_bank_statement_transactions")
@@ -471,6 +494,26 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         p_details: { notes, financial_transaction_ids: financialTransactionIds, count: financialTransactionIds.length },
         p_performed_by: userId,
       });
+
+      // Recalculate transactions_reconciled for the import
+      const { data: stmtRow } = await (supabase as any)
+        .from("union_bank_statement_transactions")
+        .select("import_id")
+        .eq("id", statementTransactionId)
+        .single();
+
+      if (stmtRow?.import_id) {
+        const { count } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("import_id", stmtRow.import_id)
+          .in("reconciliation_status", ["auto_reconciled", "manual_reconciled"]);
+
+        await (supabase as any)
+          .from("union_bank_statement_imports")
+          .update({ transactions_reconciled: count || 0 })
+          .eq("id", stmtRow.import_id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
