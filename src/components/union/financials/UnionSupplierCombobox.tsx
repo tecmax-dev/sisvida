@@ -58,18 +58,36 @@ export function UnionSupplierCombobox({
     }
     setOpen(isOpen);
   };
+  // Fetch ALL suppliers with pagination to bypass 1000-row limit
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ["union-suppliers", clinicId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_suppliers")
-        .select("id, name, cnpj, email, phone")
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("name");
+      const allSuppliers: Supplier[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      return data as Supplier[];
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("union_suppliers")
+          .select("id, name, cnpj, email, phone")
+          .eq("clinic_id", clinicId)
+          .eq("is_active", true)
+          .order("name")
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allSuppliers.push(...(data as Supplier[]));
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allSuppliers;
     },
     enabled: !!clinicId,
   });
@@ -78,14 +96,24 @@ export function UnionSupplierCombobox({
     if (!suppliers) return [];
     if (!search) return suppliers;
 
-    const searchLower = search.toLowerCase();
+    const searchLower = search.toLowerCase().trim();
     const searchDigits = search.replace(/\D/g, "");
-    return suppliers.filter(
-      (supplier) =>
-        supplier.name.toLowerCase().includes(searchLower) ||
-        (supplier.cnpj && supplier.cnpj.replace(/\D/g, "").includes(searchDigits)) ||
-        (supplier.cnpj && supplier.cnpj.includes(search))
-    );
+
+    return suppliers.filter((supplier) => {
+      // Match by name (case-insensitive, partial)
+      if (supplier.name.toLowerCase().includes(searchLower)) return true;
+      
+      // Match by CNPJ (digits only, partial)
+      if (searchDigits.length >= 3 && supplier.cnpj) {
+        const cnpjDigits = supplier.cnpj.replace(/\D/g, "");
+        if (cnpjDigits.includes(searchDigits)) return true;
+      }
+
+      // Match by formatted CNPJ
+      if (supplier.cnpj && supplier.cnpj.includes(search)) return true;
+
+      return false;
+    });
   }, [suppliers, search]);
 
   const selectedSupplier = suppliers?.find((s) => s.id === value);
