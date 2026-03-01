@@ -1,93 +1,75 @@
 
-# Plano: Criar Pasta "Contra cheques" para Todos os Sócios
+Objetivo
+Corrigir o motivo pelo qual lançamentos conciliados via OFX não aparecem em “Movimentação e Saldo > Extrato detalhado por portador” quando o OFX foi importado em um portador específico (ex.: “Conta Teste”).
 
-## Resumo
+Diagnóstico confirmado
+1) O extrato detalhado lista somente lançamentos da tabela financeira do portador selecionado e com status “paid”.
+2) Na conciliação manual atual, a lista de despesas pendentes não está restrita ao mesmo portador do lançamento OFX.
+3) Resultado prático: a conciliação foi feita no OFX da “Conta Teste”, mas 38 vínculos foram gravados em despesas de outro portador (“Fluxo Sicoob”).  
+4) Para “Conta Teste”, existe apenas 1 despesa conciliada e ainda com status “pending”; por isso ela também não entra no extrato detalhado (que filtra “paid”).
 
-Criar automaticamente a pasta **"Contra cheques"** na aba de anexos para todos os 5.586 sócios do sindicato que ainda não a possuem.
+Plano de implementação
+1) Blindar conciliação manual por portador (correção principal)
+- Arquivo: src/components/union/financials/UnionManualReconcileDialog.tsx
+- Ajustes:
+  - Filtrar a lista de despesas para exibir apenas itens com cash_register_id igual ao cash_register_id do lançamento do extrato.
+  - Aplicar esse filtro também na pré-seleção automática por número de cheque.
+  - Exibir no topo do diálogo um aviso do portador do extrato para deixar explícito o contexto da conciliação.
+- Resultado esperado:
+  - Não será mais possível vincular OFX de um portador com despesa de outro portador.
 
-## Situação Atual
+2) Criar validação de segurança no backend da própria mutation (defesa em profundidade)
+- Arquivo: src/hooks/useUnionReconciliation.ts
+- Ajustes:
+  - Antes de confirmar reconcile, buscar os financialTransactionIds selecionados e validar:
+    - todos pertencem à mesma clinic_id;
+    - todos possuem cash_register_id igual ao da statement transaction.
+  - Se houver divergência, abortar com erro claro (“Não é permitido conciliar despesas de outro portador”).
+- Resultado esperado:
+  - Mesmo que a UI falhe no futuro, o vínculo cruzado entre portadores fica bloqueado.
 
-| Status | Quantidade |
-|--------|-----------|
-| Total de sócios ativos | 5.589 |
-| Já possuem a pasta | 3 |
-| Precisam da pasta | 5.586 |
+3) Corrigir dados já conciliados incorretamente (seu caso atual)
+- Ação de dados (sem alterar schema):
+  - Identificar transações conciliadas do import da “Conta Teste” cujo matched_transaction_id aponta para despesa de outro portador.
+  - Para esses casos:
+    - remover conciliação da despesa financeira (is_conciliated=false, conciliated_at/by=null);
+    - voltar o lançamento OFX para pending_review (ou status equivalente de revisão);
+    - limpar matched_transaction_id/reconciled_at/reconciled_by para permitir reconciliação correta.
+- Resultado esperado:
+  - Você poderá reconciliar novamente, agora apenas com despesas da “Conta Teste”, e o extrato detalhado passará a refletir corretamente quando o status for “paid”.
 
-## Abordagem
+4) Melhorar feedback no fluxo para evitar nova confusão
+- Arquivos:
+  - src/components/union/financials/UnionManualReconcileDialog.tsx
+  - src/pages/union/UnionBankReconciliationPage.tsx (se necessário para mensagens)
+- Ajustes:
+  - Mostrar contagem “X despesas deste portador disponíveis”.
+  - Mensagem quando não houver despesas do portador para vincular.
+  - Se encontrar apenas despesas pending, orientar que “Movimentação e Saldo” mostra somente status pago.
 
-Existem duas estratégias possíveis:
+5) Tratar consistência de indicadores pós-conciliação
+- Arquivo: src/hooks/useUnionReconciliation.ts
+- Ajustes:
+  - Recalcular/atualizar transactions_reconciled no import após conciliar/desconciliar, para o card do OFX não ficar “0 conciliadas” quando já houve conciliações manuais.
+- Resultado esperado:
+  - Indicadores da tela de conciliação ficam alinhados com o estado real.
 
-### Opção A: Criação Automática no Frontend (Recomendada)
-Quando o usuário acessar a aba "Anexos" de um sócio, verificar se a pasta "Contra cheques" já existe. Se não existir, criar automaticamente.
+Validação (aceite)
+1) Reconciliar novamente no OFX da “Conta Teste” escolhendo apenas despesas desse portador.
+2) Marcar essas despesas como “paid” (se estiverem pendentes).
+3) Abrir “Movimentação e Saldo”, selecionar “Conta Teste” e período correto.
+4) Confirmar presença das transações na grade e no PDF.
+5) Testar cenário negativo: tentar vincular despesa de outro portador e validar bloqueio.
 
-**Vantagens:**
-- Não sobrecarrega o banco de dados criando milhares de pastas de uma vez
-- As pastas são criadas sob demanda
-- Código simples e fácil de manter
+Sequelas técnicas e risco
+- Risco baixo de regressão visual (mudança concentrada no diálogo e na mutation).
+- Risco médio em dados históricos se o reparo for aplicado de forma ampla; por isso farei o reparo de dados com filtro estrito por import/portador afetado.
 
-**Desvantagens:**
-- A pasta só aparece quando alguém acessar a aba de anexos
+Arquivos previstos para alteração
+- src/components/union/financials/UnionManualReconcileDialog.tsx
+- src/hooks/useUnionReconciliation.ts
+- (opcional de UX) src/pages/union/UnionBankReconciliationPage.tsx
 
-### Opção B: Script SQL em Massa
-Executar um script SQL que cria a pasta para todos os sócios que não a possuem.
-
-**Vantagens:**
-- Criação imediata para todos
-
-**Desvantagens:**
-- Insere ~5.586 registros de uma vez
-- Precisa de um `created_by` (usuário) válido
-
----
-
-## Plano de Implementação (Opção A - Recomendada)
-
-### Etapa 1: Modificar `UnionMemberAttachmentsTab.tsx`
-
-Adicionar lógica para garantir que a pasta "Contra cheques" exista quando a aba for carregada:
-
-```text
-1. Após fetchFolders() completar
-2. Verificar se existe pasta com nome "Contra cheques"  
-3. Se não existir, chamar createFolder("Contra cheques")
-4. Atualizar a lista de pastas
-```
-
-### Etapa 2: Testes
-
-- Acessar um sócio que não tenha a pasta
-- Verificar se a pasta é criada automaticamente
-- Confirmar que não duplica caso já exista
-
----
-
-## Detalhes Técnicos
-
-### Arquivo a ser modificado
-- `src/components/union/members/UnionMemberAttachmentsTab.tsx`
-
-### Lógica de criação automática
-
-```typescript
-useEffect(() => {
-  const ensureContraChequesFolder = async () => {
-    if (!folders.length) return;
-    
-    const hasFolder = folders.some(
-      f => f.name.toLowerCase().includes('contra') && 
-           f.name.toLowerCase().includes('cheque')
-    );
-    
-    if (!hasFolder) {
-      await createFolder("Contra cheques");
-    }
-  };
-  
-  ensureContraChequesFolder();
-}, [folders]);
-```
-
-### Considerações
-- A verificação usa `includes` para cobrir variações como "Contracheques" e "Contra cheques"
-- Um flag evita múltiplas tentativas de criação
-- A pasta é criada silenciosamente (sem toast de sucesso para não confundir o usuário)
+Observação técnica importante
+- O extrato detalhado por natureza contábil usa apenas lançamentos “paid”.  
+- Portanto, após corrigir o vínculo por portador, qualquer item ainda “pending” continuará fora do extrato até ser baixado/pago.
