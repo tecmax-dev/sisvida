@@ -87,23 +87,45 @@ export default function UnionExpensesPage() {
   const clinicId = currentClinic?.id;
 
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["union-financial-transactions", clinicId, "expense"],
+    queryKey: ["union-financial-transactions", clinicId, "expense", startDateFilter, endDateFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_financial_transactions")
-        .select(`
-          *,
-          category:union_financial_categories(id, name, color),
-          supplier:union_suppliers(id, name),
-          cash_register:union_cash_registers(id, name)
-        `)
-        .eq("clinic_id", clinicId!)
-        .eq("type", "expense")
-        .order("due_date", { ascending: false })
-        .limit(500);
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      if (error) throw error;
-      return data;
+      while (hasMore) {
+        let query = supabase
+          .from("union_financial_transactions")
+          .select(`
+            *,
+            category:union_financial_categories(id, name, color),
+            supplier:union_suppliers(id, name),
+            cash_register:union_cash_registers(id, name)
+          `)
+          .eq("clinic_id", clinicId!)
+          .eq("type", "expense")
+          .order("due_date", { ascending: false });
+
+        // Apply date filters server-side
+        if (startDateFilter) {
+          query = query.gte("due_date", startDateFilter);
+        }
+        if (endDateFilter) {
+          query = query.lte("due_date", endDateFilter);
+        }
+
+        query = query.range(from, from + PAGE_SIZE - 1);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        allData = allData.concat(data || []);
+        hasMore = (data?.length || 0) === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+
+      return allData;
     },
     enabled: !!clinicId,
   });
@@ -195,14 +217,8 @@ export default function UnionExpensesPage() {
       const matchesCheckNumber =
         !checkNumberFilter || normalize(t.check_number).includes(normalize(checkNumberFilter));
 
-      // Date range filter
-      let matchesDateRange = true;
-      if (startDateFilter && t.due_date) {
-        matchesDateRange = t.due_date >= startDateFilter;
-      }
-      if (endDateFilter && t.due_date) {
-        matchesDateRange = matchesDateRange && t.due_date <= endDateFilter;
-      }
+      // Date range filter is now applied server-side
+      const matchesDateRange = true;
 
       return (
         matchesSearch &&
