@@ -760,36 +760,48 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         const generatedId = stmtTx.generated_transaction_id;
         const matchedId = stmtTx.matched_transaction_id;
 
-        // If a financial transaction was generated from OFX, delete it and reverse balance
+        // If a financial transaction was generated from OFX, find ALL generated txs (split support)
         if (generatedId) {
-          // Reverse balance change
-          const balanceChange = stmtTx.transaction_type === "credit" ? -stmtTx.amount : stmtTx.amount;
-          const { data: register } = await supabase
-            .from("union_cash_registers")
-            .select("current_balance")
-            .eq("id", stmtTx.cash_register_id)
-            .single();
+          // Find all financial transactions generated from this statement tx (split entries)
+          const { data: allGenerated } = await (supabase as any)
+            .from("union_financial_transactions")
+            .select("id, amount, type")
+            .eq("source_statement_tx_id", stmtId);
 
-          if (register) {
-            await supabase
+          // If split entries found, delete all of them; otherwise fallback to single generated ID
+          const txsToDelete = (allGenerated && allGenerated.length > 0)
+            ? allGenerated
+            : [{ id: generatedId, amount: stmtTx.amount, type: stmtTx.transaction_type === "credit" ? "income" : "expense" }];
+
+          for (const genTx of txsToDelete) {
+            // Reverse balance change per entry
+            const balanceChange = genTx.type === "income" ? -genTx.amount : genTx.amount;
+            const { data: register } = await supabase
               .from("union_cash_registers")
-              .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
-              .eq("id", stmtTx.cash_register_id);
+              .select("current_balance")
+              .eq("id", stmtTx.cash_register_id)
+              .single();
+
+            if (register) {
+              await supabase
+                .from("union_cash_registers")
+                .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
+                .eq("id", stmtTx.cash_register_id);
+            }
+
+            // Cancel then delete (trigger blocks deleting paid txs)
+            await supabase
+              .from("union_financial_transactions")
+              .update({ status: "cancelled" as any })
+              .eq("id", genTx.id);
+
+            await supabase
+              .from("union_financial_transactions")
+              .delete()
+              .eq("id", genTx.id);
+
+            deletedFinCount++;
           }
-
-          // First update status to allow deletion (trigger blocks deleting paid txs)
-          await supabase
-            .from("union_financial_transactions")
-            .update({ status: "cancelled" as any })
-            .eq("id", generatedId);
-
-          // Delete the generated financial transaction (it was auto-created, safe to remove)
-          await supabase
-            .from("union_financial_transactions")
-            .delete()
-            .eq("id", generatedId);
-
-          deletedFinCount++;
         } else if (matchedId) {
           // If matched to an existing financial transaction, just un-flag it
           await supabase
@@ -874,6 +886,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
   });
 
   // Generate financial entries from OFX statement transactions
+  // Supports split mode: multiple entries sharing the same statementTransactionId
   const generateEntryMutation = useMutation({
     mutationFn: async ({
       entries,
@@ -884,65 +897,80 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     }) => {
       const results: string[] = [];
 
+      // Group entries by statementTransactionId to detect split mode
+      const groupedByStmt = new Map<string, GenerateEntryParams[]>();
       for (const entry of entries) {
-        // Create financial transaction
-        const { data: finTx, error: finError } = await supabase
-          .from("union_financial_transactions")
-          .insert({
-            clinic_id: clinicId!,
-            type: entry.type,
-            description: entry.description,
-            amount: entry.amount,
-            cash_register_id: entry.cashRegisterId,
-            status: "paid",
-            paid_date: entry.transactionDate,
-            due_date: entry.transactionDate,
-            payment_method: "other",
-            supplier_id: entry.supplierId,
-            category_id: entry.categoryId,
-            is_conciliated: true,
-            conciliated_at: new Date().toISOString(),
-            conciliated_by: userId,
-            notes: entry.notes || "Gerado a partir do OFX",
-          })
-          .select("id")
-          .single();
+        const existing = groupedByStmt.get(entry.statementTransactionId) || [];
+        existing.push(entry);
+        groupedByStmt.set(entry.statementTransactionId, existing);
+      }
 
-        if (finError) throw finError;
+      for (const [stmtTxId, stmtEntries] of groupedByStmt) {
+        const generatedIds: string[] = [];
 
-        // Link statement transaction to the generated financial transaction
+        for (const entry of stmtEntries) {
+          // Create financial transaction with source_statement_tx_id for tracking
+          const { data: finTx, error: finError } = await supabase
+            .from("union_financial_transactions")
+            .insert({
+              clinic_id: clinicId!,
+              type: entry.type,
+              description: entry.description,
+              amount: entry.amount,
+              cash_register_id: entry.cashRegisterId,
+              status: "paid",
+              paid_date: entry.transactionDate,
+              due_date: entry.transactionDate,
+              payment_method: "other",
+              supplier_id: entry.supplierId,
+              category_id: entry.categoryId,
+              is_conciliated: true,
+              conciliated_at: new Date().toISOString(),
+              conciliated_by: userId,
+              notes: entry.notes || "Gerado a partir do OFX",
+              source_statement_tx_id: stmtTxId,
+            })
+            .select("id")
+            .single();
+
+          if (finError) throw finError;
+          generatedIds.push(finTx.id);
+          results.push(finTx.id);
+
+          // Update cash register balance
+          const balanceChange = entry.type === "income" ? entry.amount : -entry.amount;
+          const { data: register } = await supabase
+            .from("union_cash_registers")
+            .select("current_balance")
+            .eq("id", entry.cashRegisterId)
+            .single();
+
+          if (register) {
+            await supabase
+              .from("union_cash_registers")
+              .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
+              .eq("id", entry.cashRegisterId);
+          }
+        }
+
+        // Link statement transaction — store first generated ID for backward compat
         const { error: linkError } = await (supabase as any)
           .from("union_bank_statement_transactions")
           .update({
-            generated_transaction_id: finTx.id,
-            matched_transaction_id: finTx.id,
+            generated_transaction_id: generatedIds[0],
+            matched_transaction_id: generatedIds[0],
             reconciliation_status: "manual_reconciled",
             reconciled_by: userId,
             reconciled_at: new Date().toISOString(),
-            reconciliation_notes: "Lançamento gerado do OFX",
-            supplier_id: entry.supplierId,
-            category_id: entry.categoryId,
+            reconciliation_notes: generatedIds.length > 1
+              ? `Split: ${generatedIds.length} lançamentos gerados do OFX`
+              : "Lançamento gerado do OFX",
+            supplier_id: stmtEntries[0].supplierId,
+            category_id: stmtEntries[0].categoryId,
           })
-          .eq("id", entry.statementTransactionId);
+          .eq("id", stmtTxId);
 
         if (linkError) throw linkError;
-
-        // Update cash register balance
-        const balanceChange = entry.type === "income" ? entry.amount : -entry.amount;
-        const { data: register } = await supabase
-          .from("union_cash_registers")
-          .select("current_balance")
-          .eq("id", entry.cashRegisterId)
-          .single();
-
-        if (register) {
-          await supabase
-            .from("union_cash_registers")
-            .update({ current_balance: Number(register.current_balance || 0) + balanceChange })
-            .eq("id", entry.cashRegisterId);
-        }
-
-        results.push(finTx.id);
       }
 
       // Recalculate reconciled count for affected imports
