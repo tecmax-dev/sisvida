@@ -1002,14 +1002,14 @@ export default function SettingsPage() {
             <Label htmlFor="swapDeadlineGlobal">Antecedência mínima para troca de paciente</Label>
             <div className="flex gap-3 items-center">
               <Select
-                value={swapDeadlineHours}
-                onValueChange={setSwapDeadlineHours}
+                value={swapDeadlineHours || "none"}
+                onValueChange={(val) => setSwapDeadlineHours(val === "none" ? "" : val)}
               >
                 <SelectTrigger id="swapDeadlineGlobal" className="w-48">
                   <SelectValue placeholder="Sem limite" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem limite</SelectItem>
+                  <SelectItem value="none">Sem limite</SelectItem>
                   <SelectItem value="0.5">30 minutos</SelectItem>
                   <SelectItem value="1">1 hora</SelectItem>
                   <SelectItem value="2">2 horas</SelectItem>
