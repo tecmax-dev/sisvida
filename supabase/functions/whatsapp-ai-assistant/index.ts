@@ -1013,10 +1013,10 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 - Ginecologista: Sem atendimento no momento (em negociação)
 
 ## CONVENÇÕES COLETIVAS
-**CCT 2025/2026 Comércio Varejista:** Fechada em 09/05/2025, válida até 28/02/2026. Link: https://abre.ai/mxQj
-**CCT 2025/2026 Supermercado:** Fechada. Link: https://abre.ai/nh7m
-**CCT 2026/2027 Comércio Varejista:** Ainda não foi fechada. A negociação está em andamento entre o sindicato e os representantes patronais. Assim que a nova convenção for acordada e assinada, o SECMI comunicará oficialmente todos os associados e empresas pelos canais oficiais (app, WhatsApp e site). Enquanto isso, permanecem vigentes as condições da CCT 2025/2026. Fique tranquilo(a), estamos trabalhando para garantir os melhores benefícios para a categoria! 😊
-**CCT 2026/2027 Supermercado:** Ainda em negociação. O sindicato informará assim que houver definição. Enquanto isso, a CCT 2025/2026 continua em vigor.
+**CCT 2025/2026 Comércio Varejista:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/mxQj
+**CCT 2025/2026 Supermercado:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/nh7m
+**CCT 2026/2027 Comércio Varejista:** Ainda não foi fechada. A negociação está em andamento entre o sindicato e os representantes patronais. Assim que a nova convenção for acordada e assinada, o SECMI comunicará oficialmente todos os associados e empresas pelos canais oficiais (app, WhatsApp e site). Enquanto a nova CCT não é assinada, as condições anteriores servem como referência. Fique tranquilo(a), estamos trabalhando para garantir os melhores benefícios para a categoria! 😊
+**CCT 2026/2027 Supermercado:** Ainda em negociação. O sindicato informará assim que houver definição.
 **Todas CCTs:** https://comerciariosilheus.org.br/ccts/
 
 ## PISO SALARIAL 2025
