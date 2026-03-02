@@ -81,6 +81,10 @@ export default function SettingsPage() {
   const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
   const [savingCpfLimit, setSavingCpfLimit] = useState(false);
 
+  // Patient swap deadline state
+  const [swapDeadlineHours, setSwapDeadlineHours] = useState<string>("");
+  const [savingSwapDeadline, setSavingSwapDeadline] = useState(false);
+
   // Entity nomenclature state
   const [entityNomenclature, setEntityNomenclature] = useState("Paciente");
   const [savingNomenclature, setSavingNomenclature] = useState(false);
@@ -139,7 +143,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month, entity_nomenclature, logo_url')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month, entity_nomenclature, logo_url, patient_swap_deadline_hours')
         .eq('id', currentClinic.id)
         .single();
       
@@ -154,6 +158,7 @@ export default function SettingsPage() {
         setMaxCpfAppointments(data.max_appointments_per_cpf_month);
         setEntityNomenclature(data.entity_nomenclature || "Paciente");
         setLocalLogoUrl(data.logo_url || null);
+        setSwapDeadlineHours(data.patient_swap_deadline_hours?.toString() || "");
         
         // Set initial data for auto-save
         setInitialSettingsData({
@@ -978,6 +983,94 @@ export default function SettingsPage() {
               <p className="text-sm text-blue-800 dark:text-blue-200">
                 ℹ️ Cada paciente poderá agendar no máximo <strong>{maxCpfAppointments} vez(es)</strong> com 
                 cada profissional por mês. A validação ocorre tanto no sistema quanto nos agendamentos via WhatsApp.
+              </p>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "swap-deadline",
+      title: "Limite para Troca de Paciente no Slot",
+      description: "Defina o prazo mínimo de antecedência para trocar o paciente em um agendamento",
+      icon: <Clock className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="swapDeadlineGlobal">Antecedência mínima para troca de paciente</Label>
+            <div className="flex gap-3 items-center">
+              <Select
+                value={swapDeadlineHours}
+                onValueChange={setSwapDeadlineHours}
+              >
+                <SelectTrigger id="swapDeadlineGlobal" className="w-48">
+                  <SelectValue placeholder="Sem limite" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem limite</SelectItem>
+                  <SelectItem value="0.5">30 minutos</SelectItem>
+                  <SelectItem value="1">1 hora</SelectItem>
+                  <SelectItem value="2">2 horas</SelectItem>
+                  <SelectItem value="4">4 horas</SelectItem>
+                  <SelectItem value="6">6 horas</SelectItem>
+                  <SelectItem value="12">12 horas</SelectItem>
+                  <SelectItem value="24">24 horas</SelectItem>
+                  <SelectItem value="48">48 horas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingSwapDeadline}
+                onClick={async () => {
+                  if (!currentClinic?.id) return;
+                  setSavingSwapDeadline(true);
+                  try {
+                    const { error } = await supabase
+                      .from('clinics')
+                      .update({ patient_swap_deadline_hours: swapDeadlineHours ? parseFloat(swapDeadlineHours) : null })
+                      .eq('id', currentClinic.id);
+                    
+                    if (error) throw error;
+                    
+                    toast({
+                      title: "Configuração salva",
+                      description: swapDeadlineHours 
+                        ? `Limite de ${parseFloat(swapDeadlineHours) < 1 ? `${Math.round(parseFloat(swapDeadlineHours) * 60)} minutos` : `${swapDeadlineHours} hora(s)`} para troca de paciente definido.`
+                        : "Limite para troca de paciente removido.",
+                    });
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro ao salvar",
+                      description: error.message || "Não foi possível salvar a configuração.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setSavingSwapDeadline(false);
+                  }
+                }}
+              >
+                {savingSwapDeadline ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Define o tempo mínimo antes do horário da consulta em que ainda é permitido trocar o paciente do slot.
+              Este é o valor padrão global — pode ser sobrescrito por Grupo de Acesso.
+            </p>
+          </div>
+          
+          {swapDeadlineHours && (
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                ℹ️ Usuários não poderão trocar o paciente de um slot quando faltar menos de{" "}
+                <strong>
+                  {parseFloat(swapDeadlineHours) < 1 
+                    ? `${Math.round(parseFloat(swapDeadlineHours) * 60)} minutos` 
+                    : `${swapDeadlineHours} hora(s)`}
+                </strong>{" "}
+                para o início da consulta. Administradores não são afetados.
               </p>
             </div>
           )}
