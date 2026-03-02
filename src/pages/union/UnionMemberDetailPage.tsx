@@ -104,6 +104,20 @@ const patientSchema = z.object({
     .refine((val) => !val || val.replace(/\D/g, '').length === 0 || isValidCPF(val), {
       message: "CPF inválido"
     }),
+  birthDate: z.string().min(1, "Data de nascimento é obrigatória"),
+  motherName: z.string().min(1, "Nome da mãe é obrigatório"),
+  fatherName: z.string().min(1, "Nome do pai é obrigatório"),
+}).refine((data) => {
+  if (!data.birthDate) return false;
+  const birth = new Date(data.birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 18;
+}, {
+  message: "O associado titular deve ser maior de idade (18 anos ou mais)",
+  path: ["birthDate"],
 });
 
 const initialFormData: PatientFormData = {
@@ -463,6 +477,9 @@ export default function UnionMemberDetailPage() {
       phone: dataToValidate.phone,
       email: dataToValidate.email || undefined,
       cpf: dataToValidate.cpf || undefined,
+      birthDate: dataToValidate.birthDate,
+      motherName: dataToValidate.motherName,
+      fatherName: dataToValidate.fatherName,
     });
     return validation.success;
   }, []);
@@ -493,6 +510,9 @@ export default function UnionMemberDetailPage() {
       phone: formData.phone,
       email: formData.email || undefined,
       cpf: formData.cpf || undefined,
+      birthDate: formData.birthDate,
+      motherName: formData.motherName,
+      fatherName: formData.fatherName,
     });
 
     if (!validation.success) {
