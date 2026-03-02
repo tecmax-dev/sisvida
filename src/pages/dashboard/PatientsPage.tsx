@@ -179,10 +179,21 @@ const patientSchema = z.object({
     .refine((val) => !val || val.replace(/\D/g, '').length === 0 || isValidCPF(val), {
       message: "CPF inválido"
     }),
-  birth_date: z.string().optional().or(z.literal("")),
+  birth_date: z.string().min(1, "Data de nascimento é obrigatória"),
   address: z.string().max(200, "Endereço deve ter no máximo 200 caracteres").optional().or(z.literal("")),
   insurance_plan_id: z.string().optional().or(z.literal("")),
   notes: z.string().max(500, "Observações deve ter no máximo 500 caracteres").optional().or(z.literal("")),
+}).refine((data) => {
+  if (!data.birth_date) return false;
+  const birth = new Date(data.birth_date);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 18;
+}, {
+  message: "O paciente titular deve ser maior de idade (18 anos ou mais)",
+  path: ["birth_date"],
 });
 
 export default function PatientsPage() {
@@ -722,7 +733,7 @@ export default function PatientsPage() {
       phone: formPhone,
       email: formEmail || undefined,
       cpf: formCpf || undefined,
-      birth_date: formBirthDate || undefined,
+      birth_date: formBirthDate,
       address: formAddress || undefined,
       insurance_plan_id: formInsurancePlanId || undefined,
       notes: formNotes || undefined,
@@ -825,7 +836,7 @@ export default function PatientsPage() {
       phone: editPhone,
       email: editEmail || undefined,
       cpf: editCpf || undefined,
-      birth_date: editBirthDate || undefined,
+      birth_date: editBirthDate,
       address: editAddress || undefined,
       insurance_plan_id: editInsurancePlanId || undefined,
       notes: editNotes || undefined,
