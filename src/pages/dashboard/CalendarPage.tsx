@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
 import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite, formatProfessionalCancellation } from "@/lib/whatsapp";
@@ -407,7 +408,7 @@ interface Appointment {
 
 export default function CalendarPage() {
   const { currentClinic, user, userRoles } = useAuth();
-  const { isProfessionalOnly, hasPermission, isAdmin } = usePermissions();
+  const { isProfessionalOnly, hasPermission, isAdmin, accessGroupId } = usePermissions();
   
   // Permissão para atender pacientes (requer acesso a prontuários médicos)
   const canAttendPatient = hasPermission('manage_medical_records');
@@ -614,6 +615,43 @@ export default function CalendarPage() {
 
   // === Booking window (UI deve respeitar a mesma regra do backend) ===
   const { data: bookingWindowEndDate } = useClinicBookingWindowEndDate(currentClinic?.id);
+
+  // === Swap deadline: busca horas de antecedência para troca de paciente ===
+  const { data: swapDeadlineHours } = useQuery({
+    queryKey: ['swap-deadline', accessGroupId, currentClinic?.id],
+    queryFn: async (): Promise<number | null> => {
+      // Admins don't have restrictions
+      if (isAdmin) return null;
+      
+      // First check access group override
+      if (accessGroupId) {
+        const { data: groupData } = await supabase
+          .from('access_groups')
+          .select('patient_swap_deadline_hours')
+          .eq('id', accessGroupId)
+          .single();
+        
+        if (groupData?.patient_swap_deadline_hours != null) {
+          return groupData.patient_swap_deadline_hours;
+        }
+      }
+      
+      // Fallback to clinic global setting
+      if (currentClinic?.id) {
+        const { data: clinicData } = await supabase
+          .from('clinics')
+          .select('patient_swap_deadline_hours')
+          .eq('id', currentClinic.id)
+          .single();
+        
+        return clinicData?.patient_swap_deadline_hours ?? null;
+      }
+      
+      return null;
+    },
+    enabled: !!currentClinic?.id && !isAdmin,
+    staleTime: 5 * 60_000,
+  });
 
   const bookingWindowEndDateKey = useMemo(() => {
     if (!bookingWindowEndDate) return null;
@@ -1456,6 +1494,27 @@ export default function CalendarPage() {
         variant: "destructive",
       });
       return;
+    }
+
+    // === Validação de troca de paciente (swap deadline) ===
+    if (editingAppointment.patient_id !== formPatient && swapDeadlineHours != null && !isAdmin) {
+      const appointmentDateTime = new Date(
+        `${editingAppointment.appointment_date}T${editingAppointment.start_time}`
+      );
+      const now = new Date();
+      const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursUntilAppointment < swapDeadlineHours) {
+        const label = swapDeadlineHours < 1 
+          ? `${Math.round(swapDeadlineHours * 60)} minutos` 
+          : `${swapDeadlineHours} hora${swapDeadlineHours > 1 ? 's' : ''}`;
+        toast({
+          title: "Operação não permitida",
+          description: `Não é possível trocar o paciente com menos de ${label} de antecedência do horário agendado.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Check if patient is active before editing appointment
