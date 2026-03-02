@@ -37,6 +37,8 @@ export default function MobileInstallPage() {
   
   const [isIOS, setIsIOS] = useState(false);
   const [isSafari, setIsSafari] = useState(false);
+  const [isEdge, setIsEdge] = useState(false);
+  const [promptWaitExpired, setPromptWaitExpired] = useState(false);
 
   // CRITICAL: Apply iOS PWA icon immediately on mount
   useEffect(() => {
@@ -95,9 +97,17 @@ export default function MobileInstallPage() {
     const ua = navigator.userAgent;
     const isIOSDevice = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     const isSafariBrowser = /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua);
+    const isEdgeBrowser = /Edg\//.test(ua);
     
     setIsIOS(isIOSDevice);
     setIsSafari(isSafariBrowser);
+    setIsEdge(isEdgeBrowser);
+
+    // Edge/Chrome pode demorar para disparar beforeinstallprompt
+    // Esperar um tempo antes de mostrar fallback
+    const promptTimeout = setTimeout(() => {
+      setPromptWaitExpired(true);
+    }, 3000);
 
     // Detectar se já está instalado (modo standalone)
     const checkStandalone = () => {
@@ -132,6 +142,7 @@ export default function MobileInstallPage() {
     loadClinicData();
 
     return () => {
+      clearTimeout(promptTimeout);
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('appinstalled', installedHandler);
     };
@@ -379,8 +390,8 @@ export default function MobileInstallPage() {
           </Card>
         )}
 
-        {/* === ESTADO: Navegador sem suporte (Desktop ou navegador antigo) === */}
-        {!isInstalled && !canInstall && !isIOS && (
+        {/* === ESTADO: Navegador sem suporte / prompt não disparou === */}
+        {!isInstalled && !canInstall && !isIOS && promptWaitExpired && (
           <Card className="border-muted bg-muted/30 shadow-lg">
             <CardContent className="py-6 space-y-4">
               <div className="flex items-center gap-4">
@@ -388,23 +399,43 @@ export default function MobileInstallPage() {
                   <Smartphone className="h-7 w-7 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-lg text-foreground">Instalação não disponível</p>
+                  <p className="font-bold text-lg text-foreground">
+                    {isEdge ? 'Instalar pelo menu do Edge' : 'Instalação manual'}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Seu navegador não suporta instalação de PWA
+                    {isEdge 
+                      ? 'Use o menu do navegador para instalar o app'
+                      : 'Siga as instruções abaixo para instalar'}
                   </p>
                 </div>
               </div>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-                <p className="text-blue-800 font-medium text-sm">
-                  💡 Para instalar o app:
-                </p>
-                <ul className="text-blue-700 text-sm space-y-1 list-disc list-inside">
-                  <li><strong>Android:</strong> Abra no Google Chrome</li>
-                  <li><strong>iPhone/iPad:</strong> Abra no Safari</li>
-                  <li><strong>Desktop:</strong> Use Chrome ou Edge</li>
-                </ul>
-              </div>
+              {isEdge ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <p className="text-blue-800 font-medium text-sm">
+                    💡 Para instalar no Microsoft Edge:
+                  </p>
+                  <ol className="text-blue-700 text-sm space-y-2 list-decimal list-inside">
+                    <li>Clique no menu <strong>⋯</strong> (três pontos) no canto superior direito</li>
+                    <li>Selecione <strong>"Aplicativos"</strong></li>
+                    <li>Clique em <strong>"Instalar este site como um aplicativo"</strong></li>
+                  </ol>
+                  <p className="text-blue-600 text-xs mt-2">
+                    Após instalar, o app ficará disponível no menu Iniciar e na área de trabalho.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                  <p className="text-blue-800 font-medium text-sm">
+                    💡 Para instalar o app:
+                  </p>
+                  <ul className="text-blue-700 text-sm space-y-1 list-disc list-inside">
+                    <li><strong>Android:</strong> Abra no Google Chrome</li>
+                    <li><strong>iPhone/iPad:</strong> Abra no Safari</li>
+                    <li><strong>Desktop:</strong> Use Chrome ou Edge</li>
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
