@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -76,8 +77,9 @@ interface GroupedPermissions {
   [category: string]: PermissionDefinition[];
 }
 
-// Map categories to friendly icons - only union-related categories
+// Map categories to friendly icons
 const categoryIcons: Record<string, React.ReactNode> = {
+  // Union categories
   'Sindical - Geral': <Building2 className="h-5 w-5 text-purple-500" />,
   'Sindical - Empresas': <Building className="h-5 w-5 text-amber-500" />,
   'Sindical - Sócios': <Users className="h-5 w-5 text-purple-500" />,
@@ -87,10 +89,19 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Sindical - Auditoria': <Eye className="h-5 w-5 text-slate-500" />,
   'Sindical - Homologação': <Calendar className="h-5 w-5 text-teal-500" />,
   'Sindical - Jurídico': <ClipboardList className="h-5 w-5 text-indigo-500" />,
+  // Clinic categories
+  'Agendamento': <Calendar className="h-5 w-5 text-blue-500" />,
+  'Atendimento': <ClipboardList className="h-5 w-5 text-teal-500" />,
+  'Pacientes': <Users className="h-5 w-5 text-green-500" />,
+  'Financeiro': <CreditCard className="h-5 w-5 text-emerald-500" />,
+  'Configurações': <Settings className="h-5 w-5 text-slate-500" />,
+  'Relatórios': <BarChart3 className="h-5 w-5 text-indigo-500" />,
+  'Usuários': <UserPlus className="h-5 w-5 text-amber-500" />,
 };
 
 // Friendly category descriptions
 const categoryDescriptions: Record<string, string> = {
+  // Union categories
   'Sindical - Geral': 'Acesso geral ao módulo sindical',
   'Sindical - Empresas': 'Cadastro e gestão de empresas associadas',
   'Sindical - Sócios': 'Gestão de sócios e associados',
@@ -100,6 +111,14 @@ const categoryDescriptions: Record<string, string> = {
   'Sindical - Auditoria': 'Logs e auditoria do módulo sindical',
   'Sindical - Homologação': 'Agendamento e gestão de homologações',
   'Sindical - Jurídico': 'Gestão de processos jurídicos',
+  // Clinic categories
+  'Agendamento': 'Controle de acesso à agenda e lista de espera',
+  'Atendimento': 'Gerenciamento da fila de atendimento',
+  'Pacientes': 'Acesso a dados e cadastro de pacientes',
+  'Financeiro': 'Gestão financeira e pagamentos',
+  'Configurações': 'Configurações gerais do sistema',
+  'Relatórios': 'Acesso a relatórios e dashboards',
+  'Usuários': 'Gerenciamento de usuários do sistema',
 };
 
 // Permission action icons
@@ -121,6 +140,8 @@ export default function UnionAccessGroupsPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
+  const [groupModuleType, setGroupModuleType] = useState<"clinic" | "union">("union");
+  const [moduleFilter, setModuleFilter] = useState<"clinic" | "union">("union");
   const [searchTerm, setSearchTerm] = useState("");
   const [permissionSearch, setPermissionSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -143,14 +164,14 @@ export default function UnionAccessGroupsPage() {
         supabase
           .from('access_groups')
           .select('*')
-          .eq('module_type', 'union')
+          .in('module_type', ['clinic', 'union'])
           .order('is_system', { ascending: false })
           .order('name'),
         supabase
           .from('permission_definitions')
           .select('*')
           .eq('is_active', true)
-          .eq('module_type', 'union')
+          .in('module_type', ['clinic', 'union'])
           .order('category')
           .order('order_index')
       ]);
@@ -168,7 +189,10 @@ export default function UnionAccessGroupsPage() {
     }
   };
 
-  const groupedPermissions: GroupedPermissions = permissions.reduce((acc, perm) => {
+  // Filter permissions by active module filter
+  const filteredPermissions = permissions.filter(p => p.module_type === moduleFilter);
+
+  const groupedPermissions: GroupedPermissions = filteredPermissions.reduce((acc, perm) => {
     if (!acc[perm.category]) {
       acc[perm.category] = [];
     }
@@ -180,6 +204,7 @@ export default function UnionAccessGroupsPage() {
     setSelectedGroup(group);
     setGroupName(group.name);
     setGroupDescription(group.description || "");
+    setGroupModuleType((group.module_type as "clinic" | "union") || "union");
 
     // Fetch group permissions
     const { data, error } = await supabase
@@ -200,6 +225,7 @@ export default function UnionAccessGroupsPage() {
     setSelectedGroup(null);
     setGroupName("");
     setGroupDescription("");
+    setGroupModuleType(moduleFilter);
     setSelectedPermissions(new Set());
   };
 
@@ -254,13 +280,13 @@ export default function UnionAccessGroupsPage() {
 
         if (error) throw error;
       } else {
-        // Create new group (for union module)
+        // Create new group
         const { data, error } = await supabase
           .from('access_groups')
           .insert({
             name: groupName.trim(),
             description: groupDescription.trim() || null,
-            module_type: 'union',
+            module_type: groupModuleType,
             clinic_id: currentClinic?.id || null,
             is_system: false,
           })
@@ -328,9 +354,10 @@ export default function UnionAccessGroupsPage() {
     }
   };
 
-  // Filter groups by search term
+  // Filter groups by search term and module type
   const filteredGroups = groups.filter(g => 
-    g.name.toLowerCase().includes(searchTerm.toLowerCase())
+    g.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    g.module_type === moduleFilter
   );
 
   const categoryPermissionStats = (category: string) => {
@@ -383,7 +410,7 @@ export default function UnionAccessGroupsPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Grupos de Acesso</h1>
             <p className="text-sm text-muted-foreground">
-              Configure permissões de usuários do módulo sindical
+              Configure permissões de usuários por módulo
             </p>
           </div>
         </div>
@@ -393,6 +420,25 @@ export default function UnionAccessGroupsPage() {
           Novo Grupo
         </Button>
       </div>
+
+      {/* Module Filter Tabs */}
+      <Tabs value={moduleFilter} onValueChange={(v) => {
+        setModuleFilter(v as "clinic" | "union");
+        setGroupModuleType(v as "clinic" | "union");
+        handleNewGroup();
+      }}>
+        <TabsList>
+          <TabsTrigger value="union" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            Módulo Sindical
+          </TabsTrigger>
+          <TabsTrigger value="clinic" className="gap-2">
+            <Building className="h-4 w-4" />
+            Clínica
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Groups List */}
