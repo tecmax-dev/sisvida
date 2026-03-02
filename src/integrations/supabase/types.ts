@@ -53,6 +53,7 @@ export type Database = {
           is_system: boolean | null
           module_type: string | null
           name: string
+          patient_swap_deadline_hours: number | null
           updated_at: string | null
         }
         Insert: {
@@ -64,6 +65,7 @@ export type Database = {
           is_system?: boolean | null
           module_type?: string | null
           name: string
+          patient_swap_deadline_hours?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -75,6 +77,7 @@ export type Database = {
           is_system?: boolean | null
           module_type?: string | null
           name?: string
+          patient_swap_deadline_hours?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1888,6 +1891,7 @@ export type Database = {
           opening_time: string | null
           owner_cpf: string | null
           owner_name: string | null
+          patient_swap_deadline_hours: number | null
           phone: string | null
           reminder_enabled: boolean | null
           reminder_hours: number | null
@@ -1934,6 +1938,7 @@ export type Database = {
           opening_time?: string | null
           owner_cpf?: string | null
           owner_name?: string | null
+          patient_swap_deadline_hours?: number | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
@@ -1980,6 +1985,7 @@ export type Database = {
           opening_time?: string | null
           owner_cpf?: string | null
           owner_name?: string | null
+          patient_swap_deadline_hours?: number | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null

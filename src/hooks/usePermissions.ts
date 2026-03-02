@@ -146,6 +146,8 @@ export type Permission =
   // Union Module permissions
   | "union_module_access"
   | "manage_card_expiry"
+  | "manage_card_expiry_clinic"
+  | "manage_patient_swap_deadline"
   // Legacy aliases (for backward compatibility)
   | "manage_cash_registers"
   | "manage_categories"

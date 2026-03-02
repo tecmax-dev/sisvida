@@ -82,6 +82,7 @@ interface AccessGroup {
   is_active: boolean;
   clinic_id: string | null;
   module_type: string;
+  patient_swap_deadline_hours: number | null;
   created_at: string;
 }
 
@@ -172,6 +173,7 @@ export default function AccessGroupsPage() {
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [groupModuleType, setGroupModuleType] = useState<string>("clinic");
+  const [groupSwapDeadline, setGroupSwapDeadline] = useState<string>("");
   const [moduleFilter, setModuleFilter] = useState<"all" | "clinic" | "union">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [permissionSearch, setPermissionSearch] = useState("");
@@ -241,6 +243,7 @@ export default function AccessGroupsPage() {
     setGroupName(group.name);
     setGroupDescription(group.description || "");
     setGroupModuleType(group.module_type || "clinic");
+    setGroupSwapDeadline(group.patient_swap_deadline_hours?.toString() || "");
 
     // Fetch group permissions
     const { data, error } = await supabase
@@ -262,6 +265,7 @@ export default function AccessGroupsPage() {
     setGroupName("");
     setGroupDescription("");
     setGroupModuleType("clinic");
+    setGroupSwapDeadline("");
     setSelectedPermissions(new Set());
   };
 
@@ -317,6 +321,7 @@ export default function AccessGroupsPage() {
             name: groupName.trim(),
             description: groupDescription.trim() || null,
             module_type: groupModuleType,
+            patient_swap_deadline_hours: groupSwapDeadline ? parseFloat(groupSwapDeadline) : null,
           })
           .eq('id', selectedGroup.id);
 
@@ -329,6 +334,7 @@ export default function AccessGroupsPage() {
             name: groupName.trim(),
             description: groupDescription.trim() || null,
             module_type: groupModuleType,
+            patient_swap_deadline_hours: groupSwapDeadline ? parseFloat(groupSwapDeadline) : null,
             clinic_id: null,
             is_system: false,
           })
@@ -628,6 +634,32 @@ export default function AccessGroupsPage() {
                     </label>
                   </div>
                 </div>
+                {groupModuleType === 'clinic' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="swapDeadline">Limite de horas para troca de paciente no slot</Label>
+                    <Select
+                      value={groupSwapDeadline}
+                      onValueChange={setGroupSwapDeadline}
+                    >
+                      <SelectTrigger id="swapDeadline">
+                        <SelectValue placeholder="Sem limite (padrão)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem limite</SelectItem>
+                        <SelectItem value="0.5">30 minutos antes</SelectItem>
+                        <SelectItem value="1">1 hora antes</SelectItem>
+                        <SelectItem value="2">2 horas antes</SelectItem>
+                        <SelectItem value="6">6 horas antes</SelectItem>
+                        <SelectItem value="12">12 horas antes</SelectItem>
+                        <SelectItem value="24">24 horas antes</SelectItem>
+                        <SelectItem value="48">48 horas antes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Define com quantas horas de antecedência o usuário pode trocar o paciente em um agendamento existente
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

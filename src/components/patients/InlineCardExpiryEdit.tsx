@@ -26,7 +26,7 @@ export function InlineCardExpiryEdit({
 }: InlineCardExpiryEditProps) {
   const { toast } = useToast();
   const { hasPermission, isAdmin } = usePermissions();
-  const canEditExpiry = isAdmin || hasPermission("manage_card_expiry");
+  const canEditExpiry = isAdmin || hasPermission("manage_card_expiry") || hasPermission("manage_card_expiry_clinic");
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newDate, setNewDate] = useState("");
