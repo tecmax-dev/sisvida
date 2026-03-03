@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Dialog,
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useHomologacaoProfessionalsWithSchedules,
@@ -62,6 +62,22 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     enabled: !!currentClinic?.id && open,
   });
 
+  // Fetch min_advance_booking_hours from clinic settings
+  const { data: minAdvanceHours } = useQuery({
+    queryKey: ["clinic-min-advance-hours", currentClinic?.id],
+    queryFn: async () => {
+      if (!currentClinic?.id) return 6;
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("min_advance_booking_hours")
+        .eq("id", currentClinic.id)
+        .single();
+      if (error) return 6;
+      return (data as any)?.min_advance_booking_hours ?? 6;
+    },
+    enabled: !!currentClinic?.id && open,
+  });
+
   // Filter professionals by the selected day of week
   const professionalsForSelectedDay = useMemo(() => {
     const dayOfWeek = formData.appointment_date.getDay();
@@ -79,6 +95,24 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
       }
     }
   }, [professionalsForSelectedDay, formData.professional_id]);
+
+  // Check if a time slot is within the minimum advance hours
+  const isSlotTooClose = useMemo(() => {
+    const hours = minAdvanceHours ?? 6;
+    return (time: string) => {
+      const now = new Date();
+      const isToday = isSameDay(formData.appointment_date, now);
+      if (!isToday) return false;
+      
+      const [h, m] = time.split(":").map(Number);
+      const slotDate = new Date(formData.appointment_date);
+      slotDate.setHours(h, m, 0, 0);
+      
+      const diffMs = slotDate.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      return diffHours < hours;
+    };
+  }, [formData.appointment_date, minAdvanceHours]);
 
   // Fetch service types
   const { data: serviceTypes } = useQuery({
@@ -164,6 +198,12 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     }
     if (!formData.company_phone.trim()) {
       toast.error("O telefone da empresa é obrigatório");
+      return;
+    }
+    // Validate minimum advance booking hours
+    if (isSlotTooClose(formData.start_time)) {
+      const hours = minAdvanceHours ?? 6;
+      toast.error(`Não é possível agendar com menos de ${hours} hora(s) de antecedência`);
       return;
     }
     createMutation.mutate(formData);
@@ -292,11 +332,14 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
+                    {timeSlots.map((time) => {
+                      const tooClose = isSlotTooClose(time);
+                      return (
+                        <SelectItem key={time} value={time} disabled={tooClose}>
+                          {time} {tooClose ? `(mín. ${minAdvanceHours ?? 6}h)` : ""}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>

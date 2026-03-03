@@ -1887,6 +1887,7 @@ export type Database = {
           maintenance_reason: string | null
           map_view_type: string | null
           max_appointments_per_cpf_month: number | null
+          min_advance_booking_hours: number | null
           name: string
           opening_time: string | null
           owner_cpf: string | null
@@ -1934,6 +1935,7 @@ export type Database = {
           maintenance_reason?: string | null
           map_view_type?: string | null
           max_appointments_per_cpf_month?: number | null
+          min_advance_booking_hours?: number | null
           name: string
           opening_time?: string | null
           owner_cpf?: string | null
@@ -1981,6 +1983,7 @@ export type Database = {
           maintenance_reason?: string | null
           map_view_type?: string | null
           max_appointments_per_cpf_month?: number | null
+          min_advance_booking_hours?: number | null
           name?: string
           opening_time?: string | null
           owner_cpf?: string | null
