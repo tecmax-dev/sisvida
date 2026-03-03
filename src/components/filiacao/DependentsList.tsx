@@ -10,7 +10,7 @@ export interface Dependent {
   nome: string;
   grau_parentesco: string;
   data_nascimento: string;
-  cpf?: string;
+  cpf: string;
 }
 
 interface ParentescoOption {
@@ -54,6 +54,25 @@ const formatCpf = (value: string) => {
     .replace(/(\d{3})(\d{1,2})/, "$1-$2");
 };
 
+// Validação de CPF brasileiro
+const isValidCPF = (cpf: string): boolean => {
+  const cleaned = cpf.replace(/\D/g, '');
+  if (cleaned.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(cleaned[i]) * (10 - i);
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleaned[9])) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(cleaned[i]) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  return remainder === parseInt(cleaned[10]);
+};
+
 export function DependentsList({ dependents, onChange, allowedRelationshipTypes }: DependentsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [newDependent, setNewDependent] = useState<Partial<Dependent>>({
@@ -69,11 +88,36 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
     : ALL_PARENTESCO_OPTIONS;
 
   const [ageError, setAgeError] = useState<string | null>(null);
+  const [cpfError, setCpfError] = useState<string | null>(null);
 
   const addDependent = () => {
     if (!newDependent.nome || !newDependent.grau_parentesco || !newDependent.data_nascimento) {
       return;
     }
+
+    // Validação de CPF obrigatório
+    const cleanCpf = newDependent.cpf?.replace(/\D/g, "") || "";
+    if (!cleanCpf) {
+      setCpfError("CPF é obrigatório.");
+      return;
+    }
+
+    // Validação de CPF válido
+    if (!isValidCPF(cleanCpf)) {
+      setCpfError("CPF inválido.");
+      return;
+    }
+
+    // Validação de duplicidade de CPF na lista
+    const isDuplicate = dependents.some(
+      (d) => d.cpf.replace(/\D/g, "") === cleanCpf
+    );
+    if (isDuplicate) {
+      setCpfError("Este CPF já foi adicionado na lista de dependentes.");
+      return;
+    }
+
+    setCpfError(null);
 
     // Validação de idade para filhos (até 21 anos)
     if (newDependent.grau_parentesco === "filho") {
@@ -91,7 +135,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
       nome: newDependent.nome,
       grau_parentesco: newDependent.grau_parentesco,
       data_nascimento: newDependent.data_nascimento,
-      cpf: newDependent.cpf?.replace(/\D/g, "") || undefined,
+      cpf: cleanCpf,
     };
 
     onChange([...dependents, dependent]);
@@ -197,17 +241,27 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">CPF</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  CPF <span className="text-red-500">*</span>
+                </label>
                 <Input
                   placeholder="000.000.000-00"
                   value={newDependent.cpf}
-                  onChange={(e) => setNewDependent({ ...newDependent, cpf: formatCpf(e.target.value) })}
+                  onChange={(e) => {
+                    setNewDependent({ ...newDependent, cpf: formatCpf(e.target.value) });
+                    setCpfError(null);
+                  }}
                   className="h-9 text-sm"
                 />
               </div>
             </div>
 
-            {/* Mensagem de erro de idade */}
+            {/* Mensagens de erro */}
+            {cpfError && (
+              <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                ⚠️ {cpfError}
+              </p>
+            )}
             {ageError && (
               <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
                 ⚠️ {ageError}
@@ -222,6 +276,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
                 onClick={() => {
                   setShowForm(false);
                   setAgeError(null);
+                  setCpfError(null);
                   setNewDependent({ nome: "", grau_parentesco: "", data_nascimento: "", cpf: "" });
                 }}
               >
@@ -231,7 +286,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
                 type="button"
                 size="sm"
                 onClick={addDependent}
-                disabled={!newDependent.nome || !newDependent.grau_parentesco || !newDependent.data_nascimento}
+                disabled={!newDependent.nome || !newDependent.grau_parentesco || !newDependent.data_nascimento || !newDependent.cpf}
               >
                 Adicionar
               </Button>
