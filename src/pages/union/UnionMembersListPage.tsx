@@ -602,7 +602,7 @@ export default function UnionMembersListPage() {
     }
   };
 
-  // Enviar solicitação de assinatura digital
+  // Enviar solicitação de assinatura digital (email)
   const handleSendSignatureRequest = async (member: UnionMember) => {
     if (!currentClinic || !member.email) {
       toast({
@@ -621,7 +621,6 @@ export default function UnionMembersListPage() {
         },
       });
 
-      // Auditoria no console (body completo)
       console.log("[send-signature-request] response", { data, error, memberId: member.id });
 
       if (error) throw error;
@@ -637,6 +636,59 @@ export default function UnionMembersListPage() {
       toast({
         title: "Erro ao enviar",
         description: extracted.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Enviar solicitação de assinatura digital via WhatsApp
+  const handleSendSignatureWhatsApp = async (member: UnionMember) => {
+    if (!currentClinic || !member.phone) {
+      toast({
+        title: "Erro",
+        description: "Telefone do sócio não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (member.signature_accepted) {
+      toast({
+        title: "Assinatura já registrada",
+        description: "Este sócio já possui autorização de desconto assinada.",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-signature-whatsapp", {
+        body: {
+          associadoId: member.id,
+          clinicId: currentClinic.id,
+        },
+      });
+
+      console.log("[send-signature-whatsapp] response", { data, error, memberId: member.id });
+
+      if (error) {
+        const extracted = extractFunctionsError(error);
+        throw new Error(extracted.message);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "WhatsApp enviado!",
+        description: `Link de assinatura enviado para ${member.phone}`,
+      });
+    } catch (err: any) {
+      console.error("[send-signature-whatsapp] error", err);
+
+      toast({
+        title: "Erro ao enviar",
+        description: err.message || "Erro desconhecido",
         variant: "destructive",
       });
     }
@@ -1062,13 +1114,22 @@ export default function UnionMembersListPage() {
                                 Notificar Carteirinha
                               </DropdownMenuItem>
                             )}
-                            {member.email && canManageMembers() && (
+                            {member.phone && canManageMembers() && !member.signature_accepted && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendSignatureWhatsApp(member)}
+                                className="text-emerald-600"
+                              >
+                                <Pen className="h-4 w-4 mr-2" />
+                                Assinar Ficha (WhatsApp)
+                              </DropdownMenuItem>
+                            )}
+                            {member.email && canManageMembers() && !member.signature_accepted && (
                               <DropdownMenuItem
                                 onClick={() => handleSendSignatureRequest(member)}
                                 className="text-violet-600"
                               >
                                 <Pen className="h-4 w-4 mr-2" />
-                                Solicitar Assinatura
+                                Assinar Ficha (Email)
                               </DropdownMenuItem>
                             )}
                             {canManageMembers() && (
