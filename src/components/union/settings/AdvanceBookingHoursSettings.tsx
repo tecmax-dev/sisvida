@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Clock, Save, Info, Lock } from "lucide-react";
+import { Loader2, Clock, Save, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -32,19 +32,11 @@ export function AdvanceBookingHoursSettings({ clinicId, currentValue = 6, onUpda
   const [advanceHours, setAdvanceHours] = useState(currentValue.toString());
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  
-  const canEdit = isAdmin;
+
+  // Ocultar completamente para não-admins
+  if (!isAdmin) return null;
 
   const handleSave = async () => {
-    if (!canEdit) {
-      toast({
-        title: "Acesso negado",
-        description: "Apenas administradores podem alterar esta configuração.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSaving(true);
     try {
       const { error } = await supabase
@@ -88,39 +80,23 @@ export function AdvanceBookingHoursSettings({ clinicId, currentValue = 6, onUpda
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!canEdit && (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
-            <Lock className="h-4 w-4" />
-            <AlertDescription className="font-medium">
-              Apenas administradores podem alterar esta configuração.
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {canEdit && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Horários com menos de {getLabel(advanceHours)} de antecedência serão bloqueados 
-              automaticamente na agenda de homologação, impedindo novos agendamentos.
-            </AlertDescription>
-          </Alert>
-        )}
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Horários com menos de {getLabel(advanceHours)} de antecedência serão bloqueados 
+            automaticamente na agenda, impedindo novos agendamentos.
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-2">
-          <Label htmlFor="advance-hours" className={!canEdit ? "text-muted-foreground" : ""}>
+          <Label htmlFor="advance-hours">
             Antecedência mínima
           </Label>
           <Select 
             value={advanceHours} 
             onValueChange={setAdvanceHours}
-            disabled={!canEdit}
           >
-            <SelectTrigger 
-              id="advance-hours" 
-              className={`w-full ${!canEdit ? "opacity-60 cursor-not-allowed bg-muted" : ""}`}
-              disabled={!canEdit}
-            >
+            <SelectTrigger id="advance-hours" className="w-full">
               <SelectValue placeholder="Selecione o limite" />
             </SelectTrigger>
             <SelectContent>
@@ -138,8 +114,8 @@ export function AdvanceBookingHoursSettings({ clinicId, currentValue = 6, onUpda
 
         <Button 
           onClick={handleSave} 
-          disabled={saving || !canEdit} 
-          className={`w-full sm:w-auto ${!canEdit ? "opacity-60 cursor-not-allowed" : ""}`}
+          disabled={saving} 
+          className="w-full sm:w-auto"
         >
           {saving ? (
             <>
