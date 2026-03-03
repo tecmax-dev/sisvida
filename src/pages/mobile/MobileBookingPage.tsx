@@ -456,16 +456,15 @@ export default function MobileBookingPage() {
         throw error;
       }
 
-      // If reschedule, cancel the old appointment
+      // If reschedule, cancel the old appointment and notify via WhatsApp
       if (isReschedule && rescheduleState?.rescheduleFrom) {
-        await supabase
-          .from("appointments")
-          .update({
-            status: "cancelled",
-            cancelled_at: new Date().toISOString(),
-            cancellation_reason: "Remarcado pelo paciente via app",
-          })
-          .eq("id", rescheduleState.rescheduleFrom);
+        await supabase.functions.invoke("mobile-appointment-action", {
+          body: {
+            appointmentId: rescheduleState.rescheduleFrom,
+            patientId,
+            action: "cancel",
+          },
+        });
       }
 
       toast({

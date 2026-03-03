@@ -139,6 +139,7 @@ function MobileAppointmentsPageContent() {
   const [showDetails, setShowDetails] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [confirming, setConfirming] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -259,16 +260,18 @@ function MobileAppointmentsPageContent() {
     );
   };
 
+  const canConfirm = (appointment: Appointment) => {
+    const date = parseISO(appointment.appointment_date);
+    return (isFuture(date) || isToday(date)) && appointment.status === 'scheduled';
+  };
+
   const canCancel = (appointment: Appointment) => {
     const date = parseISO(appointment.appointment_date);
-    // Permite cancelar consultas de hoje ou futuras quando ainda não finalizadas
     return (isFuture(date) || isToday(date)) && ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
   };
 
   const canReschedule = (appointment: Appointment) => {
     const date = parseISO(appointment.appointment_date);
-    // Exibir remarcação para consultas de hoje/futuras elegíveis;
-    // a validação fina de horários permanece na tela de agendamento.
     return (isFuture(date) || isToday(date)) && ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
   };
 
@@ -360,25 +363,48 @@ function MobileAppointmentsPageContent() {
     }
   };
 
+  const callAppointmentAction = async (appointmentId: string, action: "confirm" | "cancel" | "reschedule_notify") => {
+    const response = await supabase.functions.invoke("mobile-appointment-action", {
+      body: { appointmentId, patientId, action },
+    });
+    return response;
+  };
+
+  const handleConfirmAppointment = async (appointment: Appointment) => {
+    setConfirming(appointment.id);
+    try {
+      const { data, error } = await callAppointmentAction(appointment.id, "confirm");
+      if (error) throw error;
+
+      toast({
+        title: "Consulta confirmada!",
+        description: data?.whatsappSent 
+          ? "Confirmação enviada por WhatsApp." 
+          : "Consulta confirmada com sucesso.",
+      });
+
+      if (patientId && clinicId) loadAppointments(patientId, clinicId);
+    } catch (error) {
+      console.error("Error confirming:", error);
+      toast({ title: "Erro ao confirmar", description: "Tente novamente.", variant: "destructive" });
+    } finally {
+      setConfirming(null);
+    }
+  };
+
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return;
     
     setCancelling(true);
     try {
-      const { error } = await supabase
-        .from("appointments")
-        .update({ 
-          status: "cancelled",
-          cancelled_at: new Date().toISOString(),
-          cancellation_reason: "Cancelado pelo paciente via app"
-        })
-        .eq("id", selectedAppointment.id);
-
+      const { data, error } = await callAppointmentAction(selectedAppointment.id, "cancel");
       if (error) throw error;
 
       toast({
         title: "Agendamento cancelado",
-        description: "Seu agendamento foi cancelado com sucesso.",
+        description: data?.whatsappSent 
+          ? "Cancelamento enviado por WhatsApp." 
+          : "Seu agendamento foi cancelado com sucesso.",
       });
 
       setShowCancelDialog(false);
@@ -482,13 +508,25 @@ function MobileAppointmentsPageContent() {
           </div>
 
           {/* Ações visíveis diretamente no card */}
-          {showActions && (canCancel(appointment) || canReschedule(appointment)) && (
-            <div className="mt-3 pt-3 border-t flex items-center gap-2">
+          {showActions && (canConfirm(appointment) || canCancel(appointment) || canReschedule(appointment)) && (
+            <div className="mt-3 pt-3 border-t flex flex-wrap items-center gap-2">
+              {canConfirm(appointment) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 min-w-[90px] text-blue-700 border-blue-300 hover:bg-blue-50"
+                  onClick={() => handleConfirmAppointment(appointment)}
+                  disabled={confirming === appointment.id}
+                >
+                  {confirming === appointment.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+                  Confirmar
+                </Button>
+              )}
               {canReschedule(appointment) && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                  className="flex-1 min-w-[90px] text-emerald-700 border-emerald-300 hover:bg-emerald-50"
                   onClick={() => handleReschedule(appointment)}
                   disabled={checkingAvailability}
                 >
@@ -500,7 +538,7 @@ function MobileAppointmentsPageContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+                  className="flex-1 min-w-[90px] text-red-600 border-red-300 hover:bg-red-50"
                   onClick={() => {
                     setSelectedAppointment(appointment);
                     setShowCancelDialog(true);
@@ -510,16 +548,6 @@ function MobileAppointmentsPageContent() {
                   Cancelar
                 </Button>
               )}
-            </div>
-          )}
-
-          {/* Aguardando confirmação */}
-          {isUpcoming && ['scheduled'].includes(appointment.status) && !(canCancel(appointment) || canReschedule(appointment)) && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-amber-600 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                Aguardando confirmação
-              </p>
             </div>
           )}
         </CardContent>
@@ -733,10 +761,16 @@ function MobileAppointmentsPageContent() {
             </div>
           )}
           <DialogFooter className="flex gap-2">
+            {selectedAppointment && canConfirm(selectedAppointment) && (
+              <Button variant="outline" onClick={() => { handleConfirmAppointment(selectedAppointment); setShowDetails(false); }} disabled={confirming === selectedAppointment.id}>
+                {confirming === selectedAppointment.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                Confirmar
+              </Button>
+            )}
             {selectedAppointment && canReschedule(selectedAppointment) && (
               <Button variant="outline" onClick={() => handleReschedule()} disabled={checkingAvailability}>
                 {checkingAvailability ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-2" />}
-                {checkingAvailability ? "Verificando vagas..." : "Remarcar"}
+                {checkingAvailability ? "Verificando vagas..." : "Reagendar"}
               </Button>
             )}
             {selectedAppointment && canCancel(selectedAppointment) && (
