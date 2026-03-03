@@ -267,10 +267,9 @@ function MobileAppointmentsPageContent() {
 
   const canReschedule = (appointment: Appointment) => {
     const date = parseISO(appointment.appointment_date);
-    // Remarcação a partir de amanhã (início do dia), evitando comparação por horário atual
-    const tomorrowStart = addDays(new Date(), 1);
-    tomorrowStart.setHours(0, 0, 0, 0);
-    return date >= tomorrowStart && ['scheduled', 'confirmed'].includes(appointment.status);
+    // Exibir remarcação para consultas de hoje/futuras elegíveis;
+    // a validação fina de horários permanece na tela de agendamento.
+    return (isFuture(date) || isToday(date)) && ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
   };
 
   const [checkingAvailability, setCheckingAvailability] = useState(false);
