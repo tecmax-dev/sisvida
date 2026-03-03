@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -133,9 +133,7 @@ export default function MobileBookingPage() {
   const [noActiveCard, setNoActiveCard] = useState(false);
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
-  // Category state removed - showing all professionals
   
-  // useRef para clinicId - evita race condition e garante valor consistente no submit
   const clinicIdRef = useRef<string | null>(null);
   
   const [loading, setLoading] = useState(true);
@@ -143,9 +141,18 @@ export default function MobileBookingPage() {
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
-  // IMPORTANTE: Apenas patientId vem do auth. clinicId é resolvido via RPC.
+  // Reschedule state from navigation
+  const rescheduleState = location.state as {
+    rescheduleFrom?: string;
+    professionalId?: string;
+    procedureId?: string;
+    dependentId?: string | null;
+  } | null;
+  const isReschedule = !!rescheduleState?.rescheduleFrom;
+  
   const { patientId, initialized } = useMobileAuth();
 
   useEffect(() => {
@@ -153,6 +160,21 @@ export default function MobileBookingPage() {
       loadProfessionals();
     }
   }, [initialized, patientId]);
+
+  // Auto-setup reschedule: pre-select professional and skip to step 3
+  useEffect(() => {
+    if (isReschedule && professionals.length > 0 && rescheduleState?.professionalId) {
+      const profExists = professionals.some(p => p.id === rescheduleState.professionalId);
+      if (profExists) {
+        setSelectedProfessionalId(rescheduleState.professionalId);
+        if (rescheduleState.dependentId) {
+          setPatientType("dependent");
+          setSelectedDependentId(rescheduleState.dependentId);
+        }
+        setStep(3); // Go directly to date/time selection
+      }
+    }
+  }, [isReschedule, professionals, rescheduleState]);
 
   useEffect(() => {
     if (selectedProfessionalId && selectedDate) {
@@ -428,15 +450,26 @@ export default function MobileBookingPage() {
         .insert([appointmentData]);
 
       if (error) {
-        // Tratar erro de janela de agendamento (trigger server-side)
         if (error.message?.includes("booking_window_exceeded") || error.message?.includes("Agendamento indisponível")) {
           throw new Error("Agendamento indisponível para este período");
         }
         throw error;
       }
 
+      // If reschedule, cancel the old appointment
+      if (isReschedule && rescheduleState?.rescheduleFrom) {
+        await supabase
+          .from("appointments")
+          .update({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            cancellation_reason: "Remarcado pelo paciente via app",
+          })
+          .eq("id", rescheduleState.rescheduleFrom);
+      }
+
       toast({
-        title: "Agendamento realizado!",
+        title: isReschedule ? "Consulta remarcada!" : "Agendamento realizado!",
         description: `Consulta agendada para ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} às ${selectedTime}.`,
       });
 
@@ -571,7 +604,7 @@ export default function MobileBookingPage() {
         <button onClick={() => step > 1 ? setStep(step - 1) : navigate("/app")} className="p-1">
           <ArrowLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendar Consulta</h1>
+        <h1 className="text-lg font-semibold flex-1 text-center pr-8">{isReschedule ? "Remarcar Consulta" : "Agendar Consulta"}</h1>
       </div>
 
       {/* Progress - now 3 steps */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { eachDayOfInterval, endOfMonth, getDay, isSameDay, isBefore as isBeforeDate } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -266,9 +267,96 @@ function MobileAppointmentsPageContent() {
 
   const canReschedule = (appointment: Appointment) => {
     const date = parseISO(appointment.appointment_date);
-    // Can reschedule if it's at least 24h before
     const minDate = addDays(new Date(), 1);
     return date >= minDate && ['scheduled', 'confirmed'].includes(appointment.status);
+  };
+
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+
+  const checkProfessionalAvailability = async (professionalId: string): Promise<boolean> => {
+    try {
+      const { data: prof } = await supabase
+        .from("professionals")
+        .select("schedule, appointment_duration")
+        .eq("id", professionalId)
+        .single();
+
+      if (!prof?.schedule) return false;
+
+      const schedule = prof.schedule as any;
+      const blocks = schedule._blocks;
+      if (!blocks || blocks.length === 0) return false;
+
+      const dayMap: Record<number, string> = {
+        0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+        4: 'thursday', 5: 'friday', 6: 'saturday'
+      };
+
+      const now = new Date();
+      const monthEnd = endOfMonth(now);
+      const remainingDays = eachDayOfInterval({ start: addDays(now, 1), end: monthEnd });
+
+      const startStr = format(addDays(now, 1), "yyyy-MM-dd");
+      const endStr = format(monthEnd, "yyyy-MM-dd");
+
+      const { data: existingApts } = await supabase
+        .from("appointments")
+        .select("appointment_date, start_time, end_time")
+        .eq("professional_id", professionalId)
+        .gte("appointment_date", startStr)
+        .lte("appointment_date", endStr)
+        .not("status", "in", '("cancelled","no_show")');
+
+      for (const day of remainingDays) {
+        const dayName = dayMap[getDay(day)];
+        const dateStr = format(day, "yyyy-MM-dd");
+
+        const applicableBlocks = blocks.filter((block: any) => {
+          if (!block.days.includes(dayName)) return false;
+          if (block.start_date && block.end_date) {
+            return dateStr >= block.start_date && dateStr <= block.end_date;
+          }
+          return true;
+        });
+
+        if (applicableBlocks.length === 0) continue;
+
+        const dayApts = existingApts?.filter(a => a.appointment_date === dateStr) || [];
+
+        for (const block of applicableBlocks) {
+          const duration = block.duration || prof.appointment_duration || 30;
+          const [sh, sm] = block.start_time.split(":").map(Number);
+          const [eh, em] = block.end_time.split(":").map(Number);
+          const startMin = sh * 60 + sm;
+          const endMin = eh * 60 + em;
+
+          for (let cur = startMin; cur + duration <= endMin; cur += duration) {
+            const timeStr = `${Math.floor(cur / 60).toString().padStart(2, '0')}:${(cur % 60).toString().padStart(2, '0')}`;
+            const slotEndMin = cur + duration;
+            const slotEndStr = `${Math.floor(slotEndMin / 60).toString().padStart(2, '0')}:${(slotEndMin % 60).toString().padStart(2, '0')}`;
+
+            if (isSameDay(day, now)) {
+              const slotDate = new Date(day);
+              slotDate.setHours(Math.floor(cur / 60), cur % 60);
+              if (isBeforeDate(slotDate, now)) continue;
+            }
+
+            const isOccupied = dayApts.some(apt => {
+              const aptStart = (apt.start_time as string).slice(0, 5);
+              const aptEnd = (apt.end_time as string).slice(0, 5);
+              return timeStr < aptEnd && slotEndStr > aptStart;
+            });
+
+            if (!isOccupied) return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (err) {
+      console.error("Error checking availability:", err);
+      return false;
+    }
   };
 
   const handleCancelAppointment = async () => {
@@ -307,16 +395,34 @@ function MobileAppointmentsPageContent() {
     }
   };
 
-  const handleReschedule = () => {
-    if (!selectedAppointment) return;
-    // Navigate to booking page with reschedule info
-    navigate("/app/agendar", { 
-      state: { 
-        rescheduleFrom: selectedAppointment.id,
-        professionalId: selectedAppointment.professional?.id,
-        procedureId: selectedAppointment.procedure?.id,
-      } 
-    });
+  const handleReschedule = async (appointment?: Appointment) => {
+    const apt = appointment || selectedAppointment;
+    if (!apt) return;
+
+    setCheckingAvailability(true);
+    try {
+      const hasSlots = await checkProfessionalAvailability(apt.professional.id);
+      
+      if (!hasSlots) {
+        toast({
+          title: "Sem vagas disponíveis",
+          description: `Não há horários disponíveis para ${apt.professional.name} neste mês. Tente novamente no próximo mês.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      navigate("/app/agendar", { 
+        state: { 
+          rescheduleFrom: apt.id,
+          professionalId: apt.professional?.id,
+          procedureId: apt.procedure?.id,
+          dependentId: apt.dependent_id,
+        } 
+      });
+    } finally {
+      setCheckingAvailability(false);
+    }
   };
 
   const renderAppointmentCard = (appointment: Appointment, showActions = true) => {
@@ -370,8 +476,7 @@ function MobileAppointmentsPageContent() {
                     </DropdownMenuItem>
                     {canReschedule(appointment) && (
                       <DropdownMenuItem onClick={() => {
-                        setSelectedAppointment(appointment);
-                        handleReschedule();
+                        handleReschedule(appointment);
                       }}>
                         <CalendarClock className="h-4 w-4 mr-2" />
                         Remarcar
@@ -636,9 +741,9 @@ function MobileAppointmentsPageContent() {
           )}
           <DialogFooter className="flex gap-2">
             {selectedAppointment && canReschedule(selectedAppointment) && (
-              <Button variant="outline" onClick={handleReschedule}>
-                <CalendarClock className="h-4 w-4 mr-2" />
-                Remarcar
+              <Button variant="outline" onClick={() => handleReschedule()} disabled={checkingAvailability}>
+                {checkingAvailability ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-2" />}
+                {checkingAvailability ? "Verificando vagas..." : "Remarcar"}
               </Button>
             )}
             {selectedAppointment && canCancel(selectedAppointment) && (
