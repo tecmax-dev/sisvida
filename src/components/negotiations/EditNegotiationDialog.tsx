@@ -12,8 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Save, Calculator, Link2, Copy, Check, Clock } from "lucide-react";
+import { Loader2, Save, Calculator, Link2, Copy, Check, Clock, CalendarIcon, Edit2, RotateCcw } from "lucide-react";
 import { format, addMonths, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Employer {
@@ -65,7 +71,7 @@ export default function EditNegotiationDialog({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [linkValidityDays, setLinkValidityDays] = useState(30);
-
+  const [customDates, setCustomDates] = useState<Record<number, string>>({});
   // Editable fields
   const [installmentsCount, setInstallmentsCount] = useState(negotiation.installments_count);
   const [downPaymentValue, setDownPaymentValue] = useState(negotiation.down_payment_value || 0);
@@ -98,6 +104,7 @@ export default function EditNegotiationDialog({
       setAppliedInterestRate(negotiation.applied_interest_rate);
       setAppliedCorrectionRate(negotiation.applied_correction_rate);
       setAppliedLateFeeRate(negotiation.applied_late_fee_rate);
+      setCustomDates({});
       recalculate();
     }
   }, [open, negotiation]);
@@ -118,6 +125,50 @@ export default function EditNegotiationDialog({
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  // Generate installments preview
+  const generateInstallmentsPreview = () => {
+    const installments = [];
+    for (let i = 1; i <= installmentsCount; i++) {
+      const autoDate = addMonths(new Date(firstDueDate), i - 1);
+      const autoDateStr = format(autoDate, "yyyy-MM-dd");
+      const customDateStr = customDates[i];
+      const isCustom = !!customDateStr;
+      const dueDateStr = customDateStr || autoDateStr;
+
+      installments.push({
+        number: i,
+        dueDateStr,
+        autoDateStr,
+        isCustom,
+        value: calculatedInstallmentValue,
+      });
+    }
+    return installments;
+  };
+
+  const installmentsPreview = generateInstallmentsPreview();
+  const hasCustomDates = Object.keys(customDates).length > 0;
+
+  const handleCustomDateChange = (installmentNumber: number, date: Date | undefined) => {
+    if (!date) return;
+    setCustomDates(prev => ({
+      ...prev,
+      [installmentNumber]: format(date, "yyyy-MM-dd"),
+    }));
+  };
+
+  const handleResetDate = (installmentNumber: number) => {
+    setCustomDates(prev => {
+      const next = { ...prev };
+      delete next[installmentNumber];
+      return next;
+    });
+  };
+
+  const handleResetAllDates = () => {
+    setCustomDates({});
   };
 
   const handleSave = async () => {
@@ -179,12 +230,18 @@ export default function EditNegotiationDialog({
       }
       
       for (let i = 1; i <= installmentsCount; i++) {
-        const dueDate = addMonths(new Date(firstDueDate), i - 1);
+        let dueDateStr: string;
+        if (customDates[i]) {
+          dueDateStr = customDates[i];
+        } else {
+          const dueDate = addMonths(new Date(firstDueDate), i - 1);
+          dueDateStr = format(dueDate, "yyyy-MM-dd");
+        }
         newInstallments.push({
           negotiation_id: negotiation.id,
           installment_number: i,
           value: calculatedInstallmentValue,
-          due_date: format(dueDate, "yyyy-MM-dd"),
+          due_date: dueDateStr,
           status: "pending",
         });
       }
@@ -328,11 +385,12 @@ export default function EditNegotiationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Negociação</DialogTitle>
           <DialogDescription>
             {negotiation.negotiation_code} - {negotiation.employers?.name}
+            {negotiation.employers?.registration_number ? ` - ${negotiation.employers.registration_number}` : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -346,7 +404,11 @@ export default function EditNegotiationDialog({
               min={1}
               max={60}
               value={installmentsCount}
-              onChange={(e) => setInstallmentsCount(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 1;
+                setInstallmentsCount(val);
+                setCustomDates({});
+              }}
             />
           </div>
 
@@ -448,6 +510,97 @@ export default function EditNegotiationDialog({
                 <span>{installmentsCount}x de {formatCurrency(calculatedInstallmentValue)}</span>
               </div>
             </div>
+          </div>
+
+          {/* Installments Preview with Editable Dates */}
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Datas de Vencimento das Parcelas
+              </span>
+              {hasCustomDates && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetAllDates}
+                  className="text-muted-foreground h-7 text-xs"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Resetar
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Clique na data para personalizar o vencimento de cada parcela individualmente.
+            </p>
+            <ScrollArea className="max-h-[220px] pr-2">
+              <div className="space-y-1.5">
+                {installmentsPreview.map((inst) => (
+                  <div
+                    key={inst.number}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-md border text-sm",
+                      inst.isCustom
+                        ? "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800"
+                        : "bg-muted/30"
+                    )}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-primary">{inst.number}</span>
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={cn(
+                            "h-auto py-0.5 px-1.5 font-normal text-sm",
+                            inst.isCustom && "text-amber-700 dark:text-amber-400"
+                          )}
+                        >
+                          <CalendarIcon className="mr-1.5 h-3 w-3" />
+                          {format(new Date(inst.dueDateStr + "T12:00:00"), "dd/MM/yyyy")}
+                          {inst.isCustom && (
+                            <Badge
+                              variant="outline"
+                              className="ml-1.5 text-[10px] py-0 px-1 bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900 dark:text-amber-400 dark:border-amber-700"
+                            >
+                              editado
+                            </Badge>
+                          )}
+                          <Edit2 className="ml-1 h-3 w-3 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={new Date(inst.dueDateStr + "T12:00:00")}
+                          onSelect={(date) => handleCustomDateChange(inst.number, date)}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <span className="ml-auto font-medium flex-shrink-0">
+                      {formatCurrency(inst.value)}
+                    </span>
+                    {inst.isCustom && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 flex-shrink-0"
+                        onClick={() => handleResetDate(inst.number)}
+                        title="Restaurar data automática"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
 
           {/* Link Generation Section */}
