@@ -197,11 +197,14 @@ export function SendBoletoWhatsAppDialog({
           ? `${window.location.origin}/contribuicao/${contrib.public_access_token}`
           : contrib.lytex_invoice_url;
 
+        const typeName = contrib.contribution_types?.name || "Contribuição";
+        
         const message = isAwaitingValue
-          ? `📋 *Contribuição - Informe o Valor*
+          ? `📋 *${typeName} - Informe o Valor*
 
 ━━━━━━━━━━━━━━━━
 *Empresa:* ${contrib.employers?.name || "N/A"}
+*Tipo:* ${typeName}
 *Competência:* ${monthName}
 *Vencimento:* ${dueDate}
 *Status:* ${statusLabel}
@@ -209,10 +212,11 @@ export function SendBoletoWhatsAppDialog({
 🔗 *Clique para informar o valor:*
 ${linkUrl}
 ━━━━━━━━━━━━━━━━`
-          : `📋 *Boleto de Contribuição*
+          : `📋 *Boleto - ${typeName}*
 
 ━━━━━━━━━━━━━━━━
 *Empresa:* ${contrib.employers?.name || "N/A"}
+*Tipo:* ${typeName}
 *Competência:* ${monthName}
 *Vencimento:* ${dueDate}
 *Valor:* ${formatCurrency(contrib.value)}
