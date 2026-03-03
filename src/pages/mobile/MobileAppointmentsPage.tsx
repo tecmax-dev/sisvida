@@ -261,14 +261,16 @@ function MobileAppointmentsPageContent() {
 
   const canCancel = (appointment: Appointment) => {
     const date = parseISO(appointment.appointment_date);
-    // Can cancel if it's a future appointment and status allows
-    return isFuture(date) && ['scheduled', 'confirmed'].includes(appointment.status);
+    // Permite cancelar consultas de hoje ou futuras quando ainda não finalizadas
+    return (isFuture(date) || isToday(date)) && ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
   };
 
   const canReschedule = (appointment: Appointment) => {
     const date = parseISO(appointment.appointment_date);
-    const minDate = addDays(new Date(), 1);
-    return date >= minDate && ['scheduled', 'confirmed'].includes(appointment.status);
+    // Remarcação a partir de amanhã (início do dia), evitando comparação por horário atual
+    const tomorrowStart = addDays(new Date(), 1);
+    tomorrowStart.setHours(0, 0, 0, 0);
+    return date >= tomorrowStart && ['scheduled', 'confirmed'].includes(appointment.status);
   };
 
   const [checkingAvailability, setCheckingAvailability] = useState(false);
