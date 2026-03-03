@@ -459,47 +459,7 @@ function MobileAppointmentsPageContent() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {getStatusBadge(appointment.status)}
-              {showActions && (canCancel(appointment) || canReschedule(appointment)) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => {
-                      setSelectedAppointment(appointment);
-                      setShowDetails(true);
-                    }}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver detalhes
-                    </DropdownMenuItem>
-                    {canReschedule(appointment) && (
-                      <DropdownMenuItem onClick={() => {
-                        handleReschedule(appointment);
-                      }}>
-                        <CalendarClock className="h-4 w-4 mr-2" />
-                        Remarcar
-                      </DropdownMenuItem>
-                    )}
-                    {canCancel(appointment) && (
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setShowCancelDialog(true);
-                        }}
-                      >
-                        <CalendarX className="h-4 w-4 mr-2" />
-                        Cancelar
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+            {getStatusBadge(appointment.status)}
           </div>
           
           <div className="space-y-1 text-sm text-muted-foreground">
@@ -522,8 +482,40 @@ function MobileAppointmentsPageContent() {
             </div>
           </div>
 
-          {/* Quick actions for upcoming appointments */}
-          {isUpcoming && ['scheduled'].includes(appointment.status) && (
+          {/* Ações visíveis diretamente no card */}
+          {showActions && (canCancel(appointment) || canReschedule(appointment)) && (
+            <div className="mt-3 pt-3 border-t flex items-center gap-2">
+              {canReschedule(appointment) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                  onClick={() => handleReschedule(appointment)}
+                  disabled={checkingAvailability}
+                >
+                  {checkingAvailability ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-1" />}
+                  Reagendar
+                </Button>
+              )}
+              {canCancel(appointment) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={() => {
+                    setSelectedAppointment(appointment);
+                    setShowCancelDialog(true);
+                  }}
+                >
+                  <CalendarX className="h-4 w-4 mr-1" />
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Aguardando confirmação */}
+          {isUpcoming && ['scheduled'].includes(appointment.status) && !(canCancel(appointment) || canReschedule(appointment)) && (
             <div className="mt-3 pt-3 border-t">
               <p className="text-xs text-amber-600 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
