@@ -616,6 +616,37 @@ export default function CalendarPage() {
   // === Booking window (UI deve respeitar a mesma regra do backend) ===
   const { data: bookingWindowEndDate } = useClinicBookingWindowEndDate(currentClinic?.id);
 
+  // === Antecedência mínima para agendamento ===
+  const { data: minAdvanceBookingHours } = useQuery({
+    queryKey: ['min-advance-booking-hours', currentClinic?.id],
+    queryFn: async () => {
+      if (!currentClinic?.id) return 6;
+      const { data } = await supabase
+        .from('clinics')
+        .select('min_advance_booking_hours')
+        .eq('id', currentClinic.id)
+        .single();
+      return data?.min_advance_booking_hours ?? 6;
+    },
+    enabled: !!currentClinic?.id,
+    staleTime: 5 * 60_000,
+  });
+
+  const isSlotTooClose = useCallback(
+    (time: string, date: Date) => {
+      if (isAdmin) return false;
+      const hours = minAdvanceBookingHours ?? 6;
+      if (hours === 0) return false;
+      const now = new Date();
+      const [h, m] = time.split(':').map(Number);
+      const slotDate = new Date(date);
+      slotDate.setHours(h, m, 0, 0);
+      const diffMs = slotDate.getTime() - now.getTime();
+      return diffMs < hours * 60 * 60 * 1000;
+    },
+    [isAdmin, minAdvanceBookingHours]
+  );
+
   // === Swap deadline: busca horas de antecedência para troca de paciente ===
   const { data: swapDeadlineHours } = useQuery({
     queryKey: ['swap-deadline', accessGroupId, currentClinic?.id],
@@ -1279,6 +1310,17 @@ export default function CalendarPage() {
     
     // Proteção contra clique duplo - verificar se já está salvando
     if (saving) return;
+
+    // Validação de antecedência mínima
+    if (formTime && isSlotTooClose(formTime, selectedDate)) {
+      const hours = minAdvanceBookingHours ?? 6;
+      toast({
+        title: "Horário indisponível",
+        description: `É necessário agendar com no mínimo ${hours}h de antecedência.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Verificar se tem múltiplos horários selecionados (modo manual de recorrência)
     // Só usar branch de múltiplos slots quando há 2+ horários selecionados no mesmo dia
@@ -2023,6 +2065,17 @@ const updateData: Record<string, any> = {
 
     // Regra de janela: não abrir diálogo fora do período
     if (guardBookingWindow(date ?? selectedDate)) return;
+
+    // Regra de antecedência mínima
+    if (isSlotTooClose(time, date ?? selectedDate)) {
+      const hours = minAdvanceBookingHours ?? 6;
+      toast({
+        title: "Horário indisponível",
+        description: `É necessário agendar com no mínimo ${hours}h de antecedência.`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     resetForm();
     setFormTime(time);
@@ -3183,12 +3236,14 @@ const updateData: Record<string, any> = {
               const aptEndMinutes = parseInt(apt.end_time.slice(0, 2)) * 60 + parseInt(apt.end_time.slice(3, 5));
               return aptStartMinutes <= slotMinutes && slotMinutes < aptEndMinutes;
             });
+            const tooClose = isSlotTooClose(time, forDate);
+            const isDisabled = hasAppointment || tooClose;
             return (
               <DroppableTimeSlot
                 key={time}
                 date={dateStr}
                 time={time}
-                disabled={hasAppointment}
+                disabled={isDisabled}
                 isOccupied={hasAppointment}
                 onClick={() => {
                   setSelectedDate(normalizeCalendarDate(forDate));
@@ -3196,7 +3251,7 @@ const updateData: Record<string, any> = {
                 }}
                 className={cn(
                   "p-1.5 text-center rounded-md text-xs transition-colors",
-                  hasAppointment 
+                  isDisabled 
                     ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed" 
                     : "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary-foreground"
                 )}
