@@ -1858,6 +1858,7 @@ export type Database = {
       clinics: {
         Row: {
           address: string | null
+          allow_multiple_sessions: boolean
           app_unavailable: boolean
           app_unavailable_at: string | null
           app_unavailable_by: string | null
@@ -1906,6 +1907,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allow_multiple_sessions?: boolean
           app_unavailable?: boolean
           app_unavailable_at?: string | null
           app_unavailable_by?: string | null
@@ -1954,6 +1956,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allow_multiple_sessions?: boolean
           app_unavailable?: boolean
           app_unavailable_at?: string | null
           app_unavailable_by?: string | null
@@ -14344,6 +14347,56 @@ export type Database = {
           },
         ]
       }
+      user_active_sessions: {
+        Row: {
+          clinic_id: string
+          device_info: string | null
+          id: string
+          invalidated_at: string | null
+          invalidated_reason: string | null
+          ip_address: string | null
+          is_active: boolean
+          last_seen_at: string
+          logged_in_at: string
+          session_token: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id: string
+          device_info?: string | null
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          ip_address?: string | null
+          is_active?: boolean
+          last_seen_at?: string
+          logged_in_at?: string
+          session_token: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string
+          device_info?: string | null
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          ip_address?: string | null
+          is_active?: boolean
+          last_seen_at?: string
+          logged_in_at?: string
+          session_token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_active_sessions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           access_group_id: string | null
@@ -15772,6 +15825,14 @@ export type Database = {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: boolean
       }
+      invalidate_previous_sessions: {
+        Args: {
+          p_clinic_id: string
+          p_current_session_token: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       is_clinic_admin: {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
@@ -15793,6 +15854,7 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      is_session_valid: { Args: { p_session_token: string }; Returns: boolean }
       is_super_admin:
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }

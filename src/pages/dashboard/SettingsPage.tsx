@@ -15,8 +15,9 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff, Monitor } from "lucide-react";
 import { HidePendingContributionsConfig } from "@/components/settings/HidePendingContributionsConfig";
+import { SessionPolicySettings } from "@/components/settings/SessionPolicySettings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
@@ -1315,6 +1316,16 @@ export default function SettingsPage() {
           </Button>
         </div>
       ),
+    },
+    {
+      id: "session-policy",
+      title: "Controle de Sessão / Login",
+      description: "Configure a política de login múltiplo e gerencie sessões ativas",
+      icon: <Monitor className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: <SessionPolicySettings />,
     },
     {
       id: "hide-pending-contributions",

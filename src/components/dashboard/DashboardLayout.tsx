@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
+import { useSessionControl } from "@/hooks/useSessionControl";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -198,6 +199,17 @@ export function DashboardLayout() {
   const { hasPermission, isAdmin } = usePermissions();
   const { hasAddon, hasFeature } = usePlanFeatures();
   const { hasUnionEntity } = useClinicHasUnionEntity();
+
+  // Session control - register session on mount and poll for validity
+  const { registerSession, deactivateSession } = useSessionControl();
+  const sessionRegisteredRef = useRef(false);
+
+  useEffect(() => {
+    if (user?.id && currentClinic?.id && !sessionRegisteredRef.current) {
+      sessionRegisteredRef.current = true;
+      registerSession(currentClinic.id);
+    }
+  }, [user?.id, currentClinic?.id, registerSession]);
 
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
