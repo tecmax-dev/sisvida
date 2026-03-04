@@ -26,8 +26,12 @@ serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const startOfDay = `${today}T00:00:00+00:00`;
+  // Use Brazil timezone (UTC-3) for date calculations
+  const now = new Date();
+  const brazilOffset = -3 * 60; // UTC-3 in minutes
+  const brazilTime = new Date(now.getTime() + (brazilOffset + now.getTimezoneOffset()) * 60000);
+  const today = `${brazilTime.getFullYear()}-${String(brazilTime.getMonth() + 1).padStart(2, "0")}-${String(brazilTime.getDate()).padStart(2, "0")}`;
+  const startOfDay = `${today}T00:00:00-03:00`;
 
   try {
     // 1. Find overdue installments from active negotiations
