@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { attachPayslipToMemberFolder } from "@/utils/attachPayslipToMemberFolder";
 import { PayslipImageViewer } from "@/components/patients/PayslipImageViewer";
 
 interface PayslipRequest {
@@ -231,6 +232,16 @@ export default function PendingPayslipReviews() {
         .eq('is_active', true);
 
       if (dependentsError) throw dependentsError;
+
+      // Attach payslip to member's "Contra cheques" folder
+      if (selectedRequest.attachment_path && userId) {
+        await attachPayslipToMemberFolder({
+          clinicId: currentClinic!.id,
+          patientId: selectedRequest.patient_id,
+          attachmentPath: selectedRequest.attachment_path,
+          userId,
+        });
+      }
 
       // Send WhatsApp notification to patient
       await sendApprovalNotification(

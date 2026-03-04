@@ -355,6 +355,20 @@ export function usePatientAttachments(patientId: string) {
   };
 
   const getFileUrl = async (attachment: PatientAttachment): Promise<string | null> => {
+    // Support files from contra-cheques bucket (prefixed with "contra-cheques:")
+    if (attachment.file_path.startsWith("contra-cheques:")) {
+      const path = attachment.file_path.replace("contra-cheques:", "");
+      try {
+        const { data, error } = await supabase.functions.invoke('get-payslip-signed-url', {
+          body: { path },
+        });
+        if (error) return null;
+        return (data as any)?.signedUrl || null;
+      } catch {
+        return null;
+      }
+    }
+
     const { data } = await supabase.storage
       .from("patient-attachments")
       .createSignedUrl(attachment.file_path, 60 * 60); // 1 hour
