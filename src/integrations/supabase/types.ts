@@ -5657,6 +5657,54 @@ export type Database = {
         }
         Relationships: []
       }
+      negotiation_installment_notifications: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          installment_id: string
+          phone: string
+          sent_at: string
+          success: boolean
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          installment_id: string
+          phone: string
+          sent_at?: string
+          success?: boolean
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          installment_id?: string
+          phone?: string
+          sent_at?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_installment_notifications_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_installment_notifications_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "negotiation_installments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       negotiation_installments: {
         Row: {
           created_at: string
