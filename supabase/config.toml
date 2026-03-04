@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.send-payslip-batch-notifications]
 verify_jwt = false
+
+[functions.send-negotiation-overdue-reminders]
+verify_jwt = false
