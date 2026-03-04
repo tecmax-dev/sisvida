@@ -64,6 +64,7 @@ import { PayslipImageViewer } from '@/components/patients/PayslipImageViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { savePayslipHistory } from '@/hooks/usePatientPayslipHistory';
+import { attachPayslipToMemberFolder } from '@/utils/attachPayslipToMemberFolder';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -129,6 +130,17 @@ export default function UnionPayslipApprovalsPage() {
         previousCardExpiry: selectedRequest.patient_cards?.expires_at || null,
         newCardExpiry: newExpiresAt,
       });
+
+      // Attach payslip to member's "Contra cheques" folder
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await attachPayslipToMemberFolder({
+          clinicId: currentClinic.id,
+          patientId: selectedRequest.patient_id,
+          attachmentPath: selectedRequest.attachment_path,
+          userId: user.id,
+        });
+      }
     }
     
     reviewRequest({
