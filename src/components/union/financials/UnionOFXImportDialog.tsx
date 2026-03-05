@@ -89,7 +89,17 @@ export function UnionOFXImportDialog({
     setParseError(null);
 
     try {
-      const content = await file.text();
+      // OFX files from Brazilian banks are typically encoded in ISO-8859-1 (Latin-1)
+      // Try Latin-1 first to preserve accented characters (e.g. CRÉD.TED-STR)
+      let content: string;
+      try {
+        const buffer = await file.arrayBuffer();
+        const decoder = new TextDecoder("iso-8859-1");
+        content = decoder.decode(buffer);
+      } catch {
+        // Fallback to default UTF-8
+        content = await file.text();
+      }
       setFileContent(content);
 
       const { transactions, bankInfo: info } = parseOFX(content);
