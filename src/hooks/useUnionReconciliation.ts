@@ -186,6 +186,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     refetch: refetchImports,
   } = useQuery({
     queryKey: ["union-bank-statement-imports", clinicId],
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       // Use from with explicit type casting
       const { data, error } = await (supabase as any)
@@ -257,6 +260,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
   // Fetch ALL pending (unreconciled) expenses for matching (paginated)
   const { data: pendingExpenses } = useQuery({
     queryKey: ["union-pending-expenses-reconciliation", clinicId],
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: () => fetchAllPendingTransactions("expense"),
     enabled: !!clinicId,
   });
@@ -264,6 +270,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
   // Fetch ALL pending (unreconciled) income for matching credits (paginated)
   const { data: pendingIncomes } = useQuery({
     queryKey: ["union-pending-incomes-reconciliation", clinicId],
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: () => fetchAllPendingTransactions("income"),
     enabled: !!clinicId,
   });
