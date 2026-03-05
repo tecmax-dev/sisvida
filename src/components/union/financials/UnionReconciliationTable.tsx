@@ -35,6 +35,8 @@ import {
   Search,
   CheckCheck,
   FileText,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +64,7 @@ export function UnionReconciliationTable({
   isUndoing,
 }: UnionReconciliationTableProps) {
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "credit" | "debit">("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const formatCurrency = (value: number) =>
@@ -113,11 +116,12 @@ export function UnionReconciliationTable({
 
   const filteredTransactions = transactions.filter((tx) => {
     const searchLower = search.toLowerCase();
-    return (
+    const matchesSearch =
       tx.description?.toLowerCase().includes(searchLower) ||
       tx.check_number?.includes(search) ||
-      tx.document_number?.includes(search)
-    );
+      tx.document_number?.includes(search);
+    const matchesType = typeFilter === "all" || tx.transaction_type === typeFilter;
+    return matchesSearch && matchesType;
   });
 
   const isSelectableForGenerate = (tx: BankStatementTransaction) =>
@@ -218,6 +222,34 @@ export function UnionReconciliationTable({
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
+        </div>
+        <div className="flex items-center gap-1 border rounded-md p-0.5">
+          <Button
+            size="sm"
+            variant={typeFilter === "all" ? "default" : "ghost"}
+            onClick={() => setTypeFilter("all")}
+            className="h-7 text-xs px-3"
+          >
+            Todos
+          </Button>
+          <Button
+            size="sm"
+            variant={typeFilter === "credit" ? "default" : "ghost"}
+            onClick={() => setTypeFilter("credit")}
+            className="h-7 text-xs px-3"
+          >
+            <TrendingUp className="h-3 w-3 mr-1" />
+            Receitas
+          </Button>
+          <Button
+            size="sm"
+            variant={typeFilter === "debit" ? "default" : "ghost"}
+            onClick={() => setTypeFilter("debit")}
+            className="h-7 text-xs px-3"
+          >
+            <TrendingDown className="h-3 w-3 mr-1" />
+            Despesas
+          </Button>
         </div>
         {selectedForGenerate.length > 0 && onBatchGenerateEntry && (
           <Button
