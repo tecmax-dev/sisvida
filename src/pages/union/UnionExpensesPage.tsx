@@ -188,7 +188,11 @@ export default function UnionExpensesPage() {
     const normalize = (value: unknown) => String(value ?? "").toLowerCase();
     const searchTerm = normalize(search);
 
-    return processedTransactions.filter((t) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const filtered = processedTransactions.filter((t) => {
       // Text search (resiliente a null/number/object)
       const matchesSearch =
         normalize(t.description).includes(searchTerm) ||
@@ -229,6 +233,20 @@ export default function UnionExpensesPage() {
         matchesCheckNumber &&
         matchesDateRange
       );
+    });
+
+    // Sort: current month/year first, then by due_date descending
+    return filtered.sort((a, b) => {
+      const aDate = a.due_date ? new Date(a.due_date + "T12:00:00") : null;
+      const bDate = b.due_date ? new Date(b.due_date + "T12:00:00") : null;
+      const aCurrent = aDate && aDate.getFullYear() === currentYear && aDate.getMonth() === currentMonth ? 0 : 1;
+      const bCurrent = bDate && bDate.getFullYear() === currentYear && bDate.getMonth() === currentMonth ? 0 : 1;
+      if (aCurrent !== bCurrent) return aCurrent - bCurrent;
+
+      // Within same group, sort by due_date descending
+      const aTime = aDate?.getTime() ?? 0;
+      const bTime = bDate?.getTime() ?? 0;
+      return bTime - aTime;
     });
   }, [
     processedTransactions,
