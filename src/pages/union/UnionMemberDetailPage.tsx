@@ -517,11 +517,24 @@ export default function UnionMemberDetailPage() {
 
     if (!validation.success) {
       const newErrors: Record<string, string> = {};
+      const errorMessages: string[] = [];
       validation.error.errors.forEach((err) => {
         const field = err.path[0] as string;
         newErrors[field] = err.message;
+        errorMessages.push(err.message);
       });
       setErrors(newErrors);
+      toast({
+        title: "Erro de validação",
+        description: errorMessages.slice(0, 3).join("; "),
+        variant: "destructive",
+      });
+      // Scroll to first error field
+      const firstErrorField = Object.keys(newErrors)[0];
+      if (firstErrorField) {
+        const el = document.querySelector(`[name="${firstErrorField}"], [data-field="${firstErrorField}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
