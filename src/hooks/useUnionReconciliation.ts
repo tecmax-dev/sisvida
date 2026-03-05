@@ -412,6 +412,66 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       if (txError) throw txError;
 
+      // Update auto-reconciled financial transactions: mark as paid, set paid_date, update balance
+      for (const rec of transactionRecords) {
+        if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
+          const matchedExp = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id);
+          if (!matchedExp) continue;
+
+          const wasPending = matchedExp.status === "pending";
+          const compensationDate = rec.transaction_date; // OFX transaction date
+
+          const updatePayload: Record<string, any> = {
+            is_conciliated: true,
+            conciliated_at: new Date().toISOString(),
+            conciliated_by: userId,
+            source_statement_tx_id: null, // will be set after we get the stmt tx id
+          };
+
+          if (wasPending) {
+            updatePayload.status = "paid";
+            updatePayload.paid_date = compensationDate;
+          }
+
+          // Auto-fill check_number from OFX if financial transaction has none
+          if ((!matchedExp.check_number || matchedExp.check_number.trim() === "") && rec.check_number) {
+            updatePayload.check_number = rec.check_number;
+          }
+
+          const { error: finError } = await supabase
+            .from("union_financial_transactions")
+            .update(updatePayload)
+            .eq("id", rec.matched_transaction_id);
+
+          if (finError) {
+            console.error("Error updating auto-reconciled transaction:", finError);
+            continue;
+          }
+
+          // If was pending, update cash register balance
+          if (wasPending) {
+            const balanceChange = matchedExp.type === "income"
+              ? Number(matchedExp.amount)
+              : -Number(matchedExp.amount);
+
+            const { data: register } = await supabase
+              .from("union_cash_registers")
+              .select("current_balance")
+              .eq("id", cashRegisterId)
+              .single();
+
+            if (register) {
+              await supabase
+                .from("union_cash_registers")
+                .update({
+                  current_balance: Number(register.current_balance || 0) + balanceChange,
+                })
+                .eq("id", cashRegisterId);
+            }
+          }
+        }
+      }
+
       // Update import status
       await (supabase as any)
         .from("union_bank_statement_imports")
