@@ -153,7 +153,7 @@ export function UnionManualReconcileDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg w-[95vw] sm:w-full overflow-x-hidden">
+      <DialogContent className="!max-w-[95vw] sm:!max-w-lg w-full overflow-x-hidden overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             {statementTransaction.transaction_type === "credit" ? "Vincular Receita(s)" : "Vincular Despesa(s)"}
