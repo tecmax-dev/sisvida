@@ -399,9 +399,18 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           cpf: dep.cpf || null,
         }));
 
-        await supabase
+        const { error: depError } = await supabase
           .from("sindical_associado_dependentes")
           .insert(dependentesInsert);
+        
+        if (depError) {
+          console.error("Error inserting dependents:", depError);
+          toast({
+            title: "Erro ao incluir dependentes",
+            description: depError.message || "Não foi possível salvar os dependentes. Verifique os dados.",
+            variant: "destructive",
+          });
+        }
       }
 
       // Notify manager about new pending filiation (fire & forget)

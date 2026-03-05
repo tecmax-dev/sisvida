@@ -211,10 +211,10 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
           .insert(payload);
 
         if (error) {
-          if (error.message.includes("unique")) {
+          if (error.message.includes("unique") || error.message.includes("CPF_DUPLICADO")) {
             toast({
               title: "CPF já cadastrado",
-              description: "Este CPF já está vinculado a outro dependente.",
+              description: "Este CPF já está vinculado a outro registro no sistema.",
               variant: "destructive",
             });
             return;

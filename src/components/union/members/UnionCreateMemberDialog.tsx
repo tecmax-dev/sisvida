@@ -380,8 +380,9 @@ export function UnionCreateMemberDialog({
 
       // Create dependents if any
       if (dependents.length > 0 && patientId) {
+        const failedDeps: string[] = [];
         for (const dep of dependents) {
-          await supabase.from("patient_dependents").insert({
+          const { error: depError } = await supabase.from("patient_dependents").insert({
             clinic_id: clinicId,
             patient_id: patientId,
             name: dep.nome,
@@ -389,6 +390,13 @@ export function UnionCreateMemberDialog({
             birth_date: dep.data_nascimento,
             cpf: dep.cpf?.replace(/\D/g, "") || null,
           });
+          if (depError) {
+            console.error("Error inserting dependent:", dep.nome, depError);
+            failedDeps.push(dep.nome);
+          }
+        }
+        if (failedDeps.length > 0) {
+          toast.error(`Erro ao incluir dependente(s): ${failedDeps.join(", ")}. Verifique se o CPF já está cadastrado.`);
         }
       }
 
