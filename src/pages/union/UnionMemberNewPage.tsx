@@ -181,16 +181,23 @@ export default function UnionMemberNewPage() {
 
     if (!validation.success) {
       const newErrors: Record<string, string> = {};
+      const errorMessages: string[] = [];
       validation.error.errors.forEach((err) => {
         const field = err.path[0] as string;
         newErrors[field] = err.message;
+        errorMessages.push(err.message);
       });
       setErrors(newErrors);
       toast({
         title: "Dados inválidos",
-        description: "Corrija os erros no formulário antes de continuar.",
+        description: errorMessages.slice(0, 3).join("; "),
         variant: "destructive",
       });
+      const firstErrorField = Object.keys(newErrors)[0];
+      if (firstErrorField) {
+        const el = document.querySelector(`[name="${firstErrorField}"], [data-field="${firstErrorField}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
