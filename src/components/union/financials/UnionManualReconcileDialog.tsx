@@ -153,7 +153,7 @@ export function UnionManualReconcileDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>
             {statementTransaction.transaction_type === "credit" ? "Vincular Receita(s)" : "Vincular Despesa(s)"}
@@ -171,15 +171,15 @@ export function UnionManualReconcileDialog({
         )}
 
         {/* Statement transaction info */}
-        <div className="bg-muted/50 rounded-md p-3 text-sm">
-          <p className="font-medium">{statementTransaction.description || "Sem descrição"}</p>
-          <div className="flex items-center gap-3 mt-1 text-muted-foreground">
+        <div className="bg-muted/50 rounded-md p-3 text-sm min-w-0">
+          <p className="font-medium truncate">{statementTransaction.description || "Sem descrição"}</p>
+          <div className="flex flex-wrap items-center gap-2 mt-1 text-muted-foreground">
             <span className={statementTransaction.transaction_type === "credit" ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
               {statementTransaction.transaction_type === "credit" ? "+ " : "- "}{formatCurrency(statementAmount)}
             </span>
-            <span>{statementTransaction.transaction_date}</span>
+            <span className="text-xs">{statementTransaction.transaction_date}</span>
             {statementTransaction.check_number && (
-              <Badge variant="outline" className="font-mono text-xs">
+              <Badge variant="outline" className="font-mono text-xs shrink-0">
                 <Hash className="h-3 w-3 mr-1" />
                 Cheque {statementTransaction.check_number}
               </Badge>
@@ -188,25 +188,25 @@ export function UnionManualReconcileDialog({
         </div>
 
         {/* Running total indicator */}
-        <div className={`rounded-md p-2.5 text-sm flex items-center justify-between ${
+        <div className={`rounded-md p-2.5 text-sm flex flex-wrap items-center justify-between gap-1 ${
           selectedExpenseIds.length === 0
             ? "bg-muted/30"
             : isExactMatch
             ? "bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800"
             : "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
         }`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {selectedExpenseIds.length > 0 && !isExactMatch && (
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
             )}
             {isExactMatch && selectedExpenseIds.length > 0 && (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             )}
-            <span>
+            <span className="truncate">
               {selectedExpenseIds.length} {statementTransaction.transaction_type === "credit" ? "receita(s)" : "despesa(s)"} selecionada(s)
             </span>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <span className="font-medium">
               Soma: {formatCurrency(selectedTotal)}
             </span>
@@ -257,30 +257,30 @@ export function UnionManualReconcileDialog({
                   <button
                     key={exp.id}
                     type="button"
-                    className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-center justify-between ${
+                    className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors flex items-center justify-between gap-2 min-w-0 ${
                       isSelected ? "bg-primary/10 ring-1 ring-primary" : ""
                     } ${isCheckMatch && !isSelected ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}`}
                     onClick={() => toggleExpense(exp.id)}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{exp.description}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                         <span>{exp.due_date}</span>
                         {exp.check_number && (
                           <Badge
                             variant={isCheckMatch ? "default" : "outline"}
-                            className={`font-mono text-xs ${isCheckMatch ? "bg-emerald-600 text-white" : ""}`}
+                            className={`font-mono text-xs shrink-0 ${isCheckMatch ? "bg-emerald-600 text-white" : ""}`}
                           >
                             <Hash className="h-2.5 w-2.5 mr-0.5" />
                             {exp.check_number}
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs shrink-0">
                           {exp.status === "paid" ? "Pago" : "Pendente"}
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-2">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`text-sm font-medium whitespace-nowrap ${statementTransaction.transaction_type === "credit" ? "text-emerald-600" : "text-rose-600"}`}>
                         {formatCurrency(exp.amount)}
                       </span>
@@ -302,16 +302,19 @@ export function UnionManualReconcileDialog({
           rows={2}
         />
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => handleOpenChange(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={!canConfirm || isReconciling}
+            className="w-full sm:w-auto"
           >
-            <Link2 className="h-4 w-4 mr-2" />
-            {isReconciling ? "Vinculando..." : `Vincular ${selectedExpenseIds.length} ${statementTransaction.transaction_type === "credit" ? "receita(s)" : "despesa(s)"}`}
+            <Link2 className="h-4 w-4 mr-2 shrink-0" />
+            <span className="truncate">
+              {isReconciling ? "Vinculando..." : `Vincular ${selectedExpenseIds.length} ${statementTransaction.transaction_type === "credit" ? "receita(s)" : "despesa(s)"}`}
+            </span>
           </Button>
         </DialogFooter>
       </DialogContent>
