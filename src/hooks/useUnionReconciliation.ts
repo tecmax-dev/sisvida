@@ -218,40 +218,66 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     return data as BankStatementTransaction[];
   }, []);
 
-  // Fetch pending (unreconciled) expenses for matching
+  // Fetch ALL pending (unreconciled) expenses for matching (paginated to bypass 1000-row limit)
   const { data: pendingExpenses } = useQuery({
     queryKey: ["union-pending-expenses-reconciliation", clinicId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_financial_transactions")
-        .select("id, description, amount, status, check_number, payment_method, due_date, paid_date, cash_register_id, type")
-        .eq("clinic_id", clinicId!)
-        .eq("type", "expense")
-        .eq("is_conciliated", false)
-        .in("status", ["paid", "pending"])
-        .order("due_date", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data;
+      const allData: any[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("union_financial_transactions")
+          .select("id, description, amount, status, check_number, payment_method, due_date, paid_date, cash_register_id, type")
+          .eq("clinic_id", clinicId!)
+          .eq("type", "expense")
+          .eq("is_conciliated", false)
+          .in("status", ["paid", "pending"])
+          .order("due_date", { ascending: false })
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allData.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      return allData;
     },
     enabled: !!clinicId,
   });
 
-  // Fetch pending (unreconciled) income for matching credits
+  // Fetch ALL pending (unreconciled) income for matching credits (paginated)
   const { data: pendingIncomes } = useQuery({
     queryKey: ["union-pending-incomes-reconciliation", clinicId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_financial_transactions")
-        .select("id, description, amount, status, check_number, payment_method, due_date, paid_date, cash_register_id, type")
-        .eq("clinic_id", clinicId!)
-        .eq("type", "income")
-        .eq("is_conciliated", false)
-        .in("status", ["paid", "pending"])
-        .order("due_date", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data;
+      const allData: any[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("union_financial_transactions")
+          .select("id, description, amount, status, check_number, payment_method, due_date, paid_date, cash_register_id, type")
+          .eq("clinic_id", clinicId!)
+          .eq("type", "income")
+          .eq("is_conciliated", false)
+          .in("status", ["paid", "pending"])
+          .order("due_date", { ascending: false })
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allData.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      return allData;
     },
     enabled: !!clinicId,
   });
