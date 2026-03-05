@@ -87,13 +87,31 @@ export function UnionManualReconcileDialog({
     );
   }, [carrierFilteredExpenses, search]);
 
-  // Sort: matching check numbers first
+  // Sort: current month first, then matching check numbers
   const sorted = useMemo(() => {
-    if (!statementCheckNorm) return filtered;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+
     return [...filtered].sort((a, b) => {
-      const aMatch = normalizeCheckNumber(a.check_number) === statementCheckNorm ? 0 : 1;
-      const bMatch = normalizeCheckNumber(b.check_number) === statementCheckNorm ? 0 : 1;
-      return aMatch - bMatch;
+      // Priority 1: current month/year expenses first
+      const aDate = a.due_date ? new Date(a.due_date + "T12:00:00") : null;
+      const bDate = b.due_date ? new Date(b.due_date + "T12:00:00") : null;
+      const aCurrentMonth = aDate && aDate.getFullYear() === currentYear && aDate.getMonth() === currentMonth ? 0 : 1;
+      const bCurrentMonth = bDate && bDate.getFullYear() === currentYear && bDate.getMonth() === currentMonth ? 0 : 1;
+      if (aCurrentMonth !== bCurrentMonth) return aCurrentMonth - bCurrentMonth;
+
+      // Priority 2: matching check numbers
+      if (statementCheckNorm) {
+        const aMatch = normalizeCheckNumber(a.check_number) === statementCheckNorm ? 0 : 1;
+        const bMatch = normalizeCheckNumber(b.check_number) === statementCheckNorm ? 0 : 1;
+        if (aMatch !== bMatch) return aMatch - bMatch;
+      }
+
+      // Priority 3: by due_date ascending within same group
+      const aTime = aDate?.getTime() ?? 0;
+      const bTime = bDate?.getTime() ?? 0;
+      return aTime - bTime;
     });
   }, [filtered, statementCheckNorm]);
 
