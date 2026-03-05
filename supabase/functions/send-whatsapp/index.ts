@@ -46,18 +46,30 @@ serve(async (req) => {
       );
     }
 
-    // 2. Create client with user's auth to verify identity
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // 2. Verify identity - support both user JWT and service role key (internal calls)
+    const token = authHeader.replace("Bearer ", "").trim();
+    const isServiceRoleCall = token === supabaseServiceKey;
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    if (authError || !user) {
-      console.error('[send-whatsapp] Invalid token:', authError?.message);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let userId: string;
+
+    if (isServiceRoleCall) {
+      // Trusted internal call (e.g. from send-signature-whatsapp)
+      console.log('[send-whatsapp] Service role call - skipping user auth');
+      userId = "service-role";
+    } else {
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+      if (authError || !user) {
+        console.error('[send-whatsapp] Invalid token:', authError?.message);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      userId = user.id;
     }
 
     // 3. Parse request body
@@ -96,38 +108,40 @@ serve(async (req) => {
     // 6. Create service role client for RPC call
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 7. Verify user has access to this clinic (or is super admin)
-    const { data: hasAccess, error: accessError } = await supabase.rpc('has_clinic_access', {
-      _user_id: user.id,
-      _clinic_id: clinicId
-    });
+    // 7. Verify user has access to this clinic (skip for service role calls)
+    if (!isServiceRoleCall) {
+      const { data: hasAccess, error: accessError } = await supabase.rpc('has_clinic_access', {
+        _user_id: userId,
+        _clinic_id: clinicId
+      });
 
-    // Super-admin bypass (admin panel can message any clinic)
-    let isSuperAdmin = false;
-    if (!accessError && !hasAccess) {
-      const { data: superAdminRow, error: superAdminError } = await supabase
-        .from('super_admins')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Super-admin bypass (admin panel can message any clinic)
+      let isSuperAdmin = false;
+      if (!accessError && !hasAccess) {
+        const { data: superAdminRow, error: superAdminError } = await supabase
+          .from('super_admins')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-      if (superAdminError) {
-        console.error('[send-whatsapp] Error checking super admin:', superAdminError);
+        if (superAdminError) {
+          console.error('[send-whatsapp] Error checking super admin:', superAdminError);
+        }
+        isSuperAdmin = !!superAdminRow;
       }
-      isSuperAdmin = !!superAdminRow;
-    }
 
-    if (accessError || (!hasAccess && !isSuperAdmin)) {
-      console.error(`[send-whatsapp] User ${user.id} denied access to clinic ${clinicId}`);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Acesso negado a esta clínica' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+      if (accessError || (!hasAccess && !isSuperAdmin)) {
+        console.error(`[send-whatsapp] User ${userId} denied access to clinic ${clinicId}`);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Acesso negado a esta clínica' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    if (isSuperAdmin) {
-      console.log(`[send-whatsapp] Super admin override for clinic ${clinicId}`);
-    }
+      if (isSuperAdmin) {
+        console.log(`[send-whatsapp] Super admin override for clinic ${clinicId}`);
+      }
+    } // end permission check
 
     // 8. Check message limit for the clinic
     const monthYear = new Date().toISOString().slice(0, 7);
@@ -366,7 +380,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[Clinic ${clinicId}] User ${user.id} sending WhatsApp message to ${formattedPhone} via instance ${instance_name} with logo`);
+    console.log(`[Clinic ${clinicId}] User ${userId} sending WhatsApp message to ${formattedPhone} via instance ${instance_name} with logo`);
 
     // Envia mensagem com imagem (logo) no cabeçalho
     const response = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
@@ -421,7 +435,7 @@ serve(async (req) => {
     }
 
     // 13. Log message sent successfully
-    console.log(`[Clinic ${clinicId}] Message sent successfully by user ${user.id}, logging to message_logs`);
+    console.log(`[Clinic ${clinicId}] Message sent successfully by user ${userId}, logging to message_logs`);
     const { error: logError } = await supabase
       .from('message_logs')
       .insert({
