@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Users, Plus, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, Loader2, Trash2 } from "lucide-react";
+import { Users, Plus, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, Loader2, Trash2, IdCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -337,6 +337,48 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
     return RELATIONSHIPS.find(r => r.value === value)?.label || value;
   };
 
+  const [generatingCardId, setGeneratingCardId] = useState<string | null>(null);
+
+  const handleGenerateCard = async (dependent: Dependent) => {
+    setGeneratingCardId(dependent.id);
+    try {
+      // Generate card number based on dependent CPF or sequential
+      const cardNumber = dependent.cpf
+        ? dependent.cpf.replace(/\D/g, '')
+        : `DEP-${Date.now()}`;
+      
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      const expiresAt = oneYearFromNow.toISOString().split("T")[0];
+
+      const { error } = await supabase
+        .from("patient_dependents")
+        .update({
+          card_number: cardNumber,
+          card_expires_at: expiresAt,
+        })
+        .eq("id", dependent.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Carteirinha gerada",
+        description: `Carteirinha emitida para ${dependent.name} com validade de 1 ano.`,
+      });
+
+      fetchDependents();
+    } catch (error: any) {
+      console.error("Error generating card:", error);
+      toast({
+        title: "Erro ao gerar carteirinha",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingCardId(null);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -543,6 +585,22 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                     </div>
 
                     <div className="flex gap-1 ml-4">
+                      {!dependent.card_number && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleGenerateCard(dependent)}
+                          disabled={generatingCardId === dependent.id}
+                          title="Gerar Carteirinha"
+                          className="text-primary hover:text-primary"
+                        >
+                          {generatingCardId === dependent.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <IdCard className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
