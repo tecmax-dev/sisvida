@@ -96,7 +96,7 @@ export function UnionOFXImportDialog({
         const buffer = await file.arrayBuffer();
         const decoder = new TextDecoder("iso-8859-1");
         content = decoder.decode(buffer);
-      } catch {
+      } catch (_e) {
         // Fallback to default UTF-8
         content = await file.text();
       }
