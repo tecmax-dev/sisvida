@@ -514,6 +514,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           is_conciliated: true,
           conciliated_at: new Date().toISOString(),
           conciliated_by: userId,
+          source_statement_tx_id: statementTransactionId,
         };
 
         // If expense was pending, mark as paid with compensation date
@@ -858,15 +859,71 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             deletedFinCount++;
           }
         } else if (matchedId) {
-          // If matched to an existing financial transaction, just un-flag it
-          await supabase
+          // If matched to existing financial transaction(s), find ALL linked via source_statement_tx_id
+          const { data: allLinked } = await supabase
             .from("union_financial_transactions")
-            .update({
+            .select("id, amount, type, status, conciliated_at")
+            .eq("source_statement_tx_id", stmtId);
+
+          // Fallback: if no linked found via source_statement_tx_id, use the single matchedId
+          const linkedTxs = (allLinked && allLinked.length > 0)
+            ? allLinked
+            : [];
+
+          if (linkedTxs.length === 0) {
+            // Legacy fallback: just the single matchedId
+            const { data: singleTx } = await supabase
+              .from("union_financial_transactions")
+              .select("id, amount, type, status, conciliated_at")
+              .eq("id", matchedId)
+              .single();
+            if (singleTx) linkedTxs.push(singleTx);
+          }
+
+          for (const linkedTx of linkedTxs) {
+            // If this transaction was marked as paid during reconciliation (has conciliated_at),
+            // revert it to pending and reverse the balance
+            const wasPaidDuringReconciliation = linkedTx.status === "paid" && linkedTx.conciliated_at;
+
+            const revertPayload: Record<string, any> = {
               is_conciliated: false,
               conciliated_at: null,
               conciliated_by: null,
-            })
-            .eq("id", matchedId);
+              source_statement_tx_id: null,
+            };
+
+            if (wasPaidDuringReconciliation) {
+              revertPayload.status = "pending";
+              revertPayload.paid_date = null;
+            }
+
+            await supabase
+              .from("union_financial_transactions")
+              .update(revertPayload)
+              .eq("id", linkedTx.id);
+
+            // Reverse balance if the transaction was paid during reconciliation
+            if (wasPaidDuringReconciliation) {
+              const balanceChange = linkedTx.type === "income"
+                ? -Number(linkedTx.amount)
+                : Number(linkedTx.amount);
+
+              const { data: register } = await supabase
+                .from("union_cash_registers")
+                .select("current_balance")
+                .eq("id", stmtTx.cash_register_id)
+                .single();
+
+              if (register) {
+                await supabase
+                  .from("union_cash_registers")
+                  .update({
+                    current_balance: Number(register.current_balance || 0) + balanceChange,
+                  })
+                  .eq("id", stmtTx.cash_register_id);
+              }
+            }
+          }
         }
 
         // Reset statement transaction
