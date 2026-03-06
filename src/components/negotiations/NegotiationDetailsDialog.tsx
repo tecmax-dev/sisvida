@@ -64,6 +64,7 @@ import autoTable from "jspdf-autotable";
 import { SendNegotiationWhatsAppDialog } from "./SendNegotiationWhatsAppDialog";
 import { SendBoletosWhatsAppDialog } from "./SendBoletosWhatsAppDialog";
 import EditNegotiationDialog from "./EditNegotiationDialog";
+import EditInstallmentDueDateDialog from "./EditInstallmentDueDateDialog";
 import { Pencil } from "lucide-react";
 
 interface Employer {
@@ -125,6 +126,7 @@ interface Installment {
   value: number;
   due_date: string;
   status: string;
+  lytex_invoice_id: string | null;
   lytex_invoice_url: string | null;
   paid_at: string | null;
   paid_value: number | null;
@@ -178,6 +180,9 @@ export default function NegotiationDetailsDialog({
 
   // Edit dialog
   const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Edit installment due date
+  const [editingInstallment, setEditingInstallment] = useState<Installment | null>(null);
 
   // Local copy (ensures latest DB values after edits)
   const [currentNegotiation, setCurrentNegotiation] = useState<Negotiation>(negotiation);
@@ -1036,16 +1041,28 @@ export default function NegotiationDetailsDialog({
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {inst.lytex_invoice_url && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(inst.lytex_invoice_url!, "_blank")}
-                            >
-                              <Receipt className="h-4 w-4 mr-1" />
-                              Boleto
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {inst.status !== "paid" && inst.status !== "cancelled" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingInstallment(inst)}
+                                title="Editar vencimento"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {inst.lytex_invoice_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(inst.lytex_invoice_url!, "_blank")}
+                              >
+                                <Receipt className="h-4 w-4 mr-1" />
+                                Boleto
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1149,6 +1166,27 @@ export default function NegotiationDetailsDialog({
         negotiation={currentNegotiation}
         installments={installments}
         clinicId={clinic?.id || ""}
+      />
+
+      {/* Edit Installment Due Date Dialog */}
+      <EditInstallmentDueDateDialog
+        open={!!editingInstallment}
+        onOpenChange={(open) => { if (!open) setEditingInstallment(null); }}
+        installment={editingInstallment ? {
+          ...editingInstallment,
+          negotiation_id: negotiation.id,
+          lytex_invoice_id: null,
+          negotiation: {
+            negotiation_code: negotiation.negotiation_code,
+            employer_id: negotiation.employer_id,
+            employers: negotiation.employers ? {
+              id: negotiation.employers.id,
+              name: negotiation.employers.name,
+              cnpj: negotiation.employers.cnpj,
+            } : undefined,
+          },
+        } : null}
+        onSuccess={fetchDetails}
       />
 
       {/* Edit Dialog */}
