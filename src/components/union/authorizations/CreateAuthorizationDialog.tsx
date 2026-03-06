@@ -105,7 +105,22 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
         .limit(20);
 
       if (patientSearch) {
-        query = query.or(`name.ilike.%${patientSearch}%,cpf.ilike.%${patientSearch}%`);
+        const searchTerm = patientSearch.trim();
+        const searchDigits = searchTerm.replace(/\D/g, "");
+        
+        // If search looks like CPF digits, search both formatted and unformatted
+        if (searchDigits.length >= 3) {
+          let cpfFormatted = "";
+          if (searchDigits.length === 11) {
+            cpfFormatted = searchDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+          }
+          const cpfFilters = cpfFormatted
+            ? `cpf.ilike.%${searchDigits}%,cpf.ilike.%${cpfFormatted}%`
+            : `cpf.ilike.%${searchDigits}%`;
+          query = query.or(`name.ilike.%${searchTerm}%,${cpfFilters}`);
+        } else {
+          query = query.or(`name.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%`);
+        }
       }
 
       const { data } = await query;
