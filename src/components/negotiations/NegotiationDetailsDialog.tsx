@@ -1175,7 +1175,7 @@ export default function NegotiationDetailsDialog({
         installment={editingInstallment ? {
           ...editingInstallment,
           negotiation_id: negotiation.id,
-          lytex_invoice_id: null,
+          lytex_invoice_id: editingInstallment.lytex_invoice_id,
           negotiation: {
             negotiation_code: negotiation.negotiation_code,
             employer_id: negotiation.employer_id,
