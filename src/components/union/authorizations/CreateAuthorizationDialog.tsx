@@ -99,7 +99,6 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
         .from("patients")
         .select("id, name, cpf, registration_number")
         .eq("clinic_id", currentClinic.id)
-        .eq("is_union_member", true)
         .eq("is_active", true)
         .order("name")
         .limit(20);
