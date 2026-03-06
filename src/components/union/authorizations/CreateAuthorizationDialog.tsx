@@ -303,7 +303,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0" align="start">
-                      <Command>
+                      <Command shouldFilter={false}>
                         <CommandInput
                           placeholder="Buscar por nome ou CPF..."
                           value={patientSearch}
@@ -315,7 +315,7 @@ export function CreateAuthorizationDialog({ open, onOpenChange, preselectedPatie
                             {patients.map((patient) => (
                               <CommandItem
                                 key={patient.id}
-                                value={patient.id}
+                                value={`${patient.name} ${patient.cpf ?? ""} ${patient.registration_number ?? ""}`}
                                 onSelect={() => {
                                   field.onChange(patient.id);
                                   setSelectedPatient(patient);
