@@ -3,7 +3,7 @@ import { Loader2, Handshake, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import NegotiationsPage from "@/pages/dashboard/NegotiationsPage";
 
-export default function UnionNegotiationsPage() {
+export default function UnionNegotiationsPage() { // union negotiations
   const { currentClinic, loading } = useAuth();
 
   if (loading) {
