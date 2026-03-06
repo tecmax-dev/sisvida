@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, FileText, QrCode, Eye, Ban, Printer } from "lucide-react";
+import { Plus, Search, FileText, QrCode, Eye, Ban, Printer, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { ptBR } from "date-fns/locale";
 import { CreateAuthorizationDialog } from "./CreateAuthorizationDialog";
 import { AuthorizationViewDialog } from "./AuthorizationViewDialog";
 import { RevokeAuthorizationDialog } from "./RevokeAuthorizationDialog";
+import { DeleteAuthorizationDialog } from "./DeleteAuthorizationDialog";
 
 interface Authorization {
   id: string;
@@ -63,6 +64,7 @@ export function UnionAuthorizationsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAuthorization, setSelectedAuthorization] = useState<Authorization | null>(null);
 
   const { data: authorizations = [], isLoading } = useQuery({
@@ -128,6 +130,11 @@ export function UnionAuthorizationsPage() {
   const handleRevoke = (auth: Authorization) => {
     setSelectedAuthorization(auth);
     setRevokeDialogOpen(true);
+  };
+
+  const handleDelete = (auth: Authorization) => {
+    setSelectedAuthorization(auth);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -257,6 +264,16 @@ export function UnionAuthorizationsPage() {
                             <Ban className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
+                        {(auth.status === "active" || auth.status === "revoked") && canManageMembers() && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(auth)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -281,6 +298,12 @@ export function UnionAuthorizationsPage() {
       <RevokeAuthorizationDialog
         open={revokeDialogOpen}
         onOpenChange={setRevokeDialogOpen}
+        authorization={selectedAuthorization}
+      />
+
+      <DeleteAuthorizationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
         authorization={selectedAuthorization}
       />
     </div>
