@@ -81,8 +81,15 @@ export default function UnionExpensesPage() {
   const [cashRegisterFilter, setCashRegisterFilter] = useState<string>("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [checkNumberFilter, setCheckNumberFilter] = useState<string>("");
+  const [startDateInput, setStartDateInput] = useState("");
+  const [endDateInput, setEndDateInput] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
+
+  const handleSearchByDate = () => {
+    setStartDateFilter(startDateInput);
+    setEndDateFilter(endDateInput);
+  };
 
   const clinicId = currentClinic?.id;
 
