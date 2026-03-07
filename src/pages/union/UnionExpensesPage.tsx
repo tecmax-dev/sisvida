@@ -371,6 +371,8 @@ export default function UnionExpensesPage() {
     setCashRegisterFilter("all");
     setPaymentMethodFilter("all");
     setCheckNumberFilter("");
+    setStartDateInput("");
+    setEndDateInput("");
     setStartDateFilter("");
     setEndDateFilter("");
   };
