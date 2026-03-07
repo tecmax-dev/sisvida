@@ -654,8 +654,8 @@ export default function UnionExpensesPage() {
                   <Label className="text-xs">Data Início</Label>
                   <Input
                     type="date"
-                    value={startDateFilter}
-                    onChange={(e) => setStartDateFilter(e.target.value)}
+                    value={startDateInput}
+                    onChange={(e) => setStartDateInput(e.target.value)}
                     className="h-8 mt-1 text-sm"
                   />
                 </div>
@@ -664,15 +664,19 @@ export default function UnionExpensesPage() {
                   <Label className="text-xs">Data Fim</Label>
                   <Input
                     type="date"
-                    value={endDateFilter}
-                    onChange={(e) => setEndDateFilter(e.target.value)}
+                    value={endDateInput}
+                    onChange={(e) => setEndDateInput(e.target.value)}
                     className="h-8 mt-1 text-sm"
                   />
                 </div>
               </div>
-              <div className="mt-2 flex justify-end">
+              <div className="mt-2 flex justify-end gap-2">
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearFilters}>
                   Limpar filtros
+                </Button>
+                <Button size="sm" className="h-7 text-xs" onClick={handleSearchByDate}>
+                  <Search className="h-3.5 w-3.5 mr-1" />
+                  Buscar
                 </Button>
               </div>
             </CardContent>
