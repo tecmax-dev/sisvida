@@ -95,7 +95,10 @@ export function useContributionsReport(clinicId: string | undefined) {
 
     try {
       // Atualizar status de contribuições vencidas antes de buscar
-      await supabase.rpc("update_overdue_contributions");
+      const { error: overdueUpdateError } = await supabase.rpc("update_overdue_contributions");
+      if (overdueUpdateError) {
+        throw overdueUpdateError;
+      }
 
       console.log("[useContributionsReport] ========== STARTING FETCH ==========");
       console.log("[useContributionsReport] Clinic ID:", clinicId);
