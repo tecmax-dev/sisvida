@@ -89,6 +89,35 @@ serve(async (req) => {
     
     console.log(`CNPJ found: ${data.razao_social}`);
 
+    let email = data.email || '';
+
+    // Se email veio vazio da BrasilAPI, tentar ReceitaWS como fallback
+    if (!email) {
+      try {
+        console.log(`Email vazio na BrasilAPI, tentando ReceitaWS...`);
+        const fallbackController = new AbortController();
+        const fallbackTimeout = setTimeout(() => fallbackController.abort(), 8000);
+        
+        const fallbackResp = await fetch(`https://receitaws.com.br/v1/cnpj/${cleanCnpj}`, {
+          signal: fallbackController.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        clearTimeout(fallbackTimeout);
+        
+        if (fallbackResp.ok) {
+          const fallbackData = await fallbackResp.json();
+          if (fallbackData.email) {
+            email = fallbackData.email;
+            console.log(`Email encontrado via ReceitaWS: ${email}`);
+          }
+        }
+      } catch (fallbackErr) {
+        console.log(`Fallback ReceitaWS falhou (não crítico):`, fallbackErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
@@ -102,7 +131,7 @@ serve(async (req) => {
         uf: data.uf || '',
         cep: data.cep || '',
         telefone: data.ddd_telefone_1 || '',
-        email: data.email || '',
+        email: email,
         cnae_fiscal: data.cnae_fiscal || null,
         cnae_fiscal_descricao: data.cnae_fiscal_descricao || '',
       }),
