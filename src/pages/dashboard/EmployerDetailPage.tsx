@@ -88,6 +88,7 @@ import { AccountingOfficeSelector } from "@/components/employers/AccountingOffic
 import CreateAwaitingValueDialog from "@/components/contributions/CreateAwaitingValueDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -163,6 +164,7 @@ export default function EmployerDetailPage() {
   const isUnionModule = location.startsWith("/union");
   const backUrl = isUnionModule ? "/union/empresas" : "/dashboard/empresas";
   const { currentClinic, session } = useAuth();
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
 
   const [employer, setEmployer] = useState<Employer | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -1127,7 +1129,35 @@ export default function EmployerDetailPage() {
                 <div>
                   <Label>CNPJ</Label>
                   <div className="space-y-1">
-                    <Input value={formatCNPJ(employer.cnpj)} disabled />
+                    <div className="flex gap-2">
+                      <Input value={formatCNPJ(employer.cnpj)} disabled className="flex-1" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={cnpjLoading}
+                        title="Atualizar dados via Receita Federal"
+                        onClick={async () => {
+                          if (!employer.cnpj) return;
+                          const data = await lookupCnpj(employer.cnpj);
+                          if (data) {
+                            setFormData(prev => ({
+                              ...prev,
+                              name: data.razao_social || prev.name,
+                              trade_name: data.nome_fantasia || prev.trade_name,
+                              email: data.email || prev.email,
+                              phone: data.telefone || prev.phone,
+                              address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ''}` : prev.address,
+                              city: data.municipio || prev.city,
+                              state: data.uf || prev.state,
+                            }));
+                            toast.success("Dados atualizados da Receita Federal (incluindo e-mail)");
+                          }
+                        }}
+                      >
+                        {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      </Button>
+                    </div>
                     {employer.cnae_code && (
                       <p className="text-xs text-muted-foreground">
                         CNAE: {employer.cnae_code}
