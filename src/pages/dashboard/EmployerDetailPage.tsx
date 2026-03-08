@@ -1129,7 +1129,35 @@ export default function EmployerDetailPage() {
                 <div>
                   <Label>CNPJ</Label>
                   <div className="space-y-1">
-                    <Input value={formatCNPJ(employer.cnpj)} disabled />
+                    <div className="flex gap-2">
+                      <Input value={formatCNPJ(employer.cnpj)} disabled className="flex-1" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={cnpjLoading}
+                        title="Atualizar dados via Receita Federal"
+                        onClick={async () => {
+                          if (!employer.cnpj) return;
+                          const data = await lookupCnpj(employer.cnpj);
+                          if (data) {
+                            setFormData(prev => ({
+                              ...prev,
+                              name: data.razao_social || prev.name,
+                              trade_name: data.nome_fantasia || prev.trade_name,
+                              email: data.email || prev.email,
+                              phone: data.telefone || prev.phone,
+                              address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ''}` : prev.address,
+                              city: data.municipio || prev.city,
+                              state: data.uf || prev.state,
+                            }));
+                            toast.success("Dados atualizados da Receita Federal (incluindo e-mail)");
+                          }
+                        }}
+                      >
+                        {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      </Button>
+                    </div>
                     {employer.cnae_code && (
                       <p className="text-xs text-muted-foreground">
                         CNAE: {employer.cnae_code}
