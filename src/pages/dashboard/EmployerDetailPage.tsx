@@ -164,6 +164,7 @@ export default function EmployerDetailPage() {
   const isUnionModule = location.startsWith("/union");
   const backUrl = isUnionModule ? "/union/empresas" : "/dashboard/empresas";
   const { currentClinic, session } = useAuth();
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
 
   const [employer, setEmployer] = useState<Employer | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
