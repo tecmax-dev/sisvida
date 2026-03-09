@@ -1890,13 +1890,41 @@ async function handleBoletoFlow(
             };
           }
           
-          // Has value but no URL - redirect to use existing
+          // Has value but no URL - if already has valid due date and is not overdue, preserve existing due date
+          const preservedDueDate = normalizeDateOnly(existingContribution.due_date);
+          const askNewDueDate = mustAskNewDueDate({
+            boletoType: session.boleto_type,
+            status: existingContribution.status,
+            dueDate: preservedDueDate,
+          });
+
+          if (askNewDueDate) {
+            await updateSession(supabase, session.id, {
+              state: 'WAITING_NEW_DUE_DATE',
+              contribution_id: existingContribution.id,
+              competence_month: competence.month,
+              competence_year: competence.year,
+              value_cents: existingContribution.value,
+              flow_context: { 
+                ...session.flow_context, 
+                selected_contribution: existingContribution,
+                using_existing: true
+              }
+            });
+
+            return { 
+              response: `📋 *Contribuição já cadastrada!*\n\nJá existe uma contribuição para *${compStr}* no valor de *${formatCurrency(existingContribution.value)}* aguardando geração do boleto.\n\nVamos gerar o boleto agora!\n\n📅 Informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
+              newState: 'WAITING_NEW_DUE_DATE'
+            };
+          }
+
           await updateSession(supabase, session.id, {
-            state: 'WAITING_NEW_DUE_DATE',
+            state: 'CONFIRM_BOLETO',
             contribution_id: existingContribution.id,
             competence_month: competence.month,
             competence_year: competence.year,
             value_cents: existingContribution.value,
+            new_due_date: preservedDueDate,
             flow_context: { 
               ...session.flow_context, 
               selected_contribution: existingContribution,
@@ -1904,9 +1932,16 @@ async function handleBoletoFlow(
             }
           });
 
-          return { 
-            response: `📋 *Contribuição já cadastrada!*\n\nJá existe uma contribuição para *${compStr}* no valor de *${formatCurrency(existingContribution.value)}* aguardando geração do boleto.\n\nVamos gerar o boleto agora!\n\n📅 Informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
-            newState: 'WAITING_NEW_DUE_DATE'
+          return {
+            response: MESSAGES.confirmBoleto({
+              employerName: session.employer_name!,
+              contributionType: session.flow_context?.selected_type?.name || 'Contribuição',
+              competence: compStr,
+              value: formatCurrency(existingContribution.value),
+              dueDate: formatDate(preservedDueDate!),
+              isReissue: true,
+            }),
+            newState: 'CONFIRM_BOLETO',
           };
         } else {
           // Exists but has no value - redirect to fill value for existing contribution
