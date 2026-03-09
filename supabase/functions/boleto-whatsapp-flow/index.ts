@@ -1991,16 +1991,42 @@ async function handleBoletoFlow(
       let dueDateStr: string;
       
       if (isReissue) {
-        // For reissue/existing contribution without URL, ask for due date manually
-        await updateSession(supabase, session.id, {
-          state: 'WAITING_NEW_DUE_DATE',
-          value_cents: valueCents,
+        let existingDueDate = normalizeDateOnly(session.flow_context?.selected_contribution?.due_date);
+        let existingStatus = session.flow_context?.selected_contribution?.status || null;
+
+        // Fallback: ensure latest due_date/status from database
+        if (session.contribution_id && (!existingDueDate || !existingStatus)) {
+          const { data: existingContribution } = await supabase
+            .from('employer_contributions')
+            .select('due_date, status')
+            .eq('id', session.contribution_id)
+            .maybeSingle();
+
+          if (existingContribution) {
+            existingDueDate = normalizeDateOnly(existingContribution.due_date);
+            existingStatus = existingContribution.status;
+          }
+        }
+
+        const askNewDueDate = mustAskNewDueDate({
+          boletoType: session.boleto_type,
+          status: existingStatus,
+          dueDate: existingDueDate,
         });
 
-        return { 
-          response: `💰 Valor: *${formatCurrency(valueCents)}*\n\n📅 Agora informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
-          newState: 'WAITING_NEW_DUE_DATE'
-        };
+        if (askNewDueDate) {
+          await updateSession(supabase, session.id, {
+            state: 'WAITING_NEW_DUE_DATE',
+            value_cents: valueCents,
+          });
+
+          return { 
+            response: `💰 Valor: *${formatCurrency(valueCents)}*\n\n📅 Agora informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
+            newState: 'WAITING_NEW_DUE_DATE'
+          };
+        }
+
+        dueDateStr = existingDueDate!;
       } else {
         // For new "a vencer" boleto - calculate automatic due date based on competence
         // Rule: Day 10 of the month following competence (or next business day)
@@ -2020,7 +2046,7 @@ async function handleBoletoFlow(
           competence: competence,
           value: formatCurrency(valueCents),
           dueDate: formatDate(dueDateStr),
-          isReissue: false
+          isReissue: isReissue
         }), 
         newState: 'CONFIRM_BOLETO' 
       };
