@@ -713,22 +713,27 @@ export default function ContributionsListTab({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant={activeContributions.filter(c => c.status === "overdue").length > 0 ? "destructive" : "outline"}
                   size="sm"
                   onClick={() => setOverdueNotificationOpen(true)}
-                  className="text-rose-600 border-rose-300 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-600 dark:hover:bg-rose-950"
+                  className={activeContributions.filter(c => c.status === "overdue").length > 0
+                    ? "animate-pulse shadow-md gap-2"
+                    : "text-rose-600 border-rose-300 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-600 dark:hover:bg-rose-950 gap-2"
+                  }
                 >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Cobrar Vencidos
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Cobrar Vencidos</span>
+                  <span className="sm:hidden">Vencidos</span>
+                  <span className="hidden md:inline text-xs opacity-80">(WhatsApp + Email)</span>
                   {activeContributions.filter(c => c.status === "overdue").length > 0 && (
-                    <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs">
+                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-white/20 text-white border-white/30">
                       {activeContributions.filter(c => c.status === "overdue").length}
                     </Badge>
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                Enviar notificação de cobrança vencida via WhatsApp ou Email
+                Enviar cobrança de contribuições vencidas via WhatsApp e Email em lote
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
