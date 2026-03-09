@@ -581,13 +581,14 @@ export function EmployerContributionFilters({
       {/* Actions */}
       {overdueCount > 0 && (
         <Button
-          variant="outline"
+          variant="destructive"
           size="sm"
           onClick={onSendOverdueWhatsApp}
-          className="gap-1 h-8 border-amber-500 text-amber-600 hover:bg-amber-50"
+          className="gap-1.5 h-8 animate-pulse shadow-md"
         >
           <AlertTriangle className="h-3.5 w-3.5" />
           Cobrar Vencidos ({overdueCount})
+          <span className="hidden md:inline text-xs opacity-80">– WhatsApp + Email</span>
         </Button>
       )}
 
