@@ -1015,8 +1015,8 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 ## CONVENÇÕES COLETIVAS
 **CCT 2025/2026 Comércio Varejista:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/mxQj
 **CCT 2025/2026 Supermercado:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/nh7m
-**CCT 2026/2027 Comércio Varejista:** Ainda não foi fechada. A negociação está em andamento entre o sindicato e os representantes patronais. Assim que a nova convenção for acordada e assinada, o SECMI comunicará oficialmente todos os associados e empresas pelos canais oficiais (app, WhatsApp e site). Enquanto a nova CCT não é assinada, as condições anteriores servem como referência. Fique tranquilo(a), estamos trabalhando para garantir os melhores benefícios para a categoria! 😊
-**CCT 2026/2027 Supermercado:** Ainda em negociação. O sindicato informará assim que houver definição.
+**CCT 2026/2027 Comércio Varejista:** Ainda não disponível. NÃO forneça detalhes sobre negociações em andamento. Responda apenas: "A CCT 2026/2027 do Comércio Varejista ainda não foi publicada. Assim que estiver disponível, será comunicada pelos canais oficiais do SECMI. Para consultar as convenções anteriores, acesse: https://comerciariosilheus.org.br/ccts/"
+**CCT 2026/2027 Supermercado:** Ainda não disponível. NÃO forneça detalhes sobre negociações em andamento. Responda apenas: "A CCT 2026/2027 de Supermercados ainda não foi publicada. Acompanhe os canais oficiais do SECMI para novidades. Convenções anteriores: https://comerciariosilheus.org.br/ccts/"
 **Todas CCTs:** https://comerciariosilheus.org.br/ccts/
 
 ## PISO SALARIAL 2025
