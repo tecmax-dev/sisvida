@@ -989,6 +989,24 @@ function calculateBaseDueDate(competenceMonth: number, competenceYear: number): 
   return dueDate.toISOString().split('T')[0];
 }
 
+function normalizeDateOnly(dateValue: string | null | undefined): string | null {
+  if (!dateValue) return null;
+  return dateValue.slice(0, 10);
+}
+
+function mustAskNewDueDate(params: {
+  boletoType: 'a_vencer' | 'vencido' | null;
+  status?: string | null;
+  dueDate?: string | null;
+}): boolean {
+  const today = new Date().toISOString().split('T')[0];
+  const dueDate = normalizeDateOnly(params.dueDate);
+  const isOverdue = params.status === 'overdue' || (!!dueDate && dueDate < today);
+
+  // Regra de negócio: só pedir nova data para vencidos (ou sem data definida)
+  return params.boletoType === 'vencido' || isOverdue || !dueDate;
+}
+
 // ==========================================
 // FLOW MESSAGES
 // ==========================================
