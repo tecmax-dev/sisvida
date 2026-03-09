@@ -989,6 +989,24 @@ function calculateBaseDueDate(competenceMonth: number, competenceYear: number): 
   return dueDate.toISOString().split('T')[0];
 }
 
+function normalizeDateOnly(dateValue: string | null | undefined): string | null {
+  if (!dateValue) return null;
+  return dateValue.slice(0, 10);
+}
+
+function mustAskNewDueDate(params: {
+  boletoType: 'a_vencer' | 'vencido' | null;
+  status?: string | null;
+  dueDate?: string | null;
+}): boolean {
+  const today = new Date().toISOString().split('T')[0];
+  const dueDate = normalizeDateOnly(params.dueDate);
+  const isOverdue = params.status === 'overdue' || (!!dueDate && dueDate < today);
+
+  // Regra de negócio: só pedir nova data para vencidos (ou sem data definida)
+  return params.boletoType === 'vencido' || isOverdue || !dueDate;
+}
+
 // ==========================================
 // FLOW MESSAGES
 // ==========================================
@@ -1872,13 +1890,41 @@ async function handleBoletoFlow(
             };
           }
           
-          // Has value but no URL - redirect to use existing
+          // Has value but no URL - if already has valid due date and is not overdue, preserve existing due date
+          const preservedDueDate = normalizeDateOnly(existingContribution.due_date);
+          const askNewDueDate = mustAskNewDueDate({
+            boletoType: session.boleto_type,
+            status: existingContribution.status,
+            dueDate: preservedDueDate,
+          });
+
+          if (askNewDueDate) {
+            await updateSession(supabase, session.id, {
+              state: 'WAITING_NEW_DUE_DATE',
+              contribution_id: existingContribution.id,
+              competence_month: competence.month,
+              competence_year: competence.year,
+              value_cents: existingContribution.value,
+              flow_context: { 
+                ...session.flow_context, 
+                selected_contribution: existingContribution,
+                using_existing: true
+              }
+            });
+
+            return { 
+              response: `📋 *Contribuição já cadastrada!*\n\nJá existe uma contribuição para *${compStr}* no valor de *${formatCurrency(existingContribution.value)}* aguardando geração do boleto.\n\nVamos gerar o boleto agora!\n\n📅 Informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
+              newState: 'WAITING_NEW_DUE_DATE'
+            };
+          }
+
           await updateSession(supabase, session.id, {
-            state: 'WAITING_NEW_DUE_DATE',
+            state: 'CONFIRM_BOLETO',
             contribution_id: existingContribution.id,
             competence_month: competence.month,
             competence_year: competence.year,
             value_cents: existingContribution.value,
+            new_due_date: preservedDueDate,
             flow_context: { 
               ...session.flow_context, 
               selected_contribution: existingContribution,
@@ -1886,9 +1932,16 @@ async function handleBoletoFlow(
             }
           });
 
-          return { 
-            response: `📋 *Contribuição já cadastrada!*\n\nJá existe uma contribuição para *${compStr}* no valor de *${formatCurrency(existingContribution.value)}* aguardando geração do boleto.\n\nVamos gerar o boleto agora!\n\n📅 Informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
-            newState: 'WAITING_NEW_DUE_DATE'
+          return {
+            response: MESSAGES.confirmBoleto({
+              employerName: session.employer_name!,
+              contributionType: session.flow_context?.selected_type?.name || 'Contribuição',
+              competence: compStr,
+              value: formatCurrency(existingContribution.value),
+              dueDate: formatDate(preservedDueDate!),
+              isReissue: true,
+            }),
+            newState: 'CONFIRM_BOLETO',
           };
         } else {
           // Exists but has no value - redirect to fill value for existing contribution
@@ -1938,16 +1991,42 @@ async function handleBoletoFlow(
       let dueDateStr: string;
       
       if (isReissue) {
-        // For reissue/existing contribution without URL, ask for due date manually
-        await updateSession(supabase, session.id, {
-          state: 'WAITING_NEW_DUE_DATE',
-          value_cents: valueCents,
+        let existingDueDate = normalizeDateOnly(session.flow_context?.selected_contribution?.due_date);
+        let existingStatus = session.flow_context?.selected_contribution?.status || null;
+
+        // Fallback: ensure latest due_date/status from database
+        if (session.contribution_id && (!existingDueDate || !existingStatus)) {
+          const { data: existingContribution } = await supabase
+            .from('employer_contributions')
+            .select('due_date, status')
+            .eq('id', session.contribution_id)
+            .maybeSingle();
+
+          if (existingContribution) {
+            existingDueDate = normalizeDateOnly(existingContribution.due_date);
+            existingStatus = existingContribution.status;
+          }
+        }
+
+        const askNewDueDate = mustAskNewDueDate({
+          boletoType: session.boleto_type,
+          status: existingStatus,
+          dueDate: existingDueDate,
         });
 
-        return { 
-          response: `💰 Valor: *${formatCurrency(valueCents)}*\n\n📅 Agora informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
-          newState: 'WAITING_NEW_DUE_DATE'
-        };
+        if (askNewDueDate) {
+          await updateSession(supabase, session.id, {
+            state: 'WAITING_NEW_DUE_DATE',
+            value_cents: valueCents,
+          });
+
+          return { 
+            response: `💰 Valor: *${formatCurrency(valueCents)}*\n\n📅 Agora informe a *data de vencimento* desejada:\n\n_Exemplo: 15/02/2025_`,
+            newState: 'WAITING_NEW_DUE_DATE'
+          };
+        }
+
+        dueDateStr = existingDueDate!;
       } else {
         // For new "a vencer" boleto - calculate automatic due date based on competence
         // Rule: Day 10 of the month following competence (or next business day)
@@ -1967,7 +2046,7 @@ async function handleBoletoFlow(
           competence: competence,
           value: formatCurrency(valueCents),
           dueDate: formatDate(dueDateStr),
-          isReissue: false
+          isReissue: isReissue
         }), 
         newState: 'CONFIRM_BOLETO' 
       };
