@@ -433,7 +433,7 @@ export function MobileCreateDeclarationDialog({
                 .
               </p>
 
-              <ScrollArea className="flex-1 -mx-6 px-6 max-h-[50vh]">
+              <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
                     const isDisabled = hasActiveAuthorization(benefit.id);
