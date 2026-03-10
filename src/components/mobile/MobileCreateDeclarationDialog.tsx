@@ -494,7 +494,7 @@ export function MobileCreateDeclarationDialog({
                     );
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             </>
           )}
 
