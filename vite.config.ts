@@ -82,8 +82,8 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260303a', revision: null },
-          { url: '/manifest-sindicato.webmanifest', revision: '20260303a' },
+          { url: '/cache-bust-v20260310a', revision: null },
+          { url: '/manifest-sindicato.webmanifest', revision: '20260310a' },
         ],
         runtimeCaching: [
           // Manifests - sempre da rede (crítico para instalação do PWA)
