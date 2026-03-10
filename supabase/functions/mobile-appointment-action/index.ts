@@ -149,13 +149,14 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch appointment with patient data
+    // Fetch appointment with patient and dependent data
     const { data: appointment, error: aptError } = await supabase
       .from("appointments")
       .select(`
-        id, appointment_date, start_time, end_time, status, clinic_id,
+        id, appointment_date, start_time, end_time, status, clinic_id, dependent_id,
         patient:patients!appointments_patient_id_fkey(id, name, phone),
-        professional:professionals!appointments_professional_id_fkey(name, specialty)
+        professional:professionals!appointments_professional_id_fkey(name, specialty),
+        dependent:patient_dependents!appointments_dependent_id_fkey(id, name)
       `)
       .eq("id", appointmentId)
       .single();
@@ -176,7 +177,10 @@ serve(async (req) => {
     }
 
     const clinicId = appointment.clinic_id;
-    const patientName = appointment.patient?.name || "Associado";
+    // Use dependent name when appointment is for a dependent
+    const patientName = (appointment.dependent_id && appointment.dependent?.name)
+      ? appointment.dependent.name
+      : (appointment.patient?.name || "Associado");
     const patientPhone = appointment.patient?.phone;
     const profName = appointment.professional?.name || "profissional";
     const profSpecialty = appointment.professional?.specialty || "";
