@@ -338,7 +338,7 @@ export function MobileCreateDeclarationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md mx-4 max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-md mx-4 max-h-[90vh] h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-emerald-600" />
@@ -433,7 +433,7 @@ export function MobileCreateDeclarationDialog({
                 .
               </p>
 
-              <ScrollArea className="flex-1 -mx-6 px-6 max-h-[50vh]">
+              <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
                 <div className="space-y-3 pb-4">
                   {benefits.map((benefit) => {
                     const isDisabled = hasActiveAuthorization(benefit.id);
@@ -494,7 +494,7 @@ export function MobileCreateDeclarationDialog({
                     );
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             </>
           )}
 
