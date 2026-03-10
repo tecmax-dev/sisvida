@@ -338,7 +338,7 @@ export function MobileCreateDeclarationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md mx-4 max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-md mx-4 max-h-[90vh] h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-emerald-600" />
