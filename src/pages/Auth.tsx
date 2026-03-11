@@ -472,19 +472,38 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      // Usar supabase.auth diretamente para garantir que prompt=select_account
-      // seja repassado ao Google (o broker do lovable.auth não repassa extraParams)
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-          queryParams: {
-            prompt: 'select_account',
-          },
-        },
-      });
+      const isPreviewOrLovable =
+        window.location.hostname.includes("lovable.app") ||
+        window.location.hostname.includes("lovableproject.com");
 
-      if (error) throw error;
+      if (isPreviewOrLovable) {
+        // No preview/lovable.app, usar skipBrowserRedirect para evitar redirecionamento ao domínio customizado
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth`,
+            skipBrowserRedirect: true,
+            queryParams: {
+              prompt: 'select_account',
+            },
+          },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth`,
+            queryParams: {
+              prompt: 'select_account',
+            },
+          },
+        });
+        if (error) throw error;
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao entrar com Google",

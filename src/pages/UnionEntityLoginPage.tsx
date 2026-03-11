@@ -99,16 +99,37 @@ export default function UnionEntityLoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/entidade-sindical`,
-          queryParams: {
-            prompt: 'select_account',
+      const isPreviewOrLovable =
+        window.location.hostname.includes("lovable.app") ||
+        window.location.hostname.includes("lovableproject.com");
+
+      if (isPreviewOrLovable) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/entidade-sindical`,
+            skipBrowserRedirect: true,
+            queryParams: {
+              prompt: 'select_account',
+            },
           },
-        },
-      });
-      if (error) throw error;
+        });
+        if (error) throw error;
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/entidade-sindical`,
+            queryParams: {
+              prompt: 'select_account',
+            },
+          },
+        });
+        if (error) throw error;
+      }
     } catch (error: any) {
       toast.error(error.message || 'Erro ao entrar com Google');
       setGoogleLoading(false);
