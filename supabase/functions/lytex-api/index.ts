@@ -759,14 +759,23 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    // Permitir chamadas internas usando service role key
+    const isServiceRole = token === supabaseServiceKey;
+    
+    let userEmail = "service-role@internal";
+    
+    if (!isServiceRole) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (authError || !user) {
-      console.warn(`[Lytex][${requestId}] Token inválido:`, authError?.message);
-      return corsError("Token inválido", 401);
+      if (authError || !user) {
+        console.warn(`[Lytex][${requestId}] Token inválido:`, authError?.message);
+        return corsError("Token inválido", 401);
+      }
+      userEmail = user.email || "unknown";
     }
 
-    console.log(`[Lytex][${requestId}] Usuário autenticado: ${user.email}`);
+    console.log(`[Lytex][${requestId}] Usuário autenticado: ${userEmail}${isServiceRole ? " (service-role)" : ""}`);
 
     const { action, ...params } = await req.json();
     console.log(`[Lytex][${requestId}] Action: ${action}`);
