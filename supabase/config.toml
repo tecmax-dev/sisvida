@@ -59,6 +59,3 @@ verify_jwt = false
 
 [functions.send-negotiation-overdue-reminders]
 verify_jwt = false
-
-[functions.reconfigure-evolution]
-verify_jwt = false
