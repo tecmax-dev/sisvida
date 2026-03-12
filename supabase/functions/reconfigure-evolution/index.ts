@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const API_URL = "https://evo.tecmax.net";
-const API_KEY = "6c8f93184aa33562af34f1cb40c46091";
+const API_KEY = "2b7dbe72ab69c51e4d37e55329e10aeb";
 const WEBHOOK_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/functions/v1/whatsapp-webhook";
 
 async function evoFetch(path: string, method = "GET", body?: unknown) {
