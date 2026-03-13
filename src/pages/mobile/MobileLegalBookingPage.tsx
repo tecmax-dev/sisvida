@@ -1045,7 +1045,7 @@ export default function MobileLegalBookingPage() {
                 isDateEnabled={isDateEnabled}
                 submitting={submitting}
                 onSubmit={handleSubmit}
-                bookingMonthsAhead={2}
+                bookingMonthsAhead={bookingMonthsAhead}
               />
             </div>
           )}
