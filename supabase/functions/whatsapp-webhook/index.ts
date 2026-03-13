@@ -6541,7 +6541,7 @@ serve(async (req) => {
 
     const remoteJid = payload.data?.key?.remoteJid || '';
     const phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
-    const messageText = extractMessageText(payload.data);
+    let messageText = extractMessageText(payload.data);
     const messageType = payload.data?.messageType;
     const imageMessage = payload.data?.message?.imageMessage;
     const documentMessage = payload.data?.message?.documentMessage;
