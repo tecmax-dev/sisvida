@@ -28,7 +28,7 @@ const PortalAccessPage = () => {
     {
       id: "empresa",
       title: "Empresas",
-      description: "Emissão de boletos para empresas, gerenciamento de lista nominal e controle de outros acessos.",
+      description: "Consulte e emita boletos de contribuição sindical, gerencie a lista nominal de funcionários e acompanhe a situação financeira da sua empresa.",
       path: `/portal-empresa/${clinicData?.slug || ""}`,
     },
     {
