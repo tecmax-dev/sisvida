@@ -1,0 +1,1 @@
+ALTER TABLE public.evolution_configs ADD COLUMN IF NOT EXISTS external_webhook_url text DEFAULT NULL;
