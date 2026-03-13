@@ -7084,11 +7084,43 @@ serve(async (req) => {
             );
           }
 
+          // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
+          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
+            console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
+
+            if (storedCategory === 'associado') {
+              await sendWhazingButtons(phone, "📋 *Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
+                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
+                { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              ]);
+            } else {
+              // empresa / contabilidade
+              await sendWhazingButtons(phone, "📋 *Outros Assuntos*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
+                { id: "whazing_outros_homologacao", title: "📝 Homologações" },
+                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
+              ]);
+            }
+
+            await supabase.from('whatsapp_incoming_logs').insert({
+              clinic_id: clinicId,
+              phone,
+              message_text: `[whazing-L2] ${storedCategory}/outros → sub-menu`,
+              raw_payload: payload,
+              processed: true,
+              processed_action: 'whazing_outros_submenu',
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: `Outros Assuntos sub-menu sent for ${storedCategory}` }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
           const subActionMap: Record<string, string> = {
             'whazing_sub_convencoes': 'cct',
-            'whazing_sub_outros': 'atendente',
-            'whazing_outros': 'atendente',
           };
           const action = subActionMap[btnId] || 'atendente';
           const contextStr = `Perfil: ${storedCategory}`;
