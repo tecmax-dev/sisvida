@@ -726,6 +726,60 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
                 </div>
               </div>
             )}
+
+            {/* External Webhook (Whaticket/Multi-atendimento) - Only show when connected */}
+            {config.is_connected && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Integração com Sistema Externo (Multi-atendimento)
+                </h4>
+                
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Configure a URL do webhook do seu sistema de multiatendimento (Whaticket, Chatwoot, etc.). 
+                    Todas as mensagens recebidas serão encaminhadas automaticamente para ambos os sistemas.
+                  </p>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://seu-whaticket.com/api/webhook"
+                      value={config.external_webhook_url || ''}
+                      onChange={(e) => setConfig({ ...config, external_webhook_url: e.target.value || null })}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        const { error } = await supabase
+                          .from("evolution_configs")
+                          .update({ external_webhook_url: config.external_webhook_url })
+                          .eq("id", config.id);
+                        
+                        if (error) {
+                          toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+                        } else {
+                          toast({ title: "Salvo", description: "URL do webhook externo atualizada." });
+                        }
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+
+                  {config.external_webhook_url && (
+                    <div className="p-3 bg-success/10 rounded-lg">
+                      <div className="flex items-center gap-2 text-success">
+                        <Check className="h-4 w-4" />
+                        <span className="text-sm font-medium">Proxy ativo</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        As mensagens serão encaminhadas para o eCLINI e para o sistema externo simultaneamente.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
       </CardContent>
