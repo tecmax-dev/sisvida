@@ -1352,7 +1352,7 @@ async function handleBoletoFlow(
       });
       
       return { 
-        response: `📋 *Detectei ${intent.batch_items.length} boleto(s) para gerar*\n\nVocê mencionou *taxa*. Qual tipo de taxa deseja gerar?\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*\n\n_Digite o número da opção._`,
+        response: `📋 *Detectei ${intent.batch_items.length} boleto(s) para gerar*\n\nVocê mencionou *taxa*. Qual tipo de taxa deseja gerar?`,
         newState: 'SELECT_TAXA_TYPE_BATCH' as BoletoState
       };
     }
