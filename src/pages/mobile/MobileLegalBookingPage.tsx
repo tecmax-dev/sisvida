@@ -97,6 +97,7 @@ export default function MobileLegalBookingPage() {
   const [payslipFile, setPayslipFile] = useState<File | null>(null);
   const [payslipSubmitted, setPayslipSubmitted] = useState(false);
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -226,13 +227,24 @@ export default function MobileLegalBookingPage() {
         }
       }
 
-      // Load legal professionals
-      const { data: professionalsData } = await supabase
-        .from("homologacao_professionals")
-        .select("id, name, function, avatar_url, phone, email")
-        .eq("clinic_id", authClinicId)
-        .eq("is_active", true)
-        .order("name");
+      // Load clinic config + legal professionals in parallel
+      const [{ data: clinicConfig }, { data: professionalsData }] = await Promise.all([
+        supabase
+          .from("clinics")
+          .select("booking_months_ahead")
+          .eq("id", authClinicId)
+          .single(),
+        supabase
+          .from("homologacao_professionals")
+          .select("id, name, function, avatar_url, phone, email")
+          .eq("clinic_id", authClinicId)
+          .eq("is_active", true)
+          .order("name"),
+      ]);
+
+      if (clinicConfig?.booking_months_ahead) {
+        setBookingMonthsAhead(clinicConfig.booking_months_ahead);
+      }
 
       setProfessionals((professionalsData || []) as LegalProfessional[]);
 
@@ -1033,7 +1045,7 @@ export default function MobileLegalBookingPage() {
                 isDateEnabled={isDateEnabled}
                 submitting={submitting}
                 onSubmit={handleSubmit}
-                bookingMonthsAhead={2}
+                bookingMonthsAhead={bookingMonthsAhead}
               />
             </div>
           )}
