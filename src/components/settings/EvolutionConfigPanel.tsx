@@ -137,6 +137,7 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
         ...data,
         direct_reply_enabled: data.direct_reply_enabled ?? false,
         webhook_url: data.webhook_url ?? null,
+        external_webhook_url: data.external_webhook_url ?? null,
         booking_enabled: data.booking_enabled ?? true,
       } as EvolutionConfig);
       setForm({
