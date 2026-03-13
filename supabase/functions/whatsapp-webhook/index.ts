@@ -6876,30 +6876,24 @@ serve(async (req) => {
 
           // "Outros Assuntos" sub-option: Homologações
           if (followUpId === 'whazing_outros_homologacao') {
-            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'empresa');
-
-            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
-            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            // Send informational message with scheduling link
+            const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://app.eclini.com.br/agendamento/profissional/ione-atos-1`;
+            
             try {
-              const extResponse = await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+              await fetch(`${configData.base_url}/message/sendText/${configData.instance_name}`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                  'apikey': configData.api_key,
                 },
                 body: JSON.stringify({
-                  phone,
-                  action: 'homologacao',
-                  context: `Perfil: ${storedCat}`,
-                  clinic_id: clinicId,
-                  instance_name: configData.instance_name,
+                  number: phone,
+                  text: homologacaoMsg,
                 }),
               });
-              const extResult = await extResponse.json();
-              console.log(`[webhook] Homologacao result:`, JSON.stringify(extResult).substring(0, 300));
             } catch (_e) { /* ignore */ }
 
-            // Follow-up buttons after AI response
+            // Follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
