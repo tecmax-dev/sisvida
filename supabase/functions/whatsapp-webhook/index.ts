@@ -6833,6 +6833,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   instance_name: configData.instance_name,
                 },
                 booking_enabled: false,
+                suppress_internal_menu: true,
+                external_menu_mode: externalMenuMode,
               }),
             });
           } catch (aiErr) {
