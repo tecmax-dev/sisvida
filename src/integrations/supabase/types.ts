@@ -2843,6 +2843,7 @@ export type Database = {
           connected_at: string | null
           created_at: string
           direct_reply_enabled: boolean | null
+          external_webhook_url: string | null
           id: string
           instance_name: string
           is_connected: boolean | null
@@ -2859,6 +2860,7 @@ export type Database = {
           connected_at?: string | null
           created_at?: string
           direct_reply_enabled?: boolean | null
+          external_webhook_url?: string | null
           id?: string
           instance_name: string
           is_connected?: boolean | null
@@ -2875,6 +2877,7 @@ export type Database = {
           connected_at?: string | null
           created_at?: string
           direct_reply_enabled?: boolean | null
+          external_webhook_url?: string | null
           id?: string
           instance_name?: string
           is_connected?: boolean | null
