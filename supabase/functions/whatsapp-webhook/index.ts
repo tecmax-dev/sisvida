@@ -7089,17 +7089,17 @@ serve(async (req) => {
             console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
 
             if (storedCategory === 'associado') {
-              await sendWhazingButtons(phone, "📋 *Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
-                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
-                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
-                { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              await sendWhazingButtons(phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "Juridico" },
+                { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
+                { id: "whazing_voltar_sub", title: "Voltar" },
               ]);
             } else {
               // empresa / contabilidade
-              await sendWhazingButtons(phone, "📋 *Outros Assuntos*\n\nComo podemos ajudar?", [
-                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
-                { id: "whazing_outros_homologacao", title: "📝 Homologações" },
-                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
+              await sendWhazingButtons(phone, "*Outros Assuntos*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "Juridico" },
+                { id: "whazing_outros_homologacao", title: "Homologacoes" },
+                { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
               ]);
             }
 
