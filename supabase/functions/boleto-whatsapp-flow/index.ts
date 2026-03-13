@@ -760,6 +760,61 @@ async function sendWhatsAppMessage(
 }
 
 // ==========================================
+// WHAZING INTERACTIVE BUTTONS FOR BOLETO FLOW
+// ==========================================
+
+async function sendBoletoButtons(
+  phone: string,
+  bodyText: string,
+  buttons: Array<{ id: string; title: string }>
+): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[boleto-flow] Whazing not configured, skipping buttons');
+    return false;
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone}`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: bodyText },
+          action: {
+            buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
+          }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[boleto-flow] Whazing API error:', response.status, responseText);
+      return false;
+    }
+    console.log('[boleto-flow] Buttons sent successfully');
+    return true;
+  } catch (error) {
+    console.error('[boleto-flow] Error sending buttons:', error);
+    return false;
+  }
+}
+
+// ==========================================
 // SESSION MANAGEMENT
 // ==========================================
 
