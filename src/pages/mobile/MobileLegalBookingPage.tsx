@@ -227,13 +227,24 @@ export default function MobileLegalBookingPage() {
         }
       }
 
-      // Load legal professionals
-      const { data: professionalsData } = await supabase
-        .from("homologacao_professionals")
-        .select("id, name, function, avatar_url, phone, email")
-        .eq("clinic_id", authClinicId)
-        .eq("is_active", true)
-        .order("name");
+      // Load clinic config + legal professionals in parallel
+      const [{ data: clinicConfig }, { data: professionalsData }] = await Promise.all([
+        supabase
+          .from("clinics")
+          .select("booking_months_ahead")
+          .eq("id", authClinicId)
+          .single(),
+        supabase
+          .from("homologacao_professionals")
+          .select("id, name, function, avatar_url, phone, email")
+          .eq("clinic_id", authClinicId)
+          .eq("is_active", true)
+          .order("name"),
+      ]);
+
+      if (clinicConfig?.booking_months_ahead) {
+        setBookingMonthsAhead(clinicConfig.booking_months_ahead);
+      }
 
       setProfessionals((professionalsData || []) as LegalProfessional[]);
 
