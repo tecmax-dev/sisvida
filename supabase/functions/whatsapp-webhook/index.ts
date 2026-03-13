@@ -6720,6 +6720,83 @@ serve(async (req) => {
         // Also handle legacy button IDs (whazing_outros)
         const isWhazingLegacy = messageText?.trim() === 'whazing_outros';
 
+        // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
+        if (isWhazingFollowUp) {
+          const followUpId = messageText.trim();
+          console.log(`[webhook] Whazing follow-up button: "${followUpId}"`);
+
+          if (followUpId === 'whazing_voltar_menu') {
+            // Send main menu again
+            await sendWhazingMenuButtons(phone);
+            return new Response(
+              JSON.stringify({ success: true, message: 'Main menu resent' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          if (followUpId === 'whazing_voltar_sub') {
+            // Retrieve stored category and resend sub-menu
+            let storedCat = 'associado';
+            try {
+              const { data: catSess } = await supabase
+                .from('whatsapp_ai_conversations')
+                .select('context')
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .like('context', 'whazing_category:%')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
+            } catch (_e) { /* ignore */ }
+            await sendWhazingSubMenu(phone, storedCat);
+            return new Response(
+              JSON.stringify({ success: true, message: `Sub-menu resent for ${storedCat}` }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          if (followUpId === 'whazing_falar_atendente') {
+            // Route to atendente via external-integration
+            let storedCat = 'associado';
+            try {
+              const { data: catSess } = await supabase
+                .from('whatsapp_ai_conversations')
+                .select('context')
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .like('context', 'whazing_category:%')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
+            } catch (_e) { /* ignore */ }
+
+            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            try {
+              await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  action: 'atendente',
+                  context: `Perfil: ${storedCat}`,
+                  clinic_id: clinicId,
+                  instance_name: configData.instance_name,
+                }),
+              });
+            } catch (_e) { /* ignore */ }
+            return new Response(
+              JSON.stringify({ success: true, message: 'Routed to atendente' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
         if (isWhazingLevel1) {
           console.log(`[webhook] Whazing Level 1 button: "${messageText}" → sending sub-menu`);
           
