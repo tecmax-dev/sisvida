@@ -24,7 +24,7 @@ import {
   FileText,
   X,
 } from "lucide-react";
-import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, addDays, isPast } from "date-fns";
+import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
