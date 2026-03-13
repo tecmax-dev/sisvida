@@ -6756,7 +6756,7 @@ serve(async (req) => {
             );
           }
 
-          if (followUpId === 'whazing_falar_atendente') {
+          if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
             // Route to atendente via external-integration
             let storedCat = 'associado';
             try {
@@ -6792,6 +6792,108 @@ serve(async (req) => {
             } catch (_e) { /* ignore */ }
             return new Response(
               JSON.stringify({ success: true, message: 'Routed to atendente' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // "Outros Assuntos" sub-option: Jurídico
+          if (followUpId === 'whazing_outros_juridico') {
+            let storedCat = 'associado';
+            try {
+              const { data: catSess } = await supabase
+                .from('whatsapp_ai_conversations')
+                .select('context')
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .like('context', 'whazing_category:%')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
+            } catch (_e) { /* ignore */ }
+
+            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            try {
+              const extResponse = await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  action: 'juridico',
+                  context: `Perfil: ${storedCat}`,
+                  clinic_id: clinicId,
+                  instance_name: configData.instance_name,
+                }),
+              });
+              const extResult = await extResponse.json();
+              console.log(`[webhook] Juridico result:`, JSON.stringify(extResult).substring(0, 300));
+            } catch (_e) { /* ignore */ }
+
+            // Follow-up buttons after AI response
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+            ]);
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Routed to juridico' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // "Outros Assuntos" sub-option: Homologações
+          if (followUpId === 'whazing_outros_homologacao') {
+            let storedCat = 'empresa';
+            try {
+              const { data: catSess } = await supabase
+                .from('whatsapp_ai_conversations')
+                .select('context')
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .like('context', 'whazing_category:%')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
+            } catch (_e) { /* ignore */ }
+
+            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            try {
+              const extResponse = await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  action: 'homologacao',
+                  context: `Perfil: ${storedCat}`,
+                  clinic_id: clinicId,
+                  instance_name: configData.instance_name,
+                }),
+              });
+              const extResult = await extResponse.json();
+              console.log(`[webhook] Homologacao result:`, JSON.stringify(extResult).substring(0, 300));
+            } catch (_e) { /* ignore */ }
+
+            // Follow-up buttons after AI response
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+            ]);
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Routed to homologacao' }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
