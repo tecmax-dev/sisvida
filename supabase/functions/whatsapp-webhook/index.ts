@@ -6697,8 +6697,28 @@ serve(async (req) => {
           //   Opção 5 = Outros assuntos → passa para IA (atendimento humano geral)
           //   Opção 6 = Boleto → já capturado acima por isBoletoRequest
           //   QUALQUER outra menção a consulta/médico/agendamento → APP_ONLY_MESSAGE
-          //   Sem exceções. Sem handoff humano em contexto médico.
+          //   Respostas de menu composto (ex: "1-2") são ignoradas para evitar
+          //   conflito com bots externos no mesmo número/instância.
           // ---------------------------------------------------------------
+
+          const isCompositeMenuSelection = /^\d+-\d+$/.test(msgTrimmed);
+          if (isCompositeMenuSelection) {
+            console.log(`[webhook] booking_enabled=false and composite menu selection "${msgTrimmed}" detected - ignoring to avoid external bot conflict`);
+
+            await supabase.from('whatsapp_incoming_logs').insert({
+              clinic_id: clinicId,
+              phone,
+              message_text: messageText,
+              raw_payload: payload,
+              processed: true,
+              processed_action: 'ignored_composite_menu_selection',
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Composite menu selection ignored' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
 
           // Opção 5 = outros assuntos → deixa a IA tratar (atendimento geral, não médico)
           if (msgTrimmed === '5') {
