@@ -6688,6 +6688,7 @@ serve(async (req) => {
         // Non-booking messages (greetings, farewells, general questions) pass through
         // to the AI assistant for normal handling.
         // =========================================================================
+        let externalMenuMode = false;
         if (configData.booking_enabled === false) {
           const msgTrimmed = (messageText || '').trim();
           const msgLower = msgTrimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -6697,27 +6698,18 @@ serve(async (req) => {
           //   Opção 5 = Outros assuntos → passa para IA (atendimento humano geral)
           //   Opção 6 = Boleto → já capturado acima por isBoletoRequest
           //   QUALQUER outra menção a consulta/médico/agendamento → APP_ONLY_MESSAGE
-          //   Respostas de menu composto (ex: "1-2") são ignoradas para evitar
-          //   conflito com bots externos no mesmo número/instância.
+          //   Seleções do menu externo (ex: "1", "1-2") devem seguir para IA
+          //   SEM apresentar o menu interno deste sistema.
           // ---------------------------------------------------------------
 
-          const isCompositeMenuSelection = /^\d+-\d+$/.test(msgTrimmed);
-          if (isCompositeMenuSelection) {
-            console.log(`[webhook] booking_enabled=false and composite menu selection "${msgTrimmed}" detected - ignoring to avoid external bot conflict`);
+          const isExternalMenuSelection = /^\d+(?:-\d+)*$/.test(msgTrimmed);
+          const isCompositeMenuSelection = /^\d+(?:-\d+)+$/.test(msgTrimmed);
 
-            await supabase.from('whatsapp_incoming_logs').insert({
-              clinic_id: clinicId,
-              phone,
-              message_text: messageText,
-              raw_payload: payload,
-              processed: true,
-              processed_action: 'ignored_composite_menu_selection',
-            });
-
-            return new Response(
-              JSON.stringify({ success: true, message: 'Composite menu selection ignored' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+          if (isExternalMenuSelection) {
+            externalMenuMode = true;
+            if (isCompositeMenuSelection) {
+              console.log(`[webhook] booking_enabled=false and external composite selection "${msgTrimmed}" detected - routing to AI (external menu mode)`);
+            }
           }
 
           // Opção 5 = outros assuntos → deixa a IA tratar (atendimento geral, não médico)
@@ -6726,9 +6718,9 @@ serve(async (req) => {
             // fall through to AI handling below
           } else {
             // EXPANDED booking intent detection - covers ALL medical/scheduling keywords
-            // including doctor names, specialties, scheduling verbs, and menu options 1-4
+            // including doctor names, specialties, scheduling verbs and non-external numeric fallbacks
             const bookingIntentRegex = /\b(agendar|agendamento|agenda|consulta|consultas|marcar|desmarcar|cancelar|remarcar|reagendar|retorno|retornar|horario|horarios|medico|medicos|doutor|doutora|dentista|exame|exames|profissional|disponivel|disponibilidade|vaga|vagas|atendimento|especialidade|pediatra|clinico|ginecologista|especialista|ortopedista|cardiologista|alcides|juliane|uiara|tiuba|dr |dra |dr\.|dra\.|pediatrico|nutricionist|fisioterapeuta|psicologo|psicologa|data|datas|quando atende|proxima data|proximos dias|proxima semana|tem vaga|tem horario|quero agendar|preciso agendar|gostaria de agendar|quero marcar|preciso marcar|quero consulta|preciso de consulta|quero ver medico|ir ao medico)\b/i;
-            const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed); // options 1-4 are booking-related when booking disabled
+            const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed) && !isExternalMenuSelection;
             const hasBookingIntent = bookingIntentRegex.test(msgLower) || isBookingMenuOption;
 
             if (hasBookingIntent) {
@@ -6841,6 +6833,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   instance_name: configData.instance_name,
                 },
                 booking_enabled: false,
+                suppress_internal_menu: true,
+                external_menu_mode: externalMenuMode,
               }),
             });
           } catch (aiErr) {
