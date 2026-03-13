@@ -60,6 +60,7 @@ const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 // Landing Page - Sistema Sindical (página pública independente)
 const SindicalLandingPage = lazy(() => import("./pages/SindicalLandingPage"));
 const SindicalFiliacaoPage = lazy(() => import("./pages/SindicalFiliacaoPage"));
+const SindicatoBeneficiosLandingPage = lazy(() => import("./pages/SindicatoBeneficiosLandingPage"));
 const PublicPanel = lazy(() => import("./pages/PublicPanel"));
 const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 const CardValidation = lazy(() => import("./pages/CardValidation"));
