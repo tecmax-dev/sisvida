@@ -56,7 +56,7 @@ const benefits: Benefit[] = [
   { name: "Dra. Juliane Leite", description: "Dentista — Atendimento 100% gratuito", icon: Smile, category: "saude" },
   { name: "Dr. Jorge Avelar", description: "Ortopedista — Consulta 100% gratuita", icon: Bone, category: "saude" },
   { name: "Dr. Pedro Roberto", description: "Urologista — Consulta 100% gratuita", icon: Stethoscope, category: "saude" },
-  { name: "Drª Daniela Sales", description: "Terapia Holística — Bem-estar e saúde integrativa", icon: Leaf, category: "saude", photo: perfilDaniela },
+  { name: "Drª Daniela Sales", description: "Terapia Holística — Bem-estar e saúde integrativa", icon: Leaf, category: "estetica", photo: perfilDaniela },
   { name: "Dra. Uiara Tiuba", description: "Pediatra — Cuidados para seus filhos", icon: Baby, category: "saude" },
   { name: "Hospital São José", description: "Descontos em exames hospitalares", icon: Hospital, category: "saude" },
   { name: "Laboratório Lidi", description: "Preventivo ginecológico 100% gratuito para titular + desconto em exames", icon: FlaskConical, category: "saude" },
