@@ -174,14 +174,18 @@ serve(async (req) => {
     }
 
     // Log the interaction
-    await supabase.from('whatsapp_incoming_logs').insert({
-      clinic_id: resolvedClinicId,
-      phone: normalizedPhone,
-      message_text: `[external-integration] action=${action} | ${aiMessage}`,
-      raw_payload: body,
-      processed: true,
-      processed_action: 'external_integration',
-    }).catch((e: Error) => console.error('[external-integration] Log error:', e));
+    try {
+      await supabase.from('whatsapp_incoming_logs').insert({
+        clinic_id: resolvedClinicId,
+        phone: normalizedPhone,
+        message_text: `[external-integration] action=${action} | ${aiMessage}`,
+        raw_payload: body,
+        processed: true,
+        processed_action: 'external_integration',
+      });
+    } catch (logErr) {
+      console.error('[external-integration] Log error:', logErr);
+    }
 
     return new Response(
       JSON.stringify({
