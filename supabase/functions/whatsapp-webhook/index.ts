@@ -6880,7 +6880,7 @@ serve(async (req) => {
             const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://app.eclini.com.br/agendamento/profissional/ione-atos-1`;
             
             try {
-              await fetch(`${configData.base_url}/message/sendText/${configData.instance_name}`, {
+              await fetch(`${configData.api_url}/message/sendText/${configData.instance_name}`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
