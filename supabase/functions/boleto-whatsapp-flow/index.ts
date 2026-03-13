@@ -2614,6 +2614,11 @@ serve(async (req) => {
       
       if (evolution_config) {
         await sendWhatsAppMessage(evolution_config, phone, MESSAGES.welcome);
+        // Send interactive buttons for boleto type selection
+        await sendBoletoButtons(phone, 'Selecione o tipo de boleto:', [
+          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+        ]);
       }
       
       return new Response(
