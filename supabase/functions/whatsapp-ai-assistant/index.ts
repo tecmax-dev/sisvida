@@ -1308,7 +1308,50 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       assistantMessage = data.choices?.[0]?.message;
     }
 
-    const finalResponse = assistantMessage?.content || 'Desculpe, não consegui processar sua mensagem.';
+    let finalResponse = assistantMessage?.content || 'Desculpe, não consegui processar sua mensagem.';
+
+    const looksLikeInternalMenu = (text: string): boolean => {
+      const normalized = text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      return normalized.includes('como posso ajudar? escolha uma opcao') &&
+        normalized.includes('sou associado') &&
+        normalized.includes('falar com atendente');
+    };
+
+    if (shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+      console.warn('[ai-assistant] Internal menu leaked in external mode - retrying without menu');
+
+      try {
+        const retryMessages = [
+          ...messages,
+          { role: 'assistant', content: finalResponse },
+          {
+            role: 'user',
+            content: 'Sua resposta anterior mostrou menu interno, o que é proibido. Reescreva agora sem menu e continue diretamente o atendimento do assunto já escolhido pelo usuário.'
+          }
+        ];
+
+        const retryResponse = await callAI(retryMessages, false);
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          const retriedContent = retryData?.choices?.[0]?.message?.content;
+          if (retriedContent) {
+            finalResponse = retriedContent;
+          }
+        }
+      } catch (retryError) {
+        console.error('[ai-assistant] Retry without menu failed:', retryError);
+      }
+    }
+
+    if (shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+      finalResponse = externalSelectionPrompt
+        ? 'Perfeito, recebi sua escolha no menu externo e vou seguir direto com seu atendimento.'
+        : 'Perfeito, vamos seguir sem menu. Me diga objetivamente o que você precisa e eu te ajudo.';
+    }
+
     console.log('[ai-assistant] Final response:', finalResponse.substring(0, 100));
 
     // Check HANDOFF_BOLETO FIRST - before any booking block filters
