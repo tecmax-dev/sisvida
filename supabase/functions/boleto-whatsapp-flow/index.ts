@@ -1092,10 +1092,7 @@ Por favor, verifique o CNPJ e tente novamente, ou entre em contato com o sindica
 🏢 *${name}*
 📋 CNPJ: ${formatCnpj(cnpj)}
 
-Esta é a empresa correta?
-
-1️⃣ *Sim*
-2️⃣ *Não*`,
+Esta é a empresa correta?`,
 
   selectContributionType: (types: Array<{ id: string; name: string }>) => {
     let msg = `📝 Qual o *tipo de contribuição*?\n\n`;
