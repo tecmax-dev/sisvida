@@ -405,7 +405,7 @@ async function sendWhatsAppButtons(
 // WHAZING API PLUS - INTERACTIVE BUTTONS
 // ==========================================
 
-async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
+async function sendWhazingButtons(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
@@ -415,15 +415,11 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
   }
 
   try {
-    // Normalize phone: remove @s.whatsapp.net and non-digits
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    console.log(`[whazing] Sending 3-button menu to ${cleanPhone}`);
-
-    // Whazing interactive buttons use the /apioficial endpoint
     const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
-    console.log(`[whazing] Using endpoint: ${apiOficialUrl}`);
+    console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -435,15 +431,9 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
         number: cleanPhone,
         contents: {
           type: "button",
-          body: {
-            text: "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje? Selecione uma opção:"
-          },
+          body: { text: bodyText },
           action: {
-            buttons: [
-              { type: "reply", reply: { id: "whazing_associado", title: "Associado" } },
-              { type: "reply", reply: { id: "whazing_empresa", title: "Empresa" } },
-              { type: "reply", reply: { id: "whazing_outros", title: "Outros Assuntos" } }
-            ]
+            buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
           }
         }
       }),
@@ -460,6 +450,50 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
     console.error('[whazing] Error sending buttons:', error);
     return false;
   }
+}
+
+async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
+  return sendWhazingButtons(phone, 
+    "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?",
+    [
+      { id: "whazing_associado", title: "Sou Associado" },
+      { id: "whazing_empresa", title: "Sou Empresa" },
+      { id: "whazing_contabilidade", title: "Sou Contabilidade" },
+    ]
+  );
+}
+
+async function sendWhazingSubMenu(phone: string, category: string): Promise<boolean> {
+  const subMenus: Record<string, { text: string; buttons: Array<{ id: string; title: string }> }> = {
+    'associado': {
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:",
+      buttons: [
+        { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+      ]
+    },
+    'empresa': {
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:",
+      buttons: [
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+      ]
+    },
+    'contabilidade': {
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:",
+      buttons: [
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+      ]
+    },
+  };
+
+  const menu = subMenus[category];
+  if (!menu) return false;
+  return sendWhazingButtons(phone, menu.text, menu.buttons);
 }
 
 // ==========================================
@@ -6671,19 +6705,100 @@ serve(async (req) => {
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
-        // Detect interactive button responses from Whazing menu
-        const whazingButtonIds = ['whazing_associado', 'whazing_empresa', 'whazing_outros'];
-        const isWhazingButtonResponse = whazingButtonIds.includes(messageText?.trim());
+        // Level 1 buttons: main categories → send sub-menu
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
+        const isWhazingLevel1 = whazingLevel1Ids.includes(messageText?.trim());
 
-        if (isWhazingButtonResponse) {
-          console.log(`[webhook] Whazing button response detected: "${messageText}"`);
+        // Level 2 buttons: sub-options → route to flow
+        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
+        const isWhazingLevel2 = whazingLevel2Ids.includes(messageText?.trim());
+
+        // Also handle legacy button IDs (whazing_outros)
+        const isWhazingLegacy = messageText?.trim() === 'whazing_outros';
+
+        if (isWhazingLevel1) {
+          console.log(`[webhook] Whazing Level 1 button: "${messageText}" → sending sub-menu`);
           
-          const actionMap: Record<string, string> = {
+          const categoryMap: Record<string, string> = {
             'whazing_associado': 'associado',
             'whazing_empresa': 'empresa',
+            'whazing_contabilidade': 'contabilidade',
+          };
+          const category = categoryMap[messageText.trim()];
+
+          // Store the selected category in a temporary session for context
+          try {
+            // Delete any existing whazing session for this phone
+            await supabase.from('whatsapp_ai_conversations').delete()
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .like('context', 'whazing_category:%');
+            
+            // We'll store the category in the AI conversation context for reference
+            await supabase.from('whatsapp_ai_conversations').insert({
+              clinic_id: clinicId,
+              phone: phone,
+              context: `whazing_category:${category}`,
+              expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
+            });
+          } catch (sessErr) {
+            console.log('[webhook] Could not store whazing category session:', sessErr);
+          }
+
+          const subSent = await sendWhazingSubMenu(phone, category);
+          
+          await supabase.from('whatsapp_incoming_logs').insert({
+            clinic_id: clinicId,
+            phone,
+            message_text: `[whazing-L1] ${messageText} → sub-menu ${category}`,
+            raw_payload: payload,
+            processed: true,
+            processed_action: 'whazing_submenu_sent',
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, message: `Whazing sub-menu sent for ${category}` }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (isWhazingLevel2 || isWhazingLegacy) {
+          console.log(`[webhook] Whazing Level 2 button: "${messageText}" → routing to flow`);
+
+          // Retrieve stored category context
+          let storedCategory = 'associado'; // default
+          try {
+            const { data: catSession } = await supabase
+              .from('whatsapp_ai_conversations')
+              .select('context')
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .like('context', 'whazing_category:%')
+              .gt('expires_at', new Date().toISOString())
+              .limit(1)
+              .maybeSingle();
+            if (catSession?.context) {
+              storedCategory = catSession.context.replace('whazing_category:', '');
+            }
+            // Clean up the session
+            await supabase.from('whatsapp_ai_conversations').delete()
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .like('context', 'whazing_category:%');
+          } catch (e) {
+            console.log('[webhook] Could not retrieve whazing category:', e);
+          }
+
+          // Map sub-button to action
+          const subActionMap: Record<string, string> = {
+            'whazing_sub_carteirinha': 'carteirinha',
+            'whazing_sub_convencoes': 'cct',
+            'whazing_sub_boleto': 'boleto',
+            'whazing_sub_outros': 'atendente',
             'whazing_outros': 'atendente',
           };
-          const action = actionMap[messageText.trim()] || 'atendente';
+          const action = subActionMap[messageText.trim()] || 'atendente';
+          const contextStr = `Perfil: ${storedCategory}`;
 
           // Route to external-integration function
           const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
@@ -6699,6 +6814,7 @@ serve(async (req) => {
               body: JSON.stringify({
                 phone: phone,
                 action: action,
+                context: contextStr,
                 clinic_id: clinicId,
                 instance_name: configData.instance_name,
               }),
@@ -6710,11 +6826,10 @@ serve(async (req) => {
             console.error('[webhook] Error calling external-integration for Whazing button:', extErr);
           }
 
-          // Log the interaction
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
             phone,
-            message_text: `[whazing-button] ${messageText}`,
+            message_text: `[whazing-L2] ${storedCategory}/${messageText}`,
             raw_payload: payload,
             processed: true,
             processed_action: 'whazing_button_response',
