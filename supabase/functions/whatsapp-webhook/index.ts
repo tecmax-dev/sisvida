@@ -402,6 +402,63 @@ async function sendWhatsAppButtons(
 }
 
 // ==========================================
+// WHAZING API PLUS - INTERACTIVE BUTTONS
+// ==========================================
+
+async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[whazing] API not configured (missing WHAZING_API_URL or WHAZING_API_TOKEN)');
+    return false;
+  }
+
+  try {
+    // Normalize phone: remove @s.whatsapp.net and non-digits
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    console.log(`[whazing] Sending 3-button menu to ${cleanPhone}`);
+
+    const response = await fetch(whazingUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: {
+            text: "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje? Selecione uma opção:"
+          },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_associado", title: "Associado" } },
+              { type: "reply", reply: { id: "whazing_empresa", title: "Empresa" } },
+              { type: "reply", reply: { id: "whazing_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[whazing] API error:', response.status, responseText);
+      return false;
+    }
+    console.log('[whazing] Buttons sent successfully:', responseText.substring(0, 200));
+    return true;
+  } catch (error) {
+    console.error('[whazing] Error sending buttons:', error);
+    return false;
+  }
+}
+
+// ==========================================
 // TEXT-BASED LIST SENDER (no interactive lists)
 // Always uses numbered text format for maximum compatibility
 // ==========================================
@@ -6609,7 +6666,62 @@ serve(async (req) => {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
-        // ===== CHECK FOR BOLETO FLOW =====
+        // ===== WHAZING BUTTON RESPONSE HANDLER =====
+        // Detect interactive button responses from Whazing menu
+        const whazingButtonIds = ['whazing_associado', 'whazing_empresa', 'whazing_outros'];
+        const isWhazingButtonResponse = whazingButtonIds.includes(messageText?.trim());
+
+        if (isWhazingButtonResponse) {
+          console.log(`[webhook] Whazing button response detected: "${messageText}"`);
+          
+          const actionMap: Record<string, string> = {
+            'whazing_associado': 'associado',
+            'whazing_empresa': 'empresa',
+            'whazing_outros': 'atendente',
+          };
+          const action = actionMap[messageText.trim()] || 'atendente';
+
+          // Route to external-integration function
+          const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+          try {
+            const extResponse = await fetch(`${supabaseUrlEnv}/functions/v1/external-integration`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                phone: phone,
+                action: action,
+                clinic_id: clinicId,
+                instance_name: configData.instance_name,
+              }),
+            });
+
+            const extResult = await extResponse.json();
+            console.log(`[webhook] External-integration result:`, JSON.stringify(extResult).substring(0, 300));
+          } catch (extErr) {
+            console.error('[webhook] Error calling external-integration for Whazing button:', extErr);
+          }
+
+          // Log the interaction
+          await supabase.from('whatsapp_incoming_logs').insert({
+            clinic_id: clinicId,
+            phone,
+            message_text: `[whazing-button] ${messageText}`,
+            raw_payload: payload,
+            processed: true,
+            processed_action: 'whazing_button_response',
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, message: 'Whazing button response processed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // ===== END WHAZING BUTTON RESPONSE HANDLER =====
         // Check if there's an active boleto session or user is requesting boleto (option 7)
         const { data: activeBoletoSession } = await supabase
           .from('whatsapp_boleto_sessions')
@@ -6845,6 +6957,66 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
+
+        // ===== WHAZING INITIAL MENU - FRESH CONVERSATION =====
+        // If Whazing is configured and this is a fresh conversation (no active sessions),
+        // send interactive buttons instead of proceeding to text-based flows
+        const whazingUrl = Deno.env.get('WHAZING_API_URL');
+        const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+        
+        if (whazingUrl && whazingToken) {
+          // Check for any active sessions
+          const { data: anyBookingSession } = await supabase
+            .from('whatsapp_booking_sessions')
+            .select('id, state')
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .neq('state', 'FINISHED')
+            .gt('expires_at', new Date().toISOString())
+            .limit(1)
+            .maybeSingle();
+
+          const { data: anyAiConversation } = await supabase
+            .from('whatsapp_ai_conversations')
+            .select('id')
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .gt('expires_at', new Date().toISOString())
+            .limit(1)
+            .maybeSingle();
+
+          const isFreshConversation = !anyBookingSession && !anyAiConversation;
+          
+          // Also check if message looks like a greeting or generic first message (not a CPF, not a number selection)
+          const msgClean = messageText.trim();
+          const isCpf = /^\d{11}$/.test(msgClean.replace(/\D/g, ''));
+          const isNumericOption = /^\d{1,2}$/.test(msgClean);
+          const isNotSpecificAction = !isCpf && !isNumericOption && !MENU_REGEX.test(msgClean) && !CANCEL_REGEX.test(msgClean);
+
+          if (isFreshConversation && isNotSpecificAction) {
+            console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
+            const buttonsSent = await sendWhazingMenuButtons(phone);
+            
+            if (buttonsSent) {
+              await supabase.from('whatsapp_incoming_logs').insert({
+                clinic_id: clinicId,
+                phone,
+                message_text: messageText,
+                raw_payload: payload,
+                processed: true,
+                processed_action: 'whazing_menu_sent',
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, message: 'Whazing menu buttons sent' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            // If Whazing buttons failed, fall through to normal flow
+            console.log('[webhook] Whazing buttons failed, falling through to normal flow');
+          }
+        }
+        // ===== END WHAZING INITIAL MENU =====
 
         // Check if clinic uses AI booking
         const { data: clinicSettings } = await supabase
