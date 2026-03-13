@@ -33,6 +33,7 @@ import familiaHero from "@/assets/sindicato/familia-hero.jpg";
 import familiaSaude from "@/assets/sindicato/familia-saude.jpg";
 import familiaEducacao from "@/assets/sindicato/familia-educacao.jpg";
 import familiaEstetica from "@/assets/sindicato/familia-estetica.jpg";
+import perfilDaniela from "@/assets/sindicato/perfil-daniela.webp";
 
 const LOGO_URL =
   "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
@@ -47,6 +48,7 @@ interface Benefit {
   description: string;
   icon: React.ElementType;
   category: "saude" | "estudos" | "estetica" | "juridico";
+  photo?: string;
 }
 
 const benefits: Benefit[] = [
@@ -54,7 +56,7 @@ const benefits: Benefit[] = [
   { name: "Dra. Juliane Leite", description: "Dentista — Atendimento 100% gratuito", icon: Smile, category: "saude" },
   { name: "Dr. Jorge Avelar", description: "Ortopedista — Consulta 100% gratuita", icon: Bone, category: "saude" },
   { name: "Dr. Pedro Roberto", description: "Urologista — Consulta 100% gratuita", icon: Stethoscope, category: "saude" },
-  { name: "Drª Daniela Sales", description: "Terapia Holística — Bem-estar e saúde integrativa", icon: Leaf, category: "saude" },
+  { name: "Drª Daniela Sales", description: "Terapia Holística — Bem-estar e saúde integrativa", icon: Leaf, category: "saude", photo: perfilDaniela },
   { name: "Dra. Uiara Tiuba", description: "Pediatra — Cuidados para seus filhos", icon: Baby, category: "saude" },
   { name: "Hospital São José", description: "Descontos em exames hospitalares", icon: Hospital, category: "saude" },
   { name: "Laboratório Lidi", description: "Preventivo ginecológico 100% gratuito para titular + desconto em exames", icon: FlaskConical, category: "saude" },
@@ -327,9 +329,13 @@ export default function SindicatoBeneficiosLandingPage() {
                         key={i}
                         className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
                       >
-                        <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
-                          <b.icon className={`w-5 h-5 ${config.text}`} />
-                        </div>
+                        {b.photo ? (
+                          <img src={b.photo} alt={b.name} className="w-10 h-10 rounded-lg object-cover shrink-0 group-hover:scale-110 transition-transform" />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                            <b.icon className={`w-5 h-5 ${config.text}`} />
+                          </div>
+                        )}
                         <div>
                           <div className="font-semibold text-gray-900 text-sm">{b.name}</div>
                           <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{b.description}</div>
