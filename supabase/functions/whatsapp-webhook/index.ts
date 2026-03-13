@@ -405,7 +405,7 @@ async function sendWhatsAppButtons(
 // WHAZING API PLUS - INTERACTIVE BUTTONS
 // ==========================================
 
-async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
+async function sendWhazingButtons(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
@@ -415,15 +415,11 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
   }
 
   try {
-    // Normalize phone: remove @s.whatsapp.net and non-digits
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    console.log(`[whazing] Sending 3-button menu to ${cleanPhone}`);
-
-    // Whazing interactive buttons use the /apioficial endpoint
     const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
-    console.log(`[whazing] Using endpoint: ${apiOficialUrl}`);
+    console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -435,15 +431,9 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
         number: cleanPhone,
         contents: {
           type: "button",
-          body: {
-            text: "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje? Selecione uma opção:"
-          },
+          body: { text: bodyText },
           action: {
-            buttons: [
-              { type: "reply", reply: { id: "whazing_associado", title: "Associado" } },
-              { type: "reply", reply: { id: "whazing_empresa", title: "Empresa" } },
-              { type: "reply", reply: { id: "whazing_outros", title: "Outros Assuntos" } }
-            ]
+            buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
           }
         }
       }),
@@ -460,6 +450,50 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
     console.error('[whazing] Error sending buttons:', error);
     return false;
   }
+}
+
+async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
+  return sendWhazingButtons(phone, 
+    "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?",
+    [
+      { id: "whazing_associado", title: "Sou Associado" },
+      { id: "whazing_empresa", title: "Sou Empresa" },
+      { id: "whazing_contabilidade", title: "Sou Contabilidade" },
+    ]
+  );
+}
+
+async function sendWhazingSubMenu(phone: string, category: string): Promise<boolean> {
+  const subMenus: Record<string, { text: string; buttons: Array<{ id: string; title: string }> }> = {
+    'associado': {
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:",
+      buttons: [
+        { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+      ]
+    },
+    'empresa': {
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:",
+      buttons: [
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+      ]
+    },
+    'contabilidade': {
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:",
+      buttons: [
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+      ]
+    },
+  };
+
+  const menu = subMenus[category];
+  if (!menu) return false;
+  return sendWhazingButtons(phone, menu.text, menu.buttons);
 }
 
 // ==========================================
