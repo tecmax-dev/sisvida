@@ -7208,7 +7208,22 @@ serve(async (req) => {
           const isBoletoKeyword = /^(boleto|2[ª°]?\s*via|segunda\s*via)/i.test(msgClean);
           const isNotSpecificAction = !isCpf && !isNumericOption && !isBoletoKeyword && !MENU_REGEX.test(msgClean) && !CANCEL_REGEX.test(msgClean);
 
-          if (isFreshConversation && isNotSpecificAction) {
+          // Greetings should always restart the menu, even with an active AI session
+          const isGreeting = /^(oi|olá|ola|hey|hi|hello|bom\s*dia|boa\s*tarde|boa\s*noite|eai|e\s*ai|opa|fala)/i.test(msgClean);
+          const shouldShowMenu = isGreeting && !anyBookingSession && !anyBoletoSession;
+
+          // If it's a greeting with an active AI session, expire the old session first
+          if (shouldShowMenu && anyAiConversation) {
+            console.log(`[webhook] Greeting detected with active AI session - expiring old session to show Whazing menu`);
+            await supabase
+              .from('whatsapp_ai_conversations')
+              .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .gt('expires_at', new Date().toISOString());
+          }
+
+          if ((isFreshConversation || shouldShowMenu) && isNotSpecificAction) {
             console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
             const buttonsSent = await sendWhazingMenuButtons(phone);
             
