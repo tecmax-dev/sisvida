@@ -329,9 +329,13 @@ export default function SindicatoBeneficiosLandingPage() {
                         key={i}
                         className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
                       >
-                        <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
-                          <b.icon className={`w-5 h-5 ${config.text}`} />
-                        </div>
+                        {b.photo ? (
+                          <img src={b.photo} alt={b.name} className="w-10 h-10 rounded-lg object-cover shrink-0 group-hover:scale-110 transition-transform" />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                            <b.icon className={`w-5 h-5 ${config.text}`} />
+                          </div>
+                        )}
                         <div>
                           <div className="font-semibold text-gray-900 text-sm">{b.name}</div>
                           <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{b.description}</div>
