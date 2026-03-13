@@ -97,7 +97,7 @@ export default function SindicatoBeneficiosLandingPage() {
     const ogTags = [
       { property: "og:title", content: "SECMI - Benefícios do Associado | Sindicato dos Comerciários de Ilhéus" },
       { property: "og:description", content: "Associe-se ao SECMI e garanta consultas médicas, descontos em faculdades, assessoria jurídica e muito mais para você e toda sua família. 89 anos defendendo seus direitos!" },
-      { property: "og:image", content: familiaHero },
+      { property: "og:image", content: OG_IMAGE_URL },
       { property: "og:image:width", content: "1024" },
       { property: "og:image:height", content: "768" },
       { property: "og:url", content: window.location.href },
