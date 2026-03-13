@@ -40,7 +40,7 @@ const PortalAccessPage = () => {
     {
       id: "escritorio",
       title: "Escritórios",
-      description: "Emissão de boletos realizada por escritórios de contabilidade para gestores de múltiplas empresas.",
+      description: "Portal dedicado a escritórios de contabilidade para emitir boletos e gerenciar contribuições de todas as empresas vinculadas.",
       path: `/portal-contador/${clinicData?.slug || ""}`,
     },
   ];
