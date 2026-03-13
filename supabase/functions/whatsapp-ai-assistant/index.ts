@@ -700,7 +700,8 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const suppressInternalMenu = suppress_internal_menu === true;
-    const externalMenuMode = external_menu_mode === true;
+    const externalMenuMode = external_menu_mode === true || suppressInternalMenu;
+    const shouldBlockInternalMenu = suppressInternalMenu || externalMenuMode;
 
     // Helper: send WhatsApp message directly (used when called from webhook non-booking path)
     const sendDirectWhatsApp = async (text: string): Promise<void> => {
@@ -756,7 +757,9 @@ serve(async (req) => {
     };
 
     const externalSelectionPrompt = toExternalSelectionPrompt(cleanMessage, isBookingEnabledEarly);
-    const aiInputMessage = externalSelectionPrompt || message;
+    const aiInputMessage = shouldBlockInternalMenu
+      ? (externalSelectionPrompt || `Modo de integração externa ativo. NÃO mostre menu interno. Responda diretamente ao conteúdo desta mensagem do usuário: "${message}".`)
+      : (externalSelectionPrompt || message);
 
     // If user greets / asks for menu, return deterministic menu only when internal menu is allowed
     const isMenuRequest =
@@ -1006,13 +1009,19 @@ IMPORTANTE: NUNCA mostre "Agendar consulta" como opção no menu. Se perguntarem
 - NUNCA apresente o menu principal novamente.
 - Quando receber seleção no formato "X-Y" (ex.: "1-2"), considere que o usuário já escolheu a opção e continue o atendimento diretamente.
 - Seja objetivo e responda somente ao fluxo selecionado.`;
+
+    const internalMenuSuppressedInstructions = `## MENU INTERNO DESATIVADO (REGRA ABSOLUTA)
+- NUNCA exiba o menu principal deste sistema.
+- NUNCA responda com listas de opções 1️⃣, 2️⃣, 3️⃣... como menu inicial.
+- Responda diretamente ao conteúdo da mensagem do usuário.
+- Se a mensagem vier no formato "X-Y", trate como escolha já feita e continue o atendimento do assunto.`;
     
     const systemPrompt = `## PERSONA
 Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos Comerciários de Ilhéus e Região (SECMI). Sua função é auxiliar associados, empresas e escritórios de contabilidade a terem acesso aos serviços disponibilizados pelo sindicato de forma eficiente e amigável.
 
 ${externalMenuMode ? externalMenuInstructions : ''}
 
-${isBookingEnabled ? menuWithBooking : menuWithoutBooking}
+${shouldBlockInternalMenu ? internalMenuSuppressedInstructions : (isBookingEnabled ? menuWithBooking : menuWithoutBooking)}
 
 ${isBookingEnabled ? bookingEnabledSection : bookingDisabledSection}
 
@@ -1301,7 +1310,50 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       assistantMessage = data.choices?.[0]?.message;
     }
 
-    const finalResponse = assistantMessage?.content || 'Desculpe, não consegui processar sua mensagem.';
+    let finalResponse = assistantMessage?.content || 'Desculpe, não consegui processar sua mensagem.';
+
+    const looksLikeInternalMenu = (text: string): boolean => {
+      const normalized = text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      return normalized.includes('como posso ajudar? escolha uma opcao') &&
+        normalized.includes('sou associado') &&
+        normalized.includes('falar com atendente');
+    };
+
+    if (shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+      console.warn('[ai-assistant] Internal menu leaked in external mode - retrying without menu');
+
+      try {
+        const retryMessages = [
+          ...messages,
+          { role: 'assistant', content: finalResponse },
+          {
+            role: 'user',
+            content: 'Sua resposta anterior mostrou menu interno, o que é proibido. Reescreva agora sem menu e continue diretamente o atendimento do assunto já escolhido pelo usuário.'
+          }
+        ];
+
+        const retryResponse = await callAI(retryMessages, false);
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          const retriedContent = retryData?.choices?.[0]?.message?.content;
+          if (retriedContent) {
+            finalResponse = retriedContent;
+          }
+        }
+      } catch (retryError) {
+        console.error('[ai-assistant] Retry without menu failed:', retryError);
+      }
+    }
+
+    if (shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+      finalResponse = externalSelectionPrompt
+        ? 'Perfeito, recebi sua escolha no menu externo e vou seguir direto com seu atendimento.'
+        : 'Perfeito, vamos seguir sem menu. Me diga objetivamente o que você precisa e eu te ajudo.';
+    }
+
     console.log('[ai-assistant] Final response:', finalResponse.substring(0, 100));
 
     // Check HANDOFF_BOLETO FIRST - before any booking block filters
