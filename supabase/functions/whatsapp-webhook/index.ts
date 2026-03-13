@@ -6955,6 +6955,22 @@ serve(async (req) => {
 
             const extResult = await extResponse.json();
             console.log(`[webhook] External-integration result:`, JSON.stringify(extResult).substring(0, 300));
+
+            // Send follow-up buttons after AI response (with small delay for message ordering)
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const followUpButtons = action === 'atendente'
+              ? [
+                  { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+                  { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+                ]
+              : [
+                  { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
+                  { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+                  { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+                ];
+            
+            await sendWhazingButtons(phone, "O que deseja fazer agora?", followUpButtons);
           } catch (extErr) {
             console.error('[webhook] Error calling external-integration for Whazing button:', extErr);
           }
