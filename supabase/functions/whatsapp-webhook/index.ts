@@ -6837,19 +6837,7 @@ serve(async (req) => {
 
           // "Outros Assuntos" sub-option: Jurídico
           if (followUpId === 'whazing_outros_juridico') {
-            let storedCat = 'associado';
-            try {
-              const { data: catSess } = await supabase
-                .from('whatsapp_ai_conversations')
-                .select('context')
-                .eq('clinic_id', clinicId)
-                .in('phone', phoneCandidates)
-                .like('context', 'whazing_category:%')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
-            } catch (_e) { /* ignore */ }
+            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
 
             const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
