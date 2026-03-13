@@ -1071,12 +1071,7 @@ const MESSAGES = {
 
 Vou te ajudar a emitir uma segunda via do boleto de contribuição.
 
-O boleto é:
-
-1️⃣ *A vencer* (novo boleto)
-2️⃣ *Vencido* (atualizar data)
-
-_Digite o número da opção desejada._`,
+O boleto é *a vencer* (novo) ou *vencido* (atualizar data)?`,
 
   askCnpj: `📋 Por favor, informe o *CNPJ* da empresa (apenas números):
 
