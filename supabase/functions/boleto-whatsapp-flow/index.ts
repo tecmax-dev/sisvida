@@ -2518,7 +2518,7 @@ async function handleBoletoFlow(
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
-          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa:\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*` 
+          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa usando os botões abaixo.` 
         };
       }
       
