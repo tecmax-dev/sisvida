@@ -90,6 +90,35 @@ export default function SindicatoBeneficiosLandingPage() {
     document.title = "SECMI - Benefícios do Associado | Sindicato dos Comerciários de Ilhéus";
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
     if (link) link.href = LOGO_URL;
+
+    // Open Graph meta tags for social sharing
+    const ogTags = [
+      { property: "og:title", content: "SECMI - Benefícios do Associado | Sindicato dos Comerciários de Ilhéus" },
+      { property: "og:description", content: "Associe-se ao SECMI e garanta consultas médicas, descontos em faculdades, assessoria jurídica e muito mais para você e toda sua família. 89 anos defendendo seus direitos!" },
+      { property: "og:image", content: familiaHero },
+      { property: "og:image:width", content: "1024" },
+      { property: "og:image:height", content: "768" },
+      { property: "og:url", content: window.location.href },
+      { property: "og:type", content: "website" },
+      { property: "og:locale", content: "pt_BR" },
+      { property: "og:site_name", content: "SECMI - Sindicato dos Comerciários" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "SECMI - Benefícios do Associado | Sindicato dos Comerciários de Ilhéus" },
+      { name: "twitter:description", content: "Associe-se ao SECMI e garanta consultas médicas, descontos em faculdades, assessoria jurídica e muito mais para você e toda sua família." },
+      { name: "twitter:image", content: familiaHero },
+    ];
+
+    ogTags.forEach(({ property, name, content }) => {
+      const selector = property ? `meta[property="${property}"]` : `meta[name="${name}"]`;
+      let meta = document.querySelector(selector) as HTMLMetaElement;
+      if (!meta) {
+        meta = document.createElement("meta");
+        if (property) meta.setAttribute("property", property);
+        if (name) meta.setAttribute("name", name);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute("content", content);
+    });
   }, []);
 
   const grouped = {
