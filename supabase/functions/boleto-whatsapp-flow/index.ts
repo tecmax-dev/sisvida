@@ -1270,7 +1270,7 @@ async function handleCnpjInput(
   }
 
   return { 
-    response: `✅ *Empresa identificada!*\n\n🏢 *${employer.name}*\n📋 CNPJ: ${formatCnpj(cleanCnpj)}\n\nÉ essa a empresa correta?\n\n1️⃣ *Sim, continuar*\n2️⃣ *Não, informar outro CNPJ*`, 
+    response: `✅ *Empresa identificada!*\n\n🏢 *${employer.name}*\n📋 CNPJ: ${formatCnpj(cleanCnpj)}\n\nÉ essa a empresa correta?`, 
     newState: 'CONFIRM_EMPLOYER' 
   };
 }
