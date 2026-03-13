@@ -700,7 +700,8 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const suppressInternalMenu = suppress_internal_menu === true;
-    const externalMenuMode = external_menu_mode === true;
+    const externalMenuMode = external_menu_mode === true || suppressInternalMenu;
+    const shouldBlockInternalMenu = suppressInternalMenu || externalMenuMode;
 
     // Helper: send WhatsApp message directly (used when called from webhook non-booking path)
     const sendDirectWhatsApp = async (text: string): Promise<void> => {
