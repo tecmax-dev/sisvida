@@ -1097,9 +1097,8 @@ Esta é a empresa correta?`,
   selectContributionType: (types: Array<{ id: string; name: string }>) => {
     let msg = `📝 Qual o *tipo de contribuição*?\n\n`;
     types.forEach((t, i) => {
-      msg += `${i + 1}️⃣ ${t.name}\n`;
+      msg += `• ${t.name}\n`;
     });
-    msg += `\n_Digite o número da opção._`;
     return msg;
   },
 
