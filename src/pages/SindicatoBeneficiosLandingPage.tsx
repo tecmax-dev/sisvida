@@ -53,7 +53,7 @@ interface Benefit {
 }
 
 const benefits: Benefit[] = [
-  { name: "Dr. José Alcides", description: "Clínico Geral — Consulta 100% gratuita", icon: Stethoscope, category: "saude" },
+  { name: "Dr. José Alcides", description: "Clínico Geral — Consulta 100% gratuita", icon: Stethoscope, category: "saude", photo: perfilAlcides },
   { name: "Dra. Juliane Leite", description: "Dentista — Atendimento 100% gratuito", icon: Smile, category: "saude" },
   { name: "Dr. Jorge Avelar", description: "Ortopedista — Consulta 100% gratuita", icon: Bone, category: "saude" },
   { name: "Dr. Pedro Roberto", description: "Urologista — Consulta 100% gratuita", icon: Stethoscope, category: "saude" },
