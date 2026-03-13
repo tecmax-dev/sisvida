@@ -6722,6 +6722,78 @@ serve(async (req) => {
           );
         }
         // ===== END WHAZING BUTTON RESPONSE HANDLER =====
+
+        // ===== WHAZING INITIAL MENU - FRESH CONVERSATION =====
+        // If Whazing is configured and this is a fresh conversation (no active sessions),
+        // send interactive buttons instead of proceeding to text-based flows.
+        // This MUST run BEFORE the DEFINITIVE GATE to handle booking_enabled=false clinics.
+        const whazingUrl = Deno.env.get('WHAZING_API_URL');
+        const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+        
+        if (whazingUrl && whazingToken) {
+          // Check for any active sessions (booking, boleto, AI)
+          const { data: anyBookingSession } = await supabase
+            .from('whatsapp_booking_sessions')
+            .select('id, state')
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .neq('state', 'FINISHED')
+            .gt('expires_at', new Date().toISOString())
+            .limit(1)
+            .maybeSingle();
+
+          const { data: anyBoletoSession } = await supabase
+            .from('whatsapp_boleto_sessions')
+            .select('id')
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .gt('expires_at', new Date().toISOString())
+            .neq('state', 'FINISHED')
+            .limit(1)
+            .maybeSingle();
+
+          const { data: anyAiConversation } = await supabase
+            .from('whatsapp_ai_conversations')
+            .select('id')
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .gt('expires_at', new Date().toISOString())
+            .limit(1)
+            .maybeSingle();
+
+          const isFreshConversation = !anyBookingSession && !anyBoletoSession && !anyAiConversation;
+          
+          // Check if message is a greeting or generic first message (not a CPF, number, or specific action)
+          const msgClean = messageText.trim();
+          const isCpf = /^\d{11}$/.test(msgClean.replace(/\D/g, ''));
+          const isNumericOption = /^\d{1,2}$/.test(msgClean);
+          const isBoletoKeyword = /^(boleto|2[ª°]?\s*via|segunda\s*via)/i.test(msgClean);
+          const isNotSpecificAction = !isCpf && !isNumericOption && !isBoletoKeyword && !MENU_REGEX.test(msgClean) && !CANCEL_REGEX.test(msgClean);
+
+          if (isFreshConversation && isNotSpecificAction) {
+            console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
+            const buttonsSent = await sendWhazingMenuButtons(phone);
+            
+            if (buttonsSent) {
+              await supabase.from('whatsapp_incoming_logs').insert({
+                clinic_id: clinicId,
+                phone,
+                message_text: messageText,
+                raw_payload: payload,
+                processed: true,
+                processed_action: 'whazing_menu_sent',
+              });
+
+              return new Response(
+                JSON.stringify({ success: true, message: 'Whazing menu buttons sent' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            console.log('[webhook] Whazing buttons failed, falling through to normal flow');
+          }
+        }
+        // ===== END WHAZING INITIAL MENU =====
+
         // Check if there's an active boleto session or user is requesting boleto (option 7)
         const { data: activeBoletoSession } = await supabase
           .from('whatsapp_boleto_sessions')
