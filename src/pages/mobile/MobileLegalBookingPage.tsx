@@ -838,7 +838,15 @@ export default function MobileLegalBookingPage() {
 
   const selectedProfessional = professionals.find(p => p.id === selectedProfessionalId);
   const selectedService = serviceTypes.find(s => s.id === selectedServiceTypeId);
-  const availableTimeSlots = availableSlots.filter(s => s.available);
+
+  // Build a professionals-like array for DateTimeSelectionStep compatibility
+  const professionalForStep = selectedProfessional ? [{
+    id: selectedProfessional.id,
+    name: selectedProfessional.name,
+    specialty: selectedProfessional.function,
+    appointment_duration: serviceTypes.find(s => s.id === selectedServiceTypeId)?.duration_minutes || 30,
+    schedule: null,
+  }] : [];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
