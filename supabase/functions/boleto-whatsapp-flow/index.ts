@@ -1127,9 +1127,9 @@ _Exemplo: 150,00 ou R$ 150,00_`,
       const competence = `${monthNames[c.competence_month - 1]}/${c.competence_year}`;
       const value = c.value > 0 ? formatCurrency(c.value) : '_Valor não definido_';
       const dueDate = formatDate(c.due_date);
-      msg += `${i + 1}️⃣ ${c.contribution_type?.name || 'Contribuição'}\n   📅 ${competence} | Venc: ${dueDate}\n   💰 ${value}\n\n`;
+      msg += `• ${c.contribution_type?.name || 'Contribuição'}\n   📅 ${competence} | Venc: ${dueDate}\n   💰 ${value}\n\n`;
     });
-    msg += `_Digite o número da contribuição desejada._`;
+    msg += `Selecione a contribuição desejada:`;
     return msg;
   },
 
