@@ -6713,8 +6713,8 @@ serve(async (req) => {
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
         const isWhazingLevel2 = whazingLevel2Ids.includes(messageText?.trim());
 
-        // Level 3 buttons: follow-up actions after AI response
-        const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub'];
+        // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
+        const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
         const isWhazingFollowUp = whazingFollowUpIds.includes(messageText?.trim());
 
         // Also handle legacy button IDs (whazing_outros)
@@ -6756,7 +6756,7 @@ serve(async (req) => {
             );
           }
 
-          if (followUpId === 'whazing_falar_atendente') {
+          if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
             // Route to atendente via external-integration
             let storedCat = 'associado';
             try {
@@ -6792,6 +6792,108 @@ serve(async (req) => {
             } catch (_e) { /* ignore */ }
             return new Response(
               JSON.stringify({ success: true, message: 'Routed to atendente' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // "Outros Assuntos" sub-option: Jurídico
+          if (followUpId === 'whazing_outros_juridico') {
+            let storedCat = 'associado';
+            try {
+              const { data: catSess } = await supabase
+                .from('whatsapp_ai_conversations')
+                .select('context')
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .like('context', 'whazing_category:%')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
+            } catch (_e) { /* ignore */ }
+
+            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            try {
+              const extResponse = await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  action: 'juridico',
+                  context: `Perfil: ${storedCat}`,
+                  clinic_id: clinicId,
+                  instance_name: configData.instance_name,
+                }),
+              });
+              const extResult = await extResponse.json();
+              console.log(`[webhook] Juridico result:`, JSON.stringify(extResult).substring(0, 300));
+            } catch (_e) { /* ignore */ }
+
+            // Follow-up buttons after AI response
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+            ]);
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Routed to juridico' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // "Outros Assuntos" sub-option: Homologações
+          if (followUpId === 'whazing_outros_homologacao') {
+            let storedCat = 'empresa';
+            try {
+              const { data: catSess } = await supabase
+                .from('whatsapp_ai_conversations')
+                .select('context')
+                .eq('clinic_id', clinicId)
+                .in('phone', phoneCandidates)
+                .like('context', 'whazing_category:%')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
+            } catch (_e) { /* ignore */ }
+
+            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            try {
+              const extResponse = await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  action: 'homologacao',
+                  context: `Perfil: ${storedCat}`,
+                  clinic_id: clinicId,
+                  instance_name: configData.instance_name,
+                }),
+              });
+              const extResult = await extResponse.json();
+              console.log(`[webhook] Homologacao result:`, JSON.stringify(extResult).substring(0, 300));
+            } catch (_e) { /* ignore */ }
+
+            // Follow-up buttons after AI response
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+            ]);
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Routed to homologacao' }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
@@ -6982,11 +7084,43 @@ serve(async (req) => {
             );
           }
 
+          // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
+          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
+            console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
+
+            if (storedCategory === 'associado') {
+              await sendWhazingButtons(phone, "📋 *Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
+                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
+                { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              ]);
+            } else {
+              // empresa / contabilidade
+              await sendWhazingButtons(phone, "📋 *Outros Assuntos*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
+                { id: "whazing_outros_homologacao", title: "📝 Homologações" },
+                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
+              ]);
+            }
+
+            await supabase.from('whatsapp_incoming_logs').insert({
+              clinic_id: clinicId,
+              phone,
+              message_text: `[whazing-L2] ${storedCategory}/outros → sub-menu`,
+              raw_payload: payload,
+              processed: true,
+              processed_action: 'whazing_outros_submenu',
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: `Outros Assuntos sub-menu sent for ${storedCategory}` }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
           const subActionMap: Record<string, string> = {
             'whazing_sub_convencoes': 'cct',
-            'whazing_sub_outros': 'atendente',
-            'whazing_outros': 'atendente',
           };
           const action = subActionMap[btnId] || 'atendente';
           const contextStr = `Perfil: ${storedCategory}`;
