@@ -242,10 +242,6 @@ export default function MobileLegalBookingPage() {
           .order("name"),
       ]);
 
-      if (clinicConfig?.booking_months_ahead) {
-        setBookingMonthsAhead(clinicConfig.booking_months_ahead);
-      }
-
       setProfessionals((professionalsData || []) as LegalProfessional[]);
 
       // Load schedules
