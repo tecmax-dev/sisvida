@@ -6789,15 +6789,67 @@ serve(async (req) => {
             console.log('[webhook] Could not retrieve whazing category:', e);
           }
 
-          // Map sub-button to action
+          const btnId = messageText.trim();
+
+          // ── BOLETO: route directly to boleto-whatsapp-flow ──
+          if (btnId === 'whazing_sub_boleto') {
+            console.log(`[webhook] Whazing boleto button → direct boleto flow (category: ${storedCategory})`);
+            const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+            try {
+              const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({
+                  clinic_id: clinicId,
+                  phone: phone,
+                  action: 'start',
+                  evolution_config: {
+                    api_url: configData.api_url,
+                    api_key: configData.api_key,
+                    instance_name: configData.instance_name,
+                  }
+                }),
+              });
+
+              if (boletoResponse.ok) {
+                const boletoResult = await boletoResponse.json();
+                console.log(`[webhook] Boleto flow started via Whazing button: state=${boletoResult.state}`);
+              } else {
+                const errText = await boletoResponse.text();
+                console.error('[webhook] Boleto flow error from Whazing button:', errText);
+              }
+            } catch (bErr) {
+              console.error('[webhook] Error calling boleto flow from Whazing button:', bErr);
+            }
+
+            await supabase.from('whatsapp_incoming_logs').insert({
+              clinic_id: clinicId,
+              phone,
+              message_text: `[whazing-L2] ${storedCategory}/boleto → direct boleto flow`,
+              raw_payload: payload,
+              processed: true,
+              processed_action: 'whazing_boleto_direct',
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Whazing boleto flow started directly' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
           const subActionMap: Record<string, string> = {
             'whazing_sub_carteirinha': 'carteirinha',
             'whazing_sub_convencoes': 'cct',
-            'whazing_sub_boleto': 'boleto',
             'whazing_sub_outros': 'atendente',
             'whazing_outros': 'atendente',
           };
-          const action = subActionMap[messageText.trim()] || 'atendente';
+          const action = subActionMap[btnId] || 'atendente';
           const contextStr = `Perfil: ${storedCategory}`;
 
           // Route to external-integration function
@@ -6829,7 +6881,7 @@ serve(async (req) => {
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
             phone,
-            message_text: `[whazing-L2] ${storedCategory}/${messageText}`,
+            message_text: `[whazing-L2] ${storedCategory}/${btnId}`,
             raw_payload: payload,
             processed: true,
             processed_action: 'whazing_button_response',
