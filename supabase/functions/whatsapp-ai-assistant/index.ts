@@ -679,11 +679,19 @@ serve(async (req) => {
   }
 
   try {
-    const { message, clinic_id, phone, conversation_history, evolution_config } = await req.json();
+    const {
+      message,
+      clinic_id,
+      phone,
+      conversation_history,
+      evolution_config,
+      suppress_internal_menu,
+      external_menu_mode,
+    } = await req.json();
 
     if (!message || !clinic_id) {
-      return new Response(JSON.stringify({ 
-        error: 'message and clinic_id are required' 
+      return new Response(JSON.stringify({
+        error: 'message and clinic_id are required'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -691,6 +699,8 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const suppressInternalMenu = suppress_internal_menu === true;
+    const externalMenuMode = external_menu_mode === true;
 
     // Helper: send WhatsApp message directly (used when called from webhook non-booking path)
     const sendDirectWhatsApp = async (text: string): Promise<void> => {
@@ -722,12 +732,46 @@ serve(async (req) => {
 
     const cleanMessage = message.trim();
 
-    // If user greets / asks for menu, return a deterministic menu (avoid model drift)
+    const toExternalSelectionPrompt = (selection: string, bookingEnabled: boolean): string | null => {
+      if (!/^\d+(?:-\d+)+$/.test(selection)) return null;
+
+      const parts = selection.split('-').filter(Boolean);
+      if (parts.length < 2) return null;
+
+      const [mainOption, ...subOptions] = parts;
+      const mainOptionMap: Record<string, string> = {
+        '1': 'associados',
+        '2': 'empresas',
+        '3': 'contador/escritório contábil',
+        '4': 'Dia do Comerciário',
+        '5': 'falar com atendente',
+        '6': bookingEnabled ? 'agendar consulta ou exame' : 'segunda via de boleto (empresa)',
+        '7': 'segunda via de boleto (empresa)',
+      };
+
+      const mainLabel = mainOptionMap[mainOption] || `opção ${mainOption}`;
+      const subPath = subOptions.join(' > ');
+
+      return `Seleção recebida do menu externo: ${selection}. O usuário escolheu o fluxo "${mainLabel}" e a subopção "${subPath}". Continue o atendimento diretamente sem repetir ou exibir menu principal.`;
+    };
+
+    const externalSelectionPrompt = toExternalSelectionPrompt(cleanMessage, isBookingEnabledEarly);
+    const aiInputMessage = externalSelectionPrompt || message;
+
+    // If user greets / asks for menu, return deterministic menu only when internal menu is allowed
     const isMenuRequest =
       /^(oi|olá|ola|bom dia|boa tarde|boa noite)\b/i.test(cleanMessage) ||
       /\b(menu|op(ç|c)ões|op(ç|c)oes|opcoes|opções|ajuda|in(í|i)cio|come(ç|c)ar|comecar)\b/i.test(cleanMessage);
 
     if (isMenuRequest) {
+      if (suppressInternalMenu) {
+        console.log('[ai-assistant] Internal menu suppressed (external menu mode)');
+        return new Response(
+          JSON.stringify({ response: null, handoff_to_booking: false, action: 'menu_suppressed_external_mode' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const menuText = isBookingEnabledEarly
         ? `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
 
@@ -765,9 +809,10 @@ Digite o número da opção desejada.`;
       );
     }
 
-    // Check if user selected option 6 or is attempting booking
+    // Check if user selected option 6 or equivalent submenu path
     // IMPORTANT: When booking is disabled, option 6 is boleto (not booking)
-    if (cleanMessage === '6') {
+    const isOption6Selection = cleanMessage === '6' || /^6(?:-\d+)+$/.test(cleanMessage);
+    if (isOption6Selection) {
       if (isBookingEnabledEarly) {
         console.log('[ai-assistant] Option 6 selected and booking enabled - handing off to booking flow');
         return new Response(
