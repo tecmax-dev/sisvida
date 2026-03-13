@@ -304,7 +304,8 @@ export default function MobileLegalBookingPage() {
   };
 
   // Check if a date is enabled for the selected professional
-  const isDateEnabled = (date: Date): boolean => {
+  // Signature matches DateTimeSelectionStep's expected callback
+  const isDateEnabled = (date: Date, _professional?: any): boolean => {
     if (!selectedProfessionalId) return false;
     
     const profSchedules = getProfessionalSchedules(selectedProfessionalId);
@@ -317,23 +318,6 @@ export default function MobileLegalBookingPage() {
     const dayOfWeek = date.getDay();
     return profSchedules.some(s => s.day_of_week === dayOfWeek && s.is_active);
   };
-
-  // Generate available dates for the next 60 days
-  const availableDates = useMemo(() => {
-    if (!selectedProfessionalId) return [];
-    
-    const dates: Date[] = [];
-    const today = startOfDay(new Date());
-    
-    for (let i = 0; i < 60; i++) {
-      const date = addDays(today, i);
-      if (isDateEnabled(date)) {
-        dates.push(date);
-      }
-    }
-    
-    return dates;
-  }, [selectedProfessionalId, schedules]);
 
   const loadAvailableSlots = async () => {
     if (!selectedProfessionalId || !selectedDate) return;
