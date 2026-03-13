@@ -6923,9 +6923,67 @@ serve(async (req) => {
             );
           }
 
+          // ── CARTEIRINHA: redirect to app (not available via WhatsApp) ──
+          if (btnId === 'whazing_sub_carteirinha') {
+            console.log(`[webhook] Whazing carteirinha button → redirect to app`);
+
+            // Send image guide first
+            const whazingUrl = Deno.env.get('WHAZING_API_URL');
+            const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+            if (whazingUrl && whazingToken) {
+              let cleanPhoneImg = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+              if (!cleanPhoneImg.startsWith('55')) cleanPhoneImg = '55' + cleanPhoneImg;
+              const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+
+              const imageUrl = 'https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-assets/carteirinha-app-guide.jpg';
+              const caption = `📱 *Atualização de Carteirinha*\n\nA atualização da carteirinha é feita de forma rápida e prática diretamente pelo *aplicativo do sindicato*! 📲\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Siga as instruções na tela\n\n📥 *Baixe o app:*\n👉 https://app.eclini.com.br/sindicato/instalar\n\n⚠️ Este serviço *não está disponível* por WhatsApp.`;
+
+              try {
+                await fetch(apiOficialUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${whazingToken}`,
+                  },
+                  body: JSON.stringify({
+                    number: cleanPhoneImg,
+                    contents: {
+                      type: "image",
+                      body: { url: imageUrl },
+                      caption: caption,
+                    }
+                  }),
+                });
+              } catch (imgErr) {
+                console.error('[whazing] Error sending carteirinha image:', imgErr);
+              }
+            }
+
+            // Send follow-up buttons after image
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+            ]);
+
+            await supabase.from('whatsapp_incoming_logs').insert({
+              clinic_id: clinicId,
+              phone,
+              message_text: `[whazing-L2] ${storedCategory}/carteirinha → redirect to app`,
+              raw_payload: payload,
+              processed: true,
+              processed_action: 'whazing_carteirinha_redirect',
+            });
+
+            return new Response(
+              JSON.stringify({ success: true, message: 'Carteirinha redirect sent' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
           const subActionMap: Record<string, string> = {
-            'whazing_sub_carteirinha': 'carteirinha',
             'whazing_sub_convencoes': 'cct',
             'whazing_sub_outros': 'atendente',
             'whazing_outros': 'atendente',
