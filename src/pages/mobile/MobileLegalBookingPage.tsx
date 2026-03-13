@@ -453,12 +453,27 @@ export default function MobileLegalBookingPage() {
         notes: "Agendamento realizado via app mobile",
       };
 
-      const { error } = await (supabase
+      const { data: insertedData, error } = await (supabase
         .from("homologacao_appointments") as any)
-        .insert([appointmentData]);
+        .insert([appointmentData])
+        .select("id")
+        .single();
 
       if (error) {
         throw error;
+      }
+
+      // Send WhatsApp notifications (fire-and-forget) - same as homologação
+      if (insertedData?.id) {
+        supabase.functions.invoke("send-homologacao-notifications", {
+          body: { appointment_id: insertedData.id }
+        }).then((result: any) => {
+          if (result.error) {
+            console.error("Notification error:", result.error);
+          } else {
+            console.log("Legal appointment notifications sent:", result.data);
+          }
+        });
       }
 
       toast({
