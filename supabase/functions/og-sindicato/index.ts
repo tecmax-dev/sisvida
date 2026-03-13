@@ -130,9 +130,7 @@ serve(async (req) => {
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${ogImageUrl}">
-  <meta name="twitter:title" content="${title}">
-  <meta name="twitter:description" content="${description}">
-  <meta name="twitter:image" content="${logoUrl}">
+  
   
   <!-- Theme Color -->
   <meta name="theme-color" content="#16a394">
