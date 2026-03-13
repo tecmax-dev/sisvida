@@ -7153,13 +7153,13 @@ serve(async (req) => {
             
             const followUpButtons = action === 'atendente'
               ? [
-                  { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-                  { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+                  { id: "whazing_voltar_sub", title: "Voltar" },
+                  { id: "whazing_voltar_menu", title: "Menu Principal" },
                 ]
               : [
-                  { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
-                  { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-                  { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+                  { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+                  { id: "whazing_voltar_sub", title: "Voltar" },
+                  { id: "whazing_voltar_menu", title: "Menu Principal" },
                 ];
             
             await sendWhazingButtons(phone, "O que deseja fazer agora?", followUpButtons);
