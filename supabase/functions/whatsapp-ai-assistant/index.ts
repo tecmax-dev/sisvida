@@ -1112,7 +1112,7 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
       messages.push(...conversation_history);
     }
 
-    messages.push({ role: 'user', content: message });
+    messages.push({ role: 'user', content: aiInputMessage });
 
     console.log('[ai-assistant] Sending to AI with', messages.length, 'messages');
 
