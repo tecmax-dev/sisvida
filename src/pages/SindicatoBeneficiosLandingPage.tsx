@@ -48,6 +48,7 @@ interface Benefit {
   description: string;
   icon: React.ElementType;
   category: "saude" | "estudos" | "estetica" | "juridico";
+  photo?: string;
 }
 
 const benefits: Benefit[] = [
