@@ -856,9 +856,9 @@ export default function MobileLegalBookingPage() {
   const availableTimeSlots = availableSlots.filter(s => s.available);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+      <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4 flex-shrink-0">
         <button onClick={() => step > 1 ? setStep(step - 1) : navigate("/app/home")} className="p-1">
           <ArrowLeft className="h-6 w-6" />
         </button>
@@ -868,20 +868,21 @@ export default function MobileLegalBookingPage() {
       </div>
 
       {/* Progress */}
-      <div className="px-4 py-3 flex items-center gap-2">
+      <div className="px-4 py-3 flex items-center gap-2 flex-shrink-0">
         {[1, 2, 3].map((s) => (
           <div 
             key={s} 
-            className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-gray-200'}`}
+            className={`flex-1 h-1.5 rounded-full transition-colors ${s <= step ? 'bg-emerald-600' : 'bg-muted'}`}
           />
         ))}
       </div>
 
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4">
+      {/* Content - scrollable */}
+      <div className="flex-1 overflow-y-auto pb-safe">
+        <div className="px-4 pb-6">
           {/* Step 1: Professional Selection */}
           {step === 1 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
                 <h2 className="text-lg font-semibold text-foreground mb-1">Escolha o profissional</h2>
                 <p className="text-sm text-muted-foreground">Selecione o advogado para seu atendimento</p>
@@ -924,19 +925,21 @@ export default function MobileLegalBookingPage() {
                 ))}
               </div>
 
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!selectedProfessionalId}
-                onClick={() => setStep(2)}
-              >
-                Continuar
-              </Button>
+              <div className="sticky bottom-0 pt-3 bg-background">
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+                  disabled={!selectedProfessionalId}
+                  onClick={() => setStep(2)}
+                >
+                  Continuar
+                </Button>
+              </div>
             </div>
           )}
 
           {/* Step 2: Service Type Selection (if multiple) */}
           {step === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {serviceTypes.length > 1 ? (
                 <>
                   <div>
@@ -982,24 +985,26 @@ export default function MobileLegalBookingPage() {
                 </div>
               )}
 
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={serviceTypes.length > 1 && !selectedServiceTypeId}
-                onClick={() => {
-                  if (serviceTypes.length === 1) {
-                    setSelectedServiceTypeId(serviceTypes[0].id);
-                  }
-                  setStep(3);
-                }}
-              >
-                Continuar
-              </Button>
+              <div className="sticky bottom-0 pt-3 bg-background">
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+                  disabled={serviceTypes.length > 1 && !selectedServiceTypeId}
+                  onClick={() => {
+                    if (serviceTypes.length === 1) {
+                      setSelectedServiceTypeId(serviceTypes[0].id);
+                    }
+                    setStep(3);
+                  }}
+                >
+                  Continuar
+                </Button>
+              </div>
             </div>
           )}
 
           {/* Step 3: Date and Time Selection */}
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Professional Summary */}
               {selectedProfessional && (
                 <Card className="bg-emerald-50 border-emerald-200">
@@ -1029,42 +1034,41 @@ export default function MobileLegalBookingPage() {
                 </div>
                 
                 {availableDates.length > 0 ? (
-                  <ScrollArea className="w-full">
-                    <div className="flex gap-2 pb-2">
+                  <div className="overflow-x-auto -mx-4 px-4">
+                    <div className="flex gap-2 pb-2 w-max">
                       {availableDates.map((date) => {
                         const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
                         return (
-                          <Card
+                          <button
                             key={format(date, "yyyy-MM-dd")}
-                            className={`cursor-pointer flex-shrink-0 min-w-[80px] transition-all ${
+                            type="button"
+                            className={`flex-shrink-0 w-[76px] rounded-xl border-2 py-3 px-2 text-center transition-all ${
                               isSelected 
-                                ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600" 
-                                : "hover:border-emerald-300"
+                                ? "border-emerald-600 bg-emerald-50 shadow-sm" 
+                                : "border-border bg-background hover:border-emerald-300"
                             }`}
                             onClick={() => {
                               setSelectedDate(date);
                               setSelectedTime("");
                             }}
                           >
-                            <CardContent className="p-3 text-center">
-                              <p className={`text-xs font-medium uppercase ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                                {format(date, "EEE", { locale: ptBR })}
-                              </p>
-                              <p className={`text-xl font-bold ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
-                                {format(date, "dd")}
-                              </p>
-                              <p className={`text-xs ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                                {format(date, "MMM", { locale: ptBR })}
-                              </p>
-                              {isSelected && (
-                                <Check className="h-4 w-4 text-emerald-600 mx-auto mt-1" />
-                              )}
-                            </CardContent>
-                          </Card>
+                            <p className={`text-[11px] font-semibold uppercase tracking-wide ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                              {format(date, "EEE", { locale: ptBR })}
+                            </p>
+                            <p className={`text-2xl font-bold leading-tight ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
+                              {format(date, "dd")}
+                            </p>
+                            <p className={`text-xs ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                              {format(date, "MMM", { locale: ptBR })}
+                            </p>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-emerald-600 mx-auto mt-1" />
+                            )}
+                          </button>
                         );
                       })}
                     </div>
-                  </ScrollArea>
+                  </div>
                 ) : (
                   <div className="text-center py-6 bg-muted/50 rounded-lg">
                     <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
@@ -1076,7 +1080,7 @@ export default function MobileLegalBookingPage() {
               {/* Time Selection */}
               {selectedDate && (
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <Clock className="h-5 w-5 text-emerald-600" />
                     <h2 className="text-lg font-semibold text-foreground">Escolha o horário</h2>
                   </div>
@@ -1086,25 +1090,22 @@ export default function MobileLegalBookingPage() {
                   </p>
 
                   {availableTimeSlots.length > 0 ? (
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {availableTimeSlots.map((slot) => {
                         const isSelected = selectedTime === slot.time;
                         return (
-                          <Card
+                          <button
                             key={slot.time}
-                            className={`cursor-pointer transition-all ${
+                            type="button"
+                            className={`rounded-xl border-2 py-3 px-2 text-center font-semibold text-sm transition-all ${
                               isSelected 
-                                ? "border-emerald-600 bg-emerald-600 text-white" 
-                                : "hover:border-emerald-300"
+                                ? "border-emerald-600 bg-emerald-600 text-white shadow-md" 
+                                : "border-border bg-background text-foreground hover:border-emerald-300"
                             }`}
                             onClick={() => setSelectedTime(slot.time)}
                           >
-                            <CardContent className="p-3 text-center">
-                              <p className={`text-sm font-semibold ${isSelected ? "text-white" : "text-foreground"}`}>
-                                {slot.time}
-                              </p>
-                            </CardContent>
-                          </Card>
+                            {slot.time}
+                          </button>
                         );
                       })}
                     </div>
@@ -1118,24 +1119,26 @@ export default function MobileLegalBookingPage() {
               )}
 
               {/* Submit Button */}
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!selectedDate || !selectedTime || submitting}
-                onClick={handleSubmit}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Agendando...
-                  </>
-                ) : (
-                  "Confirmar Agendamento"
-                )}
-              </Button>
+              <div className="sticky bottom-0 pt-3 bg-background">
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+                  disabled={!selectedDate || !selectedTime || submitting}
+                  onClick={handleSubmit}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Agendando...
+                    </>
+                  ) : (
+                    "Confirmar Agendamento"
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
