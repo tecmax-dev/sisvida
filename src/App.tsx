@@ -60,6 +60,7 @@ const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 // Landing Page - Sistema Sindical (página pública independente)
 const SindicalLandingPage = lazy(() => import("./pages/SindicalLandingPage"));
 const SindicalFiliacaoPage = lazy(() => import("./pages/SindicalFiliacaoPage"));
+const SindicatoBeneficiosLandingPage = lazy(() => import("./pages/SindicatoBeneficiosLandingPage"));
 const PublicPanel = lazy(() => import("./pages/PublicPanel"));
 const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 const CardValidation = lazy(() => import("./pages/CardValidation"));
@@ -372,6 +373,8 @@ function App() {
                 <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
                 <Route path="/sindical/filiacao/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
+                <Route path="/sindicato" element={<SindicatoBeneficiosLandingPage />} />
+                <Route path="/sindicato/beneficios" element={<SindicatoBeneficiosLandingPage />} />
                 <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
                 <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
