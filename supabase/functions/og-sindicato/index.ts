@@ -67,6 +67,7 @@ serve(async (req) => {
     // Use union entity data if available, otherwise fall back to clinic
     const entityName = unionEntity?.nome_fantasia || unionEntity?.razao_social || clinic?.name || "Sindicato";
     const logoUrl = unionEntity?.logo_url || clinic?.logo_url || "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
+    const ogImageUrl = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-image.jpg";
     
     // Determinar base URL baseado no domínio customizado ou padrão
     let baseUrl = "https://app.eclini.com.br";
@@ -116,19 +117,20 @@ serve(async (req) => {
   <meta property="og:url" content="${baseUrl}${path}">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
-  <meta property="og:image" content="${logoUrl}">
-  <meta property="og:image:width" content="512">
-  <meta property="og:image:height" content="512">
-  <meta property="og:image:type" content="image/png">
+  <meta property="og:image" content="${ogImageUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/jpeg">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:site_name" content="${entityName}">
   
   <!-- Twitter -->
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="${baseUrl}${path}">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
-  <meta name="twitter:image" content="${logoUrl}">
+  <meta name="twitter:image" content="${ogImageUrl}">
+  
   
   <!-- Theme Color -->
   <meta name="theme-color" content="#16a394">
