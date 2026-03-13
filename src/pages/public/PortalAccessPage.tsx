@@ -34,7 +34,7 @@ const PortalAccessPage = () => {
     {
       id: "socios",
       title: "Sócios",
-      description: "Acesso restrito para associados, gerenciamento de benefícios, boletos e outros serviços.",
+      description: "Área exclusiva do associado para consultar benefícios, emitir boletos de mensalidade e acessar serviços disponíveis pelo sindicato.",
       path: `/portal-socio/${clinicData?.slug || ""}`,
     },
     {
