@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -23,7 +24,7 @@ import {
   FileText,
   X,
 } from "lucide-react";
-import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, addDays, isPast } from "date-fns";
+import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -303,7 +304,8 @@ export default function MobileLegalBookingPage() {
   };
 
   // Check if a date is enabled for the selected professional
-  const isDateEnabled = (date: Date): boolean => {
+  // Signature matches DateTimeSelectionStep's expected callback
+  const isDateEnabled = (date: Date, _professional?: any): boolean => {
     if (!selectedProfessionalId) return false;
     
     const profSchedules = getProfessionalSchedules(selectedProfessionalId);
@@ -316,23 +318,6 @@ export default function MobileLegalBookingPage() {
     const dayOfWeek = date.getDay();
     return profSchedules.some(s => s.day_of_week === dayOfWeek && s.is_active);
   };
-
-  // Generate available dates for the next 60 days
-  const availableDates = useMemo(() => {
-    if (!selectedProfessionalId) return [];
-    
-    const dates: Date[] = [];
-    const today = startOfDay(new Date());
-    
-    for (let i = 0; i < 60; i++) {
-      const date = addDays(today, i);
-      if (isDateEnabled(date)) {
-        dates.push(date);
-      }
-    }
-    
-    return dates;
-  }, [selectedProfessionalId, schedules]);
 
   const loadAvailableSlots = async () => {
     if (!selectedProfessionalId || !selectedDate) return;
@@ -853,7 +838,15 @@ export default function MobileLegalBookingPage() {
 
   const selectedProfessional = professionals.find(p => p.id === selectedProfessionalId);
   const selectedService = serviceTypes.find(s => s.id === selectedServiceTypeId);
-  const availableTimeSlots = availableSlots.filter(s => s.available);
+
+  // Build a professionals-like array for DateTimeSelectionStep compatibility
+  const professionalForStep = selectedProfessional ? [{
+    id: selectedProfessional.id,
+    name: selectedProfessional.name,
+    specialty: selectedProfessional.function,
+    appointment_duration: serviceTypes.find(s => s.id === selectedServiceTypeId)?.duration_minutes || 30,
+    schedule: null,
+  }] : [];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -1002,7 +995,7 @@ export default function MobileLegalBookingPage() {
             </div>
           )}
 
-          {/* Step 3: Date and Time Selection */}
+          {/* Step 3: Date and Time Selection - same component as medical booking */}
           {step === 3 && (
             <div className="space-y-5">
               {/* Professional Summary */}
@@ -1026,115 +1019,22 @@ export default function MobileLegalBookingPage() {
                 </Card>
               )}
 
-              {/* Date Selection */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <CalendarDays className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-lg font-semibold text-foreground">Escolha a data</h2>
-                </div>
-                
-                {availableDates.length > 0 ? (
-                  <div className="overflow-x-auto -mx-4 px-4">
-                    <div className="flex gap-2 pb-2 w-max">
-                      {availableDates.map((date) => {
-                        const isSelected = selectedDate && format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
-                        return (
-                          <button
-                            key={format(date, "yyyy-MM-dd")}
-                            type="button"
-                            className={`flex-shrink-0 w-[76px] rounded-xl border-2 py-3 px-2 text-center transition-all ${
-                              isSelected 
-                                ? "border-emerald-600 bg-emerald-50 shadow-sm" 
-                                : "border-border bg-background hover:border-emerald-300"
-                            }`}
-                            onClick={() => {
-                              setSelectedDate(date);
-                              setSelectedTime("");
-                            }}
-                          >
-                            <p className={`text-[11px] font-semibold uppercase tracking-wide ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                              {format(date, "EEE", { locale: ptBR })}
-                            </p>
-                            <p className={`text-2xl font-bold leading-tight ${isSelected ? "text-emerald-700" : "text-foreground"}`}>
-                              {format(date, "dd")}
-                            </p>
-                            <p className={`text-xs ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`}>
-                              {format(date, "MMM", { locale: ptBR })}
-                            </p>
-                            {isSelected && (
-                              <Check className="h-4 w-4 text-emerald-600 mx-auto mt-1" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 bg-muted/50 rounded-lg">
-                    <CalendarDays className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm">Nenhuma data disponível para este profissional.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Time Selection */}
-              {selectedDate && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-5 w-5 text-emerald-600" />
-                    <h2 className="text-lg font-semibold text-foreground">Escolha o horário</h2>
-                  </div>
-                  
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                  </p>
-
-                  {availableTimeSlots.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {availableTimeSlots.map((slot) => {
-                        const isSelected = selectedTime === slot.time;
-                        return (
-                          <button
-                            key={slot.time}
-                            type="button"
-                            className={`rounded-xl border-2 py-3 px-2 text-center font-semibold text-sm transition-all ${
-                              isSelected 
-                                ? "border-emerald-600 bg-emerald-600 text-white shadow-md" 
-                                : "border-border bg-background text-foreground hover:border-emerald-300"
-                            }`}
-                            onClick={() => setSelectedTime(slot.time)}
-                          >
-                            {slot.time}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 bg-muted/50 rounded-lg">
-                      <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground text-sm">Nenhum horário disponível para esta data.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <div className="sticky bottom-0 pt-3 bg-background">
-                <Button 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
-                  disabled={!selectedDate || !selectedTime || submitting}
-                  onClick={handleSubmit}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Agendando...
-                    </>
-                  ) : (
-                    "Confirmar Agendamento"
-                  )}
-                </Button>
-              </div>
+              <DateTimeSelectionStep
+                selectedDate={selectedDate}
+                setSelectedDate={(date) => {
+                  setSelectedDate(date);
+                  setSelectedTime("");
+                }}
+                selectedTime={selectedTime}
+                setSelectedTime={setSelectedTime}
+                availableSlots={availableSlots}
+                professionals={professionalForStep}
+                selectedProfessionalId={selectedProfessionalId}
+                isDateEnabled={isDateEnabled}
+                submitting={submitting}
+                onSubmit={handleSubmit}
+                bookingMonthsAhead={2}
+              />
             </div>
           )}
         </div>
