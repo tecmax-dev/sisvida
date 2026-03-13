@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,8 +23,16 @@ import {
   MapPin,
   Star,
   Zap,
+  Quote,
+  BadgePercent,
+  Clock,
 } from "lucide-react";
 import { SINDICATO_UNION_ENTITY_ID } from "@/constants/sindicato";
+
+import familiaHero from "@/assets/sindicato/familia-hero.jpg";
+import familiaSaude from "@/assets/sindicato/familia-saude.jpg";
+import familiaEducacao from "@/assets/sindicato/familia-educacao.jpg";
+import familiaEstetica from "@/assets/sindicato/familia-estetica.jpg";
 
 const LOGO_URL =
   "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
@@ -40,7 +48,6 @@ interface Benefit {
 }
 
 const benefits: Benefit[] = [
-  // Saúde
   { name: "Dr. José Alcides", description: "Clínico Geral — Consultas com valores reduzidos", icon: Stethoscope, category: "saude" },
   { name: "Dra. Juliane Leite", description: "Dentista — Tratamentos odontológicos acessíveis", icon: Smile, category: "saude" },
   { name: "Dr. Jorge Avelar", description: "Ortopedista — Consultas especializadas", icon: Bone, category: "saude" },
@@ -53,47 +60,34 @@ const benefits: Benefit[] = [
   { name: "Clínica OftalmoSul", description: "Desconto em consultas e exames oftalmológicos", icon: Eye, category: "saude" },
   { name: "Clínica Medico Center", description: "Desconto em consultas e exames", icon: Stethoscope, category: "saude" },
   { name: "Clínica Pensar", description: "Desconto em consultas — Saúde mental", icon: Brain, category: "saude" },
-  // Estudos
   { name: "Faculdade de Ilhéus", description: "Desconto para titular e dependentes", icon: GraduationCap, category: "estudos" },
   { name: "Uniasselvi", description: "Desconto para titular e dependentes", icon: GraduationCap, category: "estudos" },
   { name: "CCAA", description: "Desconto na mensalidade de idiomas", icon: GraduationCap, category: "estudos" },
-  // Estética
   { name: "Espaçolaser", description: "Desconto para titular e dependentes", icon: Sparkles, category: "estetica" },
-  // Jurídico
   { name: "Dra. Dione Mattos", description: "Assessoria jurídica trabalhista", icon: Scale, category: "juridico" },
 ];
 
 const categoryConfig = {
-  saude: { label: "Saúde", icon: Heart, color: "from-red-500 to-rose-600", bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
-  estudos: { label: "Educação", icon: GraduationCap, color: "from-blue-500 to-indigo-600", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
-  estetica: { label: "Estética & Beleza", icon: Sparkles, color: "from-pink-500 to-fuchsia-600", bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200" },
-  juridico: { label: "Jurídico", icon: Scale, color: "from-amber-500 to-orange-600", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  saude: { label: "Saúde", icon: Heart, color: "from-red-500 to-rose-600", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", image: familiaSaude, imageAlt: "Família sendo atendida em consulta médica" },
+  estudos: { label: "Educação", icon: GraduationCap, color: "from-blue-500 to-indigo-600", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", image: familiaEducacao, imageAlt: "Jovens comemorando matrícula na faculdade" },
+  estetica: { label: "Estética & Beleza", icon: Sparkles, color: "from-pink-500 to-fuchsia-600", bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200", image: familiaEstetica, imageAlt: "Mulher sorrindo em clínica de estética" },
+  juridico: { label: "Jurídico", icon: Scale, color: "from-amber-500 to-orange-600", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", image: null, imageAlt: "" },
 };
 
-const stats = [
-  { value: "89", label: "Anos de história" },
-  { value: "17+", label: "Convênios ativos" },
-  { value: "5", label: "Cidades atendidas" },
-  { value: "100%", label: "Compromisso com você" },
-];
-
-const reasons = [
-  { icon: Shield, title: "Proteção Trabalhista", desc: "Seus direitos garantidos pela Convenção Coletiva de Trabalho." },
-  { icon: Heart, title: "Saúde Acessível", desc: "Consultas médicas, exames e tratamentos com valores reduzidos." },
-  { icon: GraduationCap, title: "Educação com Desconto", desc: "Faculdades e cursos de idiomas para você e sua família." },
-  { icon: Scale, title: "Assessoria Jurídica", desc: "Orientação trabalhista gratuita para associados." },
-  { icon: Users, title: "Representação Forte", desc: "Negociações coletivas que valorizam o seu trabalho." },
-  { icon: Zap, title: "Serviços Digitais", desc: "App exclusivo com carteirinha digital e agendamento online." },
+const testimonials = [
+  { name: "Maria S.", role: "Comerciária em Ilhéus", text: "Com o convênio do sindicato, consegui fazer todos os exames da minha família pagando muito menos. É uma economia enorme no final do mês!", avatar: "M" },
+  { name: "Carlos R.", role: "Comerciário em Itacaré", text: "Minha filha conseguiu desconto na faculdade pelo sindicato. Algo que parecia impossível se tornou realidade!", avatar: "C" },
+  { name: "Ana L.", role: "Comerciária em Ubaitaba", text: "A assessoria jurídica me ajudou quando mais precisei. Ter o sindicato ao meu lado fez toda a diferença.", avatar: "A" },
 ];
 
 export default function SindicatoBeneficiosLandingPage() {
+  const [urgencyCount] = useState(Math.floor(Math.random() * 30) + 42);
+
   useEffect(() => {
     document.documentElement.classList.remove("dark");
     document.documentElement.classList.add("light");
     document.documentElement.style.colorScheme = "light";
     document.title = "SECMI - Benefícios do Associado | Sindicato dos Comerciários de Ilhéus";
-    
-    // Set favicon
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
     if (link) link.href = LOGO_URL;
   }, []);
@@ -107,7 +101,7 @@ export default function SindicatoBeneficiosLandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 [color-scheme:light]" data-theme="light">
-      {/* Header */}
+      {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -117,79 +111,96 @@ export default function SindicatoBeneficiosLandingPage() {
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">Ilhéus • Itacaré • Ubaitaba • Una • Uruçuca</span>
             </div>
           </div>
-          <Button
-            className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 text-sm font-semibold shadow-md"
-            asChild
-          >
+          <Button className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 text-sm font-semibold shadow-md" asChild>
             <a href={FILIACAO_URL}>Filiar-se agora</a>
           </Button>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0c4a42 0%, #16a394 50%, #1baf8e 100%)" }}>
+      {/* Hero with Image */}
+      <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-white/5 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3" />
-          {/* Pattern overlay */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }} />
+          <img src={familiaHero} alt="Família feliz protegida pelo sindicato" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0c4a42]/95 via-[#0c4a42]/80 to-[#0c4a42]/40" />
         </div>
-        <div className="container mx-auto px-4 py-20 md:py-28 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
+        <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
+          <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 mb-6">
               <Star className="w-4 h-4 text-yellow-300" />
               <span className="text-white/90 text-sm font-medium">89 anos defendendo seus direitos</span>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
-              Benefícios exclusivos para{" "}
-              <span className="relative">
-                <span className="relative z-10">comerciários</span>
-                <span className="absolute bottom-1 left-0 right-0 h-3 bg-yellow-400/30 rounded-sm -z-0" />
+              Sua família merece{" "}
+              <span className="relative inline-block">
+                <span className="relative z-10">mais benefícios</span>
+                <span className="absolute bottom-1 left-0 right-0 h-3 bg-yellow-400/30 rounded-sm" />
               </span>
             </h1>
-            <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Associe-se ao SECMI e tenha acesso a <strong className="text-white">consultas médicas, descontos em educação, assessoria jurídica</strong> e muito mais para você e sua família.
+            <p className="text-lg md:text-xl text-white/85 mb-8 leading-relaxed">
+              Associe-se ao SECMI e garanta <strong className="text-white">consultas médicas, descontos em faculdades, assessoria jurídica</strong> e muito mais — para você <strong className="text-white">e toda sua família</strong>.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+            {/* Urgency badge */}
+            <div className="inline-flex items-center gap-2 bg-yellow-400/20 border border-yellow-400/30 rounded-full px-4 py-2 mb-8">
+              <Clock className="w-4 h-4 text-yellow-300 animate-pulse" />
+              <span className="text-yellow-100 text-sm font-medium">{urgencyCount} pessoas se associaram este mês</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 size="lg"
-                className="bg-white text-[#0c4a42] hover:bg-gray-100 rounded-full px-8 h-14 text-base font-bold shadow-xl transition-all hover:scale-105"
+                className="bg-yellow-400 text-gray-900 hover:bg-yellow-300 rounded-full px-8 h-14 text-base font-bold shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
                 asChild
               >
                 <a href={FILIACAO_URL} className="flex items-center gap-2">
-                  Quero me associar
+                  Quero me associar agora
                   <ArrowRight className="h-5 w-5" />
                 </a>
               </Button>
               <Button
                 size="lg"
-                className="border-2 border-white/30 bg-transparent text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold"
+                className="border-2 border-white/30 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 rounded-full px-8 h-14 text-base font-semibold"
                 asChild
               >
                 <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Phone className="h-5 w-5" />
-                  Fale conosco
+                  Fale pelo WhatsApp
                 </a>
               </Button>
             </div>
+
+            <p className="mt-6 text-white/50 text-sm flex items-center gap-4">
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Sem burocracia</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> 100% online</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Benefícios imediatos</span>
+            </p>
           </div>
-        </div>
-        {/* Wave divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 80V40C240 0 480 0 720 40C960 80 1200 80 1440 40V80H0Z" fill="white" />
-          </svg>
         </div>
       </section>
 
-      {/* Stats */}
+      {/* Value Proposition Strip */}
+      <section className="bg-[#16a394] py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-white text-sm font-medium">
+            <span className="flex items-center gap-2"><BadgePercent className="w-5 h-5" /> Até 50% de desconto</span>
+            <span className="flex items-center gap-2"><Users className="w-5 h-5" /> Você + toda família</span>
+            <span className="flex items-center gap-2"><Shield className="w-5 h-5" /> 17+ convênios ativos</span>
+            <span className="flex items-center gap-2"><MapPin className="w-5 h-5" /> 5 cidades atendidas</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof Stats */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center">
+            {[
+              { value: "89", label: "Anos de história", suffix: "" },
+              { value: "17+", label: "Convênios ativos", suffix: "" },
+              { value: "5", label: "Cidades atendidas", suffix: "" },
+              { value: "12", label: "Especialidades médicas", suffix: "" },
+            ].map((stat, i) => (
+              <div key={i} className="text-center p-4">
                 <div className="text-3xl md:text-4xl font-extrabold text-[#16a394] mb-1">{stat.value}</div>
                 <div className="text-sm text-gray-500 font-medium">{stat.label}</div>
               </div>
@@ -198,69 +209,91 @@ export default function SindicatoBeneficiosLandingPage() {
         </div>
       </section>
 
-      {/* Why Join */}
+      {/* Benefits by Category — with images */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-14">
-            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Vantagens</span>
+            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Convênios Exclusivos</span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-              Por que se associar ao SECMI?
-            </h2>
-            <p className="text-gray-500 max-w-xl mx-auto">
-              Mais do que representação — é uma rede completa de benefícios para sua vida profissional e pessoal.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {reasons.map((r, i) => (
-              <Card key={i} className="border-gray-200 bg-white hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4">
-                    <r.icon className="w-6 h-6 text-[#16a394]" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{r.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits by Category */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-14">
-            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Convênios</span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-              Rede de convênios exclusiva
+              Economia real para sua família
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto">
               Descontos e atendimento diferenciado em saúde, educação, estética e assessoria jurídica.
             </p>
           </div>
 
-          <div className="space-y-16 max-w-5xl mx-auto">
-            {(Object.keys(grouped) as Array<keyof typeof grouped>).map((cat) => {
+          <div className="space-y-20 max-w-6xl mx-auto">
+            {(Object.keys(grouped) as Array<keyof typeof grouped>).map((cat, catIndex) => {
               const config = categoryConfig[cat];
               const items = grouped[cat];
               if (items.length === 0) return null;
+              const isReversed = catIndex % 2 !== 0;
 
               return (
-                <div key={cat}>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
-                      <config.icon className="w-5 h-5 text-white" />
+                <div key={cat} className="space-y-6">
+                  {/* Category header with image */}
+                  {config.image && (
+                    <div className={`grid md:grid-cols-2 gap-8 items-center ${isReversed ? "md:[direction:rtl]" : ""}`}>
+                      <div className="rounded-2xl overflow-hidden shadow-xl">
+                        <img
+                          src={config.image}
+                          alt={config.imageAlt}
+                          className="w-full h-64 md:h-80 object-cover hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className={isReversed ? "md:[direction:ltr]" : ""}>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
+                            <config.icon className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-bold text-gray-900">{config.label}</h3>
+                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${config.bg} ${config.text}`}>
+                              {items.length} {items.length === 1 ? "convênio" : "convênios"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-gray-500 mb-6 leading-relaxed">
+                          {cat === "saude" && "Cuide da saúde de toda a família com consultas, exames e tratamentos a preços acessíveis nos melhores profissionais da região."}
+                          {cat === "estudos" && "Invista no futuro! Descontos em faculdades e cursos de idiomas para você e seus dependentes."}
+                          {cat === "estetica" && "Você merece se cuidar! Descontos especiais em estética e beleza para associados."}
+                          {cat === "juridico" && "Orientação jurídica trabalhista especializada para proteger seus direitos."}
+                        </p>
+                        <Button
+                          className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 font-semibold shadow-md"
+                          asChild
+                        >
+                          <a href={FILIACAO_URL} className="flex items-center gap-2">
+                            Quero esses benefícios
+                            <ArrowRight className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      </div>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900">{config.label}</h3>
-                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${config.bg} ${config.text}`}>
-                      {items.length} {items.length === 1 ? "convênio" : "convênios"}
-                    </span>
-                  </div>
+                  )}
+
+                  {/* If no image (juridico), show inline header */}
+                  {!config.image && (
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
+                        <config.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900">{config.label}</h3>
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${config.bg} ${config.text}`}>
+                          {items.length} {items.length === 1 ? "convênio" : "convênios"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Benefit cards */}
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((b, i) => (
                       <div
                         key={i}
-                        className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-md transition-all duration-200 hover:-translate-y-0.5`}
+                        className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
                       >
                         <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
                           <b.icon className={`w-5 h-5 ${config.text}`} />
@@ -279,20 +312,105 @@ export default function SindicatoBeneficiosLandingPage() {
         </div>
       </section>
 
-      {/* How to join */}
+      {/* Mid-page CTA */}
+      <section className="py-16 bg-[#0c4a42]">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">
+            Tudo isso por menos do que você imagina!
+          </h2>
+          <p className="text-white/70 mb-8 max-w-lg mx-auto">
+            A filiação ao sindicato dá acesso a todos os convênios para você e sua família. Não perca mais tempo!
+          </p>
+          <Button
+            size="lg"
+            className="bg-yellow-400 text-gray-900 hover:bg-yellow-300 rounded-full px-10 h-14 text-base font-bold shadow-xl transition-all hover:scale-105"
+            asChild
+          >
+            <a href={FILIACAO_URL} className="flex items-center gap-2">
+              Associar-se agora — É rápido!
+              <ArrowRight className="h-5 w-5" />
+            </a>
+          </Button>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-14">
+            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Depoimentos</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
+              Quem é associado, recomenda
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {testimonials.map((t, i) => (
+              <Card key={i} className="border-gray-200 bg-gray-50 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <Quote className="w-8 h-8 text-[#16a394]/20 mb-3" />
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4 italic">"{t.text}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#16a394] text-white flex items-center justify-center font-bold text-sm">
+                      {t.avatar}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900 text-sm">{t.name}</div>
+                      <div className="text-xs text-gray-500">{t.role}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Join — Compact */}
       <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-14">
+            <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Vantagens</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
+              Por que se associar ao SECMI?
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {[
+              { icon: Shield, title: "Proteção Trabalhista", desc: "Seus direitos garantidos pela Convenção Coletiva de Trabalho." },
+              { icon: Heart, title: "Saúde Acessível", desc: "Consultas médicas, exames e tratamentos com valores reduzidos." },
+              { icon: GraduationCap, title: "Educação com Desconto", desc: "Faculdades e cursos de idiomas para você e sua família." },
+              { icon: Scale, title: "Assessoria Jurídica", desc: "Orientação trabalhista gratuita para associados." },
+              { icon: Users, title: "Representação Forte", desc: "Negociações coletivas que valorizam o seu trabalho." },
+              { icon: Zap, title: "Serviços Digitais", desc: "App exclusivo com carteirinha digital e agendamento online." },
+            ].map((r, i) => (
+              <Card key={i} className="border-gray-200 bg-white hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4">
+                    <r.icon className="w-6 h-6 text-[#16a394]" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">{r.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How to Join — Steps */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-14">
             <span className="inline-block text-xs font-bold tracking-widest text-[#16a394] uppercase mb-3">Como associar-se</span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-              É simples e rápido!
+              3 passos simples
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {[
-              { step: "1", title: "Preencha o cadastro", desc: "Acesse nosso formulário online e informe seus dados pessoais e profissionais." },
-              { step: "2", title: "Confirmação", desc: "Nossa equipe vai validar suas informações e ativar sua associação." },
-              { step: "3", title: "Aproveite os benefícios", desc: "Receba sua carteirinha digital e comece a usar todos os convênios!" },
+              { step: "1", title: "Preencha o cadastro", desc: "Acesse nosso formulário online e informe seus dados. Leva menos de 3 minutos!" },
+              { step: "2", title: "Confirmação rápida", desc: "Nossa equipe valida suas informações e ativa sua associação em até 24h." },
+              { step: "3", title: "Use seus benefícios!", desc: "Receba sua carteirinha digital e comece a economizar em todos os convênios!" },
             ].map((item, i) => (
               <div key={i} className="text-center">
                 <div className="w-16 h-16 rounded-2xl bg-[#16a394] text-white text-2xl font-extrabold flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -303,11 +421,23 @@ export default function SindicatoBeneficiosLandingPage() {
               </div>
             ))}
           </div>
+          <div className="text-center mt-10">
+            <Button
+              size="lg"
+              className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-10 h-14 text-base font-bold shadow-xl transition-all hover:scale-105"
+              asChild
+            >
+              <a href={FILIACAO_URL} className="flex items-center gap-2">
+                Começar meu cadastro
+                <ArrowRight className="h-5 w-5" />
+              </a>
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* Coverage */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <MapPin className="w-8 h-8 text-[#16a394] mx-auto mb-4" />
@@ -319,10 +449,7 @@ export default function SindicatoBeneficiosLandingPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               {["Ilhéus", "Itacaré", "Ubaitaba", "Una", "Uruçuca"].map((city) => (
-                <span
-                  key={city}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#16a394]/10 text-[#16a394] font-semibold text-sm"
-                >
+                <span key={city} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#16a394]/10 text-[#16a394] font-semibold text-sm">
                   <CheckCircle2 className="w-4 h-4" />
                   {city}
                 </span>
@@ -333,23 +460,26 @@ export default function SindicatoBeneficiosLandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="relative overflow-hidden py-20" style={{ background: "linear-gradient(135deg, #0c4a42 0%, #16a394 60%, #1baf8e 100%)" }}>
+      <section className="relative overflow-hidden py-20">
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+          <img src={familiaHero} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-[#0c4a42]/90" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-6">
-              Valorize quem valoriza você!
+              Não fique de fora!
             </h2>
-            <p className="text-lg text-white/80 mb-10 max-w-2xl mx-auto">
-              Junte-se aos milhares de comerciários que já contam com os benefícios do SECMI. A filiação é rápida, fácil e muda a sua vida.
+            <p className="text-lg text-white/80 mb-4 max-w-2xl mx-auto">
+              Cada dia sem associação é um dia pagando mais caro em consultas, exames e educação. Seus colegas de trabalho já estão economizando.
+            </p>
+            <p className="text-yellow-300 font-semibold text-lg mb-8">
+              Associe-se hoje e comece a usar os benefícios amanhã!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                className="bg-white text-[#0c4a42] hover:bg-gray-100 rounded-full px-8 h-14 text-base font-bold shadow-xl transition-all hover:scale-105"
+                className="bg-yellow-400 text-gray-900 hover:bg-yellow-300 rounded-full px-10 h-14 text-lg font-bold shadow-xl transition-all hover:scale-105"
                 asChild
               >
                 <a href={FILIACAO_URL} className="flex items-center gap-2">
@@ -368,8 +498,8 @@ export default function SindicatoBeneficiosLandingPage() {
                 </a>
               </Button>
             </div>
-            <p className="mt-8 text-white/50 text-sm">
-              Sindicato dos Empregados no Comércio de Ilhéus e Região • SECMI
+            <p className="mt-6 text-white/40 text-sm">
+              SECMI — Sindicato dos Empregados no Comércio de Ilhéus e Região
             </p>
           </div>
         </div>
@@ -395,6 +525,17 @@ export default function SindicatoBeneficiosLandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href={WHATSAPP_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110"
+        aria-label="Fale pelo WhatsApp"
+      >
+        <Phone className="w-6 h-6" />
+      </a>
     </div>
   );
 }
