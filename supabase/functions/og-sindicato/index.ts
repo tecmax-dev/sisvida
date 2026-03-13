@@ -117,10 +117,10 @@ serve(async (req) => {
   <meta property="og:url" content="${baseUrl}${path}">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
-  <meta property="og:image" content="${logoUrl}">
-  <meta property="og:image:width" content="512">
-  <meta property="og:image:height" content="512">
-  <meta property="og:image:type" content="image/png">
+  <meta property="og:image" content="${ogImageUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/jpeg">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:site_name" content="${entityName}">
   
