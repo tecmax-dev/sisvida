@@ -151,7 +151,7 @@ serve(async (req) => {
       case 'setWebhook':
         evolutionUrl = `${api_url}/webhook/set/${instance_name}`;
         method = 'POST';
-        const defaultWebhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+        const defaultWebhookUrl = `${supabaseUrl}/functions/v1/whatsapp-proxy`;
         const webhookUrl = payload?.webhookUrl as string || defaultWebhookUrl;
         body = JSON.stringify({
           webhook: {
