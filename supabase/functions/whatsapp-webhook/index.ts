@@ -463,37 +463,89 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
   );
 }
 
-async function sendWhazingSubMenu(phone: string, category: string): Promise<boolean> {
-  const subMenus: Record<string, { text: string; buttons: Array<{ id: string; title: string }> }> = {
-    'associado': {
+type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
+
+async function sendWhazingSubMenu(phone: string, category: WhazingCategory): Promise<boolean> {
+  const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
+    associado: {
       text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:",
       buttons: [
         { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
         { id: "whazing_sub_outros", title: "Outros Assuntos" },
-      ]
+      ],
     },
-    'empresa': {
+    empresa: {
       text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
         { id: "whazing_sub_outros", title: "Outros Assuntos" },
-      ]
+      ],
     },
-    'contabilidade': {
+    contabilidade: {
       text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
         { id: "whazing_sub_outros", title: "Outros Assuntos" },
-      ]
+      ],
     },
   };
 
-  const menu = subMenus[category];
-  if (!menu) return false;
-  return sendWhazingButtons(phone, menu.text, menu.buttons);
+  return sendWhazingButtons(phone, subMenus[category].text, subMenus[category].buttons);
+}
+
+function parseWhazingCategory(messages: unknown): WhazingCategory | null {
+  if (!messages || typeof messages !== 'object' || Array.isArray(messages)) return null;
+  const category = (messages as Record<string, unknown>).whazing_category;
+  return category === 'associado' || category === 'empresa' || category === 'contabilidade' ? category : null;
+}
+
+async function storeWhazingCategory(
+  supabase: ReturnType<typeof createClient>,
+  clinicId: string,
+  phone: string,
+  category: WhazingCategory
+): Promise<void> {
+  const { error } = await supabase.from('whatsapp_ai_conversations').insert({
+    clinic_id: clinicId,
+    phone,
+    messages: { whazing_category: category, source: 'whazing_menu' },
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+  });
+
+  if (error) {
+    console.log('[webhook] Could not store whazing category session:', error.message);
+  }
+}
+
+async function getWhazingCategory(
+  supabase: ReturnType<typeof createClient>,
+  clinicId: string,
+  phoneCandidates: string[],
+  fallback: WhazingCategory = 'associado'
+): Promise<WhazingCategory> {
+  const { data, error } = await supabase
+    .from('whatsapp_ai_conversations')
+    .select('messages, created_at')
+    .eq('clinic_id', clinicId)
+    .in('phone', phoneCandidates)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.log('[webhook] Could not retrieve whazing category:', error.message);
+    return fallback;
+  }
+
+  for (const row of data ?? []) {
+    const parsed = parseWhazingCategory(row.messages);
+    if (parsed) return parsed;
+  }
+
+  return fallback;
 }
 
 // ==========================================
