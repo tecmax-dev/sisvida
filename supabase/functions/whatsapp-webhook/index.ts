@@ -7064,9 +7064,9 @@ serve(async (req) => {
             // Send follow-up buttons after image
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
-              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
-              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+              { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "Voltar" },
+              { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
             await supabase.from('whatsapp_incoming_logs').insert({
