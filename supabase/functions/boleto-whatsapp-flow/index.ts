@@ -1783,7 +1783,7 @@ async function handleBoletoFlow(
             });
 
             return { 
-              response: `📋 *Tipo de Taxa*\n\nQual tipo de taxa deseja gerar?\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*\n\n_Digite o número da opção._`, 
+              response: `📋 *Tipo de Taxa*\n\nQual tipo de taxa deseja gerar?`, 
               newState: 'SELECT_TAXA_TYPE' 
             };
           }
