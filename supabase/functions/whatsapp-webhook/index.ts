@@ -6666,7 +6666,62 @@ serve(async (req) => {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
-        // ===== CHECK FOR BOLETO FLOW =====
+        // ===== WHAZING BUTTON RESPONSE HANDLER =====
+        // Detect interactive button responses from Whazing menu
+        const whazingButtonIds = ['whazing_associado', 'whazing_empresa', 'whazing_outros'];
+        const isWhazingButtonResponse = whazingButtonIds.includes(messageText?.trim());
+
+        if (isWhazingButtonResponse) {
+          console.log(`[webhook] Whazing button response detected: "${messageText}"`);
+          
+          const actionMap: Record<string, string> = {
+            'whazing_associado': 'associado',
+            'whazing_empresa': 'empresa',
+            'whazing_outros': 'atendente',
+          };
+          const action = actionMap[messageText.trim()] || 'atendente';
+
+          // Route to external-integration function
+          const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+          try {
+            const extResponse = await fetch(`${supabaseUrlEnv}/functions/v1/external-integration`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                phone: phone,
+                action: action,
+                clinic_id: clinicId,
+                instance_name: configData.instance_name,
+              }),
+            });
+
+            const extResult = await extResponse.json();
+            console.log(`[webhook] External-integration result:`, JSON.stringify(extResult).substring(0, 300));
+          } catch (extErr) {
+            console.error('[webhook] Error calling external-integration for Whazing button:', extErr);
+          }
+
+          // Log the interaction
+          await supabase.from('whatsapp_incoming_logs').insert({
+            clinic_id: clinicId,
+            phone,
+            message_text: `[whazing-button] ${messageText}`,
+            raw_payload: payload,
+            processed: true,
+            processed_action: 'whazing_button_response',
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, message: 'Whazing button response processed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // ===== END WHAZING BUTTON RESPONSE HANDLER =====
         // Check if there's an active boleto session or user is requesting boleto (option 7)
         const { data: activeBoletoSession } = await supabase
           .from('whatsapp_boleto_sessions')
