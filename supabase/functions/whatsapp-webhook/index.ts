@@ -6836,9 +6836,9 @@ serve(async (req) => {
             // Follow-up buttons after AI response
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
-              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
-              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+              { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "Voltar" },
+              { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
             return new Response(
@@ -6887,9 +6887,9 @@ serve(async (req) => {
             // Follow-up buttons after AI response
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
-              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
-              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+              { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "Voltar" },
+              { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
             return new Response(
@@ -7064,9 +7064,9 @@ serve(async (req) => {
             // Send follow-up buttons after image
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
-              { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
-              { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-              { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+              { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+              { id: "whazing_voltar_sub", title: "Voltar" },
+              { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
             await supabase.from('whatsapp_incoming_logs').insert({
@@ -7089,17 +7089,17 @@ serve(async (req) => {
             console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
 
             if (storedCategory === 'associado') {
-              await sendWhazingButtons(phone, "📋 *Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
-                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
-                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
-                { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
+              await sendWhazingButtons(phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "Juridico" },
+                { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
+                { id: "whazing_voltar_sub", title: "Voltar" },
               ]);
             } else {
               // empresa / contabilidade
-              await sendWhazingButtons(phone, "📋 *Outros Assuntos*\n\nComo podemos ajudar?", [
-                { id: "whazing_outros_juridico", title: "⚖️ Jurídico" },
-                { id: "whazing_outros_homologacao", title: "📝 Homologações" },
-                { id: "whazing_outros_atendente", title: "💬 Falar c/ Atendente" },
+              await sendWhazingButtons(phone, "*Outros Assuntos*\n\nComo podemos ajudar?", [
+                { id: "whazing_outros_juridico", title: "Juridico" },
+                { id: "whazing_outros_homologacao", title: "Homologacoes" },
+                { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
               ]);
             }
 
@@ -7153,13 +7153,13 @@ serve(async (req) => {
             
             const followUpButtons = action === 'atendente'
               ? [
-                  { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-                  { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+                  { id: "whazing_voltar_sub", title: "Voltar" },
+                  { id: "whazing_voltar_menu", title: "Menu Principal" },
                 ]
               : [
-                  { id: "whazing_falar_atendente", title: "💬 Falar c/ Atendente" },
-                  { id: "whazing_voltar_sub", title: "⬅️ Voltar" },
-                  { id: "whazing_voltar_menu", title: "🏠 Menu Principal" },
+                  { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+                  { id: "whazing_voltar_sub", title: "Voltar" },
+                  { id: "whazing_voltar_menu", title: "Menu Principal" },
                 ];
             
             await sendWhazingButtons(phone, "O que deseja fazer agora?", followUpButtons);
