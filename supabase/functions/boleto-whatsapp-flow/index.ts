@@ -1166,10 +1166,7 @@ _Exemplo: 15/02/2025_`,
 📆 Vencimento: *${data.dueDate}*
 ${data.isReissue ? '🔄 _Segunda via_' : '🆕 _Novo boleto_'}
 
-Confirma a geração do boleto?
-
-1️⃣ *Confirmar*
-2️⃣ *Cancelar*`,
+Confirma a geração do boleto?`,
 
   processing: `⏳ Gerando seu boleto, aguarde...`,
 
