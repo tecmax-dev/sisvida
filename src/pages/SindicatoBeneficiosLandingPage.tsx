@@ -50,13 +50,14 @@ interface Benefit {
 }
 
 const benefits: Benefit[] = [
-  { name: "Dr. José Alcides", description: "Clínico Geral — Consultas com valores reduzidos", icon: Stethoscope, category: "saude" },
-  { name: "Dra. Juliane Leite", description: "Dentista — Tratamentos odontológicos acessíveis", icon: Smile, category: "saude" },
-  { name: "Dr. Jorge Avelar", description: "Ortopedista — Consultas especializadas", icon: Bone, category: "saude" },
-  { name: "Dr. Pedro Roberto", description: "Urologista — Atendimento com desconto", icon: Stethoscope, category: "saude" },
+  { name: "Dr. José Alcides", description: "Clínico Geral — Consulta 100% gratuita", icon: Stethoscope, category: "saude" },
+  { name: "Dra. Juliane Leite", description: "Dentista — Atendimento 100% gratuito", icon: Smile, category: "saude" },
+  { name: "Dr. Jorge Avelar", description: "Ortopedista — Consulta 100% gratuita", icon: Bone, category: "saude" },
+  { name: "Dr. Pedro Roberto", description: "Urologista — Consulta 100% gratuita", icon: Stethoscope, category: "saude" },
   { name: "Drª Daniela Sales", description: "Terapia Holística — Bem-estar e saúde integrativa", icon: Leaf, category: "saude" },
   { name: "Dra. Uiara Tiuba", description: "Pediatra — Cuidados para seus filhos", icon: Baby, category: "saude" },
   { name: "Hospital São José", description: "Descontos em exames hospitalares", icon: Hospital, category: "saude" },
+  { name: "Laboratório Lidi", description: "Preventivo ginecológico 100% gratuito para titular + desconto em exames", icon: FlaskConical, category: "saude" },
   { name: "Laboratório Lidi", description: "Desconto em exames laboratoriais", icon: FlaskConical, category: "saude" },
   { name: "Laboratório Biolife", description: "Desconto em exames laboratoriais", icon: FlaskConical, category: "saude" },
   { name: "Clínica OftalmoSul", description: "Desconto em consultas e exames oftalmológicos", icon: Eye, category: "saude" },
