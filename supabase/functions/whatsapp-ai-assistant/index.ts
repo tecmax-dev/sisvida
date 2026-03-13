@@ -1158,10 +1158,9 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       }
     }
 
-    // Helper function to call AI API with fallback
+    // Helper function to call Lovable AI Gateway
     const callAI = async (msgs: any[], useTools: boolean = true): Promise<Response> => {
-      // Try Lovable AI Gateway first
-      let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      return await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -1173,28 +1172,6 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           ...(useTools && activeTools.length > 0 ? { tools: activeTools, tool_choice: 'auto' } : {}),
         }),
       });
-
-      // If Lovable Gateway fails with 402 (quota), fallback to OpenAI
-      if (response.status === 402) {
-        const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-        if (OPENAI_API_KEY) {
-          console.log('[ai-assistant] Lovable Gateway 402, falling back to OpenAI');
-          response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${OPENAI_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: msgs,
-              ...(useTools ? { tools, tool_choice: 'auto' } : {}),
-            }),
-          });
-        }
-      }
-
-      return response;
     };
 
     // First API call with tools
@@ -1203,6 +1180,15 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[ai-assistant] AI gateway error:', response.status, errorText);
+
+      if (response.status === 402) {
+        return new Response(JSON.stringify({
+          response: 'Atendimento temporariamente indisponível por limite de créditos da IA. Tente novamente em instantes.',
+          error_code: 402,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 

@@ -42,11 +42,12 @@ serve(async (req) => {
 
     const payloadStr = JSON.stringify(payload);
     const internalUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+    const isFromMe = payload?.data?.key?.fromMe === true;
 
     // Forward to both targets in parallel
     const forwardPromises: Promise<{ target: string; ok: boolean; status?: number; error?: string }>[] = [];
 
-    // 1. Always forward to eCLINI's internal webhook
+    // 1. Always forward to internal webhook
     forwardPromises.push(
       fetch(internalUrl, {
         method: 'POST',
@@ -64,8 +65,8 @@ serve(async (req) => {
         })
     );
 
-    // 2. Forward to external system (Whaticket, etc.) if configured
-    if (externalWebhookUrl) {
+    // 2. Forward to external system only for inbound user messages (avoid feedback loops)
+    if (externalWebhookUrl && !isFromMe) {
       console.log(`[whatsapp-proxy] Forwarding to external: ${externalWebhookUrl}`);
       forwardPromises.push(
         fetch(externalWebhookUrl, {
@@ -83,6 +84,8 @@ serve(async (req) => {
             return { target: 'external', ok: false, error: err.message };
           })
       );
+    } else if (externalWebhookUrl && isFromMe) {
+      console.log('[whatsapp-proxy] Skipping external forward for fromMe=true event (loop protection)');
     } else {
       console.log('[whatsapp-proxy] No external webhook configured, skipping');
     }
