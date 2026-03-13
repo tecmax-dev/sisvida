@@ -28,19 +28,19 @@ const PortalAccessPage = () => {
     {
       id: "empresa",
       title: "Empresas",
-      description: "Consulte e emita boletos de contribuição sindical, gerencie a lista nominal de funcionários e acompanhe a situação financeira da sua empresa.",
+      description: "Emita guias sindicais, atualize a lista de colaboradores e acompanhe pendências e pagamentos em um só painel.",
       path: `/portal-empresa/${clinicData?.slug || ""}`,
     },
     {
       id: "socios",
       title: "Sócios",
-      description: "Área exclusiva do associado para consultar benefícios, emitir boletos de mensalidade e acessar serviços disponíveis pelo sindicato.",
+      description: "Consulte benefícios ativos, gere sua mensalidade e acompanhe solicitações e serviços exclusivos do sindicato.",
       path: `/portal-socio/${clinicData?.slug || ""}`,
     },
     {
       id: "escritorio",
       title: "Escritórios",
-      description: "Portal dedicado a escritórios de contabilidade para emitir boletos e gerenciar contribuições de todas as empresas vinculadas.",
+      description: "Administre várias empresas com praticidade: emita boletos, monitore vencimentos e centralize contribuições por cliente.",
       path: `/portal-contador/${clinicData?.slug || ""}`,
     },
   ];
