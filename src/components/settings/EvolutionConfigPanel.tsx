@@ -19,6 +19,7 @@ import {
   Plug,
   Webhook,
   CalendarOff,
+  Globe,
 } from "lucide-react";
 
 interface EvolutionConfig {
