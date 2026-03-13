@@ -33,6 +33,7 @@ interface EvolutionConfig {
   qr_code: string | null;
   direct_reply_enabled: boolean;
   webhook_url: string | null;
+  external_webhook_url: string | null;
   booking_enabled: boolean;
 }
 
