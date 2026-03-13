@@ -2645,6 +2645,59 @@ serve(async (req) => {
     // Send response via WhatsApp if config provided
     if (evolution_config && result.response) {
       await sendWhatsAppMessage(evolution_config, phone, result.response);
+      
+      // Send interactive buttons based on new state
+      const nextState = result.newState || session.state;
+      
+      if (nextState === 'SELECT_BOLETO_TYPE') {
+        await sendBoletoButtons(phone, 'Selecione o tipo:', [
+          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+        ]);
+      } else if (nextState === 'CONFIRM_EMPLOYER') {
+        await sendBoletoButtons(phone, 'Confirma a empresa?', [
+          { id: 'boleto_sim', title: '✅ Sim, continuar' },
+          { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
+        ]);
+      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
+        const types = session.flow_context?.contribution_types || result.response.match(/• .+/g) || [];
+        // Fetch contribution types for button labels
+        const ctTypes = await supabase
+          .from('contribution_types')
+          .select('id, name')
+          .eq('clinic_id', clinic_id)
+          .eq('is_active', true)
+          .in('name', ['124 - MENSALIDADE SINDICAL', '125 - TAXA NEGOCIAL (MERCADOS)', '126 - TAXA NEGOCIAL (COM VEREJ)']);
+        
+        if (ctTypes.data && ctTypes.data.length > 0) {
+          const btns = ctTypes.data.slice(0, 3).map((t: any, i: number) => ({
+            id: `boleto_type_${i + 1}`,
+            title: t.name.replace(/^\d+\s*-\s*/, '').substring(0, 20),
+          }));
+          await sendBoletoButtons(phone, 'Escolha o tipo:', btns);
+        }
+      } else if (nextState === 'SELECT_TAXA_TYPE' || nextState === 'SELECT_TAXA_TYPE_BATCH') {
+        await sendBoletoButtons(phone, 'Qual tipo de taxa?', [
+          { id: 'boleto_taxa_1', title: 'TAXA (MERCADOS)' },
+          { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
+        ]);
+      } else if (nextState === 'CONFIRM_BOLETO') {
+        await sendBoletoButtons(phone, 'Confirma a geração?', [
+          { id: 'boleto_confirmar', title: '✅ Confirmar' },
+          { id: 'boleto_cancelar', title: '❌ Cancelar' },
+        ]);
+      } else if (nextState === 'SELECT_CONTRIBUTION') {
+        // Send buttons for overdue contributions (max 3)
+        const contribs = session.available_contributions || [];
+        if (contribs.length > 0) {
+          const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+          const btns = contribs.slice(0, 3).map((c: any, i: number) => ({
+            id: `boleto_contrib_${i + 1}`,
+            title: `${monthNames[c.competence_month - 1]}/${c.competence_year}`,
+          }));
+          await sendBoletoButtons(phone, 'Selecione a contribuição:', btns);
+        }
+      }
     }
 
     return new Response(
