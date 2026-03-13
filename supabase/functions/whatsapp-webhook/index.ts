@@ -6540,6 +6540,17 @@ serve(async (req) => {
     }
 
     const remoteJid = payload.data?.key?.remoteJid || '';
+
+    // Ignore group messages: interactive official templates/buttons are not reliable in groups
+    // and can fall back to raw "templateoficial" command text.
+    if (remoteJid.endsWith('@g.us')) {
+      console.log(`[webhook] Group message ignored: ${remoteJid}`);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Group message ignored' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
     let messageText = extractMessageText(payload.data);
     const messageType = payload.data?.messageType;
