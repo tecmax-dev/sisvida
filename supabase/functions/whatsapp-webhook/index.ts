@@ -402,6 +402,63 @@ async function sendWhatsAppButtons(
 }
 
 // ==========================================
+// WHAZING API PLUS - INTERACTIVE BUTTONS
+// ==========================================
+
+async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[whazing] API not configured (missing WHAZING_API_URL or WHAZING_API_TOKEN)');
+    return false;
+  }
+
+  try {
+    // Normalize phone: remove @s.whatsapp.net and non-digits
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    console.log(`[whazing] Sending 3-button menu to ${cleanPhone}`);
+
+    const response = await fetch(whazingUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: {
+            text: "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje? Selecione uma opção:"
+          },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_associado", title: "Associado" } },
+              { type: "reply", reply: { id: "whazing_empresa", title: "Empresa" } },
+              { type: "reply", reply: { id: "whazing_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[whazing] API error:', response.status, responseText);
+      return false;
+    }
+    console.log('[whazing] Buttons sent successfully:', responseText.substring(0, 200));
+    return true;
+  } catch (error) {
+    console.error('[whazing] Error sending buttons:', error);
+    return false;
+  }
+}
+
+// ==========================================
 // TEXT-BASED LIST SENDER (no interactive lists)
 // Always uses numbered text format for maximum compatibility
 // ==========================================
