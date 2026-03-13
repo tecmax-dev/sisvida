@@ -6948,28 +6948,7 @@ serve(async (req) => {
           console.log(`[webhook] Whazing Level 2 button: "${messageText}" → routing to flow`);
 
           // Retrieve stored category context
-          let storedCategory = 'associado'; // default
-          try {
-            const { data: catSession } = await supabase
-              .from('whatsapp_ai_conversations')
-              .select('context')
-              .eq('clinic_id', clinicId)
-              .in('phone', phoneCandidates)
-              .like('context', 'whazing_category:%')
-              .gt('expires_at', new Date().toISOString())
-              .limit(1)
-              .maybeSingle();
-            if (catSession?.context) {
-              storedCategory = catSession.context.replace('whazing_category:', '');
-            }
-            // Clean up the session
-            await supabase.from('whatsapp_ai_conversations').delete()
-              .eq('clinic_id', clinicId)
-              .in('phone', phoneCandidates)
-              .like('context', 'whazing_category:%');
-          } catch (e) {
-            console.log('[webhook] Could not retrieve whazing category:', e);
-          }
+          const storedCategory = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
 
           const btnId = messageText.trim();
 
