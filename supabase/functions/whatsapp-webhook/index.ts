@@ -6713,6 +6713,10 @@ serve(async (req) => {
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
         const isWhazingLevel2 = whazingLevel2Ids.includes(messageText?.trim());
 
+        // Level 3 buttons: follow-up actions after AI response
+        const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub'];
+        const isWhazingFollowUp = whazingFollowUpIds.includes(messageText?.trim());
+
         // Also handle legacy button IDs (whazing_outros)
         const isWhazingLegacy = messageText?.trim() === 'whazing_outros';
 
