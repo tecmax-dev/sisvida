@@ -289,6 +289,22 @@ const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://app.eclini.com.br';
       console.log(`Professional notification: ${results.professional ? '✓' : '✗'}`);
     }
 
+    // 4. Send to Associate/Employee (if phone differs from company phone)
+    const associatePhone = appointment.employee_phone || appointment.company_phone;
+    const isAssociateSameAsCompany = associatePhone && appointment.company_phone && 
+      associatePhone.replace(/\D/g, '') === appointment.company_phone.replace(/\D/g, '');
+    
+    if (associatePhone && !isAssociateSameAsCompany) {
+      const associateMessage = formatConfirmationMessage('company', messageData);
+      (results as any).associate = await sendWhatsAppWithImage(
+        evolutionConfig as EvolutionConfig,
+        associatePhone,
+        logoUrl,
+        associateMessage
+      );
+      console.log(`Associate notification: ${(results as any).associate ? '✓' : '✗'}`);
+    }
+
     // Update appointment with notification status
     const notificationStatus = Object.values(results).some(r => r) ? 'success' : 'error';
     await supabase
