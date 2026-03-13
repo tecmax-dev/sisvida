@@ -6965,6 +6965,31 @@ serve(async (req) => {
         }
         // ===== END WHAZING INITIAL MENU =====
 
+        // ===== BOLETO BUTTON ID TRANSLATION =====
+        // Convert Whazing interactive button IDs from boleto flow into text the flow understands
+        const boletoButtonMap: Record<string, string> = {
+          'boleto_a_vencer': '1',
+          'boleto_vencido': '2',
+          'boleto_sim': 'sim',
+          'boleto_nao': 'não',
+          'boleto_confirmar': 'confirmar',
+          'boleto_cancelar': 'cancelar',
+          'boleto_type_1': '1',
+          'boleto_type_2': '2',
+          'boleto_type_3': '3',
+          'boleto_taxa_1': '1',
+          'boleto_taxa_2': '2',
+          'boleto_contrib_1': '1',
+          'boleto_contrib_2': '2',
+          'boleto_contrib_3': '3',
+        };
+        const boletoButtonText = boletoButtonMap[messageText?.trim()];
+        if (boletoButtonText) {
+          console.log(`[webhook] Boleto button "${messageText}" → translated to "${boletoButtonText}"`);
+          messageText = boletoButtonText;
+        }
+        // ===== END BOLETO BUTTON ID TRANSLATION =====
+
         // Check if there's an active boleto session or user is requesting boleto (option 7)
         const { data: activeBoletoSession } = await supabase
           .from('whatsapp_boleto_sessions')

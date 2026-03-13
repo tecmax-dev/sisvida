@@ -505,9 +505,7 @@ Você pode me dizer de forma natural o que precisa, por exemplo:
 • "Não recebi o link do boleto"
 • "Qual a situação da empresa X?"
 
-Ou simplesmente escolha:
-1️⃣ Novo boleto (a vencer)
-2️⃣ 2ª via de vencido
+Selecione uma opção ou escreva o que precisa:
 
 _Digite MENU a qualquer momento para recomeçar._`,
 
@@ -519,9 +517,7 @@ Pode digitar só os números ou no formato com pontos e barras, como preferir! �
 
   clarification: `🤔 Não consegui entender completamente.
 
-Pode reformular ou escolher uma opção:
-1️⃣ Novo boleto (a vencer)
-2️⃣ 2ª via de boleto vencido
+Pode reformular ou selecionar uma opção:
 
 _Ou digite AJUDA para mais informações._`,
 
@@ -534,9 +530,7 @@ Aguarde um momento... ⏳`,
 
   noRecentBoleto: `❌ Não encontrei boletos recentes para reenviar.
 
-Deseja gerar um novo boleto?
-1️⃣ Sim, gerar novo
-2️⃣ Não, voltar ao menu`,
+Deseja gerar um novo boleto?`,
 
   boletoResent: (url: string) => `✅ *Link reenviado com sucesso!*
 
@@ -755,6 +749,61 @@ async function sendWhatsAppMessage(
     return true;
   } catch (error) {
     console.error('[boleto-flow] Error sending WhatsApp:', error);
+    return false;
+  }
+}
+
+// ==========================================
+// WHAZING INTERACTIVE BUTTONS FOR BOLETO FLOW
+// ==========================================
+
+async function sendBoletoButtons(
+  phone: string,
+  bodyText: string,
+  buttons: Array<{ id: string; title: string }>
+): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[boleto-flow] Whazing not configured, skipping buttons');
+    return false;
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone}`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: bodyText },
+          action: {
+            buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
+          }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[boleto-flow] Whazing API error:', response.status, responseText);
+      return false;
+    }
+    console.log('[boleto-flow] Buttons sent successfully');
+    return true;
+  } catch (error) {
+    console.error('[boleto-flow] Error sending buttons:', error);
     return false;
   }
 }
@@ -1016,12 +1065,7 @@ const MESSAGES = {
 
 Vou te ajudar a emitir uma segunda via do boleto de contribuição.
 
-O boleto é:
-
-1️⃣ *A vencer* (novo boleto)
-2️⃣ *Vencido* (atualizar data)
-
-_Digite o número da opção desejada._`,
+O boleto é *a vencer* (novo) ou *vencido* (atualizar data)?`,
 
   askCnpj: `📋 Por favor, informe o *CNPJ* da empresa (apenas números):
 
@@ -1042,17 +1086,13 @@ Por favor, verifique o CNPJ e tente novamente, ou entre em contato com o sindica
 🏢 *${name}*
 📋 CNPJ: ${formatCnpj(cnpj)}
 
-Esta é a empresa correta?
-
-1️⃣ *Sim*
-2️⃣ *Não*`,
+Esta é a empresa correta?`,
 
   selectContributionType: (types: Array<{ id: string; name: string }>) => {
     let msg = `📝 Qual o *tipo de contribuição*?\n\n`;
     types.forEach((t, i) => {
-      msg += `${i + 1}️⃣ ${t.name}\n`;
+      msg += `• ${t.name}\n`;
     });
-    msg += `\n_Digite o número da opção._`;
     return msg;
   },
 
@@ -1081,9 +1121,9 @@ _Exemplo: 150,00 ou R$ 150,00_`,
       const competence = `${monthNames[c.competence_month - 1]}/${c.competence_year}`;
       const value = c.value > 0 ? formatCurrency(c.value) : '_Valor não definido_';
       const dueDate = formatDate(c.due_date);
-      msg += `${i + 1}️⃣ ${c.contribution_type?.name || 'Contribuição'}\n   📅 ${competence} | Venc: ${dueDate}\n   💰 ${value}\n\n`;
+      msg += `• ${c.contribution_type?.name || 'Contribuição'}\n   📅 ${competence} | Venc: ${dueDate}\n   💰 ${value}\n\n`;
     });
-    msg += `_Digite o número da contribuição desejada._`;
+    msg += `Selecione a contribuição desejada:`;
     return msg;
   },
 
@@ -1120,10 +1160,7 @@ _Exemplo: 15/02/2025_`,
 📆 Vencimento: *${data.dueDate}*
 ${data.isReissue ? '🔄 _Segunda via_' : '🆕 _Novo boleto_'}
 
-Confirma a geração do boleto?
-
-1️⃣ *Confirmar*
-2️⃣ *Cancelar*`,
+Confirma a geração do boleto?`,
 
   processing: `⏳ Gerando seu boleto, aguarde...`,
 
@@ -1231,7 +1268,7 @@ async function handleCnpjInput(
   }
 
   return { 
-    response: `✅ *Empresa identificada!*\n\n🏢 *${employer.name}*\n📋 CNPJ: ${formatCnpj(cleanCnpj)}\n\nÉ essa a empresa correta?\n\n1️⃣ *Sim, continuar*\n2️⃣ *Não, informar outro CNPJ*`, 
+    response: `✅ *Empresa identificada!*\n\n🏢 *${employer.name}*\n📋 CNPJ: ${formatCnpj(cleanCnpj)}\n\nÉ essa a empresa correta?`, 
     newState: 'CONFIRM_EMPLOYER' 
   };
 }
@@ -1315,7 +1352,7 @@ async function handleBoletoFlow(
       });
       
       return { 
-        response: `📋 *Detectei ${intent.batch_items.length} boleto(s) para gerar*\n\nVocê mencionou *taxa*. Qual tipo de taxa deseja gerar?\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*\n\n_Digite o número da opção._`,
+        response: `📋 *Detectei ${intent.batch_items.length} boleto(s) para gerar*\n\nVocê mencionou *taxa*. Qual tipo de taxa deseja gerar?`,
         newState: 'SELECT_TAXA_TYPE_BATCH' as BoletoState
       };
     }
@@ -1746,7 +1783,7 @@ async function handleBoletoFlow(
             });
 
             return { 
-              response: `📋 *Tipo de Taxa*\n\nQual tipo de taxa deseja gerar?\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*\n\n_Digite o número da opção._`, 
+              response: `📋 *Tipo de Taxa*\n\nQual tipo de taxa deseja gerar?`, 
               newState: 'SELECT_TAXA_TYPE' 
             };
           }
@@ -1794,7 +1831,7 @@ async function handleBoletoFlow(
       
       // Unclear response
       return { 
-        response: `🤔 Não consegui entender sua resposta.\n\nA empresa *${session.employer_name}* está correta?\n\n1️⃣ Sim\n2️⃣ Não` 
+        response: `🤔 Não consegui entender sua resposta.\n\nA empresa *${session.employer_name}* está correta?` 
       };
     }
 
@@ -2262,7 +2299,7 @@ async function handleBoletoFlow(
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
-          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa:\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*` 
+          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa usando os botões abaixo.` 
         };
       }
       
@@ -2481,7 +2518,7 @@ async function handleBoletoFlow(
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
-          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa:\n\n1️⃣ *125 - TAXA NEGOCIAL (MERCADOS)*\n2️⃣ *126 - TAXA NEGOCIAL (COM VEREJ)*` 
+          response: `❌ Opção inválida.\n\nEscolha o tipo de taxa usando os botões abaixo.` 
         };
       }
       
@@ -2575,6 +2612,11 @@ serve(async (req) => {
       
       if (evolution_config) {
         await sendWhatsAppMessage(evolution_config, phone, MESSAGES.welcome);
+        // Send interactive buttons for boleto type selection
+        await sendBoletoButtons(phone, 'Selecione o tipo de boleto:', [
+          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+        ]);
       }
       
       return new Response(
@@ -2601,6 +2643,59 @@ serve(async (req) => {
     // Send response via WhatsApp if config provided
     if (evolution_config && result.response) {
       await sendWhatsAppMessage(evolution_config, phone, result.response);
+      
+      // Send interactive buttons based on new state
+      const nextState = result.newState || session.state;
+      
+      if (nextState === 'SELECT_BOLETO_TYPE') {
+        await sendBoletoButtons(phone, 'Selecione o tipo:', [
+          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+        ]);
+      } else if (nextState === 'CONFIRM_EMPLOYER') {
+        await sendBoletoButtons(phone, 'Confirma a empresa?', [
+          { id: 'boleto_sim', title: '✅ Sim, continuar' },
+          { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
+        ]);
+      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
+        const types = session.flow_context?.contribution_types || result.response.match(/• .+/g) || [];
+        // Fetch contribution types for button labels
+        const ctTypes = await supabase
+          .from('contribution_types')
+          .select('id, name')
+          .eq('clinic_id', clinic_id)
+          .eq('is_active', true)
+          .in('name', ['124 - MENSALIDADE SINDICAL', '125 - TAXA NEGOCIAL (MERCADOS)', '126 - TAXA NEGOCIAL (COM VEREJ)']);
+        
+        if (ctTypes.data && ctTypes.data.length > 0) {
+          const btns = ctTypes.data.slice(0, 3).map((t: any, i: number) => ({
+            id: `boleto_type_${i + 1}`,
+            title: t.name.replace(/^\d+\s*-\s*/, '').substring(0, 20),
+          }));
+          await sendBoletoButtons(phone, 'Escolha o tipo:', btns);
+        }
+      } else if (nextState === 'SELECT_TAXA_TYPE' || nextState === 'SELECT_TAXA_TYPE_BATCH') {
+        await sendBoletoButtons(phone, 'Qual tipo de taxa?', [
+          { id: 'boleto_taxa_1', title: 'TAXA (MERCADOS)' },
+          { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
+        ]);
+      } else if (nextState === 'CONFIRM_BOLETO') {
+        await sendBoletoButtons(phone, 'Confirma a geração?', [
+          { id: 'boleto_confirmar', title: '✅ Confirmar' },
+          { id: 'boleto_cancelar', title: '❌ Cancelar' },
+        ]);
+      } else if (nextState === 'SELECT_CONTRIBUTION') {
+        // Send buttons for overdue contributions (max 3)
+        const contribs = session.available_contributions || [];
+        if (contribs.length > 0) {
+          const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+          const btns = contribs.slice(0, 3).map((c: any, i: number) => ({
+            id: `boleto_contrib_${i + 1}`,
+            title: `${monthNames[c.competence_month - 1]}/${c.competence_year}`,
+          }));
+          await sendBoletoButtons(phone, 'Selecione a contribuição:', btns);
+        }
+      }
     }
 
     return new Response(
