@@ -421,7 +421,11 @@ async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
 
     console.log(`[whazing] Sending 3-button menu to ${cleanPhone}`);
 
-    const response = await fetch(whazingUrl, {
+    // Whazing interactive buttons use the /apioficial endpoint
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[whazing] Using endpoint: ${apiOficialUrl}`);
+
+    const response = await fetch(apiOficialUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
