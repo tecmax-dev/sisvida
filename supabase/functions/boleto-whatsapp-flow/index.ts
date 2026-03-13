@@ -530,9 +530,7 @@ Aguarde um momento... ⏳`,
 
   noRecentBoleto: `❌ Não encontrei boletos recentes para reenviar.
 
-Deseja gerar um novo boleto?
-1️⃣ Sim, gerar novo
-2️⃣ Não, voltar ao menu`,
+Deseja gerar um novo boleto?`,
 
   boletoResent: (url: string) => `✅ *Link reenviado com sucesso!*
 
