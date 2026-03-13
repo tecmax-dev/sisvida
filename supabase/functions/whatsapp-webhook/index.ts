@@ -6799,19 +6799,7 @@ serve(async (req) => {
 
           if (followUpId === 'whazing_voltar_sub') {
             // Retrieve stored category and resend sub-menu
-            let storedCat = 'associado';
-            try {
-              const { data: catSess } = await supabase
-                .from('whatsapp_ai_conversations')
-                .select('context')
-                .eq('clinic_id', clinicId)
-                .in('phone', phoneCandidates)
-                .like('context', 'whazing_category:%')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              if (catSess?.context) storedCat = catSess.context.replace('whazing_category:', '');
-            } catch (_e) { /* ignore */ }
+            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
             await sendWhazingSubMenu(phone, storedCat);
             return new Response(
               JSON.stringify({ success: true, message: `Sub-menu resent for ${storedCat}` }),
