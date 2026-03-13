@@ -6917,31 +6917,15 @@ serve(async (req) => {
         if (isWhazingLevel1) {
           console.log(`[webhook] Whazing Level 1 button: "${messageText}" → sending sub-menu`);
           
-          const categoryMap: Record<string, string> = {
-            'whazing_associado': 'associado',
-            'whazing_empresa': 'empresa',
-            'whazing_contabilidade': 'contabilidade',
+          const categoryMap: Record<string, WhazingCategory> = {
+            whazing_associado: 'associado',
+            whazing_empresa: 'empresa',
+            whazing_contabilidade: 'contabilidade',
           };
-          const category = categoryMap[messageText.trim()];
+          const category = categoryMap[messageText.trim()] ?? 'associado';
 
           // Store the selected category in a temporary session for context
-          try {
-            // Delete any existing whazing session for this phone
-            await supabase.from('whatsapp_ai_conversations').delete()
-              .eq('clinic_id', clinicId)
-              .in('phone', phoneCandidates)
-              .like('context', 'whazing_category:%');
-            
-            // We'll store the category in the AI conversation context for reference
-            await supabase.from('whatsapp_ai_conversations').insert({
-              clinic_id: clinicId,
-              phone: phone,
-              context: `whazing_category:${category}`,
-              expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
-            });
-          } catch (sessErr) {
-            console.log('[webhook] Could not store whazing category session:', sessErr);
-          }
+          await storeWhazingCategory(supabase, clinicId, phone, category);
 
           const subSent = await sendWhazingSubMenu(phone, category);
           
