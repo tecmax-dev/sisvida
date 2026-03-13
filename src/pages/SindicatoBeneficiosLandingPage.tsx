@@ -34,6 +34,7 @@ import familiaSaude from "@/assets/sindicato/familia-saude.jpg";
 import familiaEducacao from "@/assets/sindicato/familia-educacao.jpg";
 import familiaEstetica from "@/assets/sindicato/familia-estetica.jpg";
 import perfilDaniela from "@/assets/sindicato/perfil-daniela.webp";
+import perfilAlcides from "@/assets/sindicato/perfil-dalcides.jpg";
 
 const LOGO_URL =
   "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
