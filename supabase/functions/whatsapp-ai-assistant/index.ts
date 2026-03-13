@@ -757,7 +757,9 @@ serve(async (req) => {
     };
 
     const externalSelectionPrompt = toExternalSelectionPrompt(cleanMessage, isBookingEnabledEarly);
-    const aiInputMessage = externalSelectionPrompt || message;
+    const aiInputMessage = shouldBlockInternalMenu
+      ? (externalSelectionPrompt || `Modo de integração externa ativo. NÃO mostre menu interno. Responda diretamente ao conteúdo desta mensagem do usuário: "${message}".`)
+      : (externalSelectionPrompt || message);
 
     // If user greets / asks for menu, return deterministic menu only when internal menu is allowed
     const isMenuRequest =
