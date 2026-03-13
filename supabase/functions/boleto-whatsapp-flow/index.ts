@@ -505,9 +505,7 @@ Você pode me dizer de forma natural o que precisa, por exemplo:
 • "Não recebi o link do boleto"
 • "Qual a situação da empresa X?"
 
-Ou simplesmente escolha:
-1️⃣ Novo boleto (a vencer)
-2️⃣ 2ª via de vencido
+Selecione uma opção ou escreva o que precisa:
 
 _Digite MENU a qualquer momento para recomeçar._`,
 
@@ -519,9 +517,7 @@ Pode digitar só os números ou no formato com pontos e barras, como preferir! �
 
   clarification: `🤔 Não consegui entender completamente.
 
-Pode reformular ou escolher uma opção:
-1️⃣ Novo boleto (a vencer)
-2️⃣ 2ª via de boleto vencido
+Pode reformular ou selecionar uma opção:
 
 _Ou digite AJUDA para mais informações._`,
 
