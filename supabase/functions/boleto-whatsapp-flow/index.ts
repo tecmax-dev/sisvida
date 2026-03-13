@@ -1833,7 +1833,7 @@ async function handleBoletoFlow(
       
       // Unclear response
       return { 
-        response: `🤔 Não consegui entender sua resposta.\n\nA empresa *${session.employer_name}* está correta?\n\n1️⃣ Sim\n2️⃣ Não` 
+        response: `🤔 Não consegui entender sua resposta.\n\nA empresa *${session.employer_name}* está correta?` 
       };
     }
 
