@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 export function CTASection() {
   return (
     <section id="contact" className="py-20 lg:py-28 relative overflow-hidden" style={{
-      background: 'linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%)'
+      background: 'linear-gradient(135deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%)'
     }}>
       {/* Decorative shapes */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />

@@ -11,43 +11,43 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ProsindWeb Design System - Blue-Cyan-Green Gradient Theme */
+/* ProsindWeb Design System - Azul Royal + Laranja */
 
 @layer base {
   :root {
-    /* Primary - Blue to Cyan (Main Brand Gradient Start) */
-    --primary: 195 100% 45%;
+    /* Primary - Azul Royal */
+    --primary: 220 80% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 195 80% 96%;
-    --primary-glow: 180 80% 50%;
-    --primary-dark: 195 100% 35%;
+    --primary-soft: 220 60% 96%;
+    --primary-glow: 220 90% 55%;
+    --primary-dark: 220 80% 35%;
     
-    /* CTA - Green (Gradient End / Action Color) */
-    --cta: 85 70% 50%;
+    /* CTA - Laranja (Action Color) */
+    --cta: 25 95% 53%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 85 70% 42%;
+    --cta-hover: 25 95% 45%;
     
-    /* Background & Surfaces - Clean white/light gray */
+    /* Background & Surfaces */
     --background: 0 0% 99%;
-    --foreground: 210 20% 15%;
+    --foreground: 220 20% 15%;
     
     --card: 0 0% 100%;
-    --card-foreground: 210 20% 15%;
+    --card-foreground: 220 20% 15%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 210 20% 15%;
+    --popover-foreground: 220 20% 15%;
     
-    /* Secondary - Light Cyan tint */
-    --secondary: 195 40% 96%;
-    --secondary-foreground: 195 60% 30%;
+    /* Secondary */
+    --secondary: 220 30% 96%;
+    --secondary-foreground: 220 50% 30%;
     
     /* Muted */
-    --muted: 210 15% 94%;
-    --muted-foreground: 210 10% 50%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 50%;
     
-    /* Accent - Soft Cyan/Teal */
-    --accent: 180 50% 94%;
-    --accent-foreground: 180 70% 35%;
+    /* Accent - Laranja suave */
+    --accent: 25 60% 95%;
+    --accent-foreground: 25 80% 40%;
     
     /* Destructive */
     --destructive: 0 72% 51%;
@@ -62,52 +62,52 @@
     --warning-foreground: 0 0% 100%;
     
     /* Info */
-    --info: 199 89% 48%;
+    --info: 220 80% 50%;
     --info-foreground: 0 0% 100%;
     
     /* Borders & Inputs */
-    --border: 210 15% 90%;
-    --input: 210 15% 90%;
-    --ring: 195 100% 45%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 220 80% 45%;
     
     --radius: 0.75rem;
     
-    /* Sidebar - Premium Gradient Theme ProsindWeb */
-    --sidebar-background: 200 85% 35%;
+    /* Sidebar - Azul Royal Premium */
+    --sidebar-background: 220 75% 30%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 200 85% 35%;
+    --sidebar-primary-foreground: 220 75% 30%;
     --sidebar-accent: 0 0% 100% / 0.12;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 100% / 0.15;
     --sidebar-ring: 0 0% 100%;
     --sidebar-muted: 0 0% 100% / 0.7;
-    --sidebar-gradient-start: 200 85% 40%;
-    --sidebar-gradient-mid: 175 70% 38%;
-    --sidebar-gradient-end: 140 60% 42%;
+    --sidebar-gradient-start: 220 80% 35%;
+    --sidebar-gradient-mid: 220 70% 28%;
+    --sidebar-gradient-end: 220 60% 22%;
     
-    /* Category Colors - Distinct parent category colors */
-    --category-empresas: 38 92% 50%;
+    /* Category Colors */
+    --category-empresas: 25 95% 53%;
     --category-socios: 280 70% 50%;
-    --category-clinica: 180 80% 45%;
+    --category-clinica: 220 80% 50%;
     --category-admin: 340 75% 55%;
     
-    /* Custom Gradients - Blue to Cyan to Green */
-    --gradient-primary: linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(195 40% 97%) 0%, hsl(0 0% 99%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(195 30% 99%) 100%);
-    --gradient-soft: linear-gradient(135deg, hsl(195 60% 97%) 0%, hsl(95 40% 98%) 100%);
-    --gradient-stats: linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(95 70% 50%) 100%);
-    --gradient-text: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    /* Custom Gradients - Azul Royal to Laranja */
+    --gradient-primary: linear-gradient(135deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(220 30% 97%) 0%, hsl(0 0% 99%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 99%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(220 40% 97%) 0%, hsl(25 30% 98%) 100%);
+    --gradient-stats: linear-gradient(135deg, hsl(220 80% 45%) 0%, hsl(25 95% 53%) 100%);
+    --gradient-text: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(195 20% 20% / 0.04);
-    --shadow-md: 0 4px 6px -1px hsl(195 20% 20% / 0.06), 0 2px 4px -2px hsl(195 20% 20% / 0.04);
-    --shadow-lg: 0 10px 15px -3px hsl(195 20% 20% / 0.06), 0 4px 6px -4px hsl(195 20% 20% / 0.04);
-    --shadow-xl: 0 20px 25px -5px hsl(195 20% 20% / 0.08), 0 8px 10px -6px hsl(195 20% 20% / 0.06);
-    --shadow-glow: 0 0 40px hsl(195 100% 45% / 0.15);
-    --shadow-card: 0 1px 3px 0 hsl(195 20% 20% / 0.04), 0 1px 2px -1px hsl(195 20% 20% / 0.04);
-    --shadow-float: 0 25px 50px -12px hsl(195 20% 20% / 0.2);
+    --shadow-sm: 0 1px 2px 0 hsl(220 20% 20% / 0.04);
+    --shadow-md: 0 4px 6px -1px hsl(220 20% 20% / 0.06), 0 2px 4px -2px hsl(220 20% 20% / 0.04);
+    --shadow-lg: 0 10px 15px -3px hsl(220 20% 20% / 0.06), 0 4px 6px -4px hsl(220 20% 20% / 0.04);
+    --shadow-xl: 0 20px 25px -5px hsl(220 20% 20% / 0.08), 0 8px 10px -6px hsl(220 20% 20% / 0.06);
+    --shadow-glow: 0 0 40px hsl(220 80% 45% / 0.15);
+    --shadow-card: 0 1px 3px 0 hsl(220 20% 20% / 0.04), 0 1px 2px -1px hsl(220 20% 20% / 0.04);
+    --shadow-float: 0 25px 50px -12px hsl(220 20% 20% / 0.2);
     
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -117,46 +117,46 @@
   }
 
   .dark {
-    --primary: 195 80% 55%;
+    --primary: 220 70% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 195 30% 15%;
-    --primary-glow: 180 60% 50%;
+    --primary-soft: 220 30% 15%;
+    --primary-glow: 220 60% 55%;
     
-    --background: 210 15% 6%;
-    --foreground: 210 5% 92%;
+    --background: 220 15% 6%;
+    --foreground: 220 5% 92%;
     
-    --card: 210 15% 10%;
-    --card-foreground: 210 5% 92%;
+    --card: 220 15% 10%;
+    --card-foreground: 220 5% 92%;
     
-    --popover: 210 15% 10%;
-    --popover-foreground: 210 5% 92%;
+    --popover: 220 15% 10%;
+    --popover-foreground: 220 5% 92%;
     
-    --secondary: 195 25% 15%;
-    --secondary-foreground: 195 30% 85%;
+    --secondary: 220 25% 15%;
+    --secondary-foreground: 220 30% 85%;
     
-    --muted: 210 15% 18%;
-    --muted-foreground: 210 5% 60%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 5% 60%;
     
-    --accent: 180 30% 18%;
-    --accent-foreground: 180 60% 70%;
+    --accent: 25 30% 18%;
+    --accent-foreground: 25 60% 70%;
     
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 210 15% 18%;
-    --input: 210 15% 18%;
-    --ring: 195 80% 55%;
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 220 70% 60%;
     
-    --sidebar-background: 210 15% 4%;
-    --sidebar-foreground: 210 5% 80%;
-    --sidebar-primary: 195 80% 55%;
+    --sidebar-background: 220 15% 4%;
+    --sidebar-foreground: 220 5% 80%;
+    --sidebar-primary: 220 70% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 15% 10%;
-    --sidebar-accent-foreground: 210 5% 85%;
-    --sidebar-border: 210 15% 12%;
+    --sidebar-accent: 220 15% 10%;
+    --sidebar-accent-foreground: 220 5% 85%;
+    --sidebar-border: 220 15% 12%;
     
-    --gradient-hero: linear-gradient(135deg, hsl(210 15% 6%) 0%, hsl(195 20% 10%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(210 15% 10%) 0%, hsl(210 15% 8%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(220 15% 6%) 0%, hsl(220 20% 10%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(220 15% 10%) 0%, hsl(220 15% 8%) 100%);
   }
 }
 
@@ -189,7 +189,7 @@
     @apply bg-card/95 backdrop-blur-lg border border-border/60;
   }
   
-  /* ProsindWeb gradient text - blue to green */
+  /* ProsindWeb gradient text - azul royal to laranja */
   .gradient-text {
     background: var(--gradient-text);
     -webkit-background-clip: text;
@@ -198,7 +198,7 @@
   }
   
   .gradient-text-brand {
-    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -222,29 +222,29 @@
     @apply opacity-100;
   }
   
-  /* ProsindWeb-style gradient button */
+  /* ProsindWeb-style gradient button - Azul Royal + Laranja */
   .btn-prosindweb {
     @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
-    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
   .btn-prosindweb:hover {
-    background: linear-gradient(90deg, hsl(200 100% 40%) 0%, hsl(180 80% 40%) 50%, hsl(95 70% 45%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 40%) 0%, hsl(220 90% 50%) 50%, hsl(25 95% 45%) 100%);
   }
   
   .btn-prosindweb-outline {
     @apply border-2 font-semibold px-6 py-3 rounded-full transition-all duration-300;
-    border-color: hsl(180 80% 45%);
-    color: hsl(180 80% 40%);
+    border-color: hsl(220 80% 45%);
+    color: hsl(220 80% 45%);
   }
   
   .btn-prosindweb-outline:hover {
-    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     @apply text-white border-transparent;
   }
   
-  /* Keep legacy class names for backward compatibility */
+  /* Legacy compatibility */
   .btn-eclini { @apply btn-prosindweb; }
   .btn-eclini:hover { @apply btn-prosindweb; }
   .btn-eclini-outline { @apply btn-prosindweb-outline; }
@@ -288,7 +288,7 @@
   .card-premium::before {
     content: '';
     @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(195 100% 45% / 0.05) 0%, hsl(95 70% 50% / 0.05) 100%);
+    background: linear-gradient(135deg, hsl(220 80% 45% / 0.05) 0%, hsl(25 95% 53% / 0.05) 100%);
   }
   
   .card-premium:hover::before {
@@ -303,8 +303,8 @@
   
   .feature-card-icon {
     @apply w-12 h-12 rounded-xl flex items-center justify-center;
-    background: linear-gradient(135deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%);
-    color: hsl(180 80% 40%);
+    background: linear-gradient(135deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%);
+    color: hsl(220 80% 45%);
   }
   
   /* Stat Card Decoration */
@@ -332,9 +332,9 @@
   /* ProsindWeb-style section header */
   .section-badge {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
-    background: linear-gradient(90deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%);
-    color: hsl(180 80% 40%);
-    border: 1px solid hsl(180 80% 45% / 0.2);
+    background: linear-gradient(90deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%);
+    color: hsl(220 80% 45%);
+    border: 1px solid hsl(220 80% 45% / 0.2);
   }
   
   /* Stats counter style with gradient */
@@ -430,11 +430,11 @@
 
 ::-webkit-scrollbar-thumb {
   @apply rounded-full;
-  background: linear-gradient(180deg, hsl(200 100% 45% / 0.3) 0%, hsl(95 70% 50% / 0.3) 100%);
+  background: linear-gradient(180deg, hsl(220 80% 45% / 0.3) 0%, hsl(25 95% 53% / 0.3) 100%);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, hsl(200 100% 45% / 0.5) 0%, hsl(95 70% 50% / 0.5) 100%);
+  background: linear-gradient(180deg, hsl(220 80% 45% / 0.5) 0%, hsl(25 95% 53% / 0.5) 100%);
 }
 
 /* Focus styles */
