@@ -167,7 +167,7 @@ function AboutSection() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              SindiFlex
+              ProsindWeb
             </span>?
             </h2>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
