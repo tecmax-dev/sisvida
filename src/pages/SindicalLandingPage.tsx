@@ -428,7 +428,7 @@ function StatsSection() {
                       className="h-full rounded-full transition-all duration-1000"
                       style={{
                         width: `${bar.pct}%`,
-                        background: 'linear-gradient(90deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                        background: 'linear-gradient(90deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                       }}
                     />
                   </div>
