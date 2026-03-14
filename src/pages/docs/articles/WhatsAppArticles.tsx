@@ -22,7 +22,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Provedores Disponíveis</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini oferece duas opções de integração com WhatsApp:
+            O ProsindWeb oferece duas opções de integração com WhatsApp:
           </p>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
