@@ -692,7 +692,7 @@ function SindicalFooter() {
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
             <div className="mb-4">
-              <img src={sindiflexLogo} alt="SindiFlex - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
+              <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
             </div>
             <p className="text-white/50 mb-6 max-w-md">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
