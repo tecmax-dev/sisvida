@@ -73,31 +73,31 @@ function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { e
 function HeroSection() {
   return (
     <section className="relative min-h-[100vh] flex items-center overflow-hidden">
-      {/* Dark gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,12%)] via-[hsl(215,50%,18%)] to-[hsl(215,60%,12%)]" />
+      {/* Light gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,97%)] via-white to-[hsl(120,40%,97%)]" />
       
       {/* Hex pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.04]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
+      <div className="absolute inset-0 opacity-[0.06]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='%23336699' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '60px 60px'
       }} />
 
       {/* Gradient accent */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full blur-[120px] opacity-10"
         style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
       />
 
       <div className="container relative z-10 py-32">
         <div className="max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[hsl(215,85%,50%,0.15)] bg-[hsl(215,85%,50%,0.06)] mb-8">
             <span className="w-2 h-2 rounded-full bg-[hsl(30,90%,55%)] animate-pulse" />
-            <span className="text-sm text-white/80 font-medium">Módulos de Gestão Integrados</span>
+            <span className="text-sm text-[hsl(215,50%,35%)] font-medium">Módulos de Gestão Integrados</span>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-white mb-4 tracking-tight">
-            <span className="block text-white/60 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-gray-900 mb-4 tracking-tight">
+            <span className="block text-gray-400 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
             <span style={{
-              background: 'linear-gradient(135deg, hsl(215 85% 55%), hsl(30 90% 55%), hsl(120 65% 45%))',
+              background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(30 90% 55%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -105,7 +105,7 @@ function HeroSection() {
             </span>
           </h1>
 
-          <p className="text-xl lg:text-2xl text-white/60 font-medium mt-6 max-w-2xl">
+          <p className="text-xl lg:text-2xl text-gray-500 font-medium mt-6 max-w-2xl">
             Solução completa em gestão para Entidades Sindicais do Brasil.
           </p>
 
@@ -127,7 +127,7 @@ function HeroSection() {
             <Button 
               size="lg"
               variant="outline"
-              className="h-14 px-8 text-base font-semibold rounded-full border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="h-14 px-8 text-base font-semibold rounded-full border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
               asChild
             >
               <a 
@@ -145,7 +145,7 @@ function HeroSection() {
       </div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[hsl(0,0%,100%)] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent" />
     </section>
   );
 }
