@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     question: "O sistema funciona no celular?",
-    answer: "Sim! O Eclini é totalmente responsivo e funciona perfeitamente em smartphones e tablets. Você pode gerenciar sua clínica de qualquer lugar."
+    answer: "Sim! O ProsindWeb é totalmente responsivo e funciona perfeitamente em smartphones e tablets. Você pode gerenciar sua clínica de qualquer lugar."
   }
 ];
 
