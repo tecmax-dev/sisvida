@@ -86,7 +86,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Níveis de Acesso</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini possui diferentes perfis de usuário com permissões específicas:
+            O ProsindWeb possui diferentes perfis de usuário com permissões específicas:
           </p>
           <div className="space-y-3">
             <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
