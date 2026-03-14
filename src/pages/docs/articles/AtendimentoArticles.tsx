@@ -241,7 +241,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={prescricaoDigital} 
-              alt="Emissão de documentos Eclini" 
+              alt="Emissão de documentos ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>

@@ -218,7 +218,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4">Confirmação Automática</h2>
           <p className="text-muted-foreground">
-            O Eclini pode enviar automaticamente mensagens de confirmação para os pacientes via WhatsApp, 
+            O ProsindWeb pode enviar automaticamente mensagens de confirmação para os pacientes via WhatsApp, 
             reduzindo faltas e melhorando a organização da sua agenda.
           </p>
         </section>

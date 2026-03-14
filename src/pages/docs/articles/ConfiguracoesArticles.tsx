@@ -218,7 +218,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Segurança dos Dados</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini utiliza as melhores práticas de segurança para proteger os dados da sua clínica:
+            O ProsindWeb utiliza as melhores práticas de segurança para proteger os dados da sua clínica:
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
