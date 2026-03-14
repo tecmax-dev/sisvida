@@ -2120,6 +2120,52 @@ async function handleBoletoFlow(
       };
     }
 
+    case 'SELECT_CONTRIBUTION_YEAR': {
+      const years = session.flow_context?.available_years || [];
+      const allContributions = session.flow_context?.all_contributions || session.available_contributions || [];
+      const optionNum = intent.extracted_number || parseInt(text);
+      
+      if (isNaN(optionNum) || optionNum < 1 || optionNum > years.length) {
+        return { 
+          response: `❌ Opção inválida.\n\nPor favor, escolha um número de 1 a ${years.length}.` 
+        };
+      }
+
+      const selectedYear = years[optionNum - 1];
+      const yearContribs = allContributions.filter((c: any) => c.competence_year === selectedYear);
+      
+      // If this year has more than 3, paginate
+      const page = 0;
+      const pageSize = 3;
+      const pageContribs = yearContribs.slice(page * pageSize, (page + 1) * pageSize);
+      const hasMore = yearContribs.length > pageSize;
+      
+      await updateSession(supabase, session.id, {
+        state: 'SELECT_CONTRIBUTION',
+        available_contributions: pageContribs,
+        flow_context: { 
+          ...session.flow_context, 
+          selected_year: selectedYear,
+          year_contributions: yearContribs,
+          current_page: page,
+          page_size: pageSize
+        }
+      });
+
+      let msg = `📋 *Contribuições Vencidas - ${selectedYear}*\n\n`;
+      msg += `${yearContribs.length} contribuição(ões) encontrada(s)`;
+      if (hasMore) {
+        msg += ` (mostrando ${pageContribs.length} de ${yearContribs.length})`;
+      }
+      msg += `:\n\n`;
+      msg += MESSAGES.selectContribution(pageContribs);
+      
+      return { 
+        response: msg, 
+        newState: 'SELECT_CONTRIBUTION' 
+      };
+    }
+
     case 'SELECT_CONTRIBUTION': {
       const contributions = session.available_contributions || [];
       const optionNum = parseInt(text);
