@@ -70,7 +70,7 @@ export function HeroSection() {
             <Button 
               size="lg" 
               variant="outline"
-              className="btn-eclini-outline px-8 h-14 text-base"
+className="btn-eclini-outline px-8 h-14 text-base"
               asChild
             >
               <Link to={primaryButtonLink}>
