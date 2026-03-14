@@ -222,29 +222,29 @@
     @apply opacity-100;
   }
   
-  /* ProsindWeb-style gradient button */
+  /* ProsindWeb-style gradient button - Azul Royal + Laranja */
   .btn-prosindweb {
     @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
-    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
   .btn-prosindweb:hover {
-    background: linear-gradient(90deg, hsl(200 100% 40%) 0%, hsl(180 80% 40%) 50%, hsl(95 70% 45%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 40%) 0%, hsl(220 90% 50%) 50%, hsl(25 95% 45%) 100%);
   }
   
   .btn-prosindweb-outline {
     @apply border-2 font-semibold px-6 py-3 rounded-full transition-all duration-300;
-    border-color: hsl(180 80% 45%);
-    color: hsl(180 80% 40%);
+    border-color: hsl(220 80% 45%);
+    color: hsl(220 80% 45%);
   }
   
   .btn-prosindweb-outline:hover {
-    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     @apply text-white border-transparent;
   }
   
-  /* Keep legacy class names for backward compatibility */
+  /* Legacy compatibility */
   .btn-eclini { @apply btn-prosindweb; }
   .btn-eclini:hover { @apply btn-prosindweb; }
   .btn-eclini-outline { @apply btn-prosindweb-outline; }
