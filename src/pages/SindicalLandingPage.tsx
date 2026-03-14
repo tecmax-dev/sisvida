@@ -235,7 +235,7 @@ const modules = [
     icon: Receipt,
     title: "Arrecadação",
     description: "Cadastros, emissão de boletos e controle financeiro. Crucial para a transformação de resultados da Entidade. Geração em lote, integração bancária e controle de inadimplência automatizado.",
-    color: "from-green-500 to-emerald-600",
+    color: "from-[hsl(120,65%,45%)] to-[hsl(120,60%,35%)]",
     highlights: ["Emissão de boletos em lote", "Integração bancária", "Controle de inadimplência", "Relatórios de arrecadação"],
   },
   {
