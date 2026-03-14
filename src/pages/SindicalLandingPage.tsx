@@ -73,31 +73,31 @@ function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { e
 function HeroSection() {
   return (
     <section className="relative min-h-[100vh] flex items-center overflow-hidden">
-      {/* Dark gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,12%)] via-[hsl(215,50%,18%)] to-[hsl(215,60%,12%)]" />
+      {/* Light gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,97%)] via-white to-[hsl(120,40%,97%)]" />
       
       {/* Hex pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.04]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
+      <div className="absolute inset-0 opacity-[0.06]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='%23336699' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '60px 60px'
       }} />
 
       {/* Gradient accent */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full blur-[120px] opacity-10"
         style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
       />
 
       <div className="container relative z-10 py-32">
         <div className="max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[hsl(215,85%,50%,0.15)] bg-[hsl(215,85%,50%,0.06)] mb-8">
             <span className="w-2 h-2 rounded-full bg-[hsl(30,90%,55%)] animate-pulse" />
-            <span className="text-sm text-white/80 font-medium">Módulos de Gestão Integrados</span>
+            <span className="text-sm text-[hsl(215,50%,35%)] font-medium">Módulos de Gestão Integrados</span>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-white mb-4 tracking-tight">
-            <span className="block text-white/60 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-gray-900 mb-4 tracking-tight">
+            <span className="block text-gray-400 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
             <span style={{
-              background: 'linear-gradient(135deg, hsl(215 85% 55%), hsl(30 90% 55%), hsl(120 65% 45%))',
+              background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(30 90% 55%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -105,7 +105,7 @@ function HeroSection() {
             </span>
           </h1>
 
-          <p className="text-xl lg:text-2xl text-white/60 font-medium mt-6 max-w-2xl">
+          <p className="text-xl lg:text-2xl text-gray-500 font-medium mt-6 max-w-2xl">
             Solução completa em gestão para Entidades Sindicais do Brasil.
           </p>
 
@@ -127,7 +127,7 @@ function HeroSection() {
             <Button 
               size="lg"
               variant="outline"
-              className="h-14 px-8 text-base font-semibold rounded-full border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="h-14 px-8 text-base font-semibold rounded-full border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
               asChild
             >
               <a 
@@ -145,7 +145,7 @@ function HeroSection() {
       </div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[hsl(0,0%,100%)] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent" />
     </section>
   );
 }
@@ -407,9 +407,9 @@ function StatsSection() {
           </div>
 
           {/* Right: coverage map stats */}
-          <div className="bg-[hsl(215,60%,12%)] rounded-3xl p-10 text-white flex flex-col justify-center">
-            <h3 className="text-2xl font-bold mb-2">Nossa Abrangência</h3>
-            <p className="text-white/60 mb-10">
+          <div className="bg-gradient-to-br from-[hsl(215,60%,97%)] to-[hsl(120,40%,97%)] rounded-3xl p-10 border border-gray-200 shadow-lg flex flex-col justify-center">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Nossa Abrangência</h3>
+            <p className="text-gray-500 mb-10">
               Presentes em todo o território nacional, atendendo diversas Confederações, Federações, Sindicatos e Associações.
             </p>
             <div className="space-y-8">
@@ -420,10 +420,10 @@ function StatsSection() {
               ].map((bar, i) => (
                 <div key={i}>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-white/80">{bar.label}</span>
-                    <span className="font-bold text-white">{bar.pct}%</span>
+                    <span className="text-gray-600">{bar.label}</span>
+                    <span className="font-bold text-gray-900">{bar.pct}%</span>
                   </div>
-                  <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
                     <div 
                       className="h-full rounded-full transition-all duration-1000"
                       style={{
@@ -564,28 +564,29 @@ function AudienceSection() {
 function CTASection() {
   return (
     <section id="contato" className="py-24 lg:py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[hsl(215,60%,12%)]" />
-      <div className="absolute inset-0 opacity-30"
-        style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
-      />
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,96%)] via-white to-[hsl(120,40%,96%)]" />
+      <div className="absolute inset-0 opacity-[0.05]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='%23336699' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '60px 60px'
       }} />
 
       <div className="container relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
             Pronto para modernizar a gestão da sua entidade?
           </h2>
-          <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto">
             Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar a sua entidade.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
-              className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-white text-gray-900 hover:bg-gray-100"
+              className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all"
+              style={{
+                background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
+                color: 'white',
+              }}
               asChild
             >
               <a href="mailto:contato@prosindweb.com.br?subject=Demonstração ProsindWeb" className="flex items-center gap-2">
@@ -595,7 +596,8 @@ function CTASection() {
             </Button>
             <Button 
               size="lg"
-              className="h-14 px-8 rounded-full text-base font-semibold border-2 border-white/30 text-white hover:bg-white/10 bg-transparent"
+              variant="outline"
+              className="h-14 px-8 rounded-full text-base font-semibold border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
               asChild
             >
               <a 
@@ -610,7 +612,7 @@ function CTASection() {
             </Button>
           </div>
 
-          <p className="mt-8 text-white/40 text-sm">
+          <p className="mt-8 text-gray-400 text-sm">
             Demonstração gratuita • Sem compromisso • Suporte em português
           </p>
         </div>
@@ -624,7 +626,7 @@ function SindicalHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[hsl(215,60%,12%)]/95 backdrop-blur-md border-b border-white/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-sm">
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
@@ -639,14 +641,14 @@ function SindicalHeader() {
               { href: "#publico", label: "Para quem" },
               { href: "#contato", label: "Contato" },
             ].map((l) => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-white/70 hover:text-white transition-colors">
+              <a key={l.href} href={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
                 {l.label}
               </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10">
+            <Button variant="ghost" size="sm" asChild className="hidden sm:flex text-gray-500 hover:text-gray-900">
               <Link to="/entidade-sindical">Área da Entidade</Link>
             </Button>
             <Button size="sm" className="rounded-full font-semibold" style={{
@@ -655,7 +657,7 @@ function SindicalHeader() {
             }} asChild>
               <a href="#contato">Demonstração</a>
             </Button>
-            <Button variant="ghost" size="icon" className="md:hidden text-white" onClick={() => setMobileOpen(!mobileOpen)}>
+            <Button variant="ghost" size="icon" className="md:hidden text-gray-700" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
@@ -663,17 +665,17 @@ function SindicalHeader() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden py-4 border-t border-white/10">
+          <div className="md:hidden py-4 border-t border-gray-200">
             <nav className="flex flex-col gap-3">
               {["Sobre", "Módulos", "Depoimentos", "Para quem", "Contato"].map((l) => (
                 <a key={l} href={`#${l.toLowerCase().replace(/\s/g, '')}`} 
-                  className="text-white/70 hover:text-white px-3 py-2"
+                  className="text-gray-500 hover:text-gray-900 px-3 py-2"
                   onClick={() => setMobileOpen(false)}
                 >
                   {l}
                 </a>
               ))}
-              <Link to="/entidade-sindical" className="text-white/70 hover:text-white px-3 py-2">
+              <Link to="/entidade-sindical" className="text-gray-500 hover:text-gray-900 px-3 py-2">
                 Área da Entidade
               </Link>
             </nav>
@@ -687,31 +689,31 @@ function SindicalHeader() {
 // ─── Footer ─────────────────────────────────────────────────────────
 function SindicalFooter() {
   return (
-    <footer className="bg-[hsl(215,60%,12%)] text-white py-16 border-t border-white/10">
+    <footer className="bg-gray-50 text-gray-700 py-16 border-t border-gray-200">
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
             <div className="mb-4">
               <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
             </div>
-            <p className="text-white/50 mb-6 max-w-md">
+            <p className="text-gray-500 mb-6 max-w-md">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
             <div className="flex gap-3">
               <a href="https://wa.me/5571982786864" target="_blank" rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
                 <MessageCircle className="h-5 w-5" />
               </a>
               <a href="mailto:contato@prosindweb.com.br"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
                 <Mail className="h-5 w-5" />
               </a>
             </div>
           </div>
 
           <div>
-            <h4 className="font-bold mb-4">Contato</h4>
-            <ul className="space-y-3 text-white/50">
+            <h4 className="font-bold text-gray-900 mb-4">Contato</h4>
+            <ul className="space-y-3 text-gray-500">
               <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(71) 98278-6864</li>
               <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
@@ -719,18 +721,18 @@ function SindicalFooter() {
           </div>
 
           <div>
-            <h4 className="font-bold mb-4">Links</h4>
-            <ul className="space-y-3 text-white/50">
-              <li><a href="#sobre" className="hover:text-white transition-colors">Sobre o Sistema</a></li>
-              <li><a href="#modulos" className="hover:text-white transition-colors">Módulos</a></li>
-              <li><a href="#depoimentos" className="hover:text-white transition-colors">Depoimentos</a></li>
-              <li><Link to="/politica-privacidade" className="hover:text-white transition-colors">Privacidade</Link></li>
-              <li><Link to="/termos-uso" className="hover:text-white transition-colors">Termos de Uso</Link></li>
+            <h4 className="font-bold text-gray-900 mb-4">Links</h4>
+            <ul className="space-y-3 text-gray-500">
+              <li><a href="#sobre" className="hover:text-gray-900 transition-colors">Sobre o Sistema</a></li>
+              <li><a href="#modulos" className="hover:text-gray-900 transition-colors">Módulos</a></li>
+              <li><a href="#depoimentos" className="hover:text-gray-900 transition-colors">Depoimentos</a></li>
+              <li><Link to="/politica-privacidade" className="hover:text-gray-900 transition-colors">Privacidade</Link></li>
+              <li><Link to="/termos-uso" className="hover:text-gray-900 transition-colors">Termos de Uso</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
+        <div className="border-t border-gray-200 mt-12 pt-8 text-center text-gray-400 text-sm">
           <p>© {new Date().getFullYear()} ProsindWeb - Todos os direitos reservados.</p>
         </div>
       </div>
