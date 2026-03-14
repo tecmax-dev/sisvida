@@ -37,7 +37,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 import prosindwebLogo from "@/assets/prosindweb-logo.png"; // ProsindWeb branding
-import sindicalHeroDashboard from "@/assets/sindical-hero-dashboard.png";
+import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
 
 // ─── Animated Counter ───────────────────────────────────────────────
 function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
