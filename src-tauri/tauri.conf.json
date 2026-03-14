@@ -22,7 +22,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tecmax.eclini",
+      "identifier": "com.tecmax.prosindweb",
       "publisher": "Tecmax",
       "icon": [
         "icons/32x32.png",
