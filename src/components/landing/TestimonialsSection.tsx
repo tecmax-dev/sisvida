@@ -12,7 +12,7 @@ const testimonials = [
     name: "Dra. Carla Mendes",
     role: "Dermatologista",
     image: carlaMendes,
-    quote: "O Eclini transformou a rotina da minha clínica. Antes eu perdia tempo com papelada e controles manuais, agora tudo é automatizado. A agenda integrada com o prontuário eletrônico me dá muito mais agilidade nos atendimentos."
+    quote: "O ProsindWeb transformou a rotina da minha clínica. Antes eu perdia tempo com papelada e controles manuais, agora tudo é automatizado. A agenda integrada com o prontuário eletrônico me dá muito mais agilidade nos atendimentos."
   },
   {
     name: "Dr. Ricardo Oliveira",
