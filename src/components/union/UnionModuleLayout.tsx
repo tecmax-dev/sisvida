@@ -111,7 +111,7 @@ export function UnionModuleLayout() {
             )}
             {sidebarCollapsed && (
               <div className="w-full flex flex-col items-center">
-                <img src={sindiflexLogo} alt="SindiFlex" className="h-6 object-contain" />
+                <img src={prosindwebLogo} alt="ProsindWeb" className="h-6 object-contain" />
               </div>
             )}
             {/* Mobile close button */}
