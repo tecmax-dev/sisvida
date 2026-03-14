@@ -169,7 +169,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Controle de despesas Eclini" 
+              alt="Controle de despesas ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
