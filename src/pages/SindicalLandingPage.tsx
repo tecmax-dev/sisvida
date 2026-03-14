@@ -183,7 +183,7 @@ function AboutSection() {
               size="lg"
               className="h-14 px-8 rounded-full font-semibold"
               style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                 background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                 color: 'white',
               }}
               asChild
