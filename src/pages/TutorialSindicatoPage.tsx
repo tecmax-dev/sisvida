@@ -1005,7 +1005,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("71 3144-9898", pageWidth / 2, 218, { align: "center" });
-      doc.text("www.eclini.com.br", pageWidth / 2, 230, { align: "center" });
+      doc.text("www.prosindweb.com.br", pageWidth / 2, 230, { align: "center" });
 
       // Version footer
       doc.setTextColor(180, 180, 180);
