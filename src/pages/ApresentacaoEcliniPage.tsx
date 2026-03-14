@@ -453,7 +453,7 @@ const ApresentacaoEcliniPage = () => {
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('TECMAX TECNOLOGIA | (71) 3144-9898 | contato@tecmaxtecnologia.com.br', pageWidth/2, 172, { align: 'center' });
+      doc.text('TECMAX TECNOLOGIA | (11) 5194-3839 | contato@prosindweb.com.br', pageWidth/2, 172, { align: 'center' });
       
       drawFooter();
 
