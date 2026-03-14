@@ -9,7 +9,7 @@ import clinicModule from "@/assets/presentation/clinic-module.jpg";
 import unionModule from "@/assets/presentation/union-module.jpg";
 import technologyStack from "@/assets/presentation/technology-stack.jpg";
 import portalsAccess from "@/assets/presentation/portals-access.jpg";
-import ecliniLogo from "@/assets/eclini-logo.png";
+import ecliniLogo from "@/assets/prosindweb-logo.png";
 
 export default function PresentationPage() {
   const handlePrint = () => {
