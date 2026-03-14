@@ -28,7 +28,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={financeiroDashboard} 
-              alt="Dashboard Financeiro Eclini" 
+              alt="Dashboard Financeiro ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
