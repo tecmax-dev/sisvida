@@ -566,7 +566,7 @@ function CTASection() {
     <section id="contato" className="py-24 lg:py-32 relative overflow-hidden">
       <div className="absolute inset-0 bg-[hsl(215,60%,12%)]" />
       <div className="absolute inset-0 opacity-30"
-        style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
+        style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
       />
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
