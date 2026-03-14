@@ -739,7 +739,7 @@ function SindicalFooter() {
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
             <div className="flex gap-3">
-              <a href="https://wa.me/5571982786864" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
                 <MessageCircle className="h-5 w-5" />
               </a>
