@@ -16,7 +16,7 @@ export function MigrationSection() {
           {/* Left - Content */}
           <div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
-              Migrar para o Eclini é{" "}
+              Migrar para o ProsindWeb é{" "}
               <span className="gradient-text">fácil e seguro!</span>
             </h2>
             
