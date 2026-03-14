@@ -18,7 +18,7 @@ const testimonials = [
     name: "Dr. Ricardo Oliveira",
     role: "Ortopedista",
     image: ricardoOliveira,
-    quote: "Depois que adotamos o Eclini, nosso faturamento melhorou 40%. O controle financeiro é impecável e a gestão de convênios ficou muito mais simples. Recomendo para qualquer clínica que queira crescer de forma organizada."
+    quote: "Depois que adotamos o ProsindWeb, nosso faturamento melhorou 40%. O controle financeiro é impecável e a gestão de convênios ficou muito mais simples. Recomendo para qualquer clínica que queira crescer de forma organizada."
   },
   {
     name: "Fernanda Lima",
