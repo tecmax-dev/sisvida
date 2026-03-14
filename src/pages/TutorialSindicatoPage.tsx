@@ -339,7 +339,7 @@ const TutorialSindicatoPage = () => {
       title: "Primeiros Passos", 
       desc: "Como acessar e navegar no sistema",
       fullContent: {
-        overview: "Aprenda como acessar o sistema Eclini pela primeira vez, configurar sua conta e navegar pelas principais funcionalidades.",
+        overview: "Aprenda como acessar o sistema ProSindWeb pela primeira vez, configurar sua conta e navegar pelas principais funcionalidades.",
         steps: [
           { title: "Acessar o sistema", desc: "Acesse o endereço fornecido pela sua entidade e faça login com e-mail e senha cadastrados." },
           { title: "Conhecer o dashboard", desc: "A tela inicial mostra um resumo com estatísticas importantes: empresas, sócios e finanças." },
