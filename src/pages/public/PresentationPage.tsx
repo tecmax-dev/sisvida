@@ -657,7 +657,7 @@ export default function PresentationPage() {
                 </div>
                 <div>
                   <p className="text-blue-300 text-[10px]">E-mail</p>
-                  <p className="text-base font-semibold">contato@tecmax.com.br</p>
+                  <p className="text-base font-semibold">contato@prosindweb.com.br</p>
                 </div>
               </div>
 
