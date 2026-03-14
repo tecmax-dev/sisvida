@@ -90,7 +90,7 @@ function HeroSection() {
       <div className="container relative z-10 py-32">
         <div className="max-w-4xl">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-8">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[hsl(30,90%,55%)] animate-pulse" />
             <span className="text-sm text-white/80 font-medium">Módulos de Gestão Integrados</span>
           </div>
 
