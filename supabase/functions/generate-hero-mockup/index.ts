@@ -23,7 +23,7 @@ serve(async (req) => {
 
     console.log('Starting hero mockup generation...');
 
-    const prompt = `Create a professional SaaS dashboard mockup composition image for a Brazilian healthcare clinic management system called "Eclini".
+    const prompt = `Create a professional SaaS dashboard mockup composition image for a Brazilian healthcare clinic management system called "ProSindWeb".
 
 COMPOSITION LAYOUT:
 - Desktop dashboard screen in the background, slightly tilted/angled for depth

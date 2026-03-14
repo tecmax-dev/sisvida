@@ -592,7 +592,7 @@ export default function SmtpSettingsPage() {
                 <Label htmlFor="from_name">Nome do Remetente</Label>
                 <Input
                   id="from_name"
-                  placeholder="Eclini"
+                  placeholder="ProSindWeb"
                   value={settings.from_name}
                   onChange={(e) => setSettings(prev => ({ ...prev, from_name: e.target.value }))}
                 />

@@ -93,7 +93,7 @@ serve(async (req) => {
         payer: {
           email: 'teste@eclini.app',
           first_name: 'Teste',
-          last_name: 'Eclini',
+          last_name: 'ProSindWeb',
           identification: {
             type: 'CPF',
             number: '12345678909',

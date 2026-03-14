@@ -134,9 +134,9 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     await client.send({
-      from: `${from_name || "Eclini"} <${from_email}>`,
+      from: `${from_name || "ProSindWeb"} <${from_email}>`,
       to: test_email,
-      subject: "✅ Teste de Configuração SMTP - Eclini",
+      subject: "✅ Teste de Configuração SMTP - ProSindWeb",
       content: "auto",
       html: testHtml,
     });

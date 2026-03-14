@@ -551,7 +551,7 @@ export default function AccountingOfficesPage() {
       doc.setFontSize(8);
       doc.setTextColor(150);
       doc.text(
-        `Página ${i} de ${pageCount} • ${currentClinic?.name || "Eclini"}`,
+        `Página ${i} de ${pageCount} • ${currentClinic?.name || "ProSindWeb"}`,
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 10,
         { align: "center" }
