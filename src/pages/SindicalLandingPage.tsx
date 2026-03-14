@@ -702,7 +702,7 @@ function SindicalFooter() {
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <MessageCircle className="h-5 w-5" />
               </a>
-              <a href="mailto:contato@eclini.com.br"
+              <a href="mailto:contato@prosindweb.com.br"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <Mail className="h-5 w-5" />
               </a>
