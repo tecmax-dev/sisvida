@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
-import sindiflexLogo from "@/assets/logo_sindiflex.png"; // SindiFlex branding
+import prosindwebLogo from "@/assets/prosindweb-logo.png"; // ProsindWeb branding
 
 // ─── Animated Counter ───────────────────────────────────────────────
 function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
