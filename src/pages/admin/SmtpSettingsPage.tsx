@@ -46,7 +46,7 @@ const defaultSettings: SmtpSettings = {
   username: "",
   password: "",
   from_email: "",
-  from_name: "Eclini",
+  from_name: "ProSindWeb",
   encryption: "tls",
   is_active: true,
 };
