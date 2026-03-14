@@ -28,9 +28,9 @@ const articles: Record<string, {
     content: (
       <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-4">Bem-vindo ao Eclini!</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Bem-vindo ao ProsindWeb!</h2>
           <p className="text-muted-foreground mb-4">
-            Este guia vai te ajudar a configurar sua clínica no Eclini em poucos minutos. 
+            Este guia vai te ajudar a configurar sua clínica no ProsindWeb em poucos minutos. 
             Siga os passos abaixo para ter seu sistema pronto para uso.
           </p>
           
