@@ -564,28 +564,29 @@ function AudienceSection() {
 function CTASection() {
   return (
     <section id="contato" className="py-24 lg:py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[hsl(215,60%,12%)]" />
-      <div className="absolute inset-0 opacity-30"
-        style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
-      />
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,96%)] via-white to-[hsl(120,40%,96%)]" />
+      <div className="absolute inset-0 opacity-[0.05]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='%23336699' stroke-width='0.5'/%3E%3C/svg%3E")`,
         backgroundSize: '60px 60px'
       }} />
 
       <div className="container relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
             Pronto para modernizar a gestão da sua entidade?
           </h2>
-          <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto">
             Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar a sua entidade.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
-              className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-white text-gray-900 hover:bg-gray-100"
+              className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all"
+              style={{
+                background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
+                color: 'white',
+              }}
               asChild
             >
               <a href="mailto:contato@prosindweb.com.br?subject=Demonstração ProsindWeb" className="flex items-center gap-2">
@@ -595,7 +596,8 @@ function CTASection() {
             </Button>
             <Button 
               size="lg"
-              className="h-14 px-8 rounded-full text-base font-semibold border-2 border-white/30 text-white hover:bg-white/10 bg-transparent"
+              variant="outline"
+              className="h-14 px-8 rounded-full text-base font-semibold border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
               asChild
             >
               <a 
@@ -610,7 +612,7 @@ function CTASection() {
             </Button>
           </div>
 
-          <p className="mt-8 text-white/40 text-sm">
+          <p className="mt-8 text-gray-400 text-sm">
             Demonstração gratuita • Sem compromisso • Suporte em português
           </p>
         </div>
