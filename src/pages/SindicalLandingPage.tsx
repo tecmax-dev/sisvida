@@ -332,7 +332,7 @@ function ModulesSection() {
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {mod.highlights.map((h, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-[hsl(120,65%,45%)] flex-shrink-0" />
                       <span className="text-gray-700">{h}</span>
                     </div>
                   ))}
