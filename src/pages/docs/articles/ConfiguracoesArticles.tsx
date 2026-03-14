@@ -28,7 +28,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={configuracoesPainel} 
-              alt="Tela de Configurações Eclini" 
+              alt="Tela de Configurações ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
