@@ -21,7 +21,7 @@ const articles: Record<string, {
 }> = {
   "configuracao-inicial": {
     title: "Configuração Inicial do Sistema",
-    description: "Configure sua clínica no Eclini do zero e comece a usar todas as funcionalidades",
+    description: "Configure sua clínica no ProsindWeb do zero e comece a usar todas as funcionalidades",
     readTime: "5 min",
     prevArticle: undefined,
     nextArticle: { slug: "personalizando-clinica", title: "Personalizando sua Clínica" },
