@@ -53,7 +53,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={whatsappIntegracao} 
-              alt="Configuração WhatsApp Eclini" 
+              alt="Configuração WhatsApp ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
