@@ -1013,7 +1013,7 @@ const TutorialSindicatoPage = () => {
       doc.text("Tutorial v1.0 | Janeiro 2026", pageWidth / 2, pageHeight - 18, { align: "center" });
 
       // Save PDF
-      doc.save("Tutorial-Modulo-Sindical-Eclini.pdf");
+      doc.save("Tutorial-Modulo-Sindical-ProsindWeb.pdf");
       toast.success("Tutorial gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);

@@ -136,19 +136,7 @@ export function Footer() {
             
             {/* Developer credit */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Desenvolvido por</span>
-              <a
-                href="https://danielasales.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:opacity-80 transition-opacity"
-              >
-                <img
-                  src="https://danielasales.com/assets/logo-tecmax-DxAeqUGw.png"
-                  alt="Tecmax Tecnologia"
-                  className="h-5"
-                />
-              </a>
+              <span>Desenvolvido por ProsindWeb</span>
             </div>
           </div>
           
