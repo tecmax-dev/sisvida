@@ -713,7 +713,7 @@ function SindicalFooter() {
             <h4 className="font-bold mb-4">Contato</h4>
             <ul className="space-y-3 text-white/50">
               <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(71) 98278-6864</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@eclini.com.br</li>
+              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
             </ul>
           </div>

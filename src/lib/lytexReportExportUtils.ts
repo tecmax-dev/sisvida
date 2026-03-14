@@ -251,7 +251,7 @@ export function exportLytexReportToPDF({ title, clinicName, period, columns, dat
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} • Eclini by Tecmax Tecnologia`,
+      `Página ${i} de ${pageCount} • ProSindWeb by Tecmax Tecnologia`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 8,
       { align: 'center' }

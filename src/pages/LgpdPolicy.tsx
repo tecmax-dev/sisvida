@@ -261,8 +261,8 @@ export default function LgpdPolicy() {
                         </p>
                         <p className="text-foreground">
                           <strong>E-mail:</strong>{" "}
-                          <a href="mailto:contato@eclini.com.br" className="text-primary hover:underline">
-                            contato@eclini.com.br
+                          <a href="mailto:contato@prosindweb.com.br" className="text-primary hover:underline">
+                            contato@prosindweb.com.br
                           </a>
                         </p>
                         <p className="text-foreground">

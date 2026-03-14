@@ -952,7 +952,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFont("helvetica", "bold");
       doc.text("Telefone: 71 3144-9898", margin + 10, yPos + 23);
-      doc.text("E-mail: suporte@eclini.com.br", margin + 10, yPos + 32);
+      doc.text("E-mail: suporte@prosindweb.com.br", margin + 10, yPos + 32);
       doc.text("Chat: Disponivel no sistema (horario comercial)", margin + 10, yPos + 41);
 
       // =====================

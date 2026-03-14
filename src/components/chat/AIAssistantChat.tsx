@@ -45,7 +45,7 @@ Digite o número da opção desejada:`;
 6️⃣ 2ª via Boleto Empresa
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://app.eclini.com.br/sindicato/instalar
+👉 https://prosindweb.com.br/sindicato/instalar
 
 Digite o número da opção desejada:`;
 };
