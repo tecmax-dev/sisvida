@@ -543,7 +543,7 @@ function AudienceSection() {
             { icon: Scale, title: "Associações de Classe", desc: "Entidades representativas que buscam modernização." },
           ].map((a, i) => (
             <div key={i} className="group text-center p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-transparent hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              style={{ '--hover-bg': 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' } as any}
+              style={{ '--hover-bg': 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' } as any}
             >
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-colors duration-300"
                 style={{ background: 'linear-gradient(135deg, hsl(200 100% 45% / 0.1), hsl(95 70% 50% / 0.1))' }}
