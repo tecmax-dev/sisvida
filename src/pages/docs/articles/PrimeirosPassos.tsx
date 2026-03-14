@@ -85,7 +85,7 @@ const articles: Record<string, {
 
         <TutorialImage 
           src={tutorialConfiguracoes} 
-          alt="Painel de configurações do Eclini" 
+          alt="Painel de configurações do ProsindWeb" 
           caption="Painel de configurações com todas as opções disponíveis"
         />
 
