@@ -270,7 +270,7 @@ const modules = [
     icon: Handshake,
     title: "Negociações e Acordos",
     description: "Facilite agendamentos e controle de negociações, parcelamentos de débitos e acordos de pagamento com empresas inadimplentes.",
-    color: "from-teal-500 to-cyan-600",
+    color: "from-[hsl(160,60%,40%)] to-[hsl(120,55%,35%)]",
     highlights: ["Parcelamento de débitos", "Acordos automatizados", "Controle de parcelas", "Histórico de negociações"],
   },
   {
