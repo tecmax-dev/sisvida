@@ -204,7 +204,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Documentos Disponíveis</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini permite emitir diversos tipos de documentos durante o atendimento:
+            O ProsindWeb permite emitir diversos tipos de documentos durante o atendimento:
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="p-3 bg-muted/50 rounded-lg border">
