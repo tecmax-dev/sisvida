@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
-import sindiflexLogo from "@/assets/logo_sindiflex.png"; // SindiFlex branding
+import prosindwebLogo from "@/assets/prosindweb-logo.png"; // ProsindWeb branding
 
 // ─── Animated Counter ───────────────────────────────────────────────
 function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
@@ -101,7 +101,7 @@ function HeroSection() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              SindiFlex
+              ProsindWeb
             </span>
           </h1>
 
@@ -131,7 +131,7 @@ function HeroSection() {
               asChild
             >
               <a 
-                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o SindiFlex."
+                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o ProsindWeb."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -167,17 +167,17 @@ function AboutSection() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              SindiFlex
+              ProsindWeb
             </span>?
             </h2>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">SindiFlex é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
+              O <strong className="text-gray-900">ProsindWeb é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
             </p>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">SindiFlex é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
+              O <strong className="text-gray-900">ProsindWeb é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
             </p>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              O SindiFlex é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
+              O ProsindWeb é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
             </p>
             <Button 
               size="lg"
@@ -445,7 +445,7 @@ function StatsSection() {
 // ─── Testimonials Section ───────────────────────────────────────────
 const testimonials = [
   {
-    quote: "O SindiFlex revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
+    quote: "O ProsindWeb revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
     name: "Maria Santos",
     role: "Diretora Administrativa",
     org: "SINDICOMÉRCIO",
@@ -579,7 +579,7 @@ function CTASection() {
             Pronto para modernizar a gestão da sua entidade?
           </h2>
           <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto">
-            Solicite uma demonstração gratuita e descubra como o SindiFlex pode transformar a sua entidade.
+            Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar a sua entidade.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -588,7 +588,7 @@ function CTASection() {
               className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-white text-gray-900 hover:bg-gray-100"
               asChild
             >
-              <a href="mailto:contato@prosindweb.com.br?subject=Demonstração SindiFlex" className="flex items-center gap-2">
+              <a href="mailto:contato@prosindweb.com.br?subject=Demonstração ProsindWeb" className="flex items-center gap-2">
                 Solicitar demonstração
                 <ArrowRight className="h-5 w-5" />
               </a>
@@ -599,7 +599,7 @@ function CTASection() {
               asChild
             >
               <a 
-                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma demonstração do SindiFlex."
+                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma demonstração do ProsindWeb."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -628,7 +628,7 @@ function SindicalHeader() {
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
-            <img src={sindiflexLogo} alt="SindiFlex - Sistema Web para Gestão Sindical" className="h-10 w-auto" />
+            <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-10 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
@@ -692,7 +692,7 @@ function SindicalFooter() {
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
             <div className="mb-4">
-              <img src={sindiflexLogo} alt="SindiFlex - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
+              <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
             </div>
             <p className="text-white/50 mb-6 max-w-md">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
@@ -731,7 +731,7 @@ function SindicalFooter() {
         </div>
 
         <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
-          <p>© {new Date().getFullYear()} SindiFlex. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} ProsindWeb - Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
@@ -740,17 +740,17 @@ function SindicalFooter() {
 
 // ─── Main Page ──────────────────────────────────────────────────────
 export default function SindicalLandingPage() {
-  // Set SindiFlex favicon only on this page
+  // Set ProsindWeb favicon only on this page
   useEffect(() => {
     const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     const originalHref = favicon?.href || '/favicon.ico';
     if (favicon) {
-      favicon.href = '/favicon-sindiflex.png';
+      favicon.href = '/favicon-prosindweb.png';
     }
-    document.title = 'SindiFlex - Sistema de Gestão Sindical';
+    document.title = 'ProsindWeb - Sistema de Gestão Sindical';
     return () => {
       if (favicon) favicon.href = originalHref;
-      document.title = 'Eclini - Sistema para Clínicas';
+      document.title = 'ProSindWeb - Sistema de Gestão Sindical';
     };
   }, []);
 
