@@ -114,7 +114,7 @@ function HeroSection() {
               size="lg" 
               className="h-14 px-8 text-base font-semibold rounded-full shadow-2xl transition-all hover:scale-105"
               style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                 color: 'white',
               }}
               asChild
