@@ -1050,7 +1050,7 @@ const TutorialSindicatoPage = () => {
               
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Guia completo e ilustrado para usuários e profissionais de saúde. 
-                Domine todas as funcionalidades do sistema Eclini.
+                Domine todas as funcionalidades do sistema ProsindWeb.
               </p>
               
               <Button 
