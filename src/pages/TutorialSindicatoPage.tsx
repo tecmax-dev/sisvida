@@ -638,7 +638,7 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Tecmax Tecnologia", pageWidth / 2, pageHeight - 36, { align: "center" });
+      doc.text("ProsindWeb", pageWidth / 2, pageHeight - 36, { align: "center" });
       
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
