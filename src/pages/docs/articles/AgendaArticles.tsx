@@ -26,9 +26,9 @@ const articles: Record<string, {
     content: (
       <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-4">A Agenda do Eclini</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">A Agenda do ProsindWeb</h2>
           <p className="text-muted-foreground">
-            A agenda é o coração do Eclini. Aqui você gerencia todos os agendamentos da sua clínica de forma visual e intuitiva.
+            A agenda é o coração do ProsindWeb. Aqui você gerencia todos os agendamentos da sua clínica de forma visual e intuitiva.
           </p>
         </section>
 
