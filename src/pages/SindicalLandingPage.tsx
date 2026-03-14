@@ -277,7 +277,7 @@ const modules = [
     icon: FileBarChart,
     title: "Relatórios Gerenciais",
     description: "Relatórios profissionais para gestão interna, assembleias, auditorias e órgãos fiscalizadores. Exportação em PDF e Excel.",
-    color: "from-indigo-500 to-blue-600",
+    color: "from-[hsl(215,50%,35%)] to-[hsl(215,60%,25%)]",
     highlights: ["Relatórios de assembleias", "Exportação PDF/Excel", "Dashboards visuais", "Indicadores de desempenho"],
   },
   {
