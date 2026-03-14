@@ -407,7 +407,7 @@ function StatsSection() {
           </div>
 
           {/* Right: coverage map stats */}
-          <div className="bg-gray-900 rounded-3xl p-10 text-white flex flex-col justify-center">
+          <div className="bg-[hsl(215,60%,12%)] rounded-3xl p-10 text-white flex flex-col justify-center">
             <h3 className="text-2xl font-bold mb-2">Nossa Abrangência</h3>
             <p className="text-white/60 mb-10">
               Presentes em todo o território nacional, atendendo diversas Confederações, Federações, Sindicatos e Associações.
