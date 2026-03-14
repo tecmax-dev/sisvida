@@ -180,7 +180,7 @@ serve(async (req) => {
   <title>SECMI - App do Associado</title>
   <meta property="og:title" content="SECMI - App do Associado">
   <meta property="og:description" content="Aplicativo oficial do Sindicato">
-  <script>window.location.replace('https://app.eclini.com.br/app/instalar');</script>
+  <script>window.location.replace('https://prosindweb.com.br/app/instalar');</script>
 </head>
 <body>Redirecionando...</body>
 </html>`, {

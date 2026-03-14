@@ -209,8 +209,8 @@ serve(async (req) => {
       );
     }
 
-const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://app.eclini.com.br';
-    const logoUrl = settings?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://app.eclini.com.br/logo.png';
+const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://prosindweb.com.br';
+    const logoUrl = settings?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://prosindweb.com.br/logo.png';
 
     // Format appointment date (timezone-safe)
     const dateOnly = (appointment.appointment_date || "").slice(0, 10);

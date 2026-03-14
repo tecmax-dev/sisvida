@@ -260,7 +260,7 @@ serve(async (req) => {
     let skippedCount = 0;
     let limitReachedCount = 0;
 
-    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://app.eclini.com.br';
+    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://prosindweb.com.br';
     const monthYear = new Date().toISOString().slice(0, 7);
 
     for (const clinic of (clinics || []) as ClinicWithReminder[]) {

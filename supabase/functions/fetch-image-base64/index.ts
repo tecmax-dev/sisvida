@@ -86,8 +86,7 @@ serve(async (req) => {
       "i.imgur.com",
       "lh3.googleusercontent.com",
       // Custom domains that may host logos
-      "app.eclini.com.br",
-      "eclini.com.br",
+      "prosindweb.com.br",
     ];
 
     // Also allow any *.supabase.co host
