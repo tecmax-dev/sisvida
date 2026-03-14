@@ -731,7 +731,7 @@ function SindicalFooter() {
         </div>
 
         <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
-          <p>© {new Date().getFullYear()} SindiFlex. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} ProsindWeb - Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
