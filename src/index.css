@@ -189,7 +189,7 @@
     @apply bg-card/95 backdrop-blur-lg border border-border/60;
   }
   
-  /* ProsindWeb gradient text - blue to green */
+  /* ProsindWeb gradient text - azul royal to laranja */
   .gradient-text {
     background: var(--gradient-text);
     -webkit-background-clip: text;
@@ -198,7 +198,7 @@
   }
   
   .gradient-text-brand {
-    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
