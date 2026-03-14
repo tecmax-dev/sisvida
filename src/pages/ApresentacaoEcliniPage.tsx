@@ -66,7 +66,7 @@ const ApresentacaoEcliniPage = () => {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text('(71) 3144-9898', pageWidth - margin, 10, { align: 'right' });
+        doc.text('(11) 5194-3839', pageWidth - margin, 10, { align: 'right' });
         
         doc.setFontSize(8);
         doc.text(`Página ${pageNum} de 4`, pageWidth - margin, 17, { align: 'right' });
