@@ -1715,7 +1715,7 @@ async function handleBoletoFlow(
             .lt('due_date', today)
             .in('status', ['pending', 'overdue'])
             .order('due_date', { ascending: false })
-            .limit(10);
+            .limit(20);
 
           if (!contributions || contributions.length === 0) {
             return { 
@@ -1723,6 +1723,35 @@ async function handleBoletoFlow(
             };
           }
 
+          // If more than 3 contributions, group by year and show year selection first
+          if (contributions.length > 3) {
+            const years = [...new Set(contributions.map((c: any) => c.competence_year))].sort((a, b) => b - a);
+            
+            await updateSession(supabase, session.id, {
+              state: 'SELECT_CONTRIBUTION_YEAR' as BoletoState,
+              available_contributions: contributions,
+              flow_context: { 
+                ...session.flow_context, 
+                available_years: years,
+                all_contributions: contributions
+              }
+            });
+
+            let msg = `📋 *Contribuições Pendentes*\n\n`;
+            msg += `Encontramos *${contributions.length}* contribuições vencidas distribuídas em *${years.length}* ano(s).\n\n`;
+            msg += `Selecione o *ano* para ver as contribuições:\n\n`;
+            years.forEach((y, i) => {
+              const count = contributions.filter((c: any) => c.competence_year === y).length;
+              msg += `${i + 1}. *${y}* (${count} contribuição${count > 1 ? 'ões' : ''})\n`;
+            });
+
+            return { 
+              response: msg, 
+              newState: 'SELECT_CONTRIBUTION_YEAR' as BoletoState
+            };
+          }
+
+          // 3 or fewer - show directly
           await updateSession(supabase, session.id, {
             state: 'SELECT_CONTRIBUTION',
             available_contributions: contributions
