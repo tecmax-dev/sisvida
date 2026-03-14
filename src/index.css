@@ -222,7 +222,7 @@
     @apply opacity-100;
   }
   
-  /* Eclini-style gradient button */
+  /* ProsindWeb-style gradient button */
   .btn-eclini {
     @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
     background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
