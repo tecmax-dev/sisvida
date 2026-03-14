@@ -263,7 +263,7 @@ const modules = [
     icon: Users,
     title: "Gestão de Sócios e Dependentes",
     description: "Administre o cadastro de associados com dependentes, carteirinhas digitais, controle de benefícios e comunicação direta.",
-    color: "from-rose-500 to-pink-600",
+    color: "from-[hsl(30,80%,50%)] to-[hsl(15,75%,45%)]",
     highlights: ["Carteirinha digital", "Dependentes e benefícios", "Portal do sócio", "Comunicação por WhatsApp"],
   },
   {
