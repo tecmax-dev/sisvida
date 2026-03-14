@@ -16,7 +16,7 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-const DEFAULT_SYSTEM_LOGO = "https://app.eclini.com.br/eclini-whatsapp-header.jpg";
+const DEFAULT_SYSTEM_LOGO = "https://prosindweb.com.br/eclini-whatsapp-header.jpg";
 
 interface ActionRequest {
   appointmentId: string;

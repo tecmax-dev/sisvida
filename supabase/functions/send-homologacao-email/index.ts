@@ -11,7 +11,7 @@ const SMTP_HOST = Deno.env.get('SMTP_HOST');
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
 const SMTP_USER = Deno.env.get('SMTP_USER');
 const SMTP_PASSWORD = Deno.env.get('SMTP_PASSWORD');
-const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@eclini.com.br';
+const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@prosindweb.com.br';
 
 async function sendEmailViaSMTP(
   to: string,
