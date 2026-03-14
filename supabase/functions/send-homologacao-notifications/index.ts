@@ -82,39 +82,44 @@ function formatConfirmationMessage(
     protocolLink: string;
     clinicName: string;
     createdAt: string;
+    serviceTypeName: string;
   }
 ): string {
-  const { protocolNumber, companyName, employeeName, appointmentDate, startTime, professionalName, address, protocolLink, clinicName, createdAt } = data;
+  const { protocolNumber, companyName, employeeName, appointmentDate, startTime, professionalName, address, protocolLink, clinicName, createdAt, serviceTypeName } = data;
+
+  const isJuridico = serviceTypeName.toLowerCase().includes('jurídic') || serviceTypeName.toLowerCase().includes('juridic') || serviceTypeName.toLowerCase().includes('assessoria');
+  const serviceIcon = isJuridico ? '⚖️' : '📋';
+  const professionalIcon = isJuridico ? '👨‍⚖️' : '👨‍💼';
 
   if (type === 'company') {
     return [
-      `✅ *Agendamento Confirmado - Homologação*`,
+      `✅ *Agendamento Confirmado - ${serviceTypeName}*`,
       ``,
-      `📋 *Protocolo:* ${protocolNumber}`,
+      `${serviceIcon} *Protocolo:* ${protocolNumber}`,
       ``,
       `🏢 *Empresa:* ${companyName}`,
       `👤 *Funcionário:* ${employeeName}`,
       ``,
       `📅 *Data:* ${appointmentDate}`,
       `🕐 *Horário:* ${startTime}`,
-      `👨‍⚖️ *Profissional:* ${professionalName}`,
+      `${professionalIcon} *Profissional:* ${professionalName}`,
       `📍 *Local:* ${address}`,
       ``,
       `📄 Acesse o protocolo: ${protocolLink}`,
       ``,
-      `_HomologaNet - ${clinicName}_`,
+      `_${clinicName}_`,
     ].join('\n');
   }
 
   if (type === 'manager') {
     return [
-      `🔔 *Novo Agendamento de Homologação*`,
+      `🔔 *Novo Agendamento - ${serviceTypeName}*`,
       ``,
-      `📋 *Protocolo:* ${protocolNumber}`,
+      `${serviceIcon} *Protocolo:* ${protocolNumber}`,
       `🏢 *Empresa:* ${companyName}`,
       `👤 *Funcionário:* ${employeeName}`,
       `📅 *Data:* ${appointmentDate} às ${startTime}`,
-      `👨‍⚖️ *Profissional:* ${professionalName}`,
+      `${professionalIcon} *Profissional:* ${professionalName}`,
       ``,
       `_Agendado em ${createdAt}_`,
     ].join('\n');
@@ -122,9 +127,9 @@ function formatConfirmationMessage(
 
   // professional
   return [
-    `📅 *Nova Homologação Agendada*`,
+    `📅 *Novo Agendamento - ${serviceTypeName}*`,
     ``,
-    `📋 *Protocolo:* ${protocolNumber}`,
+    `${serviceIcon} *Protocolo:* ${protocolNumber}`,
     `🏢 *Empresa:* ${companyName}`,
     `👤 *Funcionário:* ${employeeName}`,
     `📅 *Data:* ${appointmentDate} às ${startTime}`,
