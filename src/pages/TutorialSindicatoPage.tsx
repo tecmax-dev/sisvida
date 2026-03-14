@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import ecliniLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 // Import illustrations
 import ilustracaoEmpresas from "@/assets/illustrations/tutorial-empresas.png";
