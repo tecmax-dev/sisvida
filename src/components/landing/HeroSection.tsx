@@ -9,7 +9,7 @@ export function HeroSection() {
 
   const title = settings?.title || "O software que resolve a gestão da clínica";
   const subtitle = settings?.subtitle || "";
-  const description = settings?.description || "O Eclini é um sistema para clínicas com prontuário eletrônico, agenda médica online, controle financeiro e mais de 200 outros recursos.";
+  const description = settings?.description || "O ProsindWeb é um sistema para clínicas com prontuário eletrônico, agenda médica online, controle financeiro e mais de 200 outros recursos.";
   const primaryButtonText = settings?.primary_button_text || "Solicite uma demonstração";
   const primaryButtonLink = settings?.primary_button_link || "/cadastro";
   const heroImage = settings?.hero_image_url || heroMockupScreens;
