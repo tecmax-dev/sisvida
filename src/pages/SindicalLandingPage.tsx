@@ -579,7 +579,7 @@ function CTASection() {
             Pronto para modernizar a gestão da sua entidade?
           </h2>
           <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto">
-            Solicite uma demonstração gratuita e descubra como o SindiFlex pode transformar a sua entidade.
+            Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar a sua entidade.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
