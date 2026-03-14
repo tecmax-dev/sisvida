@@ -126,7 +126,7 @@ const articles: Record<string, {
   },
   "criando-agendamentos": {
     title: "Criando Agendamentos",
-    description: "Aprenda todas as formas de criar e gerenciar agendamentos no Eclini",
+    description: "Aprenda todas as formas de criar e gerenciar agendamentos no ProsindWeb",
     readTime: "5 min",
     prevArticle: { slug: "visao-geral-agenda", title: "Visão Geral da Agenda" },
     nextArticle: { slug: "confirmacao-whatsapp", title: "Confirmação via WhatsApp" },
