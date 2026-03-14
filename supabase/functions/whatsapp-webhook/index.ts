@@ -7400,12 +7400,12 @@ serve(async (req) => {
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
