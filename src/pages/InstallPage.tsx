@@ -186,7 +186,7 @@ export default function InstallPage() {
                 <div>
                   <p className="font-medium text-foreground">Confirme a instalação</p>
                   <p className="text-sm text-muted-foreground">
-                    O ícone do Eclini aparecerá na sua tela inicial
+                    O ícone do ProsindWeb aparecerá na sua tela inicial
                   </p>
                 </div>
               </div>
