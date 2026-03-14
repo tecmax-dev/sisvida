@@ -801,7 +801,7 @@ Como posso ajudar? Escolha uma opção:
 6️⃣ Segunda via de boleto (empresa)
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 Digite o número da opção desejada.`;
 
