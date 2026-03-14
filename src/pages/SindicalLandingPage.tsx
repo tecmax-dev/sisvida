@@ -548,7 +548,7 @@ function AudienceSection() {
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-colors duration-300"
                 style={{ background: 'linear-gradient(135deg, hsl(215 85% 50% / 0.1), hsl(120 65% 45% / 0.1))' }}
               >
-                <a.icon className="h-8 w-8" style={{ color: 'hsl(200 100% 45%)' }} />
+                <a.icon className="h-8 w-8" style={{ color: 'hsl(215 85% 50%)' }} />
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{a.title}</h3>
               <p className="text-sm text-gray-500">{a.desc}</p>
