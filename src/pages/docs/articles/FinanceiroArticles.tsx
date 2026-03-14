@@ -98,7 +98,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Tela de Transações Financeiras Eclini" 
+              alt="Tela de Transações Financeiras ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
