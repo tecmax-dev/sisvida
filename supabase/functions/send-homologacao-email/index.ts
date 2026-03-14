@@ -351,7 +351,7 @@ serve(async (req) => {
       .eq('clinic_id', appointment.clinic_id)
       .maybeSingle();
 
-    const logoUrl = settings?.logo_url || clinic?.logo_url || 'https://app.eclini.com.br/logo.png';
+    const logoUrl = settings?.logo_url || clinic?.logo_url || 'https://prosindweb.com.br/logo.png';
     const clinicName = settings?.display_name || clinic?.name || 'HomologaNet';
 
     // Format date
