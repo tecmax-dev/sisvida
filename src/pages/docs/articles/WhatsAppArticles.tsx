@@ -216,7 +216,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Ativando o Recurso</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini pode enviar automaticamente mensagens de aniversário para seus pacientes:
+            O ProsindWeb pode enviar automaticamente mensagens de aniversário para seus pacientes:
           </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground ml-4">
             <li>Acesse <strong>Configurações → Geral</strong></li>
