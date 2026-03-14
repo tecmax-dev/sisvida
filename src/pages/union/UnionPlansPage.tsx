@@ -123,7 +123,7 @@ export default function UnionPlansPage() {
           </p>
           <Button className="mt-6" asChild>
             <a 
-              href="https://wa.me/5571982786864?text=Olá! Gostaria de saber mais sobre os planos do Sistema Sindical."
+              href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre os planos do Sistema Sindical."
               target="_blank"
               rel="noopener noreferrer"
             >
