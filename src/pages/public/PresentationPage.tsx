@@ -90,8 +90,8 @@ export default function PresentationPage() {
             
             <div className="border-t border-white/30 pt-6 mt-6">
               <p className="text-base print:text-sm text-blue-200 mb-2">Desenvolvido por:</p>
-              <p className="text-2xl print:text-xl font-bold">TECMAX TECNOLOGIA</p>
-              <p className="text-blue-200 mt-3 print:text-sm">Ilhéus - Bahia • Janeiro de 2026</p>
+              <p className="text-2xl print:text-xl font-bold">PROSINDWEB</p>
+              <p className="text-blue-200 mt-3 print:text-sm">Brasil • 2026</p>
             </div>
           </div>
         </div>
