@@ -628,7 +628,7 @@ function SindicalHeader() {
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
-            <img src={sindiflexLogo} alt="SindiFlex - Sistema Web para Gestão Sindical" className="h-10 w-auto" />
+            <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-10 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
