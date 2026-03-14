@@ -106,9 +106,9 @@ export default function PresentationPage() {
 
         <div className="grid grid-cols-1 gap-4">
           <div className="no-break bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 print:p-3">
-            <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a Tecmax Tecnologia</h3>
+            <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a ProsindWeb</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              A <strong>Tecmax Tecnologia</strong> é uma empresa especializada no desenvolvimento de soluções 
+              A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
               digitais personalizadas, com foco em sistemas de gestão para organizações que buscam 
               modernização, eficiência e segurança em seus processos administrativos.
             </p>
