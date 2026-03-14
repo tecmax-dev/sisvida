@@ -60,7 +60,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src={atendimentoFluxo} 
-            alt="Dashboard Eclini - Fluxo de Atendimento" 
+            alt="Dashboard ProsindWeb - Fluxo de Atendimento" 
             className="rounded-lg w-full"
           />
         </div>
