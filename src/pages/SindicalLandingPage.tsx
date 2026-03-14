@@ -101,7 +101,7 @@ function HeroSection() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              SindiFlex
+              ProsindWeb
             </span>
           </h1>
 
