@@ -229,6 +229,8 @@ const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://app.eclini.com.br';
     const createdAtFormatted = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
     const professional = appointment.professional as any;
+    const serviceType = appointment.service_type as any;
+    const serviceTypeName = serviceType?.name || 'Homologação';
     
     // Fixed homologation address - always use the default location
     const defaultAddress = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3231-1784";
@@ -250,6 +252,7 @@ const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://app.eclini.com.br';
       protocolLink,
       clinicName: settings?.display_name || clinic?.name || 'HomologaNet',
       createdAt: createdAtFormatted,
+      serviceTypeName,
     };
 
     const results = {
