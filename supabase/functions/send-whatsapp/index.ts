@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 // Logo padrão do sistema ProSindWeb para cabeçalho de mensagens WhatsApp
-const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
+const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/prosindweb-whatsapp-header.jpg';
 
 interface WhatsAppRequest {
   phone: string;
