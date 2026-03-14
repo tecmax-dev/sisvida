@@ -254,10 +254,7 @@ export default function LgpdPolicy() {
                       </p>
                       <div className="space-y-2">
                         <p className="text-foreground">
-                          <strong>Empresa:</strong> Tecmax Tecnologia
-                        </p>
-                        <p className="text-foreground">
-                          <strong>CNPJ:</strong> 03.025.212/0001-11
+                          <strong>Empresa:</strong> ProsindWeb
                         </p>
                         <p className="text-foreground">
                           <strong>E-mail:</strong>{" "}

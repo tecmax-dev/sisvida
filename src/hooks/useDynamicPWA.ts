@@ -97,7 +97,7 @@ export function useDynamicPWA() {
     updateMetaProperty("twitter:title", DEFAULT_BRANDING.name);
     updateMetaProperty("twitter:description", DEFAULT_BRANDING.description);
 
-    // Restore default manifest (Eclini)
+    // Restore default manifest (ProsindWeb)
     restoreDefaultManifest();
 
     setClinic(null);

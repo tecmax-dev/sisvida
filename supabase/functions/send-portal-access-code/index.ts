@@ -190,7 +190,7 @@ ${logoSection}
 </div>
 <div style="padding: 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
 <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Em caso de duvidas, entre em contato conosco.</p>
-<p style="margin: 0; color: #9ca3af; font-size: 12px;">${clinicName} - Sistema eCLINI</p>
+<p style="margin: 0; color: #9ca3af; font-size: 12px;">${clinicName} - ProsindWeb</p>
 </div>
 </div>
 </body>
