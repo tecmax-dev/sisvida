@@ -242,7 +242,7 @@ const modules = [
     icon: PiggyBank,
     title: "Contas a Pagar e Receber",
     description: "Controle eficaz de convênios, guias e pagamentos, proporcionando gestão financeira mais precisa e transparente para toda a entidade.",
-    color: "from-blue-500 to-cyan-600",
+    color: "from-[hsl(215,85%,50%)] to-[hsl(215,80%,40%)]",
     highlights: ["Controle de vencimentos", "Categorização automática", "Fluxo de aprovações", "Alertas de pagamento"],
   },
   {
