@@ -376,7 +376,7 @@ function StatsSection() {
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-12">
               Resultados que{" "}
               <span style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                 background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
