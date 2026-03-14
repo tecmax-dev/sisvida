@@ -626,7 +626,7 @@ function SindicalHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[hsl(215,60%,12%)]/95 backdrop-blur-md border-b border-white/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-sm">
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
@@ -641,14 +641,14 @@ function SindicalHeader() {
               { href: "#publico", label: "Para quem" },
               { href: "#contato", label: "Contato" },
             ].map((l) => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-white/70 hover:text-white transition-colors">
+              <a key={l.href} href={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
                 {l.label}
               </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10">
+            <Button variant="ghost" size="sm" asChild className="hidden sm:flex text-gray-500 hover:text-gray-900">
               <Link to="/entidade-sindical">Área da Entidade</Link>
             </Button>
             <Button size="sm" className="rounded-full font-semibold" style={{
@@ -657,7 +657,7 @@ function SindicalHeader() {
             }} asChild>
               <a href="#contato">Demonstração</a>
             </Button>
-            <Button variant="ghost" size="icon" className="md:hidden text-white" onClick={() => setMobileOpen(!mobileOpen)}>
+            <Button variant="ghost" size="icon" className="md:hidden text-gray-700" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
@@ -665,17 +665,17 @@ function SindicalHeader() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden py-4 border-t border-white/10">
+          <div className="md:hidden py-4 border-t border-gray-200">
             <nav className="flex flex-col gap-3">
               {["Sobre", "Módulos", "Depoimentos", "Para quem", "Contato"].map((l) => (
                 <a key={l} href={`#${l.toLowerCase().replace(/\s/g, '')}`} 
-                  className="text-white/70 hover:text-white px-3 py-2"
+                  className="text-gray-500 hover:text-gray-900 px-3 py-2"
                   onClick={() => setMobileOpen(false)}
                 >
                   {l}
                 </a>
               ))}
-              <Link to="/entidade-sindical" className="text-white/70 hover:text-white px-3 py-2">
+              <Link to="/entidade-sindical" className="text-gray-500 hover:text-gray-900 px-3 py-2">
                 Área da Entidade
               </Link>
             </nav>
