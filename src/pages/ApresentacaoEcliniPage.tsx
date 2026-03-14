@@ -78,7 +78,7 @@ const ApresentacaoEcliniPage = () => {
         
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(8);
-        doc.text('www.tecmaxtecnologia.com.br | contato@tecmaxtecnologia.com.br | (71) 3144-9898', pageWidth / 2, pageHeight - 5, { align: 'center' });
+        doc.text('www.prosindweb.com.br | contato@prosindweb.com.br | (11) 5194-3839', pageWidth / 2, pageHeight - 5, { align: 'center' });
       };
 
       const drawCard = (x: number, y: number, w: number, h: number, title: string, items: string[], iconColor: [number, number, number]) => {
