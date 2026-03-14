@@ -6877,7 +6877,7 @@ serve(async (req) => {
           // "Outros Assuntos" sub-option: Homologações
           if (followUpId === 'whazing_outros_homologacao') {
             // Send informational message with scheduling link
-            const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://app.eclini.com.br/agendamento/profissional/ione-atos-1`;
+            const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://prosindweb.com.br/agendamento/profissional/ione-atos-1`;
             
             try {
               await fetch(`${configData.api_url}/message/sendText/${configData.instance_name}`, {
