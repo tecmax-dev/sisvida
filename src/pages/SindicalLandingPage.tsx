@@ -256,7 +256,7 @@ const modules = [
     icon: Building2,
     title: "Gestão de Empresas",
     description: "Cadastro completo de empresas contribuintes com dados fiscais, documentos, histórico de contribuições e relacionamento com escritórios contábeis.",
-    color: "from-amber-500 to-orange-600",
+    color: "from-[hsl(30,90%,55%)] to-[hsl(30,85%,45%)]",
     highlights: ["Cadastro com CNPJ", "Portal do contador", "Portal da empresa", "Histórico completo"],
   },
   {
