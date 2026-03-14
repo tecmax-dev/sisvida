@@ -156,6 +156,7 @@ function getStateDescription(state: BoletoState, context: any): string {
     'SELECT_TAXA_TYPE_BATCH': 'Aguardando escolha do tipo de taxa para processamento em lote',
     'WAITING_COMPETENCE': 'Aguardando competência (mês/ano)',
     'WAITING_VALUE': 'Aguardando valor do boleto',
+    'SELECT_CONTRIBUTION_YEAR': 'Aguardando seleção do ano das contribuições vencidas',
     'SELECT_CONTRIBUTION': 'Aguardando seleção de contribuição vencida',
     'WAITING_NEW_DUE_DATE': 'Aguardando nova data de vencimento',
     'CONFIRM_BOLETO': 'Aguardando confirmação final para gerar boleto',
@@ -551,6 +552,7 @@ type BoletoState =
   | 'SELECT_TAXA_TYPE_BATCH'    // Escolher entre taxa mercados/varejista (fluxo em lote)
   | 'WAITING_COMPETENCE'        // Competência (mês/ano)
   | 'WAITING_VALUE'             // Valor a recolher
+  | 'SELECT_CONTRIBUTION_YEAR'  // Selecionar ano quando há muitas contribuições vencidas
   | 'SELECT_CONTRIBUTION'       // Selecionar contribuição vencida existente
   | 'WAITING_NEW_DUE_DATE'      // Nova data de vencimento
   | 'CONFIRM_BOLETO'            // Confirmação final
@@ -1713,7 +1715,7 @@ async function handleBoletoFlow(
             .lt('due_date', today)
             .in('status', ['pending', 'overdue'])
             .order('due_date', { ascending: false })
-            .limit(10);
+            .limit(20);
 
           if (!contributions || contributions.length === 0) {
             return { 
@@ -1721,6 +1723,35 @@ async function handleBoletoFlow(
             };
           }
 
+          // If more than 3 contributions, group by year and show year selection first
+          if (contributions.length > 3) {
+            const years = [...new Set(contributions.map((c: any) => c.competence_year))].sort((a, b) => b - a);
+            
+            await updateSession(supabase, session.id, {
+              state: 'SELECT_CONTRIBUTION_YEAR' as BoletoState,
+              available_contributions: contributions,
+              flow_context: { 
+                ...session.flow_context, 
+                available_years: years,
+                all_contributions: contributions
+              }
+            });
+
+            let msg = `📋 *Contribuições Pendentes*\n\n`;
+            msg += `Encontramos *${contributions.length}* contribuições vencidas distribuídas em *${years.length}* ano(s).\n\n`;
+            msg += `Selecione o *ano* para ver as contribuições:\n\n`;
+            years.forEach((y, i) => {
+              const count = contributions.filter((c: any) => c.competence_year === y).length;
+              msg += `${i + 1}. *${y}* (${count} contribuição${count > 1 ? 'ões' : ''})\n`;
+            });
+
+            return { 
+              response: msg, 
+              newState: 'SELECT_CONTRIBUTION_YEAR' as BoletoState
+            };
+          }
+
+          // 3 or fewer - show directly
           await updateSession(supabase, session.id, {
             state: 'SELECT_CONTRIBUTION',
             available_contributions: contributions
@@ -2089,8 +2120,102 @@ async function handleBoletoFlow(
       };
     }
 
+    case 'SELECT_CONTRIBUTION_YEAR': {
+      const years = session.flow_context?.available_years || [];
+      const allContributions = session.flow_context?.all_contributions || session.available_contributions || [];
+      const optionNum = intent.extracted_number || parseInt(text);
+      
+      if (isNaN(optionNum) || optionNum < 1 || optionNum > years.length) {
+        return { 
+          response: `❌ Opção inválida.\n\nPor favor, escolha um número de 1 a ${years.length}.` 
+        };
+      }
+
+      const selectedYear = years[optionNum - 1];
+      const yearContribs = allContributions.filter((c: any) => c.competence_year === selectedYear);
+      
+      // If this year has more than 3, paginate
+      const page = 0;
+      const pageSize = 3;
+      const pageContribs = yearContribs.slice(page * pageSize, (page + 1) * pageSize);
+      const hasMore = yearContribs.length > pageSize;
+      
+      await updateSession(supabase, session.id, {
+        state: 'SELECT_CONTRIBUTION',
+        available_contributions: pageContribs,
+        flow_context: { 
+          ...session.flow_context, 
+          selected_year: selectedYear,
+          year_contributions: yearContribs,
+          current_page: page,
+          page_size: pageSize
+        }
+      });
+
+      let msg = `📋 *Contribuições Vencidas - ${selectedYear}*\n\n`;
+      msg += `${yearContribs.length} contribuição(ões) encontrada(s)`;
+      if (hasMore) {
+        msg += ` (mostrando ${pageContribs.length} de ${yearContribs.length})`;
+      }
+      msg += `:\n\n`;
+      msg += MESSAGES.selectContribution(pageContribs);
+      
+      return { 
+        response: msg, 
+        newState: 'SELECT_CONTRIBUTION' 
+      };
+    }
+
     case 'SELECT_CONTRIBUTION': {
       const contributions = session.available_contributions || [];
+      
+      // Handle "next page" command
+      if (text === 'mais' || text === 'proxima' || text === 'próxima' || messageText.trim() === 'boleto_contrib_mais') {
+        const yearContribs = session.flow_context?.year_contributions || [];
+        const currentPage = (session.flow_context?.current_page || 0) + 1;
+        const pageSize = session.flow_context?.page_size || 3;
+        const pageContribs = yearContribs.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+        
+        if (pageContribs.length === 0) {
+          return { response: `ℹ️ Não há mais contribuições para exibir.\n\nEscolha uma das opções acima ou digite *MENU* para recomeçar.` };
+        }
+        
+        const hasMore = yearContribs.length > (currentPage + 1) * pageSize;
+        
+        await updateSession(supabase, session.id, {
+          available_contributions: pageContribs,
+          flow_context: { 
+            ...session.flow_context, 
+            current_page: currentPage 
+          }
+        });
+
+        let msg = `📋 *Mais contribuições - ${session.flow_context?.selected_year || ''}*\n\n`;
+        msg += `Página ${currentPage + 1} (${pageContribs.length} de ${yearContribs.length}):\n\n`;
+        msg += MESSAGES.selectContribution(pageContribs);
+        
+        return { response: msg, newState: 'SELECT_CONTRIBUTION' };
+      }
+      
+      // Handle "back to years" command
+      if (text === 'voltar' && session.flow_context?.available_years) {
+        const years = session.flow_context.available_years;
+        const allContributions = session.flow_context.all_contributions || [];
+        
+        await updateSession(supabase, session.id, {
+          state: 'SELECT_CONTRIBUTION_YEAR' as BoletoState,
+          available_contributions: allContributions,
+        });
+
+        let msg = `📋 *Contribuições Pendentes*\n\nSelecione o *ano*:\n\n`;
+        years.forEach((y: number, i: number) => {
+          const count = allContributions.filter((c: any) => c.competence_year === y).length;
+          msg += `${i + 1}. *${y}* (${count} contribuição${count > 1 ? 'ões' : ''})\n`;
+        });
+
+        return { response: msg, newState: 'SELECT_CONTRIBUTION_YEAR' as BoletoState };
+      }
+      
       const optionNum = parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > contributions.length) {
@@ -2684,16 +2809,65 @@ serve(async (req) => {
           { id: 'boleto_confirmar', title: '✅ Confirmar' },
           { id: 'boleto_cancelar', title: '❌ Cancelar' },
         ]);
+      } else if (nextState === 'SELECT_CONTRIBUTION_YEAR') {
+        // Send year selection buttons (max 3 years)
+        const years = session.flow_context?.available_years || 
+          result.response.match(/\*(\d{4})\*/g)?.map((y: string) => parseInt(y.replace(/\*/g, ''))) || [];
+        
+        // Re-read session to get updated flow_context
+        const { data: updatedSession } = await supabase
+          .from('whatsapp_boleto_sessions')
+          .select('flow_context')
+          .eq('id', session.id)
+          .single();
+        const updatedYears = updatedSession?.flow_context?.available_years || years;
+        
+        if (updatedYears.length > 0) {
+          const btns = updatedYears.slice(0, 3).map((y: number, i: number) => ({
+            id: `boleto_year_${i + 1}`,
+            title: `${y}`,
+          }));
+          await sendBoletoButtons(phone, 'Selecione o ano:', btns);
+        }
       } else if (nextState === 'SELECT_CONTRIBUTION') {
-        // Send buttons for overdue contributions (max 3)
-        const contribs = session.available_contributions || [];
+        // Re-read session to get the latest available_contributions after state update
+        const { data: updatedSession2 } = await supabase
+          .from('whatsapp_boleto_sessions')
+          .select('available_contributions, flow_context')
+          .eq('id', session.id)
+          .single();
+        
+        const contribs = updatedSession2?.available_contributions || session.available_contributions || [];
+        const yearContribs = updatedSession2?.flow_context?.year_contributions || [];
+        const currentPage = updatedSession2?.flow_context?.current_page || 0;
+        const pageSize = updatedSession2?.flow_context?.page_size || 3;
+        const hasMore = yearContribs.length > (currentPage + 1) * pageSize;
+        const hasYearNav = updatedSession2?.flow_context?.available_years?.length > 0;
+        
         if (contribs.length > 0) {
           const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-          const btns = contribs.slice(0, 3).map((c: any, i: number) => ({
-            id: `boleto_contrib_${i + 1}`,
-            title: `${monthNames[c.competence_month - 1]}/${c.competence_year}`,
-          }));
-          await sendBoletoButtons(phone, 'Selecione a contribuição:', btns);
+          const btns: Array<{ id: string; title: string }> = [];
+          
+          // Add contribution buttons (max 3, or fewer to leave room for navigation)
+          const maxContribBtns = hasMore || hasYearNav ? 2 : 3;
+          contribs.slice(0, maxContribBtns).forEach((c: any, i: number) => {
+            btns.push({
+              id: `boleto_contrib_${i + 1}`,
+              title: `${monthNames[c.competence_month - 1]}/${c.competence_year}`,
+            });
+          });
+          
+          // Add "More" button if there are more pages
+          if (hasMore) {
+            btns.push({ id: 'boleto_contrib_mais', title: 'Mais opcoes ➡️' });
+          }
+          
+          // Add "Back to years" button if navigating from year menu
+          if (hasYearNav && !hasMore) {
+            btns.push({ id: 'boleto_contrib_voltar', title: '⬅️ Voltar (anos)' });
+          }
+          
+          await sendBoletoButtons(phone, 'Selecione a contribuicao:', btns);
         }
       }
     }
