@@ -220,7 +220,7 @@ function AboutSection() {
               style={{ background: 'hsl(200 100% 45%)' }}
             />
             <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full blur-2xl opacity-30"
-              style={{ background: 'hsl(95 70% 50%)' }}
+              style={{ background: 'hsl(120 65% 45%)' }}
             />
           </div>
         </div>
