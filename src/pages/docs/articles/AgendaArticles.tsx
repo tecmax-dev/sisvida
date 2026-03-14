@@ -34,7 +34,7 @@ const articles: Record<string, {
 
         <TutorialImage 
           src={tutorialAgenda} 
-          alt="Visão geral da agenda do Eclini" 
+          alt="Visão geral da agenda do ProsindWeb" 
           caption="Agenda com visualização de agendamentos coloridos por status"
         />
 
