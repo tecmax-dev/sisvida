@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     question: "Preciso instalar algum software?",
-    answer: "Não! O Eclini funciona 100% na nuvem, acessível de qualquer navegador. Basta fazer login e começar a usar, sem instalações ou atualizações manuais."
+    answer: "Não! O ProsindWeb funciona 100% na nuvem, acessível de qualquer navegador. Basta fazer login e começar a usar, sem instalações ou atualizações manuais."
   },
   {
     question: "Meus dados estão seguros?",
@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     question: "O sistema funciona no celular?",
-    answer: "Sim! O Eclini é totalmente responsivo e funciona perfeitamente em smartphones e tablets. Você pode gerenciar sua clínica de qualquer lugar."
+    answer: "Sim! O ProsindWeb é totalmente responsivo e funciona perfeitamente em smartphones e tablets. Você pode gerenciar sua clínica de qualquer lugar."
   }
 ];
 
@@ -46,7 +46,7 @@ export function FAQSection() {
             Perguntas Frequentes
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Encontre respostas para as dúvidas mais comuns sobre o Eclini
+            Encontre respostas para as dúvidas mais comuns sobre o ProsindWeb
           </p>
         </div>
 

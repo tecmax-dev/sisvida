@@ -22,13 +22,13 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">O Módulo Financeiro</h2>
           <p className="text-muted-foreground mb-4">
-            O módulo financeiro do Eclini permite gerenciar todas as movimentações da sua clínica, 
+            O módulo financeiro do ProsindWeb permite gerenciar todas as movimentações da sua clínica, 
             incluindo receitas, despesas, contas a receber e fluxo de caixa.
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={financeiroDashboard} 
-              alt="Dashboard Financeiro Eclini" 
+              alt="Dashboard Financeiro ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -98,7 +98,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Tela de Transações Financeiras Eclini" 
+              alt="Tela de Transações Financeiras ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -169,7 +169,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Controle de despesas Eclini" 
+              alt="Controle de despesas ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -262,7 +262,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={financeiroDashboard} 
-              alt="Relatórios Financeiros Eclini" 
+              alt="Relatórios Financeiros ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>

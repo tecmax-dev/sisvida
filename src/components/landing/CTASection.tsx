@@ -18,7 +18,7 @@ export function CTASection() {
             Pronto para transformar sua clínica?
           </h2>
           <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-            Junte-se a milhares de profissionais de saúde que já simplificaram sua gestão com o Eclini.
+            Junte-se a milhares de profissionais de saúde que já simplificaram sua gestão com o ProsindWeb.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

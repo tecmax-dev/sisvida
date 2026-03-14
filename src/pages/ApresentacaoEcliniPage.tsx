@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, Loader2, Building2, Users, Briefcase, Calculator, Zap, Shield, Globe, Smartphone, BarChart3, MessageSquare, Clock, CheckCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import ecliniLogo from "@/assets/eclini-logo.png";
+import ecliniLogo from "@/assets/prosindweb-logo.png";
 
 const ApresentacaoEcliniPage = () => {
   const [generating, setGenerating] = useState(false);

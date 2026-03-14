@@ -12,13 +12,13 @@ const testimonials = [
     name: "Dra. Carla Mendes",
     role: "Dermatologista",
     image: carlaMendes,
-    quote: "O Eclini transformou a rotina da minha clínica. Antes eu perdia tempo com papelada e controles manuais, agora tudo é automatizado. A agenda integrada com o prontuário eletrônico me dá muito mais agilidade nos atendimentos."
+    quote: "O ProsindWeb transformou a rotina da minha clínica. Antes eu perdia tempo com papelada e controles manuais, agora tudo é automatizado. A agenda integrada com o prontuário eletrônico me dá muito mais agilidade nos atendimentos."
   },
   {
     name: "Dr. Ricardo Oliveira",
     role: "Ortopedista",
     image: ricardoOliveira,
-    quote: "Depois que adotamos o Eclini, nosso faturamento melhorou 40%. O controle financeiro é impecável e a gestão de convênios ficou muito mais simples. Recomendo para qualquer clínica que queira crescer de forma organizada."
+    quote: "Depois que adotamos o ProsindWeb, nosso faturamento melhorou 40%. O controle financeiro é impecável e a gestão de convênios ficou muito mais simples. Recomendo para qualquer clínica que queira crescer de forma organizada."
   },
   {
     name: "Fernanda Lima",
@@ -30,7 +30,7 @@ const testimonials = [
     name: "Marcos Silva",
     role: "Psicólogo",
     image: marcosSilva,
-    quote: "O que mais me impressiona no Eclini é a segurança dos dados. Trabalho com informações sensíveis e sei que tudo está protegido. Além disso, o prontuário digital facilita muito o acompanhamento das sessões."
+    quote: "O que mais me impressiona no ProsindWeb é a segurança dos dados. Trabalho com informações sensíveis e sei que tudo está protegido. Além disso, o prontuário digital facilita muito o acompanhamento das sessões."
   }
 ];
 

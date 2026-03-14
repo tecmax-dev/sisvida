@@ -80,7 +80,7 @@ export function exportFinancialToPDF({ title, clinicName, period, columns, data,
     doc.setFontSize(9);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} • Eclini by Tecmax Tecnologia`,
+      `Página ${i} de ${pageCount} • ProsindWeb by Tecmax Tecnologia`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
@@ -763,7 +763,7 @@ export function exportFinancialReportToPDF(
     doc.setFontSize(9);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • Eclini by Tecmax Tecnologia`,
+      `Página ${i} de ${pageCount} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • ProsindWeb by Tecmax Tecnologia`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }

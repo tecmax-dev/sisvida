@@ -124,11 +124,11 @@ export function BulkSendAccessCodeDialog({
 
     const portalUrl = getPortalUrl();
     
-    const message = `🎉 *Novidade: Sistema eCLINI*
+    const message = `🎉 *Novidade: Sistema ProsindWeb*
 
 Olá *${office.name}*!
 
-O *${currentClinic.name}* atualizou seu sistema de gestão de contribuições para o *eCLINI*.
+O *${currentClinic.name}* atualizou seu sistema de gestão de contribuições para o *ProsindWeb*.
 
 A partir de agora, todos os boletos, consultas de empresas e serviços estarão disponíveis através do novo *Portal do Contador*.
 

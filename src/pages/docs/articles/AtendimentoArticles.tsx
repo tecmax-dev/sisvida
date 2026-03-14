@@ -23,7 +23,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Etapas do Atendimento</h2>
           <p className="text-muted-foreground mb-4">
-            O fluxo de atendimento no Eclini segue as seguintes etapas:
+            O fluxo de atendimento no ProsindWeb segue as seguintes etapas:
           </p>
           <div className="space-y-3">
             <div className="flex items-start gap-4 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
@@ -60,7 +60,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src={atendimentoFluxo} 
-            alt="Dashboard Eclini - Fluxo de Atendimento" 
+            alt="Dashboard ProsindWeb - Fluxo de Atendimento" 
             className="rounded-lg w-full"
           />
         </div>
@@ -109,7 +109,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src={agendaCalendar} 
-            alt="Tela de Agenda Eclini" 
+            alt="Tela de Agenda ProsindWeb" 
             className="rounded-lg w-full"
           />
         </div>
@@ -178,7 +178,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={prescricaoDigital} 
-              alt="Tela de Prescrição Eclini" 
+              alt="Tela de Prescrição ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -204,7 +204,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Documentos Disponíveis</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini permite emitir diversos tipos de documentos durante o atendimento:
+            O ProsindWeb permite emitir diversos tipos de documentos durante o atendimento:
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="p-3 bg-muted/50 rounded-lg border">
@@ -241,7 +241,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={prescricaoDigital} 
-              alt="Emissão de documentos Eclini" 
+              alt="Emissão de documentos ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>

@@ -28,7 +28,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={configuracoesPainel} 
-              alt="Tela de Configurações Eclini" 
+              alt="Tela de Configurações ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -86,7 +86,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Níveis de Acesso</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini possui diferentes perfis de usuário com permissões específicas:
+            O ProsindWeb possui diferentes perfis de usuário com permissões específicas:
           </p>
           <div className="space-y-3">
             <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
@@ -125,7 +125,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={usuariosPermissoes} 
-              alt="Gerenciamento de Usuários Eclini" 
+              alt="Gerenciamento de Usuários ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -157,7 +157,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={prescricaoDigital} 
-              alt="Configuração de Documentos Eclini" 
+              alt="Configuração de Documentos ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
@@ -218,7 +218,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Segurança dos Dados</h2>
           <p className="text-muted-foreground mb-4">
-            O Eclini utiliza as melhores práticas de segurança para proteger os dados da sua clínica:
+            O ProsindWeb utiliza as melhores práticas de segurança para proteger os dados da sua clínica:
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">

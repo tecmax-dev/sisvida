@@ -21,16 +21,16 @@ const articles: Record<string, {
 }> = {
   "configuracao-inicial": {
     title: "Configuração Inicial do Sistema",
-    description: "Configure sua clínica no Eclini do zero e comece a usar todas as funcionalidades",
+    description: "Configure sua clínica no ProsindWeb do zero e comece a usar todas as funcionalidades",
     readTime: "5 min",
     prevArticle: undefined,
     nextArticle: { slug: "personalizando-clinica", title: "Personalizando sua Clínica" },
     content: (
       <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-4">Bem-vindo ao Eclini!</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Bem-vindo ao ProsindWeb!</h2>
           <p className="text-muted-foreground mb-4">
-            Este guia vai te ajudar a configurar sua clínica no Eclini em poucos minutos. 
+            Este guia vai te ajudar a configurar sua clínica no ProsindWeb em poucos minutos. 
             Siga os passos abaixo para ter seu sistema pronto para uso.
           </p>
           
@@ -41,8 +41,8 @@ const articles: Record<string, {
 
         <TutorialImage 
           src={tutorialLogin} 
-          alt="Tela de login do Eclini" 
-          caption="Tela de acesso ao sistema Eclini com login seguro"
+          alt="Tela de login do ProsindWeb" 
+          caption="Tela de acesso ao sistema ProsindWeb com login seguro"
         />
 
         <section className="space-y-6">
@@ -85,7 +85,7 @@ const articles: Record<string, {
 
         <TutorialImage 
           src={tutorialConfiguracoes} 
-          alt="Painel de configurações do Eclini" 
+          alt="Painel de configurações do ProsindWeb" 
           caption="Painel de configurações com todas as opções disponíveis"
         />
 
@@ -135,7 +135,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4">Personalize sua clínica</h2>
           <p className="text-muted-foreground">
-            O Eclini permite que você personalize diversos aspectos do sistema para refletir a identidade visual da sua clínica.
+            O ProsindWeb permite que você personalize diversos aspectos do sistema para refletir a identidade visual da sua clínica.
           </p>
         </section>
 
