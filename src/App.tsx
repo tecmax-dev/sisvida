@@ -352,7 +352,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="system" storageKey="eclini-theme">
+      <ThemeProvider defaultTheme="system" storageKey="prosindweb-theme">
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <ModalProvider>

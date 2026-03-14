@@ -1,8 +1,8 @@
 [package]
-name = "eclini"
+name = "prosindweb"
 version = "1.0.0"
-description = "Eclini - Sistema de Gestão"
-authors = ["Tecmax"]
+description = "ProsindWeb - Sistema de Gestão Sindical e Clínica"
+authors = ["ProsindWeb"]
 license = ""
 repository = ""
 edition = "2021"

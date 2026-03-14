@@ -506,7 +506,7 @@ export default function MobileInstallPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground pt-2 pb-4">
-          © {new Date().getFullYear()} {clinicName} • Tecmax Tecnologia
+          © {new Date().getFullYear()} {clinicName} • ProsindWeb
         </p>
       </main>
     </div>

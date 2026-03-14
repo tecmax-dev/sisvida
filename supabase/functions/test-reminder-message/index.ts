@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
+const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/prosindweb-whatsapp-header.jpg';
 
 interface EvolutionConfig {
   api_url: string;

@@ -74,9 +74,9 @@ export default function ClinicPresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
             <div className="w-28 h-28 print:w-24 print:h-24 bg-white rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-2xl p-3">
-              <img src={ecliniLogo} alt="eCLINI" className="w-full h-full object-contain" />
+              <img src={ecliniLogo} alt="ProsindWeb Clínica" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">eCLINI</h1>
+            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">ProsindWeb Clínica</h1>
             <p className="text-xl print:text-lg text-cyan-100">Sistema de Gestão para Clínicas e Consultórios</p>
           </div>
 
@@ -88,8 +88,8 @@ export default function ClinicPresentationPage() {
             
             <div className="border-t border-white/30 pt-6 mt-6">
               <p className="text-base print:text-sm text-cyan-200 mb-2">Desenvolvido por:</p>
-              <p className="text-2xl print:text-xl font-bold">TECMAX TECNOLOGIA</p>
-              <p className="text-cyan-200 mt-3 print:text-sm">Ilhéus - Bahia • Janeiro de 2026</p>
+              <p className="text-2xl print:text-xl font-bold">PROSINDWEB</p>
+              <p className="text-cyan-200 mt-3 print:text-sm">Brasil • 2026</p>
             </div>
           </div>
         </div>
@@ -104,9 +104,9 @@ export default function ClinicPresentationPage() {
 
         <div className="grid grid-cols-1 gap-4">
           <div className="no-break bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-4 print:p-3">
-            <h3 className="text-lg print:text-base font-bold text-cyan-800 mb-2">Sobre a Tecmax Tecnologia</h3>
+            <h3 className="text-lg print:text-base font-bold text-cyan-800 mb-2">Sobre a ProsindWeb</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              A <strong>Tecmax Tecnologia</strong> é uma empresa especializada no desenvolvimento de soluções 
+              A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
               digitais personalizadas, com foco em sistemas de gestão para organizações que buscam 
               modernização, eficiência e segurança em seus processos administrativos.
             </p>
@@ -115,7 +115,7 @@ export default function ClinicPresentationPage() {
           <div className="no-break bg-gradient-to-r from-teal-50 to-teal-100 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-teal-800 mb-2">Visão Geral do Sistema</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
-              O <strong>eCLINI Clínica</strong> é uma plataforma completa para gestão de clínicas médicas, 
+              O <strong>ProsindWeb Clínica</strong> é uma plataforma completa para gestão de clínicas médicas, 
               consultórios e centros de saúde, proporcionando:
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -353,7 +353,7 @@ export default function ClinicPresentationPage() {
           />
           <div className="flex flex-col justify-center">
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              O eCLINI foi desenvolvido utilizando as mais modernas tecnologias do mercado,
+              O ProsindWeb foi desenvolvido utilizando as mais modernas tecnologias do mercado,
               garantindo performance, segurança e escalabilidade para sua clínica.
             </p>
           </div>
@@ -568,10 +568,10 @@ export default function ClinicPresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">
             <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center mb-4 mx-auto shadow-2xl">
-              <span className="text-3xl font-bold text-cyan-600">TM</span>
+              <span className="text-3xl font-bold text-cyan-600">PW</span>
             </div>
-            <h2 className="text-3xl print:text-2xl font-bold mb-2">TECMAX TECNOLOGIA</h2>
-            <p className="text-lg print:text-base text-cyan-200">Desenvolvimento de Soluções Digitais</p>
+            <h2 className="text-3xl print:text-2xl font-bold mb-2">PROSINDWEB</h2>
+            <p className="text-lg print:text-base text-cyan-200">Gestão Sindical e Clínica</p>
           </div>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-sm mb-4">
@@ -584,7 +584,7 @@ export default function ClinicPresentationPage() {
                 </div>
                 <div>
                   <p className="text-cyan-300 text-[10px]">E-mail</p>
-                  <p className="text-base font-semibold">contato@tecmax.com.br</p>
+                  <p className="text-base font-semibold">contato@prosindweb.com.br</p>
                 </div>
               </div>
 
@@ -613,13 +613,13 @@ export default function ClinicPresentationPage() {
           <div className="bg-cyan-500/20 backdrop-blur-sm rounded-lg p-4 max-w-md">
             <p className="font-bold text-lg mb-2">🚀 Pronto para modernizar sua clínica?</p>
             <p className="text-cyan-200 text-sm">
-              Solicite uma demonstração gratuita e descubra como o eCLINI pode transformar sua gestão!
+              Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar sua gestão!
             </p>
           </div>
 
           <div className="mt-6 text-cyan-300">
             <p className="text-base italic mb-1">"Tecnologia a serviço da saúde"</p>
-            <p className="text-[10px]">© 2026 Tecmax Tecnologia - Todos os direitos reservados</p>
+            <p className="text-[10px]">© 2026 ProsindWeb - Todos os direitos reservados</p>
           </div>
         </div>
       </div>

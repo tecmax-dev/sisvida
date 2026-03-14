@@ -90,8 +90,8 @@ export default function PresentationPage() {
             
             <div className="border-t border-white/30 pt-6 mt-6">
               <p className="text-base print:text-sm text-blue-200 mb-2">Desenvolvido por:</p>
-              <p className="text-2xl print:text-xl font-bold">TECMAX TECNOLOGIA</p>
-              <p className="text-blue-200 mt-3 print:text-sm">Ilhéus - Bahia • Janeiro de 2026</p>
+              <p className="text-2xl print:text-xl font-bold">PROSINDWEB</p>
+              <p className="text-blue-200 mt-3 print:text-sm">Brasil • 2026</p>
             </div>
           </div>
         </div>
@@ -106,9 +106,9 @@ export default function PresentationPage() {
 
         <div className="grid grid-cols-1 gap-4">
           <div className="no-break bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 print:p-3">
-            <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a Tecmax Tecnologia</h3>
+            <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a ProsindWeb</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
-              A <strong>Tecmax Tecnologia</strong> é uma empresa especializada no desenvolvimento de soluções 
+              A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
               digitais personalizadas, com foco em sistemas de gestão para organizações que buscam 
               modernização, eficiência e segurança em seus processos administrativos.
             </p>
@@ -641,10 +641,10 @@ export default function PresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">
             <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center mb-4 mx-auto shadow-2xl">
-              <span className="text-3xl font-bold text-blue-600">TM</span>
+              <span className="text-3xl font-bold text-blue-600">PW</span>
             </div>
-            <h2 className="text-3xl print:text-2xl font-bold mb-2">TECMAX TECNOLOGIA</h2>
-            <p className="text-lg print:text-base text-blue-200">Desenvolvimento de Soluções Digitais</p>
+            <h2 className="text-3xl print:text-2xl font-bold mb-2">PROSINDWEB</h2>
+            <p className="text-lg print:text-base text-blue-200">Gestão Sindical e Clínica</p>
           </div>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-sm">
@@ -657,7 +657,7 @@ export default function PresentationPage() {
                 </div>
                 <div>
                   <p className="text-blue-300 text-[10px]">E-mail</p>
-                  <p className="text-base font-semibold">contato@tecmax.com.br</p>
+                  <p className="text-base font-semibold">contato@prosindweb.com.br</p>
                 </div>
               </div>
 
@@ -685,7 +685,7 @@ export default function PresentationPage() {
 
           <div className="mt-6 text-blue-300">
             <p className="text-base italic mb-1">"Tecnologia a serviço da gestão eficiente"</p>
-            <p className="text-[10px]">© 2026 Tecmax Tecnologia - Todos os direitos reservados</p>
+            <p className="text-[10px]">© 2026 ProsindWeb - Todos os direitos reservados</p>
           </div>
         </div>
       </div>

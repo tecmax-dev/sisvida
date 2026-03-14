@@ -129,7 +129,7 @@ const ApresentacaoEcliniPage = () => {
       doc.setTextColor(...secondaryColor);
       doc.setFontSize(42);
       doc.setFont('helvetica', 'bold');
-      doc.text('ECLINI', margin + 15, 70);
+      doc.text('PROSINDWEB', margin + 15, 70);
       
       doc.setFontSize(18);
       doc.setTextColor(...primaryColor);
@@ -453,7 +453,7 @@ const ApresentacaoEcliniPage = () => {
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('TECMAX TECNOLOGIA | (11) 5194-3839 | contato@prosindweb.com.br', pageWidth/2, 172, { align: 'center' });
+      doc.text('PROSINDWEB | (11) 5194-3839 | contato@prosindweb.com.br', pageWidth/2, 172, { align: 'center' });
       
       drawFooter();
 
@@ -481,7 +481,7 @@ const ApresentacaoEcliniPage = () => {
             Proposta para o Sindicato dos Comerciários
           </p>
           <p className="text-muted-foreground">
-            Tecmax Tecnologia | (11) 5194-3839
+            ProsindWeb | (11) 5194-3839
           </p>
         </div>
 
@@ -518,7 +518,7 @@ const ApresentacaoEcliniPage = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Capa institucional com apresentação do Sistema Eclini e destaques principais.
+                Capa institucional com apresentação do Sistema ProsindWeb e destaques principais.
               </p>
             </CardContent>
           </Card>

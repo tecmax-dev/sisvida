@@ -312,7 +312,7 @@ serve(async (req) => {
 
     // Logo priority
     const unionEntity = (clinic as any)?.union_entities?.[0];
-    const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
+    const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://prosindweb.com.br/prosindweb-whatsapp-header.jpg';
     const clinicName = settings?.display_name || clinic?.name || 'HomologaNet';
 
     // Format date

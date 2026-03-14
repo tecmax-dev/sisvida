@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-import ecliniLogo from "@/assets/prosindweb-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 // Import illustrations
 import ilustracaoEmpresas from "@/assets/illustrations/tutorial-empresas.png";
@@ -57,7 +57,7 @@ const TutorialSindicatoPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(ecliniLogo);
+        const response = await fetch(prosindwebLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -494,7 +494,7 @@ const TutorialSindicatoPage = () => {
         doc.rect(0, pageHeight - 10, pageWidth, 10, "F");
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(7);
-        doc.text("Tutorial ProSindWeb - Modulo Sindical | Tecmax Tecnologia 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
+        doc.text("Tutorial ProSindWeb - Modulo Sindical | ProsindWeb 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
       };
 
       // Helper: Draw a content box with colored left bar
@@ -595,7 +595,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("Guia ilustrado para usuarios e profissionais de saude", pageWidth / 2, 122, { align: "center" });
-      doc.text("Sistema Eclini - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
+      doc.text("Sistema ProsindWeb - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
 
       // Feature cards - 6 items in 2 rows
       const features = [
@@ -638,7 +638,7 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Tecmax Tecnologia", pageWidth / 2, pageHeight - 36, { align: "center" });
+      doc.text("ProsindWeb", pageWidth / 2, pageHeight - 36, { align: "center" });
       
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
@@ -658,7 +658,7 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      const introText = "O Modulo Sindical do Eclini foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
+      const introText = "O Modulo Sindical do ProsindWeb foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
       const introLines = doc.splitTextToSize(introText, contentWidth);
       doc.text(introLines, margin, yPos);
       yPos += 18;
@@ -980,7 +980,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
       doc.text("Obrigado por escolher", pageWidth / 2, 95, { align: "center" });
-      doc.text("o Eclini!", pageWidth / 2, 108, { align: "center" });
+      doc.text("o ProsindWeb!", pageWidth / 2, 108, { align: "center" });
 
       // Closing message box with darker shade
       doc.setFillColor(55, 65, 81); // Slightly lighter than dark background
@@ -1000,7 +1000,7 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("Tecmax Tecnologia", pageWidth / 2, 205, { align: "center" });
+      doc.text("ProsindWeb", pageWidth / 2, 205, { align: "center" });
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
@@ -1013,7 +1013,7 @@ const TutorialSindicatoPage = () => {
       doc.text("Tutorial v1.0 | Janeiro 2026", pageWidth / 2, pageHeight - 18, { align: "center" });
 
       // Save PDF
-      doc.save("Tutorial-Modulo-Sindical-Eclini.pdf");
+      doc.save("Tutorial-Modulo-Sindical-ProsindWeb.pdf");
       toast.success("Tutorial gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -1050,7 +1050,7 @@ const TutorialSindicatoPage = () => {
               
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Guia completo e ilustrado para usuários e profissionais de saúde. 
-                Domine todas as funcionalidades do sistema Eclini.
+                Domine todas as funcionalidades do sistema ProsindWeb.
               </p>
               
               <Button 
@@ -1203,7 +1203,7 @@ const TutorialSindicatoPage = () => {
                 </h2>
                 <p className="text-white/80 mb-8 max-w-lg mx-auto">
                   Baixe agora o tutorial completo e domine todas as funcionalidades 
-                  do Módulo Sindical do Eclini.
+                  do Módulo Sindical do ProsindWeb.
                 </p>
                 <Button 
                   size="lg" 

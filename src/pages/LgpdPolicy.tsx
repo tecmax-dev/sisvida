@@ -20,7 +20,7 @@ export default function LgpdPolicy() {
                 Política de Privacidade e Proteção de Dados
               </h1>
               <p className="text-lg text-muted-foreground">
-                A Tecmax Tecnologia (CNPJ: 03.025.212/0001-11) está comprometida com a proteção dos seus dados pessoais, 
+                A ProsindWeb está comprometida com a proteção dos seus dados pessoais, 
                 em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
               </p>
             </div>
@@ -254,10 +254,7 @@ export default function LgpdPolicy() {
                       </p>
                       <div className="space-y-2">
                         <p className="text-foreground">
-                          <strong>Empresa:</strong> Tecmax Tecnologia
-                        </p>
-                        <p className="text-foreground">
-                          <strong>CNPJ:</strong> 03.025.212/0001-11
+                          <strong>Empresa:</strong> ProsindWeb
                         </p>
                         <p className="text-foreground">
                           <strong>E-mail:</strong>{" "}
