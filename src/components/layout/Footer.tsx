@@ -114,11 +114,11 @@ export function Footer() {
               </li>
               <li>
                 <a 
-                  href="mailto:contato@eclini.com.br"
+                  href="mailto:contato@prosindweb.com.br"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <Mail className="h-4 w-4" />
-                  contato@eclini.com.br
+                  contato@prosindweb.com.br
                 </a>
               </li>
             </ul>

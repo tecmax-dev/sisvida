@@ -43,11 +43,11 @@ export function BlockedClinicOverlay({ reason }: BlockedClinicOverlayProps) {
               (71) 98278-6864
             </a>
             <a 
-              href="mailto:suporte@eclini.com.br" 
+              href="mailto:suporte@prosindweb.com.br" 
               className="flex items-center justify-center gap-2 text-primary hover:underline"
             >
               <Mail className="h-4 w-4" />
-              suporte@eclini.com.br
+              suporte@prosindweb.com.br
             </a>
           </div>
         </div>

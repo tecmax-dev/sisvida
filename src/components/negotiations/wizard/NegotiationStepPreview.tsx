@@ -394,7 +394,7 @@ export default function NegotiationStepPreview({
       }
 
       // Use custom domain for production links
-      const productionUrl = "https://app.eclini.com.br";
+      const productionUrl = "https://prosindweb.com.br";
       const link = `${productionUrl}/negociacao-espelho/${accessToken}`;
       setGeneratedLink(link);
       toast.success("Link gerado com sucesso!");

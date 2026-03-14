@@ -50,7 +50,7 @@ const articles: Record<string, {
           
           <TutorialStep number={1} title="Acesse o Sistema">
             <p className="mb-2">
-              Entre no endereço <strong>app.eclini.com.br</strong> e faça login com suas credenciais. 
+              Entre no endereço <strong>prosindweb.com.br</strong> e faça login com suas credenciais. 
               Se você ainda não tem uma conta, clique em "Criar conta" para começar.
             </p>
           </TutorialStep>
