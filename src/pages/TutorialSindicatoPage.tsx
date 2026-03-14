@@ -980,7 +980,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
       doc.text("Obrigado por escolher", pageWidth / 2, 95, { align: "center" });
-      doc.text("o Eclini!", pageWidth / 2, 108, { align: "center" });
+      doc.text("o ProsindWeb!", pageWidth / 2, 108, { align: "center" });
 
       // Closing message box with darker shade
       doc.setFillColor(55, 65, 81); // Slightly lighter than dark background
