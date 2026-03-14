@@ -951,7 +951,7 @@ const TutorialSindicatoPage = () => {
       doc.text("Precisa de ajuda? Entre em contato conosco:", margin + 10, yPos + 12);
       
       doc.setFont("helvetica", "bold");
-      doc.text("Telefone: 71 3144-9898", margin + 10, yPos + 23);
+      doc.text("Telefone: (11) 5194-3839", margin + 10, yPos + 23);
       doc.text("E-mail: suporte@prosindweb.com.br", margin + 10, yPos + 32);
       doc.text("Chat: Disponivel no sistema (horario comercial)", margin + 10, yPos + 41);
 
