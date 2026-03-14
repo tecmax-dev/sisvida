@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     question: "Preciso instalar algum software?",
-    answer: "Não! O Eclini funciona 100% na nuvem, acessível de qualquer navegador. Basta fazer login e começar a usar, sem instalações ou atualizações manuais."
+    answer: "Não! O ProsindWeb funciona 100% na nuvem, acessível de qualquer navegador. Basta fazer login e começar a usar, sem instalações ou atualizações manuais."
   },
   {
     question: "Meus dados estão seguros?",
