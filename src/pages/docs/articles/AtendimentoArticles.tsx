@@ -109,7 +109,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src={agendaCalendar} 
-            alt="Tela de Agenda Eclini" 
+            alt="Tela de Agenda ProsindWeb" 
             className="rounded-lg w-full"
           />
         </div>
