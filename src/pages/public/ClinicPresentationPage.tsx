@@ -568,10 +568,10 @@ export default function ClinicPresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">
             <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center mb-4 mx-auto shadow-2xl">
-              <span className="text-3xl font-bold text-cyan-600">TM</span>
+              <span className="text-3xl font-bold text-cyan-600">PW</span>
             </div>
-            <h2 className="text-3xl print:text-2xl font-bold mb-2">TECMAX TECNOLOGIA</h2>
-            <p className="text-lg print:text-base text-cyan-200">Desenvolvimento de Soluções Digitais</p>
+            <h2 className="text-3xl print:text-2xl font-bold mb-2">PROSINDWEB</h2>
+            <p className="text-lg print:text-base text-cyan-200">Gestão Sindical e Clínica</p>
           </div>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-sm mb-4">
