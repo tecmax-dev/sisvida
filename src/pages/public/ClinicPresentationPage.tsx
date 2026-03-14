@@ -74,9 +74,9 @@ export default function ClinicPresentationPage() {
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
             <div className="w-28 h-28 print:w-24 print:h-24 bg-white rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-2xl p-3">
-              <img src={ecliniLogo} alt="eCLINI" className="w-full h-full object-contain" />
+              <img src={ecliniLogo} alt="ProsindWeb Clínica" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">eCLINI</h1>
+            <h1 className="text-5xl print:text-4xl font-bold mb-3 tracking-tight">ProsindWeb Clínica</h1>
             <p className="text-xl print:text-lg text-cyan-100">Sistema de Gestão para Clínicas e Consultórios</p>
           </div>
 
