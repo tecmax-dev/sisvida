@@ -249,7 +249,7 @@ const modules = [
     icon: BarChart3,
     title: "Fluxo de Caixa",
     description: "Controle total das entradas e saídas financeiras, com relatórios comparativos e ferramentas de análise para tomada de decisão.",
-    color: "from-violet-500 to-purple-600",
+    color: "from-[hsl(215,70%,40%)] to-[hsl(215,85%,30%)]",
     highlights: ["Visão consolidada", "Relatórios comparativos", "Projeções financeiras", "Múltiplos portadores"],
   },
   {
