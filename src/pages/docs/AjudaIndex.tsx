@@ -184,11 +184,11 @@ export default function AjudaIndex() {
             Central de Tutoriais
           </Badge>
           <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Aprenda a usar o Eclini
+            Aprenda a usar o ProsindWeb
           </h1>
           <p className="text-lg text-muted-foreground mb-6">
             Tutoriais passo a passo para você aproveitar todas as funcionalidades do sistema. 
-            Encontre respostas rápidas e torne-se um expert no Eclini.
+            Encontre respostas rápidas e torne-se um expert no ProsindWeb.
           </p>
           
           {/* Search Bar */}

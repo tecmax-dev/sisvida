@@ -135,7 +135,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4">Personalize sua clínica</h2>
           <p className="text-muted-foreground">
-            O Eclini permite que você personalize diversos aspectos do sistema para refletir a identidade visual da sua clínica.
+            O ProsindWeb permite que você personalize diversos aspectos do sistema para refletir a identidade visual da sua clínica.
           </p>
         </section>
 

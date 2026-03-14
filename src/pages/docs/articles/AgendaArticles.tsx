@@ -135,7 +135,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4">Criando um Novo Agendamento</h2>
           <p className="text-muted-foreground">
-            Existem várias formas de criar um agendamento no Eclini. Veja as opções disponíveis e escolha a mais prática para você.
+            Existem várias formas de criar um agendamento no ProsindWeb. Veja as opções disponíveis e escolha a mais prática para você.
           </p>
         </section>
 
