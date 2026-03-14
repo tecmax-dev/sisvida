@@ -129,7 +129,7 @@ const ApresentacaoEcliniPage = () => {
       doc.setTextColor(...secondaryColor);
       doc.setFontSize(42);
       doc.setFont('helvetica', 'bold');
-      doc.text('ECLINI', margin + 15, 70);
+      doc.text('PROSINDWEB', margin + 15, 70);
       
       doc.setFontSize(18);
       doc.setTextColor(...primaryColor);
