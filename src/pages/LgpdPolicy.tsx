@@ -35,7 +35,7 @@ export default function LgpdPolicy() {
               <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
                 <p className="text-muted-foreground leading-relaxed">
                   Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos 
-                  seus dados pessoais quando você utiliza o sistema Eclini. Ao utilizar nossos serviços, 
+                  seus dados pessoais quando você utiliza o sistema ProSindWeb. Ao utilizar nossos serviços, 
                   você concorda com os termos desta política.
                 </p>
               </div>
