@@ -178,7 +178,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
               src={prescricaoDigital} 
-              alt="Tela de Prescrição Eclini" 
+              alt="Tela de Prescrição ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
