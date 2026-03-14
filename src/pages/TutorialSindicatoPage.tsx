@@ -642,7 +642,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text("Contato: 71 3144-9898", pageWidth / 2, pageHeight - 27, { align: "center" });
+      doc.text("Contato: (11) 5194-3839", pageWidth / 2, pageHeight - 27, { align: "center" });
       doc.text("www.prosindweb.com.br", pageWidth / 2, pageHeight - 19, { align: "center" });
 
       // =====================
