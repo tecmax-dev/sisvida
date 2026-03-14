@@ -425,7 +425,7 @@ export function HelpContentManagement() {
                 <Input
                   value={content.whatsapp}
                   onChange={(e) => setContent({ ...content, whatsapp: e.target.value })}
-                  placeholder="Ex: (11) 99999-8888"
+                  placeholder="Ex: (11) 5194-3839"
                 />
               </div>
               <div className="space-y-2">

@@ -753,7 +753,7 @@ function SindicalFooter() {
           <div>
             <h4 className="font-bold text-gray-900 mb-4">Contato</h4>
             <ul className="space-y-3 text-gray-500">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(71) 98278-6864</li>
+              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(11) 5194-3839</li>
               <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
             </ul>
