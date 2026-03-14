@@ -93,7 +93,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={agendaCalendar} 
-              alt="Dashboard Eclini com lembretes" 
+              alt="Dashboard ProsindWeb com lembretes" 
               className="rounded-lg w-full"
             />
           </div>
