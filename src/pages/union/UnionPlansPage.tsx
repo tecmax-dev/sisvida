@@ -282,7 +282,7 @@ export default function UnionPlansPage() {
         </p>
         <Button variant="outline" asChild>
           <a 
-            href="https://wa.me/5571982786864?text=Olá! Preciso de um plano personalizado para minha entidade sindical."
+            href="https://wa.me/551151943839?text=Olá! Preciso de um plano personalizado para minha entidade sindical."
             target="_blank"
             rel="noopener noreferrer"
           >

@@ -1004,7 +1004,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("71 3144-9898", pageWidth / 2, 218, { align: "center" });
+      doc.text("(11) 5194-3839", pageWidth / 2, 218, { align: "center" });
       doc.text("www.prosindweb.com.br", pageWidth / 2, 230, { align: "center" });
 
       // Version footer
