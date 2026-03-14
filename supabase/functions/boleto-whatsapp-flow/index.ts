@@ -156,6 +156,7 @@ function getStateDescription(state: BoletoState, context: any): string {
     'SELECT_TAXA_TYPE_BATCH': 'Aguardando escolha do tipo de taxa para processamento em lote',
     'WAITING_COMPETENCE': 'Aguardando competência (mês/ano)',
     'WAITING_VALUE': 'Aguardando valor do boleto',
+    'SELECT_CONTRIBUTION_YEAR': 'Aguardando seleção do ano das contribuições vencidas',
     'SELECT_CONTRIBUTION': 'Aguardando seleção de contribuição vencida',
     'WAITING_NEW_DUE_DATE': 'Aguardando nova data de vencimento',
     'CONFIRM_BOLETO': 'Aguardando confirmação final para gerar boleto',
