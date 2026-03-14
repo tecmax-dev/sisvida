@@ -225,7 +225,7 @@ export default function InstallPage() {
                 <div>
                   <p className="font-medium text-foreground">Se não aparecer, use o menu</p>
                   <p className="text-sm text-muted-foreground">
-                    Clique nos três pontos <MoreVertical className="inline h-4 w-4" /> → "Instalar Eclini" ou "Mais ferramentas" → "Criar atalho"
+                    Clique nos três pontos <MoreVertical className="inline h-4 w-4" /> → "Instalar ProsindWeb" ou "Mais ferramentas" → "Criar atalho"
                   </p>
                 </div>
               </div>
