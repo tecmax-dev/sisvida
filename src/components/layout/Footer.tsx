@@ -160,7 +160,7 @@ export function Footer() {
                 <span className="text-xs font-medium">Em conformidade com a LGPD</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Tecmax Tecnologia • CNPJ: 03.025.212/0001-11
+                ProSindWeb • CNPJ: 03.025.212/0001-11
               </p>
             </div>
           </div>
