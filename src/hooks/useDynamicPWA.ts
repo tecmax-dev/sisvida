@@ -5,12 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 // Target clinic for the mobile app
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-// Default system branding (Eclini)
+// Default system branding (ProSindWeb)
 const DEFAULT_BRANDING = {
-  name: "Eclini - Sistema para Clínicas",
-  shortName: "Eclini",
-  description: "Sistema de gestão para clínicas médicas e consultórios.",
-  logo: "/favicon-eclini.png",
+  name: "ProSindWeb - Sistema de Gestão Sindical",
+  shortName: "ProSindWeb",
+  description: "Sistema de gestão para sindicatos e clínicas.",
+  logo: "/favicon-prosindweb.png",
 };
 
 interface ClinicBranding {
