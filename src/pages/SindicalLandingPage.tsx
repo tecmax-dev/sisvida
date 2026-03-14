@@ -497,7 +497,7 @@ function TestimonialsSection() {
               </p>
               <div className="flex items-center gap-4 pt-6 border-t border-gray-100">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
+                   style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
                 >
                   {t.name.charAt(0)}
                 </div>
