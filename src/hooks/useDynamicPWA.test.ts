@@ -22,9 +22,9 @@ describe("useDynamicPWA - Branding Isolation", () => {
 
   describe("Default Branding", () => {
     it("should have correct default branding values", () => {
-      expect(DEFAULT_BRANDING.name).toBe("Eclini - Sistema para Clínicas");
-      expect(DEFAULT_BRANDING.shortName).toBe("Eclini");
-      expect(DEFAULT_BRANDING.logo).toBe("/favicon-eclini.png");
+      expect(DEFAULT_BRANDING.name).toBe("ProSindWeb - Sistema de Gestão Sindical");
+      expect(DEFAULT_BRANDING.shortName).toBe("ProSindWeb");
+      expect(DEFAULT_BRANDING.logo).toBe("/favicon-prosindweb.png");
     });
 
     it("should have correct target clinic ID for Sindicato", () => {
