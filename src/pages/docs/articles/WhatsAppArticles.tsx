@@ -191,7 +191,7 @@ const articles: Record<string, {
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
             src={agendaCalendar} 
-            alt="Tela de agenda Eclini com status" 
+            alt="Tela de agenda ProsindWeb com status" 
             className="rounded-lg w-full"
           />
         </div>
