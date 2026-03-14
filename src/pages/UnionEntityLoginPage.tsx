@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Loader2, LogIn, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import sindiflexLogo from "@/assets/logo_sindiflex.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 export default function UnionEntityLoginPage() {
   const navigate = useNavigate();
