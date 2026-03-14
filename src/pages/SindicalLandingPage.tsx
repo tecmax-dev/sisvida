@@ -199,10 +199,10 @@ function AboutSection() {
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl p-10 border border-gray-200 shadow-xl">
               <div className="grid grid-cols-2 gap-5">
                 {[
-                  { icon: Building2, label: "Gestão de Empresas", desc: "Cadastro completo", color: "from-amber-500 to-orange-500" },
-                  { icon: Users, label: "Cadastro de Sócios", desc: "Associados e dependentes", color: "from-blue-500 to-cyan-500" },
-                  { icon: Receipt, label: "Contribuições", desc: "Boletos e cobranças", color: "from-green-500 to-emerald-500" },
-                  { icon: PiggyBank, label: "Financeiro", desc: "Receitas e despesas", color: "from-purple-500 to-violet-500" },
+                   { icon: Building2, label: "Gestão de Empresas", desc: "Cadastro completo", color: "from-[hsl(30,90%,55%)] to-[hsl(30,85%,45%)]" },
+                   { icon: Users, label: "Cadastro de Sócios", desc: "Associados e dependentes", color: "from-[hsl(215,85%,50%)] to-[hsl(215,80%,40%)]" },
+                   { icon: Receipt, label: "Contribuições", desc: "Boletos e cobranças", color: "from-[hsl(120,65%,45%)] to-[hsl(120,60%,35%)]" },
+                   { icon: PiggyBank, label: "Financeiro", desc: "Receitas e despesas", color: "from-[hsl(215,70%,40%)] to-[hsl(215,85%,30%)]" },
                   { icon: Handshake, label: "Negociações", desc: "Acordos e parcelamentos", color: "from-rose-500 to-pink-500" },
                   { icon: FileBarChart, label: "Relatórios", desc: "Gerenciais e fiscais", color: "from-teal-500 to-cyan-500" },
                 ].map((item, i) => (
