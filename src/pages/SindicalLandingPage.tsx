@@ -564,7 +564,7 @@ function AudienceSection() {
 function CTASection() {
   return (
     <section id="contato" className="py-24 lg:py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gray-900" />
+      <div className="absolute inset-0 bg-[hsl(215,60%,12%)]" />
       <div className="absolute inset-0 opacity-30"
         style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
       />
