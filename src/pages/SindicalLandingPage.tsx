@@ -284,7 +284,7 @@ const modules = [
     icon: Shield,
     title: "Auditoria e Segurança",
     description: "Todas as ações são registradas com rastreabilidade completa. Controle de permissões granular por perfil de usuário.",
-    color: "from-gray-600 to-gray-800",
+    color: "from-[hsl(215,30%,30%)] to-[hsl(215,40%,20%)]",
     highlights: ["Log de auditoria", "Permissões por perfil", "Rastreabilidade total", "Segurança de dados"],
   },
 ];
