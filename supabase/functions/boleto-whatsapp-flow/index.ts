@@ -2168,6 +2168,54 @@ async function handleBoletoFlow(
 
     case 'SELECT_CONTRIBUTION': {
       const contributions = session.available_contributions || [];
+      
+      // Handle "next page" command
+      if (text === 'mais' || text === 'proxima' || text === 'próxima' || messageText.trim() === 'boleto_contrib_mais') {
+        const yearContribs = session.flow_context?.year_contributions || [];
+        const currentPage = (session.flow_context?.current_page || 0) + 1;
+        const pageSize = session.flow_context?.page_size || 3;
+        const pageContribs = yearContribs.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+        
+        if (pageContribs.length === 0) {
+          return { response: `ℹ️ Não há mais contribuições para exibir.\n\nEscolha uma das opções acima ou digite *MENU* para recomeçar.` };
+        }
+        
+        const hasMore = yearContribs.length > (currentPage + 1) * pageSize;
+        
+        await updateSession(supabase, session.id, {
+          available_contributions: pageContribs,
+          flow_context: { 
+            ...session.flow_context, 
+            current_page: currentPage 
+          }
+        });
+
+        let msg = `📋 *Mais contribuições - ${session.flow_context?.selected_year || ''}*\n\n`;
+        msg += `Página ${currentPage + 1} (${pageContribs.length} de ${yearContribs.length}):\n\n`;
+        msg += MESSAGES.selectContribution(pageContribs);
+        
+        return { response: msg, newState: 'SELECT_CONTRIBUTION' };
+      }
+      
+      // Handle "back to years" command
+      if (text === 'voltar' && session.flow_context?.available_years) {
+        const years = session.flow_context.available_years;
+        const allContributions = session.flow_context.all_contributions || [];
+        
+        await updateSession(supabase, session.id, {
+          state: 'SELECT_CONTRIBUTION_YEAR' as BoletoState,
+          available_contributions: allContributions,
+        });
+
+        let msg = `📋 *Contribuições Pendentes*\n\nSelecione o *ano*:\n\n`;
+        years.forEach((y: number, i: number) => {
+          const count = allContributions.filter((c: any) => c.competence_year === y).length;
+          msg += `${i + 1}. *${y}* (${count} contribuição${count > 1 ? 'ões' : ''})\n`;
+        });
+
+        return { response: msg, newState: 'SELECT_CONTRIBUTION_YEAR' as BoletoState };
+      }
+      
       const optionNum = parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > contributions.length) {
