@@ -10,7 +10,7 @@ import { UserMenu } from "@/components/layout/UserMenu";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import sindiflexLogo from "@/assets/logo_sindiflex.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 import {
   Menu,
   X,
@@ -106,12 +106,12 @@ export function UnionModuleLayout() {
           >
             {!sidebarCollapsed && (
               <div className="flex-1 flex flex-col items-center gap-1">
-                <img src={sindiflexLogo} alt="SindiFlex" className="h-10 object-contain" />
+                <img src={prosindwebLogo} alt="ProsindWeb" className="h-10 object-contain" />
               </div>
             )}
             {sidebarCollapsed && (
               <div className="w-full flex flex-col items-center">
-                <img src={sindiflexLogo} alt="SindiFlex" className="h-6 object-contain" />
+                <img src={prosindwebLogo} alt="ProsindWeb" className="h-6 object-contain" />
               </div>
             )}
             {/* Mobile close button */}
@@ -183,9 +183,9 @@ export function UnionModuleLayout() {
             </button>
             
             <div className="flex items-center gap-2">
-              <img src={sindiflexLogo} alt="SindiFlex" className="h-7 object-contain" />
+              <img src={prosindwebLogo} alt="ProsindWeb" className="h-7 object-contain" />
               <h1 className="text-lg font-semibold text-foreground">
-                SindiFlex
+                ProsindWeb
               </h1>
               {currentClinic && (
                 <span className="text-sm text-muted-foreground hidden sm:inline">
