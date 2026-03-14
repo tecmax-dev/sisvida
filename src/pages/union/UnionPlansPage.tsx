@@ -254,7 +254,7 @@ export default function UnionPlansPage() {
               <CardFooter className="flex flex-col gap-2">
                 <Button className="w-full btn-eclini" asChild>
                   <a 
-                    href={`https://wa.me/5571982786864?text=Olá! Tenho interesse no plano ${plan.name} do Sistema Sindical.`}
+                    href={`https://wa.me/551151943839?text=Olá! Tenho interesse no plano ${plan.name} do Sistema Sindical.`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
