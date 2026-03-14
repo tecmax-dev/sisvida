@@ -1203,7 +1203,7 @@ const TutorialSindicatoPage = () => {
                 </h2>
                 <p className="text-white/80 mb-8 max-w-lg mx-auto">
                   Baixe agora o tutorial completo e domine todas as funcionalidades 
-                  do Módulo Sindical do Eclini.
+                  do Módulo Sindical do ProsindWeb.
                 </p>
                 <Button 
                   size="lg" 

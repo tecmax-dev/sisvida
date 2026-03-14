@@ -518,7 +518,7 @@ const ApresentacaoEcliniPage = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Capa institucional com apresentação do Sistema Eclini e destaques principais.
+                Capa institucional com apresentação do Sistema ProsindWeb e destaques principais.
               </p>
             </CardContent>
           </Card>

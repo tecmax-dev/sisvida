@@ -80,10 +80,10 @@ serve(async (req) => {
       finalMessage = message;
     } else {
       // Test PIX code
-      const testPixCode = pix_code || '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540550.005802BR5925ECLINI SISTEMAS LTDA6009SAO PAULO62070503***6304ABCD';
+      const testPixCode = pix_code || '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540550.005802BR5925PROSINDWEB SISTEMAS LTDA6009SAO PAULO62070503***6304ABCD';
 
       // Build billing message
-      finalMessage = `🏥 *Eclini - TESTE de Cobrança*
+      finalMessage = `🏥 *ProsindWeb - TESTE de Cobrança*
 
 Olá, ${clinic_name || 'Clínica Teste'}!
 

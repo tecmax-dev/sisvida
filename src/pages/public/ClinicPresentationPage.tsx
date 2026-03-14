@@ -613,7 +613,7 @@ export default function ClinicPresentationPage() {
           <div className="bg-cyan-500/20 backdrop-blur-sm rounded-lg p-4 max-w-md">
             <p className="font-bold text-lg mb-2">🚀 Pronto para modernizar sua clínica?</p>
             <p className="text-cyan-200 text-sm">
-              Solicite uma demonstração gratuita e descubra como o eCLINI pode transformar sua gestão!
+              Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar sua gestão!
             </p>
           </div>
 
