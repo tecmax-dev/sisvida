@@ -288,7 +288,7 @@
   .card-premium::before {
     content: '';
     @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(195 100% 45% / 0.05) 0%, hsl(95 70% 50% / 0.05) 100%);
+    background: linear-gradient(135deg, hsl(220 80% 45% / 0.05) 0%, hsl(25 95% 53% / 0.05) 100%);
   }
   
   .card-premium:hover::before {
@@ -303,8 +303,8 @@
   
   .feature-card-icon {
     @apply w-12 h-12 rounded-xl flex items-center justify-center;
-    background: linear-gradient(135deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%);
-    color: hsl(180 80% 40%);
+    background: linear-gradient(135deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%);
+    color: hsl(220 80% 45%);
   }
   
   /* Stat Card Decoration */
