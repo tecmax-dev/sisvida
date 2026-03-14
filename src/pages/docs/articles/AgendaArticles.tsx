@@ -19,7 +19,7 @@ const articles: Record<string, {
 }> = {
   "visao-geral-agenda": {
     title: "Visão Geral da Agenda",
-    description: "Conheça todas as funcionalidades da agenda do Eclini e como ela pode otimizar sua clínica",
+    description: "Conheça todas as funcionalidades da agenda do ProsindWeb e como ela pode otimizar sua clínica",
     readTime: "4 min",
     prevArticle: undefined,
     nextArticle: { slug: "criando-agendamentos", title: "Criando Agendamentos" },
