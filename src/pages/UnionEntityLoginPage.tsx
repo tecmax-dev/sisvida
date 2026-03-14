@@ -186,8 +186,8 @@ export default function UnionEntityLoginPage() {
         <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur">
           <CardHeader className="space-y-4 text-center pb-2">
             <img 
-              src={sindiflexLogo} 
-              alt="SindiFlex - Sistema de Gestão Sindical" 
+              src={prosindwebLogo} 
+              alt="ProsindWeb - Sistema de Gestão Sindical" 
               className="h-16 mx-auto object-contain"
             />
             <div>

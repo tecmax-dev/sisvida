@@ -183,9 +183,9 @@ export function UnionModuleLayout() {
             </button>
             
             <div className="flex items-center gap-2">
-              <img src={sindiflexLogo} alt="SindiFlex" className="h-7 object-contain" />
+              <img src={prosindwebLogo} alt="ProsindWeb" className="h-7 object-contain" />
               <h1 className="text-lg font-semibold text-foreground">
-                SindiFlex
+                ProsindWeb
               </h1>
               {currentClinic && (
                 <span className="text-sm text-muted-foreground hidden sm:inline">
