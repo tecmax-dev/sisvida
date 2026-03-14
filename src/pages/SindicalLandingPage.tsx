@@ -445,7 +445,7 @@ function StatsSection() {
 // ─── Testimonials Section ───────────────────────────────────────────
 const testimonials = [
   {
-    quote: "O SindiFlex revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
+    quote: "O ProsindWeb revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
     name: "Maria Santos",
     role: "Diretora Administrativa",
     org: "SINDICOMÉRCIO",
