@@ -687,7 +687,7 @@ function SindicalHeader() {
 // ─── Footer ─────────────────────────────────────────────────────────
 function SindicalFooter() {
   return (
-    <footer className="bg-gray-900 text-white py-16 border-t border-white/10">
+    <footer className="bg-[hsl(215,60%,12%)] text-white py-16 border-t border-white/10">
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
