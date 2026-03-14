@@ -57,7 +57,7 @@ const TutorialSindicatoPage = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const response = await fetch(ecliniLogo);
+        const response = await fetch(prosindwebLogo);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
