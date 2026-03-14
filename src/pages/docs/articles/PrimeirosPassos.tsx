@@ -41,8 +41,8 @@ const articles: Record<string, {
 
         <TutorialImage 
           src={tutorialLogin} 
-          alt="Tela de login do Eclini" 
-          caption="Tela de acesso ao sistema Eclini com login seguro"
+          alt="Tela de login do ProsindWeb" 
+          caption="Tela de acesso ao sistema ProsindWeb com login seguro"
         />
 
         <section className="space-y-6">
