@@ -174,7 +174,7 @@ function AboutSection() {
               O <strong className="text-gray-900">ProsindWeb é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
             </p>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">SindiFlex é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
+              O <strong className="text-gray-900">ProsindWeb é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
             </p>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
               O SindiFlex é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
