@@ -7010,7 +7010,7 @@ serve(async (req) => {
               const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
 
               const imageUrl = 'https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-assets/carteirinha-app-guide.jpg';
-              const caption = `📱 *Atualização de Carteirinha*\n\nA atualização da carteirinha é feita de forma rápida e prática diretamente pelo *aplicativo do sindicato*! 📲\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Siga as instruções na tela\n\n📥 *Baixe o app:*\n👉 https://app.eclini.com.br/sindicato/instalar\n\n⚠️ Este serviço *não está disponível* por WhatsApp.`;
+              const caption = `📱 *Atualização de Carteirinha*\n\nA atualização da carteirinha é feita de forma rápida e prática diretamente pelo *aplicativo do sindicato*! 📲\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Siga as instruções na tela\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\n⚠️ Este serviço *não está disponível* por WhatsApp.`;
 
               try {
                 await fetch(apiOficialUrl, {
