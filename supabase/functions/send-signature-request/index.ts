@@ -326,7 +326,7 @@ serve(async (req) => {
     }
 
     // Build signature URL
-    const baseUrl = Deno.env.get("APP_BASE_URL") || "https://app.eclini.com.br";
+    const baseUrl = Deno.env.get("APP_BASE_URL") || "https://prosindweb.com.br";
     const signatureUrl = `${baseUrl}/assinar/${token}`;
 
     console.log(

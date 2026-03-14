@@ -95,7 +95,7 @@ Você recebeu acesso ao sistema da *${clinicName}*.
 • Senha temporária: ${tempPassword}
 
 🔗 *Acesse agora:*
-https://app.eclini.com.br/auth
+https://prosindweb.com.br/auth
 
 ⚠️ *Importante:* Por segurança, recomendamos que você altere sua senha no primeiro acesso.
 

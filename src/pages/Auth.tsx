@@ -26,8 +26,8 @@ const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres
 
 type AuthView = "login" | "signup" | "forgot-password" | "reset-password" | "first-access";
 
-const PUBLISHED_FALLBACK_HOST = "eclini.lovable.app";
-const CANONICAL_CUSTOM_DOMAIN = "https://app.eclini.com.br";
+const PUBLISHED_FALLBACK_HOST = "sisvida.lovable.app";
+const CANONICAL_CUSTOM_DOMAIN = "https://prosindweb.com.br";
 
 export default function Auth() {
   // Canonicaliza APENAS o domínio publicado fallback (eclini.lovable.app) para o domínio customizado.

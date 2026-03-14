@@ -2,11 +2,11 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "https://sisvida.lovable.app/auth",
-    "distDir": "https://sisvida.lovable.app/auth"
+    "devPath": "https://prosindweb.com.br/auth",
+    "distDir": "https://prosindweb.com.br/auth"
   },
   "package": {
-    "productName": "Eclini",
+    "productName": "ProSindWeb",
     "version": "1.0.0"
   },
   "tauri": {
@@ -22,7 +22,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tecmax.eclini",
+      "identifier": "com.tecmax.prosindweb",
       "publisher": "Tecmax",
       "icon": [
         "icons/32x32.png",
@@ -44,7 +44,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "Eclini - Gestão Clínica e Sindical",
+        "title": "ProSindWeb - Gestão Sindical",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

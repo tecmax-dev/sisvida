@@ -11,7 +11,7 @@ const SMTP_HOST = Deno.env.get('SMTP_HOST');
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
 const SMTP_USER = Deno.env.get('SMTP_USER');
 const SMTP_PASSWORD = Deno.env.get('SMTP_PASSWORD');
-const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@eclini.com.br';
+const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@prosindweb.com.br';
 
 async function sendEmailViaSMTP(
   to: string,
@@ -351,7 +351,7 @@ serve(async (req) => {
       .eq('clinic_id', appointment.clinic_id)
       .maybeSingle();
 
-    const logoUrl = settings?.logo_url || clinic?.logo_url || 'https://app.eclini.com.br/logo.png';
+    const logoUrl = settings?.logo_url || clinic?.logo_url || 'https://prosindweb.com.br/logo.png';
     const clinicName = settings?.display_name || clinic?.name || 'HomologaNet';
 
     // Format date

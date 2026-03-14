@@ -104,8 +104,7 @@ const TRUSTED_IMAGE_HOSTS = [
   "images.unsplash.com",
   "i.imgur.com",
   "lh3.googleusercontent.com",
-  "app.eclini.com.br",
-  "eclini.com.br",
+  "prosindweb.com.br",
 ];
 
 async function fetchPublicImageToDataUrl(url: string, requestId: string) {

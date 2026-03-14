@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Logo padrão do sistema Eclini para cabeçalho de mensagens WhatsApp
-const DEFAULT_SYSTEM_LOGO = 'https://app.eclini.com.br/eclini-whatsapp-header.jpg';
+// Logo padrão do sistema ProSindWeb para cabeçalho de mensagens WhatsApp
+const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
 
 interface EvolutionConfig {
   api_url: string;
@@ -260,7 +260,7 @@ serve(async (req) => {
     let skippedCount = 0;
     let limitReachedCount = 0;
 
-    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://app.eclini.com.br';
+    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://prosindweb.com.br';
     const monthYear = new Date().toISOString().slice(0, 7);
 
     for (const clinic of (clinics || []) as ClinicWithReminder[]) {

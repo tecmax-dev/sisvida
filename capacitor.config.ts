@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     // Use the published web app so the native wrapper always shows the latest version
-    url: 'https://sisvida.lovable.app?forceHideBadge=true',
+    url: 'https://prosindweb.com.br?forceHideBadge=true',
     cleartext: true
   },
   plugins: {

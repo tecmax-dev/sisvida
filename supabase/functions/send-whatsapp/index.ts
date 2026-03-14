@@ -8,8 +8,8 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-// Logo padrão do sistema Eclini para cabeçalho de mensagens WhatsApp
-const DEFAULT_SYSTEM_LOGO = 'https://app.eclini.com.br/eclini-whatsapp-header.jpg';
+// Logo padrão do sistema ProSindWeb para cabeçalho de mensagens WhatsApp
+const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
 
 interface WhatsAppRequest {
   phone: string;

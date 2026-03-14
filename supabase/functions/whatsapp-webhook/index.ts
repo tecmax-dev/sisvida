@@ -955,12 +955,12 @@ _Digite o número da opção desejada._`,
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
@@ -1260,12 +1260,12 @@ async function handleAIBookingFlow(
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
@@ -6877,7 +6877,7 @@ serve(async (req) => {
           // "Outros Assuntos" sub-option: Homologações
           if (followUpId === 'whazing_outros_homologacao') {
             // Send informational message with scheduling link
-            const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://app.eclini.com.br/agendamento/profissional/ione-atos-1`;
+            const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://prosindweb.com.br/agendamento/profissional/ione-atos-1`;
             
             try {
               await fetch(`${configData.api_url}/message/sendText/${configData.instance_name}`, {
@@ -7010,7 +7010,7 @@ serve(async (req) => {
               const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
 
               const imageUrl = 'https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-assets/carteirinha-app-guide.jpg';
-              const caption = `📱 *Atualização de Carteirinha*\n\nA atualização da carteirinha é feita de forma rápida e prática diretamente pelo *aplicativo do sindicato*! 📲\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Siga as instruções na tela\n\n📥 *Baixe o app:*\n👉 https://app.eclini.com.br/sindicato/instalar\n\n⚠️ Este serviço *não está disponível* por WhatsApp.`;
+              const caption = `📱 *Atualização de Carteirinha*\n\nA atualização da carteirinha é feita de forma rápida e prática diretamente pelo *aplicativo do sindicato*! 📲\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Siga as instruções na tela\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\n⚠️ Este serviço *não está disponível* por WhatsApp.`;
 
               try {
                 await fetch(apiOficialUrl, {
@@ -7400,12 +7400,12 @@ serve(async (req) => {
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;

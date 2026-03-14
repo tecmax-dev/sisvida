@@ -512,7 +512,7 @@ serve(async (req) => {
           .single();
 
         // Send WhatsApp with telemedicine link
-        const telemedicineLink = `https://app.eclini.com.br/telemedicina/${session.patient_token}`;
+        const telemedicineLink = `https://prosindweb.com.br/telemedicina/${session.patient_token}`;
         
         // Format date for display
         const [year, month, day] = date.split('-');

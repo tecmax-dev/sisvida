@@ -11,7 +11,7 @@ const SMTP_HOST = Deno.env.get('SMTP_HOST');
 const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
 const SMTP_USER = Deno.env.get('SMTP_USER');
 const SMTP_PASSWORD = Deno.env.get('SMTP_PASSWORD');
-const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@eclini.com.br';
+const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'noreply@prosindweb.com.br';
 
 interface EvolutionConfig {
   api_url: string;
@@ -312,7 +312,7 @@ serve(async (req) => {
 
     // Logo priority
     const unionEntity = (clinic as any)?.union_entities?.[0];
-    const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://app.eclini.com.br/eclini-whatsapp-header.jpg';
+    const logoUrl = settings?.logo_url || unionEntity?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
     const clinicName = settings?.display_name || clinic?.name || 'HomologaNet';
 
     // Format date

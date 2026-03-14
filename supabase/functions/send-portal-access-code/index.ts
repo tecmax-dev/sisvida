@@ -273,7 +273,7 @@ serve(async (req) => {
       accessCode = String(office.access_code);
       identifier = data.recipientEmail || office.email;
       clinicId = clinicId || office.clinic_id;
-      portalUrl = `${req.headers.get("origin") || "https://app.eclini.com.br"}/portal-contador/${data.clinicSlug}`;
+      portalUrl = `${req.headers.get("origin") || "https://prosindweb.com.br"}/portal-contador/${data.clinicSlug}`;
 
       if (data.updateEmail && data.recipientEmail && data.recipientEmail !== office.email) {
         await withTimeout(
@@ -332,7 +332,7 @@ serve(async (req) => {
         : cleanCnpj;
 
       clinicId = clinicId || employer.clinic_id;
-      portalUrl = `${req.headers.get("origin") || "https://app.eclini.com.br"}/portal-empresa/${data.clinicSlug}`;
+      portalUrl = `${req.headers.get("origin") || "https://prosindweb.com.br"}/portal-empresa/${data.clinicSlug}`;
 
       if (data.updateEmail && data.recipientEmail && data.recipientEmail !== employer.email) {
         await withTimeout(

@@ -801,7 +801,7 @@ Como posso ajudar? Escolha uma opção:
 6️⃣ Segunda via de boleto (empresa)
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 Digite o número da opção desejada.`;
 
@@ -849,12 +849,12 @@ Digite o número da opção desejada.`;
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`,
@@ -950,12 +950,12 @@ Sempre que detectar QUALQUER intenção de agendamento, responda EXATAMENTE com 
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial"
@@ -998,7 +998,7 @@ Como posso ajudar? Escolha uma opção:
 6️⃣ Segunda via de boleto (empresa)
 
 📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 Digite o número da opção desejada."
 
@@ -1088,11 +1088,11 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 - Nível 04 (R$2.050): Encarregado de Loja, Subgerente e Gerente
 
 ## APLICATIVO DO SINDICATO
-- Instalação universal: https://app.eclini.com.br/app/instalar
-- Link direto (app instalado): https://app.eclini.com.br/app
+- Instalação universal: https://prosindweb.com.br/app/instalar
+- Link direto (app instalado): https://prosindweb.com.br/app
 
 ## HOMOLOGAÇÃO
-Link: https://app.eclini.com.br/homologacao/sindicato
+Link: https://prosindweb.com.br/homologacao/sindicato
 
 ## SEGUNDA VIA DE BOLETO (EMPRESAS)
 ⚠️ IMPORTANTE: Quando o usuário solicitar segunda via de boleto, 2ª via, boleto vencido, ou qualquer pedido relacionado a boleto empresarial, NÃO tente processar manualmente.
@@ -1199,12 +1199,12 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
@@ -1391,12 +1391,12 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 O agendamento por WhatsApp está desativado. Utilize nosso aplicativo para agendar suas consultas com praticidade.
 
 📲 *Abrir o app agora:*
-👉 https://app.eclini.com.br/app
+👉 https://prosindweb.com.br/app
 
 _(Se o app já estiver instalado no seu celular, o link acima abrirá diretamente nele)_
 
 📥 *Ainda não instalou?*
-👉 https://app.eclini.com.br/app/instalar
+👉 https://prosindweb.com.br/app/instalar
 
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;

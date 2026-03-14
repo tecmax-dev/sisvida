@@ -70,7 +70,7 @@ serve(async (req) => {
     const ogImageUrl = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-image.jpg";
     
     // Determinar base URL baseado no domínio customizado ou padrão
-    let baseUrl = "https://app.eclini.com.br";
+    let baseUrl = "https://prosindweb.com.br";
     for (const [domain, cId] of Object.entries(DOMAIN_TO_CLINIC)) {
       if (cId === clinicId) {
         baseUrl = `https://${domain}`;
@@ -180,7 +180,7 @@ serve(async (req) => {
   <title>SECMI - App do Associado</title>
   <meta property="og:title" content="SECMI - App do Associado">
   <meta property="og:description" content="Aplicativo oficial do Sindicato">
-  <script>window.location.replace('https://app.eclini.com.br/app/instalar');</script>
+  <script>window.location.replace('https://prosindweb.com.br/app/instalar');</script>
 </head>
 <body>Redirecionando...</body>
 </html>`, {

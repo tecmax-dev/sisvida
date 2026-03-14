@@ -604,7 +604,7 @@ export default function ClinicPresentationPage() {
                 </div>
                 <div>
                   <p className="text-cyan-300 text-[10px]">Sistema</p>
-                  <p className="text-base font-semibold">app.eclini.com.br</p>
+                  <p className="text-base font-semibold">prosindweb.com.br</p>
                 </div>
               </div>
             </div>

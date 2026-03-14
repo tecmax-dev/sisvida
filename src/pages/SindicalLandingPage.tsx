@@ -588,7 +588,7 @@ function CTASection() {
               className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-white text-gray-900 hover:bg-gray-100"
               asChild
             >
-              <a href="mailto:contato@eclini.com.br?subject=Demonstração SindiFlex" className="flex items-center gap-2">
+              <a href="mailto:contato@prosindweb.com.br?subject=Demonstração SindiFlex" className="flex items-center gap-2">
                 Solicitar demonstração
                 <ArrowRight className="h-5 w-5" />
               </a>
@@ -702,7 +702,7 @@ function SindicalFooter() {
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <MessageCircle className="h-5 w-5" />
               </a>
-              <a href="mailto:contato@eclini.com.br"
+              <a href="mailto:contato@prosindweb.com.br"
                 className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <Mail className="h-5 w-5" />
               </a>
@@ -713,7 +713,7 @@ function SindicalFooter() {
             <h4 className="font-bold mb-4">Contato</h4>
             <ul className="space-y-3 text-white/50">
               <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(71) 98278-6864</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@eclini.com.br</li>
+              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
             </ul>
           </div>
