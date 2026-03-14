@@ -190,7 +190,7 @@ const ApresentacaoEcliniPage = () => {
       doc.setTextColor(...secondaryColor);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('(71) 3144-9898', pageWidth - 60, 90, { align: 'center' });
+      doc.text('(11) 5194-3839', pageWidth - 60, 90, { align: 'center' });
       
       drawFooter();
 
