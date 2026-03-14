@@ -157,7 +157,7 @@ const articles: Record<string, {
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
               src={prescricaoDigital} 
-              alt="Configuração de Documentos Eclini" 
+              alt="Configuração de Documentos ProsindWeb" 
               className="rounded-lg w-full"
             />
           </div>
