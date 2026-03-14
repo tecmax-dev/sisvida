@@ -101,7 +101,7 @@ export default function InstallPage() {
             <Smartphone className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Instale o Eclini
+            Instale o ProsindWeb
           </h1>
           <p className="text-muted-foreground">
             Tenha acesso rápido ao sistema diretamente da sua tela inicial
