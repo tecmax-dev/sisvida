@@ -74,7 +74,7 @@ function HeroSection() {
   return (
     <section className="relative min-h-[100vh] flex items-center overflow-hidden">
       {/* Dark gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,12%)] via-[hsl(215,50%,18%)] to-[hsl(215,60%,12%)]" />
       
       {/* Hex pattern overlay */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
