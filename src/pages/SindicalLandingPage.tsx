@@ -171,7 +171,7 @@ function AboutSection() {
             </span>?
             </h2>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">SindiFlex é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
+              O <strong className="text-gray-900">ProsindWeb é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
             </p>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
               O <strong className="text-gray-900">SindiFlex é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
