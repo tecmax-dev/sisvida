@@ -595,7 +595,7 @@ const TutorialSindicatoPage = () => {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("Guia ilustrado para usuarios e profissionais de saude", pageWidth / 2, 122, { align: "center" });
-      doc.text("Sistema Eclini - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
+      doc.text("Sistema ProsindWeb - Gestao Sindical Inteligente", pageWidth / 2, 132, { align: "center" });
 
       // Feature cards - 6 items in 2 rows
       const features = [
