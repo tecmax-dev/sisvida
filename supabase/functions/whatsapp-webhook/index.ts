@@ -7258,6 +7258,11 @@ serve(async (req) => {
           'boleto_contrib_1': '1',
           'boleto_contrib_2': '2',
           'boleto_contrib_3': '3',
+          'boleto_contrib_mais': 'mais',
+          'boleto_contrib_voltar': 'voltar',
+          'boleto_year_1': '1',
+          'boleto_year_2': '2',
+          'boleto_year_3': '3',
         };
         const boletoButtonText = boletoButtonMap[messageText?.trim()];
         if (boletoButtonText) {
