@@ -7,9 +7,9 @@ const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 // Default system branding (ProSindWeb)
 const DEFAULT_BRANDING = {
-  name: "ProSindWeb - Sistema de Gestão Sindical",
-  shortName: "ProSindWeb",
-  description: "Sistema de gestão para sindicatos e clínicas.",
+  name: "ProsindWeb - Gestão Sindical e Clínica",
+  shortName: "ProsindWeb",
+  description: "Sistema completo de gestão para sindicatos e clínicas.",
   logo: "/favicon-prosindweb.png",
 };
 
