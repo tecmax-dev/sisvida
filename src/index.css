@@ -273,7 +273,7 @@
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
   }
   
-  /* Premium Card Styles - Eclini inspired */
+  /* Premium Card Styles - ProsindWeb inspired */
   .card-premium {
     @apply relative overflow-hidden border border-border/50 bg-card rounded-2xl;
     box-shadow: 0 2px 8px hsl(195 20% 20% / 0.04), 0 8px 24px hsl(195 20% 20% / 0.03);
