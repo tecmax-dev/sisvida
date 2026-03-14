@@ -74,7 +74,7 @@ function HeroSection() {
   return (
     <section className="relative min-h-[100vh] flex items-center overflow-hidden">
       {/* Dark gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,12%)] via-[hsl(215,50%,18%)] to-[hsl(215,60%,12%)]" />
       
       {/* Hex pattern overlay */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
@@ -84,20 +84,20 @@ function HeroSection() {
 
       {/* Gradient accent */}
       <div className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
-        style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
+        style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
       />
 
       <div className="container relative z-10 py-32">
         <div className="max-w-4xl">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-8">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[hsl(30,90%,55%)] animate-pulse" />
             <span className="text-sm text-white/80 font-medium">Módulos de Gestão Integrados</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-white mb-4 tracking-tight">
             <span className="block text-white/60 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
             <span style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 60%), hsl(160 80% 55%), hsl(95 70% 55%))',
+              background: 'linear-gradient(135deg, hsl(215 85% 55%), hsl(30 90% 55%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -114,7 +114,7 @@ function HeroSection() {
               size="lg" 
               className="h-14 px-8 text-base font-semibold rounded-full shadow-2xl transition-all hover:scale-105"
               style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                 color: 'white',
               }}
               asChild
@@ -145,7 +145,7 @@ function HeroSection() {
       </div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[hsl(0,0%,100%)] to-transparent" />
     </section>
   );
 }
@@ -163,7 +163,7 @@ function AboutSection() {
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
             O que é o{" "}
             <span style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+               background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -183,7 +183,7 @@ function AboutSection() {
               size="lg"
               className="h-14 px-8 rounded-full font-semibold"
               style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                 background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                 color: 'white',
               }}
               asChild
@@ -199,12 +199,12 @@ function AboutSection() {
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl p-10 border border-gray-200 shadow-xl">
               <div className="grid grid-cols-2 gap-5">
                 {[
-                  { icon: Building2, label: "Gestão de Empresas", desc: "Cadastro completo", color: "from-amber-500 to-orange-500" },
-                  { icon: Users, label: "Cadastro de Sócios", desc: "Associados e dependentes", color: "from-blue-500 to-cyan-500" },
-                  { icon: Receipt, label: "Contribuições", desc: "Boletos e cobranças", color: "from-green-500 to-emerald-500" },
-                  { icon: PiggyBank, label: "Financeiro", desc: "Receitas e despesas", color: "from-purple-500 to-violet-500" },
-                  { icon: Handshake, label: "Negociações", desc: "Acordos e parcelamentos", color: "from-rose-500 to-pink-500" },
-                  { icon: FileBarChart, label: "Relatórios", desc: "Gerenciais e fiscais", color: "from-teal-500 to-cyan-500" },
+                   { icon: Building2, label: "Gestão de Empresas", desc: "Cadastro completo", color: "from-[hsl(30,90%,55%)] to-[hsl(30,85%,45%)]" },
+                   { icon: Users, label: "Cadastro de Sócios", desc: "Associados e dependentes", color: "from-[hsl(215,85%,50%)] to-[hsl(215,80%,40%)]" },
+                   { icon: Receipt, label: "Contribuições", desc: "Boletos e cobranças", color: "from-[hsl(120,65%,45%)] to-[hsl(120,60%,35%)]" },
+                   { icon: PiggyBank, label: "Financeiro", desc: "Receitas e despesas", color: "from-[hsl(215,70%,40%)] to-[hsl(215,85%,30%)]" },
+                   { icon: Handshake, label: "Negociações", desc: "Acordos e parcelamentos", color: "from-[hsl(30,80%,50%)] to-[hsl(15,75%,45%)]" },
+                   { icon: FileBarChart, label: "Relatórios", desc: "Gerenciais e fiscais", color: "from-[hsl(120,55%,40%)] to-[hsl(160,60%,35%)]" },
                 ].map((item, i) => (
                   <div key={i} className="flex flex-col items-center p-5 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center mb-3`}>
@@ -217,10 +217,10 @@ function AboutSection() {
               </div>
             </div>
             <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-40"
-              style={{ background: 'hsl(200 100% 45%)' }}
+              style={{ background: 'hsl(215 85% 50%)' }}
             />
             <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full blur-2xl opacity-30"
-              style={{ background: 'hsl(95 70% 50%)' }}
+              style={{ background: 'hsl(120 65% 45%)' }}
             />
           </div>
         </div>
@@ -235,56 +235,56 @@ const modules = [
     icon: Receipt,
     title: "Arrecadação",
     description: "Cadastros, emissão de boletos e controle financeiro. Crucial para a transformação de resultados da Entidade. Geração em lote, integração bancária e controle de inadimplência automatizado.",
-    color: "from-green-500 to-emerald-600",
+    color: "from-[hsl(120,65%,45%)] to-[hsl(120,60%,35%)]",
     highlights: ["Emissão de boletos em lote", "Integração bancária", "Controle de inadimplência", "Relatórios de arrecadação"],
   },
   {
     icon: PiggyBank,
     title: "Contas a Pagar e Receber",
     description: "Controle eficaz de convênios, guias e pagamentos, proporcionando gestão financeira mais precisa e transparente para toda a entidade.",
-    color: "from-blue-500 to-cyan-600",
+    color: "from-[hsl(215,85%,50%)] to-[hsl(215,80%,40%)]",
     highlights: ["Controle de vencimentos", "Categorização automática", "Fluxo de aprovações", "Alertas de pagamento"],
   },
   {
     icon: BarChart3,
     title: "Fluxo de Caixa",
     description: "Controle total das entradas e saídas financeiras, com relatórios comparativos e ferramentas de análise para tomada de decisão.",
-    color: "from-violet-500 to-purple-600",
+    color: "from-[hsl(215,70%,40%)] to-[hsl(215,85%,30%)]",
     highlights: ["Visão consolidada", "Relatórios comparativos", "Projeções financeiras", "Múltiplos portadores"],
   },
   {
     icon: Building2,
     title: "Gestão de Empresas",
     description: "Cadastro completo de empresas contribuintes com dados fiscais, documentos, histórico de contribuições e relacionamento com escritórios contábeis.",
-    color: "from-amber-500 to-orange-600",
+    color: "from-[hsl(30,90%,55%)] to-[hsl(30,85%,45%)]",
     highlights: ["Cadastro com CNPJ", "Portal do contador", "Portal da empresa", "Histórico completo"],
   },
   {
     icon: Users,
     title: "Gestão de Sócios e Dependentes",
     description: "Administre o cadastro de associados com dependentes, carteirinhas digitais, controle de benefícios e comunicação direta.",
-    color: "from-rose-500 to-pink-600",
+    color: "from-[hsl(30,80%,50%)] to-[hsl(15,75%,45%)]",
     highlights: ["Carteirinha digital", "Dependentes e benefícios", "Portal do sócio", "Comunicação por WhatsApp"],
   },
   {
     icon: Handshake,
     title: "Negociações e Acordos",
     description: "Facilite agendamentos e controle de negociações, parcelamentos de débitos e acordos de pagamento com empresas inadimplentes.",
-    color: "from-teal-500 to-cyan-600",
+    color: "from-[hsl(160,60%,40%)] to-[hsl(120,55%,35%)]",
     highlights: ["Parcelamento de débitos", "Acordos automatizados", "Controle de parcelas", "Histórico de negociações"],
   },
   {
     icon: FileBarChart,
     title: "Relatórios Gerenciais",
     description: "Relatórios profissionais para gestão interna, assembleias, auditorias e órgãos fiscalizadores. Exportação em PDF e Excel.",
-    color: "from-indigo-500 to-blue-600",
+    color: "from-[hsl(215,50%,35%)] to-[hsl(215,60%,25%)]",
     highlights: ["Relatórios de assembleias", "Exportação PDF/Excel", "Dashboards visuais", "Indicadores de desempenho"],
   },
   {
     icon: Shield,
     title: "Auditoria e Segurança",
     description: "Todas as ações são registradas com rastreabilidade completa. Controle de permissões granular por perfil de usuário.",
-    color: "from-gray-600 to-gray-800",
+    color: "from-[hsl(215,30%,30%)] to-[hsl(215,40%,20%)]",
     highlights: ["Log de auditoria", "Permissões por perfil", "Rastreabilidade total", "Segurança de dados"],
   },
 ];
@@ -300,7 +300,7 @@ function ModulesSection() {
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Módulos de Gestão{" "}
             <span style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+               background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -332,7 +332,7 @@ function ModulesSection() {
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {mod.highlights.map((h, j) => (
                     <div key={j} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-[hsl(120,65%,45%)] flex-shrink-0" />
                       <span className="text-gray-700">{h}</span>
                     </div>
                   ))}
@@ -342,7 +342,7 @@ function ModulesSection() {
                     size="sm"
                     className="rounded-full font-semibold"
                     style={{
-                      background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                       background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                       color: 'white',
                     }}
                     asChild
@@ -376,7 +376,7 @@ function StatsSection() {
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-12">
               Resultados que{" "}
               <span style={{
-                background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                 background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
@@ -393,7 +393,7 @@ function StatsSection() {
               ].map((stat, i) => (
                 <div key={i} className="text-left">
                   <div className="text-4xl md:text-5xl font-bold mb-2" style={{
-                    background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                     background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                   }}>
@@ -407,7 +407,7 @@ function StatsSection() {
           </div>
 
           {/* Right: coverage map stats */}
-          <div className="bg-gray-900 rounded-3xl p-10 text-white flex flex-col justify-center">
+          <div className="bg-[hsl(215,60%,12%)] rounded-3xl p-10 text-white flex flex-col justify-center">
             <h3 className="text-2xl font-bold mb-2">Nossa Abrangência</h3>
             <p className="text-white/60 mb-10">
               Presentes em todo o território nacional, atendendo diversas Confederações, Federações, Sindicatos e Associações.
@@ -428,7 +428,7 @@ function StatsSection() {
                       className="h-full rounded-full transition-all duration-1000"
                       style={{
                         width: `${bar.pct}%`,
-                        background: 'linear-gradient(90deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+                        background: 'linear-gradient(90deg, hsl(215 85% 50%), hsl(120 65% 45%))',
                       }}
                     />
                   </div>
@@ -475,7 +475,7 @@ function TestimonialsSection() {
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             O que dizem nossos{" "}
             <span style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+               background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -497,7 +497,7 @@ function TestimonialsSection() {
               </p>
               <div className="flex items-center gap-4 pt-6 border-t border-gray-100">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
+                   style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
                 >
                   {t.name.charAt(0)}
                 </div>
@@ -526,7 +526,7 @@ function AudienceSection() {
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Desenvolvido para{" "}
             <span style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+               background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -543,12 +543,12 @@ function AudienceSection() {
             { icon: Scale, title: "Associações de Classe", desc: "Entidades representativas que buscam modernização." },
           ].map((a, i) => (
             <div key={i} className="group text-center p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-transparent hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              style={{ '--hover-bg': 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' } as any}
+              style={{ '--hover-bg': 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' } as any}
             >
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-colors duration-300"
-                style={{ background: 'linear-gradient(135deg, hsl(200 100% 45% / 0.1), hsl(95 70% 50% / 0.1))' }}
+                style={{ background: 'linear-gradient(135deg, hsl(215 85% 50% / 0.1), hsl(120 65% 45% / 0.1))' }}
               >
-                <a.icon className="h-8 w-8" style={{ color: 'hsl(200 100% 45%)' }} />
+                <a.icon className="h-8 w-8" style={{ color: 'hsl(215 85% 50%)' }} />
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{a.title}</h3>
               <p className="text-sm text-gray-500">{a.desc}</p>
@@ -564,9 +564,9 @@ function AudienceSection() {
 function CTASection() {
   return (
     <section id="contato" className="py-24 lg:py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gray-900" />
+      <div className="absolute inset-0 bg-[hsl(215,60%,12%)]" />
       <div className="absolute inset-0 opacity-30"
-        style={{ background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))' }}
+        style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
       />
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
@@ -624,7 +624,7 @@ function SindicalHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-md border-b border-white/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[hsl(215,60%,12%)]/95 backdrop-blur-md border-b border-white/10">
       <div className="container">
         <div className="flex items-center justify-between h-16">
           <Link to="/sindical" className="flex items-center">
@@ -650,7 +650,7 @@ function SindicalHeader() {
               <Link to="/entidade-sindical">Área da Entidade</Link>
             </Button>
             <Button size="sm" className="rounded-full font-semibold" style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 45%), hsl(95 70% 50%))',
+              background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
               color: 'white',
             }} asChild>
               <a href="#contato">Demonstração</a>
@@ -687,7 +687,7 @@ function SindicalHeader() {
 // ─── Footer ─────────────────────────────────────────────────────────
 function SindicalFooter() {
   return (
-    <footer className="bg-gray-900 text-white py-16 border-t border-white/10">
+    <footer className="bg-[hsl(215,60%,12%)] text-white py-16 border-t border-white/10">
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
