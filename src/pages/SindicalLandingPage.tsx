@@ -689,31 +689,31 @@ function SindicalHeader() {
 // ─── Footer ─────────────────────────────────────────────────────────
 function SindicalFooter() {
   return (
-    <footer className="bg-[hsl(215,60%,12%)] text-white py-16 border-t border-white/10">
+    <footer className="bg-gray-50 text-gray-700 py-16 border-t border-gray-200">
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
             <div className="mb-4">
               <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
             </div>
-            <p className="text-white/50 mb-6 max-w-md">
+            <p className="text-gray-500 mb-6 max-w-md">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
             <div className="flex gap-3">
               <a href="https://wa.me/5571982786864" target="_blank" rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
                 <MessageCircle className="h-5 w-5" />
               </a>
               <a href="mailto:contato@prosindweb.com.br"
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
                 <Mail className="h-5 w-5" />
               </a>
             </div>
           </div>
 
           <div>
-            <h4 className="font-bold mb-4">Contato</h4>
-            <ul className="space-y-3 text-white/50">
+            <h4 className="font-bold text-gray-900 mb-4">Contato</h4>
+            <ul className="space-y-3 text-gray-500">
               <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(71) 98278-6864</li>
               <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
@@ -721,18 +721,18 @@ function SindicalFooter() {
           </div>
 
           <div>
-            <h4 className="font-bold mb-4">Links</h4>
-            <ul className="space-y-3 text-white/50">
-              <li><a href="#sobre" className="hover:text-white transition-colors">Sobre o Sistema</a></li>
-              <li><a href="#modulos" className="hover:text-white transition-colors">Módulos</a></li>
-              <li><a href="#depoimentos" className="hover:text-white transition-colors">Depoimentos</a></li>
-              <li><Link to="/politica-privacidade" className="hover:text-white transition-colors">Privacidade</Link></li>
-              <li><Link to="/termos-uso" className="hover:text-white transition-colors">Termos de Uso</Link></li>
+            <h4 className="font-bold text-gray-900 mb-4">Links</h4>
+            <ul className="space-y-3 text-gray-500">
+              <li><a href="#sobre" className="hover:text-gray-900 transition-colors">Sobre o Sistema</a></li>
+              <li><a href="#modulos" className="hover:text-gray-900 transition-colors">Módulos</a></li>
+              <li><a href="#depoimentos" className="hover:text-gray-900 transition-colors">Depoimentos</a></li>
+              <li><Link to="/politica-privacidade" className="hover:text-gray-900 transition-colors">Privacidade</Link></li>
+              <li><Link to="/termos-uso" className="hover:text-gray-900 transition-colors">Termos de Uso</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
+        <div className="border-t border-gray-200 mt-12 pt-8 text-center text-gray-400 text-sm">
           <p>© {new Date().getFullYear()} ProsindWeb - Todos os direitos reservados.</p>
         </div>
       </div>
