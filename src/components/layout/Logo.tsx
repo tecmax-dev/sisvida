@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import ecliniLogo from "@/assets/eclini-logo.png";
+import prosindwebLogo from "@/assets/prosindweb-logo.png";
 
 interface LogoProps {
   variant?: "light" | "dark";
@@ -18,8 +18,8 @@ export function Logo({ variant = "dark", size = "md", showText = true, customSrc
   return (
     <Link to="/" className="flex items-center gap-2 group">
       <img 
-        src={customSrc || ecliniLogo} 
-        alt="Eclini - Sistema para Clínicas" 
+        src={customSrc || prosindwebLogo} 
+        alt="ProsindWeb - Sistema para Clínicas" 
         className={`${sizes[size]} w-auto object-contain`}
       />
     </Link>

@@ -88,7 +88,7 @@ export function HeroSection() {
             <div className="relative">
               <img 
                 src={heroImage}
-                alt="Múltiplas telas do sistema Eclini - Dashboard, agenda e prontuário"
+                alt="Múltiplas telas do sistema ProsindWeb - Dashboard, agenda e prontuário"
                 className="w-full max-w-lg h-auto object-contain drop-shadow-xl animate-fade-in"
               />
               

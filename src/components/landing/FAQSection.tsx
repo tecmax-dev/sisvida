@@ -46,7 +46,7 @@ export function FAQSection() {
             Perguntas Frequentes
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Encontre respostas para as dúvidas mais comuns sobre o Eclini
+            Encontre respostas para as dúvidas mais comuns sobre o ProsindWeb
           </p>
         </div>
 

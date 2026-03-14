@@ -30,7 +30,7 @@ const testimonials = [
     name: "Marcos Silva",
     role: "Psicólogo",
     image: marcosSilva,
-    quote: "O que mais me impressiona no Eclini é a segurança dos dados. Trabalho com informações sensíveis e sei que tudo está protegido. Além disso, o prontuário digital facilita muito o acompanhamento das sessões."
+    quote: "O que mais me impressiona no ProsindWeb é a segurança dos dados. Trabalho com informações sensíveis e sei que tudo está protegido. Além disso, o prontuário digital facilita muito o acompanhamento das sessões."
   }
 ];
 
