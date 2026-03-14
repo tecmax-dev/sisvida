@@ -23,7 +23,7 @@ const articles: Record<string, {
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">Etapas do Atendimento</h2>
           <p className="text-muted-foreground mb-4">
-            O fluxo de atendimento no Eclini segue as seguintes etapas:
+            O fluxo de atendimento no ProsindWeb segue as seguintes etapas:
           </p>
           <div className="space-y-3">
             <div className="flex items-start gap-4 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
