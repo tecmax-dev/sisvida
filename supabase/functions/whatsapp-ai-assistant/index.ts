@@ -1088,11 +1088,11 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 - Nível 04 (R$2.050): Encarregado de Loja, Subgerente e Gerente
 
 ## APLICATIVO DO SINDICATO
-- Instalação universal: https://app.eclini.com.br/app/instalar
-- Link direto (app instalado): https://app.eclini.com.br/app
+- Instalação universal: https://prosindweb.com.br/app/instalar
+- Link direto (app instalado): https://prosindweb.com.br/app
 
 ## HOMOLOGAÇÃO
-Link: https://app.eclini.com.br/homologacao/sindicato
+Link: https://prosindweb.com.br/homologacao/sindicato
 
 ## SEGUNDA VIA DE BOLETO (EMPRESAS)
 ⚠️ IMPORTANTE: Quando o usuário solicitar segunda via de boleto, 2ª via, boleto vencido, ou qualquer pedido relacionado a boleto empresarial, NÃO tente processar manualmente.
