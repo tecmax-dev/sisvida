@@ -263,7 +263,7 @@ export function AdminLayout() {
             </span>
           )}
           <span className="text-muted-foreground">
-            VERSÃO <span className="font-semibold text-primary">{SYSTEM_VERSION}</span>
+            © 2026 ProSindWeb - Todos os Direitos Reservados | VERSÃO <span className="font-semibold text-primary">{SYSTEM_VERSION}</span>
           </span>
         </div>
 
