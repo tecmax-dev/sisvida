@@ -494,7 +494,7 @@ const TutorialSindicatoPage = () => {
         doc.rect(0, pageHeight - 10, pageWidth, 10, "F");
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(7);
-        doc.text("Tutorial Eclini - Modulo Sindical | Tecmax Tecnologia 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
+        doc.text("Tutorial ProSindWeb - Modulo Sindical | Tecmax Tecnologia 2026", pageWidth / 2, pageHeight - 4, { align: "center" });
       };
 
       // Helper: Draw a content box with colored left bar
