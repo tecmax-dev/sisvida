@@ -4,10 +4,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const DEFAULT_BRANDING = {
-  name: "Eclini - Sistema para Clínicas",
-  shortName: "Eclini",
-  description: "Sistema de gestão para clínicas médicas e consultórios.",
-  logo: "/favicon-eclini.png",
+  name: "ProSindWeb - Sistema de Gestão Sindical",
+  shortName: "ProSindWeb",
+  description: "Sistema de gestão para sindicatos e clínicas.",
+  logo: "/favicon-prosindweb.png",
 };
 
 const SINDICATO_MANIFEST_URL = "/manifest-sindicato.webmanifest";
