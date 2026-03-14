@@ -177,7 +177,7 @@ function AboutSection() {
               O <strong className="text-gray-900">ProsindWeb é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
             </p>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              O SindiFlex é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
+              O ProsindWeb é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
             </p>
             <Button 
               size="lg"
