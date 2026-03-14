@@ -658,7 +658,7 @@ const TutorialSindicatoPage = () => {
       doc.setTextColor(...darkColor);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      const introText = "O Modulo Sindical do Eclini foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
+      const introText = "O Modulo Sindical do ProsindWeb foi desenvolvido para oferecer uma solucao completa de gestao para entidades sindicais. Este tutorial apresenta as principais funcionalidades e como utiliza-las de forma eficiente.";
       const introLines = doc.splitTextToSize(introText, contentWidth);
       doc.text(introLines, margin, yPos);
       yPos += 18;
