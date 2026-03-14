@@ -588,7 +588,7 @@ function CTASection() {
               className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-white text-gray-900 hover:bg-gray-100"
               asChild
             >
-              <a href="mailto:contato@eclini.com.br?subject=Demonstração SindiFlex" className="flex items-center gap-2">
+              <a href="mailto:contato@prosindweb.com.br?subject=Demonstração SindiFlex" className="flex items-center gap-2">
                 Solicitar demonstração
                 <ArrowRight className="h-5 w-5" />
               </a>
