@@ -189,7 +189,7 @@
     @apply bg-card/95 backdrop-blur-lg border border-border/60;
   }
   
-  /* Eclini gradient text - blue to green */
+  /* ProsindWeb gradient text - blue to green */
   .gradient-text {
     background: var(--gradient-text);
     -webkit-background-clip: text;
