@@ -24,7 +24,7 @@ interface ClinicBranding {
  * based on the clinic's data for the mobile app.
  * 
  * IMPORTANT: This hook applies custom branding on /app/*, /m/*, and /sindicato/* routes.
- * On all other routes, it restores the default Eclini branding.
+ * On all other routes, it restores the default ProsindWeb branding.
  */
 export function useDynamicPWA() {
   const [clinic, setClinic] = useState<ClinicBranding | null>(null);
