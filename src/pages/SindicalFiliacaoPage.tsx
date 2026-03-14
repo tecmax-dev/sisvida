@@ -398,7 +398,7 @@ export default function SindicalFiliacaoPage() {
         setCpfExistsType('associado');
         toast({
           title: "CPF já possui solicitação",
-          description: "Este CPF já possui uma solicitação de filiação pendente. Entre em contato com o sindicato pelo (73) 3231-1784.",
+          description: "Este CPF já possui uma solicitação de filiação pendente. Entre em contato com o sindicato pelo (11) 5194-3839.",
           variant: "destructive",
         });
         return;
