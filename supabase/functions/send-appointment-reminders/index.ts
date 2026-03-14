@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Logo padrão do sistema Eclini para cabeçalho de mensagens WhatsApp
-const DEFAULT_SYSTEM_LOGO = 'https://app.eclini.com.br/eclini-whatsapp-header.jpg';
+// Logo padrão do sistema ProSindWeb para cabeçalho de mensagens WhatsApp
+const DEFAULT_SYSTEM_LOGO = 'https://prosindweb.com.br/eclini-whatsapp-header.jpg';
 
 interface EvolutionConfig {
   api_url: string;
