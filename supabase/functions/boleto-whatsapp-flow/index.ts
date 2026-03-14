@@ -551,6 +551,7 @@ type BoletoState =
   | 'SELECT_TAXA_TYPE_BATCH'    // Escolher entre taxa mercados/varejista (fluxo em lote)
   | 'WAITING_COMPETENCE'        // Competência (mês/ano)
   | 'WAITING_VALUE'             // Valor a recolher
+  | 'SELECT_CONTRIBUTION_YEAR'  // Selecionar ano quando há muitas contribuições vencidas
   | 'SELECT_CONTRIBUTION'       // Selecionar contribuição vencida existente
   | 'WAITING_NEW_DUE_DATE'      // Nova data de vencimento
   | 'CONFIRM_BOLETO'            // Confirmação final
