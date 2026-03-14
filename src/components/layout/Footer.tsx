@@ -130,7 +130,7 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-col md:flex-row items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                © 2026 Tecmax Tecnologia. Todos os Direitos Reservados
+                © 2026 ProSindWeb - Todos os Direitos Reservados
               </p>
             </div>
             
