@@ -726,7 +726,7 @@ export function DashboardLayout() {
 
           <div className="hidden md:flex items-center gap-4">
             <a 
-              href="https://wa.me/5500000000000" 
+              href="https://wa.me/551151943839" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"

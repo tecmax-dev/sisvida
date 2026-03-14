@@ -416,7 +416,7 @@ export default function AjudaIndex() {
                 Fale diretamente com nossa equipe de suporte
               </p>
               <Button variant="outline" size="sm" className="w-full" asChild>
-                <a href="https://wa.me/5571982786864" target="_blank" rel="noopener noreferrer">
+                <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer">
                   Iniciar conversa
                 </a>
               </Button>

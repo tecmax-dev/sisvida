@@ -371,7 +371,7 @@ export default function MobileCardPage() {
               <Button
                 size="sm"
                 className="bg-green-600 hover:bg-green-700"
-                onClick={() => window.open("https://wa.me/5573999999999", "_blank")}
+                onClick={() => window.open("https://wa.me/551151943839", "_blank")}
               >
                 Solicitar pelo WhatsApp
               </Button>

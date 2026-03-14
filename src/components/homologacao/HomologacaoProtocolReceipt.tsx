@@ -69,7 +69,7 @@ export function HomologacaoProtocolReceipt({
   const defaultAddressComplement = "Ao lado da Sorveteria Chiquinho";
   const defaultCity = "Ilhéus";
   const defaultStateCode = "BA";
-  const defaultPhone = "(73) 3231-1784";
+  const defaultPhone = "(11) 5194-3839";
   
   const address = professional.address || clinic?.address || defaultAddress;
   const addressComplement = defaultAddressComplement;

@@ -153,7 +153,7 @@ function HeroSection() {
                 asChild
               >
                 <a 
-                  href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o ProsindWeb."
+                  href="https://wa.me/551151943839?text=Olá! Gostaria de agendar uma reunião sobre o ProsindWeb."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2"
@@ -640,7 +640,7 @@ function CTASection() {
               asChild
             >
               <a 
-                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma demonstração do ProsindWeb."
+                href="https://wa.me/551151943839?text=Olá! Gostaria de agendar uma demonstração do ProsindWeb."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -739,7 +739,7 @@ function SindicalFooter() {
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
             <div className="flex gap-3">
-              <a href="https://wa.me/5571982786864" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
                 <MessageCircle className="h-5 w-5" />
               </a>
@@ -753,7 +753,7 @@ function SindicalFooter() {
           <div>
             <h4 className="font-bold text-gray-900 mb-4">Contato</h4>
             <ul className="space-y-3 text-gray-500">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(71) 98278-6864</li>
+              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(11) 5194-3839</li>
               <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
             </ul>
