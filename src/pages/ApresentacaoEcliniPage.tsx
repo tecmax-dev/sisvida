@@ -481,7 +481,7 @@ const ApresentacaoEcliniPage = () => {
             Proposta para o Sindicato dos Comerciários
           </p>
           <p className="text-muted-foreground">
-            Tecmax Tecnologia | (11) 5194-3839
+            ProsindWeb | (11) 5194-3839
           </p>
         </div>
 

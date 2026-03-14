@@ -121,7 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="max-width: 500px; margin: 0 auto; background: #f8fafc; padding: 30px; border-radius: 12px; text-align: center;">
           <h1 style="color: #16a34a; margin-bottom: 20px;">✅ Teste de Email Bem-Sucedido!</h1>
           <p style="color: #475569; font-size: 16px;">
-            As configurações SMTP do Eclini estão funcionando corretamente.
+            As configurações SMTP do ProsindWeb estão funcionando corretamente.
           </p>
           <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
           <p style="color: #94a3b8; font-size: 14px;">

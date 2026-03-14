@@ -619,7 +619,7 @@ export default function ClinicPresentationPage() {
 
           <div className="mt-6 text-cyan-300">
             <p className="text-base italic mb-1">"Tecnologia a serviço da saúde"</p>
-            <p className="text-[10px]">© 2026 Tecmax Tecnologia - Todos os direitos reservados</p>
+            <p className="text-[10px]">© 2026 ProsindWeb - Todos os direitos reservados</p>
           </div>
         </div>
       </div>

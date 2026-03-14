@@ -763,7 +763,7 @@ export function exportFinancialReportToPDF(
     doc.setFontSize(9);
     doc.setTextColor(150);
     doc.text(
-      `Página ${i} de ${pageCount} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • ProsindWeb by Tecmax Tecnologia`,
+      `Página ${i} de ${pageCount} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • ProsindWeb`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
