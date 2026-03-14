@@ -122,7 +122,7 @@ export default function InstallPage() {
               <CardContent className="py-6">
                 <div className="text-center space-y-4">
                   <p className="text-foreground font-medium">
-                    Instale o Eclini diretamente no seu dispositivo
+                    Instale o ProsindWeb diretamente no seu dispositivo
                   </p>
                   <Button onClick={handleInstall} size="lg" className="gap-2">
                     <Download className="h-5 w-5" />
