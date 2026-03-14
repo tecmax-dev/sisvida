@@ -407,9 +407,9 @@ function StatsSection() {
           </div>
 
           {/* Right: coverage map stats */}
-          <div className="bg-[hsl(215,60%,12%)] rounded-3xl p-10 text-white flex flex-col justify-center">
-            <h3 className="text-2xl font-bold mb-2">Nossa Abrangência</h3>
-            <p className="text-white/60 mb-10">
+          <div className="bg-gradient-to-br from-[hsl(215,60%,97%)] to-[hsl(120,40%,97%)] rounded-3xl p-10 border border-gray-200 shadow-lg flex flex-col justify-center">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Nossa Abrangência</h3>
+            <p className="text-gray-500 mb-10">
               Presentes em todo o território nacional, atendendo diversas Confederações, Federações, Sindicatos e Associações.
             </p>
             <div className="space-y-8">
@@ -420,10 +420,10 @@ function StatsSection() {
               ].map((bar, i) => (
                 <div key={i}>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-white/80">{bar.label}</span>
-                    <span className="font-bold text-white">{bar.pct}%</span>
+                    <span className="text-gray-600">{bar.label}</span>
+                    <span className="font-bold text-gray-900">{bar.pct}%</span>
                   </div>
-                  <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
                     <div 
                       className="h-full rounded-full transition-all duration-1000"
                       style={{
