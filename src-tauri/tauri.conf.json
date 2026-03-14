@@ -6,7 +6,7 @@
     "distDir": "https://prosindweb.com.br/auth"
   },
   "package": {
-    "productName": "Eclini",
+    "productName": "ProSindWeb",
     "version": "1.0.0"
   },
   "tauri": {
