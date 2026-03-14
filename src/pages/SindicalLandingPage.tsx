@@ -97,7 +97,7 @@ function HeroSection() {
           <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-white mb-4 tracking-tight">
             <span className="block text-white/60 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
             <span style={{
-              background: 'linear-gradient(135deg, hsl(200 100% 60%), hsl(160 80% 55%), hsl(95 70% 55%))',
+              background: 'linear-gradient(135deg, hsl(215 85% 55%), hsl(30 90% 55%), hsl(120 65% 45%))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
