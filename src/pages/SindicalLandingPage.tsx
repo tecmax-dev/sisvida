@@ -37,6 +37,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 import prosindwebLogo from "@/assets/prosindweb-logo.png"; // ProsindWeb branding
+import sindicalHeroDashboard from "@/assets/sindical-hero-dashboard.png";
 
 // ─── Animated Counter ───────────────────────────────────────────────
 function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
@@ -76,70 +77,108 @@ function HeroSection() {
       {/* Light gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,60%,97%)] via-white to-[hsl(120,40%,97%)]" />
       
-      {/* Hex pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.06]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 15V45L30 60L0 45V15Z' fill='none' stroke='%23336699' stroke-width='0.5'/%3E%3C/svg%3E")`,
-        backgroundSize: '60px 60px'
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0z' fill='none' stroke='%23336699' stroke-width='0.3'/%3E%3C/svg%3E")`,
+        backgroundSize: '40px 40px'
       }} />
 
-      {/* Gradient accent */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] rounded-full blur-[120px] opacity-10"
-        style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
+      {/* Gradient orbs */}
+      <div className="absolute top-20 left-[-200px] w-[600px] h-[600px] rounded-full blur-[120px] opacity-[0.08]"
+        style={{ background: 'hsl(215 85% 50%)' }}
+      />
+      <div className="absolute bottom-0 right-[-100px] w-[500px] h-[500px] rounded-full blur-[120px] opacity-[0.06]"
+        style={{ background: 'hsl(120 65% 45%)' }}
       />
 
-      <div className="container relative z-10 py-32">
-        <div className="max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[hsl(215,85%,50%,0.15)] bg-[hsl(215,85%,50%,0.06)] mb-8">
-            <span className="w-2 h-2 rounded-full bg-[hsl(30,90%,55%)] animate-pulse" />
-            <span className="text-sm text-[hsl(215,50%,35%)] font-medium">Módulos de Gestão Integrados</span>
+      <div className="container relative z-10 py-24 lg:py-32">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left - Content */}
+          <div className="order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[hsl(215,85%,50%,0.15)] bg-[hsl(215,85%,50%,0.06)] mb-8">
+              <span className="w-2 h-2 rounded-full bg-[hsl(30,90%,55%)] animate-pulse" />
+              <span className="text-sm text-[hsl(215,50%,35%)] font-medium">Plataforma de Gestão Integrada</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[0.95] text-gray-900 mb-4 tracking-tight">
+              <span className="block text-gray-400 text-2xl sm:text-3xl lg:text-4xl font-medium mb-2">GESTÃO SINDICAL</span>
+              <span style={{
+                background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(30 90% 55%), hsl(120 65% 45%))',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>
+                ProsindWeb
+              </span>
+            </h1>
+
+            <p className="text-lg lg:text-xl text-gray-500 font-medium mt-6 max-w-xl leading-relaxed">
+              Solução completa em gestão para Entidades Sindicais do Brasil. Controle financeiro, associados, contribuições e negociações em um único sistema.
+            </p>
+
+            {/* Trust badges */}
+            <div className="flex flex-wrap gap-6 mt-8 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-[hsl(120,65%,45%)]" />
+                <span>Dados protegidos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-[hsl(215,85%,50%)]" />
+                <span>100% na nuvem</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <HeadphonesIcon className="h-4 w-4 text-[hsl(30,90%,55%)]" />
+                <span>Suporte dedicado</span>
+              </div>
+            </div>
+
+            <div className="mt-10 flex flex-col sm:flex-row gap-4">
+              <Button 
+                size="lg" 
+                className="h-14 px-8 text-base font-semibold rounded-full shadow-2xl transition-all hover:scale-105"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
+                  color: 'white',
+                }}
+                asChild
+              >
+                <a href="#contato" className="flex items-center gap-2">
+                  Solicitar Demonstração
+                  <ArrowRight className="h-5 w-5" />
+                </a>
+              </Button>
+              <Button 
+                size="lg"
+                variant="outline"
+                className="h-14 px-8 text-base font-semibold rounded-full border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
+                asChild
+              >
+                <a 
+                  href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o ProsindWeb."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  Agendar Reunião
+                </a>
+              </Button>
+            </div>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] text-gray-900 mb-4 tracking-tight">
-            <span className="block text-gray-400 text-3xl sm:text-4xl lg:text-5xl font-medium mb-2">GESTÃO SINDICAL</span>
-            <span style={{
-              background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(30 90% 55%), hsl(120 65% 45%))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              ProsindWeb
-            </span>
-          </h1>
-
-          <p className="text-xl lg:text-2xl text-gray-500 font-medium mt-6 max-w-2xl">
-            Solução completa em gestão para Entidades Sindicais do Brasil.
-          </p>
-
-          <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Button 
-              size="lg" 
-              className="h-14 px-8 text-base font-semibold rounded-full shadow-2xl transition-all hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))',
-                color: 'white',
-              }}
-              asChild
-            >
-              <a href="#contato" className="flex items-center gap-2">
-                Solicitar Demonstração
-                <ArrowRight className="h-5 w-5" />
-              </a>
-            </Button>
-            <Button 
-              size="lg"
-              variant="outline"
-              className="h-14 px-8 text-base font-semibold rounded-full border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
-              asChild
-            >
-              <a 
-                href="https://wa.me/5571982786864?text=Olá! Gostaria de agendar uma reunião sobre o ProsindWeb."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-5 w-5" />
-                Agendar Reunião
-              </a>
-            </Button>
+          {/* Right - Dashboard Image */}
+          <div className="order-1 lg:order-2 relative">
+            <div className="relative z-10">
+              <img 
+                src={sindicalHeroDashboard} 
+                alt="ProsindWeb - Dashboard de Gestão Sindical mostrando gráficos, relatórios e controle de associados" 
+                className="w-full h-auto drop-shadow-2xl transform lg:scale-110 lg:translate-x-8"
+                loading="eager"
+              />
+            </div>
+            {/* Glow behind image */}
+            <div className="absolute inset-0 -z-10 scale-90 blur-[60px] opacity-20 rounded-3xl"
+              style={{ background: 'linear-gradient(135deg, hsl(215 85% 50%), hsl(120 65% 45%))' }}
+            />
           </div>
         </div>
       </div>
