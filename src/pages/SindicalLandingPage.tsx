@@ -203,8 +203,8 @@ function AboutSection() {
                    { icon: Users, label: "Cadastro de Sócios", desc: "Associados e dependentes", color: "from-[hsl(215,85%,50%)] to-[hsl(215,80%,40%)]" },
                    { icon: Receipt, label: "Contribuições", desc: "Boletos e cobranças", color: "from-[hsl(120,65%,45%)] to-[hsl(120,60%,35%)]" },
                    { icon: PiggyBank, label: "Financeiro", desc: "Receitas e despesas", color: "from-[hsl(215,70%,40%)] to-[hsl(215,85%,30%)]" },
-                  { icon: Handshake, label: "Negociações", desc: "Acordos e parcelamentos", color: "from-rose-500 to-pink-500" },
-                  { icon: FileBarChart, label: "Relatórios", desc: "Gerenciais e fiscais", color: "from-teal-500 to-cyan-500" },
+                   { icon: Handshake, label: "Negociações", desc: "Acordos e parcelamentos", color: "from-[hsl(30,80%,50%)] to-[hsl(15,75%,45%)]" },
+                   { icon: FileBarChart, label: "Relatórios", desc: "Gerenciais e fiscais", color: "from-[hsl(120,55%,40%)] to-[hsl(160,60%,35%)]" },
                 ].map((item, i) => (
                   <div key={i} className="flex flex-col items-center p-5 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center mb-3`}>
