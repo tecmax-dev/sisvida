@@ -111,7 +111,7 @@ const categories: TutorialCategory[] = [
   {
     id: "configuracoes",
     title: "Configurações do Sistema",
-    description: "Personalize o Eclini de acordo com as necessidades da sua clínica",
+    description: "Personalize o ProsindWeb de acordo com as necessidades da sua clínica",
     icon: Settings,
     color: "text-slate-600",
     bgColor: "bg-slate-500/10 border-slate-500/20",
