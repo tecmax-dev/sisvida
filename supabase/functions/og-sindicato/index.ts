@@ -70,7 +70,7 @@ serve(async (req) => {
     const ogImageUrl = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-image.jpg";
     
     // Determinar base URL baseado no domínio customizado ou padrão
-    let baseUrl = "https://app.eclini.com.br";
+    let baseUrl = "https://prosindweb.com.br";
     for (const [domain, cId] of Object.entries(DOMAIN_TO_CLINIC)) {
       if (cId === clinicId) {
         baseUrl = `https://${domain}`;
