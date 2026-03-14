@@ -49,7 +49,7 @@ const categories: TutorialCategory[] = [
   {
     id: "primeiros-passos",
     title: "Primeiros Passos",
-    description: "Configure sua clínica do zero e comece a usar o Eclini em minutos",
+    description: "Configure sua clínica do zero e comece a usar o ProsindWeb em minutos",
     icon: Play,
     color: "text-emerald-600",
     bgColor: "bg-emerald-500/10 border-emerald-500/20",
