@@ -125,7 +125,7 @@ serve(async (req) => {
 
     // 3. Parse request body
     const body = await req.json();
-    const { phone, message, clinicId, type = 'custom', imageUrl } = body as WhatsAppRequest;
+    const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId } = body as WhatsAppRequest;
     
     console.log(`[send-whatsapp] Received imageUrl: ${imageUrl || 'NOT PROVIDED'}, body keys: ${Object.keys(body).join(', ')}`);
 
