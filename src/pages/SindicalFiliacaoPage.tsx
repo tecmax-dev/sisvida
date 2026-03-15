@@ -158,11 +158,11 @@ function FormSection({
   return (
     <div className="relative">
       {/* Accent line */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-${accentColor}-500 to-${accentColor}-300 rounded-full`} />
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full" />
       
       <div className="pl-6 space-y-4">
         <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-xl bg-gradient-to-br from-${accentColor}-500 to-${accentColor}-600 text-white shadow-lg shadow-${accentColor}-500/25`}>
+          <div className="p-2.5 rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
             <Icon className="h-5 w-5" />
           </div>
           <div>
