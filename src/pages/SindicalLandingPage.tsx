@@ -26,6 +26,8 @@ import {
   Zap,
   TrendingUp,
   Lock,
+  ClipboardCheck,
+  Stethoscope,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
@@ -304,6 +306,8 @@ function AboutSection() {
     { icon: Receipt, title: "Contribuições", desc: "Boletos e cobranças em lote" },
     { icon: PiggyBank, title: "Financeiro", desc: "Receitas, despesas e fluxo" },
     { icon: Handshake, title: "Negociações", desc: "Acordos e parcelamentos" },
+    { icon: ClipboardCheck, title: "Homologação", desc: "Agendamento e protocolos" },
+    { icon: Stethoscope, title: "Clínica Integrada", desc: "Agenda e prontuário eletrônico" },
     { icon: FileBarChart, title: "Relatórios", desc: "Gerenciais e fiscais" },
   ];
 
@@ -326,7 +330,7 @@ function AboutSection() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((f, i) => (
             <div
               key={i}
@@ -425,6 +429,22 @@ const modules = [
     highlights: ["Auditoria", "Permissões", "Rastreabilidade", "Segurança"],
     accent: "bg-[hsl(215,50%,20%)]",
   },
+  {
+    icon: ClipboardCheck,
+    title: "Homologação",
+    description:
+      "Agendamento online de homologações com calendário exclusivo, notificações automáticas via WhatsApp para associado, gestor e profissional, e controle completo de protocolos.",
+    highlights: ["Agendamento online", "Notificações WhatsApp", "Protocolos", "Calendário"],
+    accent: "bg-[hsl(0,85%,50%)]",
+  },
+  {
+    icon: Stethoscope,
+    title: "Módulo Clínica",
+    description:
+      "Gestão completa de atendimentos clínicos integrados à entidade: agenda de profissionais, prontuário eletrônico, anamnese digital, procedimentos e controle de convênios.",
+    highlights: ["Agenda médica", "Prontuário eletrônico", "Anamnese digital", "Convênios"],
+    accent: "bg-[hsl(215,85%,50%)]",
+  },
 ];
 
 function ModulesSection() {
@@ -436,7 +456,7 @@ function ModulesSection() {
             Módulos do Sistema
           </span>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight mb-4">
-            8 módulos.{" "}
+            10 módulos.{" "}
             <span className="text-[hsl(215,85%,50%)]">Uma plataforma.</span>
           </h2>
           <p className="text-lg text-gray-500">
