@@ -11,7 +11,7 @@ import { useSessionControl } from "@/hooks/useSessionControl";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
-import prosindClinicaLogo from "@/assets/prosind-clinica-logo.png";
+import prosindClinicaLogo from "@/assets/prosindweb-clinica-logo.png";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
