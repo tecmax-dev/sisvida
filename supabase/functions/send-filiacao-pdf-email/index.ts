@@ -43,7 +43,7 @@ serve(async (req) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
-        <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <div style="background: #1e3a5f; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 24px;">Ficha de Filiacao</h1>
           <p style="color: #94a3b8; margin: 10px 0 0 0;">${sindicatoName}</p>
         </div>

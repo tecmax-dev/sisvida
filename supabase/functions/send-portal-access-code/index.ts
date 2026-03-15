@@ -164,7 +164,7 @@ ${logoSection}
 <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.6;">O <strong>${clinicName}</strong> atualizou seu sistema de gestao de contribuicoes para o <strong>ProsindWeb</strong>. A partir de agora, todos os boletos, consultas e servicos estarao disponiveis atraves deste novo portal.</p>
 </div>
 <p style="margin: 0 0 24px 0; color: #374151; font-size: 15px; line-height: 1.6;">Segue seu codigo de acesso ao ${portalName}:</p>
-<div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border: 2px solid #14b8a6; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+<div style="background: #eff6ff; border: 2px solid #1e3a8a; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
 <p style="margin: 0 0 8px 0; color: #0f766e; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Seu Codigo de Acesso</p>
 <div style="font-family: Courier New, Courier, monospace; font-size: 36px; font-weight: bold; color: #0d9488; letter-spacing: 8px; padding: 16px 0;">${accessCode}</div>
 </div>

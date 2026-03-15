@@ -173,9 +173,9 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
         </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/50 to-transparent dark:from-purple-950/20">
+      <Card className="border-l-4 border-l-cta bg-cta/5">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-medium text-purple-700 dark:text-purple-300">
+          <CardTitle className="text-base font-medium text-cta">
             Despesas por Categoria (Mês)
           </CardTitle>
           <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">

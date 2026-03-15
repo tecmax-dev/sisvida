@@ -66,7 +66,7 @@ async function sendManagerNotification(params: {
     </head>
     <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
       <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 32px 24px; text-align: center;">
+        <div style="background: #1e3a8a; padding: 32px 24px; text-align: center;">
           <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
             Novo Valor de Contribuicao Informado
           </h1>

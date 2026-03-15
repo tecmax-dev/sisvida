@@ -37,7 +37,7 @@ ${logoSection}
 <td style="padding: 40px 30px;">
 <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px;">Ola, ${firstName}!</h2>
 <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">Voce solicitou o cadastro de senha para primeiro acesso ao aplicativo SECMI.</p>
-<div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 0 0 30px 0;">
+<div style="background: #eff6ff; border-radius: 12px; padding: 30px; text-align: center; margin: 0 0 30px 0;">
 <p style="color: #065f46; font-size: 14px; margin: 0 0 15px 0; font-weight: 500;">Seu codigo de verificacao:</p>
 <div style="background: #ffffff; border-radius: 8px; padding: 20px; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 <span style="font-size: 36px; font-weight: 700; color: #059669; letter-spacing: 8px;">${token}</span>
