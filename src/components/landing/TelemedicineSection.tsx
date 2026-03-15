@@ -48,7 +48,7 @@ export function TelemedicineSection() {
   return (
     <section id="telemedicine" className="py-20 lg:py-28 relative overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-background to-teal-500/5" />
+      <div className="absolute inset-0 bg-emerald-500/5" />
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-teal-500/10 rounded-full blur-3xl" />
 
