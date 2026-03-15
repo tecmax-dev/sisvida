@@ -114,7 +114,7 @@ export default function PresentationPage() {
             </p>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-emerald-800 mb-2">Visão Geral do Projeto</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
               O <strong>eCLINI</strong> é uma plataforma completa e integrada que unifica a gestão clínica 
