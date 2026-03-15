@@ -929,7 +929,7 @@ export default function ClinicsManagement() {
           icon={Building2} 
           label="Clínicas Ativas" 
           value={activeClinics}
-          color="bg-gradient-to-br from-primary to-primary-dark"
+          color="bg-primary"
         />
         <StatCard 
           icon={Stethoscope} 
