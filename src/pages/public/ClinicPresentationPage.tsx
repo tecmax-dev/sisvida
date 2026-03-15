@@ -69,7 +69,7 @@ export default function ClinicPresentationPage() {
           alt="Cover" 
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/90 via-cyan-800/80 to-teal-700/70" />
+        <div className="absolute inset-0 bg-black/70" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
