@@ -24,7 +24,7 @@ export function PortalHeader({
   variant = "amber"
 }: PortalHeaderProps) {
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white sticky top-0 z-20 shadow-lg">
+    <header className="text-white sticky top-0 z-20 shadow-lg" style={{ background: 'hsl(220 75% 22%)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
@@ -102,12 +102,8 @@ export function PortalWelcomeBanner({
   entityName,
   variant = "amber"
 }: PortalWelcomeBannerProps) {
-  const gradientClass = variant === "teal" 
-    ? "from-teal-600 to-cyan-600" 
-    : "from-amber-500 to-orange-600";
-  
   return (
-    <div className={`bg-gradient-to-r ${gradientClass} rounded-2xl p-6 text-white shadow-lg`}>
+    <div className="rounded-2xl p-6 text-white shadow-lg bg-primary">
       <div className="flex items-center gap-4">
         {logoUrl ? (
           <img 
@@ -230,7 +226,7 @@ interface PortalContainerProps {
 
 export function PortalContainer({ children }: PortalContainerProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <div className="min-h-screen bg-background">
       {children}
     </div>
   );

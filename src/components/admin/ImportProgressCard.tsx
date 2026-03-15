@@ -60,7 +60,7 @@ export function ImportProgressCard({
     : null;
 
   return (
-    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background shadow-lg animate-in fade-in duration-300">
+    <Card className="border-primary/30 bg-primary/5 shadow-lg animate-in fade-in duration-300">
       <CardContent className="py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -124,7 +124,7 @@ export function ImportProgressCard({
               />
               {/* Animated glow effect */}
               <div 
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-pulse"
+                className="absolute inset-0 rounded-full bg-primary/20 animate-pulse"
                 style={{ 
                   width: `${progress}%`,
                   transition: 'width 0.3s ease-out'

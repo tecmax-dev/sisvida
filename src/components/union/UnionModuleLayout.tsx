@@ -93,7 +93,7 @@ export function UnionModuleLayout() {
           sidebarCollapsed ? "w-16" : "w-64"
         )}
         style={{
-          background: 'linear-gradient(180deg, hsl(210 60% 30%) 0%, hsl(220 55% 25%) 45%, hsl(240 45% 20%) 100%)'
+          background: 'hsl(220 75% 30%)'
         }}
       >
         <div className="flex flex-col h-full">
@@ -101,7 +101,7 @@ export function UnionModuleLayout() {
           <div 
             className="flex items-center justify-center p-4 border-b border-sidebar-border relative"
             style={{
-              background: 'linear-gradient(180deg, hsl(210 50% 15%) 0%, hsl(220 55% 20%) 100%)'
+              background: 'hsl(220 75% 22%)'
             }}
           >
             {!sidebarCollapsed && (
