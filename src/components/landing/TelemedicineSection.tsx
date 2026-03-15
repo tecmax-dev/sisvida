@@ -48,7 +48,7 @@ export function TelemedicineSection() {
   return (
     <section id="telemedicine" className="py-20 lg:py-28 relative overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-background to-teal-500/5" />
+      <div className="absolute inset-0 bg-emerald-500/5" />
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-teal-500/10 rounded-full blur-3xl" />
 
@@ -106,7 +106,7 @@ export function TelemedicineSection() {
           <div className="flex justify-center lg:justify-end">
             <div className="relative">
               {/* Main visual container */}
-              <div className="w-full max-w-md bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-3xl p-8 border border-emerald-500/20">
+              <div className="w-full max-w-md bg-emerald-500/10 rounded-3xl p-8 border border-emerald-500/20">
                 {/* Video call mockup */}
                 <div className="bg-card rounded-2xl shadow-2xl overflow-hidden border border-border">
                   {/* Header */}
@@ -122,7 +122,7 @@ export function TelemedicineSection() {
                   </div>
                   
                   {/* Video area */}
-                  <div className="aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center relative">
+                  <div className="aspect-video bg-muted flex items-center justify-center relative">
                     <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center">
                       <Video className="w-10 h-10 text-emerald-600" />
                     </div>

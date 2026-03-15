@@ -82,23 +82,12 @@
     --sidebar-border: 0 0% 100% / 0.15;
     --sidebar-ring: 0 0% 100%;
     --sidebar-muted: 0 0% 100% / 0.7;
-    --sidebar-gradient-start: 220 80% 35%;
-    --sidebar-gradient-mid: 220 70% 28%;
-    --sidebar-gradient-end: 220 60% 22%;
     
     /* Category Colors */
     --category-empresas: 0 85% 50%;
     --category-socios: 280 70% 50%;
     --category-clinica: 220 80% 50%;
     --category-admin: 340 75% 55%;
-    
-    /* Custom Gradients - Azul Royal to Vermelho */
-    --gradient-primary: linear-gradient(135deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(0 85% 50%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(220 30% 97%) 0%, hsl(0 0% 99%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 99%) 100%);
-    --gradient-soft: linear-gradient(135deg, hsl(220 40% 97%) 0%, hsl(0 20% 98%) 100%);
-    --gradient-stats: linear-gradient(135deg, hsl(220 80% 45%) 0%, hsl(0 85% 50%) 100%);
-    --gradient-text: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(0 85% 50%) 100%);
     
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(220 20% 20% / 0.04);
@@ -154,9 +143,6 @@
     --sidebar-accent: 220 15% 10%;
     --sidebar-accent-foreground: 220 5% 85%;
     --sidebar-border: 220 15% 12%;
-    
-    --gradient-hero: linear-gradient(135deg, hsl(220 15% 6%) 0%, hsl(220 20% 10%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(220 15% 10%) 0%, hsl(220 15% 8%) 100%);
   }
 }
 
@@ -189,19 +175,13 @@
     @apply bg-card/95 backdrop-blur-lg border border-border/60;
   }
   
-  /* ProsindWeb gradient text - azul royal to laranja */
+  /* ProsindWeb solid text color - primary */
   .gradient-text {
-    background: var(--gradient-text);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: hsl(var(--primary));
   }
   
   .gradient-text-brand {
-    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: hsl(var(--primary));
   }
   
   .card-hover {
@@ -215,32 +195,32 @@
   .btn-glow::after {
     content: "";
     @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: radial-gradient(circle at center, hsl(var(--primary) / 0.2) 0%, transparent 70%);
+    background: hsl(var(--primary) / 0.1);
   }
   
   .btn-glow:hover::after {
     @apply opacity-100;
   }
   
-  /* ProsindWeb-style gradient button - Azul Royal + Laranja */
+  /* ProsindWeb-style solid button - Azul Royal */
   .btn-prosindweb {
     @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
-    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
+    background: hsl(var(--primary));
     @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
   .btn-prosindweb:hover {
-    background: linear-gradient(90deg, hsl(220 80% 40%) 0%, hsl(220 90% 50%) 50%, hsl(25 95% 45%) 100%);
+    background: hsl(var(--primary-dark));
   }
   
   .btn-prosindweb-outline {
     @apply border-2 font-semibold px-6 py-3 rounded-full transition-all duration-300;
-    border-color: hsl(220 80% 45%);
-    color: hsl(220 80% 45%);
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary));
   }
   
   .btn-prosindweb-outline:hover {
-    background: linear-gradient(90deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%);
+    background: hsl(var(--primary));
     @apply text-white border-transparent;
   }
   
@@ -279,7 +259,7 @@
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
   }
   
-  /* Premium Card Styles - ProsindWeb inspired */
+  /* Premium Card Styles */
   .card-premium {
     @apply relative overflow-hidden border border-border/50 bg-card rounded-2xl;
     box-shadow: 0 2px 8px hsl(195 20% 20% / 0.04), 0 8px 24px hsl(195 20% 20% / 0.03);
@@ -288,14 +268,14 @@
   .card-premium::before {
     content: '';
     @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(220 80% 45% / 0.05) 0%, hsl(25 95% 53% / 0.05) 100%);
+    background: hsl(var(--primary) / 0.03);
   }
   
   .card-premium:hover::before {
     @apply opacity-100;
   }
   
-  /* Feature Card - ProsindWeb style */
+  /* Feature Card */
   .feature-card {
     @apply bg-card border border-border/40 rounded-2xl p-6 transition-all duration-300;
     @apply hover:border-primary/30 hover:shadow-lg hover:-translate-y-1;
@@ -303,8 +283,8 @@
   
   .feature-card-icon {
     @apply w-12 h-12 rounded-xl flex items-center justify-center;
-    background: linear-gradient(135deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%);
-    color: hsl(220 80% 45%);
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
   }
   
   /* Stat Card Decoration */
@@ -332,18 +312,15 @@
   /* ProsindWeb-style section header */
   .section-badge {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
-    background: linear-gradient(90deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%);
-    color: hsl(220 80% 45%);
-    border: 1px solid hsl(220 80% 45% / 0.2);
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.2);
   }
   
-  /* Stats counter style with gradient */
+  /* Stats counter style */
   .stat-value {
     @apply text-4xl md:text-5xl font-bold;
-    background: var(--gradient-text);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: hsl(var(--primary));
   }
   
   .stat-label {
@@ -430,11 +407,11 @@
 
 ::-webkit-scrollbar-thumb {
   @apply rounded-full;
-  background: linear-gradient(180deg, hsl(220 80% 45% / 0.3) 0%, hsl(25 95% 53% / 0.3) 100%);
+  background: hsl(var(--primary) / 0.3);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, hsl(220 80% 45% / 0.5) 0%, hsl(25 95% 53% / 0.5) 100%);
+  background: hsl(var(--primary) / 0.5);
 }
 
 /* Focus styles */

@@ -76,7 +76,7 @@ function FeatureBlock({
   const visual = (
     <div className="lg:w-1/2 flex justify-center">
       <div className="relative w-full max-w-lg">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-cta/10 rounded-3xl blur-xl" />
+        <div className="absolute inset-0 bg-primary/5 rounded-3xl blur-xl" />
         <div className="relative bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
           <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
             <div className="w-10 h-10 rounded-lg feature-card-icon">

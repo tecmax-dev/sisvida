@@ -55,8 +55,8 @@ export function MigrationSection() {
           {/* Right - Visual */}
           <div className="relative flex justify-center lg:justify-end">
             <div className="relative w-full max-w-md">
-              {/* Background gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-cta/10 rounded-3xl blur-xl" />
+              {/* Background */}
+              <div className="absolute inset-0 bg-primary/5 rounded-3xl blur-xl" />
               
               {/* Main card */}
               <div className="relative bg-card border border-border rounded-2xl p-8 shadow-lg">

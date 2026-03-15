@@ -68,7 +68,7 @@ export function AgendaMockup() {
   return (
     <div className="w-full max-w-md bg-background border border-border/50 rounded-2xl shadow-2xl overflow-hidden animate-float">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary/5 to-accent/5 border-b border-border/50 p-4">
+      <div className="bg-primary/5 border-b border-border/50 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -160,7 +160,7 @@ export function AgendaMockup() {
       </div>
 
       {/* Footer */}
-      <div className="bg-gradient-to-r from-primary/5 to-accent/5 border-t border-border/50 px-4 py-3 flex items-center justify-between">
+      <div className="bg-primary/5 border-t border-border/50 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           <p className="text-xs text-muted-foreground">

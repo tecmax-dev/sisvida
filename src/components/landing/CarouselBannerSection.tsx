@@ -69,7 +69,7 @@ export default function CarouselBannerSection() {
               
               {/* Overlay with gradient */}
               <div 
-                className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"
+                className="absolute inset-0 bg-black/60"
                 style={{ 
                   backgroundColor: banner.background_color || 'transparent',
                   opacity: banner.overlay_opacity ?? 0.6
