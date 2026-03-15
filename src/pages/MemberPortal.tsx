@@ -381,7 +381,7 @@ export default function MemberPortal() {
               </div>
             )}
             <h1 className="text-2xl font-bold text-white mb-2">{clinic?.name || "Portal do Sócio"}</h1>
-            <p className="text-emerald-200/80">Acesso restrito para associados</p>
+            <p className="text-primary-foreground/80">Acesso restrito para associados</p>
           </div>
 
           {/* Login Card */}
