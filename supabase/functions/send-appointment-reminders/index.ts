@@ -463,20 +463,13 @@ serve(async (req) => {
         const dateFormatted = formatDateTime(appointment.appointment_date, appointment.start_time);
         const time = appointment.start_time.substring(0, 5);
 
-        // Build confirmation link (only if not using direct reply)
-        const confirmationLink = !directReplyEnabled && appointment.confirmation_token 
-          ? `${baseUrl}/consulta/${appointment.confirmation_token}`
-          : undefined;
-
         // Create message - usar displayName (nome do dependente ou titular)
         const message = formatAppointmentReminder(
           displayName,
           clinic.name,
           dateFormatted,
           time,
-          professional?.name || 'Profissional',
-          confirmationLink,
-          directReplyEnabled
+          professional?.name || 'Profissional'
         );
 
         let success = false;
