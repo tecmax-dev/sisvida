@@ -138,7 +138,7 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20">
+      <Card className="border-l-4 border-l-primary bg-primary/5">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base font-medium text-blue-700 dark:text-blue-300">
             Receitas vs Despesas
