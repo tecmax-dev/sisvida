@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound, Shield, CalendarCheck, Users, BarChart3 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
-import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
+import { authTrace, maskEmail } from "@/lib/authTrace";
 import { authTrace, maskEmail } from "@/lib/authTrace";
 
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
