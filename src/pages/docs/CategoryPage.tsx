@@ -57,7 +57,7 @@ export default function CategoryPage() {
   return (
     <div className="space-y-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20">
+      <div className="relative overflow-hidden rounded-2xl bg-primary/5 border border-primary/20">
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-20 hidden lg:block">
           <img 
             src={categoryImage} 
