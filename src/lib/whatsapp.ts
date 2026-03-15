@@ -196,6 +196,8 @@ export function formatAppointmentReminder(
       ``,
       `👇 *Use os botões abaixo para confirmar ou cancelar sua consulta.*`,
       ``,
+      `⚠️ *Importante:* Caso não possa comparecer, por favor cancele com antecedência para evitar o bloqueio de novos agendamentos.`,
+      ``,
       `Atenciosamente,`,
       `Equipe ${clinicName}`,
     ];
