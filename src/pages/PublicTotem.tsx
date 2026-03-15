@@ -181,7 +181,7 @@ export default function PublicTotem() {
   // Ticket issued confirmation screen
   if (ticketIssued) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-500 flex flex-col items-center justify-center gap-8 p-8">
+      <div className="min-h-screen bg-success flex flex-col items-center justify-center gap-8 p-8">
         <CheckCircle2 className="h-24 w-24 text-white" />
         <div className="text-center">
           <div className="text-white/80 text-2xl mb-2">Sua senha é</div>
