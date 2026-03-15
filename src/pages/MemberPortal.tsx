@@ -436,7 +436,7 @@ export default function MemberPortal() {
             </CardContent>
           </Card>
 
-          <p className="mt-8 text-emerald-200/60 text-sm">
+          <p className="mt-8 text-primary-foreground/60 text-sm">
             © {new Date().getFullYear()} {clinic?.name || "Sindicato"}
           </p>
         </div>
