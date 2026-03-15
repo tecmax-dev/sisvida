@@ -137,7 +137,7 @@ export default function ClinicPresentationPage() {
             </div>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Diferenciais Competitivos</h3>
             <ul className="grid grid-cols-2 gap-2 text-gray-700 text-sm print:text-xs">
               <li className="flex items-start gap-2">
