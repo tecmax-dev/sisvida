@@ -437,7 +437,7 @@ export function UnionBatchCheckPrintDialog({
             .status-cancelled { background: #f1f5f9; color: #64748b; }
             .status-reversed { background: #ede9fe; color: #7c3aed; }
             
-            .total-row { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; }
+            .total-row { background: #eff6ff !important; }
             .total-row td { padding: 8px; border-top: 2px solid #3b82f6; border-bottom: none !important; }
             .total-label { font-size: 10px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; }
             .total-value { font-size: 13px; font-weight: 700; color: #1e3a5f; }
