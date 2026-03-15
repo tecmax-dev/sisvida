@@ -18,8 +18,8 @@ export function ProblemsSection() {
           {/* Left - Visual */}
           <div className="relative flex justify-center">
             <div className="relative w-full max-w-md">
-              {/* Background gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-warning/10 rounded-3xl" />
+              {/* Background */}
+              <div className="absolute inset-0 bg-destructive/5 rounded-3xl" />
               
               {/* Main card */}
               <div className="relative bg-card border border-border rounded-2xl p-8 shadow-lg">

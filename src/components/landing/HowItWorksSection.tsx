@@ -45,7 +45,7 @@ export function HowItWorksSection() {
             >
               {/* Connector line */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-16 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
+                <div className="hidden md:block absolute top-16 left-[60%] w-full h-0.5 bg-primary/30" />
               )}
               
               <div className="text-center relative z-10">

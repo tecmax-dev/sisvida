@@ -122,7 +122,7 @@ export function TelemedicineSection() {
                   </div>
                   
                   {/* Video area */}
-                  <div className="aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center relative">
+                  <div className="aspect-video bg-muted flex items-center justify-center relative">
                     <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center">
                       <Video className="w-10 h-10 text-emerald-600" />
                     </div>
