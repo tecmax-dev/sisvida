@@ -1361,7 +1361,7 @@ export default function SindicalFiliacaoPage() {
                       name="aceite_lgpd"
                       render={({ field }) => (
                         <FormItem>
-                          <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-4 border border-gray-200">
+                          <div className="bg-muted/50 rounded-xl p-4 border border-border">
                             <div className="flex items-start gap-3">
                               <FormControl>
                                 <Checkbox
