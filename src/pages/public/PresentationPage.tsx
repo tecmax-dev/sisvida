@@ -545,7 +545,7 @@ export default function PresentationPage() {
 
         <div className="grid grid-cols-2 gap-4 flex-1">
           <div className="no-break">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👔</span>
                 Para os Gestores
