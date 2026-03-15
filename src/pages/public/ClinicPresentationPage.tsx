@@ -318,7 +318,7 @@ export default function ClinicPresentationPage() {
           ))}
         </div>
 
-        <div className="no-break bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg p-4 text-white mt-auto">
+        <div className="no-break bg-primary rounded-lg p-4 text-white mt-auto">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Integrações Disponíveis</h3>
           <div className="grid grid-cols-5 gap-2">
             {[
