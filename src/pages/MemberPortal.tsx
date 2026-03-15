@@ -504,15 +504,15 @@ export default function MemberPortal() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-emerald-500 dark:border-l-emerald-400">
+          <Card className="border-l-4 border-l-success dark:border-l-success">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Pagas</p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.paidCount}</p>
+                  <p className="text-2xl font-bold text-success">{metrics.paidCount}</p>
                   <p className="text-sm text-muted-foreground">{formatCurrency(metrics.paidValue)}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-emerald-500/30 dark:text-emerald-400/30" />
+                <CheckCircle2 className="h-8 w-8 text-success/30" />
               </div>
             </CardContent>
           </Card>
