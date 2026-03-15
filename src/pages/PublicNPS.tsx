@@ -130,7 +130,7 @@ export default function PublicNPS() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-primary/5 p-4">
       <Card className="max-w-lg w-full">
         <CardHeader className="text-center">
           {clinic?.logo_url && (

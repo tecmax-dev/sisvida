@@ -127,7 +127,7 @@ export function VitalSignsDisplay({ appointmentId, className }: VitalSignsDispla
   };
 
   return (
-    <Card className={`border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/5 shadow-lg ${className}`}>
+    <Card className={`border-2 border-primary/30 bg-primary/5 shadow-lg ${className}`}>
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

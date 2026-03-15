@@ -194,7 +194,7 @@ export default function PublicTotem() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex flex-col">
+    <div className="min-h-screen bg-primary flex flex-col">
       {/* Header */}
       <div className="p-8 text-center border-b border-white/10">
         {clinic?.logo_url ? (

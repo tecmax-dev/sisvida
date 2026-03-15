@@ -110,7 +110,7 @@ export function MobileCarousel() {
               />
               
               {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="absolute inset-0 bg-black/50" />
               
               {/* Content with staggered animation */}
               <div className="absolute inset-0 flex flex-col justify-end p-5">
