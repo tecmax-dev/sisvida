@@ -519,12 +519,20 @@ serve(async (req) => {
         // Prioridade: 1) Logo da union entity, 2) Header WhatsApp personalizado, 3) Logo da clínica, 4) Logo padrão
         const unionEntity = (clinic as any).union_entities?.[0];
         const logoUrl = unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+        
+        // Try Evolution API first for image+text
         success = await sendWhatsAppWithImage(
           evolutionConfig as EvolutionConfig,
           phoneToUse,
           logoUrl,
           message
         );
+
+        // Fallback: if Evolution fails, send text via Whazing
+        if (!success) {
+          console.log(`[${clinic.name}] Evolution failed for ${displayName}, trying Whazing text fallback...`);
+          success = await sendWhatsAppViaWhazing(phoneToUse, message);
+        }
 
         if (success) {
           // Mark as sent
@@ -533,43 +541,52 @@ serve(async (req) => {
             .update({ reminder_sent: true })
             .eq('id', appointment.id);
 
-          // Send interactive buttons (Confirmar / Cancelar) via Whazing
-          // Small delay before sending buttons to ensure message arrives first
+          sentCount++;
+          console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${appointment.appointment_date} at ${time}`);
+        } else {
+          errorCount++;
+          console.error(`✗ Failed to send reminder to ${displayName} via both Evolution and Whazing`);
+        }
+
+        // Always try to send interactive buttons via Whazing (even if main message used fallback)
+        // Small delay before sending buttons to ensure message arrives first
+        if (success) {
           await new Promise(resolve => setTimeout(resolve, 1500));
           const buttonsSent = await sendConfirmationButtons(phoneToUse, appointment.id);
           if (buttonsSent) {
             console.log(`✓ Confirmation buttons sent to ${displayName}`);
           } else {
-            console.log(`⚠ Could not send buttons to ${displayName} (Whazing not configured or error), text fallback in message`);
+            console.log(`⚠ Could not send buttons to ${displayName} (Whazing not configured or error)`);
           }
+        }
 
-          // If direct reply is enabled, register pending confirmation
-          if (directReplyEnabled) {
-            const formattedPhone = phoneToUse.replace(/\D/g, '');
-            const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
-            
-            // Calculate expiry time (1 hour before appointment)
-            const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.start_time}`);
-            const expiresAt = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000); // 1 hour before
+        // If direct reply is enabled, register pending confirmation
+        if (success && directReplyEnabled) {
+          const formattedPhone = phoneToUse.replace(/\D/g, '');
+          const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
+          
+          const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.start_time}`);
+          const expiresAt = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000);
 
-            const { error: pendingError } = await supabase
-              .from('pending_confirmations')
-              .insert({
-                clinic_id: clinic.id,
-                appointment_id: appointment.id,
-                phone: phoneWithCountry,
-                expires_at: expiresAt.toISOString(),
-                status: 'pending'
-              });
+          const { error: pendingError } = await supabase
+            .from('pending_confirmations')
+            .insert({
+              clinic_id: clinic.id,
+              appointment_id: appointment.id,
+              phone: phoneWithCountry,
+              expires_at: expiresAt.toISOString(),
+              status: 'pending'
+            });
 
-            if (pendingError) {
-              console.error(`Error creating pending confirmation for appointment ${appointment.id}:`, pendingError);
-            } else {
-              console.log(`✓ Pending confirmation registered for ${displayName} (phone: ${phoneWithCountry})`);
-            }
+          if (pendingError) {
+            console.error(`Error creating pending confirmation for appointment ${appointment.id}:`, pendingError);
+          } else {
+            console.log(`✓ Pending confirmation registered for ${displayName} (phone: ${phoneWithCountry})`);
           }
+        }
 
-          // Log the message
+        // Log the message
+        if (success) {
           const formattedPhone = phoneToUse.replace(/\D/g, '');
           const { error: logError } = await supabase
             .from('message_logs')
@@ -585,9 +602,7 @@ serve(async (req) => {
           }
 
           remainingMessages++;
-          sentCount++;
-          console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${appointment.appointment_date} at ${time}`);
-        } else {
+        }
           errorCount++;
           console.error(`✗ Failed to send reminder to ${displayName}`);
         }
