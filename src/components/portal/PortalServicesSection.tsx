@@ -213,9 +213,9 @@ export function PortalHomologacaoCard({ clinicSlug, onNavigate }: PortalHomologa
 
   return (
     <Card className="bg-white border-0 shadow-sm overflow-hidden">
-      <CardHeader className="pb-3 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-        <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-emerald-600" />
+      <CardHeader className="pb-3 border-b border-border bg-primary/5">
+        <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
           Agendar Homologação
         </CardTitle>
       </CardHeader>

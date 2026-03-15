@@ -589,13 +589,13 @@ export default function SindicalFiliacaoPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-lg p-8 text-center shadow-2xl border-0">
           {/* Confetti effect placeholder */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <Sparkles className="absolute top-4 left-4 h-6 w-6 text-amber-400 animate-pulse" />
-            <Sparkles className="absolute top-8 right-8 h-4 w-4 text-emerald-400 animate-pulse delay-100" />
-            <Sparkles className="absolute bottom-12 left-8 h-5 w-5 text-teal-400 animate-pulse delay-200" />
+            <Sparkles className="absolute top-4 left-4 h-6 w-6 text-primary/60 animate-pulse" />
+            <Sparkles className="absolute top-8 right-8 h-4 w-4 text-primary/50 animate-pulse delay-100" />
+            <Sparkles className="absolute bottom-12 left-8 h-5 w-5 text-primary/40 animate-pulse delay-200" />
           </div>
           
           {/* Logo */}
@@ -606,35 +606,35 @@ export default function SindicalFiliacaoPage() {
               className="h-20 w-auto object-contain mx-auto mb-6"
             />
           ) : (
-            <div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
               <Building2 className="h-8 w-8 text-white" />
             </div>
           )}
           
           {/* Success Icon */}
           <div className="relative mx-auto w-24 h-24 mb-6">
-            <div className="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-25" />
-            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+            <div className="absolute inset-0 bg-success/20 rounded-full animate-ping opacity-25" />
+            <div className="relative w-full h-full rounded-full bg-success flex items-center justify-center shadow-lg shadow-success/30">
               <CheckCircle2 className="h-12 w-12 text-white" />
             </div>
           </div>
           
-          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 mb-4">
+          <h2 className="text-2xl font-bold text-primary mb-4">
             Solicitação Enviada com Sucesso! 🎉
           </h2>
           
-          <p className="text-gray-600 mb-4">
-            Sua filiação ao <span className="font-semibold text-gray-800">{sindicato.nome_fantasia || sindicato.razao_social}</span> foi registrada.
+          <p className="text-muted-foreground mb-4">
+            Sua filiação ao <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span> foi registrada.
           </p>
           
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 mb-6 border border-emerald-100">
+          <div className="bg-primary/5 rounded-xl p-4 mb-6 border border-primary/10">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-white shadow-sm">
-                <Mail className="h-5 w-5 text-emerald-600" />
+              <div className="p-2 rounded-lg bg-card shadow-sm">
+                <Mail className="h-5 w-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-medium text-gray-800">Próximos passos</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-sm font-medium text-foreground">Próximos passos</p>
+                <p className="text-xs text-muted-foreground">
                   Nossa equipe irá analisar sua solicitação e entrar em contato através do e-mail ou WhatsApp informados. Você receberá sua <span className="font-medium">Carteira Digital</span> após a aprovação.
                 </p>
               </div>
@@ -643,7 +643,7 @@ export default function SindicalFiliacaoPage() {
           
           <Button 
             onClick={() => window.location.reload()} 
-            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25"
           >
             <Heart className="h-4 w-4 mr-2" />
             Nova Filiação

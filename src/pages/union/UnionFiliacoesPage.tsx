@@ -278,14 +278,14 @@ export default function UnionFiliacoesPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+        <Card className="bg-primary/10 border-primary/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Users className="h-5 w-5 text-purple-500" />
+              <div className="p-2 rounded-lg bg-primary/20">
+                <Users className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-purple-500">{stats.total}</p>
+                <p className="text-2xl font-bold text-primary">{stats.total}</p>
                 <p className="text-xs text-muted-foreground">Total</p>
               </div>
             </div>
@@ -293,16 +293,16 @@ export default function UnionFiliacoesPage() {
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all ${statusFilter === 'pendente' ? 'ring-2 ring-amber-500' : ''} bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20`}
+          className={`cursor-pointer transition-all ${statusFilter === 'pendente' ? 'ring-2 ring-warning' : ''} bg-warning/10 border-warning/20`}
           onClick={() => setStatusFilter("pendente")}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <Clock className="h-5 w-5 text-amber-500" />
+              <div className="p-2 rounded-lg bg-warning/20">
+                <Clock className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-amber-500">{stats.pendentes}</p>
+                <p className="text-2xl font-bold text-warning">{stats.pendentes}</p>
                 <p className="text-xs text-muted-foreground">Pendentes</p>
               </div>
             </div>
@@ -310,16 +310,16 @@ export default function UnionFiliacoesPage() {
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all ${statusFilter === 'ativo' ? 'ring-2 ring-emerald-500' : ''} bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20`}
+          className={`cursor-pointer transition-all ${statusFilter === 'ativo' ? 'ring-2 ring-success' : ''} bg-success/10 border-success/20`}
           onClick={() => setStatusFilter("ativo")}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <UserCheck className="h-5 w-5 text-emerald-500" />
+              <div className="p-2 rounded-lg bg-success/20">
+                <UserCheck className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-500">{stats.aprovados}</p>
+                <p className="text-2xl font-bold text-success">{stats.aprovados}</p>
                 <p className="text-xs text-muted-foreground">Ativos</p>
               </div>
             </div>
@@ -327,16 +327,16 @@ export default function UnionFiliacoesPage() {
         </Card>
         
         <Card 
-          className={`cursor-pointer transition-all ${statusFilter === 'rejeitado' ? 'ring-2 ring-red-500' : ''} bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-500/20`}
+          className={`cursor-pointer transition-all ${statusFilter === 'rejeitado' ? 'ring-2 ring-destructive' : ''} bg-destructive/10 border-destructive/20`}
           onClick={() => setStatusFilter("rejeitado")}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/20">
-                <UserX className="h-5 w-5 text-red-500" />
+              <div className="p-2 rounded-lg bg-destructive/20">
+                <UserX className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-500">{stats.rejeitados}</p>
+                <p className="text-2xl font-bold text-destructive">{stats.rejeitados}</p>
                 <p className="text-xs text-muted-foreground">Rejeitados</p>
               </div>
             </div>

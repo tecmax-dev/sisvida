@@ -529,47 +529,47 @@ export default function UnionEntitiesPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+        <Card className="bg-secondary border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
-              <Building2 className="h-8 w-8 text-slate-400" />
+              <Building2 className="h-8 w-8 text-muted-foreground/40" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+        <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-600">Ativas</p>
-                <p className="text-2xl font-bold text-emerald-700">{stats.ativas}</p>
+                <p className="text-sm text-success">Ativas</p>
+                <p className="text-2xl font-bold text-success">{stats.ativas}</p>
               </div>
-              <Check className="h-8 w-8 text-emerald-400" />
+              <Check className="h-8 w-8 text-success/40" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <Card className="bg-warning/10 border-warning/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-amber-600">Suspensas</p>
-                <p className="text-2xl font-bold text-amber-700">{stats.suspensas}</p>
+                <p className="text-sm text-warning">Suspensas</p>
+                <p className="text-2xl font-bold text-warning">{stats.suspensas}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-amber-400" />
+              <AlertTriangle className="h-8 w-8 text-warning/40" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-info/10 border-info/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600">Em Análise</p>
-                <p className="text-2xl font-bold text-blue-700">{stats.emAnalise}</p>
+                <p className="text-sm text-info">Em Análise</p>
+                <p className="text-2xl font-bold text-info">{stats.emAnalise}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-400" />
+              <Clock className="h-8 w-8 text-info/40" />
             </div>
           </CardContent>
         </Card>

@@ -545,7 +545,7 @@ export default function DashboardOverview() {
 
         {/* Procedures Donut Chart */}
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between">
+          <div className="bg-primary px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3 text-white">
               <Brain className="h-5 w-5" />
               <h3 className="font-semibold text-lg">Tipos de Procedimentos</h3>

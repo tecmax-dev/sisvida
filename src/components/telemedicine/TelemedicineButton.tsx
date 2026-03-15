@@ -89,7 +89,7 @@ export function TelemedicineButton({
       onClick={handleStartTelemedicine}
       disabled={disabled || loading}
       className={cn(
-        "gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white",
+        "gap-2 bg-primary hover:bg-primary/90 text-primary-foreground",
         className
       )}
     >
