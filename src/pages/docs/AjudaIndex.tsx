@@ -338,7 +338,7 @@ export default function AjudaIndex() {
                     alt={category.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                  <div className="absolute inset-0 bg-black/50" />
                   <div className={`absolute bottom-3 left-3 w-10 h-10 rounded-lg ${category.bgColor} border backdrop-blur-sm flex items-center justify-center`}>
                     <Icon className={`h-5 w-5 ${category.color}`} />
                   </div>
