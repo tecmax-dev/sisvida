@@ -460,25 +460,21 @@ export function DashboardLayout() {
         }}
       >
         <div className="flex flex-col h-full">
-          {/* Header com fundo escuro para melhor contraste da logo */}
+          {/* Header com fundo claro para destaque da logo */}
           <div 
             className="flex items-center justify-center p-4 border-b border-sidebar-border relative"
             style={{
-              background: 'hsl(220 75% 22%)'
+              background: 'hsl(220 40% 95%)'
             }}
           >
             {!sidebarCollapsed && (
               <div className="flex-1 flex justify-center">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-                  <Logo size="md" customSrc={prosindClinicaLogo} />
-                </div>
+                <Logo size="md" customSrc={prosindClinicaLogo} />
               </div>
             )}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1">
-                  <img src={prosindClinicaLogo} alt="ProsindClinica" className="h-8 w-8 object-contain" />
-                </div>
+                <img src={prosindClinicaLogo} alt="ProsindClinica" className="h-8 w-8 object-contain" />
               </div>
             )}
             <Button
