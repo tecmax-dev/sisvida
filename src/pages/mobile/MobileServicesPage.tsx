@@ -678,7 +678,7 @@ function ConveniosContent() {
               onClick={() => setActiveCategory(cat.id)}
             >
               <CardContent className="p-4">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${cat.color} flex items-center justify-center mb-3`}>
+                <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3">
                   <IconComponent className="h-6 w-6 text-white" />
                 </div>
                 <h4 className="font-semibold text-sm">{cat.nome}</h4>

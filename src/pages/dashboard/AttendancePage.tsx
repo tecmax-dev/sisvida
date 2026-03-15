@@ -1155,7 +1155,7 @@ export default function AttendancePage() {
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 {/* Avatar */}
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20">
+                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20">
                   <span className="text-xl font-bold text-primary">
                     {getInitials(appointment.patient.name)}
                   </span>

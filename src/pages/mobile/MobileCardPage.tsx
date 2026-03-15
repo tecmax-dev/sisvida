@@ -234,7 +234,7 @@ export default function MobileCardPage() {
         <div ref={cardRef} className="relative mx-auto max-w-[360px]">
           <Card className="overflow-hidden shadow-xl">
             {/* Card Header */}
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 p-4 text-white">
+            <div className="bg-primary p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {clinic?.logo_url ? (

@@ -478,7 +478,7 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Sessions Chart */}
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 px-5 py-4 flex items-center justify-between">
+          <div className="bg-primary px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3 text-white">
               <TrendingUp className="h-5 w-5" />
               <h3 className="font-semibold text-lg">Sessões nos Últimos 6 Meses</h3>

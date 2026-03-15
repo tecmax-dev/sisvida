@@ -1251,7 +1251,7 @@ export default function PatientsPage() {
       </div>
 
       {/* SEARCH - Primary Focus */}
-      <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent shadow-lg">
+      <Card className="border-2 border-primary/30 bg-primary/5 shadow-lg">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">

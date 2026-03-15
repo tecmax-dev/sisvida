@@ -1292,7 +1292,7 @@ export default function AttendancePageRedesign() {
                 </div>
 
                 {/* Patient Header Card - Enhanced Design */}
-                <Card className="bg-gradient-to-r from-primary/5 via-background to-accent/5 border-primary/20">
+                <Card className="bg-primary/5 border-primary/20">
                   <CardContent className={cn("p-4 md:p-6", isMobile && "p-3")}>
                     <div className={cn("flex items-start gap-4 md:gap-6", isMobile && "flex-col items-center text-center")}>
                       <Avatar className={cn(
