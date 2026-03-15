@@ -469,7 +469,7 @@ export default function MemberPortal() {
             )}
             <div>
               <h2 className="text-xl font-bold">Olá, {member.name.split(' ')[0]}!</h2>
-              <p className="text-emerald-100">
+              <p className="text-primary-foreground/80">
                 CPF: {formatCPF(member.cpf)} {member.registration_number && `• Matrícula: ${member.registration_number}`}
               </p>
             </div>
