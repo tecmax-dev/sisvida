@@ -1176,13 +1176,13 @@ const TutorialSindicatoPage = () => {
                     abordando agenda de homologações, cadastro de pacientes e assinatura digital.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                    <span className="px-3 py-1 bg-purple-500/10 text-purple-600 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                       <CheckCircle className="h-4 w-4 inline mr-1" /> Agenda Médica
                     </span>
-                    <span className="px-3 py-1 bg-teal-500/10 text-teal-600 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                       <CheckCircle className="h-4 w-4 inline mr-1" /> Homologações
                     </span>
-                    <span className="px-3 py-1 bg-blue-500/10 text-blue-600 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                       <CheckCircle className="h-4 w-4 inline mr-1" /> Assinatura Digital
                     </span>
                   </div>
