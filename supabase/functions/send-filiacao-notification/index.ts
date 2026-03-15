@@ -104,7 +104,7 @@ serve(async (req) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
-            <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
+            <div style="background: #1e3a8a; padding: 30px; text-align: center;">
               ${logoSection}
               <h1 style="color: white; margin: 0;">Filiacao Aprovada!</h1>
               <p style="color: #d1fae5; margin: 10px 0 0 0;">${sindicatoName}</p>

@@ -29,7 +29,7 @@ const getCredentialsEmailTemplate = (userName: string, userEmail: string, tempPa
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 30px; text-align: center;">
+            <td style="background: #1e3a8a; padding: 40px 30px; text-align: center;">
               <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">🔐 Suas credenciais de acesso</h1>
             </td>
           </tr>

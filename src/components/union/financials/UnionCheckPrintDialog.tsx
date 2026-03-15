@@ -488,7 +488,7 @@ export function UnionCheckPrintDialog({
             .footer-icon {
               width: 20px;
               height: 20px;
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               border-radius: 4px;
               display: flex;
               align-items: center;
