@@ -419,7 +419,7 @@ export function UnionCheckPrintDialog({
             
             /* Total row */
             .total-row {
-              background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+              background: #eff6ff !important;
             }
             
             .total-row td {
