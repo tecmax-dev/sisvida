@@ -245,6 +245,8 @@ ${boletosList}
 
 Solicitamos a regularização o mais breve possível para evitar eventuais penalidades.
 
+_Caso o pagamento já tenha sido efetuado, favor desconsiderar esta mensagem._
+
 Em caso de dúvidas ou para negociação, entre em contato conosco.
 
 _${entityName}_`;

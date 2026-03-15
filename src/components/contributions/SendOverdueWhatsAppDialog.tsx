@@ -93,6 +93,7 @@ export function SendOverdueWhatsAppDialog({
     }
 
     message += `Pedimos a gentileza de regularizar as pendências o mais breve possível.\n\n`;
+    message += `_Caso o pagamento já tenha sido efetuado, favor desconsiderar esta mensagem._\n\n`;
     message += `Em caso de dúvidas, estamos à disposição.`;
 
     return message;
