@@ -230,7 +230,7 @@ export default function UnionEntityLoginPage() {
 
               <Button 
                 type="submit" 
-                className="w-full h-11 bg-gradient-to-r from-[#0f3460] to-[#1a1a6e] hover:from-[#0d2b52] hover:to-[#15155e]"
+                className="w-full h-11 bg-primary hover:bg-primary/90"
                 disabled={loading}
               >
                 {loading ? (

@@ -124,7 +124,7 @@ export function ImportProgressCard({
               />
               {/* Animated glow effect */}
               <div 
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-pulse"
+                className="absolute inset-0 rounded-full bg-primary/20 animate-pulse"
                 style={{ 
                   width: `${progress}%`,
                   transition: 'width 0.3s ease-out'

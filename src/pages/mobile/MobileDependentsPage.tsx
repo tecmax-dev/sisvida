@@ -265,7 +265,7 @@ export default function MobileDependentsPage() {
       {/* Content */}
       <div className="p-4 space-y-4">
         {/* Stats Card */}
-        <Card className="bg-gradient-to-r from-emerald-500 to-emerald-600">
+        <Card className="bg-primary">
           <CardContent className="p-4">
             <div className="flex items-center justify-between text-white">
               <div>

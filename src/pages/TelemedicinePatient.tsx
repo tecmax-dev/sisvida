@@ -389,7 +389,7 @@ export default function TelemedicinePatient() {
             onClick={handleJoinCall}
             disabled={checkingDevices}
             size="lg"
-            className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 h-14 text-lg"
+            className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-14 text-lg"
           >
             <Video className="h-5 w-5" />
             Entrar na Consulta

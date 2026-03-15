@@ -19,23 +19,21 @@ export function Footer() {
               <a 
                 href="#" 
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                style={{ background: 'linear-gradient(135deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%)' }}
+                className="bg-primary/10"
                 aria-label="Instagram"
               >
                 <Instagram className="h-5 w-5 text-primary" />
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                style={{ background: 'linear-gradient(135deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%)' }}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 bg-primary/10"
                 aria-label="LinkedIn"
               >
                 <Linkedin className="h-5 w-5 text-primary" />
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                style={{ background: 'linear-gradient(135deg, hsl(220 80% 45% / 0.1) 0%, hsl(25 95% 53% / 0.1) 100%)' }}
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 bg-primary/10"
                 aria-label="YouTube"
               >
                 <Youtube className="h-5 w-5 text-primary" />

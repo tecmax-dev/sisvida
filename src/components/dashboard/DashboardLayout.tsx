@@ -464,7 +464,7 @@ export function DashboardLayout() {
           <div 
             className="flex items-center justify-center p-4 border-b border-sidebar-border relative"
             style={{
-              background: 'linear-gradient(180deg, hsl(210 50% 20%) 0%, hsl(200 60% 25%) 100%)'
+              background: 'hsl(220 75% 22%)'
             }}
           >
             {!sidebarCollapsed && (

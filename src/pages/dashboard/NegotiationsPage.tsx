@@ -106,7 +106,7 @@ function NegotiationsContent() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/25">
+          <div className="p-3 rounded-xl bg-primary shadow-lg shadow-primary/25">
             <Handshake className="h-8 w-8 text-white" />
           </div>
           <div>
