@@ -456,7 +456,7 @@ export function DashboardLayout() {
           sidebarCollapsed ? "w-16" : "w-64"
         )}
         style={{
-          background: 'linear-gradient(180deg, hsl(200 85% 38%) 0%, hsl(175 70% 36%) 45%, hsl(145 55% 40%) 100%)'
+          background: 'hsl(220 75% 30%)'
         }}
       >
         <div className="flex flex-col h-full">
