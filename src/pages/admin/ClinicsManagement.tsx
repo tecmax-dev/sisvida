@@ -209,7 +209,7 @@ const ClinicCard = ({
               ? "bg-destructive/10 text-destructive"
               : status === 'maintenance' 
               ? "bg-warning/10 text-warning" 
-              : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+              : "bg-primary/10 text-primary"
           }`}>
             {status === 'blocked' ? (
               <Ban className="h-6 w-6" />
