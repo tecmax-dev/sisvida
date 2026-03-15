@@ -601,10 +601,6 @@ serve(async (req) => {
             console.error(`Error logging message for clinic ${clinic.id}:`, logError);
           }
 
-          remainingMessages++;
-        }
-          errorCount++;
-          console.error(`✗ Failed to send reminder to ${displayName}`);
         }
 
         // Small delay to avoid rate limiting
