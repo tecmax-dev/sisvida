@@ -427,6 +427,22 @@ const modules = [
     highlights: ["Auditoria", "Permissões", "Rastreabilidade", "Segurança"],
     accent: "bg-[hsl(215,50%,20%)]",
   },
+  {
+    icon: ClipboardCheck,
+    title: "Homologação",
+    description:
+      "Agendamento online de homologações com calendário exclusivo, notificações automáticas via WhatsApp para associado, gestor e profissional, e controle completo de protocolos.",
+    highlights: ["Agendamento online", "Notificações WhatsApp", "Protocolos", "Calendário"],
+    accent: "bg-[hsl(0,85%,50%)]",
+  },
+  {
+    icon: Stethoscope,
+    title: "Módulo Clínica",
+    description:
+      "Gestão completa de atendimentos clínicos integrados à entidade: agenda de profissionais, prontuário eletrônico, anamnese digital, procedimentos e controle de convênios.",
+    highlights: ["Agenda médica", "Prontuário eletrônico", "Anamnese digital", "Convênios"],
+    accent: "bg-[hsl(215,85%,50%)]",
+  },
 ];
 
 function ModulesSection() {
