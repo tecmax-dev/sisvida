@@ -43,7 +43,6 @@ function formatAppointmentReminder(
   const arrivalInstruction = `⏳ *Compareça com 15 minutos de antecedência.*`;
   const specificLocation = getProfessionalLocation(professionalName);
 
-  // Always use the buttons format (no numbered list, no link)
   const lines = [
     `Olá ${patientName}! 👋`,
     ``,
@@ -78,7 +77,7 @@ async function sendWhatsAppWithImage(
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`[test] Sending WhatsApp image+text to ${formattedPhone} via Evolution`);
+    console.log(`[test] Sending via Evolution to ${formattedPhone}`);
 
     const response = await fetch(`${config.api_url}/message/sendMedia/${config.instance_name}`, {
       method: 'POST',
@@ -100,10 +99,55 @@ async function sendWhatsAppWithImage(
       return { success: false, error: responseText };
     }
 
-    console.log('[test] Evolution message sent OK:', responseText.substring(0, 200));
+    console.log('[test] Evolution OK:', responseText.substring(0, 200));
     return { success: true };
   } catch (error) {
-    console.error('[test] Error sending via Evolution:', error);
+    console.error('[test] Evolution exception:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+async function sendWhatsAppViaWhazing(
+  phone: string,
+  message: string
+): Promise<{ success: boolean; error?: string; response?: string }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    return { success: false, error: 'Whazing not configured' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[test-whazing-text] Sending text to ${cleanPhone}`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "text",
+          body: { text: message }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`[test-whazing-text] Status: ${response.status}, Body: ${responseText.substring(0, 300)}`);
+
+    if (!response.ok) {
+      return { success: false, error: `${response.status}: ${responseText}`, response: responseText };
+    }
+    return { success: true, response: responseText };
+  } catch (error) {
     return { success: false, error: String(error) };
   }
 }
@@ -115,37 +159,16 @@ async function sendConfirmationButtons(
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
-  console.log(`[test-buttons] WHAZING_API_URL configured: ${!!whazingUrl}`);
-  console.log(`[test-buttons] WHAZING_API_TOKEN configured: ${!!whazingToken}`);
-
   if (!whazingUrl || !whazingToken) {
-    return { success: false, error: 'Whazing not configured (missing WHAZING_API_URL or WHAZING_API_TOKEN)' };
+    return { success: false, error: 'Whazing not configured' };
   }
 
   try {
     let cleanPhone = phone.replace(/\D/g, '');
-    if (!cleanPhone.startsWith('55')) {
-      cleanPhone = '55' + cleanPhone;
-    }
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
     const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
-    console.log(`[test-buttons] Sending buttons to ${cleanPhone} via ${apiOficialUrl}`);
-
-    const payload = {
-      number: cleanPhone,
-      contents: {
-        type: "button",
-        body: { text: "Confirme ou cancele sua consulta:" },
-        action: {
-          buttons: [
-            { type: "reply", reply: { id: `confirm_apt_${testAppointmentId}`, title: "✅ Confirmar" } },
-            { type: "reply", reply: { id: `cancel_apt_${testAppointmentId}`, title: "❌ Cancelar" } },
-          ]
-        }
-      }
-    };
-
-    console.log(`[test-buttons] Payload:`, JSON.stringify(payload));
+    console.log(`[test-buttons] Sending buttons to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -153,20 +176,29 @@ async function sendConfirmationButtons(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: "Confirme ou cancele sua consulta:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: `confirm_apt_${testAppointmentId}`, title: "✅ Confirmar" } },
+              { type: "reply", reply: { id: `cancel_apt_${testAppointmentId}`, title: "❌ Cancelar" } },
+            ]
+          }
+        }
+      }),
     });
 
     const responseText = await response.text();
-    console.log(`[test-buttons] Response status: ${response.status}`);
-    console.log(`[test-buttons] Response body: ${responseText.substring(0, 500)}`);
+    console.log(`[test-buttons] Status: ${response.status}, Body: ${responseText.substring(0, 300)}`);
 
     if (!response.ok) {
-      return { success: false, error: `Status ${response.status}: ${responseText}`, response: responseText };
+      return { success: false, error: `${response.status}: ${responseText}`, response: responseText };
     }
-
     return { success: true, response: responseText };
   } catch (error) {
-    console.error('[test-buttons] Exception:', error);
     return { success: false, error: String(error) };
   }
 }
@@ -190,7 +222,6 @@ serve(async (req) => {
       );
     }
 
-    // Get clinic info
     let clinicName = 'Clínica Teste';
     let logoUrl = DEFAULT_SYSTEM_LOGO;
 
@@ -207,67 +238,61 @@ serve(async (req) => {
       }
     }
 
-    // Get Evolution config for the clinic
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
-      .select('api_url, api_key, instance_name, direct_reply_enabled')
+      .select('api_url, api_key, instance_name')
       .eq('clinic_id', clinic_id)
       .maybeSingle();
 
     if (configError || !evolutionConfig) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Evolution config not found for clinic' }),
+        JSON.stringify({ success: false, error: 'Evolution config not found' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create test message with buttons format (no numbered list)
     const testDate = 'sexta-feira, 10 de janeiro';
     const testTime = '14:00';
     const testProfessional = 'Dr. José Silva';
     const testPatient = 'João Teste';
     const testAppointmentId = 'test-' + Date.now();
 
-    const message = formatAppointmentReminder(
-      testPatient,
-      clinicName,
-      testDate,
-      testTime,
-      testProfessional,
-    );
+    const message = formatAppointmentReminder(testPatient, clinicName, testDate, testTime, testProfessional);
 
-    console.log('[test] === STEP 1: Sending main reminder message via Evolution ===');
-    const mainResult = await sendWhatsAppWithImage(
-      evolutionConfig as EvolutionConfig,
-      phone,
-      logoUrl,
-      message
-    );
+    // STEP 1: Try Evolution
+    console.log('[test] === STEP 1: Try Evolution ===');
+    const evolutionResult = await sendWhatsAppWithImage(evolutionConfig as EvolutionConfig, phone, logoUrl, message);
 
-    console.log('[test] Main message result:', mainResult);
+    // STEP 2: If Evolution fails, fallback to Whazing text
+    let whazingTextResult = null;
+    let messageSent = evolutionResult.success;
+    if (!evolutionResult.success) {
+      console.log('[test] === STEP 2: Evolution failed, trying Whazing text fallback ===');
+      whazingTextResult = await sendWhatsAppViaWhazing(phone, message);
+      messageSent = whazingTextResult.success;
+    }
 
-    // Wait 1.5s then send buttons via Whazing
-    console.log('[test] === STEP 2: Waiting 1.5s before sending buttons ===');
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    console.log('[test] === STEP 3: Sending confirmation buttons via Whazing ===');
-    const buttonsResult = await sendConfirmationButtons(phone, testAppointmentId);
-    console.log('[test] Buttons result:', buttonsResult);
+    // STEP 3: Send buttons via Whazing
+    let buttonsResult = null;
+    if (messageSent) {
+      console.log('[test] === STEP 3: Waiting 1.5s then sending buttons ===');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      buttonsResult = await sendConfirmationButtons(phone, testAppointmentId);
+    }
 
     return new Response(
       JSON.stringify({
-        success: mainResult.success,
-        main_message: mainResult,
+        success: messageSent,
+        evolution: evolutionResult,
+        whazing_text_fallback: whazingTextResult,
         buttons: buttonsResult,
-        message: mainResult.success ? 'Test reminder sent' : 'Failed to send reminder',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
     console.error('[test] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal error';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Internal error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
