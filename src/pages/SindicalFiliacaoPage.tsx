@@ -1400,7 +1400,7 @@ export default function SindicalFiliacaoPage() {
               <Button
                 type="submit"
                 disabled={submitting || cpfChecking || cpfExists}
-                className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 transition-all duration-300"
+                className="w-full h-14 text-lg font-semibold rounded-xl bg-primary hover:bg-primary-dark text-primary-foreground shadow-lg transition-all duration-300"
               >
                 {submitting ? (
                   <>

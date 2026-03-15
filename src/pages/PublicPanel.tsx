@@ -268,7 +268,7 @@ export default function PublicPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col">
+    <div className="min-h-screen bg-foreground flex flex-col">
       {/* Header */}
       <div className="p-6 flex items-center justify-between border-b border-slate-700">
         <div className="flex items-center gap-4">

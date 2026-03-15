@@ -1040,7 +1040,7 @@ export default function ClinicsManagement() {
                                   ? "bg-destructive/10 text-destructive" 
                                   : clinic.is_maintenance
                                     ? "bg-warning/10 text-warning"
-                                    : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+                                    : "bg-primary/10 text-primary"
                               }`}>
                                 {clinic.is_blocked ? (
                                   <Ban className="h-5 w-5" />
