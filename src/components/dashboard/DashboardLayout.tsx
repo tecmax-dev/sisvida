@@ -569,7 +569,7 @@ export function DashboardLayout() {
                   "border border-cta/30 text-sidebar-foreground hover:text-white"
                 )}
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-cta flex items-center justify-center shadow-sm">
                   <Building2 className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex flex-col">
