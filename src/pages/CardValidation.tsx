@@ -106,7 +106,7 @@ export default function CardValidation() {
 
   if (error || !card) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <div className="w-full max-w-[360px] bg-card rounded-2xl shadow-xl overflow-hidden border">
           <div className="bg-destructive p-6 text-center">
             <XCircle className="h-16 w-16 mx-auto text-white mb-3" />
