@@ -159,7 +159,7 @@ ${logoSection}
 </div>
 <div style="padding: 32px 24px;">
 <p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6;">Prezado(a) <strong>${recipientName}</strong>,</p>
-<div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
+<div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
 <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 16px; font-weight: 600;">Novidade: Sistema ProsindWeb</h3>
 <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.6;">O <strong>${clinicName}</strong> atualizou seu sistema de gestao de contribuicoes para o <strong>ProsindWeb</strong>. A partir de agora, todos os boletos, consultas e servicos estarao disponiveis atraves deste novo portal.</p>
 </div>
