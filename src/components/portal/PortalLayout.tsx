@@ -102,12 +102,8 @@ export function PortalWelcomeBanner({
   entityName,
   variant = "amber"
 }: PortalWelcomeBannerProps) {
-  const gradientClass = variant === "teal" 
-    ? "from-teal-600 to-cyan-600" 
-    : "from-amber-500 to-orange-600";
-  
   return (
-    <div className={`bg-gradient-to-r ${gradientClass} rounded-2xl p-6 text-white shadow-lg`}>
+    <div className="rounded-2xl p-6 text-white shadow-lg bg-primary">
       <div className="flex items-center gap-4">
         {logoUrl ? (
           <img 
