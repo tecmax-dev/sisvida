@@ -839,7 +839,7 @@ export default function ProfessionalProfile() {
           <div className="lg:col-span-7 space-y-5">
             {/* Profile Header Card */}
             <Card className="overflow-hidden shadow-sm">
-              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">
+              <div className="bg-primary/10 p-5">
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
                   <Avatar className="w-24 h-24 border-4 border-background shadow-md flex-shrink-0">
                     <AvatarImage src={professional.avatar_url || undefined} alt={professional.name} />
