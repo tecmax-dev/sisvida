@@ -586,7 +586,7 @@ function RadiosContent({ clinicId }: { clinicId: string | null }) {
         {radios.map((radio, idx) => (
           <Card 
             key={radio.id} 
-            className={`border shadow-sm ${idx === 0 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' : ''}`}
+            className={`border shadow-sm ${idx === 0 ? 'bg-primary text-white' : ''}`}
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-3">

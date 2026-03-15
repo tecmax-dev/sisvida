@@ -59,7 +59,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="fixed inset-0 z-[100] bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 flex flex-col items-center justify-center overflow-hidden"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden" style={{ background: 'hsl(220 75% 30%)' }}
         >
           {/* Animated background particles */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -101,7 +101,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
               initial={{ scale: 0, opacity: 0, rotate: -45 }}
               animate={{ scale: 1, opacity: 0.25, rotate: 0 }}
               transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
-              className="absolute -top-32 -right-32 w-96 h-96 bg-gradient-to-br from-emerald-400 to-transparent rounded-full"
+              className="absolute -top-32 -right-32 w-96 h-96 bg-primary/20 rounded-full"
             />
             
             {/* Large decorative circle bottom-left */}
@@ -109,7 +109,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
               initial={{ scale: 0, opacity: 0, rotate: 45 }}
               animate={{ scale: 1, opacity: 0.3, rotate: 0 }}
               transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-              className="absolute -bottom-24 -left-24 w-72 h-72 bg-gradient-to-tr from-teal-400 to-transparent rounded-full"
+              className="absolute -bottom-24 -left-24 w-72 h-72 bg-primary/25 rounded-full"
             />
 
             {/* Pulsing ring around logo area */}

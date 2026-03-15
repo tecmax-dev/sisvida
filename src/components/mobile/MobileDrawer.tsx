@@ -83,42 +83,42 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
       icon: Users, 
       label: "Dependentes", 
       description: "Gerencie seus dependentes",
-      gradient: "from-violet-500 to-purple-600",
+      bgColor: "bg-primary",
       onClick: () => handleNavigate("/app/dependentes") 
     },
     { 
       icon: CreditCard, 
       label: "Carteirinha", 
       description: "Sua identificação digital",
-      gradient: "from-emerald-500 to-teal-600",
+      bgColor: "bg-primary",
       onClick: () => handleNavigate("/app/carteirinha") 
     },
     { 
       icon: Send, 
       label: "Notificar Carteirinha", 
       description: "Receber lembrete da carteirinha",
-      gradient: "from-sky-500 to-blue-600",
+      bgColor: "bg-primary",
       onClick: handleNotifyCard 
     },
     { 
       icon: Lock, 
       label: "Alterar senha", 
       description: "Segurança da sua conta",
-      gradient: "from-amber-500 to-orange-600",
+      bgColor: "bg-primary/80",
       onClick: () => handleNavigate("/app/alterar-senha") 
     },
     { 
       icon: HelpCircle, 
       label: "Dúvidas frequentes", 
       description: "Respostas rápidas",
-      gradient: "from-blue-500 to-indigo-600",
+      bgColor: "bg-primary/80",
       onClick: () => handleNavigate("/app/faq") 
     },
     { 
       icon: Info, 
       label: "Sobre", 
       description: "Conheça o SECMI",
-      gradient: "from-slate-500 to-slate-700",
+      bgColor: "bg-primary/70",
       onClick: () => handleNavigate("/app/sobre") 
     },
   ];
@@ -127,19 +127,19 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     { 
       icon: Star, 
       label: "Avaliar o aplicativo", 
-      gradient: "from-amber-400 to-yellow-500",
+      bgColor: "bg-primary/80",
       onClick: handleRate 
     },
     { 
       icon: Share2, 
       label: "Compartilhar", 
-      gradient: "from-blue-400 to-cyan-500",
+      bgColor: "bg-primary",
       onClick: handleShare 
     },
     { 
       icon: LogOut, 
       label: "Sair do aplicativo", 
-      gradient: "from-red-500 to-rose-600",
+      bgColor: "bg-destructive",
       onClick: handleSignOut,
       isDestructive: true
     },
@@ -147,9 +147,9 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[85%] max-w-[340px] p-0 flex flex-col bg-slate-50">
+      <SheetContent side="left" className="w-[85%] max-w-[340px] p-0 flex flex-col bg-background">
         {/* Header with user info - Premium gradient */}
-        <SheetHeader className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 text-white p-5 pb-7 relative overflow-hidden">
+        <SheetHeader className="text-white p-5 pb-7 relative overflow-hidden" style={{ background: 'hsl(220 75% 30%)' }}>
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
           <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/10 rounded-full" />
@@ -164,7 +164,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-emerald-300 to-teal-400 flex items-center justify-center">
+                  <div className="w-full h-full bg-primary/60 flex items-center justify-center">
                     <UserCircle className="h-12 w-12 text-white/80" />
                   </div>
                 )}
@@ -195,7 +195,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
                 onClick={item.onClick}
                 className="w-full flex items-center gap-3 p-3 hover:bg-white rounded-2xl transition-all duration-200 text-left group"
               >
-                <div className={`w-11 h-11 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200`}>
+                <div className={`w-11 h-11 ${item.bgColor} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200`}>
                   <item.icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
@@ -221,7 +221,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
                     : 'hover:bg-gray-100'
                 }`}
               >
-                <div className={`w-9 h-9 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center shadow-md`}>
+                <div className={`w-9 h-9 ${item.bgColor} rounded-xl flex items-center justify-center shadow-md`}>
                   <item.icon className="h-4 w-4 text-white" />
                 </div>
                 <span className={`text-[10px] font-medium ${item.isDestructive ? 'text-red-600' : 'text-gray-600'}`}>

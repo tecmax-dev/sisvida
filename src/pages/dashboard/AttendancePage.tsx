@@ -1051,7 +1051,7 @@ export default function AttendancePage() {
         {/* LEFT SIDEBAR */}
         <div className="space-y-4">
           {/* Timer Card - Prominent */}
-          <Card className={`relative overflow-hidden ${isInProgress ? 'bg-gradient-to-br from-info/10 via-info/5 to-background border-info/30' : isCompleted ? 'bg-gradient-to-br from-success/10 via-success/5 to-background border-success/30' : 'bg-gradient-to-br from-muted via-background to-background'}`}>
+          <Card className={`relative overflow-hidden ${isInProgress ? 'bg-info/10 border-info/30' : isCompleted ? 'bg-success/10 border-success/30' : 'bg-muted'}`}>
             <CardContent className="p-4">
               <div className="flex flex-col items-center text-center space-y-2">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duração da consulta</span>
@@ -1155,7 +1155,7 @@ export default function AttendancePage() {
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 {/* Avatar */}
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20">
+                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20">
                   <span className="text-xl font-bold text-primary">
                     {getInitials(appointment.patient.name)}
                   </span>

@@ -624,10 +624,10 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
   };
 
   return (
-    <Card className="border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-purple-600/5">
+    <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Share2 className="h-5 w-5 text-purple-500" />
+          <Share2 className="h-5 w-5 text-primary" />
           Ficha de Filiação
         </CardTitle>
       </CardHeader>

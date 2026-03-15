@@ -315,9 +315,9 @@ export default function DashboardOverview() {
       subtitle: "Total de Pacientes",
       buttonText: "Ver detalhes",
       buttonLink: "/dashboard/patients",
-      gradient: "from-blue-400 via-blue-500 to-cyan-500",
+      bgSolid: "bg-primary",
       icon: Users,
-      iconBg: "bg-blue-300/50",
+      iconBg: "bg-white/20",
     },
     {
       title: "PROFISSIONAIS",
@@ -325,9 +325,9 @@ export default function DashboardOverview() {
       subtitle: getProfessionalLabel(),
       buttonText: "Ver detalhes",
       buttonLink: "/dashboard/professionals",
-      gradient: "from-pink-400 via-pink-500 to-rose-500",
+      bgSolid: "bg-[hsl(0_85%_50%)]",
       icon: Stethoscope,
-      iconBg: "bg-pink-300/50",
+      iconBg: "bg-white/20",
     },
     {
       title: "HOJE",
@@ -335,9 +335,9 @@ export default function DashboardOverview() {
       subtitle: `${getSessionLabel()} Hoje`,
       buttonText: "Ver agenda",
       buttonLink: "/dashboard/calendar",
-      gradient: "from-orange-400 via-orange-500 to-amber-500",
+      bgSolid: "bg-primary/80",
       icon: Calendar,
-      iconBg: "bg-orange-300/50",
+      iconBg: "bg-white/20",
     },
     {
       title: "FUTURAS",
@@ -345,9 +345,9 @@ export default function DashboardOverview() {
       subtitle: `${getSessionLabel()} Agendadas`,
       buttonText: "Ver todas",
       buttonLink: "/dashboard/calendar",
-      gradient: "from-emerald-400 via-emerald-500 to-teal-500",
+      bgSolid: "bg-[hsl(220_80%_35%)]",
       icon: Clock,
-      iconBg: "bg-emerald-300/50",
+      iconBg: "bg-white/20",
     },
   ];
 
@@ -358,12 +358,12 @@ export default function DashboardOverview() {
       subtitle: "Evoluções Registradas",
       buttonText: "Ver prontuários",
       buttonLink: "/dashboard/medical-records",
-      bgColor: "bg-purple-50 dark:bg-purple-950/50",
-      borderColor: "border-purple-100 dark:border-purple-800",
+      bgColor: "bg-primary/5",
+      borderColor: "border-primary/10",
       icon: FileText,
-      iconBg: "bg-purple-100 dark:bg-purple-900/50",
-      iconColor: "text-purple-500 dark:text-purple-400",
-      valueColor: "text-purple-700 dark:text-purple-300",
+      iconBg: "bg-primary/10",
+      iconColor: "text-primary",
+      valueColor: "text-primary",
     },
     {
       title: "TAXA DE PRESENÇA",
@@ -371,12 +371,12 @@ export default function DashboardOverview() {
       subtitle: "Taxa Realização",
       buttonText: "Ver registros",
       buttonLink: "/dashboard/reports",
-      bgColor: "bg-amber-50 dark:bg-amber-950/50",
-      borderColor: "border-amber-100 dark:border-amber-800",
+      bgColor: "bg-warning/5",
+      borderColor: "border-warning/10",
       icon: TrendingUp,
-      iconBg: "bg-amber-100 dark:bg-amber-900/50",
-      iconColor: "text-amber-600 dark:text-amber-400",
-      valueColor: "text-amber-700 dark:text-amber-300",
+      iconBg: "bg-warning/10",
+      iconColor: "text-warning",
+      valueColor: "text-warning",
     },
     {
       title: "AÇÃO",
@@ -385,12 +385,12 @@ export default function DashboardOverview() {
       subtitle: "Nova Evolução",
       buttonText: "Registrar nova",
       buttonLink: "/dashboard/medical-records",
-      bgColor: "bg-rose-50 dark:bg-rose-950/50",
-      borderColor: "border-rose-100 dark:border-rose-800",
+      bgColor: "bg-destructive/5",
+      borderColor: "border-destructive/10",
       icon: Plus,
-      iconBg: "bg-rose-100 dark:bg-rose-900/50",
-      iconColor: "text-rose-500 dark:text-rose-400",
-      valueColor: "text-rose-700 dark:text-rose-300",
+      iconBg: "bg-destructive/10",
+      iconColor: "text-destructive",
+      valueColor: "text-destructive",
     },
   ];
 
@@ -405,7 +405,7 @@ export default function DashboardOverview() {
         {topCards.map((card, i) => (
           <Card
             key={i}
-            className={`relative overflow-hidden border-0 shadow-lg bg-gradient-to-br ${card.gradient} text-white`}
+            className={`relative overflow-hidden border-0 shadow-lg ${card.bgSolid} text-white`}
           >
             <CardContent className="p-5 relative">
               <div className="flex justify-between items-start">
@@ -478,7 +478,7 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Sessions Chart */}
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 px-5 py-4 flex items-center justify-between">
+          <div className="bg-primary px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3 text-white">
               <TrendingUp className="h-5 w-5" />
               <h3 className="font-semibold text-lg">Sessões nos Últimos 6 Meses</h3>
@@ -545,7 +545,7 @@ export default function DashboardOverview() {
 
         {/* Procedures Donut Chart */}
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between">
+          <div className="bg-primary px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3 text-white">
               <Brain className="h-5 w-5" />
               <h3 className="font-semibold text-lg">Tipos de Procedimentos</h3>

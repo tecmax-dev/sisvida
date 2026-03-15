@@ -280,7 +280,7 @@ export default function MobileInstallPage() {
         
         {/* === ESTADO: APP JÁ INSTALADO === */}
         {isInstalled && (
-          <Card className="border-green-500 bg-gradient-to-br from-green-50 to-green-100 shadow-lg">
+          <Card className="border-success bg-success/10 shadow-lg">
             <CardContent className="py-6 space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-green-500 flex items-center justify-center shadow-md">
@@ -309,7 +309,7 @@ export default function MobileInstallPage() {
 
         {/* === ESTADO: PODE INSTALAR VIA PROMPT NATIVO (Chrome/Edge/Android) === */}
         {!isInstalled && canInstall && (
-          <Card className="border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg">
+          <Card className="border-primary bg-primary/10 shadow-lg">
             <CardContent className="py-6 space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-md">
@@ -339,7 +339,7 @@ export default function MobileInstallPage() {
 
         {/* === ESTADO: iOS (Safari) - Instruções manuais === */}
         {!isInstalled && !canInstall && isIOS && (
-          <Card className="border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg">
+          <Card className="border-primary bg-primary/10 shadow-lg">
             <CardContent className="py-6 space-y-5">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-md">

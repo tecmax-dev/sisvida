@@ -167,7 +167,7 @@ export default function NegotiationSettingsTab({ clinicId }: NegotiationSettings
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg shadow-rose-500/25">
+            <div className="p-3 rounded-xl bg-destructive shadow-lg shadow-destructive/25">
               <Percent className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -277,7 +277,7 @@ export default function NegotiationSettingsTab({ clinicId }: NegotiationSettings
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25">
+            <div className="p-3 rounded-xl bg-primary shadow-lg shadow-primary/25">
               <Calendar className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -349,7 +349,7 @@ export default function NegotiationSettingsTab({ clinicId }: NegotiationSettings
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25">
+            <div className="p-3 rounded-xl bg-warning shadow-lg shadow-warning/25">
               <Scale className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -434,7 +434,7 @@ export default function NegotiationSettingsTab({ clinicId }: NegotiationSettings
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 shadow-lg shadow-slate-500/25">
+            <div className="p-3 rounded-xl bg-primary/70 shadow-lg shadow-primary/25">
               <FileText className="h-6 w-6 text-white" />
             </div>
             <div>

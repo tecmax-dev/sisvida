@@ -229,11 +229,11 @@ export default function NegotiationsListTab({
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25">
+              <div className="p-3 rounded-xl bg-success shadow-lg shadow-success/25">
                 <CheckCircle2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600">{stats.active}</p>
+                <p className="text-2xl font-bold text-success">{stats.active}</p>
                 <p className="text-xs text-muted-foreground font-medium">Ativas</p>
               </div>
             </div>

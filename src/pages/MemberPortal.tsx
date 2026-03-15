@@ -349,19 +349,19 @@ export default function MemberPortal() {
   // ==================== LOGIN SCREEN ====================
   if (!member) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-900 relative overflow-hidden">
+      <div className="min-h-screen relative overflow-hidden" style={{ background: 'hsl(220 75% 22%)' }}>
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="network" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <circle cx="50" cy="50" r="1.5" fill="currentColor" className="text-emerald-300" />
-                <circle cx="0" cy="0" r="1" fill="currentColor" className="text-emerald-300" />
-                <circle cx="100" cy="0" r="1" fill="currentColor" className="text-emerald-300" />
-                <circle cx="0" cy="100" r="1" fill="currentColor" className="text-emerald-300" />
-                <circle cx="100" cy="100" r="1" fill="currentColor" className="text-emerald-300" />
-                <line x1="50" y1="50" x2="0" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-emerald-300/50" />
-                <line x1="50" y1="50" x2="100" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-emerald-300/50" />
+                <circle cx="50" cy="50" r="1.5" fill="currentColor" className="text-primary/50" />
+                <circle cx="0" cy="0" r="1" fill="currentColor" className="text-primary/50" />
+                <circle cx="100" cy="0" r="1" fill="currentColor" className="text-primary/50" />
+                <circle cx="0" cy="100" r="1" fill="currentColor" className="text-primary/50" />
+                <circle cx="100" cy="100" r="1" fill="currentColor" className="text-primary/50" />
+                <line x1="50" y1="50" x2="0" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-primary/30" />
+                <line x1="50" y1="50" x2="100" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-primary/30" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#network)" />
@@ -381,7 +381,7 @@ export default function MemberPortal() {
               </div>
             )}
             <h1 className="text-2xl font-bold text-white mb-2">{clinic?.name || "Portal do Sócio"}</h1>
-            <p className="text-emerald-200/80">Acesso restrito para associados</p>
+            <p className="text-primary-foreground/80">Acesso restrito para associados</p>
           </div>
 
           {/* Login Card */}
@@ -422,21 +422,21 @@ export default function MemberPortal() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Acessar
                 </Button>
               </form>
 
               <div className="text-center text-sm text-muted-foreground">
-                <a href="/app" className="text-emerald-600 hover:underline">
+                <a href="/app" className="text-primary hover:underline">
                   Primeiro acesso? Recuperar senha
                 </a>
               </div>
             </CardContent>
           </Card>
 
-          <p className="mt-8 text-emerald-200/60 text-sm">
+          <p className="mt-8 text-primary-foreground/60 text-sm">
             © {new Date().getFullYear()} {clinic?.name || "Sindicato"}
           </p>
         </div>
@@ -458,7 +458,7 @@ export default function MemberPortal() {
 
       <PortalMain>
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-6 text-white mb-6">
+        <div className="bg-primary rounded-xl p-6 text-white mb-6">
           <div className="flex items-center gap-4">
             {member.photo_url ? (
               <img src={member.photo_url} alt={member.name} className="w-16 h-16 rounded-full border-2 border-white/30" />
@@ -469,7 +469,7 @@ export default function MemberPortal() {
             )}
             <div>
               <h2 className="text-xl font-bold">Olá, {member.name.split(' ')[0]}!</h2>
-              <p className="text-emerald-100">
+              <p className="text-primary-foreground/80">
                 CPF: {formatCPF(member.cpf)} {member.registration_number && `• Matrícula: ${member.registration_number}`}
               </p>
             </div>
@@ -504,15 +504,15 @@ export default function MemberPortal() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-emerald-500 dark:border-l-emerald-400">
+          <Card className="border-l-4 border-l-success dark:border-l-success">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Pagas</p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.paidCount}</p>
+                  <p className="text-2xl font-bold text-success">{metrics.paidCount}</p>
                   <p className="text-sm text-muted-foreground">{formatCurrency(metrics.paidValue)}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-emerald-500/30 dark:text-emerald-400/30" />
+                <CheckCircle2 className="h-8 w-8 text-success/30" />
               </div>
             </CardContent>
           </Card>
@@ -520,7 +520,7 @@ export default function MemberPortal() {
 
         {/* Card Info */}
         {card && (
-          <Card className="mb-6 bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+          <Card className="mb-6 text-white" style={{ background: 'hsl(220 75% 22%)' }}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

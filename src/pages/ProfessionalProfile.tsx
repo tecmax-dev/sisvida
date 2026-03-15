@@ -753,7 +753,7 @@ export default function ProfessionalProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -761,7 +761,7 @@ export default function ProfessionalProfile() {
 
   if (!clinic || !professional) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -775,7 +775,7 @@ export default function ProfessionalProfile() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 pb-8 text-center">
             <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
@@ -818,7 +818,7 @@ export default function ProfessionalProfile() {
     : configuredMapViewType;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
@@ -839,7 +839,7 @@ export default function ProfessionalProfile() {
           <div className="lg:col-span-7 space-y-5">
             {/* Profile Header Card */}
             <Card className="overflow-hidden shadow-sm">
-              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">
+              <div className="bg-primary/10 p-5">
                 <div className="flex flex-col sm:flex-row gap-4 items-start">
                   <Avatar className="w-24 h-24 border-4 border-background shadow-md flex-shrink-0">
                     <AvatarImage src={professional.avatar_url || undefined} alt={professional.name} />
@@ -1086,7 +1086,7 @@ export default function ProfessionalProfile() {
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-20">
               <Card className="shadow-md border border-border">
-                <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg py-4">
+                <CardHeader className="bg-primary text-primary-foreground rounded-t-lg py-4">
                   <CardTitle className="text-lg font-semibold">Agende uma Consulta</CardTitle>
                   <p className="text-sm text-primary-foreground/80 mt-0.5">Consulte especialidades da maneira mais conveniente</p>
                 </CardHeader>

@@ -1032,7 +1032,7 @@ export default function AttendancePageRedesign() {
   const sidebarItems = SIDEBAR_ITEMS.filter(item => !item.dentalOnly || isDentalSpecialty);
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-gradient-to-br from-primary/5 via-background to-muted/40">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-primary/5">
       {/* Mobile Header */}
       {isMobile && (
         <div className="bg-card border-b border-border p-3 flex items-center justify-between">
@@ -1292,7 +1292,7 @@ export default function AttendancePageRedesign() {
                 </div>
 
                 {/* Patient Header Card - Enhanced Design */}
-                <Card className="bg-gradient-to-r from-primary/5 via-background to-accent/5 border-primary/20">
+                <Card className="bg-primary/5 border-primary/20">
                   <CardContent className={cn("p-4 md:p-6", isMobile && "p-3")}>
                     <div className={cn("flex items-start gap-4 md:gap-6", isMobile && "flex-col items-center text-center")}>
                       <Avatar className={cn(

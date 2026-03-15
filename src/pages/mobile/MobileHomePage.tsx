@@ -85,12 +85,12 @@ export default function MobileHomePage() {
   // Mostrar loading enquanto carrega dados
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/30 animate-pulse">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 animate-pulse">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
           </div>
-          <p className="text-sm font-medium text-gray-500">Carregando...</p>
+          <p className="text-sm font-medium text-muted-foreground">Carregando...</p>
         </div>
       </div>
     );

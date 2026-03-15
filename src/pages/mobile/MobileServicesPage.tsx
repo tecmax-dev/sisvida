@@ -612,7 +612,7 @@ function ConveniosContent() {
           Voltar às categorias
         </Button>
 
-        <div className={`rounded-xl bg-gradient-to-r ${catInfo?.color || 'from-rose-500 to-pink-500'} p-4 text-white`}>
+        <div className="rounded-xl bg-primary p-4 text-white">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
               <IconComponent className="h-6 w-6" />
@@ -629,7 +629,7 @@ function ConveniosContent() {
             <Card key={conv.id} className="border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-gradient-to-r ${catInfo?.color || 'from-rose-500 to-pink-500'} bg-opacity-10`}>
+                  <div className="p-2 rounded-lg bg-primary/10">
                     <IconComponent className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1">
@@ -678,7 +678,7 @@ function ConveniosContent() {
               onClick={() => setActiveCategory(cat.id)}
             >
               <CardContent className="p-4">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${cat.color} flex items-center justify-center mb-3`}>
+                <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-3">
                   <IconComponent className="h-6 w-6 text-white" />
                 </div>
                 <h4 className="font-semibold text-sm">{cat.nome}</h4>

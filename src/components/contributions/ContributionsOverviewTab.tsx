@@ -295,37 +295,37 @@ export default function ContributionsOverviewTab({
     <div className="space-y-6">
       {/* Pagamentos Recentes - Cards destacados */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-200 dark:border-emerald-800">
+        <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Pagamentos Hoje</span>
+                  <Calendar className="h-4 w-4 text-success" />
+                  <span className="text-sm font-medium text-success">Pagamentos Hoje</span>
                 </div>
-                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(recentPayments.todayValue)}</p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-500">{recentPayments.todayCount} boletos baixados</p>
+                <p className="text-2xl font-bold text-success">{formatCurrency(recentPayments.todayValue)}</p>
+                <p className="text-xs text-success/80">{recentPayments.todayCount} boletos baixados</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              <div className="h-12 w-12 rounded-full bg-success/20 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-success" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-950/20 dark:to-sky-950/20 border-cyan-200 dark:border-cyan-800">
+        <Card className="bg-info/10 border-info/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <CalendarDays className="h-4 w-4 text-cyan-600" />
-                  <span className="text-sm font-medium text-cyan-700 dark:text-cyan-400">Pagamentos Ontem</span>
+                  <CalendarDays className="h-4 w-4 text-info" />
+                  <span className="text-sm font-medium text-info">Pagamentos Ontem</span>
                 </div>
-                <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">{formatCurrency(recentPayments.yesterdayValue)}</p>
-                <p className="text-xs text-cyan-600 dark:text-cyan-500">{recentPayments.yesterdayCount} boletos baixados</p>
+                <p className="text-2xl font-bold text-info">{formatCurrency(recentPayments.yesterdayValue)}</p>
+                <p className="text-xs text-info/80">{recentPayments.yesterdayCount} boletos baixados</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-cyan-600" />
+              <div className="h-12 w-12 rounded-full bg-info/20 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-info" />
               </div>
             </div>
           </CardContent>

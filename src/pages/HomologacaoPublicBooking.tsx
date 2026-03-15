@@ -978,11 +978,11 @@ export default function HomologacaoPublicBooking() {
 
           {/* Summary and Submit */}
           {selectedDate && selectedTime && (
-            <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0">
+            <Card className="bg-primary text-white border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-purple-100 text-sm">Agendamento para</p>
+                    <p className="text-primary-foreground/80 text-sm">Agendamento para</p>
                     <p className="font-semibold">
                       {format(selectedDate, "dd/MM/yyyy")} às {selectedTime}
                     </p>

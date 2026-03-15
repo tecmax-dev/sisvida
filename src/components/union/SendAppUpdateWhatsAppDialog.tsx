@@ -179,7 +179,7 @@ export function SendAppUpdateWhatsAppDialog({
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center">
               <Smartphone className="h-5 w-5 text-white" />
             </div>
             Notificar Atualização do App

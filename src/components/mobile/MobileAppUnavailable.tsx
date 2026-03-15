@@ -29,7 +29,7 @@ export function MobileAppUnavailable({
         }}
         className="mb-8"
       >
-        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-2xl shadow-amber-500/30">
+        <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center shadow-2xl shadow-primary/30">
           <motion.div
             animate={{ 
               rotate: [0, -10, 10, -10, 0],
