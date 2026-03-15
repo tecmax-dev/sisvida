@@ -6269,9 +6269,16 @@ async function handleConfirmationFlow(
   }
 
   let action: 'confirmed' | 'cancelled' | 'ignored' = 'ignored';
-  if (POSITIVE_REGEX.test(messageText.trim())) {
+  const trimmedText = messageText.trim();
+  
+  // Handle interactive button responses (confirm_apt_* / cancel_apt_*)
+  if (trimmedText.startsWith('confirm_apt_')) {
     action = 'confirmed';
-  } else if (NEGATIVE_REGEX.test(messageText.trim())) {
+  } else if (trimmedText.startsWith('cancel_apt_')) {
+    action = 'cancelled';
+  } else if (POSITIVE_REGEX.test(trimmedText)) {
+    action = 'confirmed';
+  } else if (NEGATIVE_REGEX.test(trimmedText)) {
     action = 'cancelled';
   }
 
