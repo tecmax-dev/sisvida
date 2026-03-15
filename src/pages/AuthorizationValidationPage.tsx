@@ -113,8 +113,8 @@ export default function AuthorizationValidationPage() {
   if (isLoading) {
     return (
       <PublicPageWrapper>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-indigo-100">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+        <div className="min-h-screen flex items-center justify-center bg-primary/5">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </PublicPageWrapper>
     );
