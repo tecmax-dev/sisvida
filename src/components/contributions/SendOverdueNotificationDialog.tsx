@@ -206,6 +206,8 @@ Informamos que a contribuição abaixo encontra-se *VENCIDA há ${daysOverdue} d
 ${linkUrl ? `🔗 *Acesse o boleto:*\n${linkUrl}\n` : ""}
 Solicitamos a regularização o mais breve possível para evitar eventuais penalidades.
 
+_Caso o pagamento já tenha sido efetuado, favor desconsiderar esta mensagem._
+
 Em caso de dúvidas ou para negociação, entre em contato conosco.
 
 _${entityName}_`;
