@@ -29,10 +29,12 @@ import {
   ClipboardCheck,
   Stethoscope,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 import prosindwebLogo from "@/assets/prosindweb-logo.png";
 import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
+import sindicalContribuicoes from "@/assets/sindical-contribuicoes.jpg";
+import sindicalRelatorios from "@/assets/sindical-relatorios.jpg";
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN SYSTEM — Cores sólidas (sem gradientes)
