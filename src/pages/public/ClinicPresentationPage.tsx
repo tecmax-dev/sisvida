@@ -500,7 +500,7 @@ export default function ClinicPresentationPage() {
             {
               name: "Profissional",
               price: "R$ 297",
-              color: "from-cyan-600 to-teal-600",
+              solidColor: "bg-primary",
               highlight: true,
               features: [
                 "Até 5 profissionais",
