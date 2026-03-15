@@ -138,7 +138,7 @@ export function UnionCheckPrintDialog({
 
     const logoHtml = clinic?.logo_url 
       ? `<img src="${clinic.logo_url}" alt="Logo" style="max-height: 70px; max-width: 200px; object-fit: contain;" />`
-      : `<div style="width: 70px; height: 70px; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+      : `<div style="width: 70px; height: 70px; background: #1e3a5f; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
            <span style="color: white; font-size: 28px; font-weight: bold;">${(clinic?.name || "E").charAt(0)}</span>
          </div>`;
 
