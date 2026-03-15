@@ -450,7 +450,7 @@ export default function PresentationPage() {
           </div>
         </div>
 
-        <div className="no-break bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 text-white">
+        <div className="no-break bg-primary rounded-lg p-4 text-white">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Segurança de Dados</h3>
           <div className="grid grid-cols-4 gap-2">
             {[
