@@ -74,10 +74,10 @@ const benefits: Benefit[] = [
 ];
 
 const categoryConfig = {
-  saude: { label: "Saúde", icon: Heart, color: "from-red-500 to-rose-600", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", image: familiaSaude, imageAlt: "Família sendo atendida em consulta médica" },
-  estudos: { label: "Educação", icon: GraduationCap, color: "from-blue-500 to-indigo-600", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", image: familiaEducacao, imageAlt: "Jovens comemorando matrícula na faculdade" },
-  estetica: { label: "Estética & Beleza", icon: Sparkles, color: "from-pink-500 to-fuchsia-600", bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200", image: familiaEstetica, imageAlt: "Mulher sorrindo em clínica de estética" },
-  juridico: { label: "Jurídico", icon: Scale, color: "from-amber-500 to-orange-600", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", image: null, imageAlt: "" },
+  saude: { label: "Saúde", icon: Heart, solidColor: "bg-cta", bg: "bg-cta/5", text: "text-cta", border: "border-cta/20", image: familiaSaude, imageAlt: "Família sendo atendida em consulta médica" },
+  estudos: { label: "Educação", icon: GraduationCap, solidColor: "bg-primary", bg: "bg-primary/5", text: "text-primary", border: "border-primary/20", image: familiaEducacao, imageAlt: "Jovens comemorando matrícula na faculdade" },
+  estetica: { label: "Estética & Beleza", icon: Sparkles, solidColor: "bg-cta", bg: "bg-cta/5", text: "text-cta", border: "border-cta/20", image: familiaEstetica, imageAlt: "Mulher sorrindo em clínica de estética" },
+  juridico: { label: "Jurídico", icon: Scale, solidColor: "bg-primary", bg: "bg-primary/5", text: "text-primary", border: "border-primary/20", image: null, imageAlt: "" },
 };
 
 const testimonials = [
