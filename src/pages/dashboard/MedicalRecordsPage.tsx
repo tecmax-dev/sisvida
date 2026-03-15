@@ -551,7 +551,7 @@ export default function MedicalRecordsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200/50 dark:border-blue-800/50">
+        <Card className="bg-info/10 border-info/20">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-blue-500/20">
