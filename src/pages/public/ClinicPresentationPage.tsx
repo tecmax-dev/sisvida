@@ -563,7 +563,7 @@ export default function ClinicPresentationPage() {
       {/* PAGE 8 - CONTATO */}
       <div className="page-break print-page print:min-h-[277mm] flex flex-col relative overflow-hidden">
         <PageNumber current={8} total={8} variant="light" />
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900 via-teal-900 to-blue-900" />
+        <div className="absolute inset-0 bg-primary-dark" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">

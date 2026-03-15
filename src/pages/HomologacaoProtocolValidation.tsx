@@ -149,7 +149,7 @@ export default function HomologacaoProtocolValidation() {
   const stateCode = professional?.state_code || clinic?.state_code || defaultStateCode;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="max-w-md w-full shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${statusInfo.color}`}>

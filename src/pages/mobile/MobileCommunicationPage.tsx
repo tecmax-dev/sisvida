@@ -325,7 +325,7 @@ function GaleriaContent({ clinicId }: { clinicId: string | null }) {
                   draggable={false}
                 />
                 {(selectedImage.title || selectedImage.description) && (
-                  <div className="p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
+                  <div className="p-4 bg-black/60 text-white">
                     {selectedImage.title && <h4 className="font-semibold">{selectedImage.title}</h4>}
                     {selectedImage.description && (
                       <p className="text-sm text-white/80 mt-1">{selectedImage.description}</p>

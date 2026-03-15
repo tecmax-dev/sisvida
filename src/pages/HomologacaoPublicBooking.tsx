@@ -627,9 +627,9 @@ export default function HomologacaoPublicBooking() {
   const availableSlots = getAvailableSlots();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white py-8">
+      <div className="bg-primary text-primary-foreground py-8">
         <div className="max-w-2xl mx-auto px-4 text-center">
           {clinic?.logo_url ? (
             <img 

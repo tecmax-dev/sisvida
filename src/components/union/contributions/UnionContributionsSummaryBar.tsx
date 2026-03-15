@@ -35,7 +35,7 @@ export default function UnionContributionsSummaryBar({
   const pendingCount = contributions.filter((c) => c.status === "pending" || c.status === "overdue").length;
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-primary/3 to-transparent shadow-sm">
+    <Card className="border-primary/20 bg-primary/5 shadow-sm">
       <CardContent className="p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           {/* Main Summary Text */}

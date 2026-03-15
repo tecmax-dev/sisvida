@@ -64,7 +64,7 @@ export default function CategoryPage() {
             alt={category.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background to-transparent" />
+          <div className="absolute inset-0 bg-background/60" />
         </div>
         
         <div className="relative z-10 p-6 lg:p-8">

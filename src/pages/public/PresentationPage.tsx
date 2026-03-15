@@ -105,7 +105,7 @@ export default function PresentationPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <div className="no-break bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a ProsindWeb</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
               A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
