@@ -865,9 +865,9 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('[ai-assistant] LOVABLE_API_KEY not configured');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      console.error('[ai-assistant] OPENAI_API_KEY not configured');
       return new Response(JSON.stringify({ 
         response: 'Desculpe, o sistema está temporariamente indisponível.',
         error: 'API key not configured' 

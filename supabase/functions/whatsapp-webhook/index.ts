@@ -625,9 +625,9 @@ async function getAIIntent(
   availableTimes?: Array<{ time: string; formatted: string }>
 ): Promise<AIExtractedIntent> {
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.log('[ai] LOVABLE_API_KEY not configured, falling back to regex');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      console.log('[ai] OPENAI_API_KEY not configured, falling back to regex');
       return { intent: 'unknown', entities: {}, confidence: 0 };
     }
 

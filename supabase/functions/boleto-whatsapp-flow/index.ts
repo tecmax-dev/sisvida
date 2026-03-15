@@ -50,10 +50,10 @@ async function analyzeUserIntent(
   currentState: BoletoState,
   sessionContext: any
 ): Promise<IntentAnalysis> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
   
-  if (!LOVABLE_API_KEY) {
-    console.log("[boleto-flow] No LOVABLE_API_KEY, using fallback intent analysis");
+  if (!OPENAI_API_KEY) {
+    console.log("[boleto-flow] No OPENAI_API_KEY, using fallback intent analysis");
     return fallbackIntentAnalysis(message, currentState);
   }
 
