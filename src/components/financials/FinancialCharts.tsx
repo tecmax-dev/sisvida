@@ -138,13 +138,13 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20">
+      <Card className="border-l-4 border-l-primary bg-primary/5">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-medium text-blue-700 dark:text-blue-300">
+          <CardTitle className="text-base font-medium text-primary">
             Receitas vs Despesas
           </CardTitle>
-          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <BarChart3 className="h-4 w-4 text-primary" />
           </div>
         </CardHeader>
         <CardContent>
@@ -173,9 +173,9 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
         </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/50 to-transparent dark:from-purple-950/20">
+      <Card className="border-l-4 border-l-cta bg-cta/5">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-medium text-purple-700 dark:text-purple-300">
+          <CardTitle className="text-base font-medium text-cta">
             Despesas por Categoria (Mês)
           </CardTitle>
           <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">

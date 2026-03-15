@@ -166,7 +166,7 @@ function formatProtocolEmailHtml(data: {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 30px; text-align: center;">
+            <td style="background: #1e3a8a; padding: 30px; text-align: center;">
               <img src="${data.logoUrl}" alt="${data.clinicName}" style="max-height: 60px; margin-bottom: 16px;">
               <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">
                 ✅ Protocolo de Homologação

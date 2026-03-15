@@ -152,19 +152,19 @@ const generateEmailHtml = (
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f3f4f6;">
 <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-<div style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); padding: 32px 24px; text-align: center;">
+<div style="background: #1e3a8a; padding: 32px 24px; text-align: center;">
 ${logoSection}
 <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Bem-vindo ao ProsindWeb</h1>
 <p style="margin: 8px 0 0 0; color: #99f6e4; font-size: 14px;">${portalName} - ${clinicName}</p>
 </div>
 <div style="padding: 32px 24px;">
 <p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6;">Prezado(a) <strong>${recipientName}</strong>,</p>
-<div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
+<div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
 <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 16px; font-weight: 600;">Novidade: Sistema ProsindWeb</h3>
 <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.6;">O <strong>${clinicName}</strong> atualizou seu sistema de gestao de contribuicoes para o <strong>ProsindWeb</strong>. A partir de agora, todos os boletos, consultas e servicos estarao disponiveis atraves deste novo portal.</p>
 </div>
 <p style="margin: 0 0 24px 0; color: #374151; font-size: 15px; line-height: 1.6;">Segue seu codigo de acesso ao ${portalName}:</p>
-<div style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border: 2px solid #14b8a6; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+<div style="background: #eff6ff; border: 2px solid #1e3a8a; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
 <p style="margin: 0 0 8px 0; color: #0f766e; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Seu Codigo de Acesso</p>
 <div style="font-family: Courier New, Courier, monospace; font-size: 36px; font-weight: bold; color: #0d9488; letter-spacing: 8px; padding: 16px 0;">${accessCode}</div>
 </div>
@@ -182,7 +182,7 @@ ${logoSection}
 </ol>
 </div>
 <div style="text-align: center; margin: 32px 0;">
-<a href="${portalUrl}" target="_blank" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Acessar Portal</a>
+<a href="${portalUrl}" target="_blank" style="display: inline-block; padding: 14px 40px; background: #1e3a8a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Acessar Portal</a>
 </div>
 <div style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin: 24px 0;">
 <p style="margin: 0; color: #92400e; font-size: 13px;"><strong>Importante:</strong> Este codigo e pessoal e intransferivel. Nao compartilhe com terceiros.</p>

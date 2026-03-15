@@ -72,7 +72,7 @@ serve(async (req) => {
             <html>
             <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
             <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
-              <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 30px; text-align: center;">
+              <div style="background: #1e3a8a; padding: 30px; text-align: center;">
                 ${logoSection}
                 <h1 style="color: white; margin: 0; font-size: 20px;">Nova Solicitação de Filiação</h1>
                 <p style="color: #e9d5ff; margin: 10px 0 0 0;">${sindicatoName}</p>

@@ -93,7 +93,7 @@ serve(async (req) => {
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
 <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; text-align: center;">
+<div style="background: #1e3a8a; padding: 24px; text-align: center;">
 ${logoSection}
 <h1 style="color: white; margin: 0; font-size: 24px;">${clinicName}</h1>
 </div>

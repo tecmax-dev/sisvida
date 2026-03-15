@@ -113,8 +113,8 @@ export default function AuthorizationValidationPage() {
   if (isLoading) {
     return (
       <PublicPageWrapper>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-indigo-100">
-          <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+        <div className="min-h-screen flex items-center justify-center bg-primary/5">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </PublicPageWrapper>
     );
@@ -123,7 +123,7 @@ export default function AuthorizationValidationPage() {
   if (error || !data) {
     return (
       <PublicPageWrapper>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-destructive/5 p-4">
           <Card className="w-full max-w-md bg-white">
             <CardContent className="pt-6 text-center">
               <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
@@ -150,8 +150,8 @@ export default function AuthorizationValidationPage() {
     <PublicPageWrapper>
       <div className={`min-h-screen flex items-center justify-center p-4 ${
         isValid 
-          ? "bg-gradient-to-br from-emerald-50 to-teal-100"
-          : "bg-gradient-to-br from-red-50 to-orange-100"
+          ? "bg-success/5"
+          : "bg-destructive/5"
       }`}>
         <Card className="w-full max-w-lg bg-white print:shadow-none print:border-none">
           <CardContent className="pt-6 space-y-6" ref={printRef}>

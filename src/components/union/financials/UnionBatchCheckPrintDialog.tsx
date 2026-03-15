@@ -206,7 +206,7 @@ export function UnionBatchCheckPrintDialog({
 
     const logoHtml = clinic?.logo_url
       ? `<img src="${clinic.logo_url}" alt="Logo" style="max-height: 40px; max-width: 100px; object-fit: contain;" />`
-      : `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+      : `<div style="width: 40px; height: 40px; background: #1e3a5f; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
            <span style="color: white; font-size: 18px; font-weight: bold;">${(clinic?.name || "E").charAt(0)}</span>
          </div>`;
 
@@ -366,7 +366,7 @@ export function UnionBatchCheckPrintDialog({
             }
             
             .header {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
+              background: #1e3a5f;
               color: white;
               padding: 12px 16px;
               display: flex;
@@ -412,7 +412,7 @@ export function UnionBatchCheckPrintDialog({
             .table-container { border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
             table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             th {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               color: white;
               font-size: 9px;
               font-weight: 600;
@@ -437,7 +437,7 @@ export function UnionBatchCheckPrintDialog({
             .status-cancelled { background: #f1f5f9; color: #64748b; }
             .status-reversed { background: #ede9fe; color: #7c3aed; }
             
-            .total-row { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; }
+            .total-row { background: #eff6ff !important; }
             .total-row td { padding: 8px; border-top: 2px solid #3b82f6; border-bottom: none !important; }
             .total-label { font-size: 10px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; }
             .total-value { font-size: 13px; font-weight: 700; color: #1e3a5f; }
@@ -458,7 +458,7 @@ export function UnionBatchCheckPrintDialog({
             .footer-left { display: flex; align-items: center; gap: 6px; }
             .footer-icon {
               width: 20px; height: 20px;
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               border-radius: 4px;
               display: flex; align-items: center; justify-content: center;
             }

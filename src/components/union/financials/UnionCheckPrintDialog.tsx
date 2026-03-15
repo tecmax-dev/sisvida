@@ -138,7 +138,7 @@ export function UnionCheckPrintDialog({
 
     const logoHtml = clinic?.logo_url 
       ? `<img src="${clinic.logo_url}" alt="Logo" style="max-height: 70px; max-width: 200px; object-fit: contain;" />`
-      : `<div style="width: 70px; height: 70px; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+      : `<div style="width: 70px; height: 70px; background: #1e3a5f; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
            <span style="color: white; font-size: 28px; font-weight: bold;">${(clinic?.name || "E").charAt(0)}</span>
          </div>`;
 
@@ -182,7 +182,7 @@ export function UnionCheckPrintDialog({
             
             /* Header compacto */
             .header {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
+              background: #1e3a5f;
               color: white;
               padding: 12px 16px;
               display: flex;
@@ -329,7 +329,7 @@ export function UnionCheckPrintDialog({
             }
             
             th {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               color: white;
               font-size: 9px;
               font-weight: 600;
@@ -419,7 +419,7 @@ export function UnionCheckPrintDialog({
             
             /* Total row */
             .total-row {
-              background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+              background: #eff6ff !important;
             }
             
             .total-row td {
@@ -488,7 +488,7 @@ export function UnionCheckPrintDialog({
             .footer-icon {
               width: 20px;
               height: 20px;
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               border-radius: 4px;
               display: flex;
               align-items: center;

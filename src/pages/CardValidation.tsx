@@ -98,7 +98,7 @@ export default function CardValidation() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted">
+      <div className="min-h-screen flex items-center justify-center bg-muted">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -106,7 +106,7 @@ export default function CardValidation() {
 
   if (error || !card) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <div className="w-full max-w-[360px] bg-card rounded-2xl shadow-xl overflow-hidden border">
           <div className="bg-destructive p-6 text-center">
             <XCircle className="h-16 w-16 mx-auto text-white mb-3" />
@@ -142,8 +142,8 @@ export default function CardValidation() {
     <div className={cn(
       "min-h-screen flex items-center justify-center p-4",
       isValid 
-        ? "bg-gradient-to-b from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20" 
-        : "bg-gradient-to-b from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20"
+        ? "bg-success/5" 
+        : "bg-destructive/5"
     )}>
       {/* Status Banner */}
       <div className={cn(
@@ -175,7 +175,7 @@ export default function CardValidation() {
       <div className="w-full max-w-[360px] bg-card rounded-2xl shadow-xl overflow-hidden border mt-16">
         
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 px-5 py-4">
+        <div className="bg-primary px-5 py-4">
           <div className="flex items-center gap-3">
             {card.clinic.logo_url ? (
               <img 

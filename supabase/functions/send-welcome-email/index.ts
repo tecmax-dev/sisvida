@@ -28,8 +28,8 @@ const getWelcomeEmailTemplate = (userName: string, trialDays: number): string =>
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">🎉 Bem-vindo(a) ao Eclini!</h1>
+            <td style="background: #1e3a8a; padding: 40px 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">🎉 Bem-vindo(a) ao ProsindWeb!</h1>
             </td>
           </tr>
           

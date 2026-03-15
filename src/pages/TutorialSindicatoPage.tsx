@@ -1024,15 +1024,15 @@ const TutorialSindicatoPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative py-20 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-purple-500/10 to-emerald-500/10" />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+          <div className="absolute inset-0 bg-primary/5" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-cta/10 rounded-full blur-3xl" />
           
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
@@ -1043,7 +1043,7 @@ const TutorialSindicatoPage = () => {
               
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
                 Aprenda a usar o{" "}
-                <span className="bg-gradient-to-r from-primary via-purple-500 to-emerald-500 bg-clip-text text-transparent">
+                <span className="text-primary">
                   Módulo Sindical
                 </span>
               </h1>
@@ -1057,7 +1057,7 @@ const TutorialSindicatoPage = () => {
                 size="lg" 
                 onClick={generatePDF}
                 disabled={generating}
-                className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all"
               >
                 {generating ? (
                   <>
@@ -1099,13 +1099,13 @@ const TutorialSindicatoPage = () => {
                   className="border-border/50 hover:border-primary/50 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-2 overflow-hidden group"
                   onClick={() => setSelectedModule(mod)}
                 >
-                  <div className="relative h-32 overflow-hidden bg-gradient-to-br from-muted/50 to-muted">
+                  <div className="relative h-32 overflow-hidden bg-muted">
                     <img 
                       src={mod.illustration} 
                       alt={mod.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                    <div className="absolute inset-0 bg-background/60" />
                     <div className={`absolute bottom-3 left-3 w-10 h-10 rounded-lg ${mod.bg} flex items-center justify-center backdrop-blur-sm`}>
                       <mod.icon className={`h-5 w-5 ${mod.color}`} />
                     </div>
@@ -1153,7 +1153,7 @@ const TutorialSindicatoPage = () => {
         </section>
 
         {/* Medical Section */}
-        <section className="py-16 bg-gradient-to-r from-purple-500/10 via-primary/5 to-teal-500/10">
+        <section className="py-16 bg-primary/5">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
               <div className="flex flex-col md:flex-row items-center gap-8">
@@ -1176,13 +1176,13 @@ const TutorialSindicatoPage = () => {
                     abordando agenda de homologações, cadastro de pacientes e assinatura digital.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                    <span className="px-3 py-1 bg-purple-500/10 text-purple-600 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                       <CheckCircle className="h-4 w-4 inline mr-1" /> Agenda Médica
                     </span>
-                    <span className="px-3 py-1 bg-teal-500/10 text-teal-600 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                       <CheckCircle className="h-4 w-4 inline mr-1" /> Homologações
                     </span>
-                    <span className="px-3 py-1 bg-blue-500/10 text-blue-600 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                       <CheckCircle className="h-4 w-4 inline mr-1" /> Assinatura Digital
                     </span>
                   </div>
@@ -1195,7 +1195,7 @@ const TutorialSindicatoPage = () => {
         {/* CTA Section */}
         <section className="py-20">
           <div className="container mx-auto px-4">
-            <Card className="max-w-3xl mx-auto bg-gradient-to-r from-primary to-purple-600 border-0 text-white overflow-hidden relative">
+            <Card className="max-w-3xl mx-auto bg-primary border-0 text-primary-foreground overflow-hidden relative">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
               <CardContent className="p-8 md:p-12 text-center relative z-10">
                 <h2 className="text-3xl font-bold mb-4">
@@ -1252,13 +1252,13 @@ const TutorialSindicatoPage = () => {
               
               <div className="space-y-6 mt-4">
                 {/* Illustration */}
-                <div className="relative rounded-xl overflow-hidden h-48 bg-gradient-to-br from-muted/50 to-muted">
+                <div className="relative rounded-xl overflow-hidden h-48 bg-muted">
                   <img 
                     src={selectedModule.illustration} 
                     alt={selectedModule.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+                  <div className="absolute inset-0 bg-background/40" />
                 </div>
 
                 {/* Overview */}

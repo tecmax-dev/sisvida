@@ -893,7 +893,7 @@ export default function Auth() {
           <div 
             className="hidden lg:flex lg:w-[320px] relative overflow-hidden p-5"
             style={{
-              background: 'linear-gradient(135deg, hsl(220 80% 45%) 0%, hsl(220 90% 55%) 50%, hsl(25 95% 53%) 100%)'
+              background: 'hsl(220 80% 45%)'
             }}
           >
             {/* Background pattern */}
