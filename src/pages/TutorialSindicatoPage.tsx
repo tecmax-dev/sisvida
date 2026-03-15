@@ -1153,7 +1153,7 @@ const TutorialSindicatoPage = () => {
         </section>
 
         {/* Medical Section */}
-        <section className="py-16 bg-gradient-to-r from-purple-500/10 via-primary/5 to-teal-500/10">
+        <section className="py-16 bg-primary/5">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
               <div className="flex flex-col md:flex-row items-center gap-8">
