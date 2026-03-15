@@ -139,7 +139,7 @@ export default function PresentationPage() {
             </div>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-cta/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-amber-800 mb-2">Objetivos da Apresentação</h3>
             <ul className="grid grid-cols-2 gap-2 text-gray-700 text-sm print:text-xs">
               <li className="flex items-start gap-2">
