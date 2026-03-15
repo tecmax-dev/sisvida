@@ -686,10 +686,10 @@ EXEMPLOS:
 Retorne APENAS JSON:
 {"intent":"schedule|cancel|reschedule|list|info|query_schedule|help|confirm|deny|select_option|unknown","entities":{"professional_name":"...","specialty":"...","date":"...","time":"...","option_number":N,"cpf":"..."},"confidence":0.0-1.0,"friendly_response":"resposta amigável"}`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

@@ -1222,10 +1222,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
     // Helper function to call Lovable AI Gateway
     const callAI = async (msgs: any[], useTools: boolean = true): Promise<Response> => {
-      return await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      return await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
