@@ -514,7 +514,7 @@ export default function ClinicPresentationPage() {
             {
               name: "Premium",
               price: "R$ 497",
-              color: "from-purple-600 to-indigo-600",
+              solidColor: "bg-primary-dark",
               highlight: false,
               features: [
                 "Profissionais ilimitados",
