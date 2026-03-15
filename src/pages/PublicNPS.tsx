@@ -103,7 +103,7 @@ export default function PublicNPS() {
 
   if (!survey) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5 p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">Pesquisa não encontrada ou expirada.</p>
