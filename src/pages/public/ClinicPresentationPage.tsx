@@ -487,7 +487,7 @@ export default function ClinicPresentationPage() {
             {
               name: "Essencial",
               price: "R$ 197",
-              color: "from-gray-600 to-gray-700",
+              solidColor: "bg-muted-foreground",
               highlight: false,
               features: [
                 "Até 2 profissionais",
