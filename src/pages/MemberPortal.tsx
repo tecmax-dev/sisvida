@@ -349,7 +349,7 @@ export default function MemberPortal() {
   // ==================== LOGIN SCREEN ====================
   if (!member) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-900 relative overflow-hidden">
+      <div className="min-h-screen relative overflow-hidden" style={{ background: 'hsl(220 75% 22%)' }}>
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
