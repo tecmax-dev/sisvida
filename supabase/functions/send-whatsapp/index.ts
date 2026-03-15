@@ -355,7 +355,7 @@ serve(async (req) => {
       );
     }
 
-    const { api_url, api_key, instance_name } = evolutionConfig as EvolutionConfig;
+    const { api_url, api_key, instance_name, direct_reply_enabled } = evolutionConfig as EvolutionConfig;
 
     // 10. CHECK REAL CONNECTION STATUS with Evolution API
     console.log(`[Clinic ${clinicId}] Checking real connection status for instance ${instance_name}`);
