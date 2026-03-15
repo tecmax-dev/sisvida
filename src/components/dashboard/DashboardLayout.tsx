@@ -588,8 +588,8 @@ export function DashboardLayout() {
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
                       "flex items-center justify-center p-2 rounded-lg transition-colors mb-2",
-                      "bg-gradient-to-br from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                      "border border-amber-400/30"
+                      "bg-cta/15 hover:bg-cta/25",
+                      "border border-cta/30"
                     )}
                   >
                     <Building2 className="h-5 w-5 text-amber-200" />

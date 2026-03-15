@@ -16,7 +16,7 @@ export function MobileAppUnavailable({
   const defaultMessage = "O aplicativo está temporariamente indisponível. Estamos trabalhando para restabelecer o acesso o mais breve possível.";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       {/* Animated Icon */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}

@@ -398,7 +398,7 @@ export default function AjudaIndex() {
       </div>
 
       {/* Help Options */}
-      <div className="bg-gradient-to-br from-primary/5 to-background rounded-2xl border border-primary/20 p-8">
+      <div className="bg-primary/5 rounded-2xl border border-primary/20 p-8">
         <h2 className="text-xl font-semibold text-foreground mb-2 text-center">
           Precisa de mais ajuda?
         </h2>

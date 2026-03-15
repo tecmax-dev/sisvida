@@ -357,7 +357,7 @@ export default function PublicSignup() {
                     className="w-full h-full object-cover"
                   />
                   {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-black/50" />
                   {/* Text */}
                   <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                     <h3 className="text-xl font-bold mb-2">{image.title}</h3>

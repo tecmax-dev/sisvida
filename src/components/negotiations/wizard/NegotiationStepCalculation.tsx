@@ -160,7 +160,7 @@ export default function NegotiationStepCalculation({
       </Card>
 
       {/* Summary */}
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+      <Card className="bg-primary/5">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
