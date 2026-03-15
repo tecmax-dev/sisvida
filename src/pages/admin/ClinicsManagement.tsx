@@ -935,7 +935,7 @@ export default function ClinicsManagement() {
           icon={Stethoscope} 
           label="Total Profissionais" 
           value={totalProfessionals}
-          color="bg-gradient-to-br from-info to-info/80"
+          color="bg-info"
         />
         <StatCard 
           icon={Users} 
