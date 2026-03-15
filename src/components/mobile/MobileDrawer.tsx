@@ -149,7 +149,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-[85%] max-w-[340px] p-0 flex flex-col bg-background">
         {/* Header with user info - Premium gradient */}
-        <SheetHeader className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 text-white p-5 pb-7 relative overflow-hidden">
+        <SheetHeader className="text-white p-5 pb-7 relative overflow-hidden" style={{ background: 'hsl(220 75% 30%)' }}>
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
           <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/10 rounded-full" />
