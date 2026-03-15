@@ -287,7 +287,7 @@ export default function SignatureAuthorizationPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5 p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
