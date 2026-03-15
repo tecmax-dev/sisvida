@@ -142,8 +142,8 @@ export default function CardValidation() {
     <div className={cn(
       "min-h-screen flex items-center justify-center p-4",
       isValid 
-        ? "bg-gradient-to-b from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20" 
-        : "bg-gradient-to-b from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20"
+        ? "bg-success/5" 
+        : "bg-destructive/5"
     )}>
       {/* Status Banner */}
       <div className={cn(
