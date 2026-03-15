@@ -337,10 +337,10 @@ export default function PFContributionsReportsTab({
       </div>
 
       {/* Search and Filters Card */}
-      <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50/50 to-background">
+      <Card className="border-2 border-primary/20 bg-primary/5">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <FileSearch className="h-5 w-5 text-purple-600" />
+            <FileSearch className="h-5 w-5 text-primary" />
             Filtros do Relatório PF
           </CardTitle>
           <CardDescription>

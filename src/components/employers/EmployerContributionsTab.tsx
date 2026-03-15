@@ -595,15 +595,15 @@ export default function EmployerContributionsTab({
 
       {/* Summary Cards - 3 columns */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
+        <Card className="bg-info/10 border-info/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg bg-info/10">
+                <TrendingUp className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Total</p>
-                <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                <p className="text-lg font-bold text-info">
                   {formatCurrency(stats.totalValue)}
                 </p>
               </div>
@@ -611,15 +611,15 @@ export default function EmployerContributionsTab({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+        <Card className="bg-success/10 border-success/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <Wallet className="h-5 w-5 text-emerald-600" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <Wallet className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Recebido</p>
-                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                <p className="text-lg font-bold text-success">
                   {formatCurrency(stats.paidValue)}
                 </p>
               </div>
@@ -627,15 +627,15 @@ export default function EmployerContributionsTab({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border-amber-200 dark:border-amber-800">
+        <Card className="bg-warning/10 border-warning/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <CircleDollarSign className="h-5 w-5 text-amber-600" />
+              <div className="p-2 rounded-lg bg-warning/10">
+                <CircleDollarSign className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Pendente</p>
-                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                <p className="text-lg font-bold text-warning">
                   {formatCurrency(pendingValue)}
                 </p>
               </div>
