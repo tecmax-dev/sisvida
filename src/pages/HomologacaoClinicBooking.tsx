@@ -84,7 +84,7 @@ export default function HomologacaoClinicBooking() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="min-h-screen bg-background">
         <div className="container max-w-4xl mx-auto py-8 px-4">
           <Skeleton className="h-32 w-full mb-6" />
           <Skeleton className="h-48 w-full" />
