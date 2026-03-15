@@ -285,7 +285,7 @@ export default function AjudaIndex() {
                         alt={category.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-background/60 to-transparent" />
+                      <div className="absolute inset-0 bg-black/40" />
                     </div>
                     
                     {/* Content */}
