@@ -458,7 +458,7 @@ export default function MemberPortal() {
 
       <PortalMain>
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-6 text-white mb-6">
+        <div className="bg-primary rounded-xl p-6 text-white mb-6">
           <div className="flex items-center gap-4">
             {member.photo_url ? (
               <img src={member.photo_url} alt={member.name} className="w-16 h-16 rounded-full border-2 border-white/30" />
