@@ -565,7 +565,7 @@ export default function MedicalRecordsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50">
+        <Card className="bg-success/10 border-success/20">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-emerald-500/20">
