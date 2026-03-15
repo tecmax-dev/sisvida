@@ -279,7 +279,7 @@ export default function SindicatoBeneficiosLandingPage() {
                       </div>
                       <div className={isReversed ? "md:[direction:ltr]" : ""}>
                         <div className="flex items-center gap-3 mb-4">
-                          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
+                          <div className={`w-12 h-12 rounded-xl ${config.solidColor} flex items-center justify-center shadow-md`}>
                             <config.icon className="w-6 h-6 text-white" />
                           </div>
                           <div>
