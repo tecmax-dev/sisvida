@@ -1340,7 +1340,7 @@ export default function SindicalFiliacaoPage() {
                 <FormSection icon={PenTool} title="Assinatura Digital" subtitle="Confirme sua filiação" accentColor="indigo">
                   <div className="space-y-6">
                     {/* Signature */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
+                    <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
                       <div className="flex items-center gap-2 mb-4">
                         <PenTool className="h-4 w-4 text-indigo-600" />
                         <span className="text-sm font-medium text-gray-700">Assine no campo abaixo</span>
