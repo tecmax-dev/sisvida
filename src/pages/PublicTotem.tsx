@@ -159,7 +159,7 @@ export default function PublicTotem() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex items-center justify-center">
+      <div className="min-h-screen bg-primary flex items-center justify-center">
         <div className="text-white text-xl flex items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin" />
           Carregando...
