@@ -482,6 +482,16 @@ serve(async (req) => {
             .update({ reminder_sent: true })
             .eq('id', appointment.id);
 
+          // Send interactive buttons (Confirmar / Cancelar) via Whazing
+          // Small delay before sending buttons to ensure message arrives first
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          const buttonsSent = await sendConfirmationButtons(phoneToUse, appointment.id);
+          if (buttonsSent) {
+            console.log(`✓ Confirmation buttons sent to ${displayName}`);
+          } else {
+            console.log(`⚠ Could not send buttons to ${displayName} (Whazing not configured or error), text fallback in message`);
+          }
+
           // If direct reply is enabled, register pending confirmation
           if (directReplyEnabled) {
             const formattedPhone = phoneToUse.replace(/\D/g, '');
