@@ -668,7 +668,7 @@ export default function SindicalFiliacaoPage() {
                   className="h-14 w-auto object-contain"
                 />
               ) : (
-                <div className="h-14 w-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                <div className="h-14 w-14 bg-primary rounded-xl flex items-center justify-center shadow-lg">
                   <Building2 className="h-7 w-7 text-white" />
                 </div>
               )}
