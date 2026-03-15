@@ -469,14 +469,14 @@ export function DashboardLayout() {
           >
             {!sidebarCollapsed && (
               <div className="flex-1 flex justify-center">
-                <div className="bg-white rounded-xl px-4 py-2">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                   <Logo size="md" customSrc={prosindClinicaLogo} />
                 </div>
               </div>
             )}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
-                <div className="bg-white rounded-lg p-1">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1">
                   <img src={prosindClinicaLogo} alt="ProsindClinica" className="h-8 w-8 object-contain" />
                 </div>
               </div>
