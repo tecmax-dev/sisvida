@@ -116,7 +116,7 @@ export default function HomologacaoClinicBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
         <Card className="mb-6 overflow-hidden">
