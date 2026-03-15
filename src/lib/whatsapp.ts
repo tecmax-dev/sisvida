@@ -14,8 +14,9 @@ interface SendWhatsAppParams {
   phone: string;
   message: string;
   clinicId: string;
-  type?: 'reminder' | 'confirmation' | 'custom';
+  type?: 'reminder' | 'confirmation' | 'custom' | 'reminder_direct_reply';
   imageUrl?: string;
+  appointmentId?: string;
 }
 
 interface SendWhatsAppDocumentParams {
