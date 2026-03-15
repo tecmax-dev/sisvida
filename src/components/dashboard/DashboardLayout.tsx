@@ -11,7 +11,7 @@ import { useSessionControl } from "@/hooks/useSessionControl";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
-import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
+import prosindClinicaLogo from "@/assets/prosind-clinica-logo.png";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -469,7 +469,7 @@ export function DashboardLayout() {
           >
             {!sidebarCollapsed && (
               <div className="flex-1 flex justify-center">
-                <Logo size="md" customSrc={ecliniDashboardLogo} />
+                <Logo size="md" customSrc={prosindClinicaLogo} />
               </div>
             )}
             {sidebarCollapsed && (
