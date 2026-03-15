@@ -230,7 +230,7 @@ export function AlbumManagementTab() {
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                <div className="w-full h-full flex items-center justify-center bg-muted">
                   <Images className="h-12 w-12 text-muted-foreground/30" />
                 </div>
               )}

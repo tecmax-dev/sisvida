@@ -636,7 +636,7 @@ export default function PresentationPage() {
       {/* PAGE 10 - CONTATO */}
       <div className="page-break print-page print:min-h-[277mm] flex flex-col relative overflow-hidden">
         <PageNumber current={10} total={10} variant="light" />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900" />
+        <div className="absolute inset-0 bg-primary-dark" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">

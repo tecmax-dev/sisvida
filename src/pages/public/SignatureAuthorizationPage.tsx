@@ -309,7 +309,7 @@ export default function SignatureAuthorizationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 py-8 px-4">
+    <div className="min-h-screen bg-primary/5 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

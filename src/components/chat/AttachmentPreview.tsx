@@ -98,7 +98,7 @@ export const AttachmentPreview = ({ url, name, type, size, isUser = false }: Att
                 alt={name}
                 className="w-full h-auto max-h-[80vh] object-contain"
               />
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/50">
                 <div className="flex items-center justify-between text-white">
                   <span className="text-sm">{name}</span>
                   <Button
