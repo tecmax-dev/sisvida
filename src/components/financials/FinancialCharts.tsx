@@ -143,8 +143,8 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
           <CardTitle className="text-base font-medium text-primary">
             Receitas vs Despesas
           </CardTitle>
-          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <BarChart3 className="h-4 w-4 text-primary" />
           </div>
         </CardHeader>
         <CardContent>
