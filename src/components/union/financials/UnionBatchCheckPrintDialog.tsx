@@ -412,7 +412,7 @@ export function UnionBatchCheckPrintDialog({
             .table-container { border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
             table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             th {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               color: white;
               font-size: 9px;
               font-weight: 600;
