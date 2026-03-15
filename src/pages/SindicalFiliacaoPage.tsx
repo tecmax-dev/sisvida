@@ -1175,7 +1175,7 @@ export default function SindicalFiliacaoPage() {
                     </div>
 
                     {/* Employer Search */}
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                    <div className="bg-warning/5 rounded-xl p-4 border border-warning/20">
                       <div className="flex items-center gap-2 mb-3">
                         <Building2 className="h-4 w-4 text-amber-600" />
                         <span className="text-sm font-medium text-gray-700">Empresa onde trabalha</span>
