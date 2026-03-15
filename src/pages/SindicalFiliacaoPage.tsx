@@ -706,7 +706,7 @@ export default function SindicalFiliacaoPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
             {/* Welcome Card */}
-            <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-r from-emerald-500 to-teal-600">
+            <Card className="overflow-hidden border-0 shadow-lg bg-primary">
               <CardContent className="p-6 text-white">
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
