@@ -941,7 +941,7 @@ export default function ClinicsManagement() {
           icon={Users} 
           label="Total Pacientes" 
           value={totalPatients}
-          color="bg-gradient-to-br from-success to-success/80"
+          color="bg-success"
         />
         <StatCard 
           icon={Calendar} 
