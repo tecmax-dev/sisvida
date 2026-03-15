@@ -28,6 +28,99 @@ interface EvolutionConfig {
   direct_reply_enabled?: boolean | null;
 }
 
+function normalizePhoneDigits(value: string): string {
+  return value.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+}
+
+function getComparableBrazilianPhones(rawPhone: string): string[] {
+  let digits = normalizePhoneDigits(rawPhone);
+
+  if (digits.startsWith('55') && digits.length > 11) {
+    digits = digits.slice(2);
+  }
+
+  const localVariants = new Set<string>([digits]);
+
+  // 10 dígitos (DDD + 8) → pode faltar o 9
+  if (digits.length === 10) {
+    localVariants.add(`${digits.slice(0, 2)}9${digits.slice(2)}`);
+  }
+
+  // 11 dígitos (DDD + 9 + 8) → variante sem o 9
+  if (digits.length === 11 && digits[2] === '9') {
+    localVariants.add(`${digits.slice(0, 2)}${digits.slice(3)}`);
+  }
+
+  const withCountryCode = [...localVariants].map((variant) => `55${variant}`);
+  return [...new Set([...localVariants, ...withCountryCode])];
+}
+
+function phonesEquivalent(a: string, b: string): boolean {
+  const aVariants = new Set(getComparableBrazilianPhones(a));
+  return getComparableBrazilianPhones(b).some((variant) => aVariants.has(variant));
+}
+
+async function resolveReminderAppointmentId(
+  supabase: ReturnType<typeof createClient>,
+  clinicId: string,
+  phone: string,
+  message: string,
+): Promise<string | null> {
+  // 1) Tenta extrair token do link de confirmação (modo antigo)
+  const tokenMatch = message.match(/\/consulta\/([a-zA-Z0-9_-]+)/);
+  const confirmationToken = tokenMatch?.[1];
+
+  if (confirmationToken) {
+    const { data: byToken, error: byTokenError } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('confirmation_token', confirmationToken)
+      .maybeSingle();
+
+    if (byTokenError) {
+      console.error('[send-whatsapp] Error resolving appointment by confirmation token:', byTokenError);
+    }
+
+    if (byToken?.id) {
+      return byToken.id;
+    }
+  }
+
+  // 2) Fallback: próxima consulta agendada/confirmada do mesmo telefone
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: upcomingAppointments, error: upcomingError } = await supabase
+    .from('appointments')
+    .select(`
+      id,
+      appointment_date,
+      start_time,
+      patient:patients!inner(phone)
+    `)
+    .eq('clinic_id', clinicId)
+    .in('status', ['scheduled', 'confirmed'])
+    .gte('appointment_date', today)
+    .order('appointment_date', { ascending: true })
+    .order('start_time', { ascending: true })
+    .limit(250);
+
+  if (upcomingError) {
+    console.error('[send-whatsapp] Error resolving appointment by phone:', upcomingError);
+    return null;
+  }
+
+  const matchedAppointment = (upcomingAppointments || []).find((appointment: any) => {
+    const patientData = appointment?.patient;
+    const patientPhone = Array.isArray(patientData)
+      ? patientData[0]?.phone
+      : patientData?.phone;
+
+    return typeof patientPhone === 'string' && phonesEquivalent(phone, patientPhone);
+  });
+
+  return matchedAppointment?.id || null;
+}
+
 async function sendWhazingConfirmationButtons(
   phone: string,
   appointmentId: string
@@ -488,19 +581,35 @@ serve(async (req) => {
 
     let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
 
+    const isReminderType = type === 'reminder' || type === 'reminder_direct_reply';
+    let resolvedAppointmentId = appointmentId;
+
+    if (isReminderType && !resolvedAppointmentId) {
+      resolvedAppointmentId = await resolveReminderAppointmentId(
+        supabase,
+        clinicId,
+        formattedPhone,
+        message,
+      );
+
+      if (resolvedAppointmentId) {
+        console.log(`[send-whatsapp] appointmentId resolved automatically: ${resolvedAppointmentId}`);
+      }
+    }
+
     const shouldSendReminderButtons = Boolean(
-      appointmentId && (
+      resolvedAppointmentId && (
         type === 'reminder_direct_reply' ||
         (type === 'reminder' && direct_reply_enabled === true)
       )
     );
 
-    if ((type === 'reminder_direct_reply' || type === 'reminder') && !appointmentId) {
-      buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
+    if (isReminderType && !resolvedAppointmentId) {
+      buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided or not resolved' };
       console.warn('[send-whatsapp] Reminder without appointmentId. Buttons not sent.');
-    } else if (shouldSendReminderButtons && appointmentId) {
+    } else if (shouldSendReminderButtons && resolvedAppointmentId) {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
+      const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, resolvedAppointmentId);
 
       buttonsResult = {
         attempted: true,
@@ -511,7 +620,7 @@ serve(async (req) => {
       if (!buttonsResponse.success) {
         console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
       } else {
-        console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
+        console.log(`[send-whatsapp] Reminder buttons sent for appointment ${resolvedAppointmentId}`);
       }
     }
 
