@@ -177,9 +177,9 @@ function SindicalHeader() {
 
 // ─── Hero Carousel ──────────────────────────────────────────────
 const heroSlides = [
-  { src: sindicalHeroDashboard, alt: "Painel Intuitivo - Dashboard completo de gestão sindical", label: "Painel Intuitivo" },
-  { src: sindicalContribuicoes, alt: "Contribuições Sindicais - Gerenciamento de boletos e cobranças", label: "Contribuições" },
-  { src: sindicalRelatorios, alt: "Relatórios Financeiros - Análise detalhada por empresa", label: "Relatórios" },
+  { src: sindicalHeroDashboard, alt: "Painel Intuitivo - Dashboard completo de gestão sindical", label: "Painel Intuitivo", blur: false },
+  { src: sindicalContribuicoes, alt: "Contribuições Sindicais - Gerenciamento de boletos e cobranças", label: "Contribuições", blur: true },
+  { src: sindicalRelatorios, alt: "Relatórios Financeiros - Análise detalhada por empresa", label: "Relatórios", blur: true },
 ];
 
 function HeroCarousel() {
