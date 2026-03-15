@@ -71,7 +71,7 @@ export default function PresentationPage() {
           alt="Cover" 
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-blue-800/80 to-emerald-700/70" />
+        <div className="absolute inset-0 bg-black/70" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
