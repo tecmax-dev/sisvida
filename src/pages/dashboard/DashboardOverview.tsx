@@ -315,9 +315,9 @@ export default function DashboardOverview() {
       subtitle: "Total de Pacientes",
       buttonText: "Ver detalhes",
       buttonLink: "/dashboard/patients",
-      gradient: "from-blue-400 via-blue-500 to-cyan-500",
+      bgSolid: "bg-primary",
       icon: Users,
-      iconBg: "bg-blue-300/50",
+      iconBg: "bg-white/20",
     },
     {
       title: "PROFISSIONAIS",
@@ -325,9 +325,9 @@ export default function DashboardOverview() {
       subtitle: getProfessionalLabel(),
       buttonText: "Ver detalhes",
       buttonLink: "/dashboard/professionals",
-      gradient: "from-pink-400 via-pink-500 to-rose-500",
+      bgSolid: "bg-[hsl(0_85%_50%)]",
       icon: Stethoscope,
-      iconBg: "bg-pink-300/50",
+      iconBg: "bg-white/20",
     },
     {
       title: "HOJE",
@@ -335,9 +335,9 @@ export default function DashboardOverview() {
       subtitle: `${getSessionLabel()} Hoje`,
       buttonText: "Ver agenda",
       buttonLink: "/dashboard/calendar",
-      gradient: "from-orange-400 via-orange-500 to-amber-500",
+      bgSolid: "bg-primary/80",
       icon: Calendar,
-      iconBg: "bg-orange-300/50",
+      iconBg: "bg-white/20",
     },
     {
       title: "FUTURAS",
@@ -345,9 +345,9 @@ export default function DashboardOverview() {
       subtitle: `${getSessionLabel()} Agendadas`,
       buttonText: "Ver todas",
       buttonLink: "/dashboard/calendar",
-      gradient: "from-emerald-400 via-emerald-500 to-teal-500",
+      bgSolid: "bg-[hsl(220_80%_35%)]",
       icon: Clock,
-      iconBg: "bg-emerald-300/50",
+      iconBg: "bg-white/20",
     },
   ];
 
