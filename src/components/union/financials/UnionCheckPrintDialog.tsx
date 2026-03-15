@@ -329,7 +329,7 @@ export function UnionCheckPrintDialog({
             }
             
             th {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              background: #1e3a5f;
               color: white;
               font-size: 9px;
               font-weight: 600;
