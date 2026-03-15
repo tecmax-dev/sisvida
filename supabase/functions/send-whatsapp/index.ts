@@ -25,6 +25,7 @@ interface EvolutionConfig {
   api_key: string;
   instance_name: string;
   is_connected: boolean;
+  direct_reply_enabled?: boolean | null;
 }
 
 async function sendWhazingConfirmationButtons(
@@ -328,7 +329,7 @@ serve(async (req) => {
     // ========== EVOLUTION API PROVIDER (default) ==========
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
-      .select('api_url, api_key, instance_name, is_connected')
+      .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled')
       .eq('clinic_id', clinicId)
       .maybeSingle();
 
@@ -354,7 +355,7 @@ serve(async (req) => {
       );
     }
 
-    const { api_url, api_key, instance_name } = evolutionConfig as EvolutionConfig;
+    const { api_url, api_key, instance_name, direct_reply_enabled } = evolutionConfig as EvolutionConfig;
 
     // 10. CHECK REAL CONNECTION STATUS with Evolution API
     console.log(`[Clinic ${clinicId}] Checking real connection status for instance ${instance_name}`);
@@ -487,25 +488,30 @@ serve(async (req) => {
 
     let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
 
-    if (type === 'reminder_direct_reply') {
-      if (!appointmentId) {
-        buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
-        console.warn('[send-whatsapp] reminder_direct_reply without appointmentId. Buttons not sent.');
+    const shouldSendReminderButtons = Boolean(
+      appointmentId && (
+        type === 'reminder_direct_reply' ||
+        (type === 'reminder' && direct_reply_enabled === true)
+      )
+    );
+
+    if ((type === 'reminder_direct_reply' || type === 'reminder') && !appointmentId) {
+      buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
+      console.warn('[send-whatsapp] Reminder without appointmentId. Buttons not sent.');
+    } else if (shouldSendReminderButtons && appointmentId) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
+
+      buttonsResult = {
+        attempted: true,
+        success: buttonsResponse.success,
+        error: buttonsResponse.error,
+      };
+
+      if (!buttonsResponse.success) {
+        console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
       } else {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
-
-        buttonsResult = {
-          attempted: true,
-          success: buttonsResponse.success,
-          error: buttonsResponse.error,
-        };
-
-        if (!buttonsResponse.success) {
-          console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
-        } else {
-          console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
-        }
+        console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
       }
     }
 
