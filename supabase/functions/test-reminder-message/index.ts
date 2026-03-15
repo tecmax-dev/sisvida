@@ -66,9 +66,6 @@ function formatAppointmentReminder(
       ``,
       ...noShowWarning,
       ``,
-      `✅ *Responda SIM para confirmar*`,
-      `❌ *Responda NÃO para cancelar*`,
-      ``,
       `Atenciosamente,`,
       `Equipe ${clinicName}`,
     ].filter(Boolean);
