@@ -580,7 +580,7 @@ export default function HomologacaoPublicBooking() {
 
   if (loadingProfessional) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
+      <div className="min-h-screen bg-background p-4">
         <div className="max-w-2xl mx-auto space-y-6">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-32 w-full" />
