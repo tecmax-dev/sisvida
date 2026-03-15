@@ -1057,7 +1057,7 @@ const TutorialSindicatoPage = () => {
                 size="lg" 
                 onClick={generatePDF}
                 disabled={generating}
-                className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all"
               >
                 {generating ? (
                   <>
