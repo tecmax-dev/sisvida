@@ -95,13 +95,7 @@ export default {
         card: "var(--shadow-card)",
         float: "var(--shadow-float)",
       },
-      backgroundImage: {
-        "gradient-primary": "var(--gradient-primary)",
-        "gradient-hero": "var(--gradient-hero)",
-        "gradient-card": "var(--gradient-card)",
-        "gradient-soft": "var(--gradient-soft)",
-        "gradient-stats": "var(--gradient-stats)",
-      },
+      backgroundImage: {},
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
