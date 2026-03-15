@@ -712,8 +712,7 @@ function CTASection() {
             </Button>
             <Button
               size="lg"
-              variant="outline"
-              className="h-14 px-10 rounded-full text-base font-bold border-white/20 text-white hover:bg-white/10"
+              className="h-14 px-10 rounded-full text-base font-bold border border-white/30 bg-transparent text-white hover:bg-white/10"
               asChild
             >
               <a
