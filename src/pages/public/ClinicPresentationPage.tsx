@@ -7,7 +7,7 @@ import { PageNumber } from "@/components/print/PageNumber";
 import coverHero from "@/assets/presentation/cover-hero.jpg";
 import clinicModule from "@/assets/presentation/clinic-module.jpg";
 import technologyStack from "@/assets/presentation/technology-stack.jpg";
-import ecliniLogo from "@/assets/prosindweb-logo.png";
+import prosindClinicaLogo from "@/assets/prosind-clinica-logo.png";
 
 export default function ClinicPresentationPage() {
   const handlePrint = () => {
