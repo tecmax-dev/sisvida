@@ -432,7 +432,7 @@ export default function ClinicPresentationPage() {
           </div>
 
           <div className="no-break">
-            <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary-dark rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👥</span>
                 Para os Pacientes
