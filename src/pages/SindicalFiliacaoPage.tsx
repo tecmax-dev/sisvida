@@ -561,13 +561,13 @@ export default function SindicalFiliacaoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-emerald-200 rounded-full animate-pulse" />
-            <Loader2 className="absolute inset-0 m-auto h-8 w-8 animate-spin text-emerald-600" />
+            <div className="w-16 h-16 border-4 border-primary/30 rounded-full animate-pulse" />
+            <Loader2 className="absolute inset-0 m-auto h-8 w-8 animate-spin text-primary" />
           </div>
-          <p className="text-gray-600 font-medium">Carregando formulário...</p>
+          <p className="text-muted-foreground font-medium">Carregando formulário...</p>
         </div>
       </div>
     );
