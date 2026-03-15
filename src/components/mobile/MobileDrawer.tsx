@@ -83,42 +83,42 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
       icon: Users, 
       label: "Dependentes", 
       description: "Gerencie seus dependentes",
-      gradient: "from-violet-500 to-purple-600",
+      bgColor: "bg-primary",
       onClick: () => handleNavigate("/app/dependentes") 
     },
     { 
       icon: CreditCard, 
       label: "Carteirinha", 
       description: "Sua identificação digital",
-      gradient: "from-emerald-500 to-teal-600",
+      bgColor: "bg-primary",
       onClick: () => handleNavigate("/app/carteirinha") 
     },
     { 
       icon: Send, 
       label: "Notificar Carteirinha", 
       description: "Receber lembrete da carteirinha",
-      gradient: "from-sky-500 to-blue-600",
+      bgColor: "bg-primary",
       onClick: handleNotifyCard 
     },
     { 
       icon: Lock, 
       label: "Alterar senha", 
       description: "Segurança da sua conta",
-      gradient: "from-amber-500 to-orange-600",
+      bgColor: "bg-primary/80",
       onClick: () => handleNavigate("/app/alterar-senha") 
     },
     { 
       icon: HelpCircle, 
       label: "Dúvidas frequentes", 
       description: "Respostas rápidas",
-      gradient: "from-blue-500 to-indigo-600",
+      bgColor: "bg-primary/80",
       onClick: () => handleNavigate("/app/faq") 
     },
     { 
       icon: Info, 
       label: "Sobre", 
       description: "Conheça o SECMI",
-      gradient: "from-slate-500 to-slate-700",
+      bgColor: "bg-primary/70",
       onClick: () => handleNavigate("/app/sobre") 
     },
   ];
