@@ -329,7 +329,7 @@ serve(async (req) => {
     // ========== EVOLUTION API PROVIDER (default) ==========
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
-      .select('api_url, api_key, instance_name, is_connected')
+      .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled')
       .eq('clinic_id', clinicId)
       .maybeSingle();
 
