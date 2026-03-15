@@ -195,7 +195,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
                 onClick={item.onClick}
                 className="w-full flex items-center gap-3 p-3 hover:bg-white rounded-2xl transition-all duration-200 text-left group"
               >
-                <div className={`w-11 h-11 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200`}>
+                <div className={`w-11 h-11 ${item.bgColor} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200`}>
                   <item.icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
