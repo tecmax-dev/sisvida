@@ -260,10 +260,7 @@ function formatAppointmentReminder(
   date: string,
   time: string,
   professionalName: string,
-  confirmationLink?: string,
-  directReplyEnabled?: boolean
 ): string {
-  // Aviso amigável sobre bloqueio por falta e incentivo para cancelar
   const noShowWarning = [
     `⚠️ *Atenção, Associado(a):*`,
     `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
@@ -271,37 +268,9 @@ function formatAppointmentReminder(
     `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
   ];
 
-  // Instrução de antecedência
   const arrivalInstruction = `⏳ *Compareça com 15 minutos de antecedência.*`;
-  
-  // Local específico para Dr. Marcelo Aguiar e Dr. Jorge Avelar
   const specificLocation = getProfessionalLocation(professionalName);
 
-  // If direct reply is enabled, use the new format without links (buttons will be sent separately)
-  if (directReplyEnabled) {
-    const lines = [
-      `Olá ${patientName}! 👋`,
-      ``,
-      arrivalInstruction,
-      ``,
-      `Lembramos que você tem uma consulta agendada:`,
-      ``,
-      `📅 *Data:* ${date}`,
-      `🕐 *Horário:* ${time}`,
-      `👨‍⚕️ *Profissional:* ${professionalName}`,
-      `🏥 *Clínica:* ${clinicName}`,
-      specificLocation ? `` : null,
-      specificLocation,
-      ``,
-      ...noShowWarning,
-      ``,
-      `Atenciosamente,`,
-      `Equipe ${clinicName}`,
-    ].filter(Boolean);
-    return lines.join('\n');
-  }
-
-  // Original format with link
   const lines = [
     `Olá ${patientName}! 👋`,
     ``,
@@ -318,13 +287,9 @@ function formatAppointmentReminder(
     ``,
     ...noShowWarning,
     ``,
-    confirmationLink ? `Para confirmar ou cancelar sua consulta, acesse:` : `Por favor, confirme sua presença respondendo esta mensagem.`,
-    confirmationLink ? confirmationLink : null,
-    ``,
     `Atenciosamente,`,
     `Equipe ${clinicName}`,
   ].filter(Boolean);
-
   return lines.join('\n');
 }
 
@@ -498,20 +463,13 @@ serve(async (req) => {
         const dateFormatted = formatDateTime(appointment.appointment_date, appointment.start_time);
         const time = appointment.start_time.substring(0, 5);
 
-        // Build confirmation link (only if not using direct reply)
-        const confirmationLink = !directReplyEnabled && appointment.confirmation_token 
-          ? `${baseUrl}/consulta/${appointment.confirmation_token}`
-          : undefined;
-
         // Create message - usar displayName (nome do dependente ou titular)
         const message = formatAppointmentReminder(
           displayName,
           clinic.name,
           dateFormatted,
           time,
-          professional?.name || 'Profissional',
-          confirmationLink,
-          directReplyEnabled
+          professional?.name || 'Profissional'
         );
 
         let success = false;
