@@ -581,19 +581,35 @@ serve(async (req) => {
 
     let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
 
+    const isReminderType = type === 'reminder' || type === 'reminder_direct_reply';
+    let resolvedAppointmentId = appointmentId;
+
+    if (isReminderType && !resolvedAppointmentId) {
+      resolvedAppointmentId = await resolveReminderAppointmentId(
+        supabase,
+        clinicId,
+        formattedPhone,
+        message,
+      );
+
+      if (resolvedAppointmentId) {
+        console.log(`[send-whatsapp] appointmentId resolved automatically: ${resolvedAppointmentId}`);
+      }
+    }
+
     const shouldSendReminderButtons = Boolean(
-      appointmentId && (
+      resolvedAppointmentId && (
         type === 'reminder_direct_reply' ||
         (type === 'reminder' && direct_reply_enabled === true)
       )
     );
 
-    if ((type === 'reminder_direct_reply' || type === 'reminder') && !appointmentId) {
-      buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
+    if (isReminderType && !resolvedAppointmentId) {
+      buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided or not resolved' };
       console.warn('[send-whatsapp] Reminder without appointmentId. Buttons not sent.');
-    } else if (shouldSendReminderButtons && appointmentId) {
+    } else if (shouldSendReminderButtons && resolvedAppointmentId) {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
+      const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, resolvedAppointmentId);
 
       buttonsResult = {
         attempted: true,
@@ -604,7 +620,7 @@ serve(async (req) => {
       if (!buttonsResponse.success) {
         console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
       } else {
-        console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
+        console.log(`[send-whatsapp] Reminder buttons sent for appointment ${resolvedAppointmentId}`);
       }
     }
 
