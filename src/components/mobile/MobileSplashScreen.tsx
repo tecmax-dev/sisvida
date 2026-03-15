@@ -59,7 +59,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="fixed inset-0 z-[100] bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 flex flex-col items-center justify-center overflow-hidden"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden" style={{ background: 'hsl(220 75% 30%)' }}
         >
           {/* Animated background particles */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
