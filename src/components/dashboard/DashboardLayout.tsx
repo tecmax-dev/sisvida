@@ -474,7 +474,7 @@ export function DashboardLayout() {
             )}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
                   <span className="text-primary-foreground font-bold text-sm">E</span>
                 </div>
               </div>
