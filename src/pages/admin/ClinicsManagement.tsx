@@ -947,7 +947,7 @@ export default function ClinicsManagement() {
           icon={Calendar} 
           label="Total Agendamentos" 
           value={totalAppointments}
-          color="bg-gradient-to-br from-warning to-warning/80"
+          color="bg-warning"
         />
       </div>
 
