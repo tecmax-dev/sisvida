@@ -119,6 +119,62 @@ async function sendWhatsAppWithImage(
   }
 }
 
+// Send interactive buttons via Whazing API (WhatsApp Business)
+async function sendConfirmationButtons(
+  phone: string,
+  appointmentId: string
+): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[reminder-buttons] Whazing not configured, skipping buttons');
+    return false;
+  }
+
+  try {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) {
+      cleanPhone = '55' + cleanPhone;
+    }
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone}`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: "Confirme ou cancele sua consulta:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
+              { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
+            ]
+          }
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[reminder-buttons] Error:', errorText);
+      return false;
+    }
+    console.log('[reminder-buttons] Buttons sent successfully');
+    return true;
+  } catch (error) {
+    console.error('[reminder-buttons] Exception:', error);
+    return false;
+  }
+}
+
 function formatDateTime(dateStr: string, time: string): string {
   // Timezone-safe: parse YYYY-MM-DD at noon local time to avoid shifts
   const dateOnly = (dateStr || "").slice(0, 10);
@@ -170,7 +226,7 @@ function formatAppointmentReminder(
   // Local específico para Dr. Marcelo Aguiar e Dr. Jorge Avelar
   const specificLocation = getProfessionalLocation(professionalName);
 
-  // If direct reply is enabled, use the new format without links
+  // If direct reply is enabled, use the new format without links (buttons will be sent separately)
   if (directReplyEnabled) {
     const lines = [
       `Olá ${patientName}! 👋`,
@@ -187,9 +243,6 @@ function formatAppointmentReminder(
       specificLocation,
       ``,
       ...noShowWarning,
-      ``,
-      `✅ *Responda SIM para confirmar*`,
-      `❌ *Responda NÃO para cancelar*`,
       ``,
       `Atenciosamente,`,
       `Equipe ${clinicName}`,
@@ -428,6 +481,16 @@ serve(async (req) => {
             .from('appointments')
             .update({ reminder_sent: true })
             .eq('id', appointment.id);
+
+          // Send interactive buttons (Confirmar / Cancelar) via Whazing
+          // Small delay before sending buttons to ensure message arrives first
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          const buttonsSent = await sendConfirmationButtons(phoneToUse, appointment.id);
+          if (buttonsSent) {
+            console.log(`✓ Confirmation buttons sent to ${displayName}`);
+          } else {
+            console.log(`⚠ Could not send buttons to ${displayName} (Whazing not configured or error), text fallback in message`);
+          }
 
           // If direct reply is enabled, register pending confirmation
           if (directReplyEnabled) {
