@@ -480,7 +480,7 @@ export default function UnionExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-gradient-to-r from-amber-50/80 dark:from-amber-950/30 to-transparent">
+        <Card className="border-l-4 border-l-warning bg-warning/5">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
