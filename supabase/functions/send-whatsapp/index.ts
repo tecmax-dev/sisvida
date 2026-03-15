@@ -15,8 +15,9 @@ interface WhatsAppRequest {
   phone: string;
   message: string;
   clinicId: string;
-  type?: 'reminder' | 'confirmation' | 'custom' | 'document';
+  type?: 'reminder' | 'confirmation' | 'custom' | 'document' | 'reminder_direct_reply';
   imageUrl?: string; // URL da imagem para enviar como cabeçalho
+  appointmentId?: string;
 }
 
 interface EvolutionConfig {
@@ -24,6 +25,56 @@ interface EvolutionConfig {
   api_key: string;
   instance_name: string;
   is_connected: boolean;
+}
+
+async function sendWhazingConfirmationButtons(
+  phone: string,
+  appointmentId: string
+): Promise<{ success: boolean; error?: string; response?: string }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    return { success: false, error: 'Whazing not configured' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} (appointment: ${appointmentId})`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: "Confirme ou cancele sua consulta:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
+              { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
+            ]
+          }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      return { success: false, error: `${response.status}: ${responseText}`, response: responseText };
+    }
+
+    return { success: true, response: responseText };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
 }
 
 serve(async (req) => {
