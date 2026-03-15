@@ -175,7 +175,7 @@ export default function CardValidation() {
       <div className="w-full max-w-[360px] bg-card rounded-2xl shadow-xl overflow-hidden border mt-16">
         
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 px-5 py-4">
+        <div className="bg-primary px-5 py-4">
           <div className="flex items-center gap-3">
             {card.clinic.logo_url ? (
               <img 

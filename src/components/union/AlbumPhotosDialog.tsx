@@ -359,7 +359,7 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
 
           {/* Photo Info */}
           {currentPhoto && (currentPhoto.title || currentPhoto.description) && (
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white">
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-4 text-white">
               {currentPhoto.title && <h4 className="font-semibold">{currentPhoto.title}</h4>}
               {currentPhoto.description && (
                 <p className="text-sm text-white/80 mt-1">{currentPhoto.description}</p>

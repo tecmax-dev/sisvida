@@ -160,7 +160,7 @@ export function AdminLayout() {
         <aside 
           className="w-64 border-r border-white/15 flex flex-col"
           style={{
-            background: 'linear-gradient(180deg, hsl(200 85% 38%) 0%, hsl(175 70% 36%) 45%, hsl(145 55% 40%) 100%)'
+            background: 'hsl(220 75% 30%)'
           }}
         >
           <div className="p-4 border-b border-sidebar-border">

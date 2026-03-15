@@ -1252,13 +1252,13 @@ const TutorialSindicatoPage = () => {
               
               <div className="space-y-6 mt-4">
                 {/* Illustration */}
-                <div className="relative rounded-xl overflow-hidden h-48 bg-gradient-to-br from-muted/50 to-muted">
+                <div className="relative rounded-xl overflow-hidden h-48 bg-muted">
                   <img 
                     src={selectedModule.illustration} 
                     alt={selectedModule.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+                  <div className="absolute inset-0 bg-background/40" />
                 </div>
 
                 {/* Overview */}

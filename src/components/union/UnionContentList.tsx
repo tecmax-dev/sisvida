@@ -107,7 +107,7 @@ export function UnionContentList({
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                <div className="w-full h-full flex items-center justify-center bg-muted">
                   <div className="text-muted-foreground/50">
                     {contentTypeIcons[contentType]}
                   </div>

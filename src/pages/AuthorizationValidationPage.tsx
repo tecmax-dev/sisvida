@@ -150,8 +150,8 @@ export default function AuthorizationValidationPage() {
     <PublicPageWrapper>
       <div className={`min-h-screen flex items-center justify-center p-4 ${
         isValid 
-          ? "bg-gradient-to-br from-emerald-50 to-teal-100"
-          : "bg-gradient-to-br from-red-50 to-orange-100"
+          ? "bg-success/5"
+          : "bg-destructive/5"
       }`}>
         <Card className="w-full max-w-lg bg-white print:shadow-none print:border-none">
           <CardContent className="pt-6 space-y-6" ref={printRef}>
