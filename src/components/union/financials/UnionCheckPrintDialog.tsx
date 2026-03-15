@@ -182,7 +182,7 @@ export function UnionCheckPrintDialog({
             
             /* Header compacto */
             .header {
-              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
+              background: #1e3a5f;
               color: white;
               padding: 12px 16px;
               display: flex;
