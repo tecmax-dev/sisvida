@@ -46,7 +46,7 @@ export default function HomologacaoProtocolValidation() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 space-y-4">
             <Skeleton className="h-16 w-16 rounded-full mx-auto" />
