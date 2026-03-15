@@ -485,6 +485,30 @@ serve(async (req) => {
       );
     }
 
+    let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
+
+    if (type === 'reminder_direct_reply') {
+      if (!appointmentId) {
+        buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
+        console.warn('[send-whatsapp] reminder_direct_reply without appointmentId. Buttons not sent.');
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
+
+        buttonsResult = {
+          attempted: true,
+          success: buttonsResponse.success,
+          error: buttonsResponse.error,
+        };
+
+        if (!buttonsResponse.success) {
+          console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
+        } else {
+          console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
+        }
+      }
+    }
+
     // 13. Log message sent successfully
     console.log(`[Clinic ${clinicId}] Message sent successfully by user ${userId}, logging to message_logs`);
     const { error: logError } = await supabase
@@ -502,7 +526,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: result }),
+      JSON.stringify({ success: true, data: result, buttons: buttonsResult }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
