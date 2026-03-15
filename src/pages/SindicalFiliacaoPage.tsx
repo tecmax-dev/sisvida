@@ -1198,7 +1198,7 @@ export default function SindicalFiliacaoPage() {
 
                 {/* DEPENDENTES */}
                 <FormSection icon={Users} title="Dependentes" subtitle="Opcional - Adicione familiares" accentColor="pink">
-                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl p-4 border border-pink-100">
+                  <div className="bg-cta/5 rounded-xl p-4 border border-cta/20">
                     <DependentsList
                       dependents={dependents}
                       onChange={setDependents}
