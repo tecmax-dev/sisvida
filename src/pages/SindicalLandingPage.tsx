@@ -306,6 +306,8 @@ function AboutSection() {
     { icon: Receipt, title: "Contribuições", desc: "Boletos e cobranças em lote" },
     { icon: PiggyBank, title: "Financeiro", desc: "Receitas, despesas e fluxo" },
     { icon: Handshake, title: "Negociações", desc: "Acordos e parcelamentos" },
+    { icon: ClipboardCheck, title: "Homologação", desc: "Agendamento e protocolos" },
+    { icon: Stethoscope, title: "Clínica Integrada", desc: "Agenda e prontuário eletrônico" },
     { icon: FileBarChart, title: "Relatórios", desc: "Gerenciais e fiscais" },
   ];
 
