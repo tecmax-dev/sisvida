@@ -177,9 +177,9 @@ function SindicalHeader() {
 
 // ─── Hero Carousel ──────────────────────────────────────────────
 const heroSlides = [
-  { src: sindicalHeroDashboard, alt: "Painel Intuitivo - Dashboard completo de gestão sindical", label: "Painel Intuitivo", blur: false },
-  { src: sindicalContribuicoes, alt: "Contribuições Sindicais - Gerenciamento de boletos e cobranças", label: "Contribuições", blur: true },
-  { src: sindicalRelatorios, alt: "Relatórios Financeiros - Análise detalhada por empresa", label: "Relatórios", blur: true },
+  { src: sindicalHeroDashboard, alt: "Painel Intuitivo - Dashboard completo de gestão sindical", label: "Painel Intuitivo" },
+  { src: sindicalContribuicoes, alt: "Contribuições Sindicais - Gerenciamento de boletos e cobranças", label: "Contribuições" },
+  { src: sindicalRelatorios, alt: "Relatórios Financeiros - Análise detalhada por empresa", label: "Relatórios" },
 ];
 
 function HeroCarousel() {
@@ -211,22 +211,15 @@ function HeroCarousel() {
       {/* Image container */}
       <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-white/10">
         {heroSlides.map((slide, i) => (
-          <div
+          <img
             key={i}
-            className={`transition-opacity duration-700 ${
+            src={slide.src}
+            alt={slide.alt}
+            className={`w-full h-auto transition-opacity duration-700 ${
               i === current ? "opacity-100 relative" : "opacity-0 absolute inset-0"
             }`}
-          >
-            <img
-              src={slide.src}
-              alt={slide.alt}
-              className={`w-full h-auto ${slide.blur ? "blur-[2px]" : ""}`}
-              loading={i === 0 ? "eager" : "lazy"}
-            />
-            {slide.blur && (
-              <div className="absolute inset-0 backdrop-blur-[3px] bg-white/[0.03]" />
-            )}
-          </div>
+            loading={i === 0 ? "eager" : "lazy"}
+          />
         ))}
       </div>
 
