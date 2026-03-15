@@ -259,7 +259,7 @@ export default function PublicPanel() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-foreground flex flex-col items-center justify-center gap-4">
         <Monitor className="h-16 w-16 text-slate-500" />
         <div className="text-white text-2xl">{error}</div>
         <p className="text-slate-400">Verifique se o link está correto</p>
