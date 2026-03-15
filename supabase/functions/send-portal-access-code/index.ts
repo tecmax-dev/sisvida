@@ -152,7 +152,7 @@ const generateEmailHtml = (
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f3f4f6;">
 <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-<div style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); padding: 32px 24px; text-align: center;">
+<div style="background: #1e3a8a; padding: 32px 24px; text-align: center;">
 ${logoSection}
 <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Bem-vindo ao ProsindWeb</h1>
 <p style="margin: 8px 0 0 0; color: #99f6e4; font-size: 14px;">${portalName} - ${clinicName}</p>
