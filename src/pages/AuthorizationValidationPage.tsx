@@ -123,7 +123,7 @@ export default function AuthorizationValidationPage() {
   if (error || !data) {
     return (
       <PublicPageWrapper>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-destructive/5 p-4">
           <Card className="w-full max-w-md bg-white">
             <CardContent className="pt-6 text-center">
               <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
