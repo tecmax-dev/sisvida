@@ -195,9 +195,7 @@ export function formatAppointmentReminder(
       `🏥 *Clínica:* ${clinicName}`,
       ``,
       `👇 *Use os botões abaixo para confirmar ou cancelar sua consulta.*`,
-      `💡 *Se os botões não aparecerem, responda SIM para confirmar ou NÃO para cancelar.*`,
       ``,
-
       `Atenciosamente,`,
       `Equipe ${clinicName}`,
     ];
