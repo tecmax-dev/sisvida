@@ -454,7 +454,7 @@ function ModulesSection() {
             Módulos do Sistema
           </span>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight mb-4">
-            8 módulos.{" "}
+            10 módulos.{" "}
             <span className="text-[hsl(215,85%,50%)]">Uma plataforma.</span>
           </h2>
           <p className="text-lg text-gray-500">
