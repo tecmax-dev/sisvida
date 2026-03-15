@@ -58,7 +58,7 @@ export function PortalLoginScreen({
               className="h-16 mx-auto object-contain"
             />
           ) : (
-            <div className={`h-16 w-16 mx-auto bg-gradient-to-br ${iconBgClass} rounded-xl flex items-center justify-center shadow-lg`}>
+            <div className="h-16 w-16 mx-auto bg-primary rounded-xl flex items-center justify-center shadow-lg">
               <Building2 className="h-8 w-8 text-white" />
             </div>
           )}
