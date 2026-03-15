@@ -24,7 +24,7 @@ export function PortalHeader({
   variant = "amber"
 }: PortalHeaderProps) {
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white sticky top-0 z-20 shadow-lg">
+    <header className="text-white sticky top-0 z-20 shadow-lg" style={{ background: 'hsl(220 75% 22%)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
