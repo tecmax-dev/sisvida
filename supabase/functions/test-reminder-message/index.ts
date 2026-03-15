@@ -14,7 +14,6 @@ interface EvolutionConfig {
   instance_name: string;
 }
 
-// Profissionais com local de atendimento específico (Sede do Sindicato dos Rodoviários)
 const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar'];
 
 function getProfessionalLocation(professionalName: string): string | null {
@@ -33,9 +32,7 @@ function formatAppointmentReminder(
   date: string,
   time: string,
   professionalName: string,
-  directReplyEnabled: boolean = false
 ): string {
-  // Aviso amigável sobre bloqueio por falta e incentivo para cancelar
   const noShowWarning = [
     `⚠️ *Atenção, Associado(a):*`,
     `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
@@ -43,37 +40,14 @@ function formatAppointmentReminder(
     `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
   ];
 
-  // Instrução de antecedência
   const arrivalInstruction = `⏳ *Compareça com 15 minutos de antecedência.*`;
-  
-  // Local específico para Dr. Marcelo Aguiar e Dr. Jorge Avelar
   const specificLocation = getProfessionalLocation(professionalName);
 
-  if (directReplyEnabled) {
-    const lines = [
-      `Olá ${patientName}! 👋`,
-      ``,
-      `Lembramos que você tem uma consulta agendada:`,
-      ``,
-      `📅 *Data:* ${date}`,
-      `🕐 *Horário:* ${time}`,
-      `👨‍⚕️ *Profissional:* ${professionalName}`,
-      `🏥 *Clínica:* ${clinicName}`,
-      specificLocation ? `` : null,
-      specificLocation,
-      ``,
-      arrivalInstruction,
-      ``,
-      ...noShowWarning,
-      ``,
-      `Atenciosamente,`,
-      `Equipe ${clinicName}`,
-    ].filter(Boolean);
-    return lines.join('\n');
-  }
-
+  // Always use the buttons format (no numbered list, no link)
   const lines = [
     `Olá ${patientName}! 👋`,
+    ``,
+    arrivalInstruction,
     ``,
     `Lembramos que você tem uma consulta agendada:`,
     ``,
@@ -84,16 +58,11 @@ function formatAppointmentReminder(
     specificLocation ? `` : null,
     specificLocation,
     ``,
-    arrivalInstruction,
-    ``,
     ...noShowWarning,
-    ``,
-    `Por favor, confirme sua presença respondendo esta mensagem.`,
     ``,
     `Atenciosamente,`,
     `Equipe ${clinicName}`,
   ].filter(Boolean);
-
   return lines.join('\n');
 }
 
@@ -109,7 +78,7 @@ async function sendWhatsAppWithImage(
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`Sending WhatsApp with image to ${formattedPhone}`);
+    console.log(`[test] Sending WhatsApp image+text to ${formattedPhone} via Evolution`);
 
     const response = await fetch(`${config.api_url}/message/sendMedia/${config.instance_name}`, {
       method: 'POST',
@@ -125,15 +94,79 @@ async function sendWhatsAppWithImage(
       }),
     });
 
+    const responseText = await response.text();
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('WhatsApp API error:', errorText);
-      return { success: false, error: errorText };
+      console.error('[test] Evolution API error:', response.status, responseText);
+      return { success: false, error: responseText };
     }
 
+    console.log('[test] Evolution message sent OK:', responseText.substring(0, 200));
     return { success: true };
   } catch (error) {
-    console.error('Error sending WhatsApp with image:', error);
+    console.error('[test] Error sending via Evolution:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+async function sendConfirmationButtons(
+  phone: string,
+  testAppointmentId: string
+): Promise<{ success: boolean; error?: string; response?: string }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  console.log(`[test-buttons] WHAZING_API_URL configured: ${!!whazingUrl}`);
+  console.log(`[test-buttons] WHAZING_API_TOKEN configured: ${!!whazingToken}`);
+
+  if (!whazingUrl || !whazingToken) {
+    return { success: false, error: 'Whazing not configured (missing WHAZING_API_URL or WHAZING_API_TOKEN)' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) {
+      cleanPhone = '55' + cleanPhone;
+    }
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[test-buttons] Sending buttons to ${cleanPhone} via ${apiOficialUrl}`);
+
+    const payload = {
+      number: cleanPhone,
+      contents: {
+        type: "button",
+        body: { text: "Confirme ou cancele sua consulta:" },
+        action: {
+          buttons: [
+            { type: "reply", reply: { id: `confirm_apt_${testAppointmentId}`, title: "✅ Confirmar" } },
+            { type: "reply", reply: { id: `cancel_apt_${testAppointmentId}`, title: "❌ Cancelar" } },
+          ]
+        }
+      }
+    };
+
+    console.log(`[test-buttons] Payload:`, JSON.stringify(payload));
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+    console.log(`[test-buttons] Response status: ${response.status}`);
+    console.log(`[test-buttons] Response body: ${responseText.substring(0, 500)}`);
+
+    if (!response.ok) {
+      return { success: false, error: `Status ${response.status}: ${responseText}`, response: responseText };
+    }
+
+    return { success: true, response: responseText };
+  } catch (error) {
+    console.error('[test-buttons] Exception:', error);
     return { success: false, error: String(error) };
   }
 }
@@ -188,11 +221,12 @@ serve(async (req) => {
       );
     }
 
-    // Create test message with the new format
+    // Create test message with buttons format (no numbered list)
     const testDate = 'sexta-feira, 10 de janeiro';
     const testTime = '14:00';
     const testProfessional = 'Dr. José Silva';
     const testPatient = 'João Teste';
+    const testAppointmentId = 'test-' + Date.now();
 
     const message = formatAppointmentReminder(
       testPatient,
@@ -200,32 +234,37 @@ serve(async (req) => {
       testDate,
       testTime,
       testProfessional,
-      evolutionConfig.direct_reply_enabled || false
     );
 
-    console.log('Sending test reminder to:', phone);
-    console.log('Message:', message);
-
-    const result = await sendWhatsAppWithImage(
+    console.log('[test] === STEP 1: Sending main reminder message via Evolution ===');
+    const mainResult = await sendWhatsAppWithImage(
       evolutionConfig as EvolutionConfig,
       phone,
       logoUrl,
       message
     );
 
-    if (result.success) {
-      return new Response(
-        JSON.stringify({ success: true, message: 'Test reminder sent successfully' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ success: false, error: result.error }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('[test] Main message result:', mainResult);
+
+    // Wait 1.5s then send buttons via Whazing
+    console.log('[test] === STEP 2: Waiting 1.5s before sending buttons ===');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    console.log('[test] === STEP 3: Sending confirmation buttons via Whazing ===');
+    const buttonsResult = await sendConfirmationButtons(phone, testAppointmentId);
+    console.log('[test] Buttons result:', buttonsResult);
+
+    return new Response(
+      JSON.stringify({
+        success: mainResult.success,
+        main_message: mainResult,
+        buttons: buttonsResult,
+        message: mainResult.success ? 'Test reminder sent' : 'Failed to send reminder',
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error: unknown) {
-    console.error('Error in test-reminder-message:', error);
+    console.error('[test] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal error';
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
