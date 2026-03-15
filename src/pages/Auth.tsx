@@ -913,7 +913,7 @@ export default function Auth() {
                   className="rounded-lg shadow-xl border-2 border-white/20"
                 />
                 {/* Brilho */}
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-transparent via-white/5 to-white/15 pointer-events-none" />
+                <div className="absolute inset-0 rounded-lg bg-white/10 pointer-events-none" />
               </div>
               
               {/* Card informativo */}
