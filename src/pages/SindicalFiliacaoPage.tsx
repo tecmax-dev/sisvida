@@ -1313,7 +1313,7 @@ export default function SindicalFiliacaoPage() {
                             </Select>
 
                             {isPayrollDeduction && (
-                              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                              <div className="bg-success/5 rounded-xl p-4 border border-success/20">
                                 <div className="flex items-start gap-3">
                                   <div className="p-2 rounded-lg bg-emerald-100">
                                     <Check className="h-4 w-4 text-emerald-600" />
