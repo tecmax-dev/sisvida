@@ -408,7 +408,7 @@ export default function ClinicPresentationPage() {
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="no-break">
-            <div className="bg-gradient-to-br from-cyan-600 to-cyan-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👔</span>
                 Para a Clínica
