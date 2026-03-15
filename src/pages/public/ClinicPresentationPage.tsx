@@ -112,7 +112,7 @@ export default function ClinicPresentationPage() {
             </p>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-teal-50 to-teal-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-teal-800 mb-2">Visão Geral do Sistema</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
               O <strong>ProsindWeb Clínica</strong> é uma plataforma completa para gestão de clínicas médicas, 
