@@ -106,7 +106,7 @@ export function TelemedicineSection() {
           <div className="flex justify-center lg:justify-end">
             <div className="relative">
               {/* Main visual container */}
-              <div className="w-full max-w-md bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-3xl p-8 border border-emerald-500/20">
+              <div className="w-full max-w-md bg-emerald-500/10 rounded-3xl p-8 border border-emerald-500/20">
                 {/* Video call mockup */}
                 <div className="bg-card rounded-2xl shadow-2xl overflow-hidden border border-border">
                   {/* Header */}
