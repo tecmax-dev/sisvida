@@ -25,6 +25,7 @@ interface EvolutionConfig {
   api_key: string;
   instance_name: string;
   is_connected: boolean;
+  direct_reply_enabled?: boolean | null;
 }
 
 async function sendWhazingConfirmationButtons(

@@ -2390,7 +2390,7 @@ const updateData: Record<string, any> = {
           message, 
           clinicId: currentClinic?.id,
           type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
-          appointmentId: directReplyEnabled ? appointment.id : undefined,
+          appointmentId: appointment.id,
         },
       });
 
