@@ -1,46 +1,45 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { 
-  Building2, 
-  Users, 
-  Receipt, 
-  PiggyBank, 
-  FileBarChart, 
-  Shield, 
-  Handshake, 
-  ArrowRight, 
-  MessageCircle, 
-  CheckCircle2, 
-  BarChart3, 
-  Lock, 
-  Layers,
-  Building,
-  UserCheck,
-  Scale,
+import {
+  Building2,
+  Users,
+  Receipt,
+  PiggyBank,
+  FileBarChart,
+  Shield,
+  Handshake,
+  ArrowRight,
+  MessageCircle,
+  CheckCircle2,
+  BarChart3,
   Globe,
-  Sparkles,
+  HeadphonesIcon,
+  Layers,
+  Scale,
   Phone,
   Mail,
   MapPin,
-  Play,
-  TrendingUp,
-  Clock,
-  HeadphonesIcon,
-  Monitor,
-  Briefcase,
-  FileText,
-  ChevronRight,
   Star,
   Menu,
-  X
+  X,
+  ChevronRight,
+  Zap,
+  TrendingUp,
+  Lock,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 import prosindwebLogo from "@/assets/prosindweb-logo.png";
 import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
 
-// ─── Animated Counter ───────────────────────────────────────────────
-function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Cores sólidas (sem gradientes)
+   Azul Royal: hsl(215,85%,25%)  →  hsl(215,85%,50%)
+   Vermelho CTA: hsl(0,85%,50%)
+   ═══════════════════════════════════════════════════════════════ */
+
+// ─── Animated Counter ───────────────────────────────────────────
+function AnimatedCounter({ end, suffix = "", prefix = "" }: { end: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -53,7 +52,7 @@ function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { e
           const startTime = Date.now();
           const animate = () => {
             const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
+            const progress = Math.min(elapsed / 2000, 1);
             const eased = 1 - Math.pow(1 - progress, 3);
             setCount(Math.floor(eased * end));
             if (progress < 1) requestAnimationFrame(animate);
@@ -65,64 +64,150 @@ function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: { e
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, [end, duration]);
+  }, [end]);
 
   return <div ref={ref}>{prefix}{count}{suffix}</div>;
 }
 
-// ─── Hero Section ───────────────────────────────────────────────────
+// ─── Header ─────────────────────────────────────────────────────
+function SindicalHeader() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const links = [
+    { href: "#sobre", label: "Sobre" },
+    { href: "#modulos", label: "Módulos" },
+    { href: "#resultados", label: "Resultados" },
+    { href: "#depoimentos", label: "Clientes" },
+    { href: "#contato", label: "Contato" },
+  ];
+
+  return (
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled
+        ? "bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm"
+        : "bg-transparent"
+    }`}>
+      <div className="container">
+        <div className="flex items-center justify-between h-18 py-4">
+          <Link to="/sindical" className="flex items-center">
+            <img src={prosindwebLogo} alt="ProsindWeb" className="h-10 w-auto" />
+          </Link>
+
+          <nav className="hidden lg:flex items-center gap-8">
+            {links.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className={`text-sm font-semibold transition-colors ${
+                  scrolled ? "text-gray-600 hover:text-gray-900" : "text-white/70 hover:text-white"
+                }`}
+              >
+                {l.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className={`hidden sm:flex font-semibold ${
+                scrolled ? "text-gray-600 hover:text-gray-900" : "text-white/70 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Link to="/entidade-sindical">Área da Entidade</Link>
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-full font-bold bg-[hsl(0,85%,50%)] hover:bg-[hsl(0,85%,42%)] text-white shadow-lg"
+              asChild
+            >
+              <a href="#contato">Demonstração</a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`lg:hidden ${scrolled ? "text-gray-700" : "text-white"}`}
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
+        </div>
+
+        {mobileOpen && (
+          <div className="lg:hidden py-4 border-t border-white/10 bg-[hsl(215,85%,15%)]">
+            <nav className="flex flex-col gap-1">
+              {links.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  className="text-white/80 hover:text-white px-4 py-3 rounded-lg hover:bg-white/5 font-medium"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {l.label}
+                </a>
+              ))}
+              <Link
+                to="/entidade-sindical"
+                className="text-white/80 hover:text-white px-4 py-3 rounded-lg hover:bg-white/5 font-medium"
+                onClick={() => setMobileOpen(false)}
+              >
+                Área da Entidade
+              </Link>
+            </nav>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+// ─── Hero Section — Dark Navy ───────────────────────────────────
 function HeroSection() {
   return (
-    <section className="relative min-h-[100vh] flex items-center overflow-hidden">
-      {/* Light background */}
-      <div className="absolute inset-0 bg-[hsl(215,60%,97%)]" />
-      
-      {/* Subtle grid pattern */}
-      <div className="absolute inset-0 opacity-[0.04]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0z' fill='none' stroke='%23336699' stroke-width='0.3'/%3E%3C/svg%3E")`,
-        backgroundSize: '40px 40px'
-      }} />
+    <section className="relative min-h-screen flex items-center bg-[hsl(215,85%,12%)] overflow-hidden">
+      {/* Decorative shapes */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-[hsl(215,85%,20%)] opacity-30 -translate-y-1/2 translate-x-1/3" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[hsl(0,85%,50%)] opacity-[0.06] translate-y-1/2 -translate-x-1/3" />
 
-      <div className="container relative z-10 py-24 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left - Content */}
-          <div className="order-2 lg:order-1">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[hsl(215,85%,50%,0.15)] bg-[hsl(215,85%,50%,0.06)] mb-8">
-              <span className="w-2 h-2 rounded-full bg-[hsl(0,85%,50%)] animate-pulse" />
-              <span className="text-sm text-[hsl(215,50%,35%)] font-medium">Plataforma de Gestão Integrada</span>
+      <div className="container relative z-10 py-32 lg:py-40">
+        <div className="grid lg:grid-cols-12 gap-12 items-center">
+          {/* Content — 5 cols */}
+          <div className="lg:col-span-5 order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 mb-8">
+              <Zap className="h-3.5 w-3.5 text-[hsl(0,85%,55%)]" />
+              <span className="text-xs font-bold text-white/60 tracking-wider uppercase">
+                Plataforma Líder em Gestão Sindical
+              </span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[0.95] text-gray-900 mb-4 tracking-tight">
-              <span className="block text-gray-400 text-2xl sm:text-3xl lg:text-4xl font-medium mb-2">GESTÃO SINDICAL</span>
-              <span className="text-[hsl(215,85%,50%)]">
-                ProsindWeb
-              </span>
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[0.92] tracking-tight text-white mb-6">
+              Gestão
+              <br />
+              <span className="text-[hsl(0,85%,55%)]">Sindical</span>
+              <br />
+              Inteligente.
             </h1>
 
-            <p className="text-lg lg:text-xl text-gray-500 font-medium mt-6 max-w-xl leading-relaxed">
-              Solução completa em gestão para Entidades Sindicais do Brasil. Controle financeiro, associados, contribuições e negociações em um único sistema.
+            <p className="text-lg text-white/50 max-w-md leading-relaxed mb-10">
+              Arrecadação, associados, contribuições e finanças. Tudo integrado em uma plataforma
+              que já transformou mais de 500 entidades no Brasil.
             </p>
 
-            {/* Trust badges */}
-            <div className="flex flex-wrap gap-6 mt-8 text-sm text-gray-400">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-[hsl(0,85%,50%)]" />
-                <span>Dados protegidos</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-[hsl(215,85%,50%)]" />
-                <span>100% na nuvem</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <HeadphonesIcon className="h-4 w-4 text-[hsl(0,75%,45%)]" />
-                <span>Suporte dedicado</span>
-              </div>
-            </div>
-
-            <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              <Button 
-                size="lg" 
-                className="h-14 px-8 text-base font-semibold rounded-full shadow-2xl transition-all hover:scale-105 bg-[hsl(215,85%,50%)] hover:bg-[hsl(215,85%,42%)] text-white"
+            {/* CTA row */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-12">
+              <Button
+                size="lg"
+                className="h-14 px-8 text-base font-bold rounded-full bg-[hsl(0,85%,50%)] hover:bg-[hsl(0,85%,42%)] text-white shadow-2xl hover:scale-105 transition-all"
                 asChild
               >
                 <a href="#contato" className="flex items-center gap-2">
@@ -130,225 +215,261 @@ function HeroSection() {
                   <ArrowRight className="h-5 w-5" />
                 </a>
               </Button>
-              <Button 
+              <Button
                 size="lg"
                 variant="outline"
-                className="h-14 px-8 text-base font-semibold rounded-full border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
+                className="h-14 px-8 text-base font-bold rounded-full border-white/20 text-white hover:bg-white/10"
                 asChild
               >
-                <a 
+                <a
                   href="https://wa.me/551151943839?text=Olá! Gostaria de agendar uma reunião sobre o ProsindWeb."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2"
                 >
                   <MessageCircle className="h-5 w-5" />
-                  Agendar Reunião
+                  Falar no WhatsApp
                 </a>
               </Button>
             </div>
+
+            {/* Trust badges */}
+            <div className="flex flex-wrap gap-6 text-sm text-white/40">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-[hsl(0,85%,55%)]" />
+                <span>Dados protegidos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-[hsl(215,85%,60%)]" />
+                <span>100% na nuvem</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <HeadphonesIcon className="h-4 w-4 text-[hsl(0,70%,55%)]" />
+                <span>Suporte dedicado</span>
+              </div>
+            </div>
           </div>
 
-          {/* Right - Dashboard Image */}
-          <div className="order-1 lg:order-2 relative">
-            <div className="relative z-10">
-              <img 
-                src={sindicalHeroDashboard} 
-                alt="ProsindWeb - Dashboard de Gestão Sindical mostrando gráficos, relatórios e controle de associados" 
-                className="w-full h-auto drop-shadow-2xl transform lg:scale-110 lg:translate-x-8"
+          {/* Dashboard Image — 7 cols */}
+          <div className="lg:col-span-7 order-1 lg:order-2 relative">
+            <div className="relative">
+              {/* Glow behind image */}
+              <div className="absolute inset-0 bg-[hsl(215,85%,40%)] opacity-10 blur-3xl rounded-3xl scale-110" />
+              <img
+                src={sindicalHeroDashboard}
+                alt="ProsindWeb - Dashboard de Gestão Sindical"
+                className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10"
                 loading="eager"
               />
             </div>
           </div>
         </div>
       </div>
-
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-white/80" />
     </section>
   );
 }
 
-// ─── About Section ──────────────────────────────────────────────────
-function AboutSection() {
-  return (
-    <section id="sobre" className="py-24 lg:py-32 bg-white">
-      <div className="container">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold tracking-wider mb-6">
-              SOBRE O SISTEMA
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            O que é o{" "}
-            <span className="text-[hsl(215,85%,50%)]">
-              ProsindWeb
-            </span>?
-            </h2>
-            <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">ProsindWeb é um software desenvolvido para Gerenciamento de Entidades</strong>, com a proposta de informatizar e facilitar o dia a dia com tecnologia avançada. <strong className="text-gray-900">Incorporando todos os departamentos, subsedes e escritórios regionais</strong>.
-            </p>
-            <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              O <strong className="text-gray-900">ProsindWeb é composto por Módulos completos</strong> e configuráveis, integrados entre si. Novas versões são disponibilizadas sem custos adicionais.
-            </p>
-            <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              O ProsindWeb é um software que <strong className="text-gray-900">aumenta, em média, 45% da sua arrecadação</strong> através da redução de custos operacionais e economia de tempo em processos.
-            </p>
-            <Button 
-              size="lg"
-              className="h-14 px-8 rounded-full font-semibold bg-[hsl(215,85%,50%)] hover:bg-[hsl(215,85%,42%)] text-white"
-              asChild
-            >
-              <a href="#contato" className="flex items-center gap-2">
-                Agendar Reunião
-                <ArrowRight className="h-5 w-5" />
-              </a>
-            </Button>
-          </div>
+// ─── Social Proof Bar ───────────────────────────────────────────
+function SocialProofBar() {
+  const stats = [
+    { value: "500+", label: "Entidades" },
+    { value: "98%", label: "Retenção" },
+    { value: "45%", label: "Mais Arrecadação" },
+    { value: "10+", label: "Anos no Mercado" },
+  ];
 
-          <div className="relative">
-            <div className="bg-gray-50 rounded-3xl p-10 border border-gray-200 shadow-xl">
-              <div className="grid grid-cols-2 gap-5">
-                {[
-                   { icon: Building2, label: "Gestão de Empresas", desc: "Cadastro completo", color: "bg-[hsl(0,85%,50%)]" },
-                   { icon: Users, label: "Cadastro de Sócios", desc: "Associados e dependentes", color: "bg-[hsl(215,85%,50%)]" },
-                   { icon: Receipt, label: "Contribuições", desc: "Boletos e cobranças", color: "bg-[hsl(0,75%,50%)]" },
-                   { icon: PiggyBank, label: "Financeiro", desc: "Receitas e despesas", color: "bg-[hsl(215,70%,40%)]" },
-                   { icon: Handshake, label: "Negociações", desc: "Acordos e parcelamentos", color: "bg-[hsl(0,80%,50%)]" },
-                   { icon: FileBarChart, label: "Relatórios", desc: "Gerenciais e fiscais", color: "bg-[hsl(215,50%,40%)]" },
-                ].map((item, i) => (
-                  <div key={i} className="flex flex-col items-center p-5 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                    <div className={`w-12 h-12 rounded-xl ${item.color} flex items-center justify-center mb-3`}>
-                      <item.icon className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
-                    <span className="text-xs text-gray-500 text-center mt-1">{item.desc}</span>
-                  </div>
-                ))}
+  return (
+    <section className="bg-white border-b border-gray-100">
+      <div className="container py-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((s, i) => (
+            <div key={i} className="text-center">
+              <div className="text-3xl md:text-4xl font-black text-[hsl(215,85%,25%)]">
+                {s.value}
               </div>
+              <div className="text-sm text-gray-500 font-medium mt-1">{s.label}</div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-// ─── Modules Section (Alternating Layout like GERSIN) ───────────────
+// ─── About Section ──────────────────────────────────────────────
+function AboutSection() {
+  const features = [
+    { icon: Building2, title: "Gestão de Empresas", desc: "Cadastro completo com CNPJ" },
+    { icon: Users, title: "Sócios e Dependentes", desc: "Carteirinha digital e portal" },
+    { icon: Receipt, title: "Contribuições", desc: "Boletos e cobranças em lote" },
+    { icon: PiggyBank, title: "Financeiro", desc: "Receitas, despesas e fluxo" },
+    { icon: Handshake, title: "Negociações", desc: "Acordos e parcelamentos" },
+    { icon: FileBarChart, title: "Relatórios", desc: "Gerenciais e fiscais" },
+  ];
+
+  return (
+    <section id="sobre" className="py-24 lg:py-32 bg-white">
+      <div className="container">
+        <div className="max-w-3xl mx-auto text-center mb-20">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-[hsl(215,85%,95%)] text-[hsl(215,85%,35%)] text-xs font-bold tracking-wider uppercase mb-6">
+            Sobre o Sistema
+          </span>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight mb-6">
+            Tudo que sua entidade precisa.{" "}
+            <span className="text-[hsl(0,85%,50%)]">Num só lugar.</span>
+          </h2>
+          <p className="text-lg text-gray-500 leading-relaxed">
+            O ProsindWeb é um software completo para{" "}
+            <strong className="text-gray-800">gerenciamento de entidades sindicais</strong>,
+            incorporando todos os departamentos, subsedes e escritórios regionais.
+            Em média, nossos clientes aumentam <strong className="text-gray-800">45% da arrecadação</strong>.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((f, i) => (
+            <div
+              key={i}
+              className="group relative p-8 rounded-2xl border border-gray-200 bg-white hover:border-[hsl(215,85%,50%)] hover:shadow-xl transition-all duration-300"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-[hsl(215,85%,25%)] flex items-center justify-center mb-5 group-hover:bg-[hsl(0,85%,50%)] transition-colors duration-300">
+                <f.icon className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{f.title}</h3>
+              <p className="text-gray-500">{f.desc}</p>
+              <ChevronRight className="absolute top-8 right-8 h-5 w-5 text-gray-300 group-hover:text-[hsl(0,85%,50%)] transition-colors" />
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center mt-12">
+          <Button
+            size="lg"
+            className="h-14 px-10 rounded-full font-bold bg-[hsl(215,85%,25%)] hover:bg-[hsl(215,85%,20%)] text-white"
+            asChild
+          >
+            <a href="#contato" className="flex items-center gap-2">
+              Agendar Reunião
+              <ArrowRight className="h-5 w-5" />
+            </a>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Modules Section — Stacked Cards ────────────────────────────
 const modules = [
   {
     icon: Receipt,
     title: "Arrecadação",
-    description: "Cadastros, emissão de boletos e controle financeiro. Crucial para a transformação de resultados da Entidade. Geração em lote, integração bancária e controle de inadimplência automatizado.",
-    color: "bg-[hsl(0,85%,50%)]",
-    highlights: ["Emissão de boletos em lote", "Integração bancária", "Controle de inadimplência", "Relatórios de arrecadação"],
+    description:
+      "Emissão de boletos em lote, integração bancária, controle de inadimplência automatizado e relatórios detalhados de arrecadação.",
+    highlights: ["Boletos em lote", "Integração bancária", "Inadimplência", "Relatórios"],
+    accent: "bg-[hsl(0,85%,50%)]",
   },
   {
     icon: PiggyBank,
     title: "Contas a Pagar e Receber",
-    description: "Controle eficaz de convênios, guias e pagamentos, proporcionando gestão financeira mais precisa e transparente para toda a entidade.",
-    color: "bg-[hsl(215,85%,50%)]",
-    highlights: ["Controle de vencimentos", "Categorização automática", "Fluxo de aprovações", "Alertas de pagamento"],
+    description:
+      "Controle de convênios, guias e pagamentos com categorização automática e alertas de vencimento.",
+    highlights: ["Vencimentos", "Categorização", "Aprovações", "Alertas"],
+    accent: "bg-[hsl(215,85%,50%)]",
   },
   {
     icon: BarChart3,
     title: "Fluxo de Caixa",
-    description: "Controle total das entradas e saídas financeiras, com relatórios comparativos e ferramentas de análise para tomada de decisão.",
-    color: "bg-[hsl(215,70%,40%)]",
-    highlights: ["Visão consolidada", "Relatórios comparativos", "Projeções financeiras", "Múltiplos portadores"],
+    description:
+      "Visão consolidada de entradas e saídas com relatórios comparativos e projeções financeiras.",
+    highlights: ["Consolidado", "Comparativos", "Projeções", "Portadores"],
+    accent: "bg-[hsl(215,85%,25%)]",
   },
   {
     icon: Building2,
     title: "Gestão de Empresas",
-    description: "Cadastro completo de empresas contribuintes com dados fiscais, documentos, histórico de contribuições e relacionamento com escritórios contábeis.",
-    color: "bg-[hsl(0,75%,50%)]",
-    highlights: ["Cadastro com CNPJ", "Portal do contador", "Portal da empresa", "Histórico completo"],
+    description:
+      "Cadastro completo de empresas contribuintes com dados fiscais, portal do contador e histórico.",
+    highlights: ["CNPJ", "Portal contador", "Portal empresa", "Histórico"],
+    accent: "bg-[hsl(0,75%,45%)]",
   },
   {
     icon: Users,
-    title: "Gestão de Sócios e Dependentes",
-    description: "Administre o cadastro de associados com dependentes, carteirinhas digitais, controle de benefícios e comunicação direta.",
-    color: "bg-[hsl(0,80%,50%)]",
-    highlights: ["Carteirinha digital", "Dependentes e benefícios", "Portal do sócio", "Comunicação por WhatsApp"],
+    title: "Sócios e Dependentes",
+    description:
+      "Carteirinhas digitais, dependentes, benefícios, portal do sócio e comunicação via WhatsApp.",
+    highlights: ["Carteirinha", "Dependentes", "Portal sócio", "WhatsApp"],
+    accent: "bg-[hsl(0,85%,50%)]",
   },
   {
     icon: Handshake,
     title: "Negociações e Acordos",
-    description: "Facilite agendamentos e controle de negociações, parcelamentos de débitos e acordos de pagamento com empresas inadimplentes.",
-    color: "bg-[hsl(0,70%,45%)]",
-    highlights: ["Parcelamento de débitos", "Acordos automatizados", "Controle de parcelas", "Histórico de negociações"],
+    description:
+      "Parcelamento de débitos, acordos automatizados, controle de parcelas e histórico completo.",
+    highlights: ["Parcelamento", "Acordos", "Parcelas", "Histórico"],
+    accent: "bg-[hsl(215,70%,40%)]",
   },
   {
     icon: FileBarChart,
     title: "Relatórios Gerenciais",
-    description: "Relatórios profissionais para gestão interna, assembleias, auditorias e órgãos fiscalizadores. Exportação em PDF e Excel.",
-    color: "bg-[hsl(215,50%,35%)]",
-    highlights: ["Relatórios de assembleias", "Exportação PDF/Excel", "Dashboards visuais", "Indicadores de desempenho"],
+    description:
+      "Relatórios para assembleias, auditorias e órgãos fiscalizadores. Exportação PDF e Excel.",
+    highlights: ["Assembleias", "PDF/Excel", "Dashboards", "KPIs"],
+    accent: "bg-[hsl(215,85%,30%)]",
   },
   {
     icon: Shield,
     title: "Auditoria e Segurança",
-    description: "Todas as ações são registradas com rastreabilidade completa. Controle de permissões granular por perfil de usuário.",
-    color: "bg-[hsl(215,30%,30%)]",
-    highlights: ["Log de auditoria", "Permissões por perfil", "Rastreabilidade total", "Segurança de dados"],
+    description:
+      "Log completo de auditoria, permissões por perfil, rastreabilidade total e proteção de dados.",
+    highlights: ["Auditoria", "Permissões", "Rastreabilidade", "Segurança"],
+    accent: "bg-[hsl(215,50%,20%)]",
   },
 ];
 
 function ModulesSection() {
   return (
-    <section id="modulos" className="py-24 lg:py-32 bg-gray-50">
+    <section id="modulos" className="py-24 lg:py-32 bg-[hsl(215,30%,97%)]">
       <div className="container">
-        <div className="text-center mb-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold tracking-wider mb-6">
-            MÓDULOS DO SISTEMA
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Módulos de Gestão{" "}
-            <span className="text-[hsl(215,85%,50%)]">
-              Integrados
-            </span>
+        <div className="max-w-3xl mb-16">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-[hsl(0,85%,95%)] text-[hsl(0,85%,45%)] text-xs font-bold tracking-wider uppercase mb-6">
+            Módulos do Sistema
+          </span>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight mb-4">
+            8 módulos.{" "}
+            <span className="text-[hsl(215,85%,50%)]">Uma plataforma.</span>
           </h2>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            Conheça cada módulo que compõe o sistema mais completo para gestão de entidades sindicais.
+          <p className="text-lg text-gray-500">
+            Cada módulo foi projetado para resolver um problema real da gestão sindical.
           </p>
         </div>
 
-        <div className="space-y-8">
+        <div className="grid md:grid-cols-2 gap-6">
           {modules.map((mod, i) => (
             <div
               key={i}
-              className={`flex flex-col ${i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-8 bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group`}
+              className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
             >
-              {/* Icon/Visual side */}
-              <div className={`lg:w-2/5 ${mod.color} p-10 lg:p-16 flex flex-col items-center justify-center text-center min-h-[280px]`}>
-                <mod.icon className="h-16 w-16 text-white mb-4 group-hover:scale-110 transition-transform duration-500" />
-                <h3 className="text-2xl lg:text-3xl font-bold text-white">{mod.title}</h3>
-              </div>
-
-              {/* Content side */}
-              <div className="lg:w-3/5 p-8 lg:p-12 flex flex-col justify-center">
-                <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                  {mod.description}
-                </p>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  {mod.highlights.map((h, j) => (
-                    <div key={j} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-[hsl(0,85%,50%)] flex-shrink-0" />
-                      <span className="text-gray-700">{h}</span>
-                    </div>
-                  ))}
+              <div className="p-8">
+                <div className="flex items-start gap-5 mb-5">
+                  <div className={`w-12 h-12 rounded-xl ${mod.accent} flex items-center justify-center flex-shrink-0`}>
+                    <mod.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{mod.title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">{mod.description}</p>
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button 
-                    size="sm"
-                    className="rounded-full font-semibold bg-[hsl(215,85%,50%)] hover:bg-[hsl(215,85%,42%)] text-white"
-                    asChild
-                  >
-                    <a href="#contato" className="flex items-center gap-2">
-                      Agendar Reunião
-                      <ChevronRight className="h-4 w-4" />
-                    </a>
-                  </Button>
+                <div className="flex flex-wrap gap-2">
+                  {mod.highlights.map((h, j) => (
+                    <span
+                      key={j}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-xs font-semibold text-gray-600"
+                    >
+                      <CheckCircle2 className="h-3 w-3 text-[hsl(0,85%,50%)]" />
+                      {h}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -359,62 +480,63 @@ function ModulesSection() {
   );
 }
 
-// ─── Stats Section ──────────────────────────────────────────────────
-function StatsSection() {
+// ─── Results Section — Dark ─────────────────────────────────────
+function ResultsSection() {
   return (
-    <section className="py-24 lg:py-32 bg-white">
+    <section id="resultados" className="py-24 lg:py-32 bg-[hsl(215,85%,12%)] text-white">
       <div className="container">
-        <div className="grid lg:grid-cols-2 gap-16">
-          {/* Left: counter stats */}
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold tracking-wider mb-6">
-              NÚMEROS QUE IMPRESSIONAM
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-12">
-              Resultados que{" "}
-              <span className="text-[hsl(215,85%,50%)]">
-                comprovam
-              </span>
+            <span className="inline-block px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/60 text-xs font-bold tracking-wider uppercase mb-6">
+              Resultados Comprovados
+            </span>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6">
+              Números que
+              <br />
+              <span className="text-[hsl(0,85%,55%)]">falam por si.</span>
             </h2>
+            <p className="text-lg text-white/50 mb-12 max-w-md">
+              Mais de uma década transformando a gestão de entidades sindicais em todo o Brasil.
+            </p>
 
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-10">
               {[
-                { end: 500, suffix: "+", label: "Entidades Atendidas", desc: "Sindicatos, federações e confederações confiam no sistema." },
-                { end: 98, suffix: "%", label: "Retenção de Clientes", desc: "Satisfação contínua e fidelidade de nossos parceiros." },
-                { end: 45, suffix: "%", label: "Aumento na Arrecadação", desc: "Média de crescimento na arrecadação das entidades." },
-                { end: 10, suffix: "+", label: "Anos de Experiência", desc: "Expertise consolidada em gestão sindical digital." },
-              ].map((stat, i) => (
-                <div key={i} className="text-left">
-                  <div className="text-4xl md:text-5xl font-bold mb-2 text-[hsl(215,85%,50%)]">
-                    <AnimatedCounter end={stat.end} suffix={stat.suffix} prefix={stat.end > 100 ? "+" : ""} />
+                { end: 500, suffix: "+", label: "Entidades", desc: "em todo o Brasil" },
+                { end: 98, suffix: "%", label: "Retenção", desc: "de clientes" },
+                { end: 45, suffix: "%", label: "Mais Receita", desc: "em média" },
+                { end: 10, suffix: "+", label: "Anos", desc: "de experiência" },
+              ].map((s, i) => (
+                <div key={i}>
+                  <div className="text-4xl md:text-5xl font-black text-white mb-1">
+                    <AnimatedCounter end={s.end} suffix={s.suffix} />
                   </div>
-                  <div className="font-bold text-gray-900 mb-1">{stat.label}</div>
-                  <div className="text-sm text-gray-500">{stat.desc}</div>
+                  <div className="font-bold text-white/80">{s.label}</div>
+                  <div className="text-sm text-white/40">{s.desc}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Right: coverage map stats */}
-          <div className="bg-[hsl(215,60%,97%)] rounded-3xl p-10 border border-gray-200 shadow-lg flex flex-col justify-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Nossa Abrangência</h3>
-            <p className="text-gray-500 mb-10">
-              Presentes em todo o território nacional, atendendo diversas Confederações, Federações, Sindicatos e Associações.
+          {/* Coverage bars */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-10">
+            <h3 className="text-2xl font-bold text-white mb-2">Abrangência Nacional</h3>
+            <p className="text-white/40 mb-10 text-sm">
+              Confederações, Federações, Sindicatos e Associações.
             </p>
             <div className="space-y-8">
               {[
-                { label: "Estados Brasileiros", pct: 99 },
-                { label: "Aumento de Arrecadação", pct: 48 },
-                { label: "Participação de Mercado", pct: 74 },
+                { label: "Cobertura Nacional", pct: 99, color: "bg-[hsl(0,85%,50%)]" },
+                { label: "Aumento de Arrecadação", pct: 48, color: "bg-[hsl(215,85%,50%)]" },
+                { label: "Participação de Mercado", pct: 74, color: "bg-white" },
               ].map((bar, i) => (
                 <div key={i}>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">{bar.label}</span>
-                    <span className="font-bold text-gray-900">{bar.pct}%</span>
+                    <span className="text-white/60">{bar.label}</span>
+                    <span className="font-bold text-white">{bar.pct}%</span>
                   </div>
-                  <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-1000 bg-[hsl(215,85%,50%)]"
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${bar.color}`}
                       style={{ width: `${bar.pct}%` }}
                     />
                   </div>
@@ -428,22 +550,25 @@ function StatsSection() {
   );
 }
 
-// ─── Testimonials Section ───────────────────────────────────────────
+// ─── Testimonials ───────────────────────────────────────────────
 const testimonials = [
   {
-    quote: "O ProsindWeb revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças. O suporte é excepcional e sempre disponível.",
+    quote:
+      "O ProsindWeb revolucionou nossa gestão. A arrecadação aumentou significativamente e temos controle total sobre as finanças.",
     name: "Maria Santos",
     role: "Diretora Administrativa",
     org: "SINDICOMÉRCIO",
   },
   {
-    quote: "Encontramos neste sistema uma forma de inovar com a arrecadação das contribuições. Um software que além de proporcionar economia de tempo e dinheiro, conta com equipe especializada na segurança dos dados sindicais.",
+    quote:
+      "Encontramos uma forma de inovar com a arrecadação. Um software que proporciona economia de tempo e conta com equipe especializada.",
     name: "Carlos Oliveira",
     role: "Assessor Técnico",
     org: "FECOMÉRCIO",
   },
   {
-    quote: "O sistema estabeleceu qualidade nas informações e padronização no atendimento. Contamos com um suporte competente e prestativo, que nos orienta inclusive na questão financeira.",
+    quote:
+      "O sistema estabeleceu qualidade nas informações e padronização no atendimento. Suporte competente e prestativo.",
     name: "Ana Ramos",
     role: "Gerente Administrativa",
     org: "SINCOMERCIÁRIOS",
@@ -452,38 +577,37 @@ const testimonials = [
 
 function TestimonialsSection() {
   return (
-    <section id="depoimentos" className="py-24 lg:py-32 bg-gray-50">
+    <section id="depoimentos" className="py-24 lg:py-32 bg-white">
       <div className="container">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold tracking-wider mb-6">
-            DEPOIMENTOS
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            O que dizem nossos{" "}
-            <span className="text-[hsl(215,85%,50%)]">
-              clientes
-            </span>
+          <span className="inline-block px-4 py-1.5 rounded-full bg-[hsl(215,85%,95%)] text-[hsl(215,85%,35%)] text-xs font-bold tracking-wider uppercase mb-6">
+            Depoimentos
+          </span>
+          <h2 className="text-4xl md:text-5xl font-black text-gray-900">
+            Quem usa, <span className="text-[hsl(0,85%,50%)]">recomenda.</span>
           </h2>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((t, i) => (
-            <div key={i} className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col">
-              <div className="flex gap-1 mb-6">
-                {[...Array(5)].map((_, j) => (
-                  <Star key={j} className="h-5 w-5 fill-amber-400 text-amber-400" />
-                ))}
+            <div
+              key={i}
+              className="relative p-8 rounded-2xl border border-gray-200 bg-white hover:shadow-xl transition-all duration-300"
+            >
+              {/* Quote mark */}
+              <div className="text-6xl font-serif text-[hsl(0,85%,50%)] opacity-20 leading-none mb-4">
+                "
               </div>
-              <p className="text-gray-600 leading-relaxed mb-8 flex-1 italic">
-                "{t.quote}"
-              </p>
+              <p className="text-gray-600 leading-relaxed mb-8">{t.quote}</p>
               <div className="flex items-center gap-4 pt-6 border-t border-gray-100">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-[hsl(215,85%,50%)]">
+                <div className="w-12 h-12 rounded-full bg-[hsl(215,85%,25%)] flex items-center justify-center text-white font-bold text-lg">
                   {t.name.charAt(0)}
                 </div>
                 <div>
                   <div className="font-bold text-gray-900">{t.name}</div>
-                  <div className="text-sm text-gray-500">{t.role} · {t.org}</div>
+                  <div className="text-sm text-gray-500">
+                    {t.role} · {t.org}
+                  </div>
                 </div>
               </div>
             </div>
@@ -494,33 +618,36 @@ function TestimonialsSection() {
   );
 }
 
-// ─── Audience Section ───────────────────────────────────────────────
+// ─── Audience Section ───────────────────────────────────────────
 function AudienceSection() {
+  const audiences = [
+    { icon: Users, title: "Sindicatos", desc: "De todas as categorias profissionais." },
+    { icon: Building2, title: "Federações", desc: "Estaduais e regionais." },
+    { icon: Layers, title: "Confederações", desc: "Gestão de grande escala." },
+    { icon: Scale, title: "Associações", desc: "Entidades que buscam modernização." },
+  ];
+
   return (
-    <section id="publico" className="py-24 lg:py-32 bg-white">
+    <section className="py-24 lg:py-32 bg-[hsl(215,30%,97%)]">
       <div className="container">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold tracking-wider mb-6">
-            PARA QUEM É
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Desenvolvido para{" "}
-            <span className="text-[hsl(215,85%,50%)]">
-              entidades sindicais
-            </span>
+          <span className="inline-block px-4 py-1.5 rounded-full bg-[hsl(0,85%,95%)] text-[hsl(0,85%,45%)] text-xs font-bold tracking-wider uppercase mb-6">
+            Para quem é
+          </span>
+          <h2 className="text-4xl md:text-5xl font-black text-gray-900">
+            Feito para{" "}
+            <span className="text-[hsl(215,85%,50%)]">entidades sindicais.</span>
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { icon: Users, title: "Sindicatos de Trabalhadores", desc: "Sindicatos de todas as categorias profissionais." },
-            { icon: Building2, title: "Federações", desc: "Federações estaduais e regionais." },
-            { icon: Layers, title: "Confederações", desc: "Gestão de grande escala e múltiplas entidades." },
-            { icon: Scale, title: "Associações de Classe", desc: "Entidades representativas que buscam modernização." },
-          ].map((a, i) => (
-            <div key={i} className="group text-center p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-transparent hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 transition-colors duration-300 bg-[hsl(215,85%,50%,0.1)]">
-                <a.icon className="h-8 w-8 text-[hsl(215,85%,50%)]" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {audiences.map((a, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl p-8 border border-gray-200 text-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[hsl(215,85%,25%)] mx-auto mb-5 flex items-center justify-center">
+                <a.icon className="h-8 w-8 text-white" />
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{a.title}</h3>
               <p className="text-sm text-gray-500">{a.desc}</p>
@@ -532,39 +659,45 @@ function AudienceSection() {
   );
 }
 
-// ─── CTA Section ────────────────────────────────────────────────────
+// ─── CTA Section ────────────────────────────────────────────────
 function CTASection() {
   return (
-    <section id="contato" className="py-24 lg:py-32 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[hsl(215,60%,96%)]" />
+    <section id="contato" className="py-24 lg:py-32 bg-[hsl(215,85%,12%)] relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[hsl(0,85%,50%)] opacity-[0.05] -translate-y-1/2 translate-x-1/3" />
 
       <div className="container relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Pronto para modernizar a gestão da sua entidade?
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
+            Pronto para
+            <br />
+            <span className="text-[hsl(0,85%,55%)]">transformar</span> sua entidade?
           </h2>
-          <p className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto">
-            Solicite uma demonstração gratuita e descubra como o ProsindWeb pode transformar a sua entidade.
+          <p className="text-lg text-white/50 mb-10 max-w-xl mx-auto">
+            Solicite uma demonstração gratuita e veja na prática como o ProsindWeb pode aumentar
+            sua arrecadação e simplificar a gestão.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
+            <Button
               size="lg"
-              className="h-14 px-8 rounded-full text-base font-semibold shadow-2xl hover:scale-105 transition-all bg-[hsl(215,85%,50%)] hover:bg-[hsl(215,85%,42%)] text-white"
+              className="h-14 px-10 rounded-full text-base font-bold shadow-2xl hover:scale-105 transition-all bg-[hsl(0,85%,50%)] hover:bg-[hsl(0,85%,42%)] text-white"
               asChild
             >
-              <a href="mailto:contato@prosindweb.com.br?subject=Demonstração ProsindWeb" className="flex items-center gap-2">
-                Solicitar demonstração
+              <a
+                href="mailto:contato@prosindweb.com.br?subject=Demonstração ProsindWeb"
+                className="flex items-center gap-2"
+              >
+                Solicitar Demonstração
                 <ArrowRight className="h-5 w-5" />
               </a>
             </Button>
-            <Button 
+            <Button
               size="lg"
               variant="outline"
-              className="h-14 px-8 rounded-full text-base font-semibold border-[hsl(215,85%,50%,0.3)] text-[hsl(215,85%,45%)] hover:bg-[hsl(215,85%,50%,0.08)]"
+              className="h-14 px-10 rounded-full text-base font-bold border-white/20 text-white hover:bg-white/10"
               asChild
             >
-              <a 
+              <a
                 href="https://wa.me/551151943839?text=Olá! Gostaria de agendar uma demonstração do ProsindWeb."
                 target="_blank"
                 rel="noopener noreferrer"
@@ -576,8 +709,8 @@ function CTASection() {
             </Button>
           </div>
 
-          <p className="mt-8 text-gray-400 text-sm">
-            Demonstração gratuita • Sem compromisso • Suporte em português
+          <p className="mt-8 text-white/30 text-sm">
+            Demonstração gratuita · Sem compromisso · Suporte em português
           </p>
         </div>
       </div>
@@ -585,115 +718,76 @@ function CTASection() {
   );
 }
 
-// ─── Header ─────────────────────────────────────────────────────────
-function SindicalHeader() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-sm">
-      <div className="container">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/sindical" className="flex items-center">
-            <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-10 w-auto" />
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-8">
-            {[
-              { href: "#sobre", label: "Sobre" },
-              { href: "#modulos", label: "Módulos" },
-              { href: "#depoimentos", label: "Depoimentos" },
-              { href: "#publico", label: "Para quem" },
-              { href: "#contato", label: "Contato" },
-            ].map((l) => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                {l.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild className="hidden sm:flex text-gray-500 hover:text-gray-900">
-              <Link to="/entidade-sindical">Área da Entidade</Link>
-            </Button>
-            <Button size="sm" className="rounded-full font-semibold bg-[hsl(215,85%,50%)] hover:bg-[hsl(215,85%,42%)] text-white" asChild>
-              <a href="#contato">Demonstração</a>
-            </Button>
-            <Button variant="ghost" size="icon" className="md:hidden text-gray-700" onClick={() => setMobileOpen(!mobileOpen)}>
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile menu */}
-        {mobileOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <nav className="flex flex-col gap-3">
-              {["Sobre", "Módulos", "Depoimentos", "Para quem", "Contato"].map((l) => (
-                <a key={l} href={`#${l.toLowerCase().replace(/\s/g, '')}`} 
-                  className="text-gray-500 hover:text-gray-900 px-3 py-2"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {l}
-                </a>
-              ))}
-              <Link to="/entidade-sindical" className="text-gray-500 hover:text-gray-900 px-3 py-2">
-                Área da Entidade
-              </Link>
-            </nav>
-          </div>
-        )}
-      </div>
-    </header>
-  );
-}
-
-// ─── Footer ─────────────────────────────────────────────────────────
+// ─── Footer ─────────────────────────────────────────────────────
 function SindicalFooter() {
   return (
-    <footer className="bg-gray-50 text-gray-700 py-16 border-t border-gray-200">
+    <footer className="bg-[hsl(215,85%,8%)] text-white/60 py-16">
       <div className="container">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
-            <div className="mb-4">
-              <img src={prosindwebLogo} alt="ProsindWeb - Sistema Web para Gestão Sindical" className="h-12 w-auto" />
-            </div>
-            <p className="text-gray-500 mb-6 max-w-md">
+            <img src={prosindwebLogo} alt="ProsindWeb" className="h-12 w-auto mb-4 brightness-0 invert" />
+            <p className="text-white/40 mb-6 max-w-sm">
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
             <div className="flex gap-3">
-              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
+              <a
+                href="https://wa.me/551151943839"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              >
                 <MessageCircle className="h-5 w-5" />
               </a>
-              <a href="mailto:contato@prosindweb.com.br"
-                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors text-gray-600">
+              <a
+                href="mailto:contato@prosindweb.com.br"
+                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              >
                 <Mail className="h-5 w-5" />
               </a>
             </div>
           </div>
 
           <div>
-            <h4 className="font-bold text-gray-900 mb-4">Contato</h4>
-            <ul className="space-y-3 text-gray-500">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(11) 5194-3839</li>
-              <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
-              <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-1 flex-shrink-0" />Salvador, Bahia - Brasil</li>
+            <h4 className="font-bold text-white mb-4">Contato</h4>
+            <ul className="space-y-3 text-white/40">
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                (11) 5194-3839
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                contato@prosindweb.com.br
+              </li>
+              <li className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
+                Salvador, Bahia - Brasil
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-gray-900 mb-4">Links</h4>
-            <ul className="space-y-3 text-gray-500">
-              <li><a href="#sobre" className="hover:text-gray-900 transition-colors">Sobre o Sistema</a></li>
-              <li><a href="#modulos" className="hover:text-gray-900 transition-colors">Módulos</a></li>
-              <li><a href="#depoimentos" className="hover:text-gray-900 transition-colors">Depoimentos</a></li>
-              <li><Link to="/politica-privacidade" className="hover:text-gray-900 transition-colors">Privacidade</Link></li>
-              <li><Link to="/termos-uso" className="hover:text-gray-900 transition-colors">Termos de Uso</Link></li>
+            <h4 className="font-bold text-white mb-4">Links</h4>
+            <ul className="space-y-3 text-white/40">
+              <li>
+                <a href="#sobre" className="hover:text-white transition-colors">Sobre</a>
+              </li>
+              <li>
+                <a href="#modulos" className="hover:text-white transition-colors">Módulos</a>
+              </li>
+              <li>
+                <a href="#depoimentos" className="hover:text-white transition-colors">Depoimentos</a>
+              </li>
+              <li>
+                <Link to="/politica-privacidade" className="hover:text-white transition-colors">Privacidade</Link>
+              </li>
+              <li>
+                <Link to="/termos-uso" className="hover:text-white transition-colors">Termos de Uso</Link>
+              </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 mt-12 pt-8 text-center text-gray-400 text-sm">
+        <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/30 text-sm">
           <p>© {new Date().getFullYear()} ProsindWeb - Todos os direitos reservados.</p>
         </div>
       </div>
@@ -701,18 +795,16 @@ function SindicalFooter() {
   );
 }
 
-// ─── Main Page ──────────────────────────────────────────────────────
+// ─── Main Page ──────────────────────────────────────────────────
 export default function SindicalLandingPage() {
   useEffect(() => {
     const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    const originalHref = favicon?.href || '/favicon.ico';
-    if (favicon) {
-      favicon.href = '/favicon-prosindweb.png';
-    }
-    document.title = 'ProsindWeb - Sistema de Gestão Sindical';
+    const originalHref = favicon?.href || "/favicon.ico";
+    if (favicon) favicon.href = "/favicon-prosindweb.png";
+    document.title = "ProsindWeb - Sistema de Gestão Sindical";
     return () => {
       if (favicon) favicon.href = originalHref;
-      document.title = 'ProSindWeb - Sistema de Gestão Sindical';
+      document.title = "ProSindWeb - Sistema de Gestão Sindical";
     };
   }, []);
 
@@ -721,9 +813,10 @@ export default function SindicalLandingPage() {
       <SindicalHeader />
       <main>
         <HeroSection />
+        <SocialProofBar />
         <AboutSection />
         <ModulesSection />
-        <StatsSection />
+        <ResultsSection />
         <TestimonialsSection />
         <AudienceSection />
         <CTASection />
