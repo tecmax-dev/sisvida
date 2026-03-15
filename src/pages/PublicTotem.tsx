@@ -170,7 +170,7 @@ export default function PublicTotem() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-primary flex flex-col items-center justify-center gap-4">
         <Smartphone className="h-16 w-16 text-white/50" />
         <div className="text-white text-2xl">{error}</div>
         <p className="text-white/70">Verifique se o link está correto</p>
