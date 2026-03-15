@@ -2517,7 +2517,8 @@ const updateData: Record<string, any> = {
             phone: phoneToUse, 
             message, 
             clinicId: currentClinic?.id,
-            type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder'
+            type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
+            appointmentId: directReplyEnabled ? appointment.id : undefined,
           },
         });
 
