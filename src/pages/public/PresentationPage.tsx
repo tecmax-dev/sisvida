@@ -496,7 +496,7 @@ export default function PresentationPage() {
             </div>
           </div>
 
-          <div className="no-break bg-gradient-to-br from-blue-800 to-indigo-900 rounded-lg p-4 text-white">
+          <div className="no-break bg-primary-dark rounded-lg p-4 text-white">
             <h3 className="text-lg print:text-base font-bold mb-3">Integrações Externas</h3>
             <div className="space-y-2">
               {[
