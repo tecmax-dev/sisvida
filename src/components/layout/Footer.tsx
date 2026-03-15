@@ -18,8 +18,7 @@ export function Footer() {
             <div className="mt-6 flex gap-3">
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                className="bg-primary/10"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 bg-primary/10"
                 aria-label="Instagram"
               >
                 <Instagram className="h-5 w-5 text-primary" />
