@@ -528,9 +528,9 @@ export default function ClinicPresentationPage() {
           ].map((plan, i) => (
             <div 
               key={i} 
-              className={`no-break rounded-lg overflow-hidden ${plan.highlight ? 'ring-2 ring-cyan-500 shadow-lg' : 'border border-gray-200'}`}
+              className={`no-break rounded-lg overflow-hidden ${plan.highlight ? 'ring-2 ring-primary shadow-lg' : 'border border-gray-200'}`}
             >
-              <div className={`bg-gradient-to-br ${plan.color} text-white p-4 text-center`}>
+              <div className={`${plan.solidColor} text-white p-4 text-center`}>
                 {plan.highlight && (
                   <span className="bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded mb-2 inline-block">
                     MAIS POPULAR
