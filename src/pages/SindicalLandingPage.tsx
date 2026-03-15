@@ -219,8 +219,7 @@ function HeroSection() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
-                className="h-14 px-8 text-base font-bold rounded-full border-white/20 text-white hover:bg-white/10"
+                className="h-14 px-8 text-base font-bold rounded-full border border-white/30 bg-transparent text-white hover:bg-white/10"
                 asChild
               >
                 <a
