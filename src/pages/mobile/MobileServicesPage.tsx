@@ -612,7 +612,7 @@ function ConveniosContent() {
           Voltar às categorias
         </Button>
 
-        <div className={`rounded-xl bg-gradient-to-r ${catInfo?.color || 'from-rose-500 to-pink-500'} p-4 text-white`}>
+        <div className="rounded-xl bg-primary p-4 text-white">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
               <IconComponent className="h-6 w-6" />
