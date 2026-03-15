@@ -26,6 +26,8 @@ import {
   Zap,
   TrendingUp,
   Lock,
+  ClipboardCheck,
+  Stethoscope,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
