@@ -2420,7 +2420,7 @@ const updateData: Record<string, any> = {
         toast({
           title: "Lembrete enviado",
           description: directReplyEnabled 
-            ? `Mensagem enviada para ${displayName}. Aguardando resposta SIM ou NÃO.`
+            ? `Mensagem enviada para ${displayName}. Aguardando confirmação por botões (ou resposta SIM/NÃO).`
             : `Mensagem enviada para ${displayName}.`,
         });
       } else {
