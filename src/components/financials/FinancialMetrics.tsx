@@ -107,8 +107,8 @@ export function FinancialMetrics({ clinicId }: FinancialMetricsProps) {
       value: metrics?.balance || 0,
       subtext: (metrics?.balance || 0) >= 0 ? "Resultado positivo" : "Resultado negativo",
       icon: DollarSign,
-      borderColor: "border-l-blue-500",
-      bgGradient: "bg-gradient-to-r from-blue-50/80 to-transparent dark:from-blue-950/30",
+      borderColor: "border-l-primary",
+      bgGradient: "bg-primary/5 dark:bg-primary/10",
       iconBg: "bg-blue-100 dark:bg-blue-900/50",
       iconColor: "text-blue-600 dark:text-blue-400",
       valueColor: (metrics?.balance || 0) >= 0 
