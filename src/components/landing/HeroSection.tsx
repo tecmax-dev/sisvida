@@ -82,7 +82,7 @@ className="btn-eclini-outline px-8 h-14 text-base"
           {/* Right Column - Hero Image with floating cards */}
           <div className="relative flex justify-center lg:justify-end">
             {/* Background decorative circle */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-primary/5 via-transparent to-cta/5 blur-3xl" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl" />
             
             {/* Main image container */}
             <div className="relative">
