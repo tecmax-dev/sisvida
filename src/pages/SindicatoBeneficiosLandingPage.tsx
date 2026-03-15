@@ -156,7 +156,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={familiaHero} alt="Família feliz protegida pelo sindicato" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0c4a42]/95 via-[#0c4a42]/80 to-[#0c4a42]/40" />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="max-w-2xl">
