@@ -429,7 +429,7 @@ export default function MemberPortal() {
               </form>
 
               <div className="text-center text-sm text-muted-foreground">
-                <a href="/app" className="text-emerald-600 hover:underline">
+                <a href="/app" className="text-primary hover:underline">
                   Primeiro acesso? Recuperar senha
                 </a>
               </div>
