@@ -520,7 +520,7 @@ export default function MemberPortal() {
 
         {/* Card Info */}
         {card && (
-          <Card className="mb-6 bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+          <Card className="mb-6 text-white" style={{ background: 'hsl(220 75% 22%)' }}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

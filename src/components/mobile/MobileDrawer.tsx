@@ -221,7 +221,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
                     : 'hover:bg-gray-100'
                 }`}
               >
-                <div className={`w-9 h-9 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center shadow-md`}>
+                <div className={`w-9 h-9 ${item.bgColor} rounded-xl flex items-center justify-center shadow-md`}>
                   <item.icon className="h-4 w-4 text-white" />
                 </div>
                 <span className={`text-[10px] font-medium ${item.isDestructive ? 'text-red-600' : 'text-gray-600'}`}>

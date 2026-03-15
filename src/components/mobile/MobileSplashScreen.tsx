@@ -109,7 +109,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
               initial={{ scale: 0, opacity: 0, rotate: 45 }}
               animate={{ scale: 1, opacity: 0.3, rotate: 0 }}
               transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-              className="absolute -bottom-24 -left-24 w-72 h-72 bg-gradient-to-tr from-teal-400 to-transparent rounded-full"
+              className="absolute -bottom-24 -left-24 w-72 h-72 bg-primary/25 rounded-full"
             />
 
             {/* Pulsing ring around logo area */}
