@@ -261,7 +261,7 @@ export default function SignatureAuthorizationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-100">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5">
         <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
       </div>
     );
