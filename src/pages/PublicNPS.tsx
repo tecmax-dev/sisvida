@@ -95,7 +95,7 @@ export default function PublicNPS() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
