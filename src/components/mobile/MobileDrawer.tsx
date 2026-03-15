@@ -164,7 +164,7 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-emerald-300 to-teal-400 flex items-center justify-center">
+                  <div className="w-full h-full bg-primary/60 flex items-center justify-center">
                     <UserCircle className="h-12 w-12 text-white/80" />
                   </div>
                 )}
