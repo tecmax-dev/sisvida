@@ -355,13 +355,13 @@ export default function MemberPortal() {
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="network" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <circle cx="50" cy="50" r="1.5" fill="currentColor" className="text-emerald-300" />
-                <circle cx="0" cy="0" r="1" fill="currentColor" className="text-emerald-300" />
-                <circle cx="100" cy="0" r="1" fill="currentColor" className="text-emerald-300" />
-                <circle cx="0" cy="100" r="1" fill="currentColor" className="text-emerald-300" />
-                <circle cx="100" cy="100" r="1" fill="currentColor" className="text-emerald-300" />
-                <line x1="50" y1="50" x2="0" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-emerald-300/50" />
-                <line x1="50" y1="50" x2="100" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-emerald-300/50" />
+                <circle cx="50" cy="50" r="1.5" fill="currentColor" className="text-primary/50" />
+                <circle cx="0" cy="0" r="1" fill="currentColor" className="text-primary/50" />
+                <circle cx="100" cy="0" r="1" fill="currentColor" className="text-primary/50" />
+                <circle cx="0" cy="100" r="1" fill="currentColor" className="text-primary/50" />
+                <circle cx="100" cy="100" r="1" fill="currentColor" className="text-primary/50" />
+                <line x1="50" y1="50" x2="0" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-primary/30" />
+                <line x1="50" y1="50" x2="100" y2="0" stroke="currentColor" strokeWidth="0.3" className="text-primary/30" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#network)" />
