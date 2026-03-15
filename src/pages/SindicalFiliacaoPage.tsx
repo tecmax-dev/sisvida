@@ -575,13 +575,13 @@ export default function SindicalFiliacaoPage() {
 
   if (!sindicato) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md p-8 text-center shadow-xl border-0">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-            <AlertCircle className="h-10 w-10 text-amber-600" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-warning/10 flex items-center justify-center">
+            <AlertCircle className="h-10 w-10 text-warning" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Sindicato não encontrado</h2>
-          <p className="text-gray-600">O link de acesso está incorreto ou o sindicato não está disponível no momento.</p>
+          <h2 className="text-2xl font-bold text-foreground mb-3">Sindicato não encontrado</h2>
+          <p className="text-muted-foreground">O link de acesso está incorreto ou o sindicato não está disponível no momento.</p>
         </Card>
       </div>
     );
