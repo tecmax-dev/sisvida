@@ -119,6 +119,56 @@ async function sendWhatsAppWithImage(
   }
 }
 
+// Send text message via Whazing API as fallback when Evolution is down
+async function sendWhatsAppViaWhazing(
+  phone: string,
+  message: string
+): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[whazing-fallback] Whazing not configured, cannot send text');
+    return false;
+  }
+
+  try {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) {
+      cleanPhone = '55' + cleanPhone;
+    }
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[whazing-fallback] Sending text message to ${cleanPhone}`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "text",
+          body: { text: message }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[whazing-fallback] Error:', response.status, responseText);
+      return false;
+    }
+    console.log('[whazing-fallback] Text sent successfully:', responseText.substring(0, 200));
+    return true;
+  } catch (error) {
+    console.error('[whazing-fallback] Exception:', error);
+    return false;
+  }
+}
+
 // Send interactive buttons via Whazing API (WhatsApp Business)
 async function sendConfirmationButtons(
   phone: string,
@@ -167,7 +217,8 @@ async function sendConfirmationButtons(
       console.error('[reminder-buttons] Error:', errorText);
       return false;
     }
-    console.log('[reminder-buttons] Buttons sent successfully');
+    const responseText = await response.text();
+    console.log('[reminder-buttons] Buttons sent successfully:', responseText.substring(0, 200));
     return true;
   } catch (error) {
     console.error('[reminder-buttons] Exception:', error);
