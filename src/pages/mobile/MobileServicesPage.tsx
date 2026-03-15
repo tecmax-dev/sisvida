@@ -629,7 +629,7 @@ function ConveniosContent() {
             <Card key={conv.id} className="border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-gradient-to-r ${catInfo?.color || 'from-rose-500 to-pink-500'} bg-opacity-10`}>
+                  <div className="p-2 rounded-lg bg-primary/10">
                     <IconComponent className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1">
