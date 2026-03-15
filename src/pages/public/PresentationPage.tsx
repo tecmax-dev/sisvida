@@ -478,7 +478,7 @@ export default function PresentationPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="no-break bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 text-white">
+          <div className="no-break bg-foreground rounded-lg p-4 text-white">
             <h3 className="text-lg print:text-base font-bold mb-3">Volume de Código</h3>
             <div className="space-y-2">
               {[
