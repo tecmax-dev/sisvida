@@ -253,18 +253,9 @@ function HeroSection() {
             </div>
           </div>
 
-          {/* Dashboard Image — 7 cols */}
+          {/* Dashboard Carousel — 7 cols */}
           <div className="lg:col-span-7 order-1 lg:order-2 relative">
-            <div className="relative">
-              {/* Glow behind image */}
-              <div className="absolute inset-0 bg-[hsl(215,85%,40%)] opacity-10 blur-3xl rounded-3xl scale-110" />
-              <img
-                src={sindicalHeroDashboard}
-                alt="ProsindWeb - Dashboard de Gestão Sindical"
-                className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10"
-                loading="eager"
-              />
-            </div>
+            <HeroCarousel />
           </div>
         </div>
       </div>
