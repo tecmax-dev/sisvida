@@ -249,7 +249,7 @@ export default function NegotiationsListTab({
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25">
+              <div className="p-3 rounded-xl bg-warning shadow-lg">
                 <Clock className="h-6 w-6 text-white" />
               </div>
               <div>
