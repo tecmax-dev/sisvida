@@ -198,7 +198,7 @@ const ClinicCard = ({
           ? "bg-destructive" 
           : status === 'maintenance' 
           ? "bg-warning" 
-          : "bg-gradient-to-r from-primary to-primary-glow"
+          : "bg-primary"
       }`} />
       
       {/* Header */}
