@@ -216,7 +216,7 @@ export default function ProfessionalAuth() {
       </div>
 
       {/* Right Panel - Visual */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
+      <div className="hidden lg:flex lg:flex-1 bg-primary relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-white/5 rounded-full blur-3xl" />

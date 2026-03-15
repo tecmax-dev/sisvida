@@ -474,7 +474,7 @@ export function DashboardLayout() {
             )}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
                   <span className="text-primary-foreground font-bold text-sm">E</span>
                 </div>
               </div>
@@ -565,11 +565,11 @@ export function DashboardLayout() {
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mb-2",
-                  "bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                  "border border-amber-400/30 text-amber-100 hover:text-white"
+                  "bg-cta/15 hover:bg-cta/25",
+                  "border border-cta/30 text-sidebar-foreground hover:text-white"
                 )}
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-cta flex items-center justify-center shadow-sm">
                   <Building2 className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex flex-col">
@@ -588,8 +588,8 @@ export function DashboardLayout() {
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
                       "flex items-center justify-center p-2 rounded-lg transition-colors mb-2",
-                      "bg-gradient-to-br from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30",
-                      "border border-amber-400/30"
+                      "bg-cta/15 hover:bg-cta/25",
+                      "border border-cta/30"
                     )}
                   >
                     <Building2 className="h-5 w-5 text-amber-200" />

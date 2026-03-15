@@ -654,7 +654,7 @@ export default function SindicalFiliacaoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
+    <div className="min-h-screen bg-background">
       {/* Modern Header */}
       <header className="bg-white/80 backdrop-blur-lg border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -668,7 +668,7 @@ export default function SindicalFiliacaoPage() {
                   className="h-14 w-auto object-contain"
                 />
               ) : (
-                <div className="h-14 w-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                <div className="h-14 w-14 bg-primary rounded-xl flex items-center justify-center shadow-lg">
                   <Building2 className="h-7 w-7 text-white" />
                 </div>
               )}
@@ -706,7 +706,7 @@ export default function SindicalFiliacaoPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
             {/* Welcome Card */}
-            <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-r from-emerald-500 to-teal-600">
+            <Card className="overflow-hidden border-0 shadow-lg bg-primary">
               <CardContent className="p-6 text-white">
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
@@ -1175,7 +1175,7 @@ export default function SindicalFiliacaoPage() {
                     </div>
 
                     {/* Employer Search */}
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                    <div className="bg-warning/5 rounded-xl p-4 border border-warning/20">
                       <div className="flex items-center gap-2 mb-3">
                         <Building2 className="h-4 w-4 text-amber-600" />
                         <span className="text-sm font-medium text-gray-700">Empresa onde trabalha</span>
@@ -1198,7 +1198,7 @@ export default function SindicalFiliacaoPage() {
 
                 {/* DEPENDENTES */}
                 <FormSection icon={Users} title="Dependentes" subtitle="Opcional - Adicione familiares" accentColor="pink">
-                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl p-4 border border-pink-100">
+                  <div className="bg-cta/5 rounded-xl p-4 border border-cta/20">
                     <DependentsList
                       dependents={dependents}
                       onChange={setDependents}
@@ -1313,7 +1313,7 @@ export default function SindicalFiliacaoPage() {
                             </Select>
 
                             {isPayrollDeduction && (
-                              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                              <div className="bg-success/5 rounded-xl p-4 border border-success/20">
                                 <div className="flex items-start gap-3">
                                   <div className="p-2 rounded-lg bg-emerald-100">
                                     <Check className="h-4 w-4 text-emerald-600" />
@@ -1340,7 +1340,7 @@ export default function SindicalFiliacaoPage() {
                 <FormSection icon={PenTool} title="Assinatura Digital" subtitle="Confirme sua filiação" accentColor="indigo">
                   <div className="space-y-6">
                     {/* Signature */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
+                    <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
                       <div className="flex items-center gap-2 mb-4">
                         <PenTool className="h-4 w-4 text-indigo-600" />
                         <span className="text-sm font-medium text-gray-700">Assine no campo abaixo</span>
@@ -1361,7 +1361,7 @@ export default function SindicalFiliacaoPage() {
                       name="aceite_lgpd"
                       render={({ field }) => (
                         <FormItem>
-                          <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-4 border border-gray-200">
+                          <div className="bg-muted/50 rounded-xl p-4 border border-border">
                             <div className="flex items-start gap-3">
                               <FormControl>
                                 <Checkbox
@@ -1400,7 +1400,7 @@ export default function SindicalFiliacaoPage() {
               <Button
                 type="submit"
                 disabled={submitting || cpfChecking || cpfExists}
-                className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 transition-all duration-300"
+                className="w-full h-14 text-lg font-semibold rounded-xl bg-primary hover:bg-primary-dark text-primary-foreground shadow-lg transition-all duration-300"
               >
                 {submitting ? (
                   <>

@@ -346,7 +346,7 @@ export default function PendingPayslipReviews() {
   return (
     <>
       <Card className="border-0 bg-card shadow-md overflow-hidden border-l-4 border-l-warning">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 bg-gradient-to-r from-warning/10 to-transparent border-b border-border/30">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 bg-warning/10 border-b border-border/30">
           <div className="space-y-1">
             <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
               <FileCheck className="h-5 w-5 text-warning" />

@@ -159,7 +159,7 @@ export default function PublicTotem() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex items-center justify-center">
+      <div className="min-h-screen bg-primary flex items-center justify-center">
         <div className="text-white text-xl flex items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin" />
           Carregando...
@@ -170,7 +170,7 @@ export default function PublicTotem() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-primary flex flex-col items-center justify-center gap-4">
         <Smartphone className="h-16 w-16 text-white/50" />
         <div className="text-white text-2xl">{error}</div>
         <p className="text-white/70">Verifique se o link está correto</p>
@@ -181,7 +181,7 @@ export default function PublicTotem() {
   // Ticket issued confirmation screen
   if (ticketIssued) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-600 to-green-500 flex flex-col items-center justify-center gap-8 p-8">
+      <div className="min-h-screen bg-success flex flex-col items-center justify-center gap-8 p-8">
         <CheckCircle2 className="h-24 w-24 text-white" />
         <div className="text-center">
           <div className="text-white/80 text-2xl mb-2">Sua senha é</div>
@@ -194,7 +194,7 @@ export default function PublicTotem() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex flex-col">
+    <div className="min-h-screen bg-primary flex flex-col">
       {/* Header */}
       <div className="p-8 text-center border-b border-white/10">
         {clinic?.logo_url ? (

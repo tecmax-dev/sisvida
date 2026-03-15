@@ -164,7 +164,7 @@ export default function PublicContributionValue() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Carregando...</p>
@@ -175,7 +175,7 @@ export default function PublicContributionValue() {
 
   if (error || !contribution) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -194,7 +194,7 @@ export default function PublicContributionValue() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 p-4 flex items-center justify-center">
+    <div className="min-h-screen bg-background p-4 flex items-center justify-center">
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center border-b pb-6">
           {contribution.clinic?.logo_url ? (

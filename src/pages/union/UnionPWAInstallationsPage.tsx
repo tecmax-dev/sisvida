@@ -164,7 +164,7 @@ export default function UnionPWAInstallationsPage() {
       {/* Header Compacto */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
+          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center shadow-md">
             <Download className="h-5 w-5 text-white" />
           </div>
           <div>

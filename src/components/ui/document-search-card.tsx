@@ -166,13 +166,13 @@ export function DocumentSearchCard({
     if (error) return "border-destructive bg-destructive/5";
     if (success) return "border-emerald-400 bg-emerald-50/50 dark:border-emerald-600 dark:bg-emerald-950/30";
     if (isValid === false) return "border-destructive/50 bg-destructive/5";
-    return "border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:border-blue-700 dark:bg-gradient-to-br dark:from-blue-950/40 dark:to-indigo-950/30";
+    return "border-primary/30 bg-primary/5 dark:border-primary/40 dark:bg-primary/10";
   };
 
   const getIconBgStyle = () => {
     if (error || isValid === false) return "bg-destructive/10";
     if (success) return "bg-emerald-100 dark:bg-emerald-900/50";
-    return "bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50";
+    return "bg-primary/10 dark:bg-primary/20";
   };
 
   const getIconColor = () => {

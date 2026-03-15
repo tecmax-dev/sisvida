@@ -69,7 +69,7 @@ export default function ClinicPresentationPage() {
           alt="Cover" 
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/90 via-cyan-800/80 to-teal-700/70" />
+        <div className="absolute inset-0 bg-black/70" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
@@ -103,7 +103,7 @@ export default function ClinicPresentationPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <div className="no-break bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-cyan-800 mb-2">Sobre a ProsindWeb</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
               A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
@@ -112,7 +112,7 @@ export default function ClinicPresentationPage() {
             </p>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-teal-50 to-teal-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-teal-800 mb-2">Visão Geral do Sistema</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
               O <strong>ProsindWeb Clínica</strong> é uma plataforma completa para gestão de clínicas médicas, 
@@ -137,7 +137,7 @@ export default function ClinicPresentationPage() {
             </div>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Diferenciais Competitivos</h3>
             <ul className="grid grid-cols-2 gap-2 text-gray-700 text-sm print:text-xs">
               <li className="flex items-start gap-2">
@@ -318,7 +318,7 @@ export default function ClinicPresentationPage() {
           ))}
         </div>
 
-        <div className="no-break bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg p-4 text-white mt-auto">
+        <div className="no-break bg-primary rounded-lg p-4 text-white mt-auto">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Integrações Disponíveis</h3>
           <div className="grid grid-cols-5 gap-2">
             {[
@@ -379,7 +379,7 @@ export default function ClinicPresentationPage() {
           </div>
         </div>
 
-        <div className="no-break bg-gradient-to-r from-cyan-600 to-teal-600 rounded-lg p-4 text-white">
+        <div className="no-break bg-primary rounded-lg p-4 text-white">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Segurança e Conformidade</h3>
           <div className="grid grid-cols-4 gap-2">
             {[
@@ -408,7 +408,7 @@ export default function ClinicPresentationPage() {
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="no-break">
-            <div className="bg-gradient-to-br from-cyan-600 to-cyan-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👔</span>
                 Para a Clínica
@@ -432,7 +432,7 @@ export default function ClinicPresentationPage() {
           </div>
 
           <div className="no-break">
-            <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary-dark rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👥</span>
                 Para os Pacientes
@@ -456,7 +456,7 @@ export default function ClinicPresentationPage() {
           </div>
         </div>
 
-        <div className="no-break bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg p-4 text-white">
+        <div className="no-break bg-cta rounded-lg p-4 text-white">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Resultados Esperados</h3>
           <div className="grid grid-cols-4 gap-2">
             {[
@@ -487,7 +487,7 @@ export default function ClinicPresentationPage() {
             {
               name: "Essencial",
               price: "R$ 197",
-              color: "from-gray-600 to-gray-700",
+              solidColor: "bg-muted-foreground",
               highlight: false,
               features: [
                 "Até 2 profissionais",
@@ -500,7 +500,7 @@ export default function ClinicPresentationPage() {
             {
               name: "Profissional",
               price: "R$ 297",
-              color: "from-cyan-600 to-teal-600",
+              solidColor: "bg-primary",
               highlight: true,
               features: [
                 "Até 5 profissionais",
@@ -514,7 +514,7 @@ export default function ClinicPresentationPage() {
             {
               name: "Premium",
               price: "R$ 497",
-              color: "from-purple-600 to-indigo-600",
+              solidColor: "bg-primary-dark",
               highlight: false,
               features: [
                 "Profissionais ilimitados",
@@ -528,9 +528,9 @@ export default function ClinicPresentationPage() {
           ].map((plan, i) => (
             <div 
               key={i} 
-              className={`no-break rounded-lg overflow-hidden ${plan.highlight ? 'ring-2 ring-cyan-500 shadow-lg' : 'border border-gray-200'}`}
+              className={`no-break rounded-lg overflow-hidden ${plan.highlight ? 'ring-2 ring-primary shadow-lg' : 'border border-gray-200'}`}
             >
-              <div className={`bg-gradient-to-br ${plan.color} text-white p-4 text-center`}>
+              <div className={`${plan.solidColor} text-white p-4 text-center`}>
                 {plan.highlight && (
                   <span className="bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded mb-2 inline-block">
                     MAIS POPULAR
@@ -563,7 +563,7 @@ export default function ClinicPresentationPage() {
       {/* PAGE 8 - CONTATO */}
       <div className="page-break print-page print:min-h-[277mm] flex flex-col relative overflow-hidden">
         <PageNumber current={8} total={8} variant="light" />
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900 via-teal-900 to-blue-900" />
+        <div className="absolute inset-0 bg-primary-dark" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">

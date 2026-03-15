@@ -209,7 +209,7 @@ export default function NegotiationsListTab({
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/25">
+              <div className="p-3 rounded-xl bg-primary shadow-lg">
                 <Handshake className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -249,7 +249,7 @@ export default function NegotiationsListTab({
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25">
+              <div className="p-3 rounded-xl bg-warning shadow-lg">
                 <Clock className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -269,7 +269,7 @@ export default function NegotiationsListTab({
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25">
+              <div className="p-3 rounded-xl bg-success shadow-lg">
                 <TrendingUp className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -284,7 +284,7 @@ export default function NegotiationsListTab({
         <Card className="md:col-span-2">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25">
+              <div className="p-3 rounded-xl bg-primary shadow-lg">
                 <DollarSign className="h-6 w-6 text-white" />
               </div>
               <div>

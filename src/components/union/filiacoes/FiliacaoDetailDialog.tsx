@@ -313,7 +313,7 @@ export function FiliacaoDetailDialog({
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-6">
             {/* Header Card */}
-            <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/5 rounded-lg p-4 border border-purple-500/20">
+            <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
               <div className="flex items-start gap-4">
                 {data.documento_foto_url ? (
                   <img 

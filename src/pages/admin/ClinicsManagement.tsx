@@ -198,7 +198,7 @@ const ClinicCard = ({
           ? "bg-destructive" 
           : status === 'maintenance' 
           ? "bg-warning" 
-          : "bg-gradient-to-r from-primary to-primary-glow"
+          : "bg-primary"
       }`} />
       
       {/* Header */}
@@ -209,7 +209,7 @@ const ClinicCard = ({
               ? "bg-destructive/10 text-destructive"
               : status === 'maintenance' 
               ? "bg-warning/10 text-warning" 
-              : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+              : "bg-primary/10 text-primary"
           }`}>
             {status === 'blocked' ? (
               <Ban className="h-6 w-6" />
@@ -902,7 +902,7 @@ export default function ClinicsManagement() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+            <div className="p-2 rounded-xl bg-primary/10">
               <Building2 className="h-6 w-6 text-primary" />
             </div>
             Gerenciar Clínicas
@@ -929,25 +929,25 @@ export default function ClinicsManagement() {
           icon={Building2} 
           label="Clínicas Ativas" 
           value={activeClinics}
-          color="bg-gradient-to-br from-primary to-primary-dark"
+          color="bg-primary"
         />
         <StatCard 
           icon={Stethoscope} 
           label="Total Profissionais" 
           value={totalProfessionals}
-          color="bg-gradient-to-br from-info to-info/80"
+          color="bg-info"
         />
         <StatCard 
           icon={Users} 
           label="Total Pacientes" 
           value={totalPatients}
-          color="bg-gradient-to-br from-success to-success/80"
+          color="bg-success"
         />
         <StatCard 
           icon={Calendar} 
           label="Total Agendamentos" 
           value={totalAppointments}
-          color="bg-gradient-to-br from-warning to-warning/80"
+          color="bg-warning"
         />
       </div>
 
@@ -1040,7 +1040,7 @@ export default function ClinicsManagement() {
                                   ? "bg-destructive/10 text-destructive" 
                                   : clinic.is_maintenance
                                     ? "bg-warning/10 text-warning"
-                                    : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+                                    : "bg-primary/10 text-primary"
                               }`}>
                                 {clinic.is_blocked ? (
                                   <Ban className="h-5 w-5" />

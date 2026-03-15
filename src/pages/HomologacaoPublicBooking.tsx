@@ -580,7 +580,7 @@ export default function HomologacaoPublicBooking() {
 
   if (loadingProfessional) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
+      <div className="min-h-screen bg-background p-4">
         <div className="max-w-2xl mx-auto space-y-6">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -593,7 +593,7 @@ export default function HomologacaoPublicBooking() {
 
   if (!professional || !professional.public_booking_enabled) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
@@ -612,7 +612,7 @@ export default function HomologacaoPublicBooking() {
   // Confirmation step
   if (step === 'confirmation' && createdAppointment) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
+      <div className="min-h-screen bg-background p-4">
         <div className="max-w-2xl mx-auto">
           <HomologacaoProtocolReceipt
             appointment={createdAppointment}
@@ -627,9 +627,9 @@ export default function HomologacaoPublicBooking() {
   const availableSlots = getAvailableSlots();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white py-8">
+      <div className="bg-primary text-primary-foreground py-8">
         <div className="max-w-2xl mx-auto px-4 text-center">
           {clinic?.logo_url ? (
             <img 

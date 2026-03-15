@@ -261,7 +261,7 @@ export default function SignatureAuthorizationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-100">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5">
         <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
       </div>
     );
@@ -269,7 +269,7 @@ export default function SignatureAuthorizationPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5 p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
@@ -287,7 +287,7 @@ export default function SignatureAuthorizationPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-primary/5 p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
@@ -309,7 +309,7 @@ export default function SignatureAuthorizationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 py-8 px-4">
+    <div className="min-h-screen bg-primary/5 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

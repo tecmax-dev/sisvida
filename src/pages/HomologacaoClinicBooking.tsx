@@ -84,7 +84,7 @@ export default function HomologacaoClinicBooking() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="min-h-screen bg-background">
         <div className="container max-w-4xl mx-auto py-8 px-4">
           <Skeleton className="h-32 w-full mb-6" />
           <Skeleton className="h-48 w-full" />
@@ -95,7 +95,7 @@ export default function HomologacaoClinicBooking() {
 
   if (clinicError || !clinic) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -116,11 +116,11 @@ export default function HomologacaoClinicBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
         <Card className="mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
+          <div className="bg-primary text-primary-foreground p-6">
             <div className="flex items-center gap-4">
               {clinic.logo_url ? (
                 <img 

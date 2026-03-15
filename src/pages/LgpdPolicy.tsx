@@ -9,7 +9,7 @@ export default function LgpdPolicy() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-16 lg:py-24 bg-gradient-to-b from-primary/5 to-background">
+        <section className="py-16 lg:py-24 bg-primary/5">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">

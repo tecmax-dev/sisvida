@@ -71,7 +71,7 @@ export default function PresentationPage() {
           alt="Cover" 
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-blue-800/80 to-emerald-700/70" />
+        <div className="absolute inset-0 bg-black/70" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-8 print:p-6">
           <div className="mb-6">
@@ -105,7 +105,7 @@ export default function PresentationPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <div className="no-break bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-blue-800 mb-2">Sobre a ProsindWeb</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed">
               A <strong>ProsindWeb</strong> é especializada no desenvolvimento de soluções 
@@ -114,7 +114,7 @@ export default function PresentationPage() {
             </p>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-primary/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-emerald-800 mb-2">Visão Geral do Projeto</h3>
             <p className="text-gray-700 text-sm print:text-xs leading-relaxed mb-3">
               O <strong>eCLINI</strong> é uma plataforma completa e integrada que unifica a gestão clínica 
@@ -139,7 +139,7 @@ export default function PresentationPage() {
             </div>
           </div>
 
-          <div className="no-break bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-4 print:p-3">
+          <div className="no-break bg-cta/10 rounded-lg p-4 print:p-3">
             <h3 className="text-lg print:text-base font-bold text-amber-800 mb-2">Objetivos da Apresentação</h3>
             <ul className="grid grid-cols-2 gap-2 text-gray-700 text-sm print:text-xs">
               <li className="flex items-start gap-2">
@@ -450,7 +450,7 @@ export default function PresentationPage() {
           </div>
         </div>
 
-        <div className="no-break bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 text-white">
+        <div className="no-break bg-primary rounded-lg p-4 text-white">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Segurança de Dados</h3>
           <div className="grid grid-cols-4 gap-2">
             {[
@@ -478,7 +478,7 @@ export default function PresentationPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="no-break bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 text-white">
+          <div className="no-break bg-foreground rounded-lg p-4 text-white">
             <h3 className="text-lg print:text-base font-bold mb-3">Volume de Código</h3>
             <div className="space-y-2">
               {[
@@ -496,7 +496,7 @@ export default function PresentationPage() {
             </div>
           </div>
 
-          <div className="no-break bg-gradient-to-br from-blue-800 to-indigo-900 rounded-lg p-4 text-white">
+          <div className="no-break bg-primary-dark rounded-lg p-4 text-white">
             <h3 className="text-lg print:text-base font-bold mb-3">Integrações Externas</h3>
             <div className="space-y-2">
               {[
@@ -515,7 +515,7 @@ export default function PresentationPage() {
           </div>
         </div>
 
-        <div className="no-break bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg p-4 text-white">
+        <div className="no-break bg-cta rounded-lg p-4 text-white">
           <h3 className="text-lg print:text-base font-bold mb-3 text-center">Funcionalidades Avançadas</h3>
           <div className="grid grid-cols-6 gap-2">
             {[
@@ -545,7 +545,7 @@ export default function PresentationPage() {
 
         <div className="grid grid-cols-2 gap-4 flex-1">
           <div className="no-break">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👔</span>
                 Para os Gestores
@@ -569,7 +569,7 @@ export default function PresentationPage() {
           </div>
 
           <div className="no-break">
-            <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-lg p-4 text-white h-full">
+            <div className="bg-primary-dark rounded-lg p-4 text-white h-full">
               <h3 className="text-lg print:text-base font-bold mb-3 flex items-center gap-2">
                 <span className="text-xl">👥</span>
                 Para os Usuários
@@ -636,7 +636,7 @@ export default function PresentationPage() {
       {/* PAGE 10 - CONTATO */}
       <div className="page-break print-page print:min-h-[277mm] flex flex-col relative overflow-hidden">
         <PageNumber current={10} total={10} variant="light" />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900" />
+        <div className="absolute inset-0 bg-primary-dark" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
           <div className="mb-6">

@@ -165,7 +165,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
                   initial={{ x: "-100%", opacity: 0 }}
                   animate={{ x: "200%", opacity: [0, 0.5, 0] }}
                   transition={{ duration: 1.5, delay: 1, ease: "easeInOut" }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12"
+                  className="absolute inset-0 bg-white/20 skew-x-12"
                 />
                 <img 
                   src={logoUrl} 

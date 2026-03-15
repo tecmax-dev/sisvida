@@ -251,7 +251,7 @@ export default function PublicPanel() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-foreground flex items-center justify-center">
         <div className="text-white text-xl">Carregando painel...</div>
       </div>
     );
@@ -259,7 +259,7 @@ export default function PublicPanel() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-foreground flex flex-col items-center justify-center gap-4">
         <Monitor className="h-16 w-16 text-slate-500" />
         <div className="text-white text-2xl">{error}</div>
         <p className="text-slate-400">Verifique se o link está correto</p>
@@ -268,7 +268,7 @@ export default function PublicPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col">
+    <div className="min-h-screen bg-foreground flex flex-col">
       {/* Header */}
       <div className="p-6 flex items-center justify-between border-b border-slate-700">
         <div className="flex items-center gap-4">

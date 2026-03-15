@@ -74,10 +74,10 @@ const benefits: Benefit[] = [
 ];
 
 const categoryConfig = {
-  saude: { label: "Saúde", icon: Heart, color: "from-red-500 to-rose-600", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", image: familiaSaude, imageAlt: "Família sendo atendida em consulta médica" },
-  estudos: { label: "Educação", icon: GraduationCap, color: "from-blue-500 to-indigo-600", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", image: familiaEducacao, imageAlt: "Jovens comemorando matrícula na faculdade" },
-  estetica: { label: "Estética & Beleza", icon: Sparkles, color: "from-pink-500 to-fuchsia-600", bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200", image: familiaEstetica, imageAlt: "Mulher sorrindo em clínica de estética" },
-  juridico: { label: "Jurídico", icon: Scale, color: "from-amber-500 to-orange-600", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", image: null, imageAlt: "" },
+  saude: { label: "Saúde", icon: Heart, solidColor: "bg-cta", bg: "bg-cta/5", text: "text-cta", border: "border-cta/20", image: familiaSaude, imageAlt: "Família sendo atendida em consulta médica" },
+  estudos: { label: "Educação", icon: GraduationCap, solidColor: "bg-primary", bg: "bg-primary/5", text: "text-primary", border: "border-primary/20", image: familiaEducacao, imageAlt: "Jovens comemorando matrícula na faculdade" },
+  estetica: { label: "Estética & Beleza", icon: Sparkles, solidColor: "bg-cta", bg: "bg-cta/5", text: "text-cta", border: "border-cta/20", image: familiaEstetica, imageAlt: "Mulher sorrindo em clínica de estética" },
+  juridico: { label: "Jurídico", icon: Scale, solidColor: "bg-primary", bg: "bg-primary/5", text: "text-primary", border: "border-primary/20", image: null, imageAlt: "" },
 };
 
 const testimonials = [
@@ -156,7 +156,7 @@ export default function SindicatoBeneficiosLandingPage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img src={familiaHero} alt="Família feliz protegida pelo sindicato" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0c4a42]/95 via-[#0c4a42]/80 to-[#0c4a42]/40" />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="max-w-2xl">
@@ -279,7 +279,7 @@ export default function SindicatoBeneficiosLandingPage() {
                       </div>
                       <div className={isReversed ? "md:[direction:ltr]" : ""}>
                         <div className="flex items-center gap-3 mb-4">
-                          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
+                          <div className={`w-12 h-12 rounded-xl ${config.solidColor} flex items-center justify-center shadow-md`}>
                             <config.icon className="w-6 h-6 text-white" />
                           </div>
                           <div>
@@ -311,7 +311,7 @@ export default function SindicatoBeneficiosLandingPage() {
                   {/* If no image (juridico), show inline header */}
                   {!config.image && (
                     <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
+                      <div className={`w-12 h-12 rounded-xl ${config.solidColor} flex items-center justify-center shadow-md`}>
                         <config.icon className="w-6 h-6 text-white" />
                       </div>
                       <div>

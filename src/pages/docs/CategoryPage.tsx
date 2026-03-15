@@ -57,14 +57,14 @@ export default function CategoryPage() {
   return (
     <div className="space-y-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20">
+      <div className="relative overflow-hidden rounded-2xl bg-primary/5 border border-primary/20">
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-20 hidden lg:block">
           <img 
             src={categoryImage} 
             alt={category.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background to-transparent" />
+          <div className="absolute inset-0 bg-background/60" />
         </div>
         
         <div className="relative z-10 p-6 lg:p-8">

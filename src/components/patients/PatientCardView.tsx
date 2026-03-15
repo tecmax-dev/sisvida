@@ -73,7 +73,7 @@ export function PatientCardView({
       <div className="w-full max-w-[360px] sm:max-w-sm bg-card rounded-2xl shadow-xl overflow-hidden border mx-auto">
         
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-4">
+        <div className="bg-primary px-5 py-4">
           <div className="flex items-center gap-3">
             {clinicLogo ? (
               <img 

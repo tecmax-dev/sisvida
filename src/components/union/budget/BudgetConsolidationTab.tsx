@@ -730,7 +730,7 @@ export function BudgetConsolidationTab({
       </Card>
 
       {/* Financial Health Summary */}
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+      <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Wallet className="h-4 w-4" />

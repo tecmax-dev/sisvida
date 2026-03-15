@@ -465,7 +465,7 @@ export default function UnionExpensesPage() {
 
       {/* Compact Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-slate-400 dark:border-l-slate-500 bg-gradient-to-r from-slate-50/80 dark:from-slate-900/50 to-transparent">
+        <Card className="border-l-4 border-l-muted-foreground bg-muted/30">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -480,7 +480,7 @@ export default function UnionExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-gradient-to-r from-amber-50/80 dark:from-amber-950/30 to-transparent">
+        <Card className="border-l-4 border-l-warning bg-warning/5">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -495,7 +495,7 @@ export default function UnionExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose-400 dark:border-l-rose-500 bg-gradient-to-r from-rose-50/80 dark:from-rose-950/30 to-transparent">
+        <Card className="border-l-4 border-l-destructive bg-destructive/5">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -510,7 +510,7 @@ export default function UnionExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-400 dark:border-l-emerald-500 bg-gradient-to-r from-emerald-50/80 dark:from-emerald-950/30 to-transparent">
+        <Card className="border-l-4 border-l-success bg-success/5">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>

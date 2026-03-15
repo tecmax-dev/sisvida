@@ -374,11 +374,11 @@ export function UnionSidebar() {
           to="/dashboard"
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
-            "bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30",
-            "border border-cyan-400/30 text-cyan-100 hover:text-white"
+            "bg-primary/15 hover:bg-primary/25",
+            "border border-primary/30 text-sidebar-foreground hover:text-white"
           )}
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
             <HeartPulse className="h-4 w-4 text-white" />
           </div>
           <div className="flex flex-col">

@@ -547,7 +547,7 @@ export default function Auth() {
       {/* Background decorativo sutil */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Gradiente de fundo */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
+        <div className="absolute inset-0 bg-primary/5" />
         
         {/* Círculos decorativos sutis */}
         <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/10 blur-3xl" />
@@ -913,7 +913,7 @@ export default function Auth() {
                   className="rounded-lg shadow-xl border-2 border-white/20"
                 />
                 {/* Brilho */}
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-transparent via-white/5 to-white/15 pointer-events-none" />
+                <div className="absolute inset-0 rounded-lg bg-white/10 pointer-events-none" />
               </div>
               
               {/* Card informativo */}

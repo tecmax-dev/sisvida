@@ -186,7 +186,7 @@ export function RealisticOdontogram({
       </div>
 
       {/* Odontogram Chart */}
-      <div className="bg-gradient-to-b from-slate-50 to-white rounded-xl border p-6 print:p-4">
+      <div className="bg-muted/30 rounded-xl border p-6 print:p-4">
         <h3 className="text-center text-lg font-semibold text-foreground mb-6">Odontograma</h3>
         
         {/* Upper Teeth */}

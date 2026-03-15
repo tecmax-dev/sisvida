@@ -176,7 +176,7 @@ export default function AjudaIndex() {
   return (
     <div className="space-y-12">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20 p-8 lg:p-12">
+      <div className="relative overflow-hidden rounded-3xl bg-primary/5 border border-primary/20 p-8 lg:p-12">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="relative z-10 max-w-2xl">
           <Badge className="mb-4 bg-primary/20 text-primary border-0">
@@ -285,7 +285,7 @@ export default function AjudaIndex() {
                         alt={category.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-background/60 to-transparent" />
+                      <div className="absolute inset-0 bg-black/40" />
                     </div>
                     
                     {/* Content */}
@@ -338,7 +338,7 @@ export default function AjudaIndex() {
                     alt={category.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                  <div className="absolute inset-0 bg-black/50" />
                   <div className={`absolute bottom-3 left-3 w-10 h-10 rounded-lg ${category.bgColor} border backdrop-blur-sm flex items-center justify-center`}>
                     <Icon className={`h-5 w-5 ${category.color}`} />
                   </div>
@@ -398,7 +398,7 @@ export default function AjudaIndex() {
       </div>
 
       {/* Help Options */}
-      <div className="bg-gradient-to-br from-primary/5 to-background rounded-2xl border border-primary/20 p-8">
+      <div className="bg-primary/5 rounded-2xl border border-primary/20 p-8">
         <h2 className="text-xl font-semibold text-foreground mb-2 text-center">
           Precisa de mais ajuda?
         </h2>
