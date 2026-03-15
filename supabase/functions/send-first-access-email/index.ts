@@ -27,7 +27,7 @@ const generateEmailHtml = (firstName: string, token: string, logoUrl?: string): 
 <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
 <tr>
-<td style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 30px; text-align: center;">
+<td style="background: #1e3a8a; padding: 40px 30px; text-align: center;">
 ${logoSection}
 <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">SECMI</h1>
 <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">Sindicato dos Comerciarios</p>
