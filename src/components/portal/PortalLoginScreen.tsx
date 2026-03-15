@@ -41,17 +41,9 @@ export function PortalLoginScreen({
   fields,
   helpText
 }: PortalLoginScreenProps) {
-  const gradientClass = variant === "accounting" 
-    ? "from-teal-600 to-cyan-600 shadow-teal-500/25"
-    : "from-amber-500 to-orange-600 shadow-amber-500/25";
+  const buttonClass = "bg-primary hover:bg-primary-dark shadow-md";
 
-  const focusClass = variant === "accounting"
-    ? "focus:border-teal-500 focus:ring-teal-500"
-    : "focus:border-amber-500 focus:ring-amber-500";
-
-  const iconBgClass = variant === "accounting"
-    ? "from-teal-500 to-cyan-600"
-    : "from-amber-500 to-orange-600";
+  const focusClass = "focus:border-primary focus:ring-primary";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
