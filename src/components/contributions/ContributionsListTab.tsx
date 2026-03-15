@@ -505,7 +505,7 @@ export default function ContributionsListTab({
       </Tabs>
 
       {/* Enhanced Search Card */}
-      <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20 shadow-sm">
+      <Card className="border-2 border-warning/30 bg-warning/5 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Input with Icon */}
