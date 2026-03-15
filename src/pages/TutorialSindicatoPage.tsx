@@ -1195,7 +1195,7 @@ const TutorialSindicatoPage = () => {
         {/* CTA Section */}
         <section className="py-20">
           <div className="container mx-auto px-4">
-            <Card className="max-w-3xl mx-auto bg-gradient-to-r from-primary to-purple-600 border-0 text-white overflow-hidden relative">
+            <Card className="max-w-3xl mx-auto bg-primary border-0 text-primary-foreground overflow-hidden relative">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
               <CardContent className="p-8 md:p-12 text-center relative z-10">
                 <h2 className="text-3xl font-bold mb-4">
