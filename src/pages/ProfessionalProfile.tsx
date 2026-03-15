@@ -761,7 +761,7 @@ export default function ProfessionalProfile() {
 
   if (!clinic || !professional) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
