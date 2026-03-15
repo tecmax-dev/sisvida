@@ -226,7 +226,7 @@ function formatAppointmentReminder(
   // Local específico para Dr. Marcelo Aguiar e Dr. Jorge Avelar
   const specificLocation = getProfessionalLocation(professionalName);
 
-  // If direct reply is enabled, use the new format without links
+  // If direct reply is enabled, use the new format without links (buttons will be sent separately)
   if (directReplyEnabled) {
     const lines = [
       `Olá ${patientName}! 👋`,
@@ -243,9 +243,6 @@ function formatAppointmentReminder(
       specificLocation,
       ``,
       ...noShowWarning,
-      ``,
-      `✅ *Responda SIM para confirmar*`,
-      `❌ *Responda NÃO para cancelar*`,
       ``,
       `Atenciosamente,`,
       `Equipe ${clinicName}`,
