@@ -15,8 +15,9 @@ interface WhatsAppRequest {
   phone: string;
   message: string;
   clinicId: string;
-  type?: 'reminder' | 'confirmation' | 'custom' | 'document';
+  type?: 'reminder' | 'confirmation' | 'custom' | 'document' | 'reminder_direct_reply';
   imageUrl?: string; // URL da imagem para enviar como cabeçalho
+  appointmentId?: string;
 }
 
 interface EvolutionConfig {
@@ -24,6 +25,56 @@ interface EvolutionConfig {
   api_key: string;
   instance_name: string;
   is_connected: boolean;
+}
+
+async function sendWhazingConfirmationButtons(
+  phone: string,
+  appointmentId: string
+): Promise<{ success: boolean; error?: string; response?: string }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    return { success: false, error: 'Whazing not configured' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} (appointment: ${appointmentId})`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: "Confirme ou cancele sua consulta:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
+              { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
+            ]
+          }
+        }
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      return { success: false, error: `${response.status}: ${responseText}`, response: responseText };
+    }
+
+    return { success: true, response: responseText };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
 }
 
 serve(async (req) => {
@@ -74,7 +125,7 @@ serve(async (req) => {
 
     // 3. Parse request body
     const body = await req.json();
-    const { phone, message, clinicId, type = 'custom', imageUrl } = body as WhatsAppRequest;
+    const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId } = body as WhatsAppRequest;
     
     console.log(`[send-whatsapp] Received imageUrl: ${imageUrl || 'NOT PROVIDED'}, body keys: ${Object.keys(body).join(', ')}`);
 
@@ -434,6 +485,30 @@ serve(async (req) => {
       );
     }
 
+    let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
+
+    if (type === 'reminder_direct_reply') {
+      if (!appointmentId) {
+        buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
+        console.warn('[send-whatsapp] reminder_direct_reply without appointmentId. Buttons not sent.');
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
+
+        buttonsResult = {
+          attempted: true,
+          success: buttonsResponse.success,
+          error: buttonsResponse.error,
+        };
+
+        if (!buttonsResponse.success) {
+          console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
+        } else {
+          console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
+        }
+      }
+    }
+
     // 13. Log message sent successfully
     console.log(`[Clinic ${clinicId}] Message sent successfully by user ${userId}, logging to message_logs`);
     const { error: logError } = await supabase
@@ -451,7 +526,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: result }),
+      JSON.stringify({ success: true, data: result, buttons: buttonsResult }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {

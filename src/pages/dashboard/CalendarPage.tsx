@@ -2389,7 +2389,8 @@ const updateData: Record<string, any> = {
           phone: phoneToUse, 
           message, 
           clinicId: currentClinic?.id,
-          type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder'
+          type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
+          appointmentId: directReplyEnabled ? appointment.id : undefined,
         },
       });
 
@@ -2419,7 +2420,7 @@ const updateData: Record<string, any> = {
         toast({
           title: "Lembrete enviado",
           description: directReplyEnabled 
-            ? `Mensagem enviada para ${displayName}. Aguardando resposta SIM ou NÃO.`
+            ? `Mensagem enviada para ${displayName}. Aguardando confirmação por botões (ou resposta SIM/NÃO).`
             : `Mensagem enviada para ${displayName}.`,
         });
       } else {
@@ -2516,7 +2517,8 @@ const updateData: Record<string, any> = {
             phone: phoneToUse, 
             message, 
             clinicId: currentClinic?.id,
-            type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder'
+            type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
+            appointmentId: directReplyEnabled ? appointment.id : undefined,
           },
         });
 
