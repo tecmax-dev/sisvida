@@ -29,10 +29,12 @@ import {
   ClipboardCheck,
   Stethoscope,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 import prosindwebLogo from "@/assets/prosindweb-logo.png";
 import sindicalHeroDashboard from "@/assets/sindical-dashboard-blurred.png";
+import sindicalContribuicoes from "@/assets/sindical-contribuicoes.jpg";
+import sindicalRelatorios from "@/assets/sindical-relatorios.jpg";
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN SYSTEM — Cores sólidas (sem gradientes)
@@ -173,6 +175,74 @@ function SindicalHeader() {
   );
 }
 
+// ─── Hero Carousel ──────────────────────────────────────────────
+const heroSlides = [
+  { src: sindicalHeroDashboard, alt: "Painel Intuitivo - Dashboard completo de gestão sindical", label: "Painel Intuitivo" },
+  { src: sindicalContribuicoes, alt: "Contribuições Sindicais - Gerenciamento de boletos e cobranças", label: "Contribuições" },
+  { src: sindicalRelatorios, alt: "Relatórios Financeiros - Análise detalhada por empresa", label: "Relatórios" },
+];
+
+function HeroCarousel() {
+  const [current, setCurrent] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    startTimer();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [startTimer]);
+
+  const goTo = (index: number) => {
+    setCurrent(index);
+    startTimer();
+  };
+
+  return (
+    <div className="relative">
+      {/* Glow */}
+      <div className="absolute inset-0 bg-[hsl(215,85%,40%)] opacity-10 blur-3xl rounded-3xl scale-110" />
+
+      {/* Image container */}
+      <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-white/10">
+        {heroSlides.map((slide, i) => (
+          <img
+            key={i}
+            src={slide.src}
+            alt={slide.alt}
+            className={`w-full h-auto transition-opacity duration-700 ${
+              i === current ? "opacity-100 relative" : "opacity-0 absolute inset-0"
+            }`}
+            loading={i === 0 ? "eager" : "lazy"}
+          />
+        ))}
+      </div>
+
+      {/* Label + dots */}
+      <div className="flex items-center justify-between mt-4 px-1">
+        <span className="text-sm font-semibold text-white/60">{heroSlides[current].label}</span>
+        <div className="flex gap-2">
+          {heroSlides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === current ? "w-8 bg-[hsl(0,85%,50%)]" : "w-2 bg-white/30 hover:bg-white/50"
+              }`}
+              aria-label={`Slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Hero Section — Dark Navy ───────────────────────────────────
 function HeroSection() {
   return (
@@ -251,18 +321,9 @@ function HeroSection() {
             </div>
           </div>
 
-          {/* Dashboard Image — 7 cols */}
+          {/* Dashboard Carousel — 7 cols */}
           <div className="lg:col-span-7 order-1 lg:order-2 relative">
-            <div className="relative">
-              {/* Glow behind image */}
-              <div className="absolute inset-0 bg-[hsl(215,85%,40%)] opacity-10 blur-3xl rounded-3xl scale-110" />
-              <img
-                src={sindicalHeroDashboard}
-                alt="ProsindWeb - Dashboard de Gestão Sindical"
-                className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10"
-                loading="eager"
-              />
-            </div>
+            <HeroCarousel />
           </div>
         </div>
       </div>
