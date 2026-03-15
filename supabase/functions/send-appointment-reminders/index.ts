@@ -119,6 +119,62 @@ async function sendWhatsAppWithImage(
   }
 }
 
+// Send interactive buttons via Whazing API (WhatsApp Business)
+async function sendConfirmationButtons(
+  phone: string,
+  appointmentId: string
+): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[reminder-buttons] Whazing not configured, skipping buttons');
+    return false;
+  }
+
+  try {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) {
+      cleanPhone = '55' + cleanPhone;
+    }
+
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone}`);
+
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: "button",
+          body: { text: "Confirme ou cancele sua consulta:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
+              { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
+            ]
+          }
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[reminder-buttons] Error:', errorText);
+      return false;
+    }
+    console.log('[reminder-buttons] Buttons sent successfully');
+    return true;
+  } catch (error) {
+    console.error('[reminder-buttons] Exception:', error);
+    return false;
+  }
+}
+
 function formatDateTime(dateStr: string, time: string): string {
   // Timezone-safe: parse YYYY-MM-DD at noon local time to avoid shifts
   const dateOnly = (dateStr || "").slice(0, 10);
