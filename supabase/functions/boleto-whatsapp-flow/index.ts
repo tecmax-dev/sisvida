@@ -50,10 +50,10 @@ async function analyzeUserIntent(
   currentState: BoletoState,
   sessionContext: any
 ): Promise<IntentAnalysis> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
   
-  if (!LOVABLE_API_KEY) {
-    console.log("[boleto-flow] No LOVABLE_API_KEY, using fallback intent analysis");
+  if (!OPENAI_API_KEY) {
+    console.log("[boleto-flow] No OPENAI_API_KEY, using fallback intent analysis");
     return fallbackIntentAnalysis(message, currentState);
   }
 
@@ -106,10 +106,10 @@ Responda APENAS em JSON válido:
   "humanized_response": "resposta empática opcional para contextos de dúvida/erro"
 }`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
