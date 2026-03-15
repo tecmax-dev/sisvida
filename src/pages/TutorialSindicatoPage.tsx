@@ -1043,7 +1043,7 @@ const TutorialSindicatoPage = () => {
               
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
                 Aprenda a usar o{" "}
-                <span className="bg-gradient-to-r from-primary via-purple-500 to-emerald-500 bg-clip-text text-transparent">
+                <span className="text-primary">
                   Módulo Sindical
                 </span>
               </h1>
