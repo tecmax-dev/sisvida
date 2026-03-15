@@ -1229,7 +1229,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
+          model: 'openai/gpt-5-mini',
           messages: msgs,
           ...(useTools && activeTools.length > 0 ? { tools: activeTools, tool_choice: 'auto' } : {}),
         }),
