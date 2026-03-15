@@ -902,7 +902,7 @@ export default function ClinicsManagement() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+            <div className="p-2 rounded-xl bg-primary/10">
               <Building2 className="h-6 w-6 text-primary" />
             </div>
             Gerenciar Clínicas
