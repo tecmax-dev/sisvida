@@ -488,25 +488,30 @@ serve(async (req) => {
 
     let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
 
-    if (type === 'reminder_direct_reply') {
-      if (!appointmentId) {
-        buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
-        console.warn('[send-whatsapp] reminder_direct_reply without appointmentId. Buttons not sent.');
+    const shouldSendReminderButtons = Boolean(
+      appointmentId && (
+        type === 'reminder_direct_reply' ||
+        (type === 'reminder' && direct_reply_enabled === true)
+      )
+    );
+
+    if ((type === 'reminder_direct_reply' || type === 'reminder') && !appointmentId) {
+      buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided' };
+      console.warn('[send-whatsapp] Reminder without appointmentId. Buttons not sent.');
+    } else if (shouldSendReminderButtons && appointmentId) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
+
+      buttonsResult = {
+        attempted: true,
+        success: buttonsResponse.success,
+        error: buttonsResponse.error,
+      };
+
+      if (!buttonsResponse.success) {
+        console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
       } else {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, appointmentId);
-
-        buttonsResult = {
-          attempted: true,
-          success: buttonsResponse.success,
-          error: buttonsResponse.error,
-        };
-
-        if (!buttonsResponse.success) {
-          console.error('[send-whatsapp] Failed to send reminder buttons:', buttonsResponse.error);
-        } else {
-          console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
-        }
+        console.log(`[send-whatsapp] Reminder buttons sent for appointment ${appointmentId}`);
       }
     }
 
