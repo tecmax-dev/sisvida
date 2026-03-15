@@ -112,7 +112,7 @@ export function PortalLoginScreen({
             
             <Button 
               type="submit" 
-              className={`w-full h-11 bg-gradient-to-r ${gradientClass} hover:opacity-90 text-white font-medium shadow-lg`}
+              className={`w-full h-11 ${buttonClass} text-primary-foreground font-medium`}
               disabled={isLoading}
             >
               {isLoading ? (

@@ -311,7 +311,7 @@ export default function SindicatoBeneficiosLandingPage() {
                   {/* If no image (juridico), show inline header */}
                   {!config.image && (
                     <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center shadow-md`}>
+                      <div className={`w-12 h-12 rounded-xl ${config.solidColor} flex items-center justify-center shadow-md`}>
                         <config.icon className="w-6 h-6 text-white" />
                       </div>
                       <div>

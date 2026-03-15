@@ -92,8 +92,8 @@ export function DraggableAppointment({
                 "absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center",
                 "md:opacity-0 md:group-hover/drag:opacity-100 transition-all duration-200",
                 "cursor-grab active:cursor-grabbing z-10",
-                "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-l-xl",
-                "hover:from-primary/20 hover:via-primary/10"
+                "bg-primary/10 rounded-l-xl",
+                "hover:bg-primary/20"
               )}
             >
               <div className="flex flex-col gap-0.5">

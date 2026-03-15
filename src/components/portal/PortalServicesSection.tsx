@@ -102,7 +102,7 @@ export function PortalConventionsSection({ clinicId, employerCategoryId }: Porta
   return (
     <>
       <Card className="bg-white border-0 shadow-sm overflow-hidden">
-        <CardHeader className="pb-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <CardHeader className="pb-3 border-b border-border bg-primary/5">
           <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
             <Handshake className="h-5 w-5 text-indigo-600" />
             Convenções Coletivas

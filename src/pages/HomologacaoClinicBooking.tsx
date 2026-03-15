@@ -120,7 +120,7 @@ export default function HomologacaoClinicBooking() {
       <div className="container max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
         <Card className="mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
+          <div className="bg-primary text-primary-foreground p-6">
             <div className="flex items-center gap-4">
               {clinic.logo_url ? (
                 <img 

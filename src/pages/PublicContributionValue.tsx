@@ -194,7 +194,7 @@ export default function PublicContributionValue() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 p-4 flex items-center justify-center">
+    <div className="min-h-screen bg-background p-4 flex items-center justify-center">
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center border-b pb-6">
           {contribution.clinic?.logo_url ? (

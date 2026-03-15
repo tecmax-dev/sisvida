@@ -172,7 +172,7 @@ export function DocumentSearchCard({
   const getIconBgStyle = () => {
     if (error || isValid === false) return "bg-destructive/10";
     if (success) return "bg-emerald-100 dark:bg-emerald-900/50";
-    return "bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50";
+    return "bg-primary/10 dark:bg-primary/20";
   };
 
   const getIconColor = () => {
