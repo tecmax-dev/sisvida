@@ -469,7 +469,7 @@ export function DashboardLayout() {
           >
             {!sidebarCollapsed && (
               <div className="flex-1 flex justify-center">
-                <Logo size="md" customSrc={ecliniDashboardLogo} />
+                <Logo size="md" customSrc={prosindClinicaLogo} />
               </div>
             )}
             {sidebarCollapsed && (
