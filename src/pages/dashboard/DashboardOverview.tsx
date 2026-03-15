@@ -405,7 +405,7 @@ export default function DashboardOverview() {
         {topCards.map((card, i) => (
           <Card
             key={i}
-            className={`relative overflow-hidden border-0 shadow-lg bg-gradient-to-br ${card.gradient} text-white`}
+            className={`relative overflow-hidden border-0 shadow-lg ${card.bgSolid} text-white`}
           >
             <CardContent className="p-5 relative">
               <div className="flex justify-between items-start">

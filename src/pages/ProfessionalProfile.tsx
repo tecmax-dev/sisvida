@@ -1086,7 +1086,7 @@ export default function ProfessionalProfile() {
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-20">
               <Card className="shadow-md border border-border">
-                <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg py-4">
+                <CardHeader className="bg-primary text-primary-foreground rounded-t-lg py-4">
                   <CardTitle className="text-lg font-semibold">Agende uma Consulta</CardTitle>
                   <p className="text-sm text-primary-foreground/80 mt-0.5">Consulte especialidades da maneira mais conveniente</p>
                 </CardHeader>
