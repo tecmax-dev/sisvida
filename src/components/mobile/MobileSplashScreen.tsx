@@ -101,7 +101,7 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
               initial={{ scale: 0, opacity: 0, rotate: -45 }}
               animate={{ scale: 1, opacity: 0.25, rotate: 0 }}
               transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
-              className="absolute -top-32 -right-32 w-96 h-96 bg-gradient-to-br from-emerald-400 to-transparent rounded-full"
+              className="absolute -top-32 -right-32 w-96 h-96 bg-primary/20 rounded-full"
             />
             
             {/* Large decorative circle bottom-left */}
