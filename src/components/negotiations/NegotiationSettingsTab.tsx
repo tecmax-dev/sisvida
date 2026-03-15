@@ -167,7 +167,7 @@ export default function NegotiationSettingsTab({ clinicId }: NegotiationSettings
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg shadow-rose-500/25">
+            <div className="p-3 rounded-xl bg-destructive shadow-lg shadow-destructive/25">
               <Percent className="h-6 w-6 text-white" />
             </div>
             <div>
