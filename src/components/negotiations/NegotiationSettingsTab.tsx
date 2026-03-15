@@ -349,7 +349,7 @@ export default function NegotiationSettingsTab({ clinicId }: NegotiationSettings
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25">
+            <div className="p-3 rounded-xl bg-warning shadow-lg shadow-warning/25">
               <Scale className="h-6 w-6 text-white" />
             </div>
             <div>
