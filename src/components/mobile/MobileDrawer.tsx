@@ -127,19 +127,19 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
     { 
       icon: Star, 
       label: "Avaliar o aplicativo", 
-      gradient: "from-amber-400 to-yellow-500",
+      bgColor: "bg-primary/80",
       onClick: handleRate 
     },
     { 
       icon: Share2, 
       label: "Compartilhar", 
-      gradient: "from-blue-400 to-cyan-500",
+      bgColor: "bg-primary",
       onClick: handleShare 
     },
     { 
       icon: LogOut, 
       label: "Sair do aplicativo", 
-      gradient: "from-red-500 to-rose-600",
+      bgColor: "bg-destructive",
       onClick: handleSignOut,
       isDestructive: true
     },
