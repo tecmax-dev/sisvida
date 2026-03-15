@@ -465,7 +465,7 @@ export default function UnionExpensesPage() {
 
       {/* Compact Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-slate-400 dark:border-l-slate-500 bg-gradient-to-r from-slate-50/80 dark:from-slate-900/50 to-transparent">
+        <Card className="border-l-4 border-l-muted-foreground bg-muted/30">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
