@@ -116,10 +116,12 @@ export function CardExpiryWithPayslipDialog({
 
       if (data?.is_payslip) {
         setVerificationStatus("valid");
+        setFoundItems(data.found_items || {});
         setVerificationMessage(data.message || "Documento identificado como contracheque válido.");
       } else {
         setVerificationStatus("invalid");
-        setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque.");
+        setFoundItems(data?.found_items || {});
+        setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
       }
     } catch (err: any) {
       console.error("Verification error:", err);
