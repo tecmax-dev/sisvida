@@ -544,37 +544,59 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
 
   console.log("[Lytex] Criando cobrança:", JSON.stringify(invoicePayload, null, 2));
 
-  const response = await fetch(`${LYTEX_API_URL}/invoices`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify(invoicePayload),
-  });
+  // Retry logic for transient errors (502, 503, 504)
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  const responseText = await response.text();
-  let responseData: any = {};
-  if (responseText) {
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { raw: responseText };
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch(`${LYTEX_API_URL}/invoices`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(invoicePayload),
+    });
+
+    // Retry on transient server errors
+    if (response.status >= 502 && response.status <= 504) {
+      const errorText = await response.text();
+      console.warn(`[Lytex] API retornou ${response.status} (tentativa ${attempt}/${MAX_RETRIES}):`, errorText);
+      lastError = new Error(`Lytex indisponível (${response.status})`);
+      if (attempt < MAX_RETRIES) {
+        const delay = attempt * 2000;
+        console.log(`[Lytex] Aguardando ${delay}ms antes de retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw lastError;
     }
+
+    const responseText = await response.text();
+    let responseData: any = {};
+    if (responseText) {
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { raw: responseText };
+      }
+    }
+
+    if (!response.ok) {
+      console.error("[Lytex] Erro ao criar cobrança:", JSON.stringify(responseData));
+      const msg =
+        responseData?.message ||
+        responseData?.error ||
+        (typeof responseData?.raw === "string" ? responseData.raw : null) ||
+        `Erro ao criar cobrança: ${response.status}`;
+      throw new Error(msg);
+    }
+
+    console.log("[Lytex] Cobrança criada com sucesso:", responseData?._id || responseData?.id || "(sem id)");
+    return responseData;
   }
 
-  if (!response.ok) {
-    console.error("[Lytex] Erro ao criar cobrança:", JSON.stringify(responseData));
-    const msg =
-      responseData?.message ||
-      responseData?.error ||
-      (typeof responseData?.raw === "string" ? responseData.raw : null) ||
-      `Erro ao criar cobrança: ${response.status}`;
-    throw new Error(msg);
-  }
-
-  console.log("[Lytex] Cobrança criada com sucesso:", responseData?._id || responseData?.id || "(sem id)");
-  return responseData;
+  throw lastError || new Error("Erro ao criar cobrança após múltiplas tentativas");
 }
 
 async function getInvoice(invoiceId: string): Promise<any> {
