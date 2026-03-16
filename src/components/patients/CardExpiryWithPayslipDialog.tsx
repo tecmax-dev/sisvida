@@ -49,12 +49,14 @@ export function CardExpiryWithPayslipDialog({
     return d.toISOString().split("T")[0];
   });
   const [saving, setSaving] = useState(false);
+  const [foundItems, setFoundItems] = useState<FoundItems>({});
 
   const resetState = () => {
     setFile(null);
     setFilePreview(null);
     setVerificationStatus("idle");
     setVerificationMessage("");
+    setFoundItems({});
     setSaving(false);
   };
 
