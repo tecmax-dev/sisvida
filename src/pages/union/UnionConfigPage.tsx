@@ -24,7 +24,7 @@ export default function UnionConfigPage() {
       if (!currentClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled")
         .eq("id", currentClinic.id)
         .single();
       if (error) throw error;
