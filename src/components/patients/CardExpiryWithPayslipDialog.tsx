@@ -374,12 +374,20 @@ export function CardExpiryWithPayslipDialog({
                 )}
 
                 {verificationStatus === "invalid" && (
-                  <Alert variant="destructive">
-                    <ShieldAlert className="h-4 w-4" />
-                    <AlertDescription>
-                      {verificationMessage}
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-2">
+                    <Alert variant="destructive">
+                      <ShieldAlert className="h-4 w-4" />
+                      <AlertDescription>
+                        {verificationMessage}
+                      </AlertDescription>
+                    </Alert>
+                    {nameMatch === false && memberName && (
+                      <div className="text-xs pl-1 text-destructive flex items-center gap-1">
+                        <UserCheck className="h-3 w-3" />
+                        <span>Nome do associado: {memberName} {nameFoundInDoc ? `| Nome no documento: ${nameFoundInDoc}` : ""}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
