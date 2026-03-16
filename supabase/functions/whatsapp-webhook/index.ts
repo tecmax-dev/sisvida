@@ -7008,7 +7008,7 @@ serve(async (req) => {
           if (btnId === 'whazing_sub_carteirinha') {
             console.log(`[webhook] Whazing carteirinha button → redirect to app`);
 
-            // Send image guide first
+            // Send text guide (plain text to avoid template errors)
             const whazingUrl = Deno.env.get('WHAZING_API_URL');
             const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
             if (whazingUrl && whazingToken) {
@@ -7016,8 +7016,7 @@ serve(async (req) => {
               if (!cleanPhoneImg.startsWith('55')) cleanPhoneImg = '55' + cleanPhoneImg;
               const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
 
-              const imageUrl = 'https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-assets/carteirinha-app-guide.jpg';
-              const caption = `📱 *Atualização de Carteirinha*\n\nA atualização da carteirinha é feita de forma rápida e prática diretamente pelo *aplicativo do sindicato*! 📲\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Siga as instruções na tela\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\n⚠️ Este serviço *não está disponível* por WhatsApp.`;
+              const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
 
               try {
                 await fetch(apiOficialUrl, {
@@ -7029,14 +7028,13 @@ serve(async (req) => {
                   body: JSON.stringify({
                     number: cleanPhoneImg,
                     contents: {
-                      type: "image",
-                      body: { url: imageUrl },
-                      caption: caption,
+                      type: "chat",
+                      body: { text: textMessage }
                     }
                   }),
                 });
-              } catch (imgErr) {
-                console.error('[whazing] Error sending carteirinha image:', imgErr);
+              } catch (msgErr) {
+                console.error('[whazing] Error sending carteirinha text:', msgErr);
               }
             }
 

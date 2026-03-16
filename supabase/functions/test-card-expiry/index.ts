@@ -43,16 +43,20 @@ serve(async (req) => {
 
     const clinicName = clinic?.name || "Clínica";
 
-    // Message requesting payslip image
     const message = `Olá ${patientName}! 👋
 
 Sua carteirinha digital da *${clinicName}* (${cardNumber}) está próxima do vencimento.
 
 📅 *Validade:* ${expiryDate}
 
-Para renovar sua carteirinha, por favor *envie uma foto do seu contracheque* nesta conversa. Nossa equipe irá analisar e atualizar sua carteirinha.
+⚠️ Para renovar sua carteirinha, acesse o *aplicativo do sindicato* e envie seu contracheque por lá. A atualização é feita *exclusivamente pelo app*.
 
-📎 Basta tirar uma foto do contracheque e enviar aqui!
+📲 *Como fazer:*
+1️⃣ Abra o app do sindicato
+2️⃣ Em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*
+3️⃣ Envie a foto do contracheque pelo app
+
+📥 *Baixe o app:* https://prosindweb.com.br/sindicato/instalar
 
 Atenciosamente,
 Equipe ${clinicName}`;
