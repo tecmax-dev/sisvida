@@ -183,11 +183,11 @@ export default function UnionPaymentHistoryPage() {
 
       // Date filter
       if (startDate || endDate) {
-        const paymentDate = payment.paid_at ? parseISO(payment.paid_at) : null;
-        if (!paymentDate) return false;
+        const paymentDate = payment.paid_at ? parseDateOnlyToLocalNoon(payment.paid_at) : null;
+        if (!paymentDate || isNaN(paymentDate.getTime())) return false;
         
-        const start = startDate ? startOfDay(parseISO(startDate)) : new Date(0);
-        const end = endDate ? endOfDay(parseISO(endDate)) : new Date();
+        const start = startDate ? startOfDay(parseDateOnlyToLocalNoon(startDate)) : new Date(0);
+        const end = endDate ? endOfDay(parseDateOnlyToLocalNoon(endDate)) : new Date();
         
         if (!isWithinInterval(paymentDate, { start, end })) return false;
       }
