@@ -12,6 +12,7 @@ interface DependentBookingLimitSettingsProps {
   clinicId: string;
   currentPeriod: string;
   currentLimit: number;
+  currentEnabled: boolean;
   onUpdate: () => void;
   isAdmin: boolean;
 }
