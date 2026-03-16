@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { CardExpiryWithPayslipDialog } from "./CardExpiryWithPayslipDialog";
 
 interface InlineCardExpiryEditProps {
   entityId: string;
@@ -15,6 +16,7 @@ interface InlineCardExpiryEditProps {
   currentExpiryDate: string | null;
   cardNumber?: string | null;
   onUpdate?: () => void;
+  requirePayslip?: boolean;
 }
 
 export function InlineCardExpiryEdit({
@@ -23,6 +25,7 @@ export function InlineCardExpiryEdit({
   currentExpiryDate,
   cardNumber,
   onUpdate,
+  requirePayslip = false,
 }: InlineCardExpiryEditProps) {
   const { toast } = useToast();
   const { hasPermission, isAdmin } = usePermissions();
@@ -30,6 +33,7 @@ export function InlineCardExpiryEdit({
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newDate, setNewDate] = useState("");
+  const [showPayslipDialog, setShowPayslipDialog] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isExpired = currentExpiryDate
@@ -54,6 +58,13 @@ export function InlineCardExpiryEdit({
 
   const handleStartEdit = () => {
     if (!canEditExpiry) return;
+    
+    // If payslip is required, open the dialog instead of inline edit
+    if (requirePayslip) {
+      setShowPayslipDialog(true);
+      return;
+    }
+    
     if (currentExpiryDate) {
       setNewDate(currentExpiryDate.split("T")[0]);
     } else {
@@ -77,7 +88,6 @@ export function InlineCardExpiryEdit({
       let dependentsUpdated = 0;
       
       if (entityType === "patient") {
-        // Update patient_cards table
         const { data: existingCard, error: fetchError } = await supabase
           .from("patient_cards")
           .select("id")
@@ -95,10 +105,6 @@ export function InlineCardExpiryEdit({
 
           if (error) throw error;
           
-          // The database trigger sync_dependent_card_expiry_trigger automatically
-          // updates all dependents' card_expires_at when patient_cards.expires_at changes
-          
-          // Check how many dependents were affected for the toast message
           const { count } = await supabase
             .from("patient_dependents")
             .select("*", { count: "exact", head: true })
@@ -107,7 +113,6 @@ export function InlineCardExpiryEdit({
           
           dependentsUpdated = count || 0;
         } else {
-          // Create new card if doesn't exist
           const { data: patient } = await supabase
             .from("patients")
             .select("clinic_id")
@@ -125,7 +130,6 @@ export function InlineCardExpiryEdit({
 
             if (error) throw error;
             
-            // Count dependents for new cards too
             const { count } = await supabase
               .from("patient_dependents")
               .select("*", { count: "exact", head: true })
@@ -136,7 +140,6 @@ export function InlineCardExpiryEdit({
           }
         }
       } else {
-        // Update patient_dependents table
         const { error } = await supabase
           .from("patient_dependents")
           .update({ card_expires_at: newDate })
@@ -219,13 +222,25 @@ export function InlineCardExpiryEdit({
       return <span className="text-muted-foreground text-sm">—</span>;
     }
     return (
-      <button
-        onClick={handleStartEdit}
-        className="text-muted-foreground hover:text-foreground hover:underline cursor-pointer text-sm"
-        title="Clique para adicionar validade"
-      >
-        —
-      </button>
+      <>
+        <button
+          onClick={handleStartEdit}
+          className="text-muted-foreground hover:text-foreground hover:underline cursor-pointer text-sm"
+          title="Clique para adicionar validade"
+        >
+          —
+        </button>
+        {requirePayslip && (
+          <CardExpiryWithPayslipDialog
+            open={showPayslipDialog}
+            onOpenChange={setShowPayslipDialog}
+            entityId={entityId}
+            entityType={entityType}
+            currentExpiryDate={currentExpiryDate}
+            onSuccess={onUpdate}
+          />
+        )}
+      </>
     );
   }
 
@@ -250,12 +265,24 @@ export function InlineCardExpiryEdit({
   }
 
   return (
-    <button
-      onClick={handleStartEdit}
-      className="cursor-pointer hover:opacity-80 transition-opacity"
-      title="Clique para editar validade"
-    >
-      {badgeContent}
-    </button>
+    <>
+      <button
+        onClick={handleStartEdit}
+        className="cursor-pointer hover:opacity-80 transition-opacity"
+        title="Clique para editar validade"
+      >
+        {badgeContent}
+      </button>
+      {requirePayslip && (
+        <CardExpiryWithPayslipDialog
+          open={showPayslipDialog}
+          onOpenChange={setShowPayslipDialog}
+          entityId={entityId}
+          entityType={entityType}
+          currentExpiryDate={currentExpiryDate}
+          onSuccess={onUpdate}
+        />
+      )}
+    </>
   );
 }

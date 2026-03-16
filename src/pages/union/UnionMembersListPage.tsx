@@ -1030,6 +1030,7 @@ export default function UnionMembersListPage() {
                           currentExpiryDate={member.card_expires_at || null}
                           cardNumber={member.card_number}
                           onUpdate={fetchMembers}
+                          requirePayslip={true}
                         />
                       </TableCell>
                       {isAdmin && (
