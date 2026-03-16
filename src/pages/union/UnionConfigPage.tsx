@@ -9,6 +9,7 @@ import { UnionBrandingSettings } from "@/components/union/settings/UnionBranding
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
 import { AdvanceBookingHoursSettings } from "@/components/union/settings/AdvanceBookingHoursSettings";
 import { DependentBookingLimitSettings } from "@/components/union/settings/DependentBookingLimitSettings";
+import { TitularBookingLimitSettings } from "@/components/union/settings/TitularBookingLimitSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,7 +25,7 @@ export default function UnionConfigPage() {
       if (!currentClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled")
         .eq("id", currentClinic.id)
         .single();
       if (error) throw error;
@@ -89,6 +90,12 @@ export default function UnionConfigPage() {
               <BookingMonthsSettings
                 clinicId={currentClinic.id}
                 currentValue={clinicSettings?.booking_months_ahead ?? 1}
+                onUpdate={() => refetchSettings()}
+                isAdmin={isAdmin}
+              />
+              <TitularBookingLimitSettings
+                clinicId={currentClinic.id}
+                currentEnabled={(clinicSettings as any)?.titular_booking_limit_enabled ?? true}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
