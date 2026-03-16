@@ -8,6 +8,7 @@ import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
 import { AdvanceBookingHoursSettings } from "@/components/union/settings/AdvanceBookingHoursSettings";
+import { DependentBookingLimitSettings } from "@/components/union/settings/DependentBookingLimitSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,7 +24,7 @@ export default function UnionConfigPage() {
       if (!currentClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit")
         .eq("id", currentClinic.id)
         .single();
       if (error) throw error;
@@ -94,6 +95,13 @@ export default function UnionConfigPage() {
               <AdvanceBookingHoursSettings
                 clinicId={currentClinic.id}
                 currentValue={(clinicSettings as any)?.min_advance_booking_hours ?? 6}
+                onUpdate={() => refetchSettings()}
+                isAdmin={isAdmin}
+              />
+              <DependentBookingLimitSettings
+                clinicId={currentClinic.id}
+                currentPeriod={(clinicSettings as any)?.dependent_booking_period ?? "monthly"}
+                currentLimit={(clinicSettings as any)?.dependent_booking_limit ?? 1}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
