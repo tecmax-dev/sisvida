@@ -114,17 +114,25 @@ Nome do arquivo: ${file_name}`;
     // Parse AI response
     let isPayslip = false;
     let reason = "Não foi possível determinar o tipo do documento.";
+    let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
 
     try {
-      // Extract JSON from response (might be wrapped in markdown)
-      const jsonMatch = content.match(/\{[\s\S]*?\}/);
+      // Extract JSON from response (might be wrapped in markdown or nested)
+      const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*?\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         isPayslip = parsed.is_payslip === true;
         const confidence = parsed.confidence || 0;
         reason = parsed.reason || reason;
 
-        // Accept if confidence is above 0.5
+        if (parsed.found_items) {
+          foundItems = {
+            mensalidade_sindical: !!parsed.found_items.mensalidade_sindical,
+            taxa_assistencial: !!parsed.found_items.taxa_assistencial,
+            taxa_negocial: !!parsed.found_items.taxa_negocial,
+          };
+        }
+
         if (isPayslip && confidence < 0.3) {
           isPayslip = false;
           reason = "Documento não reconhecido como contracheque com confiança suficiente.";
@@ -132,7 +140,6 @@ Nome do arquivo: ${file_name}`;
       }
     } catch (parseErr) {
       console.error("[verify-payslip] Parse error:", parseErr);
-      // Check for simple yes/no in content
       const lower = content.toLowerCase();
       if (lower.includes("is_payslip\": true") || lower.includes("é um contracheque")) {
         isPayslip = true;
@@ -142,10 +149,10 @@ Nome do arquivo: ${file_name}`;
 
     const message = isPayslip
       ? `✅ ${reason}`
-      : `❌ ${reason} Por favor, envie um contracheque válido.`;
+      : `❌ ${reason} Por favor, envie um contracheque válido com os descontos sindicais.`;
 
     return new Response(
-      JSON.stringify({ is_payslip: isPayslip, message }),
+      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
