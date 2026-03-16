@@ -50,6 +50,24 @@ export function CardExpiryWithPayslipDialog({
   });
   const [saving, setSaving] = useState(false);
   const [foundItems, setFoundItems] = useState<FoundItems>({});
+  const [memberName, setMemberName] = useState<string | null>(null);
+  const [nameMatch, setNameMatch] = useState<boolean | null>(null);
+  const [nameFoundInDoc, setNameFoundInDoc] = useState<string | null>(null);
+
+  // Fetch member name when dialog opens
+  useEffect(() => {
+    if (!open || !entityId) return;
+    const fetchName = async () => {
+      if (entityType === "patient") {
+        const { data } = await supabase.from("patients").select("name").eq("id", entityId).single();
+        setMemberName(data?.name || null);
+      } else {
+        const { data } = await supabase.from("patient_dependents").select("name").eq("id", entityId).single();
+        setMemberName(data?.name || null);
+      }
+    };
+    fetchName();
+  }, [open, entityId, entityType]);
 
   const resetState = () => {
     setFile(null);
