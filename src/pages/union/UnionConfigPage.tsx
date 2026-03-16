@@ -98,6 +98,13 @@ export default function UnionConfigPage() {
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
+              <DependentBookingLimitSettings
+                clinicId={currentClinic.id}
+                currentPeriod={(clinicSettings as any)?.dependent_booking_period ?? "monthly"}
+                currentLimit={(clinicSettings as any)?.dependent_booking_limit ?? 1}
+                onUpdate={() => refetchSettings()}
+                isAdmin={isAdmin}
+              />
             </div>
           ) : (
             <Card>
