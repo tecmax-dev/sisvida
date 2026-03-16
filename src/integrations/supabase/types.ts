@@ -1902,6 +1902,7 @@ export type Database = {
           reminder_hours: number | null
           slug: string
           state_code: string | null
+          titular_booking_limit_enabled: boolean | null
           updated_at: string
           use_ai_booking: boolean | null
           whatsapp_header_image_url: string | null
@@ -1954,6 +1955,7 @@ export type Database = {
           reminder_hours?: number | null
           slug: string
           state_code?: string | null
+          titular_booking_limit_enabled?: boolean | null
           updated_at?: string
           use_ai_booking?: boolean | null
           whatsapp_header_image_url?: string | null
@@ -2006,6 +2008,7 @@ export type Database = {
           reminder_hours?: number | null
           slug?: string
           state_code?: string | null
+          titular_booking_limit_enabled?: boolean | null
           updated_at?: string
           use_ai_booking?: boolean | null
           whatsapp_header_image_url?: string | null
