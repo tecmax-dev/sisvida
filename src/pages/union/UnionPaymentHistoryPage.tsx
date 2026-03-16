@@ -859,7 +859,7 @@ export default function UnionPaymentHistoryPage() {
                       </TableCell>
                       <TableCell>
                         {payment.due_date 
-                          ? format(parseISO(payment.due_date), "dd/MM/yy")
+                          ? format(parseDateOnlyToLocalNoon(payment.due_date), "dd/MM/yy")
                           : "-"}
                       </TableCell>
                       <TableCell>
