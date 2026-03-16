@@ -336,6 +336,20 @@ export function CardExpiryWithPayslipDialog({
                       </AlertDescription>
                     </Alert>
                     <div className="text-xs space-y-1 pl-1">
+                      {memberName && (
+                        <div className="mb-2">
+                          <p className="font-medium text-muted-foreground">Validação do nome:</p>
+                          <div className="flex items-center gap-1">
+                            <UserCheck className={`h-3 w-3 ${nameMatch ? "text-green-600" : "text-destructive"}`} />
+                            <span className={nameMatch ? "text-green-600" : "text-destructive"}>
+                              {nameMatch ? `Nome confere: ${memberName}` : `Nome não confere`}
+                            </span>
+                          </div>
+                          {nameFoundInDoc && (
+                            <p className="text-muted-foreground ml-4">Nome no documento: {nameFoundInDoc}</p>
+                          )}
+                        </div>
+                      )}
                       <p className="font-medium text-muted-foreground">Itens sindicais encontrados:</p>
                       <div className="flex items-center gap-1">
                         <span className={foundItems.mensalidade_sindical ? "text-green-600" : "text-destructive"}>
