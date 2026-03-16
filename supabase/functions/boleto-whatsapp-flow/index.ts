@@ -687,30 +687,58 @@ async function createLytexInvoice(params: {
 
   console.log("[boleto-flow] Criando cobrança Lytex:", JSON.stringify(invoicePayload, null, 2));
 
-  const response = await fetch(`${LYTEX_API_URL}/invoices`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify(invoicePayload),
-  });
+  // Retry logic for transient errors (502, 503, 504)
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  const responseData = await response.json();
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${LYTEX_API_URL}/invoices`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(invoicePayload),
+      });
 
-  if (!response.ok) {
-    console.error("[boleto-flow] Erro ao criar cobrança:", JSON.stringify(responseData));
-    throw new Error(responseData.message || `Erro ao criar cobrança: ${response.status}`);
+      // Retry on transient server errors
+      if (response.status >= 502 && response.status <= 504) {
+        const errorText = await response.text();
+        console.warn(`[boleto-flow] Lytex retornou ${response.status} (tentativa ${attempt}/${MAX_RETRIES}):`, errorText);
+        lastError = new Error(`Lytex indisponível (${response.status})`);
+        if (attempt < MAX_RETRIES) {
+          const delay = attempt * 2000; // 2s, 4s
+          console.log(`[boleto-flow] Aguardando ${delay}ms antes de tentar novamente...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw lastError;
+      }
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        console.error("[boleto-flow] Erro ao criar cobrança:", JSON.stringify(responseData));
+        throw new Error(responseData.message || `Erro ao criar cobrança: ${response.status}`);
+      }
+
+      const invoiceUrl = responseData.linkCheckout || responseData.linkBoleto || responseData.invoiceUrl || null;
+      console.log("[boleto-flow] Cobrança criada:", responseData._id, "URL:", invoiceUrl);
+      
+      return {
+        ...responseData,
+        invoiceUrl,
+      };
+    } catch (err: any) {
+      if (attempt >= MAX_RETRIES || (err.message && !err.message.includes('indisponível'))) {
+        throw err;
+      }
+      lastError = err;
+    }
   }
 
-  const invoiceUrl = responseData.linkCheckout || responseData.linkBoleto || responseData.invoiceUrl || null;
-
-  console.log("[boleto-flow] Cobrança criada:", responseData._id, "URL:", invoiceUrl);
-  
-  return {
-    ...responseData,
-    invoiceUrl,
-  };
+  throw lastError || new Error("Erro ao criar cobrança após múltiplas tentativas");
 }
 
 // ==========================================
