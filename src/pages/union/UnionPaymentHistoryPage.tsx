@@ -33,7 +33,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, parse, isValid } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, parse, isValid } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { ptBR } from "date-fns/locale";
 import {
   Search,
