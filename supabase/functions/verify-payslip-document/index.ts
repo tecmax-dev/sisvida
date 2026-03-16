@@ -148,7 +148,7 @@ Nome do arquivo: ${file_name}`;
       : `❌ ${reason} Por favor, envie um contracheque válido com os descontos sindicais.`;
 
     return new Response(
-      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems }),
+      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems, name_match: nameMatch, name_found_in_document: nameFoundInDocument }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
