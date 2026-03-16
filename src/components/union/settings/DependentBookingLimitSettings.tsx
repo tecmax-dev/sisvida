@@ -27,9 +27,11 @@ export function DependentBookingLimitSettings({
   clinicId,
   currentPeriod,
   currentLimit,
+  currentEnabled,
   onUpdate,
   isAdmin,
 }: DependentBookingLimitSettingsProps) {
+  const [enabled, setEnabled] = useState(currentEnabled);
   const [period, setPeriod] = useState(currentPeriod || "monthly");
   const [limit, setLimit] = useState(currentLimit ?? 1);
   const [saving, setSaving] = useState(false);
