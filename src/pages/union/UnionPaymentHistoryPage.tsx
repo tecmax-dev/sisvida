@@ -33,7 +33,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, parse, isValid } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, parse, isValid } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { ptBR } from "date-fns/locale";
 import {
   Search,
@@ -90,7 +91,7 @@ const parseDate = (dateStr: string): Date | null => {
   
   // Try ISO format
   try {
-    const isoDate = parseISO(dateStr);
+    const isoDate = parseDateOnlyToLocalNoon(dateStr);
     if (isValid(isoDate)) return isoDate;
   } catch {
     // ignore
@@ -182,11 +183,11 @@ export default function UnionPaymentHistoryPage() {
 
       // Date filter
       if (startDate || endDate) {
-        const paymentDate = payment.paid_at ? parseISO(payment.paid_at) : null;
-        if (!paymentDate) return false;
+        const paymentDate = payment.paid_at ? parseDateOnlyToLocalNoon(payment.paid_at) : null;
+        if (!paymentDate || isNaN(paymentDate.getTime())) return false;
         
-        const start = startDate ? startOfDay(parseISO(startDate)) : new Date(0);
-        const end = endDate ? endOfDay(parseISO(endDate)) : new Date();
+        const start = startDate ? startOfDay(parseDateOnlyToLocalNoon(startDate)) : new Date(0);
+        const end = endDate ? endOfDay(parseDateOnlyToLocalNoon(endDate)) : new Date();
         
         if (!isWithinInterval(paymentDate, { start, end })) return false;
       }
@@ -472,8 +473,8 @@ export default function UnionPaymentHistoryPage() {
         p.description?.substring(0, 20) || "-",
         p.chart_of_accounts?.substring(0, 15) || "-",
         p.bank_account?.substring(0, 12) || "-",
-        p.due_date ? format(parseISO(p.due_date), "dd/MM/yy") : "-",
-        p.paid_at ? format(parseISO(p.paid_at), "dd/MM/yy") : "-",
+        p.due_date ? format(parseDateOnlyToLocalNoon(p.due_date), "dd/MM/yy") : "-",
+        p.paid_at ? format(parseDateOnlyToLocalNoon(p.paid_at), "dd/MM/yy") : "-",
         p.check_number || "-",
         formatCurrency(p.gross_value),
         formatCurrency(p.net_value),
@@ -493,11 +494,11 @@ export default function UnionPaymentHistoryPage() {
       "Plano de Contas": p.chart_of_accounts,
       "Unidade Operacional": p.operational_unit,
       "Portador": p.bank_account,
-      "Vencimento": p.due_date ? format(parseISO(p.due_date), "dd/MM/yyyy") : "",
+      "Vencimento": p.due_date ? format(parseDateOnlyToLocalNoon(p.due_date), "dd/MM/yyyy") : "",
       "Situação": p.status,
       "Valor Bruto": p.gross_value,
       "Valor Líquido": p.net_value,
-      "Pago em": p.paid_at ? format(parseISO(p.paid_at), "dd/MM/yyyy") : "",
+      "Pago em": p.paid_at ? format(parseDateOnlyToLocalNoon(p.paid_at), "dd/MM/yyyy") : "",
       "Cheque": p.check_number,
     }));
 
@@ -858,12 +859,12 @@ export default function UnionPaymentHistoryPage() {
                       </TableCell>
                       <TableCell>
                         {payment.due_date 
-                          ? format(parseISO(payment.due_date), "dd/MM/yy")
+                          ? format(parseDateOnlyToLocalNoon(payment.due_date), "dd/MM/yy")
                           : "-"}
                       </TableCell>
                       <TableCell>
                         {payment.paid_at 
-                          ? format(parseISO(payment.paid_at), "dd/MM/yy")
+                          ? format(parseDateOnlyToLocalNoon(payment.paid_at), "dd/MM/yy")
                           : "-"}
                       </TableCell>
                       <TableCell>
