@@ -78,7 +78,22 @@ export function DependentBookingLimitSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="dep-enabled" className="text-sm font-medium">Ativar regra de limite</Label>
+            <p className="text-xs text-muted-foreground">
+              Quando ativada, a regra se aplica a agendamentos pelo painel e pelo app (PWA)
+            </p>
+          </div>
+          <Switch
+            id="dep-enabled"
+            checked={enabled}
+            onCheckedChange={setEnabled}
+            disabled={!isAdmin}
+          />
+        </div>
+
+        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 transition-opacity ${!enabled ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="space-y-2">
             <Label htmlFor="dep-period">Período de controle</Label>
             <Select value={period} onValueChange={setPeriod} disabled={!isAdmin}>
