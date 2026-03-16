@@ -8,6 +8,7 @@ import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
 import { AdvanceBookingHoursSettings } from "@/components/union/settings/AdvanceBookingHoursSettings";
+import { DependentBookingLimitSettings } from "@/components/union/settings/DependentBookingLimitSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
