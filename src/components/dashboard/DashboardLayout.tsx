@@ -461,10 +461,10 @@ export function DashboardLayout() {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div 
+           <div 
             className="flex items-center justify-center p-4 border-b border-sidebar-border relative"
             style={{
-              background: 'hsl(220 75% 22%)'
+              background: '#ffffff'
             }}
           >
             {!sidebarCollapsed && (
