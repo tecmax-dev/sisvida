@@ -1875,6 +1875,7 @@ export type Database = {
           created_at: string
           custom_map_embed_url: string | null
           dependent_booking_limit: number | null
+          dependent_booking_limit_enabled: boolean | null
           dependent_booking_period: string | null
           email: string | null
           enforce_schedule_validation: boolean | null
@@ -1926,6 +1927,7 @@ export type Database = {
           created_at?: string
           custom_map_embed_url?: string | null
           dependent_booking_limit?: number | null
+          dependent_booking_limit_enabled?: boolean | null
           dependent_booking_period?: string | null
           email?: string | null
           enforce_schedule_validation?: boolean | null
@@ -1977,6 +1979,7 @@ export type Database = {
           created_at?: string
           custom_map_embed_url?: string | null
           dependent_booking_limit?: number | null
+          dependent_booking_limit_enabled?: boolean | null
           dependent_booking_period?: string | null
           email?: string | null
           enforce_schedule_validation?: boolean | null
