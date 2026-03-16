@@ -20,6 +20,12 @@ interface CardExpiryWithPayslipDialogProps {
 
 type VerificationStatus = "idle" | "uploading" | "verifying" | "valid" | "invalid";
 
+interface FoundItems {
+  mensalidade_sindical?: boolean;
+  taxa_assistencial?: boolean;
+  taxa_negocial?: boolean;
+}
+
 export function CardExpiryWithPayslipDialog({
   open,
   onOpenChange,
@@ -43,12 +49,14 @@ export function CardExpiryWithPayslipDialog({
     return d.toISOString().split("T")[0];
   });
   const [saving, setSaving] = useState(false);
+  const [foundItems, setFoundItems] = useState<FoundItems>({});
 
   const resetState = () => {
     setFile(null);
     setFilePreview(null);
     setVerificationStatus("idle");
     setVerificationMessage("");
+    setFoundItems({});
     setSaving(false);
   };
 
@@ -108,10 +116,12 @@ export function CardExpiryWithPayslipDialog({
 
       if (data?.is_payslip) {
         setVerificationStatus("valid");
+        setFoundItems(data.found_items || {});
         setVerificationMessage(data.message || "Documento identificado como contracheque válido.");
       } else {
         setVerificationStatus("invalid");
-        setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque.");
+        setFoundItems(data?.found_items || {});
+        setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
       }
     } catch (err: any) {
       console.error("Verification error:", err);
@@ -293,12 +303,35 @@ export function CardExpiryWithPayslipDialog({
                 )}
 
                 {verificationStatus === "valid" && (
-                  <Alert className="border-green-500/50 bg-green-50 dark:bg-green-950/20">
-                    <ShieldCheck className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-700 dark:text-green-400">
-                      {verificationMessage}
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-2">
+                    <Alert className="border-green-500/50 bg-green-50 dark:bg-green-950/20">
+                      <ShieldCheck className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-700 dark:text-green-400">
+                        {verificationMessage}
+                      </AlertDescription>
+                    </Alert>
+                    <div className="text-xs space-y-1 pl-1">
+                      <p className="font-medium text-muted-foreground">Itens sindicais encontrados:</p>
+                      <div className="flex items-center gap-1">
+                        <span className={foundItems.mensalidade_sindical ? "text-green-600" : "text-destructive"}>
+                          {foundItems.mensalidade_sindical ? "✓" : "✗"}
+                        </span>
+                        <span>Mensalidade Sindical</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={foundItems.taxa_assistencial ? "text-green-600" : "text-destructive"}>
+                          {foundItems.taxa_assistencial ? "✓" : "✗"}
+                        </span>
+                        <span>Taxa Assistencial</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={foundItems.taxa_negocial ? "text-green-600" : "text-destructive"}>
+                          {foundItems.taxa_negocial ? "✓" : "✗"}
+                        </span>
+                        <span>Taxa Negocial</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {verificationStatus === "invalid" && (

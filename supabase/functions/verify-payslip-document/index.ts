@@ -36,21 +36,34 @@ serve(async (req) => {
     // For PDFs, we can't send as image - do text-based analysis
     const isPdf = file_type === "application/pdf";
 
-    const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário).
+    const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário) que contenha descontos sindicais.
 
-Um contracheque típico contém:
+Um contracheque válido deve conter:
 - Nome do empregado/funcionário
 - Nome da empresa/empregador
 - Salário bruto e líquido
 - Descontos (INSS, IRRF, etc.)
 - Proventos/vencimentos
 - Período de referência (mês/ano)
-- CNPJ da empresa
+
+IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
+1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical")
+2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")
+3. **Taxa Negocial** (ou "Taxa Negoc.", "Contrib. Negocial")
 
 Responda EXATAMENTE no formato JSON:
-{"is_payslip": true/false, "confidence": 0.0-1.0, "reason": "breve explicação"}
+{
+  "is_payslip": true/false,
+  "confidence": 0.0-1.0,
+  "reason": "breve explicação",
+  "found_items": {
+    "mensalidade_sindical": true/false,
+    "taxa_assistencial": true/false,
+    "taxa_negocial": true/false
+  }
+}
 
-Se não conseguir analisar o conteúdo visual, mas o nome do arquivo sugere ser um contracheque, considere isso na análise.
+Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 Nome do arquivo: ${file_name}`;
 
     const messages: any[] = [
@@ -101,17 +114,25 @@ Nome do arquivo: ${file_name}`;
     // Parse AI response
     let isPayslip = false;
     let reason = "Não foi possível determinar o tipo do documento.";
+    let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
 
     try {
-      // Extract JSON from response (might be wrapped in markdown)
-      const jsonMatch = content.match(/\{[\s\S]*?\}/);
+      // Extract JSON from response (might be wrapped in markdown or nested)
+      const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*?\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         isPayslip = parsed.is_payslip === true;
         const confidence = parsed.confidence || 0;
         reason = parsed.reason || reason;
 
-        // Accept if confidence is above 0.5
+        if (parsed.found_items) {
+          foundItems = {
+            mensalidade_sindical: !!parsed.found_items.mensalidade_sindical,
+            taxa_assistencial: !!parsed.found_items.taxa_assistencial,
+            taxa_negocial: !!parsed.found_items.taxa_negocial,
+          };
+        }
+
         if (isPayslip && confidence < 0.3) {
           isPayslip = false;
           reason = "Documento não reconhecido como contracheque com confiança suficiente.";
@@ -119,7 +140,6 @@ Nome do arquivo: ${file_name}`;
       }
     } catch (parseErr) {
       console.error("[verify-payslip] Parse error:", parseErr);
-      // Check for simple yes/no in content
       const lower = content.toLowerCase();
       if (lower.includes("is_payslip\": true") || lower.includes("é um contracheque")) {
         isPayslip = true;
@@ -129,10 +149,10 @@ Nome do arquivo: ${file_name}`;
 
     const message = isPayslip
       ? `✅ ${reason}`
-      : `❌ ${reason} Por favor, envie um contracheque válido.`;
+      : `❌ ${reason} Por favor, envie um contracheque válido com os descontos sindicais.`;
 
     return new Response(
-      JSON.stringify({ is_payslip: isPayslip, message }),
+      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
