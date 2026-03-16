@@ -494,11 +494,11 @@ export default function UnionPaymentHistoryPage() {
       "Plano de Contas": p.chart_of_accounts,
       "Unidade Operacional": p.operational_unit,
       "Portador": p.bank_account,
-      "Vencimento": p.due_date ? format(parseISO(p.due_date), "dd/MM/yyyy") : "",
+      "Vencimento": p.due_date ? format(parseDateOnlyToLocalNoon(p.due_date), "dd/MM/yyyy") : "",
       "Situação": p.status,
       "Valor Bruto": p.gross_value,
       "Valor Líquido": p.net_value,
-      "Pago em": p.paid_at ? format(parseISO(p.paid_at), "dd/MM/yyyy") : "",
+      "Pago em": p.paid_at ? format(parseDateOnlyToLocalNoon(p.paid_at), "dd/MM/yyyy") : "",
       "Cheque": p.check_number,
     }));
 
