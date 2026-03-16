@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -20,20 +20,16 @@ serve(async (req) => {
       );
     }
 
-    // Use Gemini Flash for fast image/document analysis
-    const LOVABLE_AI_URL = Deno.env.get("LOVABLE_AI_BASE_URL");
-    const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_AI_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
-    if (!LOVABLE_AI_URL || !LOVABLE_AI_KEY) {
-      // Fallback: accept the document if AI is not configured
-      console.log("[verify-payslip] AI not configured, accepting document");
+    if (!OPENAI_API_KEY) {
+      console.error("[verify-payslip] OPENAI_API_KEY not configured");
       return new Response(
-        JSON.stringify({ is_payslip: true, message: "Documento aceito (verificação automática indisponível)." }),
+        JSON.stringify({ is_payslip: false, message: "Verificação indisponível. Contate o administrador." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // For PDFs, we can't send as image - do text-based analysis
     const isPdf = file_type === "application/pdf";
 
     const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário) que contenha descontos sindicais.
@@ -51,17 +47,10 @@ IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes iten
 2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")
 3. **Taxa Negocial** (ou "Taxa Negoc.", "Contrib. Negocial")
 
-Responda EXATAMENTE no formato JSON:
-{
-  "is_payslip": true/false,
-  "confidence": 0.0-1.0,
-  "reason": "breve explicação",
-  "found_items": {
-    "mensalidade_sindical": true/false,
-    "taxa_assistencial": true/false,
-    "taxa_negocial": true/false
-  }
-}
+Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false imediatamente.
+
+Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
+{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 Nome do arquivo: ${file_name}`;
@@ -70,38 +59,35 @@ Nome do arquivo: ${file_name}`;
       {
         role: "user",
         content: isPdf
-          ? [
-              { type: "text", text: prompt + "\n\nNota: Este é um arquivo PDF. Analise pelo nome e contexto." },
-            ]
+          ? [{ type: "text", text: prompt + "\n\nNota: Este é um arquivo PDF. Analise pelo nome e contexto." }]
           : [
               { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: { url: file_base64 },
-              },
+              { type: "image_url", image_url: { url: file_base64 } },
             ],
       },
     ];
 
-    const response = await fetch(`${LOVABLE_AI_URL}/chat/completions`, {
+    console.log("[verify-payslip] Sending to OpenAI for analysis...");
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_AI_KEY}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages,
-        max_tokens: 300,
+        max_tokens: 400,
         temperature: 0.1,
       }),
     });
 
     if (!response.ok) {
-      console.error("[verify-payslip] AI response error:", response.status);
-      // Fallback on AI error - don't block the user
+      const errText = await response.text();
+      console.error("[verify-payslip] OpenAI error:", response.status, errText);
       return new Response(
-        JSON.stringify({ is_payslip: true, message: "Documento aceito (verificação temporariamente indisponível)." }),
+        JSON.stringify({ is_payslip: false, message: "Erro na verificação do documento. Tente novamente." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -111,14 +97,12 @@ Nome do arquivo: ${file_name}`;
 
     console.log("[verify-payslip] AI response:", content);
 
-    // Parse AI response
     let isPayslip = false;
     let reason = "Não foi possível determinar o tipo do documento.";
     let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
 
     try {
-      // Extract JSON from response (might be wrapped in markdown or nested)
-      const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*?\}/);
+      const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         isPayslip = parsed.is_payslip === true;
@@ -133,18 +117,15 @@ Nome do arquivo: ${file_name}`;
           };
         }
 
-        if (isPayslip && confidence < 0.3) {
+        if (isPayslip && confidence < 0.4) {
           isPayslip = false;
           reason = "Documento não reconhecido como contracheque com confiança suficiente.";
         }
       }
     } catch (parseErr) {
       console.error("[verify-payslip] Parse error:", parseErr);
-      const lower = content.toLowerCase();
-      if (lower.includes("is_payslip\": true") || lower.includes("é um contracheque")) {
-        isPayslip = true;
-        reason = "Documento identificado como contracheque.";
-      }
+      isPayslip = false;
+      reason = "Não foi possível analisar o documento. Envie uma imagem mais nítida.";
     }
 
     const message = isPayslip
