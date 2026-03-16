@@ -129,6 +129,7 @@ export function CardExpiryWithPayslipDialog({
           file_base64: base64,
           file_name: fileToVerify.name,
           file_type: fileToVerify.type,
+          member_name: memberName,
         },
       });
 
