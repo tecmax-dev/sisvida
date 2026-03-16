@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { file_base64, file_name, file_type } = await req.json();
+    const { file_base64, file_name, file_type, member_name } = await req.json();
 
     if (!file_base64) {
       return new Response(
@@ -42,6 +42,10 @@ Um contracheque válido deve conter:
 - Proventos/vencimentos
 - Período de referência (mês/ano)
 
+IMPORTANTE - VALIDAÇÃO DO NOME:
+O nome do associado/titular é: "${member_name || "NÃO INFORMADO"}"
+${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/FUNCIONÁRIO corresponde (total ou parcialmente) ao nome "${member_name}". Se o nome no documento for diferente do nome do associado, retorne is_payslip como false e explique que o nome não confere.` : ""}
+
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
 1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical")
 2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")
@@ -50,9 +54,10 @@ IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes iten
 Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false imediatamente.
 
 Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
-{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
+{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
+Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
 Nome do arquivo: ${file_name}`;
 
     const messages: any[] = [
@@ -100,6 +105,8 @@ Nome do arquivo: ${file_name}`;
     let isPayslip = false;
     let reason = "Não foi possível determinar o tipo do documento.";
     let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
+    let nameMatch = false;
+    let nameFoundInDocument: string | null = null;
 
     try {
       const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*\}/);
@@ -108,6 +115,8 @@ Nome do arquivo: ${file_name}`;
         isPayslip = parsed.is_payslip === true;
         const confidence = parsed.confidence || 0;
         reason = parsed.reason || reason;
+        nameMatch = !!parsed.name_match;
+        nameFoundInDocument = parsed.name_found_in_document || null;
 
         if (parsed.found_items) {
           foundItems = {
@@ -121,6 +130,12 @@ Nome do arquivo: ${file_name}`;
           isPayslip = false;
           reason = "Documento não reconhecido como contracheque com confiança suficiente.";
         }
+
+        // Validate name match when member_name was provided
+        if (isPayslip && member_name && !nameMatch) {
+          isPayslip = false;
+          reason = `O nome no contracheque (${nameFoundInDocument || "não identificado"}) não corresponde ao nome do associado (${member_name}).`;
+        }
       }
     } catch (parseErr) {
       console.error("[verify-payslip] Parse error:", parseErr);
@@ -133,7 +148,7 @@ Nome do arquivo: ${file_name}`;
       : `❌ ${reason} Por favor, envie um contracheque válido com os descontos sindicais.`;
 
     return new Response(
-      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems }),
+      JSON.stringify({ is_payslip: isPayslip, message, found_items: foundItems, name_match: nameMatch, name_found_in_document: nameFoundInDocument }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {

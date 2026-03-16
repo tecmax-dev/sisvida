@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileCheck, Loader2, ShieldCheck, ShieldAlert, Calendar } from "lucide-react";
+import { Upload, FileCheck, Loader2, ShieldCheck, ShieldAlert, Calendar, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +50,24 @@ export function CardExpiryWithPayslipDialog({
   });
   const [saving, setSaving] = useState(false);
   const [foundItems, setFoundItems] = useState<FoundItems>({});
+  const [memberName, setMemberName] = useState<string | null>(null);
+  const [nameMatch, setNameMatch] = useState<boolean | null>(null);
+  const [nameFoundInDoc, setNameFoundInDoc] = useState<string | null>(null);
+
+  // Fetch member name when dialog opens
+  useEffect(() => {
+    if (!open || !entityId) return;
+    const fetchName = async () => {
+      if (entityType === "patient") {
+        const { data } = await supabase.from("patients").select("name").eq("id", entityId).single();
+        setMemberName(data?.name || null);
+      } else {
+        const { data } = await supabase.from("patient_dependents").select("name").eq("id", entityId).single();
+        setMemberName(data?.name || null);
+      }
+    };
+    fetchName();
+  }, [open, entityId, entityType]);
 
   const resetState = () => {
     setFile(null);
@@ -58,6 +76,8 @@ export function CardExpiryWithPayslipDialog({
     setVerificationMessage("");
     setFoundItems({});
     setSaving(false);
+    setNameMatch(null);
+    setNameFoundInDoc(null);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +129,7 @@ export function CardExpiryWithPayslipDialog({
           file_base64: base64,
           file_name: fileToVerify.name,
           file_type: fileToVerify.type,
+          member_name: memberName,
         },
       });
 
@@ -117,10 +138,14 @@ export function CardExpiryWithPayslipDialog({
       if (data?.is_payslip) {
         setVerificationStatus("valid");
         setFoundItems(data.found_items || {});
+        setNameMatch(data.name_match ?? null);
+        setNameFoundInDoc(data.name_found_in_document || null);
         setVerificationMessage(data.message || "Documento identificado como contracheque válido.");
       } else {
         setVerificationStatus("invalid");
         setFoundItems(data?.found_items || {});
+        setNameMatch(data?.name_match ?? null);
+        setNameFoundInDoc(data?.name_found_in_document || null);
         setVerificationMessage(data?.message || "O documento enviado não parece ser um contracheque com os itens sindicais necessários.");
       }
     } catch (err: any) {
@@ -311,6 +336,20 @@ export function CardExpiryWithPayslipDialog({
                       </AlertDescription>
                     </Alert>
                     <div className="text-xs space-y-1 pl-1">
+                      {memberName && (
+                        <div className="mb-2">
+                          <p className="font-medium text-muted-foreground">Validação do nome:</p>
+                          <div className="flex items-center gap-1">
+                            <UserCheck className={`h-3 w-3 ${nameMatch ? "text-green-600" : "text-destructive"}`} />
+                            <span className={nameMatch ? "text-green-600" : "text-destructive"}>
+                              {nameMatch ? `Nome confere: ${memberName}` : `Nome não confere`}
+                            </span>
+                          </div>
+                          {nameFoundInDoc && (
+                            <p className="text-muted-foreground ml-4">Nome no documento: {nameFoundInDoc}</p>
+                          )}
+                        </div>
+                      )}
                       <p className="font-medium text-muted-foreground">Itens sindicais encontrados:</p>
                       <div className="flex items-center gap-1">
                         <span className={foundItems.mensalidade_sindical ? "text-green-600" : "text-destructive"}>
@@ -335,12 +374,20 @@ export function CardExpiryWithPayslipDialog({
                 )}
 
                 {verificationStatus === "invalid" && (
-                  <Alert variant="destructive">
-                    <ShieldAlert className="h-4 w-4" />
-                    <AlertDescription>
-                      {verificationMessage}
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-2">
+                    <Alert variant="destructive">
+                      <ShieldAlert className="h-4 w-4" />
+                      <AlertDescription>
+                        {verificationMessage}
+                      </AlertDescription>
+                    </Alert>
+                    {nameMatch === false && memberName && (
+                      <div className="text-xs pl-1 text-destructive flex items-center gap-1">
+                        <UserCheck className="h-3 w-3" />
+                        <span>Nome do associado: {memberName} {nameFoundInDoc ? `| Nome no documento: ${nameFoundInDoc}` : ""}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
