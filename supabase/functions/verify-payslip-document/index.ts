@@ -42,6 +42,10 @@ Um contracheque válido deve conter:
 - Proventos/vencimentos
 - Período de referência (mês/ano)
 
+IMPORTANTE - VALIDAÇÃO DO NOME:
+O nome do associado/titular é: "${member_name || "NÃO INFORMADO"}"
+${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/FUNCIONÁRIO corresponde (total ou parcialmente) ao nome "${member_name}". Se o nome no documento for diferente do nome do associado, retorne is_payslip como false e explique que o nome não confere.` : ""}
+
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
 1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical")
 2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")
@@ -50,9 +54,10 @@ IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes iten
 Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false imediatamente.
 
 Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
-{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
+{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
+Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
 Nome do arquivo: ${file_name}`;
 
     const messages: any[] = [
