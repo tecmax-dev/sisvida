@@ -91,7 +91,7 @@ const parseDate = (dateStr: string): Date | null => {
   
   // Try ISO format
   try {
-    const isoDate = parseISO(dateStr);
+    const isoDate = parseDateOnlyToLocalNoon(dateStr);
     if (isValid(isoDate)) return isoDate;
   } catch {
     // ignore
