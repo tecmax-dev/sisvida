@@ -76,6 +76,8 @@ export function CardExpiryWithPayslipDialog({
     setVerificationMessage("");
     setFoundItems({});
     setSaving(false);
+    setNameMatch(null);
+    setNameFoundInDoc(null);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
