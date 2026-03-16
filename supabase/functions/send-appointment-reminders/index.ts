@@ -243,13 +243,16 @@ function formatDateTime(dateStr: string, time: string): string {
 
 // Profissionais com local de atendimento específico (Sede do Sindicato dos Rodoviários)
 const PROFESSIONALS_RODOVIARIOS_LOCATION = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
+const RODOVIARIOS_CLINIC_NAME = 'Sindicato dos Rodoviários';
+
+function isRodoviariosProfessional(professionalName: string): boolean {
+  const lowerName = professionalName.toLowerCase();
+  return PROFESSIONALS_RODOVIARIOS_LOCATION.some(name => lowerName.includes(name));
+}
 
 function getProfessionalLocation(professionalName: string): string | null {
-  const lowerName = professionalName.toLowerCase();
-  for (const name of PROFESSIONALS_RODOVIARIOS_LOCATION) {
-    if (lowerName.includes(name)) {
-      return `📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
-    }
+  if (isRodoviariosProfessional(professionalName)) {
+    return `📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
   }
   return null;
 }
