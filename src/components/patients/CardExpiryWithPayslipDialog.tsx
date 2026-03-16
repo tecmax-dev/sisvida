@@ -20,6 +20,12 @@ interface CardExpiryWithPayslipDialogProps {
 
 type VerificationStatus = "idle" | "uploading" | "verifying" | "valid" | "invalid";
 
+interface FoundItems {
+  mensalidade_sindical?: boolean;
+  taxa_assistencial?: boolean;
+  taxa_negocial?: boolean;
+}
+
 export function CardExpiryWithPayslipDialog({
   open,
   onOpenChange,
