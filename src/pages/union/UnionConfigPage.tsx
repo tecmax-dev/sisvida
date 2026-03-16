@@ -24,7 +24,7 @@ export default function UnionConfigPage() {
       if (!currentClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled")
         .eq("id", currentClinic.id)
         .single();
       if (error) throw error;
@@ -102,6 +102,7 @@ export default function UnionConfigPage() {
                 clinicId={currentClinic.id}
                 currentPeriod={(clinicSettings as any)?.dependent_booking_period ?? "monthly"}
                 currentLimit={(clinicSettings as any)?.dependent_booking_limit ?? 1}
+                currentEnabled={(clinicSettings as any)?.dependent_booking_limit_enabled ?? true}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />

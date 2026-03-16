@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Save, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ interface DependentBookingLimitSettingsProps {
   clinicId: string;
   currentPeriod: string;
   currentLimit: number;
+  currentEnabled: boolean;
   onUpdate: () => void;
   isAdmin: boolean;
 }
@@ -26,9 +28,11 @@ export function DependentBookingLimitSettings({
   clinicId,
   currentPeriod,
   currentLimit,
+  currentEnabled,
   onUpdate,
   isAdmin,
 }: DependentBookingLimitSettingsProps) {
+  const [enabled, setEnabled] = useState(currentEnabled);
   const [period, setPeriod] = useState(currentPeriod || "monthly");
   const [limit, setLimit] = useState(currentLimit ?? 1);
   const [saving, setSaving] = useState(false);
@@ -46,6 +50,7 @@ export function DependentBookingLimitSettings({
         .update({
           dependent_booking_period: period,
           dependent_booking_limit: limit,
+          dependent_booking_limit_enabled: enabled,
         } as any)
         .eq("id", clinicId);
 
@@ -73,7 +78,22 @@ export function DependentBookingLimitSettings({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="dep-enabled" className="text-sm font-medium">Ativar regra de limite</Label>
+            <p className="text-xs text-muted-foreground">
+              Quando ativada, a regra se aplica a agendamentos pelo painel e pelo app (PWA)
+            </p>
+          </div>
+          <Switch
+            id="dep-enabled"
+            checked={enabled}
+            onCheckedChange={setEnabled}
+            disabled={!isAdmin}
+          />
+        </div>
+
+        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 transition-opacity ${!enabled ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="space-y-2">
             <Label htmlFor="dep-period">Período de controle</Label>
             <Select value={period} onValueChange={setPeriod} disabled={!isAdmin}>
