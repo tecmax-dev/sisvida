@@ -467,12 +467,14 @@ serve(async (req) => {
         const time = appointment.start_time.substring(0, 5);
 
         // Create message - usar displayName (nome do dependente ou titular)
+        const profName = professional?.name || 'Profissional';
+        const effectiveClinicName = isRodoviariosProfessional(profName) ? RODOVIARIOS_CLINIC_NAME : clinic.name;
         const message = formatAppointmentReminder(
           displayName,
-          clinic.name,
+          effectiveClinicName,
           dateFormatted,
           time,
-          professional?.name || 'Profissional'
+          profName
         );
 
         let success = false;
