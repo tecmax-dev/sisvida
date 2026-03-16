@@ -36,21 +36,34 @@ serve(async (req) => {
     // For PDFs, we can't send as image - do text-based analysis
     const isPdf = file_type === "application/pdf";
 
-    const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário).
+    const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário) que contenha descontos sindicais.
 
-Um contracheque típico contém:
+Um contracheque válido deve conter:
 - Nome do empregado/funcionário
 - Nome da empresa/empregador
 - Salário bruto e líquido
 - Descontos (INSS, IRRF, etc.)
 - Proventos/vencimentos
 - Período de referência (mês/ano)
-- CNPJ da empresa
+
+IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
+1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical")
+2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")
+3. **Taxa Negocial** (ou "Taxa Negoc.", "Contrib. Negocial")
 
 Responda EXATAMENTE no formato JSON:
-{"is_payslip": true/false, "confidence": 0.0-1.0, "reason": "breve explicação"}
+{
+  "is_payslip": true/false,
+  "confidence": 0.0-1.0,
+  "reason": "breve explicação",
+  "found_items": {
+    "mensalidade_sindical": true/false,
+    "taxa_assistencial": true/false,
+    "taxa_negocial": true/false
+  }
+}
 
-Se não conseguir analisar o conteúdo visual, mas o nome do arquivo sugere ser um contracheque, considere isso na análise.
+Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 Nome do arquivo: ${file_name}`;
 
     const messages: any[] = [
