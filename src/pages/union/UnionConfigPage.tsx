@@ -98,6 +98,7 @@ export default function UnionConfigPage() {
                 currentEnabled={(clinicSettings as any)?.titular_booking_limit_enabled ?? true}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
+              />
               <AdvanceBookingHoursSettings
                 clinicId={currentClinic.id}
                 currentValue={(clinicSettings as any)?.min_advance_booking_hours ?? 6}
