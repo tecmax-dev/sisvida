@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { file_base64, file_name, file_type } = await req.json();
+    const { file_base64, file_name, file_type, member_name } = await req.json();
 
     if (!file_base64) {
       return new Response(
