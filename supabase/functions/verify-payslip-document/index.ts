@@ -105,6 +105,8 @@ Nome do arquivo: ${file_name}`;
     let isPayslip = false;
     let reason = "Não foi possível determinar o tipo do documento.";
     let foundItems = { mensalidade_sindical: false, taxa_assistencial: false, taxa_negocial: false };
+    let nameMatch = false;
+    let nameFoundInDocument: string | null = null;
 
     try {
       const jsonMatch = content.match(/\{[\s\S]*"is_payslip"[\s\S]*\}/);
@@ -113,6 +115,8 @@ Nome do arquivo: ${file_name}`;
         isPayslip = parsed.is_payslip === true;
         const confidence = parsed.confidence || 0;
         reason = parsed.reason || reason;
+        nameMatch = !!parsed.name_match;
+        nameFoundInDocument = parsed.name_found_in_document || null;
 
         if (parsed.found_items) {
           foundItems = {
@@ -125,6 +129,12 @@ Nome do arquivo: ${file_name}`;
         if (isPayslip && confidence < 0.4) {
           isPayslip = false;
           reason = "Documento não reconhecido como contracheque com confiança suficiente.";
+        }
+
+        // Validate name match when member_name was provided
+        if (isPayslip && member_name && !nameMatch) {
+          isPayslip = false;
+          reason = `O nome no contracheque (${nameFoundInDocument || "não identificado"}) não corresponde ao nome do associado (${member_name}).`;
         }
       }
     } catch (parseErr) {
