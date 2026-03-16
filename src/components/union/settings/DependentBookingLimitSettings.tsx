@@ -49,6 +49,7 @@ export function DependentBookingLimitSettings({
         .update({
           dependent_booking_period: period,
           dependent_booking_limit: limit,
+          dependent_booking_limit_enabled: enabled,
         } as any)
         .eq("id", clinicId);
 
