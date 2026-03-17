@@ -1556,9 +1556,30 @@ export default function CalendarPage() {
       const isBookingWindowError = error.message?.includes('booking_window_exceeded') || 
                                    error.message?.includes('Agendamento indisponível');
       
+      // Verificar erro de limite de dependentes
+      const isDependentLimitError = error.message?.includes('LIMITE_AGENDAMENTO_DEPENDENTE');
+      
+      // Verificar erro de limite de CPF (titular)
+      const isCpfLimitError = error.message?.includes('LIMITE_AGENDAMENTO_CPF');
+      
+      const getErrorTitle = () => {
+        if (isBookingWindowError) return "Período indisponível";
+        if (isDependentLimitError) return "Limite de dependente atingido";
+        if (isCpfLimitError) return "Limite de agendamento atingido";
+        if (isScheduleError) return "Horário indisponível";
+        return "Erro ao agendar";
+      };
+      
+      const getErrorMessage = () => {
+        if (isBookingWindowError) return "Agendamento indisponível para este período";
+        if (isDependentLimitError) return "O limite de agendamentos de dependentes para este profissional neste período já foi atingido.";
+        if (isCpfLimitError) return "Já existe agendamento para este profissional neste mês.";
+        return message;
+      };
+      
       toast({
-        title: isBookingWindowError ? "Período indisponível" : (isScheduleError ? "Horário indisponível" : "Erro ao agendar"),
-        description: isBookingWindowError ? "Agendamento indisponível para este período" : message,
+        title: getErrorTitle(),
+        description: getErrorMessage(),
         variant: "destructive",
       });
     } finally {
