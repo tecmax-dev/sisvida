@@ -173,6 +173,19 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
   }
 }
 
+// Profissionais com local de atendimento no Sindicato dos Rodoviários
+const PROFESSIONALS_RODOVIARIOS = ['marcelo aguiar', 'jorge avelar', 'pedro roberto'];
+const RODOVIARIOS_CLINIC_NAME = 'Sindicato dos Rodoviários';
+
+function isRodoviariosProfessional(professionalName: string): boolean {
+  const lowerName = professionalName.toLowerCase();
+  return PROFESSIONALS_RODOVIARIOS.some(name => lowerName.includes(name));
+}
+
+function getRodoviariosProfessionalLocation(): string {
+  return `📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
+}
+
 export function formatAppointmentReminder(
   patientName: string,
   clinicName: string,
@@ -182,6 +195,9 @@ export function formatAppointmentReminder(
   confirmationLink?: string,
   directReplyEnabled?: boolean
 ): string {
+  // Override clinic name for Rodoviários professionals
+  const effectiveClinicName = isRodoviariosProfessional(professionalName) ? RODOVIARIOS_CLINIC_NAME : clinicName;
+  const specificLocation = isRodoviariosProfessional(professionalName) ? getRodoviariosProfessionalLocation() : null;
   // If direct reply is enabled, use the new format without links
   if (directReplyEnabled) {
     const lines = [
