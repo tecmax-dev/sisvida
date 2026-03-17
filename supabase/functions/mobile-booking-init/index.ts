@@ -114,7 +114,7 @@ serve(async (req) => {
       // Query 1: Config da clínica
       supabase
         .from("clinics")
-        .select("booking_months_ahead")
+        .select("booking_months_ahead, dependent_booking_limit, dependent_booking_period, dependent_booking_limit_enabled, titular_booking_limit_enabled, max_appointments_per_cpf_month")
         .eq("id", clinicId)
         .single(),
 
