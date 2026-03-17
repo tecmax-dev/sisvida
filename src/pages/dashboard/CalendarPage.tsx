@@ -4799,39 +4799,41 @@ const updateData: Record<string, any> = {
                       const totalAppointments = group.appointments.length;
                       
                       return (
-                        <div key={group.professional.id} className="border rounded-lg overflow-hidden">
+                        <div key={group.professional.id} className="overflow-hidden rounded-lg border">
                           {/* Header do profissional */}
-                          <div className="p-3 bg-muted/30 border-b space-y-2">
-                            <div className="flex items-center gap-3">
-                              {group.professional.avatar_url ? (
-                                <img 
-                                  src={group.professional.avatar_url} 
-                                  alt={group.professional.name}
-                                  className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <User className="h-5 w-5 text-primary" />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-foreground truncate">{group.professional.name}</h3>
-                                {group.professional.specialty && (
-                                  <p className="text-xs text-primary truncate">{group.professional.specialty}</p>
+                          <div className="space-y-3 border-b bg-muted/30 p-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                              <div className="flex min-w-0 items-center gap-3">
+                                {group.professional.avatar_url ? (
+                                  <img 
+                                    src={group.professional.avatar_url} 
+                                    alt={group.professional.name}
+                                    className="h-10 w-10 shrink-0 rounded-full border-2 border-primary/20 object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                    <User className="h-5 w-5 text-primary" />
+                                  </div>
                                 )}
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="truncate font-semibold text-foreground">{group.professional.name}</h3>
+                                  {group.professional.specialty && (
+                                    <p className="truncate text-xs text-primary">{group.professional.specialty}</p>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-right text-xs text-muted-foreground shrink-0">
+                              <div className="text-left text-xs text-muted-foreground sm:ml-auto sm:text-right">
                                 <span className="font-medium text-primary">{activeAppointments.length} agendamento(s)</span>
                                 <br />
                                 <span>Total {totalAppointments}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                               {/* Botão de lembrete em massa */}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 px-2 text-xs gap-1"
+                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0"
                                 disabled={sendingBulkReminder === group.professional.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -4844,14 +4846,14 @@ const updateData: Record<string, any> = {
                                 ) : (
                                   <Send className="h-4 w-4 text-success" />
                                 )}
-                                Lembrar todos
+                                <span className="min-w-0">Lembrar todos</span>
                               </Button>
                               {/* Botão de cancelamento profissional em lote */}
                               <Button
                                 variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
                                 size="sm"
                                 className={cn(
-                                  "h-8 px-2 text-xs gap-1",
+                                  "h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0",
                                   batchCancelMode === group.professional.id 
                                     ? "bg-orange-600 hover:bg-orange-700 text-white" 
                                     : "text-orange-600 hover:text-orange-700"
@@ -4862,35 +4864,38 @@ const updateData: Record<string, any> = {
                                 }}
                                 title="Cancelamento profissional em lote"
                               >
-                                <UserX className="h-4 w-4" />
-                                {batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}
+                                <UserX className="h-4 w-4 shrink-0" />
+                                <span className="min-w-0">{batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}</span>
                               </Button>
                             </div>
                           </div>
                           
                           {/* Batch selection bar */}
                           {batchCancelMode === group.professional.id && (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 dark:bg-orange-950/20 border-b border-orange-200 dark:border-orange-800">
-                              <Checkbox
-                                checked={(() => {
-                                  const eligible = group.appointments.filter(a => !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status));
-                                  return eligible.length > 0 && eligible.every(a => batchSelectedIds.has(a.id));
-                                })()}
-                                onCheckedChange={() => toggleBatchSelectAll(group.appointments)}
-                              />
-                              <span className="text-xs text-orange-700 dark:text-orange-400 font-medium flex-1">
-                                {batchSelectedIds.size > 0 
-                                  ? `${batchSelectedIds.size} selecionado(s)` 
-                                  : "Selecionar todos"}
-                              </span>
+                            <div className="flex flex-col gap-2 border-b border-orange-200 bg-orange-50 px-3 py-2 dark:border-orange-800 dark:bg-orange-950/20 sm:flex-row sm:items-center">
+                              <div className="flex items-start gap-2 sm:flex-1 sm:items-center">
+                                <Checkbox
+                                  checked={(() => {
+                                    const eligible = group.appointments.filter(a => !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status));
+                                    return eligible.length > 0 && eligible.every(a => batchSelectedIds.has(a.id));
+                                  })()}
+                                  onCheckedChange={() => toggleBatchSelectAll(group.appointments)}
+                                  className="mt-0.5 sm:mt-0"
+                                />
+                                <span className="flex-1 text-xs font-medium leading-snug text-orange-700 dark:text-orange-400">
+                                  {batchSelectedIds.size > 0 
+                                    ? `${batchSelectedIds.size} selecionado(s)` 
+                                    : "Selecionar todos"}
+                                </span>
+                              </div>
                               {batchSelectedIds.size > 0 && (
                                 <Button
                                   size="sm"
-                                  className="h-7 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                                  className="h-auto w-full bg-orange-600 px-3 py-2 text-xs text-white hover:bg-orange-700 sm:h-7 sm:w-auto sm:py-0"
                                   onClick={() => setBatchCancelDialogOpen(true)}
                                 >
-                                  <UserX className="h-3 w-3 mr-1" />
-                                  Cancelar {batchSelectedIds.size}
+                                  <UserX className="mr-1 h-3 w-3 shrink-0" />
+                                  <span className="min-w-0">Cancelar {batchSelectedIds.size}</span>
                                 </Button>
                               )}
                             </div>
