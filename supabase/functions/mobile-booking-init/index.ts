@@ -225,6 +225,11 @@ serve(async (req) => {
         cardExpired: false,
         bookingMonthsAhead,
         holidays,
+        dependentBookingLimit,
+        dependentBookingPeriod,
+        dependentBookingLimitEnabled,
+        titularBookingLimitEnabled,
+        maxAppointmentsPerCpfMonth,
         _debug: { elapsed_ms: elapsed }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
