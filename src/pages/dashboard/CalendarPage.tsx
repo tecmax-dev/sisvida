@@ -3138,7 +3138,7 @@ const updateData: Record<string, any> = {
     return (
       <div
         className={cn(
-          "flex items-center gap-3 py-2 px-3 hover:bg-muted/50 transition-all group cursor-pointer",
+          "flex items-start gap-2 px-2 py-2 transition-all group cursor-pointer hover:bg-muted/50 sm:items-center sm:gap-3 sm:px-3",
           isCancelled && "opacity-50",
           isNoShow && "opacity-60",
           hasConflict && !isCancelled && "bg-destructive/5"
@@ -3157,14 +3157,14 @@ const updateData: Record<string, any> = {
             checked={batchSelectedIds.has(appointment.id)}
             onCheckedChange={() => toggleBatchSelect(appointment.id)}
             onClick={(e) => e.stopPropagation()}
-            className="border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+            className="mt-1 border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 sm:mt-0"
           />
         )}
         {/* Badge de horário compacto */}
         <Badge 
           variant="secondary" 
           className={cn(
-            "font-mono font-medium text-xs px-2 py-1 min-w-[50px] justify-center rounded-sm",
+            "mt-0.5 min-w-[50px] justify-center rounded-sm px-2 py-1 font-mono text-xs font-medium sm:mt-0",
             getTimeBadgeStyle()
           )}
         >
@@ -3172,90 +3172,95 @@ const updateData: Record<string, any> = {
         </Badge>
 
         {/* Ícone de status */}
-        <div className="flex-shrink-0" title={status.label}>
+        <div className="mt-0.5 flex-shrink-0 sm:mt-0" title={status.label}>
           {getStatusIcon()}
         </div>
 
-        {/* Nome do paciente - flex-1 para ocupar espaço */}
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          {appointment.type === "return" && (
-            <span className="text-muted-foreground text-xs">(R)</span>
-          )}
-          <span className={cn(
-            "font-medium truncate uppercase text-sm",
-            (isCancelled || isNoShow) && "line-through text-muted-foreground"
-          )}>
-            {getAppointmentDisplayName(appointment)}
-          </span>
-          {/* Idade do paciente/dependente para lei de prioridade */}
-          {(() => {
-            // Se é dependente, usar a idade do dependente; senão, do titular
-            const birthDate = appointment.dependent_id && appointment.dependent?.birth_date
-              ? appointment.dependent.birth_date
-              : appointment.patient?.birth_date;
-            
-            if (!birthDate) return null;
-            
-            const age = calculateAge(birthDate);
-            if (age !== null) {
-              const isPriority = age >= 60;
+        {/* Nome do paciente + metadados */}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {appointment.type === "return" && (
+              <span className="flex-shrink-0 text-xs text-muted-foreground">(R)</span>
+            )}
+            <span className={cn(
+              "min-w-0 flex-1 truncate text-sm font-medium uppercase",
+              (isCancelled || isNoShow) && "line-through text-muted-foreground"
+            )}>
+              {getAppointmentDisplayName(appointment)}
+            </span>
+          </div>
+
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {/* Idade do paciente/dependente para lei de prioridade */}
+            {(() => {
+              // Se é dependente, usar a idade do dependente; senão, do titular
+              const birthDate = appointment.dependent_id && appointment.dependent?.birth_date
+                ? appointment.dependent.birth_date
+                : appointment.patient?.birth_date;
+              
+              if (!birthDate) return null;
+              
+              const age = calculateAge(birthDate);
+              if (age !== null) {
+                const isPriority = age >= 60;
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "h-5 flex-shrink-0 px-2 py-0.5 text-xs font-bold",
+                      isPriority 
+                        ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
+                        : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
+                    )}
+                    title={isPriority ? "Prioridade legal (60+ anos)" : appointment.dependent_id ? "Idade do dependente" : "Idade do paciente"}
+                  >
+                    {age}a
+                  </Badge>
+                );
+              }
+              return null;
+            })()}
+            {/* Badge de dependente */}
+            {appointment.dependent_id && (
+              <Badge
+                variant="outline"
+                className="h-4 flex-shrink-0 bg-primary/20 px-1.5 py-0 text-[10px] text-primary border-primary/50"
+              >
+                DEP
+              </Badge>
+            )}
+            {/* Badge do convênio - apenas para titular (não dependentes) */}
+            {appointment.patient?.insurance_plan && !appointment.dependent_id && (() => {
+              const insuranceColor =
+                toHslColor(appointment.patient.insurance_plan.color) ??
+                "hsl(var(--accent))";
+
               return (
-                <Badge 
-                  variant="outline" 
-                  className={cn(
-                    "text-xs px-2 py-0.5 h-5 flex-shrink-0 font-bold",
-                    isPriority 
-                      ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
-                      : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
-                  )}
-                  title={isPriority ? "Prioridade legal (60+ anos)" : appointment.dependent_id ? "Idade do dependente" : "Idade do paciente"}
+                <Badge
+                  className="max-w-full flex-shrink-0 truncate border px-1.5 py-0 text-[10px] font-medium"
+                  style={{
+                    backgroundColor: hslWithAlpha(insuranceColor, 0.22),
+                    color: insuranceColor,
+                    borderColor: hslWithAlpha(insuranceColor, 0.55),
+                  }}
                 >
-                  {age}a
+                  {appointment.patient.insurance_plan.name}
                 </Badge>
               );
-            }
-            return null;
-          })()}
-          {/* Badge de dependente */}
-          {appointment.dependent_id && (
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 bg-primary/20 text-primary border-primary/50"
-            >
-              DEP
-            </Badge>
-          )}
-          {/* Badge do convênio - apenas para titular (não dependentes) */}
-          {appointment.patient?.insurance_plan && !appointment.dependent_id && (() => {
-            const insuranceColor =
-              toHslColor(appointment.patient.insurance_plan.color) ??
-              "hsl(var(--accent))";
-
-            return (
-              <Badge
-                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border"
-                style={{
-                  backgroundColor: hslWithAlpha(insuranceColor, 0.22),
-                  color: insuranceColor,
-                  borderColor: hslWithAlpha(insuranceColor, 0.55),
-                }}
+            })()}
+            {hasConflict && !isCancelled && (
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-destructive" />
+            )}
+            {/* Ícone de bloqueio por falta (no-show) */}
+            {isPatientBlocked && (
+              <div 
+                className="flex flex-shrink-0 items-center gap-1"
+                title={`Paciente bloqueado até ${new Date(appointment.patient.no_show_blocked_until!).toLocaleDateString('pt-BR')}`}
               >
-                {appointment.patient.insurance_plan.name}
-              </Badge>
-            );
-          })()}
-          {hasConflict && !isCancelled && (
-            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
-          )}
-          {/* Ícone de bloqueio por falta (no-show) */}
-          {isPatientBlocked && (
-            <div 
-              className="flex items-center gap-1 flex-shrink-0"
-              title={`Paciente bloqueado até ${new Date(appointment.patient.no_show_blocked_until!).toLocaleDateString('pt-BR')}`}
-            >
-              <Ban className="h-4 w-4 text-destructive" />
-            </div>
-          )}
+                <Ban className="h-4 w-4 text-destructive" />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Menu de ações - três pontos sempre visível */}
@@ -4345,18 +4350,17 @@ const updateData: Record<string, any> = {
 
       {/* Batch Professional Cancel Dialog */}
       <AlertDialog open={batchCancelDialogOpen} onOpenChange={setBatchCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <UserX className="h-5 w-5 text-orange-600" />
-              Cancelamento Profissional em Lote
+        <AlertDialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0 sm:max-w-lg">
+          <AlertDialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+            <AlertDialogTitle className="flex items-start gap-2 text-left sm:items-center">
+              <UserX className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600 sm:mt-0" />
+              <span className="min-w-0">Cancelamento Profissional em Lote</span>
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a cancelar <strong>{batchSelectedIds.size} agendamento(s)</strong> por indisponibilidade do profissional. 
-              Os horários permanecerão bloqueados.
+            <AlertDialogDescription className="text-left">
+              Você está prestes a cancelar <strong>{batchSelectedIds.size} agendamento(s)</strong> por indisponibilidade do profissional. Os horários permanecerão bloqueados.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="max-h-[calc(90vh-11rem)] space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
             <div>
               <Label htmlFor="batch-cancel-reason">Motivo do cancelamento (opcional)</Label>
               <Textarea
@@ -4369,30 +4373,32 @@ const updateData: Record<string, any> = {
               />
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start gap-2">
               <Checkbox
                 id="batch-send-notification"
                 checked={batchSendNotification}
                 onCheckedChange={(checked) => setBatchSendNotification(!!checked)}
+                className="mt-0.5"
               />
-              <Label htmlFor="batch-send-notification" className="text-sm font-normal cursor-pointer">
+              <Label htmlFor="batch-send-notification" className="cursor-pointer text-sm font-normal leading-snug">
                 Notificar pacientes via WhatsApp
               </Label>
             </div>
 
-            <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
-              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-sm">
-                <Ban className="h-4 w-4" />
-                <span className="font-medium">Os horários permanecerão bloqueados</span>
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-950/20">
+              <div className="flex items-start gap-2 text-sm text-orange-700 dark:text-orange-400">
+                <Ban className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span className="font-medium leading-snug">Os horários permanecerão bloqueados</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Outros pacientes não poderão agendar nesses horários.
               </p>
             </div>
           </div>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2 px-4 pb-4 sm:px-6 sm:pb-6">
             <AlertDialogCancel 
               disabled={batchCancelling}
+              className="mt-0 w-full whitespace-normal sm:w-auto"
               onClick={() => {
                 setBatchCancelReason("");
                 setBatchSendNotification(true);
@@ -4402,7 +4408,7 @@ const updateData: Record<string, any> = {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBatchProfessionalCancel}
-              className="bg-orange-600 text-white hover:bg-orange-700"
+              className="h-auto w-full whitespace-normal bg-orange-600 py-2 text-white hover:bg-orange-700 sm:w-auto"
               disabled={batchCancelling}
             >
               {batchCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -4793,39 +4799,41 @@ const updateData: Record<string, any> = {
                       const totalAppointments = group.appointments.length;
                       
                       return (
-                        <div key={group.professional.id} className="border rounded-lg overflow-hidden">
+                        <div key={group.professional.id} className="overflow-hidden rounded-lg border">
                           {/* Header do profissional */}
-                          <div className="p-3 bg-muted/30 border-b space-y-2">
-                            <div className="flex items-center gap-3">
-                              {group.professional.avatar_url ? (
-                                <img 
-                                  src={group.professional.avatar_url} 
-                                  alt={group.professional.name}
-                                  className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <User className="h-5 w-5 text-primary" />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-foreground truncate">{group.professional.name}</h3>
-                                {group.professional.specialty && (
-                                  <p className="text-xs text-primary truncate">{group.professional.specialty}</p>
+                          <div className="space-y-3 border-b bg-muted/30 p-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                              <div className="flex min-w-0 items-center gap-3">
+                                {group.professional.avatar_url ? (
+                                  <img 
+                                    src={group.professional.avatar_url} 
+                                    alt={group.professional.name}
+                                    className="h-10 w-10 shrink-0 rounded-full border-2 border-primary/20 object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                    <User className="h-5 w-5 text-primary" />
+                                  </div>
                                 )}
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="truncate font-semibold text-foreground">{group.professional.name}</h3>
+                                  {group.professional.specialty && (
+                                    <p className="truncate text-xs text-primary">{group.professional.specialty}</p>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-right text-xs text-muted-foreground shrink-0">
+                              <div className="text-left text-xs text-muted-foreground sm:ml-auto sm:text-right">
                                 <span className="font-medium text-primary">{activeAppointments.length} agendamento(s)</span>
                                 <br />
                                 <span>Total {totalAppointments}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                               {/* Botão de lembrete em massa */}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 px-2 text-xs gap-1"
+                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0"
                                 disabled={sendingBulkReminder === group.professional.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -4838,14 +4846,14 @@ const updateData: Record<string, any> = {
                                 ) : (
                                   <Send className="h-4 w-4 text-success" />
                                 )}
-                                Lembrar todos
+                                <span className="min-w-0">Lembrar todos</span>
                               </Button>
                               {/* Botão de cancelamento profissional em lote */}
                               <Button
                                 variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
                                 size="sm"
                                 className={cn(
-                                  "h-8 px-2 text-xs gap-1",
+                                  "h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0",
                                   batchCancelMode === group.professional.id 
                                     ? "bg-orange-600 hover:bg-orange-700 text-white" 
                                     : "text-orange-600 hover:text-orange-700"
@@ -4856,35 +4864,38 @@ const updateData: Record<string, any> = {
                                 }}
                                 title="Cancelamento profissional em lote"
                               >
-                                <UserX className="h-4 w-4" />
-                                {batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}
+                                <UserX className="h-4 w-4 shrink-0" />
+                                <span className="min-w-0">{batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}</span>
                               </Button>
                             </div>
                           </div>
                           
                           {/* Batch selection bar */}
                           {batchCancelMode === group.professional.id && (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 dark:bg-orange-950/20 border-b border-orange-200 dark:border-orange-800">
-                              <Checkbox
-                                checked={(() => {
-                                  const eligible = group.appointments.filter(a => !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status));
-                                  return eligible.length > 0 && eligible.every(a => batchSelectedIds.has(a.id));
-                                })()}
-                                onCheckedChange={() => toggleBatchSelectAll(group.appointments)}
-                              />
-                              <span className="text-xs text-orange-700 dark:text-orange-400 font-medium flex-1">
-                                {batchSelectedIds.size > 0 
-                                  ? `${batchSelectedIds.size} selecionado(s)` 
-                                  : "Selecionar todos"}
-                              </span>
+                            <div className="flex flex-col gap-2 border-b border-orange-200 bg-orange-50 px-3 py-2 dark:border-orange-800 dark:bg-orange-950/20 sm:flex-row sm:items-center">
+                              <div className="flex items-start gap-2 sm:flex-1 sm:items-center">
+                                <Checkbox
+                                  checked={(() => {
+                                    const eligible = group.appointments.filter(a => !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status));
+                                    return eligible.length > 0 && eligible.every(a => batchSelectedIds.has(a.id));
+                                  })()}
+                                  onCheckedChange={() => toggleBatchSelectAll(group.appointments)}
+                                  className="mt-0.5 sm:mt-0"
+                                />
+                                <span className="flex-1 text-xs font-medium leading-snug text-orange-700 dark:text-orange-400">
+                                  {batchSelectedIds.size > 0 
+                                    ? `${batchSelectedIds.size} selecionado(s)` 
+                                    : "Selecionar todos"}
+                                </span>
+                              </div>
                               {batchSelectedIds.size > 0 && (
                                 <Button
                                   size="sm"
-                                  className="h-7 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                                  className="h-auto w-full bg-orange-600 px-3 py-2 text-xs text-white hover:bg-orange-700 sm:h-7 sm:w-auto sm:py-0"
                                   onClick={() => setBatchCancelDialogOpen(true)}
                                 >
-                                  <UserX className="h-3 w-3 mr-1" />
-                                  Cancelar {batchSelectedIds.size}
+                                  <UserX className="mr-1 h-3 w-3 shrink-0" />
+                                  <span className="min-w-0">Cancelar {batchSelectedIds.size}</span>
                                 </Button>
                               )}
                             </div>
