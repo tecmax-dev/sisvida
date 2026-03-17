@@ -1030,7 +1030,7 @@ export default function UnionMembersListPage() {
                           currentExpiryDate={member.card_expires_at || null}
                           cardNumber={member.card_number}
                           onUpdate={fetchMembers}
-                          requirePayslip={true}
+                          requirePayslip={!member.insurance_plan?.name?.toLowerCase().includes('rodoviário') && !member.insurance_plan?.name?.toLowerCase().includes('rodoviarios')}
                         />
                       </TableCell>
                       {isAdmin && (
