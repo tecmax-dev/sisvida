@@ -255,7 +255,7 @@ export function useMobileAuthSession() {
    */
   const login = useCallback(async (cpf: string, password: string): Promise<LoginResult> => {
     console.log("[MobileAuth] Iniciando login...");
-    
+
     try {
       const normalizedCpf = cpf.replace(/\D/g, '');
 
@@ -264,69 +264,62 @@ export function useMobileAuthSession() {
       } catch (signOutError) {
         console.warn("[MobileAuth] Não foi possível limpar sessão anterior antes do login:", signOutError);
       }
-      
-      // 1. Verificar credenciais via RPC customizado
-      const { data: patientData, error: verifyError } = await supabase
-        .rpc('verify_patient_password', {
-          p_cpf: normalizedCpf,
-          p_password: password
+
+      const { data: authBootstrap, error: authBootstrapError } = await supabase.functions.invoke(
+        'mobile-patient-auth',
+        {
+          body: {
+            cpf: normalizedCpf,
+            password,
+            clinic_id: TARGET_CLINIC_ID,
+          },
+        }
+      );
+
+      if (authBootstrapError) {
+        console.error('[MobileAuth] mobile-patient-auth falhou:', authBootstrapError);
+        await clearSession();
+        return {
+          success: false,
+          error: 'Não foi possível preparar sua conta de acesso. Tente novamente.',
+        };
+      }
+
+      if (!authBootstrap?.success) {
+        return {
+          success: false,
+          error: authBootstrap?.error || 'CPF ou senha incorretos. Verifique seus dados.',
+        };
+      }
+
+      const patient = {
+        patient_id: authBootstrap.patient_id as string,
+        patient_name: authBootstrap.patient_name as string,
+        clinic_id: authBootstrap.clinic_id as string,
+        patient_email: authBootstrap.patient_email as string,
+      };
+
+      const loginAttempts = 3;
+      let authSuccess = false;
+      let lastSignInError: unknown = null;
+
+      for (let attempt = 1; attempt <= loginAttempts; attempt++) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: patient.patient_email,
+          password,
         });
 
-      if (verifyError || !patientData || patientData.length === 0) {
-        console.error("[MobileAuth] Credenciais inválidas:", verifyError);
-        return { 
-          success: false, 
-          error: "CPF ou senha incorretos. Verifique seus dados." 
-        };
-      }
+        if (!signInError) {
+          authSuccess = true;
+          console.log('[MobileAuth] Login Supabase bem sucedido', { attempt });
+          break;
+        }
 
-      // Selecionar paciente da clínica alvo
-      const patient = patientData.find((p: any) => p.clinic_id === TARGET_CLINIC_ID) ?? patientData[0];
-      
-      console.log("[MobileAuth] Paciente encontrado:", patient.patient_name);
+        lastSignInError = signInError;
+        console.warn('[MobileAuth] signInWithPassword falhou', { attempt, signInError });
 
-      if (!patient?.is_active) {
-        return { 
-          success: false, 
-          error: "Sua conta está inativa. Entre em contato com o sindicato." 
-        };
-      }
-
-      // 2. Gerar email único para sessão Supabase
-      const email = patient.patient_email && patient.patient_email !== '' 
-        ? patient.patient_email 
-        : `paciente_${normalizedCpf}@app.internal`;
-      
-      // 3. Tentar login no Supabase (cria sessão JWT)
-      let authSuccess = false;
-      
-      // Primeiro tentar signIn (usuário já existe)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (!signInError) {
-        authSuccess = true;
-        console.log("[MobileAuth] Login Supabase bem sucedido");
-      } else if (signInError.message.includes('Invalid login credentials')) {
-        // Provisionar/atualizar usuário via RPC híbrido (garante app_metadata com patient_id)
-        const { data: hybridData, error: hybridError } = await supabase.rpc(
-          'authenticate_patient_hybrid',
-          { p_cpf: normalizedCpf, p_password: password }
-        );
-
-        if (hybridError) {
-          console.warn('[MobileAuth] authenticate_patient_hybrid falhou:', hybridError);
-        } else {
-          const emailFromHybrid = (hybridData as any)?.patient_email as string | undefined;
-          const finalEmail = emailFromHybrid || email;
-          const { error: loginAfterHybrid } = await supabase.auth.signInWithPassword({
-            email: finalEmail,
-            password,
-          });
-          authSuccess = !loginAfterHybrid;
-          console.log("[MobileAuth] Hybrid provision + Login:", authSuccess);
+        if (attempt < loginAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
         }
       }
 
@@ -334,14 +327,12 @@ export function useMobileAuthSession() {
         await clearSession();
         return {
           success: false,
-          error: "Não foi possível validar sua sessão de acesso. Entre novamente.",
+          error: 'Não foi possível validar sua sessão de acesso. Entre novamente.',
         };
       }
-      
-      // 4. Persistir em localStorage/IndexedDB (backup)
+
       await persistSession(patient.patient_id, patient.clinic_id, patient.patient_name);
-      
-      // 5. Atualizar estado
+
       setState({
         isLoggedIn: true,
         patientId: patient.patient_id,
@@ -350,24 +341,24 @@ export function useMobileAuthSession() {
         loading: false,
         initialized: true,
       });
-      
-      console.log("[MobileAuth] Login completo:", {
+
+      console.log('[MobileAuth] Login completo:', {
         supabaseAuth: authSuccess,
         localPersistence: true,
+        lastSignInError,
       });
-      
+
       return {
         success: true,
         patientId: patient.patient_id,
         patientName: patient.patient_name,
         clinicId: patient.clinic_id,
       };
-      
     } catch (err) {
       console.error("[MobileAuth] Erro no login:", err);
-      return { 
-        success: false, 
-        error: "Ocorreu um erro ao fazer login. Tente novamente." 
+      return {
+        success: false,
+        error: 'Ocorreu um erro ao fazer login. Tente novamente.',
       };
     }
   }, []);
