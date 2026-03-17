@@ -3138,7 +3138,7 @@ const updateData: Record<string, any> = {
     return (
       <div
         className={cn(
-          "flex items-center gap-3 py-2 px-3 hover:bg-muted/50 transition-all group cursor-pointer",
+          "flex items-start gap-2 px-2 py-2 transition-all group cursor-pointer hover:bg-muted/50 sm:items-center sm:gap-3 sm:px-3",
           isCancelled && "opacity-50",
           isNoShow && "opacity-60",
           hasConflict && !isCancelled && "bg-destructive/5"
@@ -3157,14 +3157,14 @@ const updateData: Record<string, any> = {
             checked={batchSelectedIds.has(appointment.id)}
             onCheckedChange={() => toggleBatchSelect(appointment.id)}
             onClick={(e) => e.stopPropagation()}
-            className="border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+            className="mt-1 border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 sm:mt-0"
           />
         )}
         {/* Badge de horário compacto */}
         <Badge 
           variant="secondary" 
           className={cn(
-            "font-mono font-medium text-xs px-2 py-1 min-w-[50px] justify-center rounded-sm",
+            "mt-0.5 min-w-[50px] justify-center rounded-sm px-2 py-1 font-mono text-xs font-medium sm:mt-0",
             getTimeBadgeStyle()
           )}
         >
@@ -3172,90 +3172,95 @@ const updateData: Record<string, any> = {
         </Badge>
 
         {/* Ícone de status */}
-        <div className="flex-shrink-0" title={status.label}>
+        <div className="mt-0.5 flex-shrink-0 sm:mt-0" title={status.label}>
           {getStatusIcon()}
         </div>
 
-        {/* Nome do paciente - flex-1 para ocupar espaço */}
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          {appointment.type === "return" && (
-            <span className="text-muted-foreground text-xs">(R)</span>
-          )}
-          <span className={cn(
-            "font-medium truncate uppercase text-sm",
-            (isCancelled || isNoShow) && "line-through text-muted-foreground"
-          )}>
-            {getAppointmentDisplayName(appointment)}
-          </span>
-          {/* Idade do paciente/dependente para lei de prioridade */}
-          {(() => {
-            // Se é dependente, usar a idade do dependente; senão, do titular
-            const birthDate = appointment.dependent_id && appointment.dependent?.birth_date
-              ? appointment.dependent.birth_date
-              : appointment.patient?.birth_date;
-            
-            if (!birthDate) return null;
-            
-            const age = calculateAge(birthDate);
-            if (age !== null) {
-              const isPriority = age >= 60;
+        {/* Nome do paciente + metadados */}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {appointment.type === "return" && (
+              <span className="flex-shrink-0 text-xs text-muted-foreground">(R)</span>
+            )}
+            <span className={cn(
+              "min-w-0 flex-1 truncate text-sm font-medium uppercase",
+              (isCancelled || isNoShow) && "line-through text-muted-foreground"
+            )}>
+              {getAppointmentDisplayName(appointment)}
+            </span>
+          </div>
+
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {/* Idade do paciente/dependente para lei de prioridade */}
+            {(() => {
+              // Se é dependente, usar a idade do dependente; senão, do titular
+              const birthDate = appointment.dependent_id && appointment.dependent?.birth_date
+                ? appointment.dependent.birth_date
+                : appointment.patient?.birth_date;
+              
+              if (!birthDate) return null;
+              
+              const age = calculateAge(birthDate);
+              if (age !== null) {
+                const isPriority = age >= 60;
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "h-5 flex-shrink-0 px-2 py-0.5 text-xs font-bold",
+                      isPriority 
+                        ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
+                        : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
+                    )}
+                    title={isPriority ? "Prioridade legal (60+ anos)" : appointment.dependent_id ? "Idade do dependente" : "Idade do paciente"}
+                  >
+                    {age}a
+                  </Badge>
+                );
+              }
+              return null;
+            })()}
+            {/* Badge de dependente */}
+            {appointment.dependent_id && (
+              <Badge
+                variant="outline"
+                className="h-4 flex-shrink-0 bg-primary/20 px-1.5 py-0 text-[10px] text-primary border-primary/50"
+              >
+                DEP
+              </Badge>
+            )}
+            {/* Badge do convênio - apenas para titular (não dependentes) */}
+            {appointment.patient?.insurance_plan && !appointment.dependent_id && (() => {
+              const insuranceColor =
+                toHslColor(appointment.patient.insurance_plan.color) ??
+                "hsl(var(--accent))";
+
               return (
-                <Badge 
-                  variant="outline" 
-                  className={cn(
-                    "text-xs px-2 py-0.5 h-5 flex-shrink-0 font-bold",
-                    isPriority 
-                      ? "bg-amber-400 text-amber-900 border-amber-500 dark:bg-amber-500 dark:text-amber-950 dark:border-amber-400" 
-                      : "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900 dark:text-sky-300 dark:border-sky-700"
-                  )}
-                  title={isPriority ? "Prioridade legal (60+ anos)" : appointment.dependent_id ? "Idade do dependente" : "Idade do paciente"}
+                <Badge
+                  className="max-w-full flex-shrink-0 truncate border px-1.5 py-0 text-[10px] font-medium"
+                  style={{
+                    backgroundColor: hslWithAlpha(insuranceColor, 0.22),
+                    color: insuranceColor,
+                    borderColor: hslWithAlpha(insuranceColor, 0.55),
+                  }}
                 >
-                  {age}a
+                  {appointment.patient.insurance_plan.name}
                 </Badge>
               );
-            }
-            return null;
-          })()}
-          {/* Badge de dependente */}
-          {appointment.dependent_id && (
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 bg-primary/20 text-primary border-primary/50"
-            >
-              DEP
-            </Badge>
-          )}
-          {/* Badge do convênio - apenas para titular (não dependentes) */}
-          {appointment.patient?.insurance_plan && !appointment.dependent_id && (() => {
-            const insuranceColor =
-              toHslColor(appointment.patient.insurance_plan.color) ??
-              "hsl(var(--accent))";
-
-            return (
-              <Badge
-                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border"
-                style={{
-                  backgroundColor: hslWithAlpha(insuranceColor, 0.22),
-                  color: insuranceColor,
-                  borderColor: hslWithAlpha(insuranceColor, 0.55),
-                }}
+            })()}
+            {hasConflict && !isCancelled && (
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 text-destructive" />
+            )}
+            {/* Ícone de bloqueio por falta (no-show) */}
+            {isPatientBlocked && (
+              <div 
+                className="flex flex-shrink-0 items-center gap-1"
+                title={`Paciente bloqueado até ${new Date(appointment.patient.no_show_blocked_until!).toLocaleDateString('pt-BR')}`}
               >
-                {appointment.patient.insurance_plan.name}
-              </Badge>
-            );
-          })()}
-          {hasConflict && !isCancelled && (
-            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
-          )}
-          {/* Ícone de bloqueio por falta (no-show) */}
-          {isPatientBlocked && (
-            <div 
-              className="flex items-center gap-1 flex-shrink-0"
-              title={`Paciente bloqueado até ${new Date(appointment.patient.no_show_blocked_until!).toLocaleDateString('pt-BR')}`}
-            >
-              <Ban className="h-4 w-4 text-destructive" />
-            </div>
-          )}
+                <Ban className="h-4 w-4 text-destructive" />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Menu de ações - três pontos sempre visível */}
