@@ -3268,6 +3268,15 @@ const updateData: Record<string, any> = {
                 Auditoria
               </DropdownMenuItem>
               
+              {/* Cancelamento Profissional */}
+              <DropdownMenuItem 
+                onClick={() => openProfessionalCancelDialog(appointment)}
+                className="text-orange-600 focus:text-orange-600"
+              >
+                <UserX className="h-4 w-4 mr-2" />
+                Cancelamento Profissional
+              </DropdownMenuItem>
+
               {/* Cancelar */}
               <DropdownMenuItem 
                 onClick={() => openCancelDialog(appointment)}
