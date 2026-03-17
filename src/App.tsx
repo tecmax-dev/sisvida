@@ -17,6 +17,7 @@ import { MobileAuthProvider } from "@/contexts/MobileAuthContext";
 import { MobileAppLayout } from "@/components/mobile/MobileAppLayout";
 import { DomainRedirect } from "@/components/routing/DomainRedirect";
 import { PWAUpdateListener } from "@/components/pwa/PWAUpdateListener";
+import { SecurityPopup } from "@/components/SecurityPopup";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
