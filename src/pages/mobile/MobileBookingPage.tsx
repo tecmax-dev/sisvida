@@ -134,6 +134,13 @@ export default function MobileBookingPage() {
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   
+  // Booking limit config from edge function
+  const [dependentBookingLimit, setDependentBookingLimit] = useState(1);
+  const [dependentBookingPeriod, setDependentBookingPeriod] = useState("monthly");
+  const [dependentBookingLimitEnabled, setDependentBookingLimitEnabled] = useState(true);
+  const [titularBookingLimitEnabled, setTitularBookingLimitEnabled] = useState(true);
+  const [maxAppointmentsPerCpfMonth, setMaxAppointmentsPerCpfMonth] = useState(1);
+  
   const clinicIdRef = useRef<string | null>(null);
   
   const [loading, setLoading] = useState(true);
@@ -272,6 +279,13 @@ export default function MobileBookingPage() {
         setBookingMonthsAhead(data.bookingMonthsAhead);
       }
 
+      // Setar configuração de limites de agendamento
+      if (data.dependentBookingLimit !== undefined) setDependentBookingLimit(data.dependentBookingLimit);
+      if (data.dependentBookingPeriod) setDependentBookingPeriod(data.dependentBookingPeriod);
+      if (data.dependentBookingLimitEnabled !== undefined) setDependentBookingLimitEnabled(data.dependentBookingLimitEnabled);
+      if (data.titularBookingLimitEnabled !== undefined) setTitularBookingLimitEnabled(data.titularBookingLimitEnabled);
+      if (data.maxAppointmentsPerCpfMonth !== undefined) setMaxAppointmentsPerCpfMonth(data.maxAppointmentsPerCpfMonth);
+
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
         setBlockedMessage(data.blockedMessage);
@@ -409,6 +423,28 @@ export default function MobileBookingPage() {
     }
   };
 
+  // Helper: calculate period range for booking limit validation
+  const getBookingPeriodRange = (date: Date, period: string): { start: string; end: string } => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    if (period === 'daily') {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      return { start: dateStr, end: dateStr };
+    } else if (period === 'weekly') {
+      const dayOfWeek = date.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(year, month, day + mondayOffset);
+      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+      return { start: format(monday, 'yyyy-MM-dd'), end: format(sunday, 'yyyy-MM-dd') };
+    } else {
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      return { start: format(firstDay, 'yyyy-MM-dd'), end: format(lastDay, 'yyyy-MM-dd') };
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedProfessionalId || !selectedDate || !selectedTime) {
       toast({
@@ -423,6 +459,65 @@ export default function MobileBookingPage() {
 
     try {
       const professional = professionals.find(p => p.id === selectedProfessionalId);
+      const isDependentBooking = patientType === "dependent" && !!selectedDependentId;
+      const appointmentDate = format(selectedDate, "yyyy-MM-dd");
+      
+      // ===== PRE-FLIGHT: Validate booking limits before inserting =====
+      if (clinicIdRef.current && patientId) {
+        // Dependent limit check
+        if (isDependentBooking && dependentBookingLimitEnabled && dependentBookingLimit > 0) {
+          const { start, end } = getBookingPeriodRange(selectedDate, dependentBookingPeriod);
+          
+          const { count, error: countError } = await supabase
+            .from("appointments")
+            .select("id", { count: "exact", head: true })
+            .eq("clinic_id", clinicIdRef.current)
+            .eq("patient_id", patientId)
+            .eq("professional_id", selectedProfessionalId)
+            .not("dependent_id", "is", null)
+            .gte("appointment_date", start)
+            .lte("appointment_date", end)
+            .not("status", "in", '("cancelled","no_show")');
+          
+          if (!countError && (count ?? 0) >= dependentBookingLimit) {
+            const periodLabel = dependentBookingPeriod === 'daily' ? 'dia' : dependentBookingPeriod === 'weekly' ? 'semana' : 'mês';
+            toast({
+              title: "Limite de dependente atingido",
+              description: `Você já possui ${dependentBookingLimit} agendamento(s) de dependente para este profissional neste(a) ${periodLabel}.`,
+              variant: "destructive",
+            });
+            setSubmitting(false);
+            return;
+          }
+        }
+        
+        // Titular limit check
+        if (!isDependentBooking && titularBookingLimitEnabled && maxAppointmentsPerCpfMonth > 0) {
+          const monthStart = format(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1), 'yyyy-MM-dd');
+          const monthEnd = format(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0), 'yyyy-MM-dd');
+          
+          const { count, error: countError } = await supabase
+            .from("appointments")
+            .select("id", { count: "exact", head: true })
+            .eq("clinic_id", clinicIdRef.current)
+            .eq("patient_id", patientId)
+            .eq("professional_id", selectedProfessionalId)
+            .is("dependent_id", null)
+            .gte("appointment_date", monthStart)
+            .lte("appointment_date", monthEnd)
+            .not("status", "in", '("cancelled","no_show")');
+          
+          if (!countError && (count ?? 0) >= maxAppointmentsPerCpfMonth) {
+            toast({
+              title: "Limite de agendamento atingido",
+              description: "Você já possui agendamento para este profissional neste mês.",
+              variant: "destructive",
+            });
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
       
       // Get the duration from the applicable block for this date
       const applicableBlocks = getBlocksForDate(selectedDate, professional?.schedule || null);
@@ -435,8 +530,8 @@ export default function MobileBookingPage() {
         clinic_id: clinicIdRef.current,
         patient_id: patientId,
         professional_id: selectedProfessionalId,
-        dependent_id: patientType === "dependent" && selectedDependentId ? selectedDependentId : null,
-        appointment_date: format(selectedDate, "yyyy-MM-dd"),
+        dependent_id: isDependentBooking ? selectedDependentId : null,
+        appointment_date: appointmentDate,
         start_time: selectedTime,
         end_time: endTime,
         status: "scheduled" as const,
@@ -449,8 +544,14 @@ export default function MobileBookingPage() {
         .insert([appointmentData]);
 
       if (error) {
+        if (error.message?.includes("LIMITE_AGENDAMENTO_DEPENDENTE")) {
+          throw new Error("Limite de agendamentos de dependentes atingido para este profissional neste período.");
+        }
+        if (error.message?.includes("LIMITE_AGENDAMENTO_CPF")) {
+          throw new Error("Você já possui agendamento para este profissional neste mês.");
+        }
         if (error.message?.includes("booking_window_exceeded") || error.message?.includes("Agendamento indisponível")) {
-          throw new Error("Agendamento indisponível para este período");
+          throw new Error("Agendamento indisponível para este período.");
         }
         throw error;
       }
