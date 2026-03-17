@@ -1121,6 +1121,41 @@ export default function CalendarPage() {
     return () => clearTimeout(timer);
   }, [patientSearchQuery, searchPatients]);
 
+  // Fetch dependents when patient is selected
+  const fetchPatientDependents = useCallback(async (patientId: string) => {
+    if (!currentClinic) return;
+    setLoadingDependents(true);
+    try {
+      const { data, error } = await supabase
+        .from('patient_dependents')
+        .select('id, name, cpf')
+        .eq('patient_id', patientId)
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
+        .or('pending_approval.is.null,pending_approval.eq.false')
+        .order('name');
+      if (!error && data) {
+        setPatientDependents(data);
+      } else {
+        setPatientDependents([]);
+      }
+    } catch {
+      setPatientDependents([]);
+    } finally {
+      setLoadingDependents(false);
+    }
+  }, [currentClinic]);
+
+  useEffect(() => {
+    if (formPatient) {
+      fetchPatientDependents(formPatient);
+      setFormDependentId(null);
+    } else {
+      setPatientDependents([]);
+      setFormDependentId(null);
+    }
+  }, [formPatient, fetchPatientDependents]);
+
   const fetchHolidays = async () => {
     if (!currentClinic) return;
 
