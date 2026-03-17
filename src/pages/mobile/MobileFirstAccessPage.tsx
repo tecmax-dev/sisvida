@@ -144,7 +144,7 @@ export default function MobileFirstAccessPage() {
       // Buscar paciente pelo CPF que não tenha senha cadastrada
       const { data: patients, error } = await supabase
         .from('patients')
-        .select('id, name, birth_date, password_hash')
+        .select('id, name, birth_date')
         .or(`cpf.eq.${normalizedCpf},cpf.eq.${cpf}`)
         .eq('clinic_id', SINDICATO_CLINIC_ID)
         .eq('is_active', true);
