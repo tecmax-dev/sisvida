@@ -258,6 +258,12 @@ export function useMobileAuthSession() {
     
     try {
       const normalizedCpf = cpf.replace(/\D/g, '');
+
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (signOutError) {
+        console.warn("[MobileAuth] Não foi possível limpar sessão anterior antes do login:", signOutError);
+      }
       
       // 1. Verificar credenciais via RPC customizado
       const { data: patientData, error: verifyError } = await supabase
@@ -322,6 +328,14 @@ export function useMobileAuthSession() {
           authSuccess = !loginAfterHybrid;
           console.log("[MobileAuth] Hybrid provision + Login:", authSuccess);
         }
+      }
+
+      if (!authSuccess) {
+        await clearSession();
+        return {
+          success: false,
+          error: "Não foi possível validar sua sessão de acesso. Entre novamente.",
+        };
       }
       
       // 4. Persistir em localStorage/IndexedDB (backup)

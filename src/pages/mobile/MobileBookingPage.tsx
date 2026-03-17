@@ -461,6 +461,28 @@ export default function MobileBookingPage() {
       const professional = professionals.find(p => p.id === selectedProfessionalId);
       const isDependentBooking = patientType === "dependent" && !!selectedDependentId;
       const appointmentDate = format(selectedDate, "yyyy-MM-dd");
+
+      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+      if (authUserError) {
+        throw authUserError;
+      }
+
+      const authUser = authUserData.user;
+      const authAppMeta = (authUser?.app_metadata ?? {}) as Record<string, any>;
+      const authUserMeta = (authUser?.user_metadata ?? {}) as Record<string, any>;
+      const authPatientId =
+        (authAppMeta.patient_id as string | undefined) ??
+        (authUserMeta.patient_id as string | undefined) ??
+        null;
+
+      if (!authUser || authPatientId !== patientId) {
+        console.error("[MobileBooking] Sessão backend inválida para o paciente atual", {
+          authUserId: authUser?.id,
+          authPatientId,
+          localPatientId: patientId,
+        });
+        throw new Error("Sua sessão expirou ou está inconsistente. Entre novamente para continuar.");
+      }
       
       // ===== PRE-FLIGHT: Validate booking limits before inserting =====
       if (clinicIdRef.current && patientId) {
