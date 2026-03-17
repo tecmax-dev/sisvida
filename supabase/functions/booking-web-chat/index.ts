@@ -1281,9 +1281,9 @@ serve(async (req) => {
           ? session.selected_dependent_name
           : session.patient_name;
 
-        // Verificar se precisa incluir local específico (Dr. Marcelo Aguiar ou Dr. Jorge Avelar)
+        // Verificar se precisa incluir local específico (Rodoviários)
         const professionalNameLower = (session.selected_professional_name || '').toLowerCase();
-        const isRodoviariosProfessional = professionalNameLower.includes('marcelo aguiar') || professionalNameLower.includes('jorge avelar');
+        const isRodoviariosProfessional = professionalNameLower.includes('marcelo aguiar') || professionalNameLower.includes('jorge avelar') || professionalNameLower.includes('pedro roberto');
         const locationInfo = isRodoviariosProfessional 
           ? `\n\n📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`
           : '';
