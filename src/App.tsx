@@ -692,6 +692,7 @@ function App() {
             </ModalProvider>
           </TooltipProvider>
         </QueryClientProvider>
+      <SecurityPopup />
       </ThemeProvider>
     </ErrorBoundary>
   );
