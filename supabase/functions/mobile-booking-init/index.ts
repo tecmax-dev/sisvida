@@ -158,6 +158,11 @@ serve(async (req) => {
 
     // Processar resultados
     const bookingMonthsAhead = clinicConfigResult.data?.booking_months_ahead ?? 12;
+    const dependentBookingLimit = clinicConfigResult.data?.dependent_booking_limit ?? 1;
+    const dependentBookingPeriod = clinicConfigResult.data?.dependent_booking_period ?? 'monthly';
+    const dependentBookingLimitEnabled = clinicConfigResult.data?.dependent_booking_limit_enabled ?? true;
+    const titularBookingLimitEnabled = clinicConfigResult.data?.titular_booking_limit_enabled ?? true;
+    const maxAppointmentsPerCpfMonth = clinicConfigResult.data?.max_appointments_per_cpf_month ?? 1;
 
     // Mapear profissionais
     const professionals = (professionalsResult.data || []).map((prof: any) => ({
