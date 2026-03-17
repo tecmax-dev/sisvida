@@ -554,6 +554,14 @@ export default function CalendarPage() {
   const [cancelByProfessional, setCancelByProfessional] = useState(false);
   const [sendCancelNotification, setSendCancelNotification] = useState(true);
   
+  // Batch professional cancellation state
+  const [batchCancelMode, setBatchCancelMode] = useState<string | null>(null); // professionalId or null
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
+  const [batchCancelDialogOpen, setBatchCancelDialogOpen] = useState(false);
+  const [batchCancelReason, setBatchCancelReason] = useState("");
+  const [batchSendNotification, setBatchSendNotification] = useState(true);
+  const [batchCancelling, setBatchCancelling] = useState(false);
+  
   // Reschedule state (for drag-drop simulation)
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
