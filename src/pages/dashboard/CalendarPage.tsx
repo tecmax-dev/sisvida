@@ -1412,6 +1412,7 @@ export default function CalendarPage() {
       duration_minutes: number;
       is_recurring: boolean;
       recurrence_group_id: string | null;
+      dependent_id: string | null;
     }> = [];
     
     const recurrenceGroupId = recurrenceConfig.enabled ? generateId() : null;
