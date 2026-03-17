@@ -15705,6 +15705,10 @@ export type Database = {
           patient_name: string
         }[]
       }
+      check_patient_has_password: {
+        Args: { p_patient_id: string }
+        Returns: boolean
+      }
       check_whatsapp_multiattendance_access: {
         Args: { p_clinic_id: string }
         Returns: boolean
