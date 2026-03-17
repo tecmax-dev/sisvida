@@ -2045,6 +2045,8 @@ const updateData: Record<string, any> = {
   const resetForm = () => {
     setFormPatient("");
     setSelectedPatientName("");
+    setFormDependentId(null);
+    setPatientDependents([]);
     // Keep professional selection for logged-in professionals
     if (!loggedInProfessionalId) {
       setFormProfessional("");
