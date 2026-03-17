@@ -134,6 +134,13 @@ export default function MobileBookingPage() {
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
   
+  // Booking limit config from edge function
+  const [dependentBookingLimit, setDependentBookingLimit] = useState(1);
+  const [dependentBookingPeriod, setDependentBookingPeriod] = useState("monthly");
+  const [dependentBookingLimitEnabled, setDependentBookingLimitEnabled] = useState(true);
+  const [titularBookingLimitEnabled, setTitularBookingLimitEnabled] = useState(true);
+  const [maxAppointmentsPerCpfMonth, setMaxAppointmentsPerCpfMonth] = useState(1);
+  
   const clinicIdRef = useRef<string | null>(null);
   
   const [loading, setLoading] = useState(true);
