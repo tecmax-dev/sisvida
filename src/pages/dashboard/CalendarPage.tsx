@@ -2083,6 +2083,15 @@ const updateData: Record<string, any> = {
   const openCancelDialog = (appointment: Appointment) => {
     setCancellingAppointment(appointment);
     setCancelReason("");
+    setCancelByProfessional(false);
+    setCancelDialogOpen(true);
+  };
+
+  const openProfessionalCancelDialog = (appointment: Appointment) => {
+    setCancellingAppointment(appointment);
+    setCancelReason("");
+    setCancelByProfessional(true);
+    setSendCancelNotification(true);
     setCancelDialogOpen(true);
   };
 
