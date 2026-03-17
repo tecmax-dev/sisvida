@@ -231,13 +231,15 @@ export function formatAppointmentReminder(
     `📅 *Data:* ${date}`,
     `🕐 *Horário:* ${time}`,
     `👨‍⚕️ *Profissional:* ${professionalName}`,
-    `🏥 *Clínica:* ${clinicName}`,
+    `🏥 *Clínica:* ${effectiveClinicName}`,
+    specificLocation ? `` : null,
+    specificLocation,
     ``,
     confirmationLink ? `Para confirmar ou cancelar sua consulta, acesse:` : `Por favor, confirme sua presença respondendo esta mensagem.`,
     confirmationLink ? confirmationLink : null,
     ``,
     `Atenciosamente,`,
-    `Equipe ${clinicName}`,
+    `Equipe ${effectiveClinicName}`,
   ].filter(Boolean);
 
   return lines.join('\n');
