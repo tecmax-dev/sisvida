@@ -554,6 +554,14 @@ export default function CalendarPage() {
   const [cancelByProfessional, setCancelByProfessional] = useState(false);
   const [sendCancelNotification, setSendCancelNotification] = useState(true);
   
+  // Batch professional cancellation state
+  const [batchCancelMode, setBatchCancelMode] = useState<string | null>(null); // professionalId or null
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
+  const [batchCancelDialogOpen, setBatchCancelDialogOpen] = useState(false);
+  const [batchCancelReason, setBatchCancelReason] = useState("");
+  const [batchSendNotification, setBatchSendNotification] = useState(true);
+  const [batchCancelling, setBatchCancelling] = useState(false);
+  
   // Reschedule state (for drag-drop simulation)
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
@@ -2087,6 +2095,114 @@ const updateData: Record<string, any> = {
     setCancelDialogOpen(true);
   };
 
+  // Batch professional cancellation helpers
+  const toggleBatchCancelMode = (professionalId: string, appointments: Appointment[]) => {
+    if (batchCancelMode === professionalId) {
+      // Exit batch mode
+      setBatchCancelMode(null);
+      setBatchSelectedIds(new Set());
+    } else {
+      setBatchCancelMode(professionalId);
+      setBatchSelectedIds(new Set());
+    }
+  };
+
+  const toggleBatchSelect = (appointmentId: string) => {
+    setBatchSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(appointmentId)) {
+        next.delete(appointmentId);
+      } else {
+        next.add(appointmentId);
+      }
+      return next;
+    });
+  };
+
+  const toggleBatchSelectAll = (appointments: Appointment[]) => {
+    const eligible = appointments.filter(a => 
+      !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status)
+    );
+    const allSelected = eligible.every(a => batchSelectedIds.has(a.id));
+    if (allSelected) {
+      setBatchSelectedIds(new Set());
+    } else {
+      setBatchSelectedIds(new Set(eligible.map(a => a.id)));
+    }
+  };
+
+  const handleBatchProfessionalCancel = async () => {
+    if (batchSelectedIds.size === 0) return;
+    setBatchCancelling(true);
+
+    const selectedAppointments = appointments.filter(a => batchSelectedIds.has(a.id));
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const apt of selectedAppointments) {
+      try {
+        const { error } = await supabase
+          .from('appointments')
+          .update({
+            status: 'blocked' as "blocked",
+            cancellation_reason: batchCancelReason.trim() || 'Cancelamento profissional em lote',
+            cancelled_at: new Date().toISOString(),
+          })
+          .eq('id', apt.id);
+
+        if (error) {
+          errorCount++;
+          continue;
+        }
+        successCount++;
+
+        // Send WhatsApp notification if enabled
+        if (batchSendNotification && currentClinic && apt.patient?.phone) {
+          const formattedDate = new Date(apt.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR');
+          const message = formatProfessionalCancellation(
+            apt.patient.name,
+            currentClinic.name,
+            formattedDate,
+            apt.start_time.slice(0, 5),
+            apt.professional?.name || 'o profissional',
+            batchCancelReason.trim() || undefined
+          );
+
+          try {
+            await sendWhatsAppMessage({
+              phone: apt.patient.phone,
+              message,
+              clinicId: currentClinic.id,
+              type: 'custom',
+            });
+          } catch (err) {
+            console.error('[BatchCancel] WhatsApp error for', apt.patient.name, err);
+          }
+
+          // Small delay between WhatsApp messages
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      } catch (err) {
+        console.error('[BatchCancel] Error cancelling appointment', apt.id, err);
+        errorCount++;
+      }
+    }
+
+    setBatchCancelling(false);
+    setBatchCancelDialogOpen(false);
+    setBatchCancelMode(null);
+    setBatchSelectedIds(new Set());
+    setBatchCancelReason("");
+    setBatchSendNotification(true);
+
+    toast({
+      title: "Cancelamento profissional em lote",
+      description: `${successCount} agendamento(s) cancelado(s)${errorCount > 0 ? `, ${errorCount} erro(s)` : ''}.`,
+    });
+
+    fetchAppointments();
+  };
+
   const openProfessionalCancelDialog = (appointment: Appointment) => {
     setCancellingAppointment(appointment);
     setCancelReason("");
@@ -3027,8 +3143,23 @@ const updateData: Record<string, any> = {
           isNoShow && "opacity-60",
           hasConflict && !isCancelled && "bg-destructive/5"
         )}
-        onClick={() => openAppointmentPanel(appointment)}
+        onClick={() => {
+          if (batchCancelMode && !['cancelled', 'completed', 'no_show', 'blocked'].includes(appointment.status)) {
+            toggleBatchSelect(appointment.id);
+            return;
+          }
+          openAppointmentPanel(appointment);
+        }}
       >
+        {/* Checkbox de seleção em lote */}
+        {batchCancelMode && !['cancelled', 'completed', 'no_show', 'blocked'].includes(appointment.status) && (
+          <Checkbox
+            checked={batchSelectedIds.has(appointment.id)}
+            onCheckedChange={() => toggleBatchSelect(appointment.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+          />
+        )}
         {/* Badge de horário compacto */}
         <Badge 
           variant="secondary" 
@@ -4212,6 +4343,75 @@ const updateData: Record<string, any> = {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Batch Professional Cancel Dialog */}
+      <AlertDialog open={batchCancelDialogOpen} onOpenChange={setBatchCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-orange-600" />
+              Cancelamento Profissional em Lote
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a cancelar <strong>{batchSelectedIds.size} agendamento(s)</strong> por indisponibilidade do profissional. 
+              Os horários permanecerão bloqueados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="batch-cancel-reason">Motivo do cancelamento (opcional)</Label>
+              <Textarea
+                id="batch-cancel-reason"
+                value={batchCancelReason}
+                onChange={(e) => setBatchCancelReason(e.target.value)}
+                placeholder="Informe o motivo do cancelamento..."
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="batch-send-notification"
+                checked={batchSendNotification}
+                onCheckedChange={(checked) => setBatchSendNotification(!!checked)}
+              />
+              <Label htmlFor="batch-send-notification" className="text-sm font-normal cursor-pointer">
+                Notificar pacientes via WhatsApp
+              </Label>
+            </div>
+
+            <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-sm">
+                <Ban className="h-4 w-4" />
+                <span className="font-medium">Os horários permanecerão bloqueados</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Outros pacientes não poderão agendar nesses horários.
+              </p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              disabled={batchCancelling}
+              onClick={() => {
+                setBatchCancelReason("");
+                setBatchSendNotification(true);
+              }}
+            >
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBatchProfessionalCancel}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+              disabled={batchCancelling}
+            >
+              {batchCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Cancelar {batchSelectedIds.size} agendamento(s)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Main Content */}
       <div className="flex gap-6">
         {/* Sidebar - Pacientes do dia (week view) */}
@@ -4637,7 +4837,56 @@ const updateData: Record<string, any> = {
                               )}
                               <span className="hidden sm:inline">Lembrar todos</span>
                             </Button>
+                            {/* Botão de cancelamento profissional em lote */}
+                            <Button
+                              variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
+                              size="sm"
+                              className={cn(
+                                "h-8 px-2 text-xs gap-1",
+                                batchCancelMode === group.professional.id 
+                                  ? "bg-orange-600 hover:bg-orange-700 text-white" 
+                                  : "text-orange-600 hover:text-orange-700"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleBatchCancelMode(group.professional.id, group.appointments);
+                              }}
+                              title="Cancelamento profissional em lote"
+                            >
+                              <UserX className="h-4 w-4" />
+                              <span className="hidden sm:inline">
+                                {batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}
+                              </span>
+                            </Button>
                           </div>
+                          
+                          {/* Batch selection bar */}
+                          {batchCancelMode === group.professional.id && (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 dark:bg-orange-950/20 border-b border-orange-200 dark:border-orange-800">
+                              <Checkbox
+                                checked={(() => {
+                                  const eligible = group.appointments.filter(a => !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status));
+                                  return eligible.length > 0 && eligible.every(a => batchSelectedIds.has(a.id));
+                                })()}
+                                onCheckedChange={() => toggleBatchSelectAll(group.appointments)}
+                              />
+                              <span className="text-xs text-orange-700 dark:text-orange-400 font-medium flex-1">
+                                {batchSelectedIds.size > 0 
+                                  ? `${batchSelectedIds.size} selecionado(s)` 
+                                  : "Selecionar todos"}
+                              </span>
+                              {batchSelectedIds.size > 0 && (
+                                <Button
+                                  size="sm"
+                                  className="h-7 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                                  onClick={() => setBatchCancelDialogOpen(true)}
+                                >
+                                  <UserX className="h-3 w-3 mr-1" />
+                                  Cancelar {batchSelectedIds.size}
+                                </Button>
+                              )}
+                            </div>
+                          )}
                           
                           {/* Lista de agendamentos e horários (inclui ocupados por intervalo) */}
                           <div className="divide-y divide-border/30">
