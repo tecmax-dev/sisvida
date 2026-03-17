@@ -3143,8 +3143,23 @@ const updateData: Record<string, any> = {
           isNoShow && "opacity-60",
           hasConflict && !isCancelled && "bg-destructive/5"
         )}
-        onClick={() => openAppointmentPanel(appointment)}
+        onClick={() => {
+          if (batchCancelMode && !['cancelled', 'completed', 'no_show', 'blocked'].includes(appointment.status)) {
+            toggleBatchSelect(appointment.id);
+            return;
+          }
+          openAppointmentPanel(appointment);
+        }}
       >
+        {/* Checkbox de seleção em lote */}
+        {batchCancelMode && !['cancelled', 'completed', 'no_show', 'blocked'].includes(appointment.status) && (
+          <Checkbox
+            checked={batchSelectedIds.has(appointment.id)}
+            onCheckedChange={() => toggleBatchSelect(appointment.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+          />
+        )}
         {/* Badge de horário compacto */}
         <Badge 
           variant="secondary" 
