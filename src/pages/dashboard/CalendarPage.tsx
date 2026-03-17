@@ -4350,18 +4350,17 @@ const updateData: Record<string, any> = {
 
       {/* Batch Professional Cancel Dialog */}
       <AlertDialog open={batchCancelDialogOpen} onOpenChange={setBatchCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <UserX className="h-5 w-5 text-orange-600" />
-              Cancelamento Profissional em Lote
+        <AlertDialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0 sm:max-w-lg">
+          <AlertDialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+            <AlertDialogTitle className="flex items-start gap-2 text-left sm:items-center">
+              <UserX className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600 sm:mt-0" />
+              <span className="min-w-0">Cancelamento Profissional em Lote</span>
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a cancelar <strong>{batchSelectedIds.size} agendamento(s)</strong> por indisponibilidade do profissional. 
-              Os horários permanecerão bloqueados.
+            <AlertDialogDescription className="text-left">
+              Você está prestes a cancelar <strong>{batchSelectedIds.size} agendamento(s)</strong> por indisponibilidade do profissional. Os horários permanecerão bloqueados.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="max-h-[calc(90vh-11rem)] space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
             <div>
               <Label htmlFor="batch-cancel-reason">Motivo do cancelamento (opcional)</Label>
               <Textarea
@@ -4374,30 +4373,32 @@ const updateData: Record<string, any> = {
               />
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start gap-2">
               <Checkbox
                 id="batch-send-notification"
                 checked={batchSendNotification}
                 onCheckedChange={(checked) => setBatchSendNotification(!!checked)}
+                className="mt-0.5"
               />
-              <Label htmlFor="batch-send-notification" className="text-sm font-normal cursor-pointer">
+              <Label htmlFor="batch-send-notification" className="cursor-pointer text-sm font-normal leading-snug">
                 Notificar pacientes via WhatsApp
               </Label>
             </div>
 
-            <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
-              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-sm">
-                <Ban className="h-4 w-4" />
-                <span className="font-medium">Os horários permanecerão bloqueados</span>
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-950/20">
+              <div className="flex items-start gap-2 text-sm text-orange-700 dark:text-orange-400">
+                <Ban className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span className="font-medium leading-snug">Os horários permanecerão bloqueados</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Outros pacientes não poderão agendar nesses horários.
               </p>
             </div>
           </div>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2 px-4 pb-4 sm:px-6 sm:pb-6">
             <AlertDialogCancel 
               disabled={batchCancelling}
+              className="mt-0 w-full whitespace-normal sm:w-auto"
               onClick={() => {
                 setBatchCancelReason("");
                 setBatchSendNotification(true);
@@ -4407,7 +4408,7 @@ const updateData: Record<string, any> = {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBatchProfessionalCancel}
-              className="bg-orange-600 text-white hover:bg-orange-700"
+              className="h-auto w-full whitespace-normal bg-orange-600 py-2 text-white hover:bg-orange-700 sm:w-auto"
               disabled={batchCancelling}
             >
               {batchCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
