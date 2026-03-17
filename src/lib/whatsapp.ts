@@ -208,15 +208,17 @@ export function formatAppointmentReminder(
       `📅 *Data:* ${date}`,
       `🕐 *Horário:* ${time}`,
       `👨‍⚕️ *Profissional:* ${professionalName}`,
-      `🏥 *Clínica:* ${clinicName}`,
+      `🏥 *Clínica:* ${effectiveClinicName}`,
+      specificLocation ? `` : null,
+      specificLocation,
       ``,
       `👇 *Use os botões abaixo para confirmar ou cancelar sua consulta.*`,
       ``,
       `⚠️ *Importante:* Caso não possa comparecer, por favor cancele com antecedência para evitar o bloqueio de novos agendamentos.`,
       ``,
       `Atenciosamente,`,
-      `Equipe ${clinicName}`,
-    ];
+      `Equipe ${effectiveClinicName}`,
+    ].filter(Boolean);
     return lines.join('\n');
   }
 
