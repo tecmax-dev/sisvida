@@ -4343,6 +4343,75 @@ const updateData: Record<string, any> = {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Batch Professional Cancel Dialog */}
+      <AlertDialog open={batchCancelDialogOpen} onOpenChange={setBatchCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-orange-600" />
+              Cancelamento Profissional em Lote
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a cancelar <strong>{batchSelectedIds.size} agendamento(s)</strong> por indisponibilidade do profissional. 
+              Os horários permanecerão bloqueados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="batch-cancel-reason">Motivo do cancelamento (opcional)</Label>
+              <Textarea
+                id="batch-cancel-reason"
+                value={batchCancelReason}
+                onChange={(e) => setBatchCancelReason(e.target.value)}
+                placeholder="Informe o motivo do cancelamento..."
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="batch-send-notification"
+                checked={batchSendNotification}
+                onCheckedChange={(checked) => setBatchSendNotification(!!checked)}
+              />
+              <Label htmlFor="batch-send-notification" className="text-sm font-normal cursor-pointer">
+                Notificar pacientes via WhatsApp
+              </Label>
+            </div>
+
+            <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-sm">
+                <Ban className="h-4 w-4" />
+                <span className="font-medium">Os horários permanecerão bloqueados</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Outros pacientes não poderão agendar nesses horários.
+              </p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              disabled={batchCancelling}
+              onClick={() => {
+                setBatchCancelReason("");
+                setBatchSendNotification(true);
+              }}
+            >
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBatchProfessionalCancel}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+              disabled={batchCancelling}
+            >
+              {batchCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Cancelar {batchSelectedIds.size} agendamento(s)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Main Content */}
       <div className="flex gap-6">
         {/* Sidebar - Pacientes do dia (week view) */}
