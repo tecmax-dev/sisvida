@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
 import App from "./App.tsx";
 import "./index.css";
+import { startUIIntegrityGuard } from "./hooks/useUIIntegrityGuard";
 
 /**
  * BOOTSTRAP IMPERATIVO PARA APP MOBILE
@@ -77,6 +78,9 @@ async function renderApp() {
     
     console.info('[PWA] Cache de pop-ups limpo. Recarregue a página para ver os avisos atualizados.');
   };
+
+  // Ativar guard de integridade de UI contra injeções não autorizadas
+  startUIIntegrityGuard();
 
   createRoot(document.getElementById("root")!).render(<App />);
 }
