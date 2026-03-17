@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const DEFAULT_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+const MOBILE_AUTH_DOMAIN = "patients.app.internal";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -18,22 +19,51 @@ function json(data: unknown, status = 200) {
   });
 }
 
-async function findUserByEmail(supabaseAdmin: ReturnType<typeof createClient>, email: string) {
-  const normalizedEmail = email.toLowerCase();
+function buildPatientAuthEmail(patientId: string) {
+  return `patient.${patientId}@${MOBILE_AUTH_DOMAIN}`;
+}
+
+async function listAllUsers(supabaseAdmin: ReturnType<typeof createClient>) {
+  const users: User[] = [];
 
   for (let page = 1; page <= 10; page++) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
 
     if (error) throw error;
 
-    const users = data.users ?? [];
-    const matchedUser = users.find((user) => user.email?.toLowerCase() === normalizedEmail) ?? null;
+    const pageUsers = data.users ?? [];
+    users.push(...pageUsers);
 
-    if (matchedUser) return matchedUser;
-    if (users.length < 1000) break;
+    if (pageUsers.length < 1000) break;
   }
 
-  return null;
+  return users;
+}
+
+async function findExistingPatientAuthUser(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  patientId: string,
+  fallbackEmails: string[]
+) {
+  const normalizedFallbackEmails = fallbackEmails
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  const users = await listAllUsers(supabaseAdmin);
+
+  const byPatientId = users.find((user) => {
+    const appMeta = (user.app_metadata ?? {}) as Record<string, unknown>;
+    const userMeta = (user.user_metadata ?? {}) as Record<string, unknown>;
+
+    return appMeta.patient_id === patientId || userMeta.patient_id === patientId;
+  });
+
+  if (byPatientId) return byPatientId;
+
+  return users.find((user) => {
+    const email = user.email?.trim().toLowerCase();
+    return !!email && normalizedFallbackEmails.includes(email);
+  }) ?? null;
 }
 
 Deno.serve(async (req) => {
@@ -86,9 +116,12 @@ Deno.serve(async (req) => {
       return json({ success: false, error: "Sua conta está inativa. Entre em contato com o sindicato.", code: "inactive_account" }, 200);
     }
 
-    const patientEmail = patient.patient_email && String(patient.patient_email).trim() !== ""
-      ? String(patient.patient_email).trim().toLowerCase()
-      : `paciente_${normalizedCpf}@app.internal`;
+    const canonicalAuthEmail = buildPatientAuthEmail(String(patient.patient_id));
+    const legacyEmails = [
+      canonicalAuthEmail,
+      `paciente_${normalizedCpf}@app.internal`,
+      patient.patient_email ? String(patient.patient_email).trim().toLowerCase() : "",
+    ];
 
     const appMetadata = {
       provider: "custom",
@@ -102,13 +135,17 @@ Deno.serve(async (req) => {
       clinic_id: patient.clinic_id,
     };
 
-    const existingUser = await findUserByEmail(supabaseAdmin, patientEmail);
+    const existingUser = await findExistingPatientAuthUser(
+      supabaseAdmin,
+      String(patient.patient_id),
+      legacyEmails
+    );
 
     let authUser: User | null = null;
 
     if (existingUser) {
       const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-        email: patientEmail,
+        email: canonicalAuthEmail,
         password,
         email_confirm: true,
         app_metadata: {
@@ -129,7 +166,7 @@ Deno.serve(async (req) => {
       authUser = updatedUser.user;
     } else {
       const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: patientEmail,
+        email: canonicalAuthEmail,
         password,
         email_confirm: true,
         app_metadata: appMetadata,
@@ -149,7 +186,7 @@ Deno.serve(async (req) => {
       patient_id: patient.patient_id,
       patient_name: patient.patient_name,
       clinic_id: patient.clinic_id,
-      patient_email: patientEmail,
+      patient_email: canonicalAuthEmail,
       auth_user_id: authUser?.id ?? null,
     });
   } catch (error) {
