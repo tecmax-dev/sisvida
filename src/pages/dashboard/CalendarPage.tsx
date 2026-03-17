@@ -590,6 +590,9 @@ export default function CalendarPage() {
   const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>([]);
   const [isSearchingPatients, setIsSearchingPatients] = useState(false);
   const [selectedPatientName, setSelectedPatientName] = useState("");
+  const [formDependentId, setFormDependentId] = useState<string | null>(null);
+  const [patientDependents, setPatientDependents] = useState<Array<{ id: string; name: string; cpf: string | null }>>([]);
+  const [loadingDependents, setLoadingDependents] = useState(false);
   
   // Recurrence state
   const [recurrenceConfig, setRecurrenceConfig] = useState<RecurrenceConfig>({
@@ -1118,6 +1121,41 @@ export default function CalendarPage() {
     return () => clearTimeout(timer);
   }, [patientSearchQuery, searchPatients]);
 
+  // Fetch dependents when patient is selected
+  const fetchPatientDependents = useCallback(async (patientId: string) => {
+    if (!currentClinic) return;
+    setLoadingDependents(true);
+    try {
+      const { data, error } = await supabase
+        .from('patient_dependents')
+        .select('id, name, cpf')
+        .eq('patient_id', patientId)
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
+        .or('pending_approval.is.null,pending_approval.eq.false')
+        .order('name');
+      if (!error && data) {
+        setPatientDependents(data);
+      } else {
+        setPatientDependents([]);
+      }
+    } catch {
+      setPatientDependents([]);
+    } finally {
+      setLoadingDependents(false);
+    }
+  }, [currentClinic]);
+
+  useEffect(() => {
+    if (formPatient) {
+      fetchPatientDependents(formPatient);
+      setFormDependentId(null);
+    } else {
+      setPatientDependents([]);
+      setFormDependentId(null);
+    }
+  }, [formPatient, fetchPatientDependents]);
+
   const fetchHolidays = async () => {
     if (!currentClinic) return;
 
@@ -1409,6 +1447,7 @@ export default function CalendarPage() {
       duration_minutes: number;
       is_recurring: boolean;
       recurrence_group_id: string | null;
+      dependent_id: string | null;
     }> = [];
     
     const recurrenceGroupId = recurrenceConfig.enabled ? generateId() : null;
@@ -1487,6 +1526,7 @@ export default function CalendarPage() {
           duration_minutes: durationMinutes,
           is_recurring: recurrenceConfig.enabled,
           recurrence_group_id: recurrenceGroupId,
+          dependent_id: formDependentId || null,
         });
       }
     }
@@ -1516,9 +1556,30 @@ export default function CalendarPage() {
       const isBookingWindowError = error.message?.includes('booking_window_exceeded') || 
                                    error.message?.includes('Agendamento indisponível');
       
+      // Verificar erro de limite de dependentes
+      const isDependentLimitError = error.message?.includes('LIMITE_AGENDAMENTO_DEPENDENTE');
+      
+      // Verificar erro de limite de CPF (titular)
+      const isCpfLimitError = error.message?.includes('LIMITE_AGENDAMENTO_CPF');
+      
+      const getErrorTitle = () => {
+        if (isBookingWindowError) return "Período indisponível";
+        if (isDependentLimitError) return "Limite de dependente atingido";
+        if (isCpfLimitError) return "Limite de agendamento atingido";
+        if (isScheduleError) return "Horário indisponível";
+        return "Erro ao agendar";
+      };
+      
+      const getErrorMessage = () => {
+        if (isBookingWindowError) return "Agendamento indisponível para este período";
+        if (isDependentLimitError) return "O limite de agendamentos de dependentes para este profissional neste período já foi atingido.";
+        if (isCpfLimitError) return "Já existe agendamento para este profissional neste mês.";
+        return message;
+      };
+      
       toast({
-        title: isBookingWindowError ? "Período indisponível" : (isScheduleError ? "Horário indisponível" : "Erro ao agendar"),
-        description: isBookingWindowError ? "Agendamento indisponível para este período" : message,
+        title: getErrorTitle(),
+        description: getErrorMessage(),
         variant: "destructive",
       });
     } finally {
@@ -2040,6 +2101,8 @@ const updateData: Record<string, any> = {
   const resetForm = () => {
     setFormPatient("");
     setSelectedPatientName("");
+    setFormDependentId(null);
+    setPatientDependents([]);
     // Keep professional selection for logged-in professionals
     if (!loggedInProfessionalId) {
       setFormProfessional("");
@@ -2761,6 +2824,35 @@ const updateData: Record<string, any> = {
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Dependent selector - only show if patient has dependents */}
+      {formPatient && patientDependents.length > 0 && (
+        <div className="space-y-2">
+          <Label>Agendar para</Label>
+          <Select 
+            value={formDependentId || "__titular__"} 
+            onValueChange={(val) => setFormDependentId(val === "__titular__" ? null : val)}
+          >
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Titular (próprio paciente)" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border border-border shadow-lg z-50">
+              <SelectItem value="__titular__">Titular (próprio paciente)</SelectItem>
+              {patientDependents.map((dep) => (
+                <SelectItem key={dep.id} value={dep.id}>
+                  {dep.name} {dep.cpf ? `(${dep.cpf})` : ''} — Dependente
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {formPatient && loadingDependents && (
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Carregando dependentes...
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label>Profissional *</Label>
