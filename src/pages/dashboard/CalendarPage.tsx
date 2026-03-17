@@ -2083,6 +2083,15 @@ const updateData: Record<string, any> = {
   const openCancelDialog = (appointment: Appointment) => {
     setCancellingAppointment(appointment);
     setCancelReason("");
+    setCancelByProfessional(false);
+    setCancelDialogOpen(true);
+  };
+
+  const openProfessionalCancelDialog = (appointment: Appointment) => {
+    setCancellingAppointment(appointment);
+    setCancelReason("");
+    setCancelByProfessional(true);
+    setSendCancelNotification(true);
     setCancelDialogOpen(true);
   };
 
@@ -3259,6 +3268,15 @@ const updateData: Record<string, any> = {
                 Auditoria
               </DropdownMenuItem>
               
+              {/* Cancelamento Profissional */}
+              <DropdownMenuItem 
+                onClick={() => openProfessionalCancelDialog(appointment)}
+                className="text-orange-600 focus:text-orange-600"
+              >
+                <UserX className="h-4 w-4 mr-2" />
+                Cancelamento Profissional
+              </DropdownMenuItem>
+
               {/* Cancelar */}
               <DropdownMenuItem 
                 onClick={() => openCancelDialog(appointment)}
