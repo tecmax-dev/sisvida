@@ -1073,9 +1073,9 @@ Digite *SIM* para confirmar ou *NÃO* para cancelar.`,
     professionalName: string;
     clinicName: string;
   }) => {
-    // Verificar se precisa incluir local específico (Dr. Marcelo Aguiar ou Dr. Jorge Avelar)
+    // Verificar se precisa incluir local específico (Rodoviários)
     const lowerName = data.professionalName.toLowerCase();
-    const isRodoviariosProfessional = lowerName.includes('marcelo aguiar') || lowerName.includes('jorge avelar');
+    const isRodoviariosProfessional = lowerName.includes('marcelo aguiar') || lowerName.includes('jorge avelar') || lowerName.includes('pedro roberto');
     const locationInfo = isRodoviariosProfessional 
       ? `\n\n📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`
       : '';
