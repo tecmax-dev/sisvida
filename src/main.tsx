@@ -79,6 +79,9 @@ async function renderApp() {
     console.info('[PWA] Cache de pop-ups limpo. Recarregue a página para ver os avisos atualizados.');
   };
 
+  // Ativar guard de integridade de UI contra injeções não autorizadas
+  startUIIntegrityGuard();
+
   createRoot(document.getElementById("root")!).render(<App />);
 }
 
