@@ -78,7 +78,7 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { targetUserId, newPassword } = await req.json();
+    const { targetUserId, newPassword, targetPatientId } = await req.json();
     
     if (!targetUserId || !newPassword) {
       return new Response(
@@ -97,7 +97,7 @@ serve(async (req) => {
 
     console.log(`Super Admin ${currentUser.id} updating password for user ${targetUserId}`);
 
-    // Update user password
+    // Update auth user password
     const { data: updatedUser, error: updateError } = await adminClient.auth.admin.updateUserById(
       targetUserId,
       { password: newPassword }
@@ -111,6 +111,22 @@ serve(async (req) => {
       );
     }
 
+    // Keep mobile patient password in sync when provided
+    if (targetPatientId) {
+      const { error: patientPasswordError } = await adminClient.rpc("set_patient_password", {
+        p_patient_id: targetPatientId,
+        p_password: newPassword,
+      });
+
+      if (patientPasswordError) {
+        console.error("Patient password sync error:", patientPasswordError);
+        return new Response(
+          JSON.stringify({ error: "Senha do app atualizada no login, mas falhou ao sincronizar com o cadastro do sócio" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Log the action
     await adminClient.from("audit_logs").insert({
       user_id: currentUser.id,
@@ -119,7 +135,8 @@ serve(async (req) => {
       entity_id: targetUserId,
       details: { 
         target_user_email: updatedUser.user?.email,
-        updated_by: currentUser.email 
+        updated_by: currentUser.email,
+        target_patient_id: targetPatientId ?? null,
       },
     });
 

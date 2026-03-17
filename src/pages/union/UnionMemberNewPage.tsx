@@ -274,6 +274,17 @@ export default function UnionMemberNewPage() {
         throw error;
       }
 
+      if (formData.mobilePassword && formData.mobilePassword.length >= 6) {
+        const { error: pwError } = await supabase.rpc('set_patient_password', {
+          p_patient_id: newPatient.id,
+          p_password: formData.mobilePassword,
+        });
+
+        if (pwError) {
+          console.error('Error setting password:', pwError);
+        }
+      }
+
       toast({
         title: "Sócio cadastrado!",
         description: "O novo sócio foi criado com sucesso.",
