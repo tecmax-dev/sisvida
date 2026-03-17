@@ -467,6 +467,17 @@ export default function UnionMemberDetailPage() {
 
     if (error) throw error;
 
+    if (isAdmin && dataToSave.mobilePassword && dataToSave.mobilePassword.length >= 6) {
+      const { error: pwError } = await supabase.rpc('set_patient_password', {
+        p_patient_id: id,
+        p_password: dataToSave.mobilePassword,
+      });
+
+      if (pwError) {
+        console.error('Error setting password:', pwError);
+      }
+    }
+
     setInitialData({ ...dataToSave, mobilePassword: '' });
     setFormData(prev => ({ ...prev, mobilePassword: '' }));
   }, [currentClinic, id, isAdmin]);
