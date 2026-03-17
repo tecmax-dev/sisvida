@@ -134,6 +134,26 @@ export function useMobileAuthSession() {
             });
             return;
           }
+
+          const { data: currentUserData } = await supabase.auth.getUser();
+          const currentUser = currentUserData?.user;
+          const currentAppMeta = (currentUser?.app_metadata ?? {}) as Record<string, any>;
+          const currentUserMeta = (currentUser?.user_metadata ?? {}) as Record<string, any>;
+          const authPatientId =
+            (currentAppMeta.patient_id as string | undefined) ??
+            (currentUserMeta.patient_id as string | undefined) ??
+            null;
+
+          if (currentUser && authPatientId !== restored.patientId) {
+            console.warn("[MobileAuth] Sessão backend divergente da sessão mobile local. Limpando auth para evitar bypass.", {
+              authUserId: currentUser.id,
+              authPatientId,
+              restoredPatientId: restored.patientId,
+            });
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch {}
+          }
           
           console.log("[MobileAuth] Sessão restaurada:", restored.patientName);
           setState({
@@ -238,6 +258,12 @@ export function useMobileAuthSession() {
     
     try {
       const normalizedCpf = cpf.replace(/\D/g, '');
+
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (signOutError) {
+        console.warn("[MobileAuth] Não foi possível limpar sessão anterior antes do login:", signOutError);
+      }
       
       // 1. Verificar credenciais via RPC customizado
       const { data: patientData, error: verifyError } = await supabase
@@ -302,6 +328,14 @@ export function useMobileAuthSession() {
           authSuccess = !loginAfterHybrid;
           console.log("[MobileAuth] Hybrid provision + Login:", authSuccess);
         }
+      }
+
+      if (!authSuccess) {
+        await clearSession();
+        return {
+          success: false,
+          error: "Não foi possível validar sua sessão de acesso. Entre novamente.",
+        };
       }
       
       // 4. Persistir em localStorage/IndexedDB (backup)
