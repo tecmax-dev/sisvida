@@ -4753,7 +4753,56 @@ const updateData: Record<string, any> = {
                               )}
                               <span className="hidden sm:inline">Lembrar todos</span>
                             </Button>
+                            {/* Botão de cancelamento profissional em lote */}
+                            <Button
+                              variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
+                              size="sm"
+                              className={cn(
+                                "h-8 px-2 text-xs gap-1",
+                                batchCancelMode === group.professional.id 
+                                  ? "bg-orange-600 hover:bg-orange-700 text-white" 
+                                  : "text-orange-600 hover:text-orange-700"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleBatchCancelMode(group.professional.id, group.appointments);
+                              }}
+                              title="Cancelamento profissional em lote"
+                            >
+                              <UserX className="h-4 w-4" />
+                              <span className="hidden sm:inline">
+                                {batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}
+                              </span>
+                            </Button>
                           </div>
+                          
+                          {/* Batch selection bar */}
+                          {batchCancelMode === group.professional.id && (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 dark:bg-orange-950/20 border-b border-orange-200 dark:border-orange-800">
+                              <Checkbox
+                                checked={(() => {
+                                  const eligible = group.appointments.filter(a => !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status));
+                                  return eligible.length > 0 && eligible.every(a => batchSelectedIds.has(a.id));
+                                })()}
+                                onCheckedChange={() => toggleBatchSelectAll(group.appointments)}
+                              />
+                              <span className="text-xs text-orange-700 dark:text-orange-400 font-medium flex-1">
+                                {batchSelectedIds.size > 0 
+                                  ? `${batchSelectedIds.size} selecionado(s)` 
+                                  : "Selecionar todos"}
+                              </span>
+                              {batchSelectedIds.size > 0 && (
+                                <Button
+                                  size="sm"
+                                  className="h-7 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                                  onClick={() => setBatchCancelDialogOpen(true)}
+                                >
+                                  <UserX className="h-3 w-3 mr-1" />
+                                  Cancelar {batchSelectedIds.size}
+                                </Button>
+                              )}
+                            </div>
+                          )}
                           
                           {/* Lista de agendamentos e horários (inclui ocupados por intervalo) */}
                           <div className="divide-y divide-border/30">
