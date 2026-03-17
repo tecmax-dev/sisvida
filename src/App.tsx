@@ -377,6 +377,7 @@ function App() {
                 <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/sindicato" element={<SindicatoBeneficiosLandingPage />} />
                 <Route path="/sindicato/beneficios" element={<SindicatoBeneficiosLandingPage />} />
+                <Route path="/sindicato/beneficios/imprimir" element={<SindicatoBeneficiosPrintPage />} />
                 <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
                 <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
