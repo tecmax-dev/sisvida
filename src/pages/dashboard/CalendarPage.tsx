@@ -2804,6 +2804,35 @@ const updateData: Record<string, any> = {
         </Popover>
       </div>
 
+      {/* Dependent selector - only show if patient has dependents */}
+      {formPatient && patientDependents.length > 0 && (
+        <div className="space-y-2">
+          <Label>Agendar para</Label>
+          <Select 
+            value={formDependentId || "__titular__"} 
+            onValueChange={(val) => setFormDependentId(val === "__titular__" ? null : val)}
+          >
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Titular (próprio paciente)" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border border-border shadow-lg z-50">
+              <SelectItem value="__titular__">Titular (próprio paciente)</SelectItem>
+              {patientDependents.map((dep) => (
+                <SelectItem key={dep.id} value={dep.id}>
+                  {dep.name} {dep.cpf ? `(${dep.cpf})` : ''} — Dependente
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {formPatient && loadingDependents && (
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Carregando dependentes...
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label>Profissional *</Label>
         <Select 
