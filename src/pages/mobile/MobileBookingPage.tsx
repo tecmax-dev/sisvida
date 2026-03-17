@@ -279,6 +279,13 @@ export default function MobileBookingPage() {
         setBookingMonthsAhead(data.bookingMonthsAhead);
       }
 
+      // Setar configuração de limites de agendamento
+      if (data.dependentBookingLimit !== undefined) setDependentBookingLimit(data.dependentBookingLimit);
+      if (data.dependentBookingPeriod) setDependentBookingPeriod(data.dependentBookingPeriod);
+      if (data.dependentBookingLimitEnabled !== undefined) setDependentBookingLimitEnabled(data.dependentBookingLimitEnabled);
+      if (data.titularBookingLimitEnabled !== undefined) setTitularBookingLimitEnabled(data.titularBookingLimitEnabled);
+      if (data.maxAppointmentsPerCpfMonth !== undefined) setMaxAppointmentsPerCpfMonth(data.maxAppointmentsPerCpfMonth);
+
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
         setBlockedMessage(data.blockedMessage);
