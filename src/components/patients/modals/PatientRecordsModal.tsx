@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, FileText, Loader2 } from "lucide-react";
@@ -246,7 +247,7 @@ export function PatientRecordsModal({
                         <p className="text-xs font-medium text-muted-foreground">Observações</p>
                         <div 
                           className="text-sm prose prose-sm max-w-none dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: record.notes }} 
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(record.notes) }} 
                         />
                       </div>
                     )}

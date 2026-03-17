@@ -144,7 +144,7 @@ export default function MobileFirstAccessPage() {
       // Buscar paciente pelo CPF que não tenha senha cadastrada
       const { data: patients, error } = await supabase
         .from('patients')
-        .select('id, name, birth_date, password_hash')
+        .select('id, name, birth_date')
         .or(`cpf.eq.${normalizedCpf},cpf.eq.${cpf}`)
         .eq('clinic_id', SINDICATO_CLINIC_ID)
         .eq('is_active', true);
@@ -162,8 +162,11 @@ export default function MobileFirstAccessPage() {
 
       const patient = patients[0];
 
-      // Verificar se já tem senha cadastrada
-      if (patient.password_hash) {
+      // Check if patient already has a password via server-side RPC
+      const { data: hasPassword } = await supabase
+        .rpc('check_patient_has_password', { p_patient_id: patient.id });
+
+      if (hasPassword) {
         toast({
           title: "Senha já cadastrada",
           description: "Você já possui uma senha. Use a opção 'Entrar' para acessar ou 'Esqueci minha senha' para recuperá-la.",
