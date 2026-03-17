@@ -4795,69 +4795,71 @@ const updateData: Record<string, any> = {
                       return (
                         <div key={group.professional.id} className="border rounded-lg overflow-hidden">
                           {/* Header do profissional */}
-                          <div className="flex items-center gap-3 p-3 bg-muted/30 border-b">
-                            {group.professional.avatar_url ? (
-                              <img 
-                                src={group.professional.avatar_url} 
-                                alt={group.professional.name}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="h-5 w-5 text-primary" />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-foreground truncate">{group.professional.name}</h3>
-                              {group.professional.specialty && (
-                                <p className="text-xs text-primary truncate">{group.professional.specialty}</p>
-                              )}
-                            </div>
-                            <div className="text-right text-xs text-muted-foreground shrink-0">
-                              <span className="font-medium text-primary">{activeAppointments.length} agendamento(s)</span>
-                              <br />
-                              <span>Total {totalAppointments}</span>
-                            </div>
-                            {/* Botão de lembrete em massa */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 px-2 text-xs gap-1"
-                              disabled={sendingBulkReminder === group.professional.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleBulkWhatsAppReminder(group.professional.id, group.appointments);
-                              }}
-                              title="Enviar lembrete via WhatsApp para todos"
-                            >
-                              {sendingBulkReminder === group.professional.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                          <div className="p-3 bg-muted/30 border-b space-y-2">
+                            <div className="flex items-center gap-3">
+                              {group.professional.avatar_url ? (
+                                <img 
+                                  src={group.professional.avatar_url} 
+                                  alt={group.professional.name}
+                                  className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shrink-0"
+                                />
                               ) : (
-                                <Send className="h-4 w-4 text-success" />
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <User className="h-5 w-5 text-primary" />
+                                </div>
                               )}
-                              <span className="hidden sm:inline">Lembrar todos</span>
-                            </Button>
-                            {/* Botão de cancelamento profissional em lote */}
-                            <Button
-                              variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
-                              size="sm"
-                              className={cn(
-                                "h-8 px-2 text-xs gap-1",
-                                batchCancelMode === group.professional.id 
-                                  ? "bg-orange-600 hover:bg-orange-700 text-white" 
-                                  : "text-orange-600 hover:text-orange-700"
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleBatchCancelMode(group.professional.id, group.appointments);
-                              }}
-                              title="Cancelamento profissional em lote"
-                            >
-                              <UserX className="h-4 w-4" />
-                              <span className="hidden sm:inline">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-foreground truncate">{group.professional.name}</h3>
+                                {group.professional.specialty && (
+                                  <p className="text-xs text-primary truncate">{group.professional.specialty}</p>
+                                )}
+                              </div>
+                              <div className="text-right text-xs text-muted-foreground shrink-0">
+                                <span className="font-medium text-primary">{activeAppointments.length} agendamento(s)</span>
+                                <br />
+                                <span>Total {totalAppointments}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Botão de lembrete em massa */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-xs gap-1"
+                                disabled={sendingBulkReminder === group.professional.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBulkWhatsAppReminder(group.professional.id, group.appointments);
+                                }}
+                                title="Enviar lembrete via WhatsApp para todos"
+                              >
+                                {sendingBulkReminder === group.professional.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Send className="h-4 w-4 text-success" />
+                                )}
+                                Lembrar todos
+                              </Button>
+                              {/* Botão de cancelamento profissional em lote */}
+                              <Button
+                                variant={batchCancelMode === group.professional.id ? "default" : "ghost"}
+                                size="sm"
+                                className={cn(
+                                  "h-8 px-2 text-xs gap-1",
+                                  batchCancelMode === group.professional.id 
+                                    ? "bg-orange-600 hover:bg-orange-700 text-white" 
+                                    : "text-orange-600 hover:text-orange-700"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleBatchCancelMode(group.professional.id, group.appointments);
+                                }}
+                                title="Cancelamento profissional em lote"
+                              >
+                                <UserX className="h-4 w-4" />
                                 {batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}
-                              </span>
-                            </Button>
+                              </Button>
+                            </div>
                           </div>
                           
                           {/* Batch selection bar */}
