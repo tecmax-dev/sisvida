@@ -1491,6 +1491,7 @@ export default function CalendarPage() {
           duration_minutes: durationMinutes,
           is_recurring: recurrenceConfig.enabled,
           recurrence_group_id: recurrenceGroupId,
+          dependent_id: formDependentId || null,
         });
       }
     }
