@@ -134,6 +134,26 @@ export function useMobileAuthSession() {
             });
             return;
           }
+
+          const { data: currentUserData } = await supabase.auth.getUser();
+          const currentUser = currentUserData?.user;
+          const currentAppMeta = (currentUser?.app_metadata ?? {}) as Record<string, any>;
+          const currentUserMeta = (currentUser?.user_metadata ?? {}) as Record<string, any>;
+          const authPatientId =
+            (currentAppMeta.patient_id as string | undefined) ??
+            (currentUserMeta.patient_id as string | undefined) ??
+            null;
+
+          if (currentUser && authPatientId !== restored.patientId) {
+            console.warn("[MobileAuth] Sessão backend divergente da sessão mobile local. Limpando auth para evitar bypass.", {
+              authUserId: currentUser.id,
+              authPatientId,
+              restoredPatientId: restored.patientId,
+            });
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch {}
+          }
           
           console.log("[MobileAuth] Sessão restaurada:", restored.patientName);
           setState({
