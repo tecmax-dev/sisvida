@@ -162,8 +162,11 @@ export default function MobileFirstAccessPage() {
 
       const patient = patients[0];
 
-      // Verificar se já tem senha cadastrada
-      if (patient.password_hash) {
+      // Check if patient already has a password via server-side RPC
+      const { data: hasPassword } = await supabase
+        .rpc('check_patient_has_password', { p_patient_id: patient.id });
+
+      if (hasPassword) {
         toast({
           title: "Senha já cadastrada",
           description: "Você já possui uma senha. Use a opção 'Entrar' para acessar ou 'Esqueci minha senha' para recuperá-la.",

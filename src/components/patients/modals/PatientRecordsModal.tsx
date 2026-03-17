@@ -247,7 +247,7 @@ export function PatientRecordsModal({
                         <p className="text-xs font-medium text-muted-foreground">Observações</p>
                         <div 
                           className="text-sm prose prose-sm max-w-none dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: record.notes }} 
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(record.notes) }} 
                         />
                       </div>
                     )}
