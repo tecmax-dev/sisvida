@@ -2095,6 +2095,114 @@ const updateData: Record<string, any> = {
     setCancelDialogOpen(true);
   };
 
+  // Batch professional cancellation helpers
+  const toggleBatchCancelMode = (professionalId: string, appointments: Appointment[]) => {
+    if (batchCancelMode === professionalId) {
+      // Exit batch mode
+      setBatchCancelMode(null);
+      setBatchSelectedIds(new Set());
+    } else {
+      setBatchCancelMode(professionalId);
+      setBatchSelectedIds(new Set());
+    }
+  };
+
+  const toggleBatchSelect = (appointmentId: string) => {
+    setBatchSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(appointmentId)) {
+        next.delete(appointmentId);
+      } else {
+        next.add(appointmentId);
+      }
+      return next;
+    });
+  };
+
+  const toggleBatchSelectAll = (appointments: Appointment[]) => {
+    const eligible = appointments.filter(a => 
+      !['cancelled', 'completed', 'no_show', 'blocked'].includes(a.status)
+    );
+    const allSelected = eligible.every(a => batchSelectedIds.has(a.id));
+    if (allSelected) {
+      setBatchSelectedIds(new Set());
+    } else {
+      setBatchSelectedIds(new Set(eligible.map(a => a.id)));
+    }
+  };
+
+  const handleBatchProfessionalCancel = async () => {
+    if (batchSelectedIds.size === 0) return;
+    setBatchCancelling(true);
+
+    const selectedAppointments = appointments.filter(a => batchSelectedIds.has(a.id));
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const apt of selectedAppointments) {
+      try {
+        const { error } = await supabase
+          .from('appointments')
+          .update({
+            status: 'blocked' as "blocked",
+            cancellation_reason: batchCancelReason.trim() || 'Cancelamento profissional em lote',
+            cancelled_at: new Date().toISOString(),
+          })
+          .eq('id', apt.id);
+
+        if (error) {
+          errorCount++;
+          continue;
+        }
+        successCount++;
+
+        // Send WhatsApp notification if enabled
+        if (batchSendNotification && currentClinic && apt.patient?.phone) {
+          const formattedDate = new Date(apt.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR');
+          const message = formatProfessionalCancellation(
+            apt.patient.name,
+            currentClinic.name,
+            formattedDate,
+            apt.start_time.slice(0, 5),
+            apt.professional?.name || 'o profissional',
+            batchCancelReason.trim() || undefined
+          );
+
+          try {
+            await sendWhatsAppMessage({
+              phone: apt.patient.phone,
+              message,
+              clinicId: currentClinic.id,
+              type: 'custom',
+            });
+          } catch (err) {
+            console.error('[BatchCancel] WhatsApp error for', apt.patient.name, err);
+          }
+
+          // Small delay between WhatsApp messages
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      } catch (err) {
+        console.error('[BatchCancel] Error cancelling appointment', apt.id, err);
+        errorCount++;
+      }
+    }
+
+    setBatchCancelling(false);
+    setBatchCancelDialogOpen(false);
+    setBatchCancelMode(null);
+    setBatchSelectedIds(new Set());
+    setBatchCancelReason("");
+    setBatchSendNotification(true);
+
+    toast({
+      title: "Cancelamento profissional em lote",
+      description: `${successCount} agendamento(s) cancelado(s)${errorCount > 0 ? `, ${errorCount} erro(s)` : ''}.`,
+    });
+
+    fetchAppointments();
+  };
+
   const openProfessionalCancelDialog = (appointment: Appointment) => {
     setCancellingAppointment(appointment);
     setCancelReason("");
