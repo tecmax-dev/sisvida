@@ -91,7 +91,7 @@ export function UnionSupplierDefaultsSelector({
             Lançamento Rápido
           </DialogTitle>
           <DialogDescription>
-            Selecione uma despesa vinculada a <strong>{supplierName}</strong>
+            Selecione um lançamento vinculado a <strong>{supplierName}</strong>
           </DialogDescription>
         </DialogHeader>
 
