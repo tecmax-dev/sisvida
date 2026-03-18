@@ -179,7 +179,7 @@ export function UnionSupplierDefaultsDialog({
             </h4>
             <div className="grid grid-cols-1 gap-3">
               <div>
-                <Label className="text-xs">Descrição da Despesa *</Label>
+                <Label className="text-xs">Descrição do Lançamento *</Label>
                 <Input
                   placeholder="Ex: Conta de Energia"
                   value={newDescription}
