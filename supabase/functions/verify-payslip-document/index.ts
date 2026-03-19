@@ -32,26 +32,27 @@ serve(async (req) => {
 
     const isPdf = file_type === "application/pdf";
 
-    const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário) que contenha descontos sindicais.
+    const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário).
 
-Um contracheque válido deve conter:
+Um contracheque válido GERALMENTE contém alguns destes elementos (não precisa ter todos):
 - Nome do empregado/funcionário
-- Nome da empresa/empregador
-- Salário bruto e líquido
-- Descontos (INSS, IRRF, etc.)
-- Proventos/vencimentos
+- Nome da empresa/empregador  
+- Valores de salário/vencimentos
+- Descontos (INSS, IRRF, vale transporte, etc.)
 - Período de referência (mês/ano)
 
 IMPORTANTE - VALIDAÇÃO DO NOME:
 O nome do associado/titular é: "${member_name || "NÃO INFORMADO"}"
-${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/FUNCIONÁRIO corresponde (total ou parcialmente) ao nome "${member_name}". Se o nome no documento for diferente do nome do associado, retorne is_payslip como false e explique que o nome não confere.` : ""}
+${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/FUNCIONÁRIO corresponde (total ou parcialmente) ao nome "${member_name}". Considere que o nome pode estar abreviado, em ordem diferente, ou parcialmente visível. Se houver correspondência parcial significativa (ex: pelo menos nome e sobrenome), considere como match. Se o nome no documento for COMPLETAMENTE diferente do nome do associado, retorne is_payslip como false.` : ""}
 
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
-1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical")
-2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")
+1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical", "MENSALIDADE SINDICAL")
+2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")  
 3. **Taxa Negocial** (ou "Taxa Negoc.", "Contrib. Negocial")
 
-Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false imediatamente.
+ATENÇÃO: Seja FLEXÍVEL na identificação. O documento pode ter diferentes layouts, fontes, qualidade de imagem ou formatação. Se você consegue identificar os elementos principais de um contracheque, considere-o válido.
+
+Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false.
 
 Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
 {"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
@@ -60,19 +61,26 @@ Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais li
 Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
 Nome do arquivo: ${file_name}`;
 
+    // Send the file as visual content - GPT-4o supports both images and PDFs via base64 data URL
+    const imageContent = {
+      type: "image_url" as const,
+      image_url: { 
+        url: file_base64,
+        detail: "high" as const
+      }
+    };
+
     const messages: any[] = [
       {
         role: "user",
-        content: isPdf
-          ? [{ type: "text", text: prompt + "\n\nNota: Este é um arquivo PDF. Analise pelo nome e contexto." }]
-          : [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: file_base64 } },
-            ],
+        content: [
+          { type: "text", text: prompt },
+          imageContent,
+        ],
       },
     ];
 
-    console.log("[verify-payslip] Sending to OpenAI for analysis...");
+    console.log("[verify-payslip] Sending to OpenAI for analysis...", { isPdf, file_name });
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -81,9 +89,9 @@ Nome do arquivo: ${file_name}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages,
-        max_tokens: 400,
+        max_tokens: 500,
         temperature: 0.1,
       }),
     });
