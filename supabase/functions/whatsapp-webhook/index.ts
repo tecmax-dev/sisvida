@@ -6824,6 +6824,29 @@ serve(async (req) => {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
+        // ===== WHAZING AGENT TAKEOVER CHECK =====
+        // If an attendant has assumed the conversation in Whazing, stop the bot
+        const agentHandling = await isWhazingAgentHandling(phone);
+        if (agentHandling) {
+          console.log(`[webhook] Agent takeover detected for ${phone} - bot will NOT process this message`);
+          
+          // Log the skipped message
+          await supabase.from('whatsapp_incoming_logs').insert({
+            clinic_id: clinicId,
+            phone,
+            message_text: messageText,
+            raw_payload: payload,
+            processed: true,
+            processed_action: 'skipped_agent_takeover',
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, message: 'Agent takeover - bot paused' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // ===== END WHAZING AGENT TAKEOVER CHECK =====
+
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
         // Level 1 buttons: main categories → send sub-menu
         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
