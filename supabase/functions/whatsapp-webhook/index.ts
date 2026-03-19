@@ -402,6 +402,56 @@ async function sendWhatsAppButtons(
 }
 
 // ==========================================
+// WHAZING - AGENT TAKEOVER DETECTION
+// ==========================================
+
+/**
+ * Check if a human agent has taken over the ticket in Whazing.
+ * When status is "open" and userId is set, it means an attendant assumed the conversation.
+ * Returns true if bot should STOP processing (agent is handling it).
+ */
+async function isWhazingAgentHandling(phone: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) return false;
+
+  try {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiUrl = whazingUrl.replace(/\/$/, '');
+    const response = await fetch(`${apiUrl}/showticket`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({ number: cleanPhone }),
+    });
+
+    if (!response.ok) {
+      console.log(`[whazing-agent-check] API returned ${response.status} for ${cleanPhone}`);
+      return false;
+    }
+
+    const ticket = await response.json();
+    
+    // If ticket status is "open" and has a userId assigned, an agent is handling it
+    if (ticket && ticket.status === 'open' && ticket.userId) {
+      console.log(`[whazing-agent-check] Agent takeover detected for ${cleanPhone}: ticket #${ticket.id}, userId=${ticket.userId}, status=${ticket.status}`);
+      return true;
+    }
+
+    console.log(`[whazing-agent-check] No agent takeover for ${cleanPhone}: status=${ticket?.status || 'unknown'}, userId=${ticket?.userId || 'none'}`);
+    return false;
+  } catch (error) {
+    console.error('[whazing-agent-check] Error checking ticket:', error);
+    return false; // On error, don't block the bot
+  }
+}
+
+// ==========================================
 // WHAZING API PLUS - INTERACTIVE BUTTONS
 // ==========================================
 
