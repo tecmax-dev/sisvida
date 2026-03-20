@@ -563,6 +563,7 @@ export default function ContributionsListTab({
                 <SelectContent>
                   <SelectItem value="hide_cancelled">Ocultar canc.</SelectItem>
                   <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="not_generated">Não gerado</SelectItem>
                   <SelectItem value="pending">Pendentes</SelectItem>
                   <SelectItem value="paid">Pagos</SelectItem>
                   <SelectItem value="overdue">Vencidos</SelectItem>
