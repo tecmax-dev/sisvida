@@ -328,9 +328,9 @@ export default function ContributionsListTab({
             ? isNotGenerated
             : c.status === statusFilter;
       
-      // Parse competence filter (format: MM/YYYY or "all")
+      // When searching, ignore competence filter to find results across all periods
       let matchesCompetence = true;
-      if (competenceFilter !== "all") {
+      if (!searchTerm.trim() && competenceFilter !== "all") {
         const [filterMonth, filterYear] = competenceFilter.split("/").map(Number);
         matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
       }
