@@ -560,36 +560,38 @@ export default function ContributionsListTab({
 
       {/* Enhanced Search Card */}
       <Card className="border-2 border-warning/30 bg-warning/5 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search Input with Icon */}
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center shrink-0 shadow-inner">
-                <FileSearch className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-amber-600/60 dark:text-amber-400/60" />
-                <Input
-                  placeholder={
-                    documentTypeTab === "pj" 
-                      ? "Buscar empresa, CNPJ, matrícula ou tipo..." 
-                      : documentTypeTab === "pf"
-                        ? "Buscar nome, CPF ou tipo de contribuição..."
-                        : "Buscar empresa ou contribuinte aguardando valor..."
-                  }
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pl-10 h-11 text-base border-amber-200 focus:border-amber-400 focus:ring-amber-400/30 dark:border-amber-700 dark:focus:border-amber-500 bg-white/80 dark:bg-amber-950/20"
-                />
-              </div>
+        <CardContent className="p-4 space-y-3">
+          {/* Row 1: Search Input */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+              <FileSearch className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={
+                  documentTypeTab === "pj" 
+                    ? "Buscar empresa, CNPJ, matrícula ou tipo..." 
+                    : documentTypeTab === "pf"
+                      ? "Buscar nome, CPF ou tipo de contribuição..."
+                      : "Buscar empresa ou contribuinte aguardando valor..."
+                }
+                value={draftSearchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleApplyFilters(); }}
+                className="pl-10 h-10 text-base border-border bg-background"
+              />
+            </div>
+          </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Contribution Type filter */}
-              {availableContributionTypes.length > 0 && (
-                <Select value={contributionTypeFilter} onValueChange={(v) => { setContributionTypeFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[180px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+          {/* Row 2: Filters */}
+          <div className="flex flex-wrap items-end gap-3">
+            {/* Contribution Type filter */}
+            {availableContributionTypes.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Tipo</label>
+                <Select value={draftContributionTypeFilter} onValueChange={setDraftContributionTypeFilter}>
+                  <SelectTrigger className="w-[160px] h-9 border-border bg-background">
                     <SelectValue placeholder="Tipo Contribuição" />
                   </SelectTrigger>
                   <SelectContent>
@@ -601,9 +603,12 @@ export default function ContributionsListTab({
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-              <Select value={statusFilter} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-[130px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Status</label>
+              <Select value={draftStatusFilter} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-[130px] h-9 border-border bg-background">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -616,13 +621,15 @@ export default function ContributionsListTab({
                   <SelectItem value="cancelled">Cancelados</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Competência</label>
               <Select value={competenceFilter} onValueChange={handleCompetenceChange}>
-                <SelectTrigger className="w-[140px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                <SelectTrigger className="w-[140px] h-9 border-border bg-background">
                   <SelectValue placeholder="Competência" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   <SelectItem value="all">Todos períodos</SelectItem>
-                  {/* Generate competence options: years descending, months descending within each year */}
                   {getStaticYearRange().flatMap(year => 
                     Array.from({ length: 12 }, (_, i) => 12 - i).map(month => {
                       const competenceKey = `${String(month).padStart(2, "0")}/${year}`;
@@ -635,10 +642,53 @@ export default function ContributionsListTab({
                   )}
                 </SelectContent>
               </Select>
-              <Badge variant="secondary" className="h-8 px-3 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                {filteredContributions.length} resultado{filteredContributions.length !== 1 ? "s" : ""}
-              </Badge>
             </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Vencimento de</label>
+              <Input
+                type="date"
+                value={draftDueDateStart}
+                onChange={(e) => setDraftDueDateStart(e.target.value)}
+                className="w-[150px] h-9 border-border bg-background"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Vencimento até</label>
+              <Input
+                type="date"
+                value={draftDueDateEnd}
+                onChange={(e) => setDraftDueDateEnd(e.target.value)}
+                className="w-[150px] h-9 border-border bg-background"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-end gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+                className="h-9 gap-1.5"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Limpar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleApplyFilters}
+                className="h-9 gap-1.5 bg-primary hover:bg-primary/90"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Buscar
+              </Button>
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div className="flex items-center pt-1 border-t border-border/40">
+            <Badge variant="secondary" className="h-7 px-3 text-xs font-medium">
+              {filteredContributions.length} resultado{filteredContributions.length !== 1 ? "s" : ""}
+            </Badge>
           </div>
         </CardContent>
       </Card>
