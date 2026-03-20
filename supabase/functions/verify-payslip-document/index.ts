@@ -32,6 +32,10 @@ serve(async (req) => {
 
     const isPdf = file_type === "application/pdf";
 
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentYear = now.getFullYear();
+
     const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário).
 
 Um contracheque válido GERALMENTE contém alguns destes elementos (não precisa ter todos):
@@ -45,6 +49,13 @@ IMPORTANTE - VALIDAÇÃO DO NOME:
 O nome do associado/titular é: "${member_name || "NÃO INFORMADO"}"
 ${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/FUNCIONÁRIO corresponde (total ou parcialmente) ao nome "${member_name}". Considere que o nome pode estar abreviado, em ordem diferente, ou parcialmente visível. Se houver correspondência parcial significativa (ex: pelo menos nome e sobrenome), considere como match. Se o nome no documento for COMPLETAMENTE diferente do nome do associado, retorne is_payslip como false.` : ""}
 
+IMPORTANTE - VALIDAÇÃO DA COMPETÊNCIA/MÊS DE REFERÊNCIA:
+A data atual é: ${String(currentMonth).padStart(2, '0')}/${currentYear}
+Identifique o mês/ano de competência (período de referência) do contracheque. O contracheque deve ser recente (não mais de 30 dias retroativo). 
+Por exemplo, se estamos em março/2026, aceitamos contracheques de fevereiro/2026 e março/2026, mas NÃO de janeiro/2026 ou anteriores.
+Extraia o mês e ano de competência do documento e retorne nos campos "competence_month" (1-12) e "competence_year" (YYYY).
+Se a competência for muito antiga (mais de 30 dias), retorne is_payslip como false e explique que o contracheque está fora do prazo.
+
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
 1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical", "MENSALIDADE SINDICAL")
 2. **Taxa Assistencial** (ou "Taxa Assist.", "Contrib. Assistencial")  
@@ -55,10 +66,11 @@ ATENÇÃO: Seja FLEXÍVEL na identificação. O documento pode ter diferentes la
 Se o documento NÃO é um contracheque (por exemplo: foto pessoal, documento genérico, imagem aleatória, selfie, paisagem, etc.), retorne is_payslip como false.
 
 Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
-{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
+{"is_payslip": true ou false, "confidence": 0.0 a 1.0, "reason": "breve explicação", "name_match": true ou false, "name_found_in_document": "nome encontrado no documento ou null", "competence_month": número 1-12 ou null, "competence_year": número YYYY ou null, "found_items": {"mensalidade_sindical": true ou false, "taxa_assistencial": true ou false, "taxa_negocial": true ou false}}
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
+Se a competência do contracheque for anterior ao mês permitido, retorne is_payslip como false.
 Nome do arquivo: ${file_name}`;
 
     // Send the file as visual content - GPT-4o supports both images and PDFs via base64 data URL
