@@ -318,7 +318,15 @@ export default function ContributionsListTab({
         }
       }
       
-      const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
+      // "not_generated" = contributions without boleto and not awaiting_value
+      const isNotGenerated = !c.lytex_invoice_id && !c.public_access_token && c.status !== "awaiting_value" && c.status !== "paid" && c.status !== "cancelled";
+      const matchesStatus = statusFilter === "all" 
+        ? true 
+        : statusFilter === "hide_cancelled" 
+          ? c.status !== "cancelled" 
+          : statusFilter === "not_generated"
+            ? isNotGenerated
+            : c.status === statusFilter;
       
       // Parse competence filter (format: MM/YYYY or "all")
       let matchesCompetence = true;
