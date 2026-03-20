@@ -481,13 +481,11 @@ export default function ContributionsListTab({
   };
 
   const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
+    setDraftSearchTerm(value);
   };
 
   const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    setCurrentPage(1);
+    setDraftStatusFilter(value);
   };
 
   const handleCompetenceChange = (value: string) => {
@@ -497,12 +495,31 @@ export default function ContributionsListTab({
       onAllPeriodsChange?.(true);
     } else {
       onAllPeriodsChange?.(false);
-      // Also update yearFilter for the parent component (reports sync)
       const [, year] = value.split("/").map(Number);
       if (year && year !== yearFilter) {
         onYearFilterChange(year);
       }
     }
+    // Auto-apply on competence change since it triggers data reload
+    setSearchTerm(draftSearchTerm);
+    setStatusFilter(draftStatusFilter);
+    setContributionTypeFilter(draftContributionTypeFilter);
+    setDueDateStart(draftDueDateStart);
+    setDueDateEnd(draftDueDateEnd);
+  };
+
+  const handleClearFilters = () => {
+    setDraftSearchTerm("");
+    setDraftStatusFilter("hide_cancelled");
+    setDraftContributionTypeFilter("all");
+    setDraftDueDateStart("");
+    setDraftDueDateEnd("");
+    setSearchTerm("");
+    setStatusFilter("hide_cancelled");
+    setContributionTypeFilter("all");
+    setDueDateStart("");
+    setDueDateEnd("");
+    setCurrentPage(1);
   };
 
   const handleTabChange = (value: string) => {
