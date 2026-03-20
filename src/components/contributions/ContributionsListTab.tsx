@@ -318,11 +318,19 @@ export default function ContributionsListTab({
         }
       }
       
-      const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
+      // "not_generated" = contributions without boleto and not awaiting_value
+      const isNotGenerated = !c.lytex_invoice_id && !c.public_access_token && c.status !== "awaiting_value" && c.status !== "paid" && c.status !== "cancelled";
+      const matchesStatus = statusFilter === "all" 
+        ? true 
+        : statusFilter === "hide_cancelled" 
+          ? c.status !== "cancelled" 
+          : statusFilter === "not_generated"
+            ? isNotGenerated
+            : c.status === statusFilter;
       
-      // Parse competence filter (format: MM/YYYY or "all")
+      // When searching, ignore competence filter to find results across all periods
       let matchesCompetence = true;
-      if (competenceFilter !== "all") {
+      if (!searchTerm.trim() && competenceFilter !== "all") {
         const [filterMonth, filterYear] = competenceFilter.split("/").map(Number);
         matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
       }
@@ -409,7 +417,7 @@ export default function ContributionsListTab({
 
   const eligibleOnPage = useMemo(() => {
     return paginatedContributions.filter(
-      (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
+      (c) => c.status !== "paid" && c.status !== "cancelled"
     );
   }, [paginatedContributions]);
 
@@ -428,7 +436,7 @@ export default function ContributionsListTab({
   // Get all eligible contributions from the current filtered list
   const allEligibleContributions = useMemo(() => {
     return filteredContributions.filter(
-      (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
+      (c) => c.status !== "paid" && c.status !== "cancelled"
     );
   }, [filteredContributions]);
 
@@ -555,6 +563,7 @@ export default function ContributionsListTab({
                 <SelectContent>
                   <SelectItem value="hide_cancelled">Ocultar canc.</SelectItem>
                   <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="not_generated">Não gerado</SelectItem>
                   <SelectItem value="pending">Pendentes</SelectItem>
                   <SelectItem value="paid">Pagos</SelectItem>
                   <SelectItem value="overdue">Vencidos</SelectItem>
@@ -871,7 +880,7 @@ export default function ContributionsListTab({
                   const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                   const StatusIcon = statusConfig?.icon || Clock;
                   const isCancelled = contrib.status === "cancelled";
-                  const isEligibleForSelection = (contrib.lytex_invoice_id || contrib.public_access_token) && contrib.status !== "paid" && contrib.status !== "cancelled";
+                  const isEligibleForSelection = contrib.status !== "paid" && contrib.status !== "cancelled";
 
                   return (
                     <TableRow 
