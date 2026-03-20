@@ -19,19 +19,22 @@ interface ContributionData {
   competence_month: number;
   competence_year: number;
   lytex_invoice_url: string | null;
+  employer_id?: string | null;
+  contribution_type_id?: string | null;
+  clinic_id?: string | null;
   employer: {
     id: string;
     name: string;
     cnpj: string;
-  };
+  } | null;
   contribution_type: {
     name: string;
     default_value: number;
-  };
+  } | null;
   clinic: {
     name: string;
     logo_url: string | null;
-  };
+  } | null;
 }
 
 const MONTHS = [
