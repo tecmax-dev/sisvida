@@ -880,7 +880,7 @@ export default function ContributionsListTab({
                   const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                   const StatusIcon = statusConfig?.icon || Clock;
                   const isCancelled = contrib.status === "cancelled";
-                  const isEligibleForSelection = (contrib.lytex_invoice_id || contrib.public_access_token) && contrib.status !== "paid" && contrib.status !== "cancelled";
+                  const isEligibleForSelection = contrib.status !== "paid" && contrib.status !== "cancelled";
 
                   return (
                     <TableRow 
