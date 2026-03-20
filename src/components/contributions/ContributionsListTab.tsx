@@ -227,6 +227,15 @@ export default function ContributionsListTab({
     setDueDateStart(draftDueDateStart);
     setDueDateEnd(draftDueDateEnd);
     setCurrentPage(1);
+
+    // When searching by term or using date range, fetch ALL periods from server
+    // so client-side filtering can find results across all years
+    const needsAllPeriods = !!(draftSearchTerm.trim() || draftDueDateStart || draftDueDateEnd);
+    if (needsAllPeriods) {
+      onAllPeriodsChange?.(true);
+      // Also set competence to "all" so client filter doesn't restrict results
+      setCompetenceFilter("all");
+    }
   };
 
   // Extract unique contribution types from contributions
@@ -520,6 +529,11 @@ export default function ContributionsListTab({
     setDueDateStart("");
     setDueDateEnd("");
     setCurrentPage(1);
+    // Restore year-based filtering
+    onAllPeriodsChange?.(false);
+    const initial = getInitialCompetence();
+    setCompetenceFilter(initial);
+    setAutoAdjustedCompetence(false);
   };
 
   const handleTabChange = (value: string) => {
