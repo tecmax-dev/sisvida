@@ -529,6 +529,11 @@ export default function ContributionsListTab({
     setDueDateStart("");
     setDueDateEnd("");
     setCurrentPage(1);
+    // Restore year-based filtering
+    onAllPeriodsChange?.(false);
+    const initial = getInitialCompetence();
+    setCompetenceFilter(initial);
+    setAutoAdjustedCompetence(false);
   };
 
   const handleTabChange = (value: string) => {
