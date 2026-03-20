@@ -417,7 +417,7 @@ export default function ContributionsListTab({
 
   const eligibleOnPage = useMemo(() => {
     return paginatedContributions.filter(
-      (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
+      (c) => c.status !== "paid" && c.status !== "cancelled"
     );
   }, [paginatedContributions]);
 
