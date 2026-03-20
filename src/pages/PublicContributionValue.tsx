@@ -77,10 +77,9 @@ export default function PublicContributionValue() {
     setError(null);
     
     try {
-      // Decode token in case it was URL-encoded (handles legacy base64 tokens with special chars)
-      const decodedToken = rawToken ? decodeURIComponent(rawToken) : rawToken;
+      const decodedToken = rawToken ? decodeURIComponent(rawToken).trim() : rawToken;
 
-      const { data, error: fetchError } = await supabase
+      const { data: baseContribution, error: baseError } = await supabase
         .from("employer_contributions")
         .select(`
           id,
@@ -90,28 +89,49 @@ export default function PublicContributionValue() {
           competence_month,
           competence_year,
           lytex_invoice_url,
-          employer:employers(id, name, cnpj),
-          contribution_type:contribution_types(name, default_value),
-          clinic:clinics(name, logo_url)
+          employer_id,
+          contribution_type_id,
+          clinic_id
         `)
         .eq("public_access_token", decodedToken)
-        .single();
+        .maybeSingle();
 
-      if (fetchError || !data) {
+      if (baseError) {
+        console.error("Error loading public contribution base record:", baseError);
+        setError("Erro ao validar o link da contribuição");
+        return;
+      }
+
+      if (!baseContribution) {
         setError("Link inválido ou expirado");
         return;
       }
 
-      // Cast the data properly
-      const contributionData = data as unknown as ContributionData;
+      const [employerResult, contributionTypeResult, clinicResult] = await Promise.all([
+        baseContribution.employer_id
+          ? supabase.from("employers").select("id, name, cnpj").eq("id", baseContribution.employer_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        baseContribution.contribution_type_id
+          ? supabase.from("contribution_types").select("name, default_value").eq("id", baseContribution.contribution_type_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        baseContribution.clinic_id
+          ? supabase.from("clinics").select("name, logo_url").eq("id", baseContribution.clinic_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+
+      const contributionData: ContributionData = {
+        ...baseContribution,
+        employer: employerResult.data ?? null,
+        contribution_type: contributionTypeResult.data ?? null,
+        clinic: clinicResult.data ?? null,
+      };
+
       setContribution(contributionData);
 
-      // Pre-fill with default value if exists
       if (contributionData.contribution_type?.default_value) {
         setValue((contributionData.contribution_type.default_value / 100).toFixed(2).replace(".", ","));
       }
 
-      // If already has invoice, show success
       if (contributionData.status !== "awaiting_value" && contributionData.lytex_invoice_url) {
         setSuccess(true);
         setInvoiceUrl(contributionData.lytex_invoice_url);
