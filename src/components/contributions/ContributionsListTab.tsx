@@ -205,9 +205,29 @@ export default function ContributionsListTab({
   onAllPeriodsChange,
 }: ContributionsListTabProps) {
   const navigate = useNavigate();
+  // "Draft" filter states (updated as user types/selects, not applied until "Buscar")
+  const [draftSearchTerm, setDraftSearchTerm] = useState("");
+  const [draftStatusFilter, setDraftStatusFilter] = useState<string>("hide_cancelled");
+  const [draftContributionTypeFilter, setDraftContributionTypeFilter] = useState<string>("all");
+  const [draftDueDateStart, setDraftDueDateStart] = useState("");
+  const [draftDueDateEnd, setDraftDueDateEnd] = useState("");
+
+  // "Applied" filter states (used for actual filtering, set on "Buscar" click)
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
+  const [dueDateStart, setDueDateStart] = useState("");
+  const [dueDateEnd, setDueDateEnd] = useState("");
+
+  // Apply filters on "Buscar" click
+  const handleApplyFilters = () => {
+    setSearchTerm(draftSearchTerm);
+    setStatusFilter(draftStatusFilter);
+    setContributionTypeFilter(draftContributionTypeFilter);
+    setDueDateStart(draftDueDateStart);
+    setDueDateEnd(draftDueDateEnd);
+    setCurrentPage(1);
+  };
 
   // Extract unique contribution types from contributions
   const availableContributionTypes = useMemo(() => {
@@ -222,7 +242,7 @@ export default function ContributionsListTab({
   // Competence filter: always starts with previous month (MM/YYYY)
   const getInitialCompetence = () => {
     const now = new Date();
-    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // Previous month (1-12)
+    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
     const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
     return `${String(prevMonth).padStart(2, "0")}/${prevYear}`;
   };
