@@ -361,9 +361,18 @@ export default function ContributionsListTab({
         matchesContributionType = c.contribution_type_id === contributionTypeFilter;
       }
 
-      return matchesSearchTerm && matchesStatus && matchesCompetence && matchesContributionType;
+      // Due date range filter
+      let matchesDueDate = true;
+      if (dueDateStart) {
+        matchesDueDate = c.due_date >= dueDateStart;
+      }
+      if (dueDateEnd && matchesDueDate) {
+        matchesDueDate = c.due_date <= dueDateEnd;
+      }
+
+      return matchesSearchTerm && matchesStatus && matchesCompetence && matchesContributionType && matchesDueDate;
     });
-  }, [activeContributions, searchTerm, statusFilter, competenceFilter, contributionTypeFilter, documentTypeTab]);
+  }, [activeContributions, searchTerm, statusFilter, competenceFilter, contributionTypeFilter, dueDateStart, dueDateEnd, documentTypeTab]);
 
   useEffect(() => {
     console.debug("[ContributionsListTab] state", {
