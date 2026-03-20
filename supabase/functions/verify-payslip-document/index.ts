@@ -156,6 +156,29 @@ Nome do arquivo: ${file_name}`;
           isPayslip = false;
           reason = `O nome no contracheque (${nameFoundInDocument || "não identificado"}) não corresponde ao nome do associado (${member_name}).`;
         }
+
+        // Validate competence month - reject payslips older than 30 days
+        if (isPayslip && parsed.competence_month && parsed.competence_year) {
+          const compMonth = parseInt(parsed.competence_month);
+          const compYear = parseInt(parsed.competence_year);
+          
+          // Calculate the earliest acceptable month (current month - 1)
+          let minMonth = currentMonth - 1;
+          let minYear = currentYear;
+          if (minMonth < 1) {
+            minMonth = 12;
+            minYear = currentYear - 1;
+          }
+          
+          // Compare: competence must be >= minMonth/minYear
+          const compDate = compYear * 12 + compMonth;
+          const minDate = minYear * 12 + minMonth;
+          
+          if (compDate < minDate) {
+            isPayslip = false;
+            reason = `Contracheque com competência ${String(compMonth).padStart(2, '0')}/${compYear} está fora do prazo. Aceitamos apenas contracheques a partir de ${String(minMonth).padStart(2, '0')}/${minYear}.`;
+          }
+        }
       }
     } catch (parseErr) {
       console.error("[verify-payslip] Parse error:", parseErr);
