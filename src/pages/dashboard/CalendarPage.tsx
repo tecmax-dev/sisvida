@@ -3617,6 +3617,7 @@ const updateData: Record<string, any> = {
                   const isOutsideWindow = isDateKeyOutsideBookingWindow(dateStr);
                   const holidayName = isHoliday(date);
                   const slotAppointments = getAppointmentsForSlot(date, time);
+                  const tooClose = isSlotTooClose(time, date);
 
                   const weekSelectedProfId = filterProfessionals.length === 1 ? filterProfessionals[0] : null;
                   const availableSlotsForDay = weekSelectedProfId
@@ -3624,7 +3625,7 @@ const updateData: Record<string, any> = {
                     : [];
                   const isWithinSchedule = availableSlotsForDay.includes(time);
                    const hasNonCancelledAppointment = slotAppointments.some(a => a.status !== 'cancelled');
-                   const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment;
+                   const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment && !tooClose;
 
                   return (
                     <DroppableTimeSlot
@@ -3633,7 +3634,7 @@ const updateData: Record<string, any> = {
                       time={time}
                       showTime={false}
                       isOccupied={!!holidayName}
-                      disabled={isOutsideWindow}
+                      disabled={isOutsideWindow || tooClose}
                       className={cn(
                         "p-1 border-r border-border/20 relative min-h-[80px]",
                         holidayName && "bg-red-50/50 dark:bg-red-950/10",
