@@ -8338,6 +8338,7 @@ export type Database = {
           is_active: boolean | null
           latitude: number | null
           longitude: number | null
+          max_patient_age: number | null
           name: string
           phone: string | null
           registration_number: string | null
@@ -8367,6 +8368,7 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          max_patient_age?: number | null
           name: string
           phone?: string | null
           registration_number?: string | null
@@ -8396,6 +8398,7 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          max_patient_age?: number | null
           name?: string
           phone?: string | null
           registration_number?: string | null
