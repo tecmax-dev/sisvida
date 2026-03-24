@@ -12472,6 +12472,7 @@ export type Database = {
       union_cash_transfers: {
         Row: {
           amount: number
+          check_number: string | null
           clinic_id: string
           created_at: string | null
           created_by: string | null
@@ -12483,6 +12484,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          check_number?: string | null
           clinic_id: string
           created_at?: string | null
           created_by?: string | null
@@ -12494,6 +12496,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          check_number?: string | null
           clinic_id?: string
           created_at?: string | null
           created_by?: string | null

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { format, parse, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2 } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2, ArrowLeftRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +47,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { UnionTransactionDialog } from "./UnionTransactionDialog";
+import { UnionCashTransferDialog } from "./UnionCashTransferDialog";
 
 interface Transaction {
   id: string;
@@ -86,6 +87,7 @@ export function UnionStatementPanel() {
   const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
   const [isMigrating, setIsMigrating] = useState(false);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<any>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isEditingInitialBalanceDate, setIsEditingInitialBalanceDate] = useState(false);
@@ -752,10 +754,16 @@ export function UnionStatementPanel() {
             Extrato detalhado de movimentações por portador
           </p>
         </div>
-        <Button onClick={() => setTransactionDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Lançamento
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-2">
+            <ArrowLeftRight className="h-4 w-4" />
+            Transferência
+          </Button>
+          <Button onClick={() => setTransactionDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Lançamento
+          </Button>
+        </div>
       </div>
 
       {/* Migration Alert */}
@@ -1203,7 +1211,15 @@ export function UnionStatementPanel() {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Transfer Dialog */}
+      {clinicId && (
+        <UnionCashTransferDialog
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          clinicId={clinicId}
+        />
+      )}
+
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
