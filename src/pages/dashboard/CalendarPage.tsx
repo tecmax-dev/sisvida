@@ -1056,7 +1056,7 @@ export default function CalendarPage() {
 
       let professionalsQuery = supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule, avatar_url')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url, max_patient_age')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true);
 
