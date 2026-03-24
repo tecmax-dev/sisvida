@@ -890,54 +890,120 @@ export default function MobileBookingPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  professionals.map((prof) => (
-                    <Card 
-                      key={prof.id}
-                      className={cn(
-                        "cursor-pointer transition-colors active:scale-[0.98]",
-                        selectedProfessionalId === prof.id 
-                          ? "border-emerald-600 bg-emerald-50" 
-                          : ""
-                      )}
-                      onClick={() => {
-                        setSelectedProfessionalId(prof.id);
-                        // Reset date and time when changing professional
-                        setSelectedDate(undefined);
-                        setSelectedTime("");
-                        setAvailableSlots([]);
-                      }}
-                    >
-                      <CardContent className="p-3 flex items-center gap-3">
-                        {prof.avatar_url ? (
-                          <img 
-                            src={prof.avatar_url} 
-                            alt={prof.name}
-                            className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <User className="h-5 w-5 text-emerald-600" />
+                  professionals.map((prof) => {
+                    // Check age restriction for this professional
+                    let isAgeBlocked = false;
+                    let ageBlockReason = "";
+                    if (prof.max_patient_age != null) {
+                      let patientBirthDate: string | null = null;
+                      if (patientType === "dependent" && selectedDependentId) {
+                        const dep = dependents.find(d => d.id === selectedDependentId);
+                        patientBirthDate = dep?.birth_date || null;
+                      } else {
+                        patientBirthDate = titularBirthDate;
+                      }
+                      if (patientBirthDate) {
+                        const age = calculateAge(patientBirthDate);
+                        if (age > prof.max_patient_age) {
+                          isAgeBlocked = true;
+                          ageBlockReason = `Atende apenas pacientes até ${prof.max_patient_age} anos`;
+                        }
+                      }
+                    }
+
+                    return (
+                      <Card 
+                        key={prof.id}
+                        className={cn(
+                          "transition-colors",
+                          isAgeBlocked 
+                            ? "opacity-50 cursor-not-allowed" 
+                            : "cursor-pointer active:scale-[0.98]",
+                          selectedProfessionalId === prof.id && !isAgeBlocked
+                            ? "border-emerald-600 bg-emerald-50" 
+                            : ""
+                        )}
+                        onClick={() => {
+                          if (isAgeBlocked) {
+                            toast({
+                              title: "Restrição de idade",
+                              description: ageBlockReason,
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setSelectedProfessionalId(prof.id);
+                          setSelectedDate(undefined);
+                          setSelectedTime("");
+                          setAvailableSlots([]);
+                        }}
+                      >
+                        <CardContent className="p-3 flex items-center gap-3">
+                          {prof.avatar_url ? (
+                            <img 
+                              src={prof.avatar_url} 
+                              alt={prof.name}
+                              className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                              <User className="h-5 w-5 text-emerald-600" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate">{prof.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {prof.specialties?.map(s => s.name).join(', ') || prof.specialty || ''}
+                            </p>
+                            {isAgeBlocked && (
+                              <p className="text-xs text-red-500 font-medium mt-0.5">
+                                ⚠️ {ageBlockReason}
+                              </p>
+                            )}
+                            {prof.max_patient_age != null && !isAgeBlocked && (
+                              <p className="text-xs text-amber-600 mt-0.5">
+                                Até {prof.max_patient_age} anos
+                              </p>
+                            )}
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-foreground truncate">{prof.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {prof.specialties?.map(s => s.name).join(', ') || prof.specialty || ''}
-                          </p>
-                        </div>
-                        {selectedProfessionalId === prof.id && (
-                          <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
+                          {selectedProfessionalId === prof.id && !isAgeBlocked && (
+                            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 )}
               </div>
 
               <Button 
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
                 disabled={!selectedProfessionalId}
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  // Double-check age restriction before proceeding
+                  const prof = professionals.find(p => p.id === selectedProfessionalId);
+                  if (prof?.max_patient_age != null) {
+                    let patientBirthDate: string | null = null;
+                    if (patientType === "dependent" && selectedDependentId) {
+                      const dep = dependents.find(d => d.id === selectedDependentId);
+                      patientBirthDate = dep?.birth_date || null;
+                    } else {
+                      patientBirthDate = titularBirthDate;
+                    }
+                    if (patientBirthDate) {
+                      const age = calculateAge(patientBirthDate);
+                      if (age > prof.max_patient_age) {
+                        toast({
+                          title: "Restrição de idade",
+                          description: `${prof.name} atende apenas pacientes até ${prof.max_patient_age} anos.`,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                    }
+                  }
+                  setStep(3);
+                }}
               >
                 Continuar
               </Button>
