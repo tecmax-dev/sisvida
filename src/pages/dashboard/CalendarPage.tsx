@@ -2356,6 +2356,18 @@ const updateData: Record<string, any> = {
       return;
     }
 
+    // Validação de antecedência mínima para drag-and-drop
+    const dropDate = new Date(newDate + 'T12:00:00');
+    if (isSlotTooClose(newTime, dropDate)) {
+      const hours = minAdvanceBookingHours ?? 6;
+      toast({
+        title: "Horário indisponível",
+        description: `É necessário agendar com no mínimo ${hours}h de antecedência.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Calculate end time based on duration
     const endTime = calculateEndTime(newTime, duration);
 
