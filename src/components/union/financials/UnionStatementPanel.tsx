@@ -754,10 +754,16 @@ export function UnionStatementPanel() {
             Extrato detalhado de movimentações por portador
           </p>
         </div>
-        <Button onClick={() => setTransactionDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Lançamento
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setTransferDialogOpen(true)} className="gap-2">
+            <ArrowLeftRight className="h-4 w-4" />
+            Transferência
+          </Button>
+          <Button onClick={() => setTransactionDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Lançamento
+          </Button>
+        </div>
       </div>
 
       {/* Migration Alert */}
