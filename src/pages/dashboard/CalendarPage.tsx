@@ -2991,6 +2991,11 @@ const updateData: Record<string, any> = {
                       />
                       <div className="flex flex-col">
                         <span className="text-sm">{patient.name}</span>
+                        {patient.matchedDependentName && (
+                          <span className="text-xs text-primary font-medium">
+                            👶 Dependente: {patient.matchedDependentName}
+                          </span>
+                        )}
                         {patient.cpf && (
                           <span className="text-xs text-muted-foreground">
                             CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
