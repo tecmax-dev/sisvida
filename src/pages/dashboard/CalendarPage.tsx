@@ -1497,8 +1497,37 @@ export default function CalendarPage() {
       return;
     }
 
-    // Usar duração do formulário (se definida) ou duração padrão do profissional
+    // Validação de idade máxima do profissional (ex: pediatra até 14 anos)
     const selectedProfessional = professionals.find(p => p.id === formProfessional);
+    if (selectedProfessional?.max_patient_age != null) {
+      let patientBirthDateStr: string | null = null;
+      if (formDependentId) {
+        const dep = patientDependents.find(d => d.id === formDependentId);
+        patientBirthDateStr = dep?.birth_date || null;
+      } else {
+        // Titular - get birth_date from patients list
+        const patient = patients.find(p => p.id === formPatient);
+        patientBirthDateStr = (patient as any)?.birth_date || null;
+      }
+      if (patientBirthDateStr) {
+        const birth = new Date(patientBirthDateStr);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+        if (age > selectedProfessional.max_patient_age) {
+          toast({
+            title: "Restrição de idade",
+            description: `${selectedProfessional.name} atende apenas pacientes até ${selectedProfessional.max_patient_age} anos.`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
+    // Usar duração do formulário (se definida) ou duração padrão do profissional
     const defaultDuration = selectedProfessional?.appointment_duration || 30;
     const durationMinutes = formDuration ?? defaultDuration;
     
