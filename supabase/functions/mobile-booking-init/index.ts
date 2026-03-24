@@ -128,6 +128,7 @@ serve(async (req) => {
           appointment_duration, 
           schedule, 
           avatar_url,
+          max_patient_age,
           professional_specialties (
             specialty:specialties (
               id,
@@ -139,10 +140,10 @@ serve(async (req) => {
         .eq("clinic_id", clinicId)
         .eq("is_active", true),
 
-      // Query 3: Dados do paciente (bloqueio)
+      // Query 3: Dados do paciente (bloqueio + birth_date)
       supabase
         .from("patients")
-        .select("no_show_blocked_until, no_show_unblocked_at, is_active")
+        .select("no_show_blocked_until, no_show_unblocked_at, is_active, birth_date")
         .eq("id", patientId)
         .single(),
 
@@ -172,6 +173,7 @@ serve(async (req) => {
       appointment_duration: prof.appointment_duration,
       schedule: prof.schedule,
       avatar_url: prof.avatar_url,
+      max_patient_age: prof.max_patient_age ?? null,
       specialties: (prof.professional_specialties || [])
         .filter((ps: any) => ps.specialty)
         .map((ps: any) => ({
@@ -230,6 +232,7 @@ serve(async (req) => {
         dependentBookingLimitEnabled,
         titularBookingLimitEnabled,
         maxAppointmentsPerCpfMonth,
+        titularBirthDate: patientData?.birth_date ?? null,
         _debug: { elapsed_ms: elapsed }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
