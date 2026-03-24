@@ -548,19 +548,19 @@ export default function UnionExpensesPage() {
             Filtros
             <ChevronDown className={cn("h-3.5 w-3.5 ml-1 transition-transform", filtersOpen && "rotate-180")} />
           </Button>
+          <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckPrintDialogOpen(true)}>
+            <Printer className="h-4 w-4 mr-1.5" />
+            Cópia Cheque
+          </Button>
+          <Button variant="outline" size="sm" className="h-9" onClick={() => setBatchPrintDialogOpen(true)}>
+            <Printer className="h-4 w-4 mr-1.5" />
+            Lote Cheques
+          </Button>
           {canManageExpenses() && (
             <>
               <Button variant="outline" size="sm" className="h-9" onClick={() => setCopyDialogOpen(true)}>
                 <Copy className="h-4 w-4 mr-1.5" />
                 Copiar Despesas
-              </Button>
-              <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckPrintDialogOpen(true)}>
-                <Printer className="h-4 w-4 mr-1.5" />
-                Cópia Cheque
-              </Button>
-              <Button variant="outline" size="sm" className="h-9" onClick={() => setBatchPrintDialogOpen(true)}>
-                <Printer className="h-4 w-4 mr-1.5" />
-                Lote Cheques
               </Button>
               <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckDialogOpen(true)}>
                 <FileCheck className="h-4 w-4 mr-1.5" />
