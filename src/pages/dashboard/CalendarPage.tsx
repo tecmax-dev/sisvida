@@ -1082,7 +1082,7 @@ export default function CalendarPage() {
     }
   };
 
-  // Busca de pacientes no servidor com debounce
+  // Busca de pacientes no servidor com debounce (inclui busca por nome de dependente)
   const searchPatients = useCallback(async (query: string) => {
     if (!currentClinic || query.length < 2) {
       setPatientSearchResults([]);
@@ -1094,22 +1094,65 @@ export default function CalendarPage() {
       // Normaliza a busca removendo pontuação para CPF
       const normalizedQuery = query.replace(/[^\w\s]/g, '');
       
-      // Busca por nome (usando ilike) ou CPF
-      const { data, error } = await supabase
-        .from('patients')
-        .select('id, name, phone, email, birth_date, cpf, is_active')
-        .eq('clinic_id', currentClinic.id)
-        .eq('is_active', true)
-        .or(`name.ilike.%${query}%,cpf.ilike.%${normalizedQuery}%`)
-        .order('name')
-        .limit(50);
+      // Busca paralela: pacientes diretos + dependentes por nome
+      const [patientsResult, dependentsResult] = await Promise.all([
+        // Busca por nome ou CPF no paciente
+        supabase
+          .from('patients')
+          .select('id, name, phone, email, birth_date, cpf, is_active')
+          .eq('clinic_id', currentClinic.id)
+          .eq('is_active', true)
+          .or(`name.ilike.%${query}%,cpf.ilike.%${normalizedQuery}%`)
+          .order('name')
+          .limit(50),
+        // Busca por nome ou CPF no dependente
+        supabase
+          .from('patient_dependents')
+          .select('id, name, cpf, patient_id')
+          .eq('clinic_id', currentClinic.id)
+          .eq('is_active', true)
+          .or(`pending_approval.is.null,pending_approval.eq.false`)
+          .or(`name.ilike.%${query}%,cpf.ilike.%${normalizedQuery}%`)
+          .limit(50),
+      ]);
 
-      if (error) {
-        console.error('Error searching patients:', error);
-        return;
+      if (patientsResult.error) {
+        console.error('Error searching patients:', patientsResult.error);
       }
 
-      setPatientSearchResults(data || []);
+      const directPatients: Patient[] = (patientsResult.data || []).map(p => ({ ...p, matchedDependentName: null }));
+      const directPatientIds = new Set(directPatients.map(p => p.id));
+
+      // Para dependentes encontrados, buscar seus titulares que não estão já nos resultados
+      const matchedDependents = dependentsResult.data || [];
+      const missingParentIds = [...new Set(matchedDependents.map(d => d.patient_id))].filter(id => !directPatientIds.has(id));
+      
+      let parentPatients: Patient[] = [];
+      if (missingParentIds.length > 0) {
+        const { data: parents } = await supabase
+          .from('patients')
+          .select('id, name, phone, email, birth_date, cpf, is_active')
+          .in('id', missingParentIds)
+          .eq('is_active', true);
+        
+        if (parents) {
+          // Mapear cada pai com o nome do dependente que deu match
+          parentPatients = parents.map(p => {
+            const matchingDep = matchedDependents.find(d => d.patient_id === p.id);
+            return { ...p, matchedDependentName: matchingDep?.name || null };
+          });
+        }
+      }
+
+      // Para pacientes diretos que também têm dependentes com match, anotar
+      directPatients.forEach(p => {
+        const matchingDep = matchedDependents.find(d => d.patient_id === p.id);
+        if (matchingDep) {
+          p.matchedDependentName = matchingDep.name;
+        }
+      });
+
+      setPatientSearchResults([...directPatients, ...parentPatients]);
     } catch (error) {
       console.error('Error searching patients:', error);
     } finally {
