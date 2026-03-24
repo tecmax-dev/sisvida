@@ -3104,6 +3104,7 @@ const updateData: Record<string, any> = {
               availableProfessionals.map((prof) => (
                 <SelectItem key={prof.id} value={prof.id}>
                   {prof.name} {prof.specialty && `- ${prof.specialty}`}
+                  {prof.max_patient_age != null && ` (até ${prof.max_patient_age} anos)`}
                 </SelectItem>
               ))
             ) : (
