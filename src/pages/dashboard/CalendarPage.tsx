@@ -1182,7 +1182,7 @@ export default function CalendarPage() {
     try {
       const { data, error } = await supabase
         .from('patient_dependents')
-        .select('id, name, cpf')
+        .select('id, name, cpf, birth_date')
         .eq('patient_id', patientId)
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true)
