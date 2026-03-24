@@ -140,10 +140,10 @@ serve(async (req) => {
         .eq("clinic_id", clinicId)
         .eq("is_active", true),
 
-      // Query 3: Dados do paciente (bloqueio)
+      // Query 3: Dados do paciente (bloqueio + birth_date)
       supabase
         .from("patients")
-        .select("no_show_blocked_until, no_show_unblocked_at, is_active")
+        .select("no_show_blocked_until, no_show_unblocked_at, is_active, birth_date")
         .eq("id", patientId)
         .single(),
 
