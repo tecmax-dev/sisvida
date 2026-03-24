@@ -602,7 +602,7 @@ export default function CalendarPage() {
   const [selectedPatientName, setSelectedPatientName] = useState("");
   const [formDependentId, setFormDependentId] = useState<string | null>(null);
   const [pendingDependentAutoSelect, setPendingDependentAutoSelect] = useState<string | null>(null);
-  const [patientDependents, setPatientDependents] = useState<Array<{ id: string; name: string; cpf: string | null }>>([]);
+  const [patientDependents, setPatientDependents] = useState<Array<{ id: string; name: string; cpf: string | null; birth_date: string | null }>>([]);
   const [loadingDependents, setLoadingDependents] = useState(false);
   
   // Recurrence state
