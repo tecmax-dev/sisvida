@@ -2356,6 +2356,18 @@ const updateData: Record<string, any> = {
       return;
     }
 
+    // Validação de antecedência mínima para drag-and-drop
+    const dropDate = new Date(newDate + 'T12:00:00');
+    if (isSlotTooClose(newTime, dropDate)) {
+      const hours = minAdvanceBookingHours ?? 6;
+      toast({
+        title: "Horário indisponível",
+        description: `É necessário agendar com no mínimo ${hours}h de antecedência.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Calculate end time based on duration
     const endTime = calculateEndTime(newTime, duration);
 
@@ -3495,7 +3507,7 @@ const updateData: Record<string, any> = {
                 isOccupied={hasAppointment}
                 onClick={() => {
                   setSelectedDate(normalizeCalendarDate(forDate));
-                  openNewAppointmentWithTime(time);
+                  openNewAppointmentWithTime(time, forDate);
                 }}
                 className={cn(
                   "p-1.5 text-center rounded-md text-xs transition-colors",
@@ -3617,6 +3629,7 @@ const updateData: Record<string, any> = {
                   const isOutsideWindow = isDateKeyOutsideBookingWindow(dateStr);
                   const holidayName = isHoliday(date);
                   const slotAppointments = getAppointmentsForSlot(date, time);
+                  const tooClose = isSlotTooClose(time, date);
 
                   const weekSelectedProfId = filterProfessionals.length === 1 ? filterProfessionals[0] : null;
                   const availableSlotsForDay = weekSelectedProfId
@@ -3624,7 +3637,7 @@ const updateData: Record<string, any> = {
                     : [];
                   const isWithinSchedule = availableSlotsForDay.includes(time);
                    const hasNonCancelledAppointment = slotAppointments.some(a => a.status !== 'cancelled');
-                   const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment;
+                   const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment && !tooClose;
 
                   return (
                     <DroppableTimeSlot
@@ -3633,7 +3646,7 @@ const updateData: Record<string, any> = {
                       time={time}
                       showTime={false}
                       isOccupied={!!holidayName}
-                      disabled={isOutsideWindow}
+                      disabled={isOutsideWindow || tooClose}
                       className={cn(
                         "p-1 border-r border-border/20 relative min-h-[80px]",
                         holidayName && "bg-red-50/50 dark:bg-red-950/10",
