@@ -600,6 +600,7 @@ export default function CalendarPage() {
   const [isSearchingPatients, setIsSearchingPatients] = useState(false);
   const [selectedPatientName, setSelectedPatientName] = useState("");
   const [formDependentId, setFormDependentId] = useState<string | null>(null);
+  const [pendingDependentAutoSelect, setPendingDependentAutoSelect] = useState<string | null>(null);
   const [patientDependents, setPatientDependents] = useState<Array<{ id: string; name: string; cpf: string | null }>>([]);
   const [loadingDependents, setLoadingDependents] = useState(false);
   
