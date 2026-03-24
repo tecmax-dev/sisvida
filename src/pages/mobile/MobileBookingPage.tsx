@@ -70,6 +70,7 @@ interface Professional {
   schedule: ProfessionalSchedule | null;
   avatar_url: string | null;
   specialties?: ProfessionalSpecialty[];
+  max_patient_age?: number | null;
 }
 
 interface Dependent {
