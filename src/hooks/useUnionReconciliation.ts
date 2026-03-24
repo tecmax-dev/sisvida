@@ -374,6 +374,48 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             } else {
               reconciliationStatus = "pending_review";
             }
+          } else if (tx.checkNumber && tx.type === "credit") {
+            // Match credits with check number against pending incomes (e.g. transfer deposits via check)
+            const normalizedCheckNum = normalizeCheckNumber(tx.checkNumber);
+            const matchedIncome = pendingIncomes?.find((inc) => {
+              const incCheckNum = normalizeCheckNumber(inc.check_number);
+              return (
+                incCheckNum === normalizedCheckNum &&
+                inc.cash_register_id === cashRegisterId &&
+                Math.abs(inc.amount - tx.amount) < 0.01 &&
+                inc.status !== "reversed" &&
+                inc.status !== "cancelled"
+              );
+            });
+
+            if (matchedIncome) {
+              reconciliationStatus = "auto_reconciled";
+              matchedTransactionId = matchedIncome.id;
+              autoReconciled++;
+            } else {
+              reconciliationStatus = "pending_review";
+            }
+          } else if (tx.type === "credit") {
+            // Match credits without check number by amount and date
+            const txDateStr = tx.date.toISOString().split("T")[0];
+            const matchedIncome = pendingIncomes?.find((inc) => {
+              const incDate = inc.paid_date || inc.due_date;
+              return (
+                Math.abs(inc.amount - tx.amount) < 0.01 &&
+                inc.cash_register_id === cashRegisterId &&
+                incDate === txDateStr &&
+                inc.status === "paid" &&
+                !inc.check_number
+              );
+            });
+
+            if (matchedIncome) {
+              reconciliationStatus = "auto_reconciled";
+              matchedTransactionId = matchedIncome.id;
+              autoReconciled++;
+            } else {
+              reconciliationStatus = "pending_review";
+            }
           } else if (tx.type === "debit") {
             // Try to match by amount and date for debits without check number
             const txDateStr = tx.date.toISOString().split("T")[0];
@@ -424,17 +466,19 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       // Update auto-reconciled financial transactions: mark as paid, set paid_date, update balance
       for (const rec of transactionRecords) {
         if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
-          const matchedExp = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id);
-          if (!matchedExp) continue;
+          // Look in both expenses and incomes
+          const matchedTx = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id)
+            || pendingIncomes?.find((i) => i.id === rec.matched_transaction_id);
+          if (!matchedTx) continue;
 
-          const wasPending = matchedExp.status === "pending";
-          const compensationDate = rec.transaction_date; // OFX transaction date
+          const wasPending = matchedTx.status === "pending";
+          const compensationDate = rec.transaction_date;
 
           const updatePayload: Record<string, any> = {
             is_conciliated: true,
             conciliated_at: new Date().toISOString(),
             conciliated_by: userId,
-            source_statement_tx_id: null, // will be set after we get the stmt tx id
+            source_statement_tx_id: null,
           };
 
           if (wasPending) {
@@ -443,7 +487,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           }
 
           // Auto-fill check_number from OFX if financial transaction has none
-          if ((!matchedExp.check_number || matchedExp.check_number.trim() === "") && rec.check_number) {
+          if ((!matchedTx.check_number || matchedTx.check_number.trim() === "") && rec.check_number) {
             updatePayload.check_number = rec.check_number;
           }
 
@@ -459,9 +503,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
           // If was pending, update cash register balance
           if (wasPending) {
-            const balanceChange = matchedExp.type === "income"
-              ? Number(matchedExp.amount)
-              : -Number(matchedExp.amount);
+            const balanceChange = matchedTx.type === "income"
+              ? Number(matchedTx.amount)
+              : -Number(matchedTx.amount);
 
             const { data: register } = await supabase
               .from("union_cash_registers")
@@ -513,6 +557,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
       toast.success(
         `Extrato importado! ${data.autoReconciled} de ${data.total} transações conciliadas automaticamente.`
       );
