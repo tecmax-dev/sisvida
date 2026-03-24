@@ -141,6 +141,7 @@ export default function MobileBookingPage() {
   const [dependentBookingLimitEnabled, setDependentBookingLimitEnabled] = useState(true);
   const [titularBookingLimitEnabled, setTitularBookingLimitEnabled] = useState(true);
   const [maxAppointmentsPerCpfMonth, setMaxAppointmentsPerCpfMonth] = useState(1);
+  const [titularBirthDate, setTitularBirthDate] = useState<string | null>(null);
   
   const clinicIdRef = useRef<string | null>(null);
   
