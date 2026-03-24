@@ -3495,7 +3495,7 @@ const updateData: Record<string, any> = {
                 isOccupied={hasAppointment}
                 onClick={() => {
                   setSelectedDate(normalizeCalendarDate(forDate));
-                  openNewAppointmentWithTime(time);
+                  openNewAppointmentWithTime(time, forDate);
                 }}
                 className={cn(
                   "p-1.5 text-center rounded-md text-xs transition-colors",
