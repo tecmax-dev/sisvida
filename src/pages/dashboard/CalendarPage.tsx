@@ -351,6 +351,7 @@ interface Patient {
   email?: string | null;
   birth_date?: string | null;
   cpf?: string | null;
+  matchedDependentName?: string | null;
 }
 
 interface Professional {
