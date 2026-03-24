@@ -361,6 +361,7 @@ interface Professional {
   appointment_duration?: number | null;
   schedule?: any | null;
   avatar_url?: string | null;
+  max_patient_age?: number | null;
 }
 
 interface Appointment {
