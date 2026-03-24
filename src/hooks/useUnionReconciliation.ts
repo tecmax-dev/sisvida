@@ -374,6 +374,48 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             } else {
               reconciliationStatus = "pending_review";
             }
+          } else if (tx.checkNumber && tx.type === "credit") {
+            // Match credits with check number against pending incomes (e.g. transfer deposits via check)
+            const normalizedCheckNum = normalizeCheckNumber(tx.checkNumber);
+            const matchedIncome = pendingIncomes?.find((inc) => {
+              const incCheckNum = normalizeCheckNumber(inc.check_number);
+              return (
+                incCheckNum === normalizedCheckNum &&
+                inc.cash_register_id === cashRegisterId &&
+                Math.abs(inc.amount - tx.amount) < 0.01 &&
+                inc.status !== "reversed" &&
+                inc.status !== "cancelled"
+              );
+            });
+
+            if (matchedIncome) {
+              reconciliationStatus = "auto_reconciled";
+              matchedTransactionId = matchedIncome.id;
+              autoReconciled++;
+            } else {
+              reconciliationStatus = "pending_review";
+            }
+          } else if (tx.type === "credit") {
+            // Match credits without check number by amount and date
+            const txDateStr = tx.date.toISOString().split("T")[0];
+            const matchedIncome = pendingIncomes?.find((inc) => {
+              const incDate = inc.paid_date || inc.due_date;
+              return (
+                Math.abs(inc.amount - tx.amount) < 0.01 &&
+                inc.cash_register_id === cashRegisterId &&
+                incDate === txDateStr &&
+                inc.status === "paid" &&
+                !inc.check_number
+              );
+            });
+
+            if (matchedIncome) {
+              reconciliationStatus = "auto_reconciled";
+              matchedTransactionId = matchedIncome.id;
+              autoReconciled++;
+            } else {
+              reconciliationStatus = "pending_review";
+            }
           } else if (tx.type === "debit") {
             // Try to match by amount and date for debits without check number
             const txDateStr = tx.date.toISOString().split("T")[0];
