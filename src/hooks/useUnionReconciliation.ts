@@ -524,7 +524,6 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           }
         }
       }
-      }
 
       // Update import status
       await (supabase as any)
