@@ -232,6 +232,7 @@ serve(async (req) => {
         dependentBookingLimitEnabled,
         titularBookingLimitEnabled,
         maxAppointmentsPerCpfMonth,
+        titularBirthDate: patientData?.birth_date ?? null,
         _debug: { elapsed_ms: elapsed }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
