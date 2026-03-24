@@ -212,6 +212,13 @@ export function DashboardLayout() {
   }, [user?.id, currentClinic?.id, registerSession]);
 
   useEffect(() => {
+    document.title = "Prosindweb - Gestão Clínica";
+    return () => {
+      document.title = "ProsindWeb - Gestão Sindical e Clínica";
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
