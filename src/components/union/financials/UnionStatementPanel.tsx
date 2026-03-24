@@ -1211,7 +1211,15 @@ export function UnionStatementPanel() {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Transfer Dialog */}
+      {clinicId && (
+        <UnionCashTransferDialog
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          clinicId={clinicId}
+        />
+      )}
+
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
