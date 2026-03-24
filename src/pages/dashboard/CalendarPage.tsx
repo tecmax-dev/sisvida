@@ -2979,6 +2979,7 @@ const updateData: Record<string, any> = {
                       onClick={() => {
                         setFormPatient(patient.id);
                         setSelectedPatientName(patient.name);
+                        setPendingDependentAutoSelect(patient.matchedDependentName || null);
                         setPatientSearchOpen(false);
                         setPatientSearchQuery("");
                         setPatientSearchResults([]);
