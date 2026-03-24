@@ -87,6 +87,7 @@ export function UnionStatementPanel() {
   const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
   const [isMigrating, setIsMigrating] = useState(false);
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [editTransaction, setEditTransaction] = useState<any>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isEditingInitialBalanceDate, setIsEditingInitialBalanceDate] = useState(false);
