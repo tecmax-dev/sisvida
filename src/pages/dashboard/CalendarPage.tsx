@@ -1202,12 +1202,28 @@ export default function CalendarPage() {
   useEffect(() => {
     if (formPatient) {
       fetchPatientDependents(formPatient);
-      setFormDependentId(null);
+      if (!pendingDependentAutoSelect) {
+        setFormDependentId(null);
+      }
     } else {
       setPatientDependents([]);
       setFormDependentId(null);
+      setPendingDependentAutoSelect(null);
     }
   }, [formPatient, fetchPatientDependents]);
+
+  // Auto-select dependent when found via dependent name search
+  useEffect(() => {
+    if (pendingDependentAutoSelect && patientDependents.length > 0) {
+      const match = patientDependents.find(d => 
+        d.name.toLowerCase() === pendingDependentAutoSelect.toLowerCase()
+      );
+      if (match) {
+        setFormDependentId(match.id);
+      }
+      setPendingDependentAutoSelect(null);
+    }
+  }, [pendingDependentAutoSelect, patientDependents]);
 
   const fetchHolidays = async () => {
     if (!currentClinic) return;
