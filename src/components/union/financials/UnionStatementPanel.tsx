@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { format, parse, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2 } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw, Plus, RotateCcw, Trash2, MoreHorizontal, Pencil, Check, X, Loader2, ArrowLeftRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
