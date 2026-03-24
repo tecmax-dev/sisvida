@@ -287,6 +287,9 @@ export default function MobileBookingPage() {
       if (data.dependentBookingLimitEnabled !== undefined) setDependentBookingLimitEnabled(data.dependentBookingLimitEnabled);
       if (data.titularBookingLimitEnabled !== undefined) setTitularBookingLimitEnabled(data.titularBookingLimitEnabled);
       if (data.maxAppointmentsPerCpfMonth !== undefined) setMaxAppointmentsPerCpfMonth(data.maxAppointmentsPerCpfMonth);
+      
+      // Setar data de nascimento do titular
+      if (data.titularBirthDate) setTitularBirthDate(data.titularBirthDate);
 
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
