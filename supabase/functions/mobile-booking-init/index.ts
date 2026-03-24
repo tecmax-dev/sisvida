@@ -128,6 +128,7 @@ serve(async (req) => {
           appointment_duration, 
           schedule, 
           avatar_url,
+          max_patient_age,
           professional_specialties (
             specialty:specialties (
               id,
