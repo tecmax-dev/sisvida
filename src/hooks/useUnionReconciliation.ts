@@ -466,17 +466,19 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       // Update auto-reconciled financial transactions: mark as paid, set paid_date, update balance
       for (const rec of transactionRecords) {
         if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
-          const matchedExp = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id);
-          if (!matchedExp) continue;
+          // Look in both expenses and incomes
+          const matchedTx = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id)
+            || pendingIncomes?.find((i) => i.id === rec.matched_transaction_id);
+          if (!matchedTx) continue;
 
-          const wasPending = matchedExp.status === "pending";
-          const compensationDate = rec.transaction_date; // OFX transaction date
+          const wasPending = matchedTx.status === "pending";
+          const compensationDate = rec.transaction_date;
 
           const updatePayload: Record<string, any> = {
             is_conciliated: true,
             conciliated_at: new Date().toISOString(),
             conciliated_by: userId,
-            source_statement_tx_id: null, // will be set after we get the stmt tx id
+            source_statement_tx_id: null,
           };
 
           if (wasPending) {
@@ -485,7 +487,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           }
 
           // Auto-fill check_number from OFX if financial transaction has none
-          if ((!matchedExp.check_number || matchedExp.check_number.trim() === "") && rec.check_number) {
+          if ((!matchedTx.check_number || matchedTx.check_number.trim() === "") && rec.check_number) {
             updatePayload.check_number = rec.check_number;
           }
 
@@ -501,9 +503,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
           // If was pending, update cash register balance
           if (wasPending) {
-            const balanceChange = matchedExp.type === "income"
-              ? Number(matchedExp.amount)
-              : -Number(matchedExp.amount);
+            const balanceChange = matchedTx.type === "income"
+              ? Number(matchedTx.amount)
+              : -Number(matchedTx.amount);
 
             const { data: register } = await supabase
               .from("union_cash_registers")
@@ -521,6 +523,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             }
           }
         }
+      }
       }
 
       // Update import status
