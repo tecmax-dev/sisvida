@@ -2288,6 +2288,7 @@ const updateData: Record<string, any> = {
     setFormPatient("");
     setSelectedPatientName("");
     setFormDependentId(null);
+    setPendingDependentAutoSelect(null);
     setPatientDependents([]);
     // Keep professional selection for logged-in professionals
     if (!loggedInProfessionalId) {
