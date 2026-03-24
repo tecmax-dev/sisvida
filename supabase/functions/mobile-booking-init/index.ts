@@ -173,6 +173,7 @@ serve(async (req) => {
       appointment_duration: prof.appointment_duration,
       schedule: prof.schedule,
       avatar_url: prof.avatar_url,
+      max_patient_age: prof.max_patient_age ?? null,
       specialties: (prof.professional_specialties || [])
         .filter((ps: any) => ps.specialty)
         .map((ps: any) => ({
