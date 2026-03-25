@@ -47,6 +47,7 @@ interface AppointmentRow {
   type: string;
   notes: string | null;
   patient_name: string;
+  patient_phone: string | null;
   professional_name: string;
   professional_specialty: string;
   procedure_name: string | null;
@@ -160,7 +161,7 @@ export default function UnionAppointmentReportsPage() {
           type,
           notes,
           dependent_id,
-          patient:patients!appointments_patient_id_fkey(name),
+          patient:patients!appointments_patient_id_fkey(name, phone),
           dependent:patient_dependents!appointments_dependent_id_fkey(name),
           professional:professionals!appointments_professional_id_fkey(name, specialty),
           procedure:procedures!appointments_procedure_id_fkey(name, price)
@@ -198,6 +199,7 @@ export default function UnionAppointmentReportsPage() {
         type: a.type,
         notes: a.notes,
         patient_name: (a.dependent_id && a.dependent?.name) ? a.dependent.name : (a.patient?.name || "—"),
+        patient_phone: a.patient?.phone || null,
         professional_name: a.professional?.name || "—",
         professional_specialty: a.professional?.specialty || "—",
         procedure_name: a.procedure?.name || null,
@@ -287,6 +289,7 @@ export default function UnionAppointmentReportsPage() {
       a.start_time?.slice(0, 5) || "—",
       a.end_time?.slice(0, 5) || "—",
       a.patient_name,
+      a.patient_phone || "—",
       a.professional_name,
       STATUS_LABELS[a.status] || a.status,
       TYPE_LABELS[a.type] || a.type || "—",
@@ -295,7 +298,7 @@ export default function UnionAppointmentReportsPage() {
 
     autoTable(doc, {
       startY,
-      head: [["Data", "Início", "Fim", "Paciente", "Profissional", "Status", "Tipo", "Procedimento"]],
+      head: [["Data", "Início", "Fim", "Paciente", "Telefone", "Profissional", "Status", "Tipo", "Procedimento"]],
       body: tableData,
       theme: "striped",
       headStyles: { fillColor: [0, 100, 150], fontSize: 8 },
@@ -540,10 +543,11 @@ export default function UnionAppointmentReportsPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                     <TableRow>
                       <TableHead>Data</TableHead>
                       <TableHead>Horário</TableHead>
                       <TableHead>Paciente</TableHead>
+                      <TableHead>Telefone</TableHead>
                       <TableHead>Profissional</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Tipo</TableHead>
@@ -560,6 +564,7 @@ export default function UnionAppointmentReportsPage() {
                           {a.start_time?.slice(0, 5)} - {a.end_time?.slice(0, 5)}
                         </TableCell>
                         <TableCell className="font-medium">{a.patient_name}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">{a.patient_phone || "—"}</TableCell>
                         <TableCell>{a.professional_name}</TableCell>
                         <TableCell>
                           <Badge
