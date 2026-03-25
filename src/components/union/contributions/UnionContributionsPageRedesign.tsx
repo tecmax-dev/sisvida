@@ -667,7 +667,7 @@ export default function UnionContributionsPageRedesign() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+    <div className="space-y-4 sm:space-y-6 p-1 sm:p-3 lg:p-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
