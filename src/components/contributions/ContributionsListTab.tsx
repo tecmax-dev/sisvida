@@ -547,25 +547,25 @@ export default function ContributionsListTab({
     <div className="space-y-4">
       {/* Document Type Tabs */}
       <Tabs value={documentTypeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-xl grid-cols-3">
-          <TabsTrigger value="pj" className="gap-2">
-            <Building2 className="h-4 w-4" />
-            Empresas (PJ)
-            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+        <TabsList className="grid w-full max-w-xl grid-cols-3 h-auto">
+          <TabsTrigger value="pj" className="gap-1.5 text-xs sm:text-sm py-2">
+            <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Empresas</span> <span className="sm:hidden">PJ</span>
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
               {pjContributions.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="pf" className="gap-2">
-            <User className="h-4 w-4" />
-            Pessoa Física (PF)
-            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+          <TabsTrigger value="pf" className="gap-1.5 text-xs sm:text-sm py-2">
+            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Pessoa Física</span> <span className="sm:hidden">PF</span>
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
               {pfContributions.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="awaiting" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Aguardando Valor
-            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+          <TabsTrigger value="awaiting" className="gap-1.5 text-xs sm:text-sm py-2">
+            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Aguardando</span> <span className="sm:hidden">Ag.</span>
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
               {awaitingContributions.length}
             </Badge>
           </TabsTrigger>
@@ -574,7 +574,7 @@ export default function ContributionsListTab({
 
       {/* Enhanced Search Card */}
       <Card className="border-2 border-warning/30 bg-warning/5 shadow-sm">
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-2 sm:p-4 space-y-3">
           {/* Row 1: Search Input */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
@@ -708,7 +708,7 @@ export default function ContributionsListTab({
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap items-center gap-2 justify-end">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 justify-end">
         {/* Select All Eligible Button */}
         {allEligibleContributions.length > 0 && (
           <TooltipProvider>
@@ -918,12 +918,12 @@ export default function ContributionsListTab({
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[40px]">
+                <TableHead className="w-[40px] sticky left-0 bg-muted/50 z-10">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -944,18 +944,18 @@ export default function ContributionsListTab({
                 {(documentTypeTab === "pj" || documentTypeTab === "awaiting") && (
                   <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
                 )}
-                <TableHead className="font-semibold">
+                <TableHead className="font-semibold min-w-[150px]">
                   {documentTypeTab === "pj" ? "Empresa" : documentTypeTab === "pf" ? "Contribuinte" : "Empresa/Contribuinte"}
                 </TableHead>
-                <TableHead className="font-semibold">Nº Documento</TableHead>
+                <TableHead className="font-semibold">Nº Doc.</TableHead>
                 <TableHead className="font-semibold">Tipo</TableHead>
                 <TableHead className="font-semibold">Competência</TableHead>
                 <TableHead className="font-semibold">Vencimento</TableHead>
-                <TableHead className="font-semibold">Pagamento</TableHead>
+                <TableHead className="font-semibold hidden lg:table-cell">Pagamento</TableHead>
                 <TableHead className="font-semibold text-right">Valor</TableHead>
                 <TableHead className="font-semibold text-center">Status</TableHead>
-                <TableHead className="font-semibold text-center">Boleto</TableHead>
-                <TableHead className="font-semibold text-right w-[100px]">Ações</TableHead>
+                <TableHead className="font-semibold text-center hidden md:table-cell">Boleto</TableHead>
+                <TableHead className="font-semibold text-right w-[80px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1079,7 +1079,7 @@ export default function ContributionsListTab({
                           {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
                         </span>
                       </TableCell>
-                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
+                      <TableCell className={`py-2 hidden lg:table-cell ${isCancelled ? "opacity-60" : ""}`}>
                         {contrib.paid_at ? (
                           <span className="text-sm text-emerald-600 font-medium">
                             {format(parseDateOnlyToLocalNoon(contrib.paid_at), "dd/MM/yyyy")}
@@ -1108,7 +1108,7 @@ export default function ContributionsListTab({
                           {statusConfig?.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-2 text-center">
+                      <TableCell className="py-2 text-center hidden md:table-cell">
                         {contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled" ? (
                           <a
                             href={contrib.lytex_invoice_url}
@@ -1195,7 +1195,7 @@ export default function ContributionsListTab({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-3 border-t">
+          <div className="flex items-center justify-between p-2 sm:p-3 border-t">
             <span className="text-sm text-muted-foreground">
               Página {currentPage} de {totalPages}
             </span>
