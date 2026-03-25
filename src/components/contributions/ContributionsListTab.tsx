@@ -743,9 +743,10 @@ export default function ContributionsListTab({
                 size="sm"
                 onClick={onSyncAll}
                 disabled={syncing}
+                className="h-8 px-2 sm:px-3 text-xs sm:text-sm"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-                {syncing ? "Sincronizando..." : "Sincronizar Lytex"}
+                <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${syncing ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline ml-2">{syncing ? "Sincronizando..." : "Sincronizar Lytex"}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Buscar status atualizado de todos os boletos na Lytex</TooltipContent>
@@ -759,11 +760,12 @@ export default function ContributionsListTab({
                 size="sm"
                 onClick={() => generateBoletosReport(selectedContributions.filter(c => c.lytex_invoice_id))}
                 disabled={selectedContributionIds.size === 0}
+                className="h-8 px-2 sm:px-3 text-xs sm:text-sm"
               >
-                <Printer className="h-4 w-4 mr-2" />
-                Imprimir
+                <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline ml-2">Imprimir</span>
                 {selectedContributionIds.size > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs">
                     {selectedContributionIds.size}
                   </Badge>
                 )}
@@ -783,12 +785,12 @@ export default function ContributionsListTab({
                 variant="outline"
                 size="sm"
                 onClick={() => setWhatsappDialogOpen(true)}
-                className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                className="h-8 px-2 sm:px-3 text-xs sm:text-sm text-emerald-600 border-emerald-300 hover:bg-emerald-50"
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                WhatsApp
+                <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline ml-2">WhatsApp</span>
                 {selectedContributionIds.size > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs bg-emerald-100 text-emerald-700">
                     {selectedContributionIds.size}
                   </Badge>
                 )}
@@ -808,12 +810,12 @@ export default function ContributionsListTab({
                 variant="outline"
                 size="sm"
                 onClick={() => setEmailDialogOpen(true)}
-                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                className="h-8 px-2 sm:px-3 text-xs sm:text-sm text-blue-600 border-blue-300 hover:bg-blue-50"
               >
-                <Mail className="h-4 w-4 mr-2" />
-                Email
+                <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline ml-2">Email</span>
                 {selectedContributionIds.size > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-blue-100 text-blue-700">
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 h-5 px-1 sm:px-1.5 text-[10px] sm:text-xs bg-blue-100 text-blue-700">
                     {selectedContributionIds.size}
                   </Badge>
                 )}
@@ -866,10 +868,10 @@ export default function ContributionsListTab({
                   variant="outline"
                   size="sm"
                   onClick={() => onOpenNegotiation()}
-                  className="text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-600 dark:hover:bg-indigo-950"
+                  className="h-8 px-2 sm:px-3 text-xs sm:text-sm text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-600 dark:hover:bg-indigo-950"
                 >
-                  <Handshake className="h-4 w-4 mr-2" />
-                  Negociar Débitos
+                  <Handshake className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline ml-2">Negociar</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -879,17 +881,17 @@ export default function ContributionsListTab({
           </TooltipProvider>
         )}
         {documentTypeTab === "pf" ? (
-          <Button onClick={onOpenCreatePF}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Contribuição PF
+          <Button onClick={onOpenCreatePF} size="sm" className="h-8 text-xs sm:text-sm">
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Nova Contribuição PF</span><span className="sm:hidden">Nova PF</span>
           </Button>
         ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Contribuição
-                <ChevronDown className="h-4 w-4 ml-2" />
+              <Button size="sm" className="h-8 text-xs sm:text-sm">
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Nova Contribuição</span><span className="sm:hidden">Nova</span>
+                <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
