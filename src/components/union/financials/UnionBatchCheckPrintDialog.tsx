@@ -482,7 +482,7 @@ export function UnionBatchCheckPrintDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
             Impressão em Lote de Cheques
@@ -492,226 +492,231 @@ export function UnionBatchCheckPrintDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Filters */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-            <Filter className="h-3.5 w-3.5" />
-            Filtros de Pesquisa
+        {/* Scrollable middle area */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
+          {/* Filters */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <Filter className="h-3.5 w-3.5" />
+              Filtros de Pesquisa
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Cheque De</Label>
+                <Input
+                  placeholder="Ex: 1200"
+                  value={checkFrom}
+                  onChange={(e) => setCheckFrom(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cheque Até</Label>
+                <Input
+                  placeholder="Ex: 1300"
+                  value={checkTo}
+                  onChange={(e) => setCheckTo(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Vencimento De</Label>
+                <Input
+                  type="date"
+                  value={dueDateFrom}
+                  onChange={(e) => setDueDateFrom(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Vencimento Até</Label>
+                <Input
+                  type="date"
+                  value={dueDateTo}
+                  onChange={(e) => setDueDateTo(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Pagamento De</Label>
+                <Input
+                  type="date"
+                  value={paidDateFrom}
+                  onChange={(e) => setPaidDateFrom(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Pagamento Até</Label>
+                <Input
+                  type="date"
+                  value={paidDateTo}
+                  onChange={(e) => setPaidDateTo(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+
+            <Button onClick={handleSearch} size="sm" className="w-full sm:w-auto">
+              <Search className="h-4 w-4 mr-1.5" />
+              Buscar Cheques
+            </Button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Cheque De</Label>
-              <Input
-                placeholder="Ex: 1200"
-                value={checkFrom}
-                onChange={(e) => setCheckFrom(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Cheque Até</Label>
-              <Input
-                placeholder="Ex: 1300"
-                value={checkTo}
-                onChange={(e) => setCheckTo(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Vencimento De</Label>
-              <Input
-                type="date"
-                value={dueDateFrom}
-                onChange={(e) => setDueDateFrom(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Vencimento Até</Label>
-              <Input
-                type="date"
-                value={dueDateTo}
-                onChange={(e) => setDueDateTo(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Pagamento De</Label>
-              <Input
-                type="date"
-                value={paidDateFrom}
-                onChange={(e) => setPaidDateFrom(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Pagamento Até</Label>
-              <Input
-                type="date"
-                value={paidDateTo}
-                onChange={(e) => setPaidDateTo(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
+          <Separator />
 
-          <Button onClick={handleSearch} size="sm" className="w-full sm:w-auto">
-            <Search className="h-4 w-4 mr-1.5" />
-            Buscar Cheques
-          </Button>
+          {/* Results */}
+          {searched && (
+            <>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : groupedByCheck.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  <FileCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>Nenhum cheque encontrado com os filtros informados</p>
+                </div>
+              ) : (
+                <>
+                  {/* Select all + count */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={
+                          groupedByCheck.length > 0 &&
+                          selectedChecks.length === groupedByCheck.length
+                        }
+                        onCheckedChange={toggleAll}
+                      />
+                      <span className="text-muted-foreground">Selecionar todos</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {groupedByCheck.length} cheque(s)
+                      </Badge>
+                      <Badge variant="outline">
+                        {selectedChecks.length} selecionado(s)
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Check list */}
+                  <div className="border rounded-md">
+                    <div className="divide-y">
+                      {groupedByCheck.map(([checkNum, expenses]) => {
+                        const total = expenses.reduce(
+                          (sum, e) => sum + Number(e.net_value || e.amount),
+                          0
+                        );
+                        const paidCount = expenses.filter(
+                          (e) => e.status === "paid"
+                        ).length;
+                        const firstPaidDate = expenses
+                          .filter((e) => e.paid_date)
+                          .sort((a, b) => (a.paid_date || "").localeCompare(b.paid_date || ""))[0]
+                          ?.paid_date;
+                        const lastDueDate = expenses
+                          .sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""))[0]
+                          ?.due_date;
+
+                        return (
+                          <label
+                            key={checkNum}
+                            className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
+                          >
+                            <Checkbox
+                              checked={selectedChecks.includes(checkNum)}
+                              onCheckedChange={() => toggleCheck(checkNum)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold">
+                                  Cheque #{checkNum}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 h-4"
+                                >
+                                  {expenses.length} desp.
+                                </Badge>
+                                {paidCount === expenses.length ? (
+                                  <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 h-4 border-0">
+                                    Liquidado
+                                  </Badge>
+                                ) : paidCount > 0 ? (
+                                  <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 h-4 border-0">
+                                    Parcial
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0 h-4 border-0">
+                                    Pendente
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                {expenses[0]?.cash_register?.name && (
+                                  <span>{expenses[0].cash_register.name}</span>
+                                )}
+                                {lastDueDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span>Venc: {formatDateBR(lastDueDate)}</span>
+                                  </>
+                                )}
+                                {firstPaidDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-emerald-600">
+                                      Pgto: {formatDateBR(firstPaidDate)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-semibold text-foreground">
+                                {formatCurrency(total)}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {paidCount}/{expenses.length} pago(s)
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {!searched && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Search className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">
+                Preencha os filtros e clique em "Buscar Cheques"
+              </p>
+            </div>
+          )}
         </div>
 
-        <Separator />
-
-        {/* Results */}
-        {searched && (
-          <>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : groupedByCheck.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                <FileCheck className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p>Nenhum cheque encontrado com os filtros informados</p>
-              </div>
-            ) : (
-              <>
-                {/* Select all + count */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={
-                        groupedByCheck.length > 0 &&
-                        selectedChecks.length === groupedByCheck.length
-                      }
-                      onCheckedChange={toggleAll}
-                    />
-                    <span className="text-muted-foreground">Selecionar todos</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {groupedByCheck.length} cheque(s)
-                    </Badge>
-                    <Badge variant="outline">
-                      {selectedChecks.length} selecionado(s)
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Check list */}
-                <div className="flex-1 min-h-[240px] max-h-[42vh] overflow-y-auto border rounded-md">
-                  <div className="divide-y">
-                    {groupedByCheck.map(([checkNum, expenses]) => {
-                      const total = expenses.reduce(
-                        (sum, e) => sum + Number(e.net_value || e.amount),
-                        0
-                      );
-                      const paidCount = expenses.filter(
-                        (e) => e.status === "paid"
-                      ).length;
-                      const firstPaidDate = expenses
-                        .filter((e) => e.paid_date)
-                        .sort((a, b) => (a.paid_date || "").localeCompare(b.paid_date || ""))[0]
-                        ?.paid_date;
-                      const lastDueDate = expenses
-                        .sort((a, b) => (b.due_date || "").localeCompare(a.due_date || ""))[0]
-                        ?.due_date;
-
-                      return (
-                        <label
-                          key={checkNum}
-                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
-                        >
-                          <Checkbox
-                            checked={selectedChecks.includes(checkNum)}
-                            onCheckedChange={() => toggleCheck(checkNum)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold">
-                                Cheque #{checkNum}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0 h-4"
-                              >
-                                {expenses.length} desp.
-                              </Badge>
-                              {paidCount === expenses.length ? (
-                                <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 h-4 border-0">
-                                  Liquidado
-                                </Badge>
-                              ) : paidCount > 0 ? (
-                                <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 h-4 border-0">
-                                  Parcial
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0 h-4 border-0">
-                                  Pendente
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                              {expenses[0]?.cash_register?.name && (
-                                <span>{expenses[0].cash_register.name}</span>
-                              )}
-                              {lastDueDate && (
-                                <>
-                                  <span>•</span>
-                                  <span>Venc: {formatDateBR(lastDueDate)}</span>
-                                </>
-                              )}
-                              {firstPaidDate && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-emerald-600">
-                                    Pgto: {formatDateBR(firstPaidDate)}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatCurrency(total)}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {paidCount}/{expenses.length} pago(s)
-                            </p>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Print button */}
-                <div className="flex justify-between items-center pt-2">
-                  <p className="text-xs text-muted-foreground">
-                    {filteredExpenses.length} despesa(s) em{" "}
-                    {groupedByCheck.length} cheque(s)
-                  </p>
-                  <Button
-                    onClick={handleBatchPrint}
-                    disabled={selectedChecks.length === 0}
-                  >
-                    <Printer className="h-4 w-4 mr-1.5" />
-                    Imprimir {selectedChecks.length} Cheque(s)
-                  </Button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {!searched && (
-          <div className="text-center py-8 text-muted-foreground">
-            <Search className="h-10 w-10 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">
-              Preencha os filtros e clique em "Buscar Cheques"
+        {/* Fixed footer with print button - always visible */}
+        {searched && groupedByCheck.length > 0 && (
+          <div className="flex-shrink-0 flex justify-between items-center pt-3 border-t mt-2">
+            <p className="text-xs text-muted-foreground">
+              {filteredExpenses.length} despesa(s) em{" "}
+              {groupedByCheck.length} cheque(s)
             </p>
+            <Button
+              onClick={handleBatchPrint}
+              disabled={selectedChecks.length === 0}
+            >
+              <Printer className="h-4 w-4 mr-1.5" />
+              Imprimir {selectedChecks.length} Cheque(s)
+            </Button>
           </div>
         )}
       </DialogContent>
