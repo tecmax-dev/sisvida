@@ -963,7 +963,7 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={(documentTypeTab === "pj" || documentTypeTab === "awaiting") ? 12 : 11} className="h-32 text-center">
+                  <TableCell colSpan={20} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       {documentTypeTab === "pj" ? (
                         <Building2 className="h-8 w-8 text-muted-foreground" />
