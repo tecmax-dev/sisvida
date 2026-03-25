@@ -194,6 +194,15 @@ const unionNavTree: NavCategory[] = [
     ]
   },
   {
+    id: "relatorios",
+    label: "Relatórios",
+    icon: FileBarChart,
+    color: "contribuicoes",
+    items: [
+      { href: "/union/relatorios/agendamentos", icon: Calendar, label: "Agendamentos", permission: "union_module_access" },
+    ]
+  },
+  {
     id: "conteudoapp",
     label: "Gestão de Conteúdo",
     icon: Smartphone,
