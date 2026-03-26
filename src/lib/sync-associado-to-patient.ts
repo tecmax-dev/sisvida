@@ -12,7 +12,7 @@ export async function syncAssociadoToPatient(
   const { data: associado, error: fetchError } = await supabase
     .from("sindical_associados")
     .select(
-      "nome, cpf, email, telefone, data_nascimento, sexo, logradouro, numero, bairro, cidade, uf, cep, empresa_cnpj, empresa_razao_social, empresa_nome_fantasia, documento_foto_url, documento_rg_url, documento_rg_verso_url, documento_comprovante_url"
+      "nome, cpf, email, telefone, data_nascimento, sexo, logradouro, numero, bairro, cidade, uf, cep, empresa_cnpj, empresa_razao_social, empresa_nome_fantasia, documento_foto_url, documento_rg_url, documento_rg_verso_url, documento_comprovante_url, nome_pai, nome_mae"
     )
     .eq("id", associadoId)
     .single();
@@ -75,6 +75,8 @@ export async function syncAssociadoToPatient(
     employer_cnpj: associado.empresa_cnpj || null,
     employer_name:
       associado.empresa_nome_fantasia || associado.empresa_razao_social || null,
+    mother_name: associado.nome_mae || null,
+    father_name: associado.nome_pai || null,
     is_active: true,
     is_union_member: true,
     notes: "Cadastrado automaticamente via aprovação de filiação pública",
