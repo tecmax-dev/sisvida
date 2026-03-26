@@ -42,6 +42,18 @@ export async function syncAssociadoToPatient(
     return;
   }
 
+  // Validate birth_date: must be at least 18 years ago for titular members
+  let validBirthDate: string | null = associado.data_nascimento || null;
+  if (validBirthDate) {
+    const birth = new Date(validBirthDate);
+    const today = new Date();
+    const age = today.getFullYear() - birth.getFullYear();
+    if (isNaN(birth.getTime()) || age < 18 || birth > today) {
+      console.warn("[syncAssociadoToPatient] Invalid birth_date detected, setting to null:", validBirthDate);
+      validBirthDate = null;
+    }
+  }
+
   // Criar novo registro em patients
   const { error: insertError } = await supabase.from("patients").insert({
     clinic_id: clinicId,
@@ -49,7 +61,7 @@ export async function syncAssociadoToPatient(
     cpf: cleanCpf,
     email: associado.email || null,
     phone: associado.telefone || null,
-    birth_date: associado.data_nascimento || null,
+    birth_date: validBirthDate,
     gender: associado.sexo || null,
     street: associado.logradouro || null,
     street_number: associado.numero || null,
