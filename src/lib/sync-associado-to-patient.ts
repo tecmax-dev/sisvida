@@ -8,11 +8,11 @@ export async function syncAssociadoToPatient(
   associadoId: string,
   clinicId: string
 ): Promise<void> {
-  // Buscar dados do associado
+  // Buscar dados do associado incluindo documentos
   const { data: associado, error: fetchError } = await supabase
     .from("sindical_associados")
     .select(
-      "nome, cpf, email, telefone, data_nascimento, sexo, logradouro, numero, bairro, cidade, uf, cep, empresa_cnpj, empresa_razao_social, empresa_nome_fantasia"
+      "nome, cpf, email, telefone, data_nascimento, sexo, logradouro, numero, bairro, cidade, uf, cep, empresa_cnpj, empresa_razao_social, empresa_nome_fantasia, documento_foto_url, documento_rg_url, documento_rg_verso_url, documento_comprovante_url"
     )
     .eq("id", associadoId)
     .single();
