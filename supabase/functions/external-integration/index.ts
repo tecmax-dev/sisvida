@@ -24,9 +24,25 @@ serve(async (req) => {
   }
 
   try {
+    // ── Authentication: require API key or internal Supabase call ──
+    const apiKey = req.headers.get('x-api-key');
+    const authHeader = req.headers.get('authorization');
+    const expectedApiKey = Deno.env.get('EXTERNAL_INTEGRATION_API_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Allow if: valid API key, or called internally with anon/service key in auth header
+    const isInternalCall = authHeader?.includes(supabaseAnonKey) || authHeader?.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '');
+    const isValidApiKey = expectedApiKey && apiKey === expectedApiKey;
+    
+    if (!isInternalCall && !isValidApiKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: ExternalRequest = await req.json();
