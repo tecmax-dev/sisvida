@@ -196,21 +196,25 @@ export default function UnionLegalExpensesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Processo</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
+                     <TableHead>Descrição</TableHead>
+                     <TableHead>Nº Documento</TableHead>
+                     <TableHead>Processo</TableHead>
+                     <TableHead>Tipo</TableHead>
+                     <TableHead>Data</TableHead>
+                     <TableHead className="text-right">Valor</TableHead>
+                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell className="font-medium max-w-[250px]">
-                        <span className="truncate block">{expense.description}</span>
-                      </TableCell>
-                      <TableCell>
+                       <TableCell className="font-medium max-w-[250px]">
+                         <span className="truncate block">{expense.description}</span>
+                       </TableCell>
+                       <TableCell className="font-mono text-sm">
+                         {expense.document_number || "-"}
+                       </TableCell>
+                       <TableCell>
                         {expense.legal_case ? (
                           <Link
                             to={`/union/juridico/casos/${expense.legal_case_id}`}

@@ -174,6 +174,7 @@ export interface LegalExpense {
   is_paid: boolean;
   paid_at: string | null;
   payment_reference: string | null;
+  document_number: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
