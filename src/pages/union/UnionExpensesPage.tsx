@@ -688,15 +688,16 @@ export default function UnionExpensesPage() {
       <Card>
         <CardContent className="p-0">
           {/* Fixed Header */}
-          <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            <div className="col-span-3">Descrição</div>
-            <div className="col-span-2">Fornecedor</div>
-            <div className="col-span-2">Categoria / Doc</div>
-            <div className="col-span-1 text-center">Vencimento</div>
-            <div className="col-span-2 text-right">Valor</div>
-            <div className="col-span-1 text-center">Status</div>
-            <div className="col-span-1"></div>
-          </div>
+           <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
+             <div className="col-span-2">Descrição</div>
+             <div className="col-span-2">Fornecedor</div>
+             <div className="col-span-1">Nº Doc</div>
+             <div className="col-span-2">Categoria / Cheque</div>
+             <div className="col-span-1 text-center">Vencimento</div>
+             <div className="col-span-2 text-right">Valor</div>
+             <div className="col-span-1 text-center">Status</div>
+             <div className="col-span-1"></div>
+           </div>
 
           <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
             {filteredTransactions && filteredTransactions.length > 0 ? (
@@ -709,47 +710,48 @@ export default function UnionExpensesPage() {
                       transaction.effectiveStatus === "overdue" && "bg-rose-50/30 dark:bg-rose-950/20"
                     )}
                   >
-                    {/* Descrição */}
-                    <div className="col-span-3 flex items-center gap-2 min-w-0">
-                      <TrendingDown className="h-3.5 w-3.5 text-rose-500 flex-shrink-0" />
-                      <span className="font-medium truncate" title={transaction.description}>
-                        {transaction.description}
-                      </span>
-                    </div>
+                     {/* Descrição */}
+                     <div className="col-span-2 flex items-center gap-2 min-w-0">
+                       <TrendingDown className="h-3.5 w-3.5 text-rose-500 flex-shrink-0" />
+                       <span className="font-medium truncate" title={transaction.description}>
+                         {transaction.description}
+                       </span>
+                     </div>
 
-                    {/* Fornecedor */}
-                    <div className="col-span-2 flex items-center gap-1.5 min-w-0">
-                      <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground truncate text-xs" title={transaction.supplier?.name}>
-                        {transaction.supplier?.name || "—"}
-                      </span>
-                    </div>
+                     {/* Fornecedor */}
+                     <div className="col-span-2 flex items-center gap-1.5 min-w-0">
+                       <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                       <span className="text-muted-foreground truncate text-xs" title={transaction.supplier?.name}>
+                         {transaction.supplier?.name || "—"}
+                       </span>
+                     </div>
 
-                    {/* Categoria / Documento */}
-                    <div className="col-span-2 space-y-0.5 min-w-0">
-                      {transaction.category && (
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: transaction.category.color || "#6b7280" }}
-                          />
-                          <span className="text-xs truncate">{transaction.category.name}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        {transaction.check_number && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                            CH:{transaction.check_number}
-                          </Badge>
-                        )}
-                        {transaction.document_number && !transaction.check_number && (
-                          <span className="truncate flex items-center gap-0.5">
-                            <FileText className="h-2.5 w-2.5" />
-                            {transaction.document_number}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                     {/* Nº Documento */}
+                     <div className="col-span-1 min-w-0">
+                       <span className="font-mono text-xs text-muted-foreground truncate block" title={transaction.document_number || ""}>
+                         {transaction.document_number || "—"}
+                       </span>
+                     </div>
+
+                     {/* Categoria / Cheque */}
+                     <div className="col-span-2 space-y-0.5 min-w-0">
+                       {transaction.category && (
+                         <div className="flex items-center gap-1.5">
+                           <div
+                             className="w-2 h-2 rounded-full flex-shrink-0"
+                             style={{ backgroundColor: transaction.category.color || "#6b7280" }}
+                           />
+                           <span className="text-xs truncate">{transaction.category.name}</span>
+                         </div>
+                       )}
+                       {transaction.check_number && (
+                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                           <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                             CH:{transaction.check_number}
+                           </Badge>
+                         </div>
+                       )}
+                     </div>
 
                     {/* Vencimento */}
                     <div className="col-span-1 text-center">
