@@ -688,15 +688,17 @@ export default function UnionExpensesPage() {
       <Card>
         <CardContent className="p-0">
           {/* Fixed Header */}
-          <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            <div className="col-span-3">Descrição</div>
-            <div className="col-span-2">Fornecedor</div>
-            <div className="col-span-2">Categoria / Doc</div>
-            <div className="col-span-1 text-center">Vencimento</div>
-            <div className="col-span-2 text-right">Valor</div>
-            <div className="col-span-1 text-center">Status</div>
-            <div className="col-span-1"></div>
-          </div>
+           <div className="grid grid-cols-14 gap-2 px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
+             <div className="col-span-3">Descrição</div>
+             <div className="col-span-2">Fornecedor</div>
+             <div className="col-span-1">Nº Doc</div>
+             <div className="col-span-2">Categoria / Cheque</div>
+             <div className="col-span-1 text-center">Vencimento</div>
+             <div className="col-span-2 text-right">Valor</div>
+             <div className="col-span-1 text-center">Status</div>
+             <div className="col-span-1"></div>
+             <div className="col-span-1"></div>
+           </div>
 
           <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
             {filteredTransactions && filteredTransactions.length > 0 ? (
