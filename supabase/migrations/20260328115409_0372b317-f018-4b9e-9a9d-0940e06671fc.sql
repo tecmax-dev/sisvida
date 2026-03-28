@@ -1,0 +1,1 @@
+ALTER TABLE public.union_legal_expenses ADD COLUMN IF NOT EXISTS document_number TEXT;

@@ -13837,6 +13837,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string
+          document_number: string | null
           expense_date: string
           expense_type: string
           financial_transaction_id: string | null
@@ -13856,6 +13857,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description: string
+          document_number?: string | null
           expense_date: string
           expense_type: string
           financial_transaction_id?: string | null
@@ -13875,6 +13877,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string
+          document_number?: string | null
           expense_date?: string
           expense_type?: string
           financial_transaction_id?: string | null
