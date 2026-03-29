@@ -2869,7 +2869,83 @@ const updateData: Record<string, any> = {
     });
   };
 
-  const handleSendTelemedicineLink = async (appointment: Appointment) => {
+  // Handler: Enviar agenda do dia para o profissional via WhatsApp
+  const handleSendDailyAgenda = async (professionalId: string, appointmentsList: Appointment[]) => {
+    const professional = professionals.find(p => p.id === professionalId);
+    if (!professional) return;
+
+    const professionalPhone = (professional as any).whatsapp || (professional as any).phone;
+    if (!professionalPhone) {
+      toast({
+        title: "Telefone não cadastrado",
+        description: `O profissional ${professional.name} não possui telefone/WhatsApp cadastrado.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingAgenda(professionalId);
+
+    try {
+      const appointmentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      const formattedDate = appointmentDate.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long',
+        year: 'numeric',
+      });
+
+      const activeApts = appointmentsList
+        .filter(a => a.status !== 'cancelled')
+        .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+      const agendaItems = activeApts.map(apt => ({
+        time: apt.start_time.slice(0, 5),
+        patientName: getAppointmentDisplayName(apt),
+        type: apt.type,
+        status: apt.status,
+        procedure: apt.procedure?.name || null,
+      }));
+
+      const message = formatDailyAgenda(
+        professional.name,
+        currentClinic?.name || 'Clínica',
+        formattedDate,
+        agendaItems
+      );
+
+      const result = await sendWhatsAppMessage({
+        phone: professionalPhone,
+        message,
+        clinicId: currentClinic?.id || '',
+        type: 'custom',
+      });
+
+      if (result.success) {
+        toast({
+          title: "Agenda enviada ✅",
+          description: `Agenda do dia enviada para ${professional.name} com ${agendaItems.length} atendimento(s).`,
+        });
+      } else {
+        toast({
+          title: "Erro ao enviar agenda",
+          description: result.error || 'Erro desconhecido',
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('[SEND AGENDA] Error:', err);
+      toast({
+        title: "Erro ao enviar agenda",
+        description: "Não foi possível enviar a agenda. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingAgenda(null);
+    }
+  };
+
+
     // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
     const displayName = getAppointmentDisplayName(appointment);
     const phoneToUse = appointment.patient?.phone;
