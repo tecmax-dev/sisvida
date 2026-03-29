@@ -5055,6 +5055,25 @@ const updateData: Record<string, any> = {
                                 <UserX className="h-4 w-4 shrink-0" />
                                 <span className="min-w-0">{batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}</span>
                               </Button>
+                              {/* Botão de enviar agenda do dia para o profissional */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0 text-blue-600 hover:text-blue-700"
+                                disabled={sendingAgenda === group.professional.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendDailyAgenda(group.professional.id, group.appointments);
+                                }}
+                                title="Enviar agenda do dia para o profissional via WhatsApp"
+                              >
+                                {sendingAgenda === group.professional.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
+                                )}
+                                <span className="min-w-0">Enviar Agenda</span>
+                              </Button>
                             </div>
                           </div>
                           
