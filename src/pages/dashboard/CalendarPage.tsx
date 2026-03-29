@@ -2874,7 +2874,7 @@ const updateData: Record<string, any> = {
     const professional = professionals.find(p => p.id === professionalId);
     if (!professional) return;
 
-    const professionalPhone = (professional as any).whatsapp || (professional as any).phone;
+    const professionalPhone = ((professional as any).phone || (professional as any).whatsapp || '').trim();
     if (!professionalPhone) {
       toast({
         title: "Telefone não cadastrado",
