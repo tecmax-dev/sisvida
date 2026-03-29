@@ -2945,8 +2945,7 @@ const updateData: Record<string, any> = {
     }
   };
 
-
-    // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
+  const handleSendTelemedicineLink = async (appointment: Appointment) => {
     const displayName = getAppointmentDisplayName(appointment);
     const phoneToUse = appointment.patient?.phone;
 
