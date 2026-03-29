@@ -93,7 +93,7 @@ export default function SindicatoBeneficiosLandingPage() {
     document.documentElement.classList.remove("dark");
     document.documentElement.classList.add("light");
     document.documentElement.style.colorScheme = "light";
-    document.title = "SECMI - Benefícios do Associado | Sindicato dos Comerciários de Ilhéus";
+    document.title = "ProsindWeb - Gestão Sindical | SECMI - Benefícios do Associado";
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
     if (link) link.href = LOGO_URL;
 
