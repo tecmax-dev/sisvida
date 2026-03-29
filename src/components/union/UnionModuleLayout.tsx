@@ -54,7 +54,7 @@ export function UnionModuleLayout() {
     const originalHref = favicon?.href || '/favicon.ico';
     const originalTitle = document.title;
     if (favicon) favicon.href = '/favicon-sindiflex.png';
-    document.title = 'SindiFlex - Sistema de Gestão Sindical';
+    document.title = 'ProsindWeb - Gestão Sindical';
 
     return () => {
       if (favicon) favicon.href = originalHref;
