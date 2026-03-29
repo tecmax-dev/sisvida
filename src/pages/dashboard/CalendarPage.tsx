@@ -2872,25 +2872,38 @@ const updateData: Record<string, any> = {
   // Handler: Enviar agenda do dia para o profissional via WhatsApp
   const handleSendDailyAgenda = async (professionalId: string, appointmentsList: Appointment[]) => {
     const professional = professionals.find(p => p.id === professionalId);
-    if (!professional) return;
-
-    const professionalPhone = ((professional as any).phone || (professional as any).whatsapp || '').trim();
-    if (!professionalPhone) {
-      toast({
-        title: "Telefone não cadastrado",
-        description: `O profissional ${professional.name} não possui telefone/WhatsApp cadastrado.`,
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!professional || !currentClinic?.id) return;
 
     setSendingAgenda(professionalId);
 
     try {
+      const { data: latestProfessional, error: professionalError } = await supabase
+        .from('professionals')
+        .select('name, phone, whatsapp')
+        .eq('id', professionalId)
+        .eq('clinic_id', currentClinic.id)
+        .maybeSingle();
+
+      if (professionalError) {
+        throw professionalError;
+      }
+
+      const professionalName = latestProfessional?.name || professional.name;
+      const professionalPhone = ((latestProfessional?.phone || latestProfessional?.whatsapp || '') as string).trim();
+
+      if (!professionalPhone) {
+        toast({
+          title: "Telefone não cadastrado",
+          description: `O profissional ${professionalName} não possui telefone/WhatsApp cadastrado.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const appointmentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-      const formattedDate = appointmentDate.toLocaleDateString('pt-BR', { 
-        weekday: 'long', 
-        day: 'numeric', 
+      const formattedDate = appointmentDate.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
         month: 'long',
         year: 'numeric',
       });
@@ -2908,7 +2921,7 @@ const updateData: Record<string, any> = {
       }));
 
       const message = formatDailyAgenda(
-        professional.name,
+        professionalName,
         currentClinic?.name || 'Clínica',
         formattedDate,
         agendaItems
@@ -2917,7 +2930,7 @@ const updateData: Record<string, any> = {
       const result = await sendWhatsAppMessage({
         phone: professionalPhone,
         message,
-        clinicId: currentClinic?.id || '',
+        clinicId: currentClinic.id,
         type: 'custom',
       });
 
