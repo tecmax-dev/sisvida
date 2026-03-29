@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
-import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite, formatProfessionalCancellation } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite, formatProfessionalCancellation, formatDailyAgenda } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { PreAttendanceDialog } from "@/components/appointments/PreAttendanceDialog";
@@ -544,6 +544,7 @@ export default function CalendarPage() {
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
   const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null); // professionalId or null
+  const [sendingAgenda, setSendingAgenda] = useState<string | null>(null); // professionalId or null
   
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -1056,7 +1057,7 @@ export default function CalendarPage() {
 
       let professionalsQuery = supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule, avatar_url, max_patient_age')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url, max_patient_age, phone, whatsapp')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true);
 
@@ -2868,8 +2869,83 @@ const updateData: Record<string, any> = {
     });
   };
 
+  // Handler: Enviar agenda do dia para o profissional via WhatsApp
+  const handleSendDailyAgenda = async (professionalId: string, appointmentsList: Appointment[]) => {
+    const professional = professionals.find(p => p.id === professionalId);
+    if (!professional) return;
+
+    const professionalPhone = (professional as any).whatsapp || (professional as any).phone;
+    if (!professionalPhone) {
+      toast({
+        title: "Telefone não cadastrado",
+        description: `O profissional ${professional.name} não possui telefone/WhatsApp cadastrado.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingAgenda(professionalId);
+
+    try {
+      const appointmentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      const formattedDate = appointmentDate.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long',
+        year: 'numeric',
+      });
+
+      const activeApts = appointmentsList
+        .filter(a => a.status !== 'cancelled')
+        .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+      const agendaItems = activeApts.map(apt => ({
+        time: apt.start_time.slice(0, 5),
+        patientName: getAppointmentDisplayName(apt),
+        type: apt.type,
+        status: apt.status,
+        procedure: apt.procedure?.name || null,
+      }));
+
+      const message = formatDailyAgenda(
+        professional.name,
+        currentClinic?.name || 'Clínica',
+        formattedDate,
+        agendaItems
+      );
+
+      const result = await sendWhatsAppMessage({
+        phone: professionalPhone,
+        message,
+        clinicId: currentClinic?.id || '',
+        type: 'custom',
+      });
+
+      if (result.success) {
+        toast({
+          title: "Agenda enviada ✅",
+          description: `Agenda do dia enviada para ${professional.name} com ${agendaItems.length} atendimento(s).`,
+        });
+      } else {
+        toast({
+          title: "Erro ao enviar agenda",
+          description: result.error || 'Erro desconhecido',
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('[SEND AGENDA] Error:', err);
+      toast({
+        title: "Erro ao enviar agenda",
+        description: "Não foi possível enviar a agenda. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingAgenda(null);
+    }
+  };
+
   const handleSendTelemedicineLink = async (appointment: Appointment) => {
-    // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
     const displayName = getAppointmentDisplayName(appointment);
     const phoneToUse = appointment.patient?.phone;
 
@@ -4978,6 +5054,25 @@ const updateData: Record<string, any> = {
                               >
                                 <UserX className="h-4 w-4 shrink-0" />
                                 <span className="min-w-0">{batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}</span>
+                              </Button>
+                              {/* Botão de enviar agenda do dia para o profissional */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto justify-start gap-1 whitespace-normal px-2 py-1.5 text-left text-xs sm:h-8 sm:w-auto sm:justify-center sm:py-0 text-blue-600 hover:text-blue-700"
+                                disabled={sendingAgenda === group.professional.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendDailyAgenda(group.professional.id, group.appointments);
+                                }}
+                                title="Enviar agenda do dia para o profissional via WhatsApp"
+                              >
+                                {sendingAgenda === group.professional.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CalendarIcon className="h-4 w-4 shrink-0" />
+                                )}
+                                <span className="min-w-0">Enviar Agenda</span>
                               </Button>
                             </div>
                           </div>

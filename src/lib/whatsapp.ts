@@ -409,6 +409,55 @@ export function formatProfessionalCancellation(
   return lines.join('\n');
 }
 
+export function formatDailyAgenda(
+  professionalName: string,
+  clinicName: string,
+  date: string,
+  appointments: Array<{
+    time: string;
+    patientName: string;
+    type?: string;
+    status?: string;
+    procedure?: string | null;
+  }>
+): string {
+  const activeAppointments = appointments.filter(a => a.status !== 'cancelled');
+  
+  const lines = [
+    `📋 *Agenda do Dia - ${date}*`,
+    ``,
+    `👨‍⚕️ *Profissional:* ${professionalName}`,
+    `🏥 *Clínica:* ${clinicName}`,
+    ``,
+    `📊 *Total de atendimentos:* ${activeAppointments.length}`,
+    `━━━━━━━━━━━━━━━━━━━━━━`,
+  ];
+
+  if (activeAppointments.length === 0) {
+    lines.push(``, `✅ Nenhum atendimento agendado para este dia.`);
+  } else {
+    activeAppointments.forEach((apt, index) => {
+      const statusEmoji = apt.status === 'confirmed' ? '✅' : apt.status === 'completed' ? '✔️' : '🕐';
+      lines.push(
+        ``,
+        `${statusEmoji} *${index + 1}. ${apt.time}* - ${apt.patientName}`,
+      );
+      if (apt.procedure) {
+        lines.push(`   📝 ${apt.procedure}`);
+      }
+    });
+  }
+
+  lines.push(
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━`,
+    `Bom trabalho! 💙`,
+    `Equipe ${clinicName}`,
+  );
+
+  return lines.join('\n');
+}
+
 export function formatWelcomeNewMember(
   memberName: string,
   entityName: string,
