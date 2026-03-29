@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
-import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite, formatProfessionalCancellation } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite, formatProfessionalCancellation, formatDailyAgenda } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { PreAttendanceDialog } from "@/components/appointments/PreAttendanceDialog";
@@ -544,6 +544,7 @@ export default function CalendarPage() {
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
   const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null); // professionalId or null
+  const [sendingAgenda, setSendingAgenda] = useState<string | null>(null); // professionalId or null
   
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -1056,7 +1057,7 @@ export default function CalendarPage() {
 
       let professionalsQuery = supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule, avatar_url, max_patient_age')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url, max_patient_age, phone, whatsapp')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true);
 
