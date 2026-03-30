@@ -17,6 +17,7 @@ export type Permission =
   | "view_waiting_list"
   | "view_schedules"
   | "view_professional_schedule"
+  | "send_professional_agenda"
   // Patients/Clients
   | "patients"
   | "view_patients"

@@ -5069,6 +5069,7 @@ const updateData: Record<string, any> = {
                                 <span className="min-w-0">{batchCancelMode === group.professional.id ? "Sair Lote" : "Cancelar Lote"}</span>
                               </Button>
                               {/* Botão de enviar agenda do dia para o profissional */}
+                              {(isAdmin || hasPermission("send_professional_agenda")) && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -5087,6 +5088,7 @@ const updateData: Record<string, any> = {
                                 )}
                                 <span className="min-w-0">Enviar Agenda</span>
                               </Button>
+                              )}
                             </div>
                           </div>
                           
