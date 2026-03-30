@@ -164,6 +164,7 @@ export function UnionSupplierDialog({
     e.preventDefault();
     if (!clinicId) return;
 
+    // Check CNPJ duplicate
     if (formData.cnpj && formData.cnpj.replace(/\D/g, "").length === 14) {
       const existing = await checkCnpjDuplicate(formData.cnpj);
       if (existing) {
@@ -171,6 +172,13 @@ export function UnionSupplierDialog({
         toast.error(`CNPJ já cadastrado para: ${existing.name}`);
         return;
       }
+    }
+
+    // Check name duplicate
+    const nameExisting = await checkNameDuplicate(formData.name);
+    if (nameExisting) {
+      toast.error(`Já existe um fornecedor com este nome: ${nameExisting.name}`);
+      return;
     }
 
     setLoading(true);
