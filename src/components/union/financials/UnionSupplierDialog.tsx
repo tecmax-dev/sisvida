@@ -103,11 +103,27 @@ export function UnionSupplierDialog({
   const checkCnpjDuplicate = async (cnpj: string): Promise<{ id: string; name: string } | null> => {
     if (!cnpj || cnpj.replace(/\D/g, "").length !== 14) return null;
     
+    const normalizedCnpj = cnpj.replace(/\D/g, "");
+    const { data: existing } = await supabase
+      .from("union_suppliers")
+      .select("id, name, cnpj")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .neq("id", supplier?.id || "00000000-0000-0000-0000-000000000000");
+    
+    const match = existing?.find(s => s.cnpj?.replace(/\D/g, "") === normalizedCnpj);
+    return match ? { id: match.id, name: match.name } : null;
+  };
+
+  const checkNameDuplicate = async (name: string): Promise<{ id: string; name: string } | null> => {
+    if (!name || name.trim().length < 3) return null;
+    
     const { data: existing } = await supabase
       .from("union_suppliers")
       .select("id, name")
       .eq("clinic_id", clinicId)
-      .eq("cnpj", cnpj)
+      .eq("is_active", true)
+      .ilike("name", name.trim())
       .neq("id", supplier?.id || "00000000-0000-0000-0000-000000000000")
       .maybeSingle();
     
