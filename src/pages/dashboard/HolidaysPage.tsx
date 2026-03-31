@@ -94,6 +94,13 @@ export default function HolidaysPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
 
+  const normalizeLocationValue = (value: string | null | undefined) =>
+    (value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [holidaysEnabled, setHolidaysEnabled] = useState(true);
@@ -130,21 +137,57 @@ export default function HolidaysPage() {
     }
   }, [currentClinic, stateCode, city]);
 
+  const resolveRegionalSettings = async () => {
+    if (!currentClinic) {
+      return {
+        holidaysEnabled: true,
+        stateCode: null as string | null,
+        city: "",
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("clinics")
+      .select("holidays_enabled, state_code, city")
+      .eq("id", currentClinic.id)
+      .single();
+
+    if (error) throw error;
+
+    let resolvedStateCode = data.state_code;
+    let resolvedCity = data.city || "";
+
+    if (!resolvedStateCode || !resolvedCity) {
+      const { data: unionEntity, error: unionError } = await supabase
+        .from("union_entities")
+        .select("estado, cidade")
+        .eq("clinic_id", currentClinic.id)
+        .maybeSingle();
+
+      if (unionError) {
+        console.error("Error fetching union regional settings:", unionError);
+      }
+
+      resolvedStateCode = resolvedStateCode || unionEntity?.estado || null;
+      resolvedCity = resolvedCity || unionEntity?.cidade || "";
+    }
+
+    return {
+      holidaysEnabled: data.holidays_enabled ?? true,
+      stateCode: resolvedStateCode,
+      city: resolvedCity,
+    };
+  };
+
   const fetchClinicSettings = async () => {
     if (!currentClinic) return;
 
     try {
-      const { data, error } = await supabase
-        .from("clinics")
-        .select("holidays_enabled, state_code, city")
-        .eq("id", currentClinic.id)
-        .single();
+      const settings = await resolveRegionalSettings();
 
-      if (error) throw error;
-
-      setHolidaysEnabled(data.holidays_enabled ?? true);
-      setStateCode(data.state_code);
-      setCity(data.city || "");
+      setHolidaysEnabled(settings.holidaysEnabled);
+      setStateCode(settings.stateCode);
+      setCity(settings.city);
     } catch (error) {
       console.error("Error fetching clinic settings:", error);
     }
@@ -155,6 +198,10 @@ export default function HolidaysPage() {
 
     setLoading(true);
     try {
+      const settings = await resolveRegionalSettings();
+      const effectiveStateCode = settings.stateCode;
+      const effectiveCity = settings.city;
+
       // Fetch national holidays
       const { data: national } = await supabase
         .from("national_holidays")
@@ -163,24 +210,33 @@ export default function HolidaysPage() {
       setNationalHolidays(national || []);
 
       // Fetch state holidays based on clinic state
-      if (stateCode) {
+      if (effectiveStateCode) {
         const { data: state } = await supabase
           .from("state_holidays")
           .select("*")
-          .eq("state_code", stateCode)
+          .eq("state_code", effectiveStateCode)
           .order("holiday_date");
         setStateHolidays(state || []);
+      } else {
+        setStateHolidays([]);
       }
 
       // Fetch municipal holidays
-      if (stateCode && city) {
+      if (effectiveStateCode && effectiveCity) {
         const { data: municipal } = await supabase
           .from("municipal_holidays")
           .select("*")
-          .eq("state_code", stateCode)
-          .eq("city", city)
+          .eq("state_code", effectiveStateCode)
           .order("holiday_date");
-        setMunicipalHolidays(municipal || []);
+
+        const normalizedCity = normalizeLocationValue(effectiveCity);
+        setMunicipalHolidays(
+          (municipal || []).filter((holiday: any) =>
+            normalizeLocationValue(holiday.city) === normalizedCity
+          )
+        );
+      } else {
+        setMunicipalHolidays([]);
       }
 
       // Fetch clinic custom holidays
