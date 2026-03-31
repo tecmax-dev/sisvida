@@ -362,18 +362,20 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
-      const tableMap: Record<string, string> = {
+      const deleteFromTable = async (table: "clinic_holidays" | "state_holidays" | "municipal_holidays" | "national_holidays", id: string) => {
+        const { error } = await supabase.from(table).delete().eq("id", id);
+        if (error) throw error;
+      };
+
+      const tableMap = {
         clinic: "clinic_holidays",
         state: "state_holidays",
         municipal: "municipal_holidays",
         national: "national_holidays",
-      };
-      const tableName = tableMap[selectedHoliday.type] || "clinic_holidays";
+      } as const;
 
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq("id", selectedHoliday.id);
+      const table = tableMap[selectedHoliday.type as keyof typeof tableMap] || "clinic_holidays";
+      await deleteFromTable(table, selectedHoliday.id);
 
       if (error) throw error;
 
