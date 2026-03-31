@@ -46,27 +46,28 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth: accept service role key or user JWT
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    // Simple auth: verify service role key via header or Authorization
+    const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    
+    // Try user auth first
+    let authenticated = false;
+    if (serviceRoleKey && authHeader === serviceRoleKey) {
+      authenticated = true;
+    } else if (authHeader) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader);
+      if (user) {
+        const { data: isSA } = await supabase.rpc("is_super_admin", { _user_id: user.id });
+        const { data: hasAccess } = await supabase.rpc("has_clinic_access", { _user_id: user.id, _clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d" });
+        authenticated = !!(isSA || hasAccess);
+      }
+    }
+
+    if (!authenticated) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    // If token is service role key, skip user validation
-    if (token !== serviceRoleKey) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) {
-        return new Response(JSON.stringify({ error: "Token inválido" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
     }
 
     // Get Evolution config
