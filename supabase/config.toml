@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.external-integration]
 verify_jwt = false
+
+[functions.notify-april-agenda]
+verify_jwt = false
