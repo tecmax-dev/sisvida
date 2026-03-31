@@ -417,7 +417,7 @@ export default function HolidaysPage() {
     holidays: Holiday[]; 
     type: "nacional" | "estadual" | "municipal" | "clinica";
     showDelete?: boolean;
-    deleteType?: "clinic" | "state" | "municipal";
+    deleteType?: "clinic" | "state" | "municipal" | "national";
   }) => (
     <Table>
       <TableHeader>
