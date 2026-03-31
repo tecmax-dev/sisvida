@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,10 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate, is
   const [bookingMonthsAhead, setBookingMonthsAhead] = useState(currentValue.toString());
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setBookingMonthsAhead(currentValue.toString());
+  }, [currentValue]);
   
   const canEdit = isAdmin;
 
@@ -70,7 +74,9 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate, is
     const num = parseInt(value);
     if (num === 1) return "Apenas mês atual";
     if (num === 2) return "Mês atual + próximo mês";
-    return `Até ${num} meses à frente`;
+    if (num === 3) return "Total de 3 meses disponíveis";
+    if (num === 4) return "Mês atual + 3 meses";
+    return `Total de ${num} meses disponíveis`;
   };
 
   return (
@@ -123,7 +129,8 @@ export function BookingMonthsSettings({ clinicId, currentValue = 1, onUpdate, is
             <SelectContent>
               <SelectItem value="1">Apenas mês atual</SelectItem>
               <SelectItem value="2">Mês atual + próximo mês</SelectItem>
-              <SelectItem value="3">Até 3 meses</SelectItem>
+              <SelectItem value="3">Total de 3 meses</SelectItem>
+              <SelectItem value="4">Mês atual + 3 meses</SelectItem>
               <SelectItem value="6">Até 6 meses</SelectItem>
               <SelectItem value="12">Até 12 meses</SelectItem>
             </SelectContent>
