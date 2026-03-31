@@ -121,9 +121,14 @@ export default function HolidaysPage() {
   useEffect(() => {
     if (currentClinic) {
       fetchClinicSettings();
-      fetchAllHolidays();
     }
   }, [currentClinic]);
+
+  useEffect(() => {
+    if (currentClinic && stateCode !== null) {
+      fetchAllHolidays();
+    }
+  }, [currentClinic, stateCode, city]);
 
   const fetchClinicSettings = async () => {
     if (!currentClinic) return;
