@@ -362,18 +362,21 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
-      const tableName = selectedHoliday.type === "clinic" 
-        ? "clinic_holidays" 
-        : selectedHoliday.type === "state" 
-          ? "state_holidays" 
-          : "municipal_holidays";
+      const deleteFromTable = async (table: "clinic_holidays" | "state_holidays" | "municipal_holidays" | "national_holidays", id: string) => {
+        const { error } = await supabase.from(table).delete().eq("id", id);
+        if (error) throw error;
+      };
 
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq("id", selectedHoliday.id);
+      const tableMap = {
+        clinic: "clinic_holidays",
+        state: "state_holidays",
+        municipal: "municipal_holidays",
+        national: "national_holidays",
+      } as const;
 
-      if (error) throw error;
+      const table = tableMap[selectedHoliday.type as keyof typeof tableMap] || "clinic_holidays";
+      await deleteFromTable(table, selectedHoliday.id);
+
 
       toast({
         title: "Feriado removido",
