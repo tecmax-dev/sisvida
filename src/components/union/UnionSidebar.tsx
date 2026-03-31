@@ -235,6 +235,7 @@ const unionNavTree: NavCategory[] = [
     color: "homologacao",
     items: [
       { href: "/union/configuracoes", icon: Settings, label: "Geral", permission: "union_module_access" },
+      { href: "/union/configuracoes/feriados", icon: CalendarX, label: "Feriados", permission: "union_module_access" },
       { href: "/union/configuracoes/grupos-acesso", icon: Shield, label: "Grupos de Acesso", permission: "union_module_access" },
     ]
   }
