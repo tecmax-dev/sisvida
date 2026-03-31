@@ -46,7 +46,7 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth check
+    // Auth: accept service role key or user JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -56,28 +56,14 @@ serve(async (req: Request) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Token inválido" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    const CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-
-    // Verify access
-    const { data: hasAccess } = await supabase.rpc("has_clinic_access", {
-      _user_id: user.id,
-      _clinic_id: CLINIC_ID,
-    });
-
-    if (!hasAccess) {
-      // Check super admin
-      const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", { _user_id: user.id });
-      if (!isSuperAdmin) {
-        return new Response(JSON.stringify({ error: "Sem acesso" }), {
-          status: 403,
+    // If token is service role key, skip user validation
+    if (token !== serviceRoleKey) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), {
+          status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
