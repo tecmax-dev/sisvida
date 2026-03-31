@@ -161,9 +161,9 @@ export default function NoShowReportPage() {
   };
 
   const handleUnblock = async (patientId: string) => {
-    // Guard: only admins can unblock
-    if (!isAdmin) {
-      toast.error("Apenas administradores podem desbloquear pacientes");
+    // Guard: only users with permission can unblock
+    if (!canUnblockPatients) {
+      toast.error("Você não tem permissão para desbloquear pacientes");
       return;
     }
     
