@@ -362,11 +362,13 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
-      const tableName = selectedHoliday.type === "clinic" 
-        ? "clinic_holidays" 
-        : selectedHoliday.type === "state" 
-          ? "state_holidays" 
-          : "municipal_holidays";
+      const tableMap: Record<string, string> = {
+        clinic: "clinic_holidays",
+        state: "state_holidays",
+        municipal: "municipal_holidays",
+        national: "national_holidays",
+      };
+      const tableName = tableMap[selectedHoliday.type] || "clinic_holidays";
 
       const { error } = await supabase
         .from(tableName)
