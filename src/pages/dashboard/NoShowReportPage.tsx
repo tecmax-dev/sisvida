@@ -34,9 +34,9 @@ interface NoShowPatient {
 
 export default function NoShowReportPage() {
   const { currentClinic } = useAuth();
-  const { isAdmin } = usePermissions();
-  // Apenas admins podem desbloquear pacientes (owner, admin ou super admin)
-  const canUnblockPatients = isAdmin;
+  const { isAdmin, hasPermission } = usePermissions();
+  // Admins ou usuários com permissão específica podem desbloquear pacientes
+  const canUnblockPatients = isAdmin || hasPermission("unblock_patients") || hasPermission("union_unblock_patients");
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("current");
   const [stats, setStats] = useState<NoShowStats>({ total: 0, noShows: 0, rate: 0, blockedPatients: 0 });
@@ -161,9 +161,9 @@ export default function NoShowReportPage() {
   };
 
   const handleUnblock = async (patientId: string) => {
-    // Guard: only admins can unblock
-    if (!isAdmin) {
-      toast.error("Apenas administradores podem desbloquear pacientes");
+    // Guard: only users with permission can unblock
+    if (!canUnblockPatients) {
+      toast.error("Você não tem permissão para desbloquear pacientes");
       return;
     }
     
