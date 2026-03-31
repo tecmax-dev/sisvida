@@ -204,6 +204,7 @@ import UnionPWAInstallationsPage from "./pages/union/UnionPWAInstallationsPage";
 import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
 import UnionAccessGroupsPage from "./pages/union/UnionAccessGroupsPage";
+import UnionHolidaysPage from "./pages/union/UnionHolidaysPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
