@@ -643,6 +643,7 @@ function App() {
                   <Route path="juridico/prazos/novo" element={<UnionLegalDeadlineFormPage />} />
                   <Route path="juridico/despesas" element={<UnionLegalExpensesPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
+                  <Route path="configuracoes/feriados" element={<UnionHolidaysPage />} />
                   <Route path="configuracoes/grupos-acesso" element={<UnionAccessGroupsPage />} />
                 </Route>
                 {/* Mobile App Routes - Rotas fixas declarativas (decisão de navegação feita no bootstrap imperativo) */}
