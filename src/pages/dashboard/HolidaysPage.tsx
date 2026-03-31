@@ -109,7 +109,7 @@ export default function HolidaysPage() {
   const [stateDialogOpen, setStateDialogOpen] = useState(false);
   const [municipalDialogOpen, setMunicipalDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedHoliday, setSelectedHoliday] = useState<{ id: string; name: string; type: "clinic" | "state" | "municipal" } | null>(null);
+  const [selectedHoliday, setSelectedHoliday] = useState<{ id: string; name: string; type: "clinic" | "state" | "municipal" | "national" } | null>(null);
 
   // Form state
   const [newHolidayName, setNewHolidayName] = useState("");
@@ -417,7 +417,7 @@ export default function HolidaysPage() {
     holidays: Holiday[]; 
     type: "nacional" | "estadual" | "municipal" | "clinica";
     showDelete?: boolean;
-    deleteType?: "clinic" | "state" | "municipal";
+    deleteType?: "clinic" | "state" | "municipal" | "national";
   }) => (
     <Table>
       <TableHeader>
