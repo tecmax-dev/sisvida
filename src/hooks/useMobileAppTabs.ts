@@ -51,12 +51,17 @@ export function useMobileAppTabs() {
 
   const updateTabStatus = async (tabKey: string, isActive: boolean) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("mobile_app_tabs")
         .update({ is_active: isActive })
-        .eq("tab_key", tabKey);
+        .eq("tab_key", tabKey)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        console.error("Update returned no rows — possible RLS restriction");
+        return false;
+      }
       await loadTabs();
       return true;
     } catch (err) {
