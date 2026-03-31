@@ -377,7 +377,6 @@ export default function HolidaysPage() {
       const table = tableMap[selectedHoliday.type as keyof typeof tableMap] || "clinic_holidays";
       await deleteFromTable(table, selectedHoliday.id);
 
-      if (error) throw error;
 
       toast({
         title: "Feriado removido",
