@@ -97,6 +97,7 @@ export default function MobileLegalBookingPage() {
   const [payslipFile, setPayslipFile] = useState<File | null>(null);
   const [payslipSubmitted, setPayslipSubmitted] = useState(false);
   const [holidayDates, setHolidayDates] = useState<Set<string>>(new Set());
+  const [bookingMonthsAhead, setBookingMonthsAhead] = useState(1);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -243,6 +244,10 @@ export default function MobileLegalBookingPage() {
       ]);
 
       setProfessionals((professionalsData || []) as LegalProfessional[]);
+
+      if (typeof clinicConfig?.booking_months_ahead === "number") {
+        setBookingMonthsAhead(clinicConfig.booking_months_ahead);
+      }
 
       // Load schedules
       const { data: schedulesData } = await supabase
@@ -1041,7 +1046,7 @@ export default function MobileLegalBookingPage() {
                 isDateEnabled={isDateEnabled}
                 submitting={submitting}
                 onSubmit={handleSubmit}
-                bookingMonthsAhead={1}
+                bookingMonthsAhead={bookingMonthsAhead}
               />
             </div>
           )}

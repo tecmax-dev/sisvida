@@ -1,7 +1,20 @@
-import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs";
+const PDFJS_VERSION = "4.0.379";
+const PDFJS_CDN_BASE = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}`;
 
-// Configure PDF.js worker with a browser-compatible build.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+let pdfJsModulePromise: Promise<any> | null = null;
+
+async function loadPdfJs() {
+  if (!pdfJsModulePromise) {
+    pdfJsModulePromise = import(
+      /* @vite-ignore */ `${PDFJS_CDN_BASE}/pdf.min.mjs`
+    ).then((module) => {
+      module.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN_BASE}/pdf.worker.min.mjs`;
+      return module;
+    });
+  }
+
+  return pdfJsModulePromise;
+}
 
 export interface ExtractedPdfData {
   rawText: string;
@@ -12,6 +25,7 @@ export interface ExtractedPdfData {
  * Extract text content from a PDF file
  */
 export async function extractTextFromPdf(file: File): Promise<ExtractedPdfData> {
+  const pdfjsLib = await loadPdfJs();
   const arrayBuffer = await file.arrayBuffer();
   
   const loadingTask = pdfjsLib.getDocument({
