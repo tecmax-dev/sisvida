@@ -93,6 +93,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Pen } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -148,10 +149,15 @@ const formatPhone = (value: string | null): string => {
 
 export default function UnionMembersListPage() {
   const navigate = useNavigate();
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles } = useAuth();
   const { isAdmin } = usePermissions();
   const { canManageMembers } = useUnionPermissions();
   const { toast } = useToast();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
 
   // Storage keys for search persistence
   const SEARCH_TITULARES_KEY = "union-members:search-titulares";
@@ -277,7 +283,7 @@ export default function UnionMembersListPage() {
   };
 
   const fetchMembers = useCallback(async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
 
     setLoading(true);
     try {
@@ -320,7 +326,7 @@ export default function UnionMembersListPage() {
         `,
           { count: "exact" }
         )
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .eq("is_union_member", true);
 
       // Filter by active status
@@ -400,10 +406,10 @@ export default function UnionMembersListPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, debouncedSearch, page, showInactive, cardFilter, toast]);
+  }, [resolvedClinic, debouncedSearch, page, showInactive, cardFilter, toast]);
 
   const fetchDependents = useCallback(async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
 
     setDependentsLoading(true);
     try {
@@ -429,7 +435,7 @@ export default function UnionMembersListPage() {
         `,
           { count: "exact" }
         )
-        .eq("clinic_id", currentClinic.id);
+        .eq("clinic_id", resolvedClinic.id);
 
       if (showInactive) {
         query = query.eq("is_active", false);
@@ -463,7 +469,7 @@ export default function UnionMembersListPage() {
     } finally {
       setDependentsLoading(false);
     }
-  }, [currentClinic, debouncedDependentsSearch, page, showInactive]);
+  }, [resolvedClinic, debouncedDependentsSearch, page, showInactive]);
 
   const handleDeleteDependent = async (mode: "inactivate" | "delete") => {
     if (!dependentToDelete) return;
@@ -496,12 +502,12 @@ export default function UnionMembersListPage() {
   };
 
   const fetchInsurancePlans = async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     try {
       const { data, error } = await supabase
         .from("insurance_plans")
         .select("id, name")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -512,12 +518,12 @@ export default function UnionMembersListPage() {
   };
 
   const fetchClinicLimit = async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     try {
       const { data } = await supabase
         .from("clinics")
         .select("max_appointments_per_cpf_month")
-        .eq("id", currentClinic.id)
+        .eq("id", resolvedClinic.id)
         .single();
       setClinicDefaultLimit(data?.max_appointments_per_cpf_month ?? null);
     } catch (error) {
@@ -526,27 +532,27 @@ export default function UnionMembersListPage() {
   };
 
   useEffect(() => {
-    if (currentClinic) {
+    if (resolvedClinic) {
       fetchMembers();
       fetchInsurancePlans();
       fetchClinicLimit();
     }
-  }, [currentClinic, fetchMembers]);
+  }, [resolvedClinic, fetchMembers]);
 
   useEffect(() => {
-    if (currentClinic && activeTab === "dependentes") {
+    if (resolvedClinic && activeTab === "dependentes") {
       fetchDependents();
     }
-  }, [currentClinic, activeTab, fetchDependents]);
+  }, [resolvedClinic, activeTab, fetchDependents]);
 
   // Realtime subscription
   useRealtimeSubscription({
     table: "patients",
-    filter: currentClinic ? { column: "clinic_id", value: currentClinic.id } : undefined,
+    filter: resolvedClinic ? { column: "clinic_id", value: resolvedClinic.id } : undefined,
     onInsert: () => fetchMembers(),
     onUpdate: () => fetchMembers(),
     onDelete: () => fetchMembers(),
-    enabled: !!currentClinic,
+    enabled: !!resolvedClinic,
   });
 
   const handleOpenEdit = (member: UnionMember) => {
@@ -573,12 +579,12 @@ export default function UnionMembersListPage() {
         ? format(parseISO(member.card_expires_at), "dd/MM/yyyy")
         : "não definida";
 
-      const message = `✅ *Carteirinha Atualizada!*\n\nOlá ${member.name}! 👋\n\nSua carteirinha foi atualizada com sucesso!\n\n📅 *Nova validade:* ${expiryText}\n${member.card_number ? `🎫 *Número:* ${member.card_number}\n` : ""}\nAtenciosamente,\n${currentClinic.name}`;
+      const message = `✅ *Carteirinha Atualizada!*\n\nOlá ${member.name}! 👋\n\nSua carteirinha foi atualizada com sucesso!\n\n📅 *Nova validade:* ${expiryText}\n${member.card_number ? `🎫 *Número:* ${member.card_number}\n` : ""}\nAtenciosamente,\n${resolvedClinic.name}`;
 
       const result = await sendWhatsAppMessage({
         phone: member.phone,
         message,
-        clinicId: currentClinic.id,
+        clinicId: resolvedClinic.id,
         type: "custom",
       });
 
@@ -618,7 +624,7 @@ export default function UnionMembersListPage() {
       const { data, error } = await supabase.functions.invoke("send-signature-request", {
         body: {
           associadoId: member.id,
-          clinicId: currentClinic.id,
+          clinicId: resolvedClinic.id,
         },
       });
 
@@ -665,7 +671,7 @@ export default function UnionMembersListPage() {
       const { data, error } = await supabase.functions.invoke("send-signature-whatsapp", {
         body: {
           associadoId: member.id,
-          clinicId: currentClinic.id,
+          clinicId: resolvedClinic.id,
         },
       });
 
@@ -1411,8 +1417,8 @@ export default function UnionMembersListPage() {
         open={welcomeDialogOpen}
         onOpenChange={setWelcomeDialogOpen}
         member={selectedMemberForWelcome}
-        clinicId={currentClinic?.id || ""}
-        entityName={currentClinic?.name || "Sindicato"}
+        clinicId={resolvedClinic?.id || ""}
+        entityName={resolvedClinic?.name || "Sindicato"}
         appUrl="https://prosindweb.com.br/app/instalar"
         headerImageUrl="https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/whatsapp-headers/header_bem_vindo_socio_secmi.png"
       />
@@ -1445,16 +1451,16 @@ export default function UnionMembersListPage() {
             employer_name: selectedMemberForFiliacao.employer_name,
             employer_cnpj: selectedMemberForFiliacao.employer_cnpj,
           }}
-          clinicId={currentClinic?.id || ""}
+          clinicId={resolvedClinic?.id || ""}
         />
       )}
 
       {/* Batch Filiacao Dialog */}
-      {currentClinic?.id && (
+      {resolvedClinic?.id && (
         <BatchFiliacaoDialog
           open={batchFiliacaoDialogOpen}
           onOpenChange={setBatchFiliacaoDialogOpen}
-          clinicId={currentClinic.id}
+          clinicId={resolvedClinic.id}
         />
       )}
 
@@ -1465,7 +1471,7 @@ export default function UnionMembersListPage() {
       />
 
       {/* Delete Member Dialog */}
-      {currentClinic?.id && (
+      {resolvedClinic?.id && (
         <DeleteMemberDialog
           open={deleteDialogOpen}
           onOpenChange={(open) => {
@@ -1479,7 +1485,7 @@ export default function UnionMembersListPage() {
             phone: selectedMemberForDelete.phone,
             dependentsCount: selectedMemberForDelete.dependents_count,
           } : null}
-          clinicId={currentClinic.id}
+          clinicId={resolvedClinic.id}
           onSuccess={fetchMembers}
         />
       )}
