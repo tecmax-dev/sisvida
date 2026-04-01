@@ -38,6 +38,15 @@ export function handleScheduleValidationError(error: any): {
     };
   }
   
+  // Erro de conflito de horário
+  if (errorMessage.includes("CONFLITO:")) {
+    const match = errorMessage.match(/CONFLITO:\s*(.+)/);
+    return {
+      isScheduleError: true,
+      message: match ? match[1].trim() : "Já existe um agendamento para este profissional neste horário.",
+    };
+  }
+  
   return {
     isScheduleError: false,
     message: error?.message || "Tente novamente.",
