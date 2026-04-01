@@ -4,7 +4,7 @@ import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, Image, Loader2, Calendar } from "lucide-react";
+import { Settings, CreditCard, FileText, Image, Loader2, Calendar, FileCheck } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
