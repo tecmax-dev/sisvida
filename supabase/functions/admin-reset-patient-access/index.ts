@@ -216,9 +216,9 @@ serve(async (req) => {
 
 Olá, ${firstName}!
 
-Um administrador solicitou a redefinição da sua senha de acesso ao aplicativo.
+Recebemos uma solicitação para redefinir sua senha de acesso ao aplicativo.
 
-Clique no link abaixo para redefinir sua senha:
+Clique no link abaixo para criar uma nova senha:
 
 ${resetLink}
 
