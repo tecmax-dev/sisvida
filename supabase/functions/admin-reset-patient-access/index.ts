@@ -243,24 +243,31 @@ _SECMI - Sindicato dos Comerciários_`;
         );
       }
 
-      const { data: whatsappData, error: whatsappError } = await adminClient.functions.invoke("send-whatsapp", {
+      const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+        method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${supabaseServiceRoleKey}`,
         },
-        body: {
+        body: JSON.stringify({
           phone: patient.phone,
           message: whatsappMessage,
           clinicId,
           type: "custom",
-        },
+        }),
       });
 
-      if (whatsappError || whatsappData?.success === false) {
-        const whatsappMessage = whatsappData?.error || whatsappError?.message || "Erro ao enviar WhatsApp";
-        console.error("WhatsApp send error:", { whatsappError, whatsappData });
+      const whatsappResult = await whatsappResponse.json().catch(() => null);
+
+      if (!whatsappResponse.ok || whatsappResult?.success === false) {
+        const whatsappErrorMessage = whatsappResult?.error || "Erro ao enviar WhatsApp";
+        console.error("WhatsApp send error:", {
+          status: whatsappResponse.status,
+          whatsappResult,
+        });
         return new Response(
-          JSON.stringify({ error: whatsappMessage }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: whatsappErrorMessage }),
+          { status: whatsappResponse.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
