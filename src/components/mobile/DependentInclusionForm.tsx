@@ -403,9 +403,10 @@ export function DependentInclusionForm({
       onSuccess?.();
     } catch (error: any) {
       console.error("Error submitting request:", error);
+      const friendlyMessage = getFriendlyErrorMessage(error.message);
       toast({
-        title: "Erro ao enviar solicitação",
-        description: error.message || "Tente novamente mais tarde.",
+        title: "Não foi possível enviar a solicitação",
+        description: friendlyMessage,
         variant: "destructive",
       });
     } finally {
