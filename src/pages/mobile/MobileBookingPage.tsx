@@ -397,11 +397,11 @@ export default function MobileBookingPage() {
           const mins = currentMinutes % 60;
           const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
           
-          // Check if slot respects minimum advance booking (6 hours)
+          // Check if slot respects minimum advance booking hours (configurable)
           const slotDateTime = new Date(selectedDate);
           slotDateTime.setHours(hours, mins, 0, 0);
-          const minAdvanceMs = 6 * 60 * 60 * 1000; // 6 hours
-          if (slotDateTime.getTime() - now.getTime() < minAdvanceMs) continue;
+          const minAdvanceMs = minAdvanceBookingHours * 60 * 60 * 1000;
+          if (minAdvanceMs > 0 && slotDateTime.getTime() - now.getTime() < minAdvanceMs) continue;
           
           // Check if slot conflicts with existing appointments
           const slotEndMinutes = currentMinutes + blockDuration;
