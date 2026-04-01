@@ -363,13 +363,17 @@ export default function MobileBookingPage() {
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-      // Get existing appointments for this day
-      const { data: existingAppointments } = await supabase
-        .from("appointments")
-        .select("start_time, end_time, status")
-        .eq("professional_id", selectedProfessionalId)
-        .eq("appointment_date", dateStr)
-        .not("status", "in", '("cancelled","no_show")');
+      // Use edge function to bypass RLS (mobile JWT may be expired)
+      const slotResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-slot-availability`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ professionalId: selectedProfessionalId, date: dateStr }),
+        }
+      );
+      const slotData = slotResponse.ok ? await slotResponse.json() : { appointments: [] };
+      const existingAppointments = slotData.appointments || [];
 
       // Get applicable blocks for this date
       const applicableBlocks = getBlocksForDate(selectedDate, professional.schedule);

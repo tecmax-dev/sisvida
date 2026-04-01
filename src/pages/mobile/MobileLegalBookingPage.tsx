@@ -349,15 +349,19 @@ export default function MobileLegalBookingPage() {
         return;
       }
 
-      // Get existing appointments for this day
-      const { data: existingAppts } = await (supabase
-        .from("homologacao_appointments") as any)
-        .select("id, appointment_date, start_time, end_time, status, professional_id")
-        .eq("professional_id", selectedProfessionalId)
-        .eq("appointment_date", dateStr)
-        .neq("status", "cancelled");
+      // Use edge function to bypass RLS (mobile JWT may be expired)
+      const slotResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-slot-availability`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ professionalId: selectedProfessionalId, date: dateStr, type: "legal" }),
+        }
+      );
+      const slotData = slotResponse.ok ? await slotResponse.json() : { appointments: [] };
+      const existingAppts = slotData.appointments || [];
 
-      setExistingAppointments((existingAppts || []) as LegalAppointment[]);
+      setExistingAppointments(existingAppts as LegalAppointment[]);
 
       // Get service duration
       const serviceType = serviceTypes.find(s => s.id === selectedServiceTypeId);
