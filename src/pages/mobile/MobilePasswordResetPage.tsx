@@ -158,16 +158,28 @@ export default function MobilePasswordResetPage() {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.rpc("reset_patient_password_with_token", {
+      const rpcParams: Record<string, unknown> = {
         p_email: email,
         p_token: code,
         p_new_password: newPassword,
-        p_birth_year: birthYear ? parseInt(birthYear, 10) : null,
-      });
+      };
+      if (birthYear) {
+        rpcParams.p_birth_year = parseInt(birthYear, 10);
+      }
 
-      if (error) throw error;
+      const { data, error } = await supabase.rpc("reset_patient_password_with_token", rpcParams as any);
 
-      const result = data?.[0];
+      if (error) {
+        console.error("RPC error:", error);
+        toast({
+          title: "Erro",
+          description: error.message || "Não foi possível redefinir a senha.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
 
       if (!result?.success) {
         toast({
@@ -179,11 +191,11 @@ export default function MobilePasswordResetPage() {
       }
 
       setStep("success");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error resetting password:", err);
       toast({
         title: "Erro",
-        description: "Não foi possível redefinir a senha. Tente novamente.",
+        description: err?.message || "Não foi possível redefinir a senha. Tente novamente.",
         variant: "destructive",
       });
     } finally {
