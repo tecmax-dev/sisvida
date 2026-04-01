@@ -1897,6 +1897,7 @@ export type Database = {
           owner_cpf: string | null
           owner_name: string | null
           patient_swap_deadline_hours: number | null
+          payslip_acceptance_days: number | null
           phone: string | null
           reminder_enabled: boolean | null
           reminder_hours: number | null
@@ -1950,6 +1951,7 @@ export type Database = {
           owner_cpf?: string | null
           owner_name?: string | null
           patient_swap_deadline_hours?: number | null
+          payslip_acceptance_days?: number | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
@@ -2003,6 +2005,7 @@ export type Database = {
           owner_cpf?: string | null
           owner_name?: string | null
           patient_swap_deadline_hours?: number | null
+          payslip_acceptance_days?: number | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
