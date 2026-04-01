@@ -14,9 +14,15 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control, pragma, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Max-Age": "86400",
+};
+
+const jsonHeaders = {
+  ...corsHeaders,
+  "Content-Type": "application/json",
+  "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
 };
 
 Deno.serve(async (req) => {
@@ -31,14 +37,14 @@ Deno.serve(async (req) => {
     if (!professionalId || typeof professionalId !== "string") {
       return new Response(
         JSON.stringify({ error: "missing or invalid professionalId" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: jsonHeaders }
       );
     }
 
     if (!date || typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return new Response(
         JSON.stringify({ error: "missing or invalid date (expected YYYY-MM-DD)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: jsonHeaders }
       );
     }
 
@@ -47,7 +53,7 @@ Deno.serve(async (req) => {
     if (!uuidRegex.test(professionalId)) {
       return new Response(
         JSON.stringify({ error: "invalid professionalId format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: jsonHeaders }
       );
     }
 
@@ -69,13 +75,13 @@ Deno.serve(async (req) => {
         console.error("[mobile-slot-availability] Error fetching legal appointments:", error);
         return new Response(
           JSON.stringify({ error: "query_failed", appointments: [] }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: jsonHeaders }
         );
       }
 
       return new Response(
         JSON.stringify({ appointments: data || [] }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: jsonHeaders }
       );
     }
 
@@ -91,19 +97,19 @@ Deno.serve(async (req) => {
       console.error("[mobile-slot-availability] Error fetching appointments:", error);
       return new Response(
         JSON.stringify({ error: "query_failed", appointments: [] }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: jsonHeaders }
       );
     }
 
     return new Response(
       JSON.stringify({ appointments: data || [] }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: jsonHeaders }
     );
   } catch (err) {
     console.error("[mobile-slot-availability] Error:", err);
     return new Response(
       JSON.stringify({ error: "internal_error", appointments: [] }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: jsonHeaders }
     );
   }
 });
