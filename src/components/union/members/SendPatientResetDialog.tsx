@@ -54,8 +54,8 @@ export function SendPatientResetDialog({
         },
       });
 
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      if (error) throw error;
+      if (data?.error) throw data;
 
       const channelLabel = channel === "email" ? "e-mail" : "WhatsApp";
       toast.success(`Código de recuperação enviado por ${channelLabel}!`, {
