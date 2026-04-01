@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLawFirms } from "@/hooks/useUnionLegal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Building2, Edit, Trash2, Loader2, Phone, Mail, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface LawFirmFormData {
   name: string;
   cnpj: string;
@@ -42,7 +43,12 @@ interface LawFirmFormData {
 }
 
 export default function UnionLawFirmsPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFirm, setEditingFirm] = useState<string | null>(null);
@@ -60,7 +66,7 @@ export default function UnionLawFirmsPage() {
     notes: "",
   });
 
-  const { lawFirms, isLoading, createLawFirm } = useUnionLawFirms(currentClinic?.id);
+  const { lawFirms, isLoading, createLawFirm } = useUnionLawFirms(resolvedClinic?.id);
 
   const filteredFirms = (lawFirms || []).filter((f) => {
     const searchLower = searchTerm.toLowerCase();
@@ -104,7 +110,7 @@ export default function UnionLawFirmsPage() {
 
     try {
       await createLawFirm.mutateAsync({
-        clinic_id: currentClinic?.id,
+        clinic_id: resolvedClinic?.id,
         ...formData,
         contract_value: formData.contract_value ? parseFloat(formData.contract_value) : null,
       });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLegalCases, useUnionLawyers, useUnionLawFirms } from "@/hooks/useUnionLegal";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Loader2, FileText } from "lucide-react";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   caseTypeLabels,
   caseStatusLabels,
   riskLevelLabels,
@@ -28,11 +29,16 @@ export default function UnionLegalCaseFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
 
-  const { cases, createCase, updateCase } = useUnionLegalCases(currentClinic?.id);
-  const { lawyers } = useUnionLawyers(currentClinic?.id);
-  const { lawFirms } = useUnionLawFirms(currentClinic?.id);
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const { cases, createCase, updateCase } = useUnionLegalCases(resolvedClinic?.id);
+  const { lawyers } = useUnionLawyers(resolvedClinic?.id);
+  const { lawFirms } = useUnionLawFirms(resolvedClinic?.id);
 
   const [formData, setFormData] = useState({
     case_number: "",
@@ -85,13 +91,13 @@ export default function UnionLegalCaseFormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentClinic?.id) return;
+    if (!resolvedClinic?.id) return;
 
     setIsSubmitting(true);
 
     const payload = {
       ...formData,
-      clinic_id: currentClinic.id,
+      clinic_id: resolvedClinic.id,
       cause_value: formData.cause_value ? parseFloat(formData.cause_value) : null,
       estimated_liability: formData.estimated_liability
         ? parseFloat(formData.estimated_liability)

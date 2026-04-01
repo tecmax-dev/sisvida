@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { formatDateBR } from "@/lib/date";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UnionCashRegisterDialog } from "@/components/union/financials/UnionCashRegisterDialog";
 import { toast } from "sonner";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   Plus,
   Wallet,
   Building2,
@@ -47,13 +48,18 @@ const typeIcons: Record<string, React.ReactNode> = {
 };
 
 export default function UnionCashRegistersPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageCashRegisters } = useUnionPermissions();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRegister, setEditingRegister] = useState<any>(null);
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   const { data: registers, isLoading } = useQuery({
     queryKey: ["union-cash-registers", clinicId],

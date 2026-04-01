@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building2, Users, Receipt, DollarSign, Handshake, TrendingUp, TrendingDown, Calendar, Loader2 } from "lucide-react";
 import { PushNotificationSetup } from "@/components/union/PushNotificationSetup";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface DashboardStats {
   totalEmployers: number;
   totalMembers: number;
@@ -19,6 +20,11 @@ interface DashboardStats {
 
 export default function UnionDashboard() {
   const { currentClinic, userRoles, isSuperAdmin } = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { entity, isUnionEntityAdmin, loading: entityLoading } = useUnionEntity();
   const { canViewFinancials } = useUnionPermissions();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -28,7 +34,7 @@ export default function UnionDashboard() {
   const isAdmin = isSuperAdmin || isUnionEntityAdmin || userRoles.some(r => r.role === 'admin');
 
   // Get the clinic_id to use for queries
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -139,7 +145,7 @@ export default function UnionDashboard() {
 
   const displayName = isUnionEntityAdmin && entity
     ? entity.nome_fantasia || entity.razao_social
-    : currentClinic?.name || "Entidade";
+    : resolvedClinic?.name || "Entidade";
 
   const statsCards = [
     { 

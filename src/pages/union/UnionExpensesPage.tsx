@@ -62,8 +62,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionExpensesPage() {
-  const { currentClinic, session } = useAuth();
+  const { currentClinic, session, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageExpenses } = useUnionPermissions();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -91,7 +97,7 @@ export default function UnionExpensesPage() {
     setEndDateFilter(endDateInput);
   };
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["union-financial-transactions", clinicId, "expense", startDateFilter, endDateFilter],

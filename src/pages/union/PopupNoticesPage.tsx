@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,15 @@ import { PopupNoticeFormDialog } from "@/components/union/PopupNoticeFormDialog"
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function PopupNoticesPage() {
-  const { currentClinic } = useAuth();
-  const clinicId = currentClinic?.id;
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const clinicId = resolvedClinic?.id;
 
   const { data: notices, isLoading } = useAllPopupNotices(clinicId || null);
   const createNotice = useCreatePopupNotice();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLegalDeadlines } from "@/hooks/useUnionLegal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,13 +33,19 @@ import {
 import { differenceInDays, format, isAfter, isBefore, parseISO, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionLegalDeadlinesPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("pendente");
   const [criticalityFilter, setCriticalityFilter] = useState<string>("all");
 
-  const { deadlines, isLoading } = useUnionLegalDeadlines(currentClinic?.id);
+  const { deadlines, isLoading } = useUnionLegalDeadlines(resolvedClinic?.id);
 
   const today = startOfDay(new Date());
 

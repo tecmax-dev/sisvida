@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
@@ -87,6 +87,7 @@ import { HelpContentManagement } from "@/components/union/HelpContentManagement"
 import { AppAvailabilityToggle } from "@/components/union/AppAvailabilityToggle";
 import { supabase } from "@/integrations/supabase/client";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface EmployerCategory {
   id: string;
   name: string;
@@ -147,7 +148,12 @@ type TabType = ContentType | "ouvidoria" | "push" | "tabs" | "cct-categories" | 
 
 export default function UnionAppContentPage() {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { hasUnionPermission } = useUnionPermissions();
   
   const [activeTab, setActiveTab] = useState<TabType>("banner");
@@ -170,32 +176,32 @@ export default function UnionAppContentPage() {
   // Load employer categories for portal CCT filtering
   useEffect(() => {
     const loadCategories = async () => {
-      if (!currentClinic?.id) return;
+      if (!resolvedClinic?.id) return;
       const { data } = await supabase
         .from("employer_categories")
         .select("id, name")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .eq("is_active", true)
         .order("name");
       if (data) setCategories(data);
     };
     loadCategories();
-  }, [currentClinic?.id]);
+  }, [resolvedClinic?.id]);
 
   // Load CCT categories for app tab organization
   useEffect(() => {
     const loadCctCategories = async () => {
-      if (!currentClinic?.id) return;
+      if (!resolvedClinic?.id) return;
       const { data } = await supabase
         .from("union_cct_categories")
         .select("id, name, color")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .eq("is_active", true)
         .order("order_index");
       if (data) setCctCategories(data);
     };
     loadCctCategories();
-  }, [currentClinic?.id]);
+  }, [resolvedClinic?.id]);
 
   // Check if user has admin access
   const hasAdminAccess = isSuperAdmin || hasUnionPermission("union_module_access");

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionBudgetDetail } from "@/hooks/useUnionBudget";
@@ -31,12 +31,18 @@ import { useUnionBudget } from "@/hooks/useUnionBudget";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 const db = supabase as any;
 
 export default function UnionBudgetDetailPage() {
   const { id: exerciseId } = useParams();
-  const { currentClinic, user } = useAuth();
-  const clinicId = currentClinic?.id;
+  const { currentClinic, user, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const clinicId = resolvedClinic?.id;
   const { canManageFinancials } = useUnionPermissions();
   const { updateStatus } = useUnionBudget(clinicId);
   

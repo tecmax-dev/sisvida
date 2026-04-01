@@ -18,10 +18,16 @@ import { LytexReportCard } from "@/components/union/reports/LytexReportCard";
 import { LytexReportDataTable, Column } from "@/components/union/reports/LytexReportDataTable";
 import * as LytexExports from "@/lib/lytexReportExportUtils";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionLytexReportsPage() {
-  const { currentClinic } = useAuth();
-  const clinicId = currentClinic?.id;
-  const clinicName = currentClinic?.name || "Entidade Sindical";
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const clinicId = resolvedClinic?.id;
+  const clinicName = resolvedClinic?.name || "Entidade Sindical";
 
   const [filters, setFilters] = useState<LytexReportFiltersState>({
     startDate: startOfMonth(new Date()),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo} from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
@@ -41,6 +41,7 @@ import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliac
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface InsurancePlan {
   id: string;
   name: string;
@@ -193,7 +194,12 @@ export default function UnionMemberDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentClinic, user } = useAuth();
+  const { currentClinic, user, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { hasPermission, isAdmin } = usePermissions();
   const { canManageMembers } = useUnionPermissions();
   const canChangePassword = isAdmin || hasPermission("change_password");
@@ -256,21 +262,21 @@ export default function UnionMemberDetailPage() {
   }, [searchParams, navigate]);
 
   useEffect(() => {
-    if (currentClinic && id) {
+    if (resolvedClinic && id) {
       fetchMember();
       fetchInsurancePlans();
       fetchCategories();
       fetchClinicLimit();
     }
-  }, [currentClinic, id]);
+  }, [resolvedClinic, id]);
 
   const fetchClinicLimit = async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     try {
       const { data } = await supabase
         .from('clinics')
         .select('max_appointments_per_cpf_month')
-        .eq('id', currentClinic.id)
+        .eq('id', resolvedClinic.id)
         .single();
       setClinicDefaultLimit(data?.max_appointments_per_cpf_month ?? null);
     } catch (error) {
@@ -279,7 +285,7 @@ export default function UnionMemberDetailPage() {
   };
 
   const fetchMember = async () => {
-    if (!currentClinic || !id) return;
+    if (!resolvedClinic || !id) return;
 
     setLoading(true);
     try {
@@ -287,7 +293,7 @@ export default function UnionMemberDetailPage() {
         .from('patients')
         .select('*, insurance_plans(name)')
         .eq('id', id)
-        .eq('clinic_id', currentClinic.id)
+        .eq('clinic_id', resolvedClinic.id)
         .single();
 
       if (error) throw error;
@@ -305,7 +311,7 @@ export default function UnionMemberDetailPage() {
           let fallbackQuery = supabase
             .from('patients')
             .select('id, name, cpf, birth_date, phone, email, is_union_member')
-            .eq('clinic_id', currentClinic.id)
+            .eq('clinic_id', resolvedClinic.id)
             .eq('is_union_member', true)
             .neq('id', id);
 
@@ -413,12 +419,12 @@ export default function UnionMemberDetailPage() {
   };
 
   const fetchInsurancePlans = async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     try {
       const { data, error } = await supabase
         .from('insurance_plans')
         .select('id, name')
-        .eq('clinic_id', currentClinic.id)
+        .eq('clinic_id', resolvedClinic.id)
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
@@ -429,11 +435,11 @@ export default function UnionMemberDetailPage() {
   };
 
   const fetchCategories = async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     const query = supabase
       .from("sindical_categorias" as "anamnese_templates")
       .select("id, nome, valor_contribuicao")
-      .eq("sindicato_id" as "clinic_id", currentClinic.id)
+      .eq("sindicato_id" as "clinic_id", resolvedClinic.id)
       .eq("ativo" as "is_active", true)
       .order("nome" as "title");
     const { data } = await query;
@@ -467,7 +473,7 @@ export default function UnionMemberDetailPage() {
 
   // Auto-save function
   const performAutoSave = useCallback(async (dataToSave: PatientFormData) => {
-    if (!currentClinic || !id) return;
+    if (!resolvedClinic || !id) return;
 
     const updatePayload: Record<string, any> = {
       name: dataToSave.name.trim(),
@@ -533,7 +539,7 @@ export default function UnionMemberDetailPage() {
 
     setInitialData({ ...dataToSave, mobilePassword: '' });
     setFormData(prev => ({ ...prev, mobilePassword: '' }));
-  }, [currentClinic, id, isAdmin]);
+  }, [resolvedClinic, id, isAdmin]);
 
   const validateBeforeSave = useCallback((dataToValidate: PatientFormData): boolean => {
     const validation = patientSchema.safeParse({
@@ -553,7 +559,7 @@ export default function UnionMemberDetailPage() {
     initialData,
     onSave: performAutoSave,
     debounceMs: 3000,
-    enabled: !loading && !!id && !!currentClinic,
+    enabled: !loading && !!id && !!resolvedClinic,
     validateBeforeSave,
     // Cache/draft desabilitado para edições de cadastro - garante consistência entre usuários
   });
@@ -602,7 +608,7 @@ export default function UnionMemberDetailPage() {
       return;
     }
 
-    if (!currentClinic || !id) return;
+    if (!resolvedClinic || !id) return;
 
     setSaving(true);
     setErrors({});
@@ -696,7 +702,7 @@ export default function UnionMemberDetailPage() {
   };
 
   const handleSaveUnionData = async () => {
-    if (!id || !currentClinic || !user) return;
+    if (!id || !resolvedClinic || !user) return;
 
     setSavingUnion(true);
     try {
@@ -717,7 +723,7 @@ export default function UnionMemberDetailPage() {
 
       // Log the action
       await supabase.from("union_member_audit_logs").insert({
-        clinic_id: currentClinic.id,
+        clinic_id: resolvedClinic.id,
         patient_id: id,
         action: "data_update",
         new_values: newValues,
@@ -740,7 +746,7 @@ export default function UnionMemberDetailPage() {
   };
 
   const handleUnlinkMember = async () => {
-    if (!id || !currentClinic || !user) return;
+    if (!id || !resolvedClinic || !user) return;
 
     if (!confirm("Tem certeza que deseja desvincular este associado? O cadastro como paciente será mantido.")) {
       return;
@@ -764,7 +770,7 @@ export default function UnionMemberDetailPage() {
       if (error) throw error;
 
       await supabase.from("union_member_audit_logs").insert({
-        clinic_id: currentClinic.id,
+        clinic_id: resolvedClinic.id,
         patient_id: id,
         action: "unlink",
         old_values: { is_union_member: true, union_member_status: unionStatus },
@@ -787,7 +793,7 @@ export default function UnionMemberDetailPage() {
   };
 
   const handleToggleActive = async () => {
-    if (!id || !currentClinic) return;
+    if (!id || !resolvedClinic) return;
     setTogglingActive(true);
     try {
       const { error } = await supabase
@@ -940,11 +946,11 @@ export default function UnionMemberDetailPage() {
       )}
 
       {/* Aba Dependentes */}
-      {activeTab === 'dependentes' && id && currentClinic && (
+      {activeTab === 'dependentes' && id && resolvedClinic && (
         <div className="bg-card rounded-lg border p-6">
           <DependentsPanel
             patientId={id}
-            clinicId={currentClinic.id}
+            clinicId={resolvedClinic.id}
             patientPhone={formData.phone}
             autoOpenForm={showDependentsForm}
           />
@@ -1096,11 +1102,11 @@ export default function UnionMemberDetailPage() {
                           size="sm"
                           disabled={sendingSignatureRequest}
                           onClick={async () => {
-                            if (!currentClinic || !id) return;
+                            if (!resolvedClinic || !id) return;
                             setSendingSignatureRequest(true);
                             try {
                               const { data, error } = await supabase.functions.invoke("send-signature-request", {
-                                body: { associadoId: id, clinicId: currentClinic.id },
+                                body: { associadoId: id, clinicId: resolvedClinic.id },
                               });
                               if (error) throw error;
                               if (data?.error) throw new Error(data.error);
@@ -1148,7 +1154,7 @@ export default function UnionMemberDetailPage() {
                 phone: formData.phone,
                 cpf: formData.cpf,
               }}
-              clinicId={currentClinic?.id || ''}
+              clinicId={resolvedClinic?.id || ''}
             />
           </div>
         </div>

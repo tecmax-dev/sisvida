@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,7 @@ import { ptBR } from "date-fns/locale";
 import { UnionCreateMemberDialog } from "@/components/union/members/UnionCreateMemberDialog";
 import { UnionShareFiliacaoDialog } from "@/components/union/members/UnionShareFiliacaoDialog";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface Associado {
   id: string;
   sindicato_id: string;
@@ -92,7 +93,12 @@ const formatPhone = (phone: string) => {
 export default function UnionAssociadosPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentClinic, user } = useAuth();
+  const { currentClinic, user, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageMembers } = useUnionPermissions();
   const { entity: unionEntity, loading: entityLoading } = useUnionEntity();
   const queryClient = useQueryClient();
@@ -106,7 +112,7 @@ export default function UnionAssociadosPage() {
   const [createMemberOpen, setCreateMemberOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
   const sindicatoId = unionEntity?.id;
 
   // Buscar associados da entidade sindical

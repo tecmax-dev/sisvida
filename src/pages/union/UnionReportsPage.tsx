@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllEmployers } from "@/lib/supabase-helpers";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import UnionContributionsReportsTab from "@/components/contributions/UnionContributionsReportsTab";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface Employer {
   id: string;
   name: string;
@@ -30,24 +31,29 @@ interface ContributionType {
 }
 
 export default function UnionReportsPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentClinic?.id) {
+    if (resolvedClinic?.id) {
       fetchData();
     }
-  }, [currentClinic?.id]);
+  }, [resolvedClinic?.id]);
 
   const fetchData = async () => {
-    if (!currentClinic?.id) return;
+    if (!resolvedClinic?.id) return;
     setLoading(true);
 
     try {
       // Fetch employers - using pagination to avoid 1000 limit
-      const employersResult = await fetchAllEmployers<Employer>(currentClinic.id, {
+      const employersResult = await fetchAllEmployers<Employer>(resolvedClinic.id, {
         select: "id, name, cnpj, email, phone, address, city, state, category_id, registration_number, trade_name"
       });
       if (employersResult.error) throw employersResult.error;
@@ -57,7 +63,7 @@ export default function UnionReportsPage() {
       const { data: typesData, error: typesError } = await supabase
         .from("contribution_types")
         .select("*")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .order("name");
 
       if (typesError) throw typesError;
@@ -69,7 +75,7 @@ export default function UnionReportsPage() {
     }
   };
 
-  if (!currentClinic) {
+  if (!resolvedClinic) {
     return (
       <div className="space-y-6">
         <div>
@@ -112,11 +118,11 @@ export default function UnionReportsPage() {
       </div>
 
       <UnionContributionsReportsTab
-        clinicId={currentClinic.id}
+        clinicId={resolvedClinic.id}
         employers={employers}
         contributionTypes={contributionTypes}
-        clinicName={currentClinic?.name}
-        clinicLogo={currentClinic?.logo_url || undefined}
+        clinicName={resolvedClinic?.name}
+        clinicLogo={resolvedClinic?.logo_url || undefined}
       />
     </div>
   );

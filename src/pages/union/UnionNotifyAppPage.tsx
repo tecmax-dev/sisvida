@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   Send, 
   Smartphone, 
   MessageCircle, 
@@ -108,7 +109,12 @@ const installSteps = {
 
 export default function UnionNotifyAppPage() {
   const { toast } = useToast();
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState(generateAppUpdateMessage());
   const [sending, setSending] = useState(false);
@@ -141,7 +147,7 @@ export default function UnionNotifyAppPage() {
   };
 
   const handleSend = async () => {
-    if (!currentClinic?.id) {
+    if (!resolvedClinic?.id) {
       toast({ title: "Erro", description: "Clínica não encontrada.", variant: "destructive" });
       return;
     }
@@ -163,7 +169,7 @@ export default function UnionNotifyAppPage() {
       const result = await sendWhatsAppMessage({
         phone: normalizedPhone,
         message,
-        clinicId: currentClinic.id,
+        clinicId: resolvedClinic.id,
         type: "custom",
       });
 

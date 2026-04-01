@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLegalExpenses } from "@/hooks/useUnionLegal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,13 +26,19 @@ import { expenseTypeLabels } from "@/types/unionLegal";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionLegalExpensesPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [paidFilter, setPaidFilter] = useState<string>("all");
 
-  const { expenses, isLoading } = useUnionLegalExpenses(currentClinic?.id);
+  const { expenses, isLoading } = useUnionLegalExpenses(resolvedClinic?.id);
 
   const filteredExpenses = (expenses || []).filter((e) => {
     const matchesSearch =

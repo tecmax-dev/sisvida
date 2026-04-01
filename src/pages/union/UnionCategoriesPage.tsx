@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   Plus,
   Trash2,
   TrendingUp,
@@ -31,7 +32,12 @@ const PRESET_COLORS = [
 ];
 
 export default function UnionCategoriesPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageCategories } = useUnionPermissions();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"income" | "expense">("expense");
@@ -39,7 +45,7 @@ export default function UnionCategoriesPage() {
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [isMigrating, setIsMigrating] = useState(false);
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   // Use the unified hook for data with fallback
   const { 

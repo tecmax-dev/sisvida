@@ -38,6 +38,7 @@ import autoTable from "jspdf-autotable";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface AppointmentRow {
   id: string;
   appointment_date: string;
@@ -88,8 +89,13 @@ const TYPE_LABELS: Record<string, string> = {
 const ITEMS_PER_PAGE = 25;
 
 export default function UnionAppointmentReportsPage() {
-  const { currentClinic, session } = useAuth();
+  const { currentClinic, session, userRoles} = useAuth();
 
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   // Filters
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -112,17 +118,17 @@ export default function UnionAppointmentReportsPage() {
 
   // Fetch professionals
   useEffect(() => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     supabase
       .from("professionals")
       .select("id, name, specialty")
-      .eq("clinic_id", currentClinic.id)
+      .eq("clinic_id", resolvedClinic.id)
       .eq("is_active", true)
       .order("name")
       .then(({ data }) => {
         if (data) setProfessionals(data);
       });
-  }, [currentClinic]);
+  }, [resolvedClinic]);
 
   const toggleStatus = (value: string) => {
     setSelectedStatuses((prev) =>
@@ -139,7 +145,7 @@ export default function UnionAppointmentReportsPage() {
   };
 
   const fetchReport = useCallback(async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     if (!startDate || !endDate) {
       toast.error("Informe o período (data inicial e final).");
       return;
@@ -166,7 +172,7 @@ export default function UnionAppointmentReportsPage() {
           professional:professionals!appointments_professional_id_fkey(name, specialty),
           procedure:procedures!appointments_procedure_id_fkey(name, price)
         `)
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .gte("appointment_date", startDate)
         .lte("appointment_date", endDate)
         .order("appointment_date", { ascending: true })
@@ -219,7 +225,7 @@ export default function UnionAppointmentReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch]);
+  }, [resolvedClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(appointments.length / ITEMS_PER_PAGE));
@@ -241,7 +247,7 @@ export default function UnionAppointmentReportsPage() {
 
   // PDF Export
   const exportPDF = useCallback(() => {
-    if (!currentClinic || appointments.length === 0) return;
+    if (!resolvedClinic || appointments.length === 0) return;
 
     const doc = new jsPDF({ orientation: "landscape" });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -254,7 +260,7 @@ export default function UnionAppointmentReportsPage() {
 
     doc.setFontSize(11);
     doc.setTextColor(60);
-    doc.text(currentClinic.name, pageWidth / 2, 23, { align: "center" });
+    doc.text(resolvedClinic.name, pageWidth / 2, 23, { align: "center" });
 
     const startF = format(parseISO(startDate), "dd/MM/yyyy");
     const endF = format(parseISO(endDate), "dd/MM/yyyy");
@@ -360,7 +366,7 @@ export default function UnionAppointmentReportsPage() {
 
     doc.save(`relatorio-agendamentos-${startDate}-a-${endDate}.pdf`);
     toast.success("PDF gerado com sucesso!");
-  }, [appointments, currentClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch, professionals, summary, session]);
+  }, [appointments, resolvedClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch, professionals, summary, session]);
 
   return (
     <div className="space-y-6">

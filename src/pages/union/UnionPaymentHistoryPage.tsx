@@ -56,6 +56,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface PaymentHistoryItem {
   id: string;
   entity_id: string;
@@ -112,7 +113,12 @@ const parseCurrency = (value: string): number => {
 };
 
 export default function UnionPaymentHistoryPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { entity, loading: entityLoading } = useUnionEntity();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -246,7 +252,7 @@ export default function UnionPaymentHistoryPage() {
     const file = e.target.files?.[0];
     if (!file || !entityId) return;
 
-    const clinicId = currentClinic?.id;
+    const clinicId = resolvedClinic?.id;
 
     setImporting(true);
     setImportProgress(0);

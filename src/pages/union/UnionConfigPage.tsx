@@ -13,25 +13,31 @@ import { TitularBookingLimitSettings } from "@/components/union/settings/Titular
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionConfigPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { entity, loading: entityLoading } = useUnionEntity();
   const { isAdmin } = usePermissions();
 
   // Fetch clinic booking settings
   const { data: clinicSettings, refetch: refetchSettings } = useQuery({
-    queryKey: ["clinic-booking-settings", currentClinic?.id],
+    queryKey: ["clinic-booking-settings", resolvedClinic?.id],
     queryFn: async () => {
-      if (!currentClinic?.id) return null;
+      if (!resolvedClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
         .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled")
-        .eq("id", currentClinic.id)
+        .eq("id", resolvedClinic.id)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!currentClinic?.id,
+    enabled: !!resolvedClinic?.id,
   });
 
   if (entityLoading) {
@@ -42,7 +48,7 @@ export default function UnionConfigPage() {
     );
   }
 
-  if (!entity && !currentClinic) {
+  if (!entity && !resolvedClinic) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <p className="text-muted-foreground">Nenhuma entidade sindical encontrada</p>
@@ -85,28 +91,28 @@ export default function UnionConfigPage() {
         </TabsList>
 
         <TabsContent value="booking">
-          {currentClinic?.id ? (
+          {resolvedClinic?.id ? (
             <div className="space-y-6">
               <BookingMonthsSettings
-                clinicId={currentClinic.id}
+                clinicId={resolvedClinic.id}
                 currentValue={clinicSettings?.booking_months_ahead ?? 1}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
               <TitularBookingLimitSettings
-                clinicId={currentClinic.id}
+                clinicId={resolvedClinic.id}
                 currentEnabled={(clinicSettings as any)?.titular_booking_limit_enabled ?? true}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
               <AdvanceBookingHoursSettings
-                clinicId={currentClinic.id}
+                clinicId={resolvedClinic.id}
                 currentValue={(clinicSettings as any)?.min_advance_booking_hours ?? 6}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
               <DependentBookingLimitSettings
-                clinicId={currentClinic.id}
+                clinicId={resolvedClinic.id}
                 currentPeriod={(clinicSettings as any)?.dependent_booking_period ?? "monthly"}
                 currentLimit={(clinicSettings as any)?.dependent_booking_limit ?? 1}
                 currentEnabled={(clinicSettings as any)?.dependent_booking_limit_enabled ?? true}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -54,6 +54,7 @@ import { ptBR } from "date-fns/locale";
 import { FiliacaoDetailDialog } from "@/components/union/filiacoes/FiliacaoDetailDialog";
 import { FiliacaoApprovalDialog } from "@/components/union/filiacoes/FiliacaoApprovalDialog";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface Filiacao {
   id: string;
   nome: string;
@@ -79,7 +80,12 @@ const ITEMS_PER_PAGE = 15;
 
 export default function UnionFiliacoesPage() {
   const navigate = useNavigate();
-  const { currentClinic, user } = useAuth();
+  const { currentClinic, user, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageMembers } = useUnionPermissions();
   const { toast } = useToast();
   
@@ -120,12 +126,12 @@ export default function UnionFiliacoesPage() {
   // Fetch union entity
   useEffect(() => {
     const fetchUnionEntity = async () => {
-      if (!currentClinic) return;
+      if (!resolvedClinic) return;
       
       const { data } = await supabase
         .from("union_entities")
         .select("id")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", resolvedClinic.id)
         .eq("status", "ativa")
         .maybeSingle();
       
@@ -135,7 +141,7 @@ export default function UnionFiliacoesPage() {
     };
     
     fetchUnionEntity();
-  }, [currentClinic]);
+  }, [resolvedClinic]);
 
   const fetchFiliacoes = useCallback(async () => {
     if (!unionEntityId) return;

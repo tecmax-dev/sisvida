@@ -36,6 +36,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface Contribution {
   id: string;
   employer_id: string;
@@ -55,12 +56,17 @@ interface Contribution {
 }
 
 export default function UnionReconciliationPage() {
-  const { currentClinic, session } = useAuth();
+  const { currentClinic, session, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [divergenceFilter, setDivergenceFilter] = useState<string>("all");
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   // Fetch contributions with Lytex integration
   const { data: contributions, isLoading } = useQuery({

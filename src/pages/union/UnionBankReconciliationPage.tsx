@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +26,7 @@ import { UnionGenerateEntryDialog } from "@/components/union/financials/UnionGen
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   Upload,
   FileSpreadsheet,
   CheckCircle2,
@@ -37,8 +38,13 @@ import {
 } from "lucide-react";
 
 export default function UnionBankReconciliationPage() {
-  const { currentClinic, session } = useAuth();
-  const clinicId = currentClinic?.id;
+  const { currentClinic, session, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const clinicId = resolvedClinic?.id;
   const userId = session?.user?.id || "";
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
