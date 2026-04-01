@@ -604,6 +604,20 @@ export default function UsersManagementPage() {
         } : null}
         onSuccess={() => {}}
       />
+
+      <SendPasswordResetDialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          setResetDialogOpen(open);
+          if (!open) setResetUser(null);
+        }}
+        user={resetUser ? {
+          user_id: resetUser.user_id,
+          name: resetUser.profile?.name || 'Usuário',
+          email: resetUser.email || '',
+          phone: resetUser.profile?.phone || null,
+        } : null}
+      />
     </div>
   );
 }
