@@ -16,9 +16,11 @@ export default function MobilePasswordResetPage() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cameFromLink, setCameFromLink] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
