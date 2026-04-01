@@ -53,23 +53,10 @@ export default function AuthorizationValidationPage() {
       if (!hash) throw new Error("Hash inválido");
 
       const { data, error } = await supabase
-        .from("union_authorizations")
-        .select(`
-          *,
-          patient:patient_id (name, cpf, registration_number),
-          dependent:dependent_id (name),
-          benefit:benefit_id (name, partner_name),
-          clinic:clinic_id (name),
-          union_entity:union_entity_id (
-            razao_social,
-            nome_fantasia,
-            logo_url,
-            president_name,
-            president_signature_url
-          )
-        `)
-        .eq("validation_hash", hash)
-        .single();
+        .rpc("validate_authorization_full", { p_hash: hash });
+
+      if (error) throw error;
+      if (!data) throw new Error("Autorização não encontrada");
 
       if (error) throw error;
 

@@ -60,20 +60,10 @@ export default function PublicAnamnesis() {
   const fetchAnamnesisData = async () => {
     try {
       // Fetch the response by public token
-      const { data: response, error: responseError } = await supabase
-        .from('anamnese_responses')
-        .select(`
-          id,
-          template_id,
-          patient_id,
-          clinic_id,
-          filled_by_patient,
-          patient:patients (name),
-          template:anamnese_templates (title, description),
-          clinic:clinics (name)
-        `)
-        .eq('public_token', token)
-        .single();
+      const { data: rpcData, error: responseError } = await supabase
+        .rpc('get_anamnese_by_public_token', { p_token: token });
+
+      const response = rpcData as any;
 
       if (responseError || !response) {
         setError("Link inválido ou expirado.");

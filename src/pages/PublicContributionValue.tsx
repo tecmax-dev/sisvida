@@ -79,22 +79,10 @@ export default function PublicContributionValue() {
     try {
       const decodedToken = rawToken ? decodeURIComponent(rawToken).trim() : rawToken;
 
-      const { data: baseContribution, error: baseError } = await supabase
-        .from("employer_contributions")
-        .select(`
-          id,
-          status,
-          value,
-          due_date,
-          competence_month,
-          competence_year,
-          lytex_invoice_url,
-          employer_id,
-          contribution_type_id,
-          clinic_id
-        `)
-        .eq("public_access_token", decodedToken)
-        .maybeSingle();
+      const { data: rpcData, error: baseError } = await supabase
+        .rpc("get_contribution_by_public_token", { p_token: decodedToken });
+
+      const baseContribution = rpcData as any;
 
       if (baseError) {
         console.error("Error loading public contribution base record:", baseError);
