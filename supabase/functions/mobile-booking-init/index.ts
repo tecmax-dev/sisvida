@@ -114,7 +114,7 @@ serve(async (req) => {
       // Query 1: Config da clínica
       supabase
         .from("clinics")
-        .select("booking_months_ahead, dependent_booking_limit, dependent_booking_period, dependent_booking_limit_enabled, titular_booking_limit_enabled, max_appointments_per_cpf_month")
+        .select("booking_months_ahead, dependent_booking_limit, dependent_booking_period, dependent_booking_limit_enabled, titular_booking_limit_enabled, max_appointments_per_cpf_month, min_advance_booking_hours")
         .eq("id", clinicId)
         .single(),
 
@@ -164,6 +164,7 @@ serve(async (req) => {
     const dependentBookingLimitEnabled = clinicConfigResult.data?.dependent_booking_limit_enabled ?? true;
     const titularBookingLimitEnabled = clinicConfigResult.data?.titular_booking_limit_enabled ?? true;
     const maxAppointmentsPerCpfMonth = clinicConfigResult.data?.max_appointments_per_cpf_month ?? 1;
+    const minAdvanceBookingHours = clinicConfigResult.data?.min_advance_booking_hours ?? 6;
 
     // Mapear profissionais
     const professionals = (professionalsResult.data || []).map((prof: any) => ({
@@ -232,6 +233,7 @@ serve(async (req) => {
         dependentBookingLimitEnabled,
         titularBookingLimitEnabled,
         maxAppointmentsPerCpfMonth,
+        minAdvanceBookingHours,
         titularBirthDate: patientData?.birth_date ?? null,
         _debug: { elapsed_ms: elapsed }
       }),

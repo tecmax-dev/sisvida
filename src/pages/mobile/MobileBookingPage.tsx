@@ -141,6 +141,7 @@ export default function MobileBookingPage() {
   const [dependentBookingLimitEnabled, setDependentBookingLimitEnabled] = useState(true);
   const [titularBookingLimitEnabled, setTitularBookingLimitEnabled] = useState(true);
   const [maxAppointmentsPerCpfMonth, setMaxAppointmentsPerCpfMonth] = useState(1);
+  const [minAdvanceBookingHours, setMinAdvanceBookingHours] = useState(6);
   const [titularBirthDate, setTitularBirthDate] = useState<string | null>(null);
   
   const clinicIdRef = useRef<string | null>(null);
@@ -287,6 +288,7 @@ export default function MobileBookingPage() {
       if (data.dependentBookingLimitEnabled !== undefined) setDependentBookingLimitEnabled(data.dependentBookingLimitEnabled);
       if (data.titularBookingLimitEnabled !== undefined) setTitularBookingLimitEnabled(data.titularBookingLimitEnabled);
       if (data.maxAppointmentsPerCpfMonth !== undefined) setMaxAppointmentsPerCpfMonth(data.maxAppointmentsPerCpfMonth);
+      if (data.minAdvanceBookingHours !== undefined) setMinAdvanceBookingHours(data.minAdvanceBookingHours);
       
       // Setar data de nascimento do titular
       if (data.titularBirthDate) setTitularBirthDate(data.titularBirthDate);
@@ -395,11 +397,11 @@ export default function MobileBookingPage() {
           const mins = currentMinutes % 60;
           const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
           
-          // Check if slot respects minimum advance booking (6 hours)
+          // Check if slot respects minimum advance booking hours (configurable)
           const slotDateTime = new Date(selectedDate);
           slotDateTime.setHours(hours, mins, 0, 0);
-          const minAdvanceMs = 6 * 60 * 60 * 1000; // 6 hours
-          if (slotDateTime.getTime() - now.getTime() < minAdvanceMs) continue;
+          const minAdvanceMs = minAdvanceBookingHours * 60 * 60 * 1000;
+          if (minAdvanceMs > 0 && slotDateTime.getTime() - now.getTime() < minAdvanceMs) continue;
           
           // Check if slot conflicts with existing appointments
           const slotEndMinutes = currentMinutes + blockDuration;
