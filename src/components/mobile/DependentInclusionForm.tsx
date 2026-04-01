@@ -43,6 +43,28 @@ interface DependentInclusionFormProps {
   onSuccess?: () => void;
 }
 
+// Friendly error messages for PWA users
+function getFriendlyErrorMessage(rawMessage?: string): string {
+  if (!rawMessage) return "Ocorreu um erro inesperado. Tente novamente mais tarde.";
+  const msg = rawMessage.toLowerCase();
+  if (msg.includes("unique") && msg.includes("cpf")) {
+    return "Este CPF já está cadastrado como dependente. Verifique os dados e tente novamente.";
+  }
+  if (msg.includes("duplicate key")) {
+    return "Este dependente já foi cadastrado anteriormente.";
+  }
+  if (msg.includes("violates row-level security")) {
+    return "Você não tem permissão para realizar esta ação. Faça login novamente.";
+  }
+  if (msg.includes("network") || msg.includes("fetch")) {
+    return "Erro de conexão. Verifique sua internet e tente novamente.";
+  }
+  if (msg.includes("timeout")) {
+    return "A operação demorou muito. Tente novamente.";
+  }
+  return "Ocorreu um erro inesperado. Tente novamente mais tarde.";
+}
+
 // CPF formatting and validation
 const formatCPF = (value: string): string => {
   const digits = value.replace(/\D/g, "").slice(0, 11);
