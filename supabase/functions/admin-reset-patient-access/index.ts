@@ -210,7 +210,7 @@ serve(async (req) => {
       }
 
       // Build deep link to the PWA reset page with token pre-filled
-      const resetLink = `https://sisvida.lovable.app/app/recuperar-senha?token=${token}&email=${encodeURIComponent(patient.email || "")}`;
+      const resetLink = `https://app.secmi.org.br/app/recuperar-senha?token=${token}&email=${encodeURIComponent(patient.email || "")}`;
 
       const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
 
