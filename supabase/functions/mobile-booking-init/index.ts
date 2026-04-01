@@ -164,6 +164,7 @@ serve(async (req) => {
     const dependentBookingLimitEnabled = clinicConfigResult.data?.dependent_booking_limit_enabled ?? true;
     const titularBookingLimitEnabled = clinicConfigResult.data?.titular_booking_limit_enabled ?? true;
     const maxAppointmentsPerCpfMonth = clinicConfigResult.data?.max_appointments_per_cpf_month ?? 1;
+    const minAdvanceBookingHours = clinicConfigResult.data?.min_advance_booking_hours ?? 6;
 
     // Mapear profissionais
     const professionals = (professionalsResult.data || []).map((prof: any) => ({
