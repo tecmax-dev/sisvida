@@ -218,6 +218,10 @@ export default function UnionMembersListPage() {
   // Signature request dialog state
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
 
+  // Patient reset dialog state
+  const [patientResetDialogOpen, setPatientResetDialogOpen] = useState(false);
+  const [selectedMemberForReset, setSelectedMemberForReset] = useState<UnionMember | null>(null);
+
   // Delete dependent state
   const [deleteDependentDialogOpen, setDeleteDependentDialogOpen] = useState(false);
   const [dependentToDelete, setDependentToDelete] = useState<any>(null);
