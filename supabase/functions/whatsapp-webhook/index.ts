@@ -73,8 +73,13 @@ interface EvolutionWebhookPayload {
       extendedTextMessage?: {
         text?: string;
       };
-      // Interactive button response
+      // Interactive button response (plural - Evolution API native)
       buttonsResponseMessage?: {
+        selectedButtonId?: string;
+        selectedDisplayText?: string;
+      };
+      // Interactive button response (singular - Whazing/alternative format)
+      buttonResponseMessage?: {
         selectedButtonId?: string;
         selectedDisplayText?: string;
       };
@@ -251,9 +256,16 @@ function getBrazilPhoneVariants(phone55: string): string[] {
 function extractMessageText(data: EvolutionWebhookPayload['data']): string | null {
   if (!data) return null;
   
-  // Check for interactive button response first
+  // Check for interactive button response (plural - Evolution API native)
   if (data.message?.buttonsResponseMessage?.selectedButtonId) {
+    console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
     return data.message.buttonsResponseMessage.selectedButtonId;
+  }
+  
+  // Check for interactive button response (singular - Whazing/alternative format)
+  if (data.message?.buttonResponseMessage?.selectedButtonId) {
+    console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
+    return data.message.buttonResponseMessage.selectedButtonId;
   }
   
   // Check for list response
@@ -274,6 +286,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     return data.message.templateButtonReplyMessage.selectedId;
   }
   
+  // Fallback: check selectedDisplayText from any button response as last resort
+  const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText ||
+                      data.message?.buttonResponseMessage?.selectedDisplayText;
+  if (displayText) {
+    console.log('[extractMessageText] Fallback to selectedDisplayText:', displayText);
+    // Map display text to action keywords for confirmation flow
+    if (displayText.includes('Confirmar')) return 'SIM';
+    if (displayText.includes('Cancelar')) return 'NÃO';
+    return displayText;
+  }
+
   // Standard text message
   const text = data.message?.conversation || 
                data.message?.extendedTextMessage?.text ||
