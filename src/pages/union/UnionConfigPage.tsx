@@ -90,6 +90,10 @@ export default function UnionConfigPage() {
             <FileText className="h-4 w-4" />
             Documentos
           </TabsTrigger>
+          <TabsTrigger value="payslip" className="gap-2">
+            <FileCheck className="h-4 w-4" />
+            Contracheque
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="booking">
