@@ -407,7 +407,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           console.error("Error inserting dependents:", depError);
           toast({
             title: "Erro ao incluir dependentes",
-            description: depError.message || "Não foi possível salvar os dependentes. Verifique os dados.",
+            description: "Não foi possível salvar os dependentes. Verifique os dados e tente novamente.",
             variant: "destructive",
           });
         }
@@ -437,8 +437,8 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     } catch (error: any) {
       console.error("Erro ao enviar filiação:", error);
       toast({
-        title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar sua solicitação.",
+        title: "Não foi possível enviar sua solicitação",
+        description: "Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o sindicato.",
         variant: "destructive",
       });
     } finally {
