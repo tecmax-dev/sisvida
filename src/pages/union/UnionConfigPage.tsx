@@ -11,6 +11,7 @@ import { BookingMonthsSettings } from "@/components/union/settings/BookingMonths
 import { AdvanceBookingHoursSettings } from "@/components/union/settings/AdvanceBookingHoursSettings";
 import { DependentBookingLimitSettings } from "@/components/union/settings/DependentBookingLimitSettings";
 import { TitularBookingLimitSettings } from "@/components/union/settings/TitularBookingLimitSettings";
+import { PayslipAcceptanceSettings } from "@/components/union/settings/PayslipAcceptanceSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
