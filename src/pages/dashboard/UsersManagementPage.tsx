@@ -101,6 +101,8 @@ export default function UsersManagementPage() {
   const [welcomeUser, setWelcomeUser] = useState<ClinicUserWithStatus | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordUser, setPasswordUser] = useState<ClinicUserWithStatus | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetUser, setResetUser] = useState<ClinicUserWithStatus | null>(null);
 
   // Check if current user is admin of the clinic OR has manage_users permission
   const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
