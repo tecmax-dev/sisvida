@@ -130,6 +130,7 @@ export function CardExpiryWithPayslipDialog({
           file_name: fileToVerify.name,
           file_type: fileToVerify.type,
           member_name: memberName,
+          clinic_id: currentClinic?.id,
         },
       });
 

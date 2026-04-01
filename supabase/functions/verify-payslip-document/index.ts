@@ -1,9 +1,71 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+async function getPayslipAcceptanceDays(clinicId?: string): Promise<number> {
+  if (!clinicId) return 60; // default
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data } = await supabase
+      .from("clinics")
+      .select("payslip_acceptance_days")
+      .eq("id", clinicId)
+      .single();
+    if (data?.payslip_acceptance_days !== null && data?.payslip_acceptance_days !== undefined) {
+      return data.payslip_acceptance_days;
+    }
+  } catch (e) {
+    console.error("[verify-payslip] Error fetching acceptance days:", e);
+  }
+  return 60;
+}
+
+function buildCompetencePrompt(acceptanceDays: number, currentMonth: number, currentYear: number): string {
+  if (acceptanceDays === 0) {
+    return `Identifique o mês/ano de competência (período de referência) do contracheque.
+Extraia o mês e ano de competência do documento e retorne nos campos "competence_month" (1-12) e "competence_year" (YYYY).
+Não há restrição de prazo para a competência do contracheque.`;
+  }
+  const monthsBack = Math.ceil(acceptanceDays / 30);
+  return `Identifique o mês/ano de competência (período de referência) do contracheque. O contracheque deve ser recente (não mais de ${acceptanceDays} dias retroativo). 
+Extraia o mês e ano de competência do documento e retorne nos campos "competence_month" (1-12) e "competence_year" (YYYY).
+Se a competência for muito antiga (mais de ${monthsBack} meses atrás), retorne is_payslip como false e explique que o contracheque está fora do prazo.`;
+}
+
+function validateCompetence(
+  compMonth: number,
+  compYear: number,
+  acceptanceDays: number,
+  currentMonth: number,
+  currentYear: number
+): { valid: boolean; reason?: string } {
+  if (acceptanceDays === 0) return { valid: true };
+
+  const monthsBack = Math.ceil(acceptanceDays / 30);
+  let minMonth = currentMonth - monthsBack;
+  let minYear = currentYear;
+  while (minMonth < 1) {
+    minMonth += 12;
+    minYear -= 1;
+  }
+
+  const compDate = compYear * 12 + compMonth;
+  const minDate = minYear * 12 + minMonth;
+
+  if (compDate < minDate) {
+    return {
+      valid: false,
+      reason: `Contracheque com competência ${String(compMonth).padStart(2, '0')}/${compYear} está fora do prazo. Aceitamos apenas contracheques a partir de ${String(minMonth).padStart(2, '0')}/${minYear}.`,
+    };
+  }
+  return { valid: true };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,7 +73,7 @@ serve(async (req) => {
   }
 
   try {
-    const { file_base64, file_name, file_type, member_name } = await req.json();
+    const { file_base64, file_name, file_type, member_name, clinic_id } = await req.json();
 
     if (!file_base64) {
       return new Response(
@@ -21,7 +83,6 @@ serve(async (req) => {
     }
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-
     if (!OPENAI_API_KEY) {
       console.error("[verify-payslip] OPENAI_API_KEY not configured");
       return new Response(
@@ -30,11 +91,15 @@ serve(async (req) => {
       );
     }
 
-    const isPdf = file_type === "application/pdf";
+    const acceptanceDays = await getPayslipAcceptanceDays(clinic_id);
+    console.log("[verify-payslip] Acceptance days:", acceptanceDays);
 
+    const isPdf = file_type === "application/pdf";
     const now = new Date();
-    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
+
+    const competencePrompt = buildCompetencePrompt(acceptanceDays, currentMonth, currentYear);
 
     const prompt = `Analise este documento e determine se é um CONTRACHEQUE (holerite/demonstrativo de pagamento de salário).
 
@@ -51,10 +116,7 @@ ${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/
 
 IMPORTANTE - VALIDAÇÃO DA COMPETÊNCIA/MÊS DE REFERÊNCIA:
 A data atual é: ${String(currentMonth).padStart(2, '0')}/${currentYear}
-Identifique o mês/ano de competência (período de referência) do contracheque. O contracheque deve ser recente (não mais de 60 dias retroativo). 
-Por exemplo, se estamos em abril/2026, aceitamos contracheques de fevereiro/2026, março/2026 e abril/2026, mas NÃO de janeiro/2026 ou anteriores.
-Extraia o mês e ano de competência do documento e retorne nos campos "competence_month" (1-12) e "competence_year" (YYYY).
-Se a competência for muito antiga (mais de 60 dias), retorne is_payslip como false e explique que o contracheque está fora do prazo.
+${competencePrompt}
 
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
 1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical", "MENSALIDADE SINDICAL")
@@ -73,26 +135,16 @@ Se o nome no documento não corresponde ao nome do associado, retorne is_payslip
 Se a competência do contracheque for anterior ao mês permitido, retorne is_payslip como false.
 Nome do arquivo: ${file_name}`;
 
-    // Send the file as visual content - GPT-4o supports both images and PDFs via base64 data URL
     const imageContent = {
       type: "image_url" as const,
-      image_url: { 
-        url: file_base64,
-        detail: "high" as const
-      }
+      image_url: { url: file_base64, detail: "high" as const },
     };
 
     const messages: any[] = [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: prompt },
-          imageContent,
-        ],
-      },
+      { role: "user", content: [{ type: "text", text: prompt }, imageContent] },
     ];
 
-    console.log("[verify-payslip] Sending to OpenAI for analysis...", { isPdf, file_name });
+    console.log("[verify-payslip] Sending to OpenAI for analysis...", { isPdf, file_name, acceptanceDays });
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -100,12 +152,7 @@ Nome do arquivo: ${file_name}`;
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages,
-        max_tokens: 500,
-        temperature: 0.1,
-      }),
+      body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 500, temperature: 0.1 }),
     });
 
     if (!response.ok) {
@@ -119,7 +166,6 @@ Nome do arquivo: ${file_name}`;
 
     const aiResult = await response.json();
     const content = aiResult.choices?.[0]?.message?.content || "";
-
     console.log("[verify-payslip] AI response:", content);
 
     let isPayslip = false;
@@ -151,32 +197,23 @@ Nome do arquivo: ${file_name}`;
           reason = "Documento não reconhecido como contracheque com confiança suficiente.";
         }
 
-        // Validate name match when member_name was provided
         if (isPayslip && member_name && !nameMatch) {
           isPayslip = false;
           reason = `O nome no contracheque (${nameFoundInDocument || "não identificado"}) não corresponde ao nome do associado (${member_name}).`;
         }
 
-        // Validate competence month - reject payslips older than 60 days
+        // Validate competence using configurable acceptance days
         if (isPayslip && parsed.competence_month && parsed.competence_year) {
-          const compMonth = parseInt(parsed.competence_month);
-          const compYear = parseInt(parsed.competence_year);
-          
-          // Calculate the earliest acceptable month (current month - 2)
-          let minMonth = currentMonth - 2;
-          let minYear = currentYear;
-          if (minMonth < 1) {
-            minMonth = minMonth + 12;
-            minYear = currentYear - 1;
-          }
-          
-          // Compare: competence must be >= minMonth/minYear
-          const compDate = compYear * 12 + compMonth;
-          const minDate = minYear * 12 + minMonth;
-          
-          if (compDate < minDate) {
+          const result = validateCompetence(
+            parseInt(parsed.competence_month),
+            parseInt(parsed.competence_year),
+            acceptanceDays,
+            currentMonth,
+            currentYear
+          );
+          if (!result.valid) {
             isPayslip = false;
-            reason = `Contracheque com competência ${String(compMonth).padStart(2, '0')}/${compYear} está fora do prazo. Aceitamos apenas contracheques a partir de ${String(minMonth).padStart(2, '0')}/${minYear}.`;
+            reason = result.reason!;
           }
         }
       }
