@@ -161,7 +161,8 @@ export default function MobilePasswordResetPage() {
       const { data, error } = await supabase.rpc("reset_patient_password_with_token", {
         p_email: email,
         p_token: code,
-        p_new_password: newPassword
+        p_new_password: newPassword,
+        p_birth_year: birthYear ? parseInt(birthYear, 10) : null,
       });
 
       if (error) throw error;
