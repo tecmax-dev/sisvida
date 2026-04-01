@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { usePermissions } from "@/hooks/usePermissions";

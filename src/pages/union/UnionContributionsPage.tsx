@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Receipt, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
