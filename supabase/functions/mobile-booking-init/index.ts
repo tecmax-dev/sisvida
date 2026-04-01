@@ -233,6 +233,7 @@ serve(async (req) => {
         dependentBookingLimitEnabled,
         titularBookingLimitEnabled,
         maxAppointmentsPerCpfMonth,
+        minAdvanceBookingHours,
         titularBirthDate: patientData?.birth_date ?? null,
         _debug: { elapsed_ms: elapsed }
       }),
