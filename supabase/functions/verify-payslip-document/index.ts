@@ -157,16 +157,16 @@ Nome do arquivo: ${file_name}`;
           reason = `O nome no contracheque (${nameFoundInDocument || "não identificado"}) não corresponde ao nome do associado (${member_name}).`;
         }
 
-        // Validate competence month - reject payslips older than 30 days
+        // Validate competence month - reject payslips older than 60 days
         if (isPayslip && parsed.competence_month && parsed.competence_year) {
           const compMonth = parseInt(parsed.competence_month);
           const compYear = parseInt(parsed.competence_year);
           
-          // Calculate the earliest acceptable month (current month - 1)
-          let minMonth = currentMonth - 1;
+          // Calculate the earliest acceptable month (current month - 2)
+          let minMonth = currentMonth - 2;
           let minYear = currentYear;
           if (minMonth < 1) {
-            minMonth = 12;
+            minMonth = minMonth + 12;
             minYear = currentYear - 1;
           }
           
