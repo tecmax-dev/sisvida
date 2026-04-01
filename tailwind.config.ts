@@ -166,6 +166,15 @@ export default {
           "10%, 30%, 50%, 70%, 90%": { transform: "rotate(-3deg)" },
           "20%, 40%, 60%, 80%": { transform: "rotate(3deg)" },
         },
+        "fade-slide-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateY(0px)" },
+        },
+        "slide-right-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateX(0px)" },
+        },
+        "testimonial-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateY(0px) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
