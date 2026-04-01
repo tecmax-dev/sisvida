@@ -207,6 +207,11 @@ export default function UsersManagementPage() {
     setPasswordDialogOpen(true);
   };
 
+  const handleSendReset = (clinicUser: ClinicUserWithStatus) => {
+    setResetUser(clinicUser);
+    setResetDialogOpen(true);
+  };
+
   const filteredUsers = users.filter(u => 
     u.profile?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.profile?.phone?.includes(searchTerm) ||
