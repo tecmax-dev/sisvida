@@ -1,167 +1,32 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle, ShieldCheck, MessageSquare } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, ShieldCheck } from "lucide-react";
 
-type Step = "email" | "channel" | "code" | "verify_identity" | "password" | "success";
+type Step = "email" | "verify_identity" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
-  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [cameFromLink, setCameFromLink] = useState(false);
-  const [patientPhone, setPatientPhone] = useState<string | null>(null);
-  const [patientHasEmail, setPatientHasEmail] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Auto-fill from URL params (deep link from WhatsApp)
-  useEffect(() => {
-    const tokenParam = searchParams.get("token");
-    const emailParam = searchParams.get("email");
-
-    if (tokenParam) {
-      setCode(tokenParam);
-      if (emailParam) setEmail(emailParam);
-      setCameFromLink(true);
-      setStep("verify_identity");
-    }
-  }, [searchParams]);
-
-  const handleCheckEmail = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !email.includes("@")) {
       toast({
         title: "Email inválido",
         description: "Por favor, insira um email válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Check if patient exists and get contact info
-      const { data, error } = await supabase.functions.invoke("send-password-reset-email", {
-        body: { email, checkOnly: true },
-      });
-
-      if (error) throw error;
-
-      if (data?.hasPhone || data?.hasEmail) {
-        setPatientPhone(data.maskedPhone || null);
-        setPatientHasEmail(!!data.hasEmail);
-
-        // If only one channel available, go straight to sending
-        if (data.hasPhone && !data.hasEmail) {
-          await sendResetCode("whatsapp");
-        } else if (!data.hasPhone && data.hasEmail) {
-          await sendResetCode("email");
-        } else {
-          setStep("channel");
-        }
-      } else {
-        // Generic success message to not reveal if account exists
-        toast({
-          title: "Código enviado!",
-          description: "Se o email estiver cadastrado, você receberá o código de recuperação.",
-        });
-        setStep("code");
-      }
-    } catch (err: any) {
-      console.error("Error checking email:", err);
-      // Always show generic message for security
-      toast({
-        title: "Código enviado!",
-        description: "Se o email estiver cadastrado, você receberá o código de recuperação.",
-      });
-      setStep("code");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendResetCode = async (channel: "email" | "whatsapp") => {
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("send-password-reset-email", {
-        body: { email, channel },
-      });
-
-      if (error) throw error;
-
-      if (channel === "whatsapp") {
-        toast({
-          title: "📱 Link enviado pelo WhatsApp!",
-          description: "Enviamos um link de recuperação para o seu WhatsApp. Abra a conversa e clique no link para redefinir sua senha.",
-          duration: 8000,
-        });
-      } else {
-        toast({
-          title: "📧 Código enviado por e-mail!",
-          description: "Verifique sua caixa de entrada (e o spam) para obter o código de recuperação.",
-          duration: 6000,
-        });
-      }
-
-      setStep("code");
-    } catch (err: any) {
-      console.error("Error sending reset code:", err);
-
-      let errorMessage = "Não foi possível enviar o código. Tente novamente.";
-      try {
-        const maybeContext = err?.context;
-        if (maybeContext?.json) {
-          const body = await maybeContext.json();
-          if (body?.error && typeof body.error === "string") {
-            errorMessage = body.error;
-          }
-        } else if (typeof err?.message === "string" && err.message.trim()) {
-          errorMessage = err.message;
-        }
-      } catch {
-        // ignore parsing errors
-      }
-
-      if (
-        errorMessage.toLowerCase().includes("email não encontrado") ||
-        errorMessage.toLowerCase().includes("sem senha")
-      ) {
-        errorMessage =
-          "Não encontramos uma conta com esse e-mail (ou ela ainda não tem senha). Use a opção 'Primeiro acesso'.";
-      }
-
-      toast({
-        title: "Erro",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (code.length !== 6) {
-      toast({
-        title: "Código incompleto",
-        description: "Digite o código de 6 dígitos.",
         variant: "destructive",
       });
       return;
@@ -209,16 +74,11 @@ export default function MobilePasswordResetPage() {
     setLoading(true);
 
     try {
-      const rpcParams: Record<string, unknown> = {
+      const { data, error } = await supabase.rpc("reset_patient_password_by_birth_year", {
         p_email: email,
-        p_token: code,
+        p_birth_year: parseInt(birthYear, 10),
         p_new_password: newPassword,
-      };
-      if (birthYear) {
-        rpcParams.p_birth_year = parseInt(birthYear, 10);
-      }
-
-      const { data, error } = await supabase.rpc("reset_patient_password_with_token", rpcParams as any);
+      } as any);
 
       if (error) {
         console.error("RPC error:", error);
@@ -230,12 +90,12 @@ export default function MobilePasswordResetPage() {
         return;
       }
 
-      const result = Array.isArray(data) ? data[0] : data;
+      const result = typeof data === "object" ? data : null;
 
       if (!result?.success) {
         toast({
           title: "Erro",
-          description: result?.message || "Não foi possível redefinir a senha.",
+          description: (result as any)?.message || "Não foi possível redefinir a senha.",
           variant: "destructive",
         });
         return;
@@ -258,7 +118,7 @@ export default function MobilePasswordResetPage() {
     switch (step) {
       case "email":
         return (
-          <form onSubmit={handleCheckEmail} className="space-y-6">
+          <form onSubmit={handleEmailSubmit} className="space-y-6">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
                 <Mail className="h-8 w-8 text-emerald-600" />
@@ -268,7 +128,7 @@ export default function MobilePasswordResetPage() {
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Recuperar Senha</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Digite seu email cadastrado para receber o código de recuperação.
+                Digite seu email cadastrado para iniciar a recuperação de senha.
               </p>
             </div>
 
@@ -288,129 +148,10 @@ export default function MobilePasswordResetPage() {
             <Button
               type="submit"
               className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={loading}
+              disabled={loading || !email}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verificando...
-                </>
-              ) : (
-                "Continuar"
-              )}
+              Continuar
             </Button>
-          </form>
-        );
-
-      case "channel":
-        return (
-          <div className="space-y-6">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                <KeyRound className="h-8 w-8 text-emerald-600" />
-              </div>
-            </div>
-
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-foreground">Como deseja receber?</h2>
-              <p className="text-sm text-muted-foreground mt-2">
-                Escolha como deseja receber o código de recuperação.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {patientHasEmail && (
-                <Button
-                  variant="outline"
-                  className="w-full h-16 flex items-center gap-4 border-2 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
-                  onClick={() => sendResetCode("email")}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-                  ) : (
-                    <Mail className="h-6 w-6 text-emerald-600" />
-                  )}
-                  <div className="text-left">
-                    <span className="text-sm font-medium block">Enviar por E-mail</span>
-                    <span className="text-xs text-muted-foreground">{email}</span>
-                  </div>
-                </Button>
-              )}
-
-              {patientPhone && (
-                <Button
-                  variant="outline"
-                  className="w-full h-16 flex items-center gap-4 border-2 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
-                  onClick={() => sendResetCode("whatsapp")}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-                  ) : (
-                    <MessageSquare className="h-6 w-6 text-emerald-600" />
-                  )}
-                  <div className="text-left">
-                    <span className="text-sm font-medium block">Enviar por WhatsApp</span>
-                    <span className="text-xs text-muted-foreground">{patientPhone}</span>
-                  </div>
-                </Button>
-              )}
-            </div>
-          </div>
-        );
-
-      case "code":
-        return (
-          <form onSubmit={handleVerifyCode} className="space-y-6">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                <KeyRound className="h-8 w-8 text-emerald-600" />
-              </div>
-            </div>
-
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-foreground">Digite o Código</h2>
-              <p className="text-sm text-muted-foreground mt-2">
-                Enviamos um código de 6 dígitos para <strong>{email}</strong>
-              </p>
-            </div>
-
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={code}
-                onChange={(value) => setCode(value)}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={code.length !== 6}
-            >
-              Verificar Código
-            </Button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                className="text-sm text-emerald-600 hover:underline"
-                onClick={() => setStep("channel")}
-                disabled={loading}
-              >
-                Reenviar código
-              </button>
-            </div>
           </form>
         );
 
@@ -454,7 +195,7 @@ export default function MobilePasswordResetPage() {
             </Button>
 
             <p className="text-xs text-muted-foreground text-center">
-              🔒 Este link é pessoal e intransferível. Não compartilhe.
+              🔒 Seus dados são protegidos e não serão compartilhados.
             </p>
           </form>
         );
@@ -557,16 +298,8 @@ export default function MobilePasswordResetPage() {
               onClick={() => {
                 if (step === "email") {
                   navigate("/app");
-                } else if (step === "channel") {
-                  setStep("email");
-                } else if (step === "code") {
-                  setStep("channel");
                 } else if (step === "verify_identity") {
-                  if (cameFromLink) {
-                    navigate("/app");
-                  } else {
-                    setStep("code");
-                  }
+                  setStep("email");
                 } else if (step === "password") {
                   setStep("verify_identity");
                 }
