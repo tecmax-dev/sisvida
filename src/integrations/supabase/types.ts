@@ -16187,6 +16187,7 @@ export type Database = {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
       }
+      is_current_patient: { Args: { p_patient_id: string }; Returns: boolean }
       is_holiday: {
         Args: { p_clinic_id: string; p_date: string }
         Returns: {
