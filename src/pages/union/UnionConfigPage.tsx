@@ -185,6 +185,25 @@ export default function UnionConfigPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="payslip">
+          {resolvedClinic?.id ? (
+            <PayslipAcceptanceSettings
+              clinicId={resolvedClinic.id}
+              currentValue={(clinicSettings as any)?.payslip_acceptance_days ?? 60}
+              onUpdate={() => refetchSettings()}
+              isAdmin={isAdmin}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Configure uma entidade sindical para gerenciar esta configuração.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
