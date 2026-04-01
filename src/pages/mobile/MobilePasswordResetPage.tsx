@@ -32,8 +32,9 @@ export default function MobilePasswordResetPage() {
     if (tokenParam) {
       setCode(tokenParam);
       if (emailParam) setEmail(emailParam);
-      // Skip directly to password step since token is pre-filled
-      setStep("password");
+      setCameFromLink(true);
+      // Go to identity verification step instead of directly to password
+      setStep("verify_identity");
     }
   }, [searchParams]);
 
