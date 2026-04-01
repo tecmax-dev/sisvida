@@ -190,7 +190,7 @@ export default function MobileBookingPage() {
     if (selectedProfessionalId && selectedDate) {
       loadAvailableSlots();
     }
-  }, [selectedProfessionalId, selectedDate]);
+  }, [selectedProfessionalId, selectedDate, minAdvanceBookingHours]);
 
   /**
    * LÓGICA VIA EDGE FUNCTION (ZERO AUTH CLIENT-SIDE):
