@@ -90,12 +90,12 @@ export default function MobilePasswordResetPage() {
         return;
       }
 
-      const result = typeof data === "object" ? data : null;
+      const result = data as Record<string, unknown> | null;
 
       if (!result?.success) {
         toast({
           title: "Erro",
-          description: (result as any)?.message || "Não foi possível redefinir a senha.",
+          description: (result?.message as string) || "Não foi possível redefinir a senha.",
           variant: "destructive",
         });
         return;
