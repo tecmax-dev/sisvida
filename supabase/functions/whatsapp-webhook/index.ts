@@ -6316,6 +6316,30 @@ async function handleConfirmationFlow(
   messageText: string,
   phoneCandidates: string[]
 ): Promise<{ handled: boolean; clinicId?: string }> {
+  const trimmedText = messageText.trim();
+
+  // Determine action and extract appointment ID from button if available
+  let action: 'confirmed' | 'cancelled' | 'ignored' = 'ignored';
+  let buttonAppointmentId: string | null = null;
+
+  if (trimmedText.startsWith('confirm_apt_')) {
+    action = 'confirmed';
+    buttonAppointmentId = trimmedText.replace('confirm_apt_', '');
+  } else if (trimmedText.startsWith('cancel_apt_')) {
+    action = 'cancelled';
+    buttonAppointmentId = trimmedText.replace('cancel_apt_', '');
+  } else if (POSITIVE_REGEX.test(trimmedText)) {
+    action = 'confirmed';
+  } else if (NEGATIVE_REGEX.test(trimmedText)) {
+    action = 'cancelled';
+  }
+
+  // If we can't determine any action, bail early
+  if (action === 'ignored') {
+    return { handled: false };
+  }
+
+  // Try to find pending confirmation by phone
   const { data: pendingConfirmations, error: pendingError } = await supabase
     .from('pending_confirmations')
     .select(`id, appointment_id, clinic_id, expires_at`)
@@ -6327,7 +6351,6 @@ async function handleConfirmationFlow(
 
   if (pendingError) {
     console.error('[webhook] Error fetching pending confirmations:', pendingError);
-    return { handled: false };
   }
 
   const pendingData = pendingConfirmations as Array<{
@@ -6337,42 +6360,70 @@ async function handleConfirmationFlow(
     expires_at: string;
   }> | null;
 
-  if (!pendingData || pendingData.length === 0) {
+  let appointmentId: string | null = null;
+  let pendingId: string | null = null;
+  let clinicId: string | null = null;
+
+  if (pendingData && pendingData.length > 0) {
+    // Use pending confirmation record
+    appointmentId = pendingData[0].appointment_id;
+    pendingId = pendingData[0].id;
+    clinicId = pendingData[0].clinic_id;
+    console.log(`[webhook] Found pending confirmation for appointment ${appointmentId}`);
+  } else if (buttonAppointmentId) {
+    // FALLBACK: No pending_confirmation found, but we have the appointment ID from the button
+    console.log(`[webhook] No pending_confirmation found, using button appointment ID: ${buttonAppointmentId}`);
+    appointmentId = buttonAppointmentId;
+  } else {
+    // Text-based confirm/cancel but no pending confirmation -> can't process
+    console.log('[webhook] Action detected but no pending confirmation and no button appointment ID');
     return { handled: false };
   }
 
-  let action: 'confirmed' | 'cancelled' | 'ignored' = 'ignored';
-  const trimmedText = messageText.trim();
-  
-  // Handle interactive button responses (confirm_apt_* / cancel_apt_*)
-  if (trimmedText.startsWith('confirm_apt_')) {
-    action = 'confirmed';
-  } else if (trimmedText.startsWith('cancel_apt_')) {
-    action = 'cancelled';
-  } else if (POSITIVE_REGEX.test(trimmedText)) {
-    action = 'confirmed';
-  } else if (NEGATIVE_REGEX.test(trimmedText)) {
-    action = 'cancelled';
-  }
-
-  if (action === 'ignored') {
-    return { handled: false, clinicId: pendingData[0].clinic_id };
-  }
-
-  const pending = pendingData[0];
-
   const { data: appointment, error: appointmentError } = await supabase
     .from('appointments')
-    .select(`id, appointment_date, start_time, status, patient:patients (name), professional:professionals (name)`)
-    .eq('id', pending.appointment_id)
+    .select(`id, appointment_date, start_time, status, clinic_id, patient:patients (name), professional:professionals (name)`)
+    .eq('id', appointmentId)
     .single();
 
   if (appointmentError || !appointment) {
     console.error('[webhook] Error fetching appointment:', appointmentError);
-    return { handled: false, clinicId: pending.clinic_id };
+    return { handled: false, clinicId: clinicId || undefined };
   }
 
-  const appointmentData = appointment as AppointmentRecord;
+  const appointmentData = appointment as AppointmentRecord & { clinic_id?: string };
+
+  // Resolve clinic_id from pending or from appointment itself
+  if (!clinicId && appointmentData.clinic_id) {
+    clinicId = appointmentData.clinic_id;
+  }
+
+  // Don't re-process already confirmed/cancelled appointments
+  if (appointmentData.status === 'confirmed' && action === 'confirmed') {
+    console.log(`[webhook] Appointment ${appointmentId} already confirmed, sending acknowledgment`);
+    // Still send a response so user knows it worked
+    const { data: evolutionConfig } = await supabase
+      .from('evolution_configs')
+      .select('api_url, api_key, instance_name, direct_reply_enabled, clinic_id')
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+    const evoConfig = evolutionConfig as EvolutionConfig | null;
+    if (evoConfig?.api_url && evoConfig?.api_key) {
+      const dateFormatted = formatDate(appointmentData.appointment_date);
+      const time = appointmentData.start_time?.substring(0, 5) || '';
+      await sendWhatsAppMessage(
+        { ...evoConfig, clinic_id: clinicId! },
+        phone,
+        `✅ Sua consulta de ${dateFormatted} às ${time} já está confirmada. Aguardamos você!`
+      );
+    }
+    return { handled: true, clinicId: clinicId || undefined };
+  }
+
+  if (appointmentData.status === 'cancelled' && action === 'cancelled') {
+    console.log(`[webhook] Appointment ${appointmentId} already cancelled`);
+    return { handled: true, clinicId: clinicId || undefined };
+  }
 
   const newStatus = action === 'confirmed' ? 'confirmed' : 'cancelled';
   const updateFields: Record<string, unknown> = { status: newStatus };
@@ -6385,18 +6436,22 @@ async function handleConfirmationFlow(
   }
 
   await supabase.from('appointments').update(updateFields).eq('id', appointmentData.id);
-  await supabase.from('pending_confirmations').update({ status: action }).eq('id', pending.id);
+
+  // Update pending_confirmation if we found one
+  if (pendingId) {
+    await supabase.from('pending_confirmations').update({ status: action }).eq('id', pendingId);
+  }
 
   const { data: evolutionConfig } = await supabase
     .from('evolution_configs')
     .select('api_url, api_key, instance_name, direct_reply_enabled')
-    .eq('clinic_id', pending.clinic_id)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
   const { data: clinic } = await supabase
     .from('clinics')
     .select('name')
-    .eq('id', pending.clinic_id)
+    .eq('id', clinicId)
     .single();
 
   const evolutionConfigData = evolutionConfig as EvolutionConfig | null;
@@ -6415,14 +6470,14 @@ async function handleConfirmationFlow(
     }
 
     await sendWhatsAppMessage(
-      { ...evolutionConfigData, clinic_id: pending.clinic_id },
+      { ...evolutionConfigData, clinic_id: clinicId! },
       phone,
       responseMessage
     );
 
     const monthYear = new Date().toISOString().slice(0, 7);
     await supabase.from('message_logs').insert({
-      clinic_id: pending.clinic_id,
+      clinic_id: clinicId,
       message_type: action === 'confirmed' ? 'confirmation_response' : 'cancellation_response',
       phone,
       month_year: monthYear,
@@ -6430,7 +6485,7 @@ async function handleConfirmationFlow(
   }
 
   console.log(`[webhook] Processed ${action} for appointment ${appointmentData.id}`);
-  return { handled: true, clinicId: pending.clinic_id };
+  return { handled: true, clinicId: clinicId || undefined };
 }
 
 // ==========================================
