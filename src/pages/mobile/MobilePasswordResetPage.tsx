@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle, ShieldCheck } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle, ShieldCheck, MessageSquare } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-type Step = "email" | "code" | "verify_identity" | "password" | "success";
+type Step = "email" | "channel" | "code" | "verify_identity" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [searchParams] = useSearchParams();
@@ -21,6 +21,8 @@ export default function MobilePasswordResetPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [cameFromLink, setCameFromLink] = useState(false);
+  const [patientPhone, setPatientPhone] = useState<string | null>(null);
+  const [patientHasEmail, setPatientHasEmail] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -33,14 +35,13 @@ export default function MobilePasswordResetPage() {
       setCode(tokenParam);
       if (emailParam) setEmail(emailParam);
       setCameFromLink(true);
-      // Go to identity verification step instead of directly to password
       setStep("verify_identity");
     }
   }, [searchParams]);
 
-  const handleSendCode = async (e: React.FormEvent) => {
+  const handleCheckEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes("@")) {
       toast({
         title: "Email inválido",
@@ -51,25 +52,68 @@ export default function MobilePasswordResetPage() {
     }
 
     setLoading(true);
-    
+
     try {
+      // Check if patient exists and get contact info
       const { data, error } = await supabase.functions.invoke("send-password-reset-email", {
-        body: { email }
+        body: { email, checkOnly: true },
       });
 
       if (error) throw error;
 
+      if (data?.hasPhone || data?.hasEmail) {
+        setPatientPhone(data.maskedPhone || null);
+        setPatientHasEmail(!!data.hasEmail);
+
+        // If only one channel available, go straight to sending
+        if (data.hasPhone && !data.hasEmail) {
+          await sendResetCode("whatsapp");
+        } else if (!data.hasPhone && data.hasEmail) {
+          await sendResetCode("email");
+        } else {
+          setStep("channel");
+        }
+      } else {
+        // Generic success message to not reveal if account exists
+        toast({
+          title: "Código enviado!",
+          description: "Se o email estiver cadastrado, você receberá o código de recuperação.",
+        });
+        setStep("code");
+      }
+    } catch (err: any) {
+      console.error("Error checking email:", err);
+      // Always show generic message for security
       toast({
         title: "Código enviado!",
-        description: "Verifique seu email para obter o código de recuperação.",
+        description: "Se o email estiver cadastrado, você receberá o código de recuperação.",
       });
-      
+      setStep("code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendResetCode = async (channel: "email" | "whatsapp") => {
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-password-reset-email", {
+        body: { email, channel },
+      });
+
+      if (error) throw error;
+
+      const channelLabel = channel === "email" ? "e-mail" : "WhatsApp";
+      toast({
+        title: "Código enviado!",
+        description: `Verifique seu ${channelLabel} para obter o código de recuperação.`,
+      });
+
       setStep("code");
     } catch (err: any) {
-      console.error("Error sending reset email:", err);
+      console.error("Error sending reset code:", err);
 
-      // Supabase Functions can return non-2xx with a JSON body.
-      // Try to extract a useful message for the user.
       let errorMessage = "Não foi possível enviar o código. Tente novamente.";
       try {
         const maybeContext = err?.context;
@@ -85,7 +129,6 @@ export default function MobilePasswordResetPage() {
         // ignore parsing errors
       }
 
-      // Guidance for the most common case in our flow
       if (
         errorMessage.toLowerCase().includes("email não encontrado") ||
         errorMessage.toLowerCase().includes("sem senha")
@@ -106,7 +149,7 @@ export default function MobilePasswordResetPage() {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (code.length !== 6) {
       toast({
         title: "Código incompleto",
@@ -136,7 +179,7 @@ export default function MobilePasswordResetPage() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword.length < 6) {
       toast({
         title: "Senha muito curta",
@@ -156,7 +199,7 @@ export default function MobilePasswordResetPage() {
     }
 
     setLoading(true);
-    
+
     try {
       const rpcParams: Record<string, unknown> = {
         p_email: email,
@@ -207,13 +250,13 @@ export default function MobilePasswordResetPage() {
     switch (step) {
       case "email":
         return (
-          <form onSubmit={handleSendCode} className="space-y-6">
+          <form onSubmit={handleCheckEmail} className="space-y-6">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
                 <Mail className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
-            
+
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Recuperar Senha</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -242,13 +285,71 @@ export default function MobilePasswordResetPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
+                  Verificando...
                 </>
               ) : (
-                "Enviar Código"
+                "Continuar"
               )}
             </Button>
           </form>
+        );
+
+      case "channel":
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <KeyRound className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
+
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Como deseja receber?</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Escolha como deseja receber o código de recuperação.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {patientHasEmail && (
+                <Button
+                  variant="outline"
+                  className="w-full h-16 flex items-center gap-4 border-2 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
+                  onClick={() => sendResetCode("email")}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                  ) : (
+                    <Mail className="h-6 w-6 text-emerald-600" />
+                  )}
+                  <div className="text-left">
+                    <span className="text-sm font-medium block">Enviar por E-mail</span>
+                    <span className="text-xs text-muted-foreground">{email}</span>
+                  </div>
+                </Button>
+              )}
+
+              {patientPhone && (
+                <Button
+                  variant="outline"
+                  className="w-full h-16 flex items-center gap-4 border-2 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
+                  onClick={() => sendResetCode("whatsapp")}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                  ) : (
+                    <MessageSquare className="h-6 w-6 text-emerald-600" />
+                  )}
+                  <div className="text-left">
+                    <span className="text-sm font-medium block">Enviar por WhatsApp</span>
+                    <span className="text-xs text-muted-foreground">{patientPhone}</span>
+                  </div>
+                </Button>
+              )}
+            </div>
+          </div>
         );
 
       case "code":
@@ -259,7 +360,7 @@ export default function MobilePasswordResetPage() {
                 <KeyRound className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
-            
+
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Digite o Código</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -296,10 +397,10 @@ export default function MobilePasswordResetPage() {
               <button
                 type="button"
                 className="text-sm text-emerald-600 hover:underline"
-                onClick={() => handleSendCode({ preventDefault: () => {} } as React.FormEvent)}
+                onClick={() => setStep("channel")}
                 disabled={loading}
               >
-                {loading ? "Reenviando..." : "Reenviar código"}
+                Reenviar código
               </button>
             </div>
           </form>
@@ -313,7 +414,7 @@ export default function MobilePasswordResetPage() {
                 <ShieldCheck className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
-            
+
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Verificação de Identidade</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -358,7 +459,7 @@ export default function MobilePasswordResetPage() {
                 <Lock className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
-            
+
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Nova Senha</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -419,7 +520,7 @@ export default function MobilePasswordResetPage() {
                 <CheckCircle className="h-10 w-10 text-emerald-600" />
               </div>
             </div>
-            
+
             <div>
               <h2 className="text-xl font-semibold text-foreground">Senha Alterada!</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -448,8 +549,10 @@ export default function MobilePasswordResetPage() {
               onClick={() => {
                 if (step === "email") {
                   navigate("/app");
-                } else if (step === "code") {
+                } else if (step === "channel") {
                   setStep("email");
+                } else if (step === "code") {
+                  setStep("channel");
                 } else if (step === "verify_identity") {
                   if (cameFromLink) {
                     navigate("/app");
