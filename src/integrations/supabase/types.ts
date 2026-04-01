@@ -15789,6 +15789,29 @@ export type Database = {
         Args: { p_clinic_id: string; p_guide_type: string }
         Returns: string
       }
+      get_anamnese_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          clinic_id: string
+          created_at: string
+          filled_by_patient: boolean | null
+          id: string
+          patient_id: string
+          professional_id: string | null
+          public_token: string | null
+          responsibility_accepted: boolean | null
+          signature_data: string | null
+          signed_at: string | null
+          template_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "anamnese_responses"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_applicable_repass_rule: {
         Args: {
           p_clinic_id: string
@@ -15835,6 +15858,105 @@ export type Database = {
           used: number
         }[]
       }
+      get_contribution_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          active_competence_key: string | null
+          cash_register_id: string | null
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          contribution_type_id: string
+          created_at: string
+          created_by: string | null
+          divergence_details: Json | null
+          due_date: string
+          employer_id: string
+          financial_category_id: string | null
+          has_divergence: boolean | null
+          id: string
+          imported_at: string | null
+          is_editable: boolean | null
+          is_negotiated_debt: boolean | null
+          is_reconciled: boolean | null
+          last_lytex_sync_at: string | null
+          lytex_boleto_barcode: string | null
+          lytex_boleto_digitable_line: string | null
+          lytex_fee_amount: number | null
+          lytex_fee_details: Json | null
+          lytex_invoice_id: string | null
+          lytex_invoice_url: string | null
+          lytex_original_status: string | null
+          lytex_pix_code: string | null
+          lytex_pix_qrcode: string | null
+          lytex_raw_data: Json | null
+          lytex_transaction_id: string | null
+          member_id: string | null
+          negotiation_id: string | null
+          net_value: number | null
+          notes: string | null
+          origin: string | null
+          paid_at: string | null
+          paid_value: number | null
+          payment_method: string | null
+          portal_reissue_count: number
+          public_access_token: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciliation_notes: string | null
+          status: string
+          union_entity_id: string | null
+          updated_at: string
+          value: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "employer_contributions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_negotiation_preview_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          access_token: string
+          cancelled_at: string | null
+          clinic_id: string
+          contributions_data: Json
+          created_at: string
+          created_by: string | null
+          custom_dates: Json | null
+          down_payment: number
+          employer_cnpj: string
+          employer_id: string
+          employer_name: string
+          employer_trade_name: string | null
+          expires_at: string
+          first_due_date: string
+          id: string
+          installment_value: number
+          installments_count: number
+          interest_rate_monthly: number
+          is_cancelled: boolean
+          late_fee_percentage: number
+          legal_basis: string | null
+          monetary_correction_monthly: number
+          negotiation_id: string | null
+          total_correction: number
+          total_interest: number
+          total_late_fee: number
+          total_negotiated_value: number
+          total_original_value: number
+          view_count: number
+          viewed_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "negotiation_previews"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_patient_dependent_requests: {
         Args: { p_patient_id: string }
         Returns: {
@@ -15875,6 +15997,50 @@ export type Database = {
           title: string
           type: string
         }[]
+      }
+      get_signature_token: {
+        Args: { p_token: string }
+        Returns: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          patient_id: string
+          token: string
+          used_at: string | null
+          user_agent: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "signature_request_tokens"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_telemedicine_by_patient_token: {
+        Args: { p_token: string }
+        Returns: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          patient_token: string
+          professional_token: string
+          room_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "telemedicine_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_user_clinic_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_permissions: {
@@ -16018,8 +16184,21 @@ export type Database = {
         Returns: number
       }
       unaccent: { Args: { "": string }; Returns: string }
+      update_anamnese_by_token: {
+        Args: {
+          p_responsibility_accepted?: boolean
+          p_signature_data?: string
+          p_signed_at?: string
+          p_token: string
+        }
+        Returns: boolean
+      }
       update_expired_authorizations: { Args: never; Returns: undefined }
       update_overdue_contributions: { Args: never; Returns: undefined }
+      update_telemedicine_by_patient_token: {
+        Args: { p_status?: string; p_token: string }
+        Returns: boolean
+      }
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
         Returns: boolean
