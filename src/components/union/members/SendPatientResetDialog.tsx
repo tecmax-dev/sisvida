@@ -65,9 +65,10 @@ export function SendPatientResetDialog({
       });
 
       handleClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const parsedError = extractFunctionsError(err);
       console.error("Error sending patient reset:", err);
-      toast.error(err.message || "Erro ao enviar código de recuperação");
+      toast.error(parsedError.message || "Erro ao enviar código de recuperação");
     } finally {
       setLoading(false);
       setSelectedChannel(null);
