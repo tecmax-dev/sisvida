@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo} from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -68,13 +68,19 @@ import { attachPayslipToMemberFolder } from '@/utils/attachPayslipToMemberFolder
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionPayslipApprovalsPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const { requests, isLoading, reviewRequest, isReviewing, getAttachmentUrl, refetch } = usePayslipRequests(
-    currentClinic?.id
+    resolvedClinic?.id
   );
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,11 +122,11 @@ export default function UnionPayslipApprovalsPage() {
   };
 
   const handleApprove = async () => {
-    if (!selectedRequest || !currentClinic) return;
+    if (!selectedRequest || !resolvedClinic) return;
     
     if (selectedRequest.attachment_path) {
       await savePayslipHistory({
-        clinicId: currentClinic.id,
+        clinicId: resolvedClinic.id,
         patientId: selectedRequest.patient_id,
         payslipRequestId: selectedRequest.id,
         cardId: selectedRequest.card_id,
@@ -135,7 +141,7 @@ export default function UnionPayslipApprovalsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await attachPayslipToMemberFolder({
-          clinicId: currentClinic.id,
+          clinicId: resolvedClinic.id,
           patientId: selectedRequest.patient_id,
           attachmentPath: selectedRequest.attachment_path,
           userId: user.id,
@@ -154,7 +160,7 @@ export default function UnionPayslipApprovalsPage() {
   };
 
   const handleReject = async () => {
-    if (!selectedRequest || !currentClinic) return;
+    if (!selectedRequest || !resolvedClinic) return;
     
     if (!reviewNotes.trim()) {
       toast({
@@ -169,7 +175,7 @@ export default function UnionPayslipApprovalsPage() {
     try {
       if (selectedRequest.attachment_path) {
         await savePayslipHistory({
-          clinicId: currentClinic.id,
+          clinicId: resolvedClinic.id,
           patientId: selectedRequest.patient_id,
           payslipRequestId: selectedRequest.id,
           cardId: selectedRequest.card_id,
@@ -190,7 +196,7 @@ export default function UnionPayslipApprovalsPage() {
       if (selectedRequest.patients?.phone) {
         await supabase.functions.invoke('send-payslip-rejection', {
           body: {
-            clinic_id: currentClinic.id,
+            clinic_id: resolvedClinic.id,
             patient_id: selectedRequest.patient_id,
             patient_name: selectedRequest.patients.name,
             patient_phone: selectedRequest.patients.phone,
@@ -220,11 +226,11 @@ export default function UnionPayslipApprovalsPage() {
   };
 
   const handleSendBatchNotifications = async () => {
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
     setIsSendingBatch(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-payslip-batch-notifications', {
-        body: { clinic_id: currentClinic.id }
+        body: { clinic_id: resolvedClinic.id }
       });
 
       if (error) throw error;

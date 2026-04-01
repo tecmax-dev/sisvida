@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLegalCases, useUnionLawyers } from "@/hooks/useUnionLegal";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Loader2, Clock } from "lucide-react";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   deadlineCriticalityLabels,
   DeadlineCriticality,
   DeadlineStatus,
@@ -28,10 +29,15 @@ export default function UnionLegalDeadlineFormPage() {
   const [searchParams] = useSearchParams();
   const caseIdFromUrl = searchParams.get("caso");
   const isEditing = !!id;
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
 
-  const { cases } = useUnionLegalCases(currentClinic?.id);
-  const { lawyers } = useUnionLawyers(currentClinic?.id);
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const { cases } = useUnionLegalCases(resolvedClinic?.id);
+  const { lawyers } = useUnionLawyers(resolvedClinic?.id);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -48,7 +54,7 @@ export default function UnionLegalDeadlineFormPage() {
 
   // Get the createDeadline mutation from the case detail hook if a case is selected
   const selectedCaseId = formData.legal_case_id || undefined;
-  const { createDeadline } = useUnionLegalCaseDetail(selectedCaseId, currentClinic?.id);
+  const { createDeadline } = useUnionLegalCaseDetail(selectedCaseId, resolvedClinic?.id);
 
   useEffect(() => {
     if (caseIdFromUrl) {
@@ -58,7 +64,7 @@ export default function UnionLegalDeadlineFormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentClinic?.id || !formData.legal_case_id) return;
+    if (!resolvedClinic?.id || !formData.legal_case_id) return;
 
     setIsSubmitting(true);
 
@@ -71,7 +77,7 @@ export default function UnionLegalDeadlineFormPage() {
       legal_case_id: formData.legal_case_id,
       responsible_lawyer_id: formData.responsible_lawyer_id || null,
       notes: formData.notes || null,
-      clinic_id: currentClinic.id,
+      clinic_id: resolvedClinic.id,
       status: "pendente" as DeadlineStatus,
     };
 

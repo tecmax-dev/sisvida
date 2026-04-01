@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -42,6 +42,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -132,7 +133,12 @@ const getPermissionIcon = (key: string) => {
 };
 
 export default function UnionAccessGroupsPage() {
-  const { currentClinic, isSuperAdmin } = useAuth();
+  const { currentClinic, isSuperAdmin, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { isAdmin } = usePermissions();
   const [groups, setGroups] = useState<AccessGroup[]>([]);
   const [permissions, setPermissions] = useState<PermissionDefinition[]>([]);
@@ -155,7 +161,7 @@ export default function UnionAccessGroupsPage() {
     if (canManage) {
       fetchData();
     }
-  }, [currentClinic?.id, canManage]);
+  }, [resolvedClinic?.id, canManage]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -287,7 +293,7 @@ export default function UnionAccessGroupsPage() {
             name: groupName.trim(),
             description: groupDescription.trim() || null,
             module_type: groupModuleType,
-            clinic_id: currentClinic?.id || null,
+            clinic_id: resolvedClinic?.id || null,
             is_system: false,
           })
           .select()

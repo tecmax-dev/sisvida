@@ -2,10 +2,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { UnionChartOfAccountsPanel } from "@/components/union/financials/UnionChartOfAccountsPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionChartOfAccountsPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
 
-  if (!currentClinic?.id) {
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  if (!resolvedClinic?.id) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -16,7 +22,7 @@ export default function UnionChartOfAccountsPage() {
 
   return (
     <div className="p-6">
-      <UnionChartOfAccountsPanel clinicId={currentClinic.id} />
+      <UnionChartOfAccountsPanel clinicId={resolvedClinic.id} />
     </div>
   );
 }

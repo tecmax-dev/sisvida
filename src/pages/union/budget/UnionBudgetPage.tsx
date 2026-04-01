@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionBudget } from "@/hooks/useUnionBudget";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
@@ -13,9 +13,15 @@ import { budgetStatusLabels, budgetStatusColors } from "@/types/unionBudget";
 import { BudgetExerciseDialog } from "@/components/union/budget/BudgetExerciseDialog";
 import { BudgetExerciseCard } from "@/components/union/budget/BudgetExerciseCard";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionBudgetPage() {
-  const { currentClinic } = useAuth();
-  const clinicId = currentClinic?.id;
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const clinicId = resolvedClinic?.id;
   const { canManageFinancials } = useUnionPermissions();
   
   const { exercises, loadingExercises } = useUnionBudget(clinicId);

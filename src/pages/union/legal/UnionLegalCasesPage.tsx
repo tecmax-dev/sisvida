@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLegalCases } from "@/hooks/useUnionLegal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import {
 import { Link } from "react-router-dom";
 import { Plus, Search, FileText, Filter, Eye, Edit, Loader2 } from "lucide-react";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   caseTypeLabels,
   caseStatusLabels,
   caseStatusColors,
@@ -34,13 +35,18 @@ import {
 } from "@/types/unionLegal";
 
 export default function UnionLegalCasesPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [riskFilter, setRiskFilter] = useState<string>("all");
 
-  const { cases, isLoading } = useUnionLegalCases(currentClinic?.id);
+  const { cases, isLoading } = useUnionLegalCases(resolvedClinic?.id);
 
   const filteredCases = (cases || []).filter((c) => {
     const matchesSearch =

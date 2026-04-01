@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLawyers } from "@/hooks/useUnionLegal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,7 @@ import {
 import { Plus, Search, Users, Edit, Trash2, Loader2, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 const ESTADOS_BRASIL = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
   "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
@@ -52,7 +53,12 @@ interface LawyerFormData {
 }
 
 export default function UnionLawyersPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLawyer, setEditingLawyer] = useState<string | null>(null);
@@ -68,7 +74,7 @@ export default function UnionLawyersPage() {
     is_internal: false,
   });
 
-  const { lawyers, isLoading, createLawyer, updateLawyer, deleteLawyer } = useUnionLawyers(currentClinic?.id);
+  const { lawyers, isLoading, createLawyer, updateLawyer, deleteLawyer } = useUnionLawyers(resolvedClinic?.id);
 
   const filteredLawyers = (lawyers || []).filter((l) =>
     l.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -108,7 +114,7 @@ export default function UnionLawyersPage() {
       if (editingLawyer) {
         await updateLawyer.mutateAsync({ id: editingLawyer, ...payload });
       } else {
-        await createLawyer.mutateAsync({ clinic_id: currentClinic?.id, ...payload });
+        await createLawyer.mutateAsync({ clinic_id: resolvedClinic?.id, ...payload });
       }
       setIsDialogOpen(false);
       resetForm();

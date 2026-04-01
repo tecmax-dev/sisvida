@@ -3,9 +3,15 @@ import { Loader2, Building2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import AccountingOfficesPage from "@/pages/dashboard/AccountingOfficesPage";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionAccountingOfficesPage() {
-  const { currentClinic, loading } = useAuth();
+  const { currentClinic, loading, userRoles} = useAuth();
 
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -14,7 +20,7 @@ export default function UnionAccountingOfficesPage() {
     );
   }
 
-  if (!currentClinic) {
+  if (!resolvedClinic) {
     return (
       <div className="space-y-6 p-6">
         <div>

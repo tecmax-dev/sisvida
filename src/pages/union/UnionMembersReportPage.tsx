@@ -45,6 +45,7 @@ import { ptBR } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface AssociadoRow {
   id: string;
   nome: string;
@@ -96,7 +97,12 @@ const formatPhone = (phone: string) => {
 };
 
 export default function UnionMembersReportPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { entity: unionEntity, loading: entityLoading } = useUnionEntity();
 
   const [loading, setLoading] = useState(false);
@@ -230,7 +236,7 @@ export default function UnionMembersReportPage() {
     doc.setFontSize(16);
     doc.text("Relatório de Associados", pageWidth / 2, 15, { align: "center" });
     doc.setFontSize(10);
-    doc.text(currentClinic?.name || "", pageWidth / 2, 22, { align: "center" });
+    doc.text(resolvedClinic?.name || "", pageWidth / 2, 22, { align: "center" });
     doc.setFontSize(8);
     doc.text(getFilterDescription(), pageWidth / 2, 28, { align: "center" });
     doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, 33, { align: "center" });

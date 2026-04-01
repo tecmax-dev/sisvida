@@ -6,9 +6,15 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionLegalDashboardPage() {
-  const { currentClinic } = useAuth();
-  const { stats, isLoading } = useUnionLegalStats(currentClinic?.id);
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
+  const { stats, isLoading } = useUnionLegalStats(resolvedClinic?.id);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {

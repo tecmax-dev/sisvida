@@ -37,6 +37,7 @@ import {
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface FinancialStats {
   totalRevenue: number;
   totalExpenses: number;
@@ -63,13 +64,18 @@ interface RecentTransaction {
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export default function UnionFinancialsPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const [stats, setStats] = useState<FinancialStats | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
 

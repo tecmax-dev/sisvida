@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,8 +41,14 @@ import {
 } from "lucide-react";
 import { UnionSupplierDefaultsDialog } from "@/components/union/financials/UnionSupplierDefaultsDialog";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export default function UnionSuppliersPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageSuppliers } = useUnionPermissions();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -54,7 +60,7 @@ export default function UnionSuppliersPage() {
   const [selectedSupplierForDefaults, setSelectedSupplierForDefaults] =
     useState<any>(null);
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   // Fetch suppliers
   const { data: suppliers, isLoading } = useQuery({

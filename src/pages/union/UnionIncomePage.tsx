@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ptBR } from "date-fns/locale";
 import {
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
   Plus,
   Search,
   TrendingUp,
@@ -69,7 +70,12 @@ import {
 } from "lucide-react";
 
 export default function UnionIncomePage() {
-  const { currentClinic, session } = useAuth();
+  const { currentClinic, session, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { canManageIncome } = useUnionPermissions();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -86,7 +92,7 @@ export default function UnionIncomePage() {
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
 
-  const clinicId = currentClinic?.id;
+  const clinicId = resolvedClinic?.id;
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["union-financial-transactions", clinicId, "income"],

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo} from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Save, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
 
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 // Validação de CPF brasileiro
 const isValidCPF = (cpf: string): boolean => {
   const cleaned = cpf.replace(/\D/g, '');
@@ -116,7 +117,12 @@ interface InsurancePlan {
 
 export default function UnionMemberNewPage() {
   const navigate = useNavigate();
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles} = useAuth();
+
+  const resolvedClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
+    [currentClinic, userRoles]
+  );
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
   const { lookupCnpj, cnpjLoading } = useCnpjLookup();
@@ -128,18 +134,18 @@ export default function UnionMemberNewPage() {
 
   // Fetch insurance plans on mount
   useEffect(() => {
-    if (currentClinic) {
+    if (resolvedClinic) {
       supabase
         .from('insurance_plans')
         .select('id, name')
-        .eq('clinic_id', currentClinic.id)
+        .eq('clinic_id', resolvedClinic.id)
         .eq('is_active', true)
         .order('name')
         .then(({ data }) => {
           setInsurancePlans(data || []);
         });
     }
-  }, [currentClinic]);
+  }, [resolvedClinic]);
 
   const handleCepLookup = async () => {
     const cepData = await lookupCep(formData.cep);
@@ -201,7 +207,7 @@ export default function UnionMemberNewPage() {
       return;
     }
 
-    if (!currentClinic) return;
+    if (!resolvedClinic) return;
 
     setSaving(true);
     setErrors({});
@@ -209,13 +215,13 @@ export default function UnionMemberNewPage() {
     try {
       // Generate registration number
       const { data: regData } = await supabase.rpc('generate_patient_registration_number', {
-        p_clinic_id: currentClinic.id
+        p_clinic_id: resolvedClinic.id
       });
 
       const { data: newPatient, error } = await supabase
         .from('patients')
         .insert({
-          clinic_id: currentClinic.id,
+          clinic_id: resolvedClinic.id,
           name: formData.name.trim(),
           phone: formData.phone.replace(/\D/g, '').trim(),
           email: formData.email.trim() || null,
