@@ -25,11 +25,13 @@ import {
   Phone,
   Send,
   Key,
+  RotateCcw,
 } from "lucide-react";
 import { UserDialog } from "@/components/users/UserDialog";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { SendUserWelcomeDialog } from "@/components/users/SendUserWelcomeDialog";
 import { EditUserPasswordDialog } from "@/components/admin/EditUserPasswordDialog";
+import { SendPasswordResetDialog } from "@/components/users/SendPasswordResetDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -99,6 +101,8 @@ export default function UsersManagementPage() {
   const [welcomeUser, setWelcomeUser] = useState<ClinicUserWithStatus | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordUser, setPasswordUser] = useState<ClinicUserWithStatus | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetUser, setResetUser] = useState<ClinicUserWithStatus | null>(null);
 
   // Check if current user is admin of the clinic OR has manage_users permission
   const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
@@ -201,6 +205,11 @@ export default function UsersManagementPage() {
   const handleChangePassword = (clinicUser: ClinicUserWithStatus) => {
     setPasswordUser(clinicUser);
     setPasswordDialogOpen(true);
+  };
+
+  const handleSendReset = (clinicUser: ClinicUserWithStatus) => {
+    setResetUser(clinicUser);
+    setResetDialogOpen(true);
   };
 
   const filteredUsers = users.filter(u => 
@@ -531,6 +540,14 @@ export default function UsersManagementPage() {
                                 Alterar Senha
                               </DropdownMenuItem>
                             )}
+                            {canChangePassword && clinicUser.user_id !== user?.id && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendReset(clinicUser)}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Enviar Reset de Senha
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -586,6 +603,20 @@ export default function UsersManagementPage() {
           email: passwordUser.email || '',
         } : null}
         onSuccess={() => {}}
+      />
+
+      <SendPasswordResetDialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          setResetDialogOpen(open);
+          if (!open) setResetUser(null);
+        }}
+        user={resetUser ? {
+          user_id: resetUser.user_id,
+          name: resetUser.profile?.name || 'Usuário',
+          email: resetUser.email || '',
+          phone: resetUser.profile?.phone || null,
+        } : null}
       />
     </div>
   );
