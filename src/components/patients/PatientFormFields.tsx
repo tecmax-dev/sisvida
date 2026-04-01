@@ -744,6 +744,16 @@ export function PatientFormFields({
             className="mt-1"
           />
         </div>
+        <div>
+          <Label htmlFor="affiliationDate">Data de Filiação</Label>
+          <Input
+            id="affiliationDate"
+            type="date"
+            value={formData.affiliationDate}
+            onChange={(e) => updateField('affiliationDate', e.target.value)}
+            className="mt-1"
+          />
+        </div>
       </div>
 
       {/* Linha 10: Nome da Mãe, Nome do Pai */}

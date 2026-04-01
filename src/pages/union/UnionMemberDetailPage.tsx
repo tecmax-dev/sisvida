@@ -655,6 +655,7 @@ export default function UnionMemberDetailPage() {
         father_name: formData.fatherName.trim() || null,
         job_function: formData.jobFunction.trim() || null,
         admission_date: formData.admissionDate || null,
+        union_affiliation_date: formData.affiliationDate || null,
       };
 
       if (isAdmin) {
