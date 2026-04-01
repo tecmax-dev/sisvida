@@ -4,13 +4,14 @@ import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, CreditCard, FileText, Image, Loader2, Calendar } from "lucide-react";
+import { Settings, CreditCard, FileText, Image, Loader2, Calendar, FileCheck } from "lucide-react";
 import PaymentMethodsTab from "@/components/union/PaymentMethodsTab";
 import { UnionBrandingSettings } from "@/components/union/settings/UnionBrandingSettings";
 import { BookingMonthsSettings } from "@/components/union/settings/BookingMonthsSettings";
 import { AdvanceBookingHoursSettings } from "@/components/union/settings/AdvanceBookingHoursSettings";
 import { DependentBookingLimitSettings } from "@/components/union/settings/DependentBookingLimitSettings";
 import { TitularBookingLimitSettings } from "@/components/union/settings/TitularBookingLimitSettings";
+import { PayslipAcceptanceSettings } from "@/components/union/settings/PayslipAcceptanceSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,7 +33,7 @@ export default function UnionConfigPage() {
       if (!resolvedClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled, payslip_acceptance_days")
         .eq("id", resolvedClinic.id)
         .single();
       if (error) throw error;
@@ -88,6 +89,10 @@ export default function UnionConfigPage() {
           <TabsTrigger value="documents" className="gap-2">
             <FileText className="h-4 w-4" />
             Documentos
+          </TabsTrigger>
+          <TabsTrigger value="payslip" className="gap-2">
+            <FileCheck className="h-4 w-4" />
+            Contracheque
           </TabsTrigger>
         </TabsList>
 
@@ -179,6 +184,25 @@ export default function UnionConfigPage() {
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="payslip">
+          {resolvedClinic?.id ? (
+            <PayslipAcceptanceSettings
+              clinicId={resolvedClinic.id}
+              currentValue={(clinicSettings as any)?.payslip_acceptance_days ?? 60}
+              onUpdate={() => refetchSettings()}
+              isAdmin={isAdmin}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  Configure uma entidade sindical para gerenciar esta configuração.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

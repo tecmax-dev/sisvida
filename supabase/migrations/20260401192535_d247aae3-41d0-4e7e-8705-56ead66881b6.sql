@@ -1,0 +1,1 @@
+ALTER TABLE public.clinics ADD COLUMN IF NOT EXISTS payslip_acceptance_days integer DEFAULT 60;
