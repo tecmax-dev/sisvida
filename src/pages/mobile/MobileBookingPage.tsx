@@ -435,28 +435,6 @@ export default function MobileBookingPage() {
     }
   };
 
-  // Helper: calculate period range for booking limit validation
-  const getBookingPeriodRange = (date: Date, period: string): { start: string; end: string } => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const day = date.getDate();
-    
-    if (period === 'daily') {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      return { start: dateStr, end: dateStr };
-    } else if (period === 'weekly') {
-      const dayOfWeek = date.getDay();
-      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(year, month, day + mondayOffset);
-      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-      return { start: format(monday, 'yyyy-MM-dd'), end: format(sunday, 'yyyy-MM-dd') };
-    } else {
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      return { start: format(firstDay, 'yyyy-MM-dd'), end: format(lastDay, 'yyyy-MM-dd') };
-    }
-  };
-
   const handleSubmit = async () => {
     if (!selectedProfessionalId || !selectedDate || !selectedTime) {
       toast({
@@ -471,123 +449,39 @@ export default function MobileBookingPage() {
 
     try {
       const professional = professionals.find(p => p.id === selectedProfessionalId);
+      if (!professional || !patientId || !clinicIdRef.current) {
+        throw new Error("Não foi possível validar os dados do agendamento. Recarregue a tela e tente novamente.");
+      }
+
       const isDependentBooking = patientType === "dependent" && !!selectedDependentId;
       const appointmentDate = format(selectedDate, "yyyy-MM-dd");
 
-      const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
-      if (authUserError) {
-        throw authUserError;
-      }
-
-      const authUser = authUserData.user;
-      const authAppMeta = (authUser?.app_metadata ?? {}) as Record<string, any>;
-      const authUserMeta = (authUser?.user_metadata ?? {}) as Record<string, any>;
-      const authPatientId =
-        (authAppMeta.patient_id as string | undefined) ??
-        (authUserMeta.patient_id as string | undefined) ??
-        null;
-
-      if (!authUser || authPatientId !== patientId) {
-        console.error("[MobileBooking] Sessão backend inválida para o paciente atual", {
-          authUserId: authUser?.id,
-          authPatientId,
-          localPatientId: patientId,
-        });
-        throw new Error("Sua sessão expirou ou está inconsistente. Entre novamente para continuar.");
-      }
-      
-      // ===== PRE-FLIGHT: Validate booking limits before inserting =====
-      if (clinicIdRef.current && patientId) {
-        // Dependent limit check
-        if (isDependentBooking && dependentBookingLimitEnabled && dependentBookingLimit > 0) {
-          const { start, end } = getBookingPeriodRange(selectedDate, dependentBookingPeriod);
-          
-          const { count, error: countError } = await supabase
-            .from("appointments")
-            .select("id", { count: "exact", head: true })
-            .eq("clinic_id", clinicIdRef.current)
-            .eq("patient_id", patientId)
-            .eq("professional_id", selectedProfessionalId)
-            .not("dependent_id", "is", null)
-            .gte("appointment_date", start)
-            .lte("appointment_date", end)
-            .not("status", "in", '("cancelled","no_show")');
-          
-          if (!countError && (count ?? 0) >= dependentBookingLimit) {
-            const periodLabel = dependentBookingPeriod === 'daily' ? 'dia' : dependentBookingPeriod === 'weekly' ? 'semana' : 'mês';
-            toast({
-              title: "Limite de dependente atingido",
-              description: `Você já possui ${dependentBookingLimit} agendamento(s) de dependente para este profissional neste(a) ${periodLabel}.`,
-              variant: "destructive",
-            });
-            setSubmitting(false);
-            return;
-          }
-        }
-        
-        // Titular limit check
-        if (!isDependentBooking && titularBookingLimitEnabled && maxAppointmentsPerCpfMonth > 0) {
-          const monthStart = format(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1), 'yyyy-MM-dd');
-          const monthEnd = format(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0), 'yyyy-MM-dd');
-          
-          const { count, error: countError } = await supabase
-            .from("appointments")
-            .select("id", { count: "exact", head: true })
-            .eq("clinic_id", clinicIdRef.current)
-            .eq("patient_id", patientId)
-            .eq("professional_id", selectedProfessionalId)
-            .is("dependent_id", null)
-            .gte("appointment_date", monthStart)
-            .lte("appointment_date", monthEnd)
-            .not("status", "in", '("cancelled","no_show")');
-          
-          if (!countError && (count ?? 0) >= maxAppointmentsPerCpfMonth) {
-            toast({
-              title: "Limite de agendamento atingido",
-              description: "Você já possui agendamento para este profissional neste mês.",
-              variant: "destructive",
-            });
-            setSubmitting(false);
-            return;
-          }
-        }
-      }
-      
       // Get the duration from the applicable block for this date
       const applicableBlocks = getBlocksForDate(selectedDate, professional?.schedule || null);
       const blockDuration = applicableBlocks[0]?.duration || professional?.appointment_duration || 30;
 
-      const [hours, minutes] = selectedTime.split(":").map(Number);
-      const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), blockDuration), "HH:mm");
-
-      const appointmentData = {
-        clinic_id: clinicIdRef.current,
-        patient_id: patientId,
-        professional_id: selectedProfessionalId,
-        dependent_id: isDependentBooking ? selectedDependentId : null,
-        appointment_date: appointmentDate,
-        start_time: selectedTime,
-        end_time: endTime,
-        status: "scheduled" as const,
-        type: "first_visit" as const,
-        duration_minutes: blockDuration,
-      };
-
-      const { error } = await supabase
-        .from("appointments")
-        .insert([appointmentData]);
-
-      if (error) {
-        if (error.message?.includes("LIMITE_AGENDAMENTO_DEPENDENTE")) {
-          throw new Error("Limite de agendamentos de dependentes atingido para este profissional neste período.");
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-create-booking`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clinicId: clinicIdRef.current,
+            patientId,
+            professionalId: selectedProfessionalId,
+            dependentId: isDependentBooking ? selectedDependentId : null,
+            date: appointmentDate,
+            time: selectedTime,
+            durationMinutes: blockDuration,
+            type: "first_visit",
+          }),
         }
-        if (error.message?.includes("LIMITE_AGENDAMENTO_CPF")) {
-          throw new Error("Você já possui agendamento para este profissional neste mês.");
-        }
-        if (error.message?.includes("booking_window_exceeded") || error.message?.includes("Agendamento indisponível")) {
-          throw new Error("Agendamento indisponível para este período.");
-        }
-        throw error;
+      );
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "Não foi possível realizar o agendamento.");
       }
 
       // If reschedule, cancel the old appointment and notify via WhatsApp
