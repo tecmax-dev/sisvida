@@ -86,6 +86,7 @@ export interface PatientFormData {
   fatherName: string;
   jobFunction: string;
   admissionDate: string;
+  affiliationDate: string;
   
   // Outros
   notes: string;
