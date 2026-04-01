@@ -86,6 +86,11 @@ export default defineConfig(({ mode }) => ({
           { url: '/manifest-sindicato.webmanifest', revision: '20260320b' },
         ],
         runtimeCaching: [
+          // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/v1\/(mobile-slot-availability|mobile-booking-init)(\?.*)?$/i,
+            handler: "NetworkOnly",
+          },
           // Manifests - sempre da rede (crítico para instalação do PWA)
           {
             urlPattern: /\.webmanifest$/i,
