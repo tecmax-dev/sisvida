@@ -91,7 +91,8 @@ import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialo
 import { SendSignatureRequestDialog } from "@/components/union/members/SendSignatureRequestDialog";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
-import { Pen } from "lucide-react";
+import { Pen, KeyRound } from "lucide-react";
+import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
@@ -216,6 +217,10 @@ export default function UnionMembersListPage() {
 
   // Signature request dialog state
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+
+  // Patient reset dialog state
+  const [patientResetDialogOpen, setPatientResetDialogOpen] = useState(false);
+  const [selectedMemberForReset, setSelectedMemberForReset] = useState<UnionMember | null>(null);
 
   // Delete dependent state
   const [deleteDependentDialogOpen, setDeleteDependentDialogOpen] = useState(false);
@@ -1143,6 +1148,18 @@ export default function UnionMembersListPage() {
                             {canManageMembers() && (
                               <DropdownMenuItem
                                 onClick={() => {
+                                  setSelectedMemberForReset(member);
+                                  setPatientResetDialogOpen(true);
+                                }}
+                                className="text-orange-600"
+                              >
+                                <KeyRound className="h-4 w-4 mr-2" />
+                                Reset de Senha App
+                              </DropdownMenuItem>
+                            )}
+                            {canManageMembers() && (
+                              <DropdownMenuItem
+                                onClick={() => {
                                   setSelectedMemberForDelete(member);
                                   setDeleteDialogOpen(true);
                                 }}
@@ -1522,6 +1539,21 @@ export default function UnionMembersListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Patient Reset Dialog */}
+      <SendPatientResetDialog
+        open={patientResetDialogOpen}
+        onOpenChange={(open) => {
+          setPatientResetDialogOpen(open);
+          if (!open) setSelectedMemberForReset(null);
+        }}
+        patient={selectedMemberForReset ? {
+          id: selectedMemberForReset.id,
+          name: selectedMemberForReset.name,
+          email: selectedMemberForReset.email,
+          phone: selectedMemberForReset.phone,
+        } : null}
+      />
     </div>
   );
 }
