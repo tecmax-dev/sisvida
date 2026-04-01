@@ -31,6 +31,7 @@ import { UserDialog } from "@/components/users/UserDialog";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { SendUserWelcomeDialog } from "@/components/users/SendUserWelcomeDialog";
 import { EditUserPasswordDialog } from "@/components/admin/EditUserPasswordDialog";
+import { SendPasswordResetDialog } from "@/components/users/SendPasswordResetDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
