@@ -51,10 +51,10 @@ ${member_name ? `Verifique se o nome que aparece no contracheque como EMPREGADO/
 
 IMPORTANTE - VALIDAÇÃO DA COMPETÊNCIA/MÊS DE REFERÊNCIA:
 A data atual é: ${String(currentMonth).padStart(2, '0')}/${currentYear}
-Identifique o mês/ano de competência (período de referência) do contracheque. O contracheque deve ser recente (não mais de 30 dias retroativo). 
-Por exemplo, se estamos em março/2026, aceitamos contracheques de fevereiro/2026 e março/2026, mas NÃO de janeiro/2026 ou anteriores.
+Identifique o mês/ano de competência (período de referência) do contracheque. O contracheque deve ser recente (não mais de 60 dias retroativo). 
+Por exemplo, se estamos em abril/2026, aceitamos contracheques de fevereiro/2026, março/2026 e abril/2026, mas NÃO de janeiro/2026 ou anteriores.
 Extraia o mês e ano de competência do documento e retorne nos campos "competence_month" (1-12) e "competence_year" (YYYY).
-Se a competência for muito antiga (mais de 30 dias), retorne is_payslip como false e explique que o contracheque está fora do prazo.
+Se a competência for muito antiga (mais de 60 dias), retorne is_payslip como false e explique que o contracheque está fora do prazo.
 
 IMPORTANTE: Verifique se o contracheque contém pelo menos UM dos seguintes itens sindicais nos descontos:
 1. **Mensalidade Sindical** (ou "Contrib. Sindical", "Mens. Sindical", "MENSALIDADE SINDICAL")
