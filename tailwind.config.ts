@@ -166,6 +166,15 @@ export default {
           "10%, 30%, 50%, 70%, 90%": { transform: "rotate(-3deg)" },
           "20%, 40%, 60%, 80%": { transform: "rotate(3deg)" },
         },
+        "fade-slide-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateY(0px)" },
+        },
+        "slide-right-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateX(0px)" },
+        },
+        "testimonial-in": {
+          to: { opacity: "1", filter: "blur(0px)", transform: "translateY(0px) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -189,6 +198,9 @@ export default {
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         bounce: "bounce 1s infinite",
         shake: "shake 0.5s ease-in-out infinite",
+        "element": "fade-slide-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "slide-right": "slide-right-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "testimonial": "testimonial-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards",
       },
     },
   },
