@@ -73,8 +73,13 @@ interface EvolutionWebhookPayload {
       extendedTextMessage?: {
         text?: string;
       };
-      // Interactive button response
+      // Interactive button response (plural - Evolution API native)
       buttonsResponseMessage?: {
+        selectedButtonId?: string;
+        selectedDisplayText?: string;
+      };
+      // Interactive button response (singular - Whazing/alternative format)
+      buttonResponseMessage?: {
         selectedButtonId?: string;
         selectedDisplayText?: string;
       };
