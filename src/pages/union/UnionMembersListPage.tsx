@@ -91,7 +91,8 @@ import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialo
 import { SendSignatureRequestDialog } from "@/components/union/members/SendSignatureRequestDialog";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
-import { Pen } from "lucide-react";
+import { Pen, KeyRound } from "lucide-react";
+import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
