@@ -148,7 +148,7 @@ type TabType = ContentType | "ouvidoria" | "push" | "tabs" | "cct-categories" | 
 
 export default function UnionAppContentPage() {
   const navigate = useNavigate();
-  const { isSuperAdmin, userRoles} = useAuth();
+  const { isSuperAdmin, userRoles, currentClinic} = useAuth();
 
   const resolvedClinic = useMemo(
     () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || currentClinic,
@@ -171,7 +171,6 @@ export default function UnionAppContentPage() {
   const updateContent = useUpdateUnionAppContent();
   const deleteContent = useDeleteUnionAppContent();
   const uploadFile = useUploadContentFile();
-  const { currentClinic } = useAuth();
 
   // Load employer categories for portal CCT filtering
   useEffect(() => {
