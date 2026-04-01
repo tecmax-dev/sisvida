@@ -193,6 +193,7 @@ async function processSocio(supabase: any, socio: SindSystemSocio): Promise<{ su
       employer_name: socio.NMEMPRESA || null,
       employer_cnpj: formatCNPJ(socio.NRCNPJEMPRESA),
       profession: socio.NMCARGO || null,
+      is_union_member: true,
       notes: `Importado do SindSystem - Sócio #${socio.NRSOCIO || 'N/A'}`,
     }
 
