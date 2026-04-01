@@ -94,6 +94,29 @@ const formatPhone = (value: string): string => {
     .substring(0, 15);
 };
 
+const normalizeMemberName = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const collapseRepeatedLetters = (value: string): string => value.replace(/(.)\1+/g, '$1');
+
+const isPlaceholderMemberRecord = (member: Record<string, any>): boolean => {
+  const identityFields = [
+    member.cpf,
+    member.birth_date,
+    member.phone,
+    member.email,
+    member.mother_name,
+    member.father_name,
+  ];
+
+  return !member.is_union_member && identityFields.every((field) => !field);
+};
+
 const patientSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   phone: z.string().min(10, "Telefone inválido").max(20),
