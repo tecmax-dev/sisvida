@@ -540,6 +540,14 @@ export default function UsersManagementPage() {
                                 Alterar Senha
                               </DropdownMenuItem>
                             )}
+                            {canChangePassword && clinicUser.user_id !== user?.id && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendReset(clinicUser)}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Enviar Reset de Senha
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
