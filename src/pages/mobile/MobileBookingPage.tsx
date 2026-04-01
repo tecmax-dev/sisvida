@@ -365,10 +365,15 @@ export default function MobileBookingPage() {
 
       // Use edge function to bypass RLS (mobile JWT may be expired)
       const slotResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-slot-availability`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-slot-availability?ts=${Date.now()}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+            Pragma: "no-cache",
+          },
           body: JSON.stringify({ professionalId: selectedProfessionalId, date: dateStr }),
         }
       );
