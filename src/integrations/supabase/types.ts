@@ -16274,6 +16274,10 @@ export type Database = {
         }
         Returns: string
       }
+      reset_patient_password_by_birth_year: {
+        Args: { p_birth_year: number; p_email: string; p_new_password: string }
+        Returns: Json
+      }
       reset_patient_password_with_token:
         | {
             Args: { p_email: string; p_new_password: string; p_token: string }
