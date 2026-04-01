@@ -104,11 +104,19 @@ export default function MobilePasswordResetPage() {
 
       if (error) throw error;
 
-      const channelLabel = channel === "email" ? "e-mail" : "WhatsApp";
-      toast({
-        title: "Código enviado!",
-        description: `Verifique seu ${channelLabel} para obter o código de recuperação.`,
-      });
+      if (channel === "whatsapp") {
+        toast({
+          title: "📱 Link enviado pelo WhatsApp!",
+          description: "Enviamos um link de recuperação para o seu WhatsApp. Abra a conversa e clique no link para redefinir sua senha.",
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: "📧 Código enviado por e-mail!",
+          description: "Verifique sua caixa de entrada (e o spam) para obter o código de recuperação.",
+          duration: 6000,
+        });
+      }
 
       setStep("code");
     } catch (err: any) {
