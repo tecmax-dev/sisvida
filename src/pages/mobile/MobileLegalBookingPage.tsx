@@ -355,11 +355,7 @@ export default function MobileLegalBookingPage() {
         {
           method: "POST",
           cache: "no-store",
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
-            Pragma: "no-cache",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ professionalId: selectedProfessionalId, date: dateStr, type: "legal" }),
         }
       );
