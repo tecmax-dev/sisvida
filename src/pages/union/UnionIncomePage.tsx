@@ -51,8 +51,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ptBR } from "date-fns/locale";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   Plus,
   Search,
   TrendingUp,

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionLegalStats } from "@/hooks/useUnionLegal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

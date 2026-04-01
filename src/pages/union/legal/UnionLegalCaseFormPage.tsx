@@ -15,8 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Loader2, FileText } from "lucide-react";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   caseTypeLabels,
   caseStatusLabels,
   riskLevelLabels,

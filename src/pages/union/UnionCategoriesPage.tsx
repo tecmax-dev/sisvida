@@ -14,8 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   Plus,
   Trash2,
   TrendingUp,
