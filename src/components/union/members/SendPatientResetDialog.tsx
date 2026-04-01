@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { extractFunctionsError } from "@/lib/functionsError";
 
 interface SendPatientResetDialogProps {
   open: boolean;
@@ -64,9 +65,10 @@ export function SendPatientResetDialog({
       });
 
       handleClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const parsedError = extractFunctionsError(err);
       console.error("Error sending patient reset:", err);
-      toast.error(err.message || "Erro ao enviar código de recuperação");
+      toast.error(parsedError.message || "Erro ao enviar código de recuperação");
     } finally {
       setLoading(false);
       setSelectedChannel(null);
