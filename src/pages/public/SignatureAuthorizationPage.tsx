@@ -26,6 +26,23 @@ interface TokenData {
   } | null;
 }
 
+async function getFunctionErrorMessage(err: unknown, fallback: string) {
+  const maybeContext = (err as { context?: Response } | null)?.context;
+
+  if (maybeContext instanceof Response) {
+    const errorPayload = await maybeContext.clone().json().catch(() => null);
+    if (typeof errorPayload?.error === "string") {
+      return errorPayload.error;
+    }
+  }
+
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+
+  return fallback;
+}
+
 export default function SignatureAuthorizationPage() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
@@ -49,69 +66,26 @@ export default function SignatureAuthorizationPage() {
 
     const fetchTokenData = async () => {
       try {
-        // Fetch token with associado data
-        const { data: tokenRecord, error: tokenError } = await supabase
-          .from('signature_request_tokens')
-          .select(`
-            id,
-            patient_id,
-            clinic_id,
-            email,
-            expires_at,
-            used_at
-          `)
-          .eq('token', token)
-          .maybeSingle();
+        const { data, error: invokeError } = await supabase.functions.invoke(
+          "get-signature-authorization",
+          {
+            body: { token },
+          }
+        );
 
-        if (tokenError || !tokenRecord) {
-          setError("Link inválido ou expirado");
-          setLoading(false);
+        if (invokeError) {
+          throw invokeError;
+        }
+
+        if (!data?.success || !data?.tokenData) {
+          setError(data?.error || "Link inválido ou expirado");
           return;
         }
 
-        // Check if already used
-        if (tokenRecord.used_at) {
-          setError("Este link já foi utilizado");
-          setLoading(false);
-          return;
-        }
-
-        // Check if expired
-        if (new Date(tokenRecord.expires_at) < new Date()) {
-          setError("Este link expirou. Solicite um novo link ao sindicato.");
-          setLoading(false);
-          return;
-        }
-
-        // Fetch patient (sócio) data
-        const { data: patient } = await supabase
-          .from('patients')
-          .select('name, cpf, employer_name, signature_accepted')
-          .eq('id', tokenRecord.patient_id)
-          .maybeSingle();
-
-        // Check if patient already signed
-        if (patient?.signature_accepted) {
-          setError("Esta autorização já foi assinada anteriormente. Não é necessário assinar novamente.");
-          setLoading(false);
-          return;
-        }
-
-        // Fetch union entity
-        const { data: unionEntity } = await supabase
-          .from('union_entities')
-          .select('razao_social, logo_url')
-          .eq('clinic_id', tokenRecord.clinic_id)
-          .maybeSingle();
-
-        setTokenData({
-          ...tokenRecord,
-          patient: patient!,
-          union_entity: unionEntity,
-        });
+        setTokenData(data.tokenData as TokenData);
       } catch (err) {
-        console.error('Error fetching token:', err);
-        setError("Erro ao carregar dados");
+        console.error("Error fetching token:", err);
+        setError(await getFunctionErrorMessage(err, "Erro ao carregar dados"));
       } finally {
         setLoading(false);
       }
