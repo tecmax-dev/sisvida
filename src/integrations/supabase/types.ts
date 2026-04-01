@@ -15858,6 +15858,7 @@ export type Database = {
         Args: { p_clinic_id: string; p_guide_type: string }
         Returns: string
       }
+      get_anamnese_by_public_token: { Args: { p_token: string }; Returns: Json }
       get_anamnese_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -15926,6 +15927,10 @@ export type Database = {
           remaining: number
           used: number
         }[]
+      }
+      get_contribution_by_public_token: {
+        Args: { p_token: string }
+        Returns: Json
       }
       get_contribution_by_token: {
         Args: { p_token: string }
@@ -16317,6 +16322,7 @@ export type Database = {
           valid_until: string
         }[]
       }
+      validate_authorization_full: { Args: { p_hash: string }; Returns: Json }
       verify_patient_password: {
         Args: { p_clinic_id?: string; p_cpf: string; p_password: string }
         Returns: {
