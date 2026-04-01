@@ -7,7 +7,7 @@
  */
 export function isScheduleValidationError(error: any): boolean {
   const message = error?.message || error?.toString() || "";
-  return message.includes("HORARIO_INVALIDO:") || message.includes("FERIADO:");
+  return message.includes("HORARIO_INVALIDO:") || message.includes("FERIADO:") || message.includes("CONFLITO:");
 }
 
 /**
@@ -35,6 +35,15 @@ export function handleScheduleValidationError(error: any): {
     return {
       isScheduleError: true,
       message: match ? match[1].trim() : "Não é possível agendar em feriados.",
+    };
+  }
+  
+  // Erro de conflito de horário
+  if (errorMessage.includes("CONFLITO:")) {
+    const match = errorMessage.match(/CONFLITO:\s*(.+)/);
+    return {
+      isScheduleError: true,
+      message: match ? match[1].trim() : "Já existe um agendamento para este profissional neste horário.",
     };
   }
   
