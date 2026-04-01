@@ -188,9 +188,7 @@ serve(async (req: Request) => {
             await supabase.from("message_logs").insert({
               clinic_id: CLINIC_ID,
               phone,
-              message: message.substring(0, 500),
-              status: "sent",
-              provider: "evolution",
+              message_type: "april_agenda_campaign",
               month_year: new Date().toISOString().slice(0, 7),
             });
           } else {
