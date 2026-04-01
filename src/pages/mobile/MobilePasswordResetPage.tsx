@@ -116,6 +116,21 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
+    setStep("verify_identity");
+  };
+
+  const handleVerifyIdentity = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!birthYear || birthYear.length !== 4) {
+      toast({
+        title: "Ano inválido",
+        description: "Digite o ano de nascimento com 4 dígitos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setStep("password");
   };
 
