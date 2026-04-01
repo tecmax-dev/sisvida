@@ -3799,6 +3799,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "homologacao_notification_logs_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_availability"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "homologacao_notification_logs_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
@@ -3853,6 +3860,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "homologacao_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_notifications_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_availability"
             referencedColumns: ["id"]
           },
           {
@@ -15690,6 +15704,61 @@ export type Database = {
           },
         ]
       }
+      homologacao_availability: {
+        Row: {
+          appointment_date: string | null
+          clinic_id: string | null
+          end_time: string | null
+          id: string | null
+          professional_id: string | null
+          service_type_id: string | null
+          start_time: string | null
+          status: string | null
+        }
+        Insert: {
+          appointment_date?: string | null
+          clinic_id?: string | null
+          end_time?: string | null
+          id?: string | null
+          professional_id?: string | null
+          service_type_id?: string | null
+          start_time?: string | null
+          status?: string | null
+        }
+        Update: {
+          appointment_date?: string | null
+          clinic_id?: string | null
+          end_time?: string | null
+          id?: string | null
+          professional_id?: string | null
+          service_type_id?: string | null
+          start_time?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_appointments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_appointments_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       authenticate_patient_hybrid: {
@@ -15957,6 +16026,40 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_patient_authorizations: {
+        Args: { p_patient_id: string }
+        Returns: {
+          authorization_number: string
+          benefit_id: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          dependent_id: string | null
+          id: string
+          is_for_dependent: boolean
+          issued_at: string
+          last_viewed_at: string | null
+          notes: string | null
+          patient_id: string
+          printed_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          union_entity_id: string | null
+          updated_at: string
+          valid_from: string
+          valid_until: string
+          validation_hash: string
+          view_count: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "union_authorizations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_patient_dependent_requests: {
         Args: { p_patient_id: string }
         Returns: {
@@ -16202,6 +16305,17 @@ export type Database = {
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
         Returns: boolean
+      }
+      validate_authorization_by_hash: {
+        Args: { p_hash: string }
+        Returns: {
+          authorization_number: string
+          benefit_name: string
+          is_valid: boolean
+          status: string
+          valid_from: string
+          valid_until: string
+        }[]
       }
       verify_patient_password: {
         Args: { p_clinic_id?: string; p_cpf: string; p_password: string }
