@@ -243,7 +243,10 @@ _SECMI - Sindicato dos Comerciários_`;
         );
       }
 
-      const { error: whatsappError } = await adminClient.functions.invoke("send-whatsapp", {
+      const { data: whatsappData, error: whatsappError } = await adminClient.functions.invoke("send-whatsapp", {
+        headers: {
+          Authorization: `Bearer ${supabaseServiceRoleKey}`,
+        },
         body: {
           phone: patient.phone,
           message: whatsappMessage,
@@ -252,10 +255,11 @@ _SECMI - Sindicato dos Comerciários_`;
         },
       });
 
-      if (whatsappError) {
-        console.error("WhatsApp send error:", whatsappError);
+      if (whatsappError || whatsappData?.success === false) {
+        const whatsappMessage = whatsappData?.error || whatsappError?.message || "Erro ao enviar WhatsApp";
+        console.error("WhatsApp send error:", { whatsappError, whatsappData });
         return new Response(
-          JSON.stringify({ error: "Erro ao enviar WhatsApp" }),
+          JSON.stringify({ error: whatsappMessage }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
