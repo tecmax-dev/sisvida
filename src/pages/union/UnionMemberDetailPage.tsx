@@ -268,7 +268,7 @@ export default function UnionMemberDetailPage() {
       fetchCategories();
       fetchClinicLimit();
     }
-  }, [currentClinic, id]);
+  }, [resolvedClinic, id]);
 
   const fetchClinicLimit = async () => {
     if (!resolvedClinic) return;
@@ -539,7 +539,7 @@ export default function UnionMemberDetailPage() {
 
     setInitialData({ ...dataToSave, mobilePassword: '' });
     setFormData(prev => ({ ...prev, mobilePassword: '' }));
-  }, [currentClinic, id, isAdmin]);
+  }, [resolvedClinic, id, isAdmin]);
 
   const validateBeforeSave = useCallback((dataToValidate: PatientFormData): boolean => {
     const validation = patientSchema.safeParse({
@@ -559,7 +559,7 @@ export default function UnionMemberDetailPage() {
     initialData,
     onSave: performAutoSave,
     debounceMs: 3000,
-    enabled: !loading && !!id && !!currentClinic,
+    enabled: !loading && !!id && !!resolvedClinic,
     validateBeforeSave,
     // Cache/draft desabilitado para edições de cadastro - garante consistência entre usuários
   });

@@ -225,7 +225,7 @@ export default function UnionAppointmentReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch]);
+  }, [resolvedClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(appointments.length / ITEMS_PER_PAGE));
@@ -366,7 +366,7 @@ export default function UnionAppointmentReportsPage() {
 
     doc.save(`relatorio-agendamentos-${startDate}-a-${endDate}.pdf`);
     toast.success("PDF gerado com sucesso!");
-  }, [appointments, currentClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch, professionals, summary, session]);
+  }, [appointments, resolvedClinic, startDate, endDate, professionalId, selectedStatuses, startTime, endTime, patientSearch, professionals, summary, session]);
 
   return (
     <div className="space-y-6">
