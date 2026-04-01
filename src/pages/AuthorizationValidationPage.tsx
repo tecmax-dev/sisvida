@@ -52,11 +52,13 @@ export default function AuthorizationValidationPage() {
     queryFn: async () => {
       if (!hash) throw new Error("Hash inválido");
 
-      const { data, error } = await supabase
+      const { data: rpcResult, error } = await supabase
         .rpc("validate_authorization_full", { p_hash: hash });
 
       if (error) throw error;
-      if (!data) throw new Error("Autorização não encontrada");
+      if (!rpcResult) throw new Error("Autorização não encontrada");
+      
+      const data = rpcResult as any;
 
       if (error) throw error;
 
