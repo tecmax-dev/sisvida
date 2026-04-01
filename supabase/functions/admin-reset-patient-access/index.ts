@@ -209,19 +209,22 @@ serve(async (req) => {
         );
       }
 
+      // Build deep link to the PWA reset page with token pre-filled
+      const resetLink = `https://sisvida.lovable.app/app/recuperar-senha?token=${token}&email=${encodeURIComponent(patient.email || "")}`;
+
       const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
 
 Olá, ${firstName}!
 
 Um administrador solicitou a redefinição da sua senha de acesso ao aplicativo.
 
-Seu código de recuperação é:
+Clique no link abaixo para redefinir sua senha:
 
-*${token}*
+${resetLink}
 
-⏳ Este código é válido por *30 minutos*.
+⏳ Este link é válido por *30 minutos*.
 
-📱 Abra o aplicativo e utilize a opção "Esqueci minha senha" para inserir este código e criar uma nova senha.
+Se preferir, abra o aplicativo manualmente e use o código: *${token}*
 
 _SECMI - Sindicato dos Comerciários_`;
 

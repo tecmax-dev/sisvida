@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 type Step = "email" | "code" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -20,6 +21,19 @@ export default function MobilePasswordResetPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Auto-fill from URL params (deep link from WhatsApp)
+  useEffect(() => {
+    const tokenParam = searchParams.get("token");
+    const emailParam = searchParams.get("email");
+
+    if (tokenParam) {
+      setCode(tokenParam);
+      if (emailParam) setEmail(emailParam);
+      // Skip directly to password step since token is pre-filled
+      setStep("password");
+    }
+  }, [searchParams]);
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
