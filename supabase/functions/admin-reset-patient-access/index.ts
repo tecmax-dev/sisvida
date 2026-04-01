@@ -84,7 +84,7 @@ serve(async (req) => {
     // Get patient info
     const { data: patient, error: patientError } = await adminClient
       .from("patients")
-      .select("id, name, email, phone, clinic_id, password_hash, is_active")
+      .select("id, name, email, phone, clinic_id, password_hash, is_active, birth_date")
       .eq("id", patientId)
       .maybeSingle();
 
