@@ -7295,6 +7295,7 @@ export type Database = {
           street: string | null
           street_number: string | null
           tag: string | null
+          union_affiliation_date: string | null
           union_category_id: string | null
           union_contribution_value: number | null
           union_join_date: string | null
@@ -7365,6 +7366,7 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tag?: string | null
+          union_affiliation_date?: string | null
           union_category_id?: string | null
           union_contribution_value?: number | null
           union_join_date?: string | null
@@ -7435,6 +7437,7 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tag?: string | null
+          union_affiliation_date?: string | null
           union_category_id?: string | null
           union_contribution_value?: number | null
           union_join_date?: string | null

@@ -139,6 +139,7 @@ const initialFormData: PatientFormData = {
   fatherName: '',
   jobFunction: '',
   admissionDate: '',
+  affiliationDate: '',
   notes: '',
   maxAppointmentsPerMonth: null,
   mobilePassword: '',
@@ -307,6 +308,7 @@ export default function PatientEditPage() {
           fatherName: data.father_name || '',
           jobFunction: (data as any).job_function || '',
           admissionDate: (data as any).admission_date || '',
+          affiliationDate: (data as any).union_affiliation_date || '',
           notes: data.notes || '',
           maxAppointmentsPerMonth: (data as any).max_appointments_per_month ?? null,
         };

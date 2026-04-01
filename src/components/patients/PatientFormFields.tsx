@@ -86,6 +86,7 @@ export interface PatientFormData {
   fatherName: string;
   jobFunction: string;
   admissionDate: string;
+  affiliationDate: string;
   
   // Outros
   notes: string;
@@ -740,6 +741,16 @@ export function PatientFormFields({
             type="date"
             value={formData.admissionDate}
             onChange={(e) => updateField('admissionDate', e.target.value)}
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <Label htmlFor="affiliationDate">Data de Filiação</Label>
+          <Input
+            id="affiliationDate"
+            type="date"
+            value={formData.affiliationDate}
+            onChange={(e) => updateField('affiliationDate', e.target.value)}
             className="mt-1"
           />
         </div>
