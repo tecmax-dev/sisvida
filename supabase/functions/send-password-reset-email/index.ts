@@ -7,45 +7,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface PasswordResetRequest {
-  email: string;
-}
-
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = Deno.env.get("SMTP_PORT");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASSWORD");
-    const smtpFrom = Deno.env.get("SMTP_FROM");
-
-    console.log("SMTP config check:", {
-      host: smtpHost || "NOT SET",
-      port: smtpPort || "NOT SET",
-      user: smtpUser ? smtpUser.substring(0, 3) + "***" : "NOT SET",
-      pass: smtpPass ? "SET (" + smtpPass.length + " chars)" : "NOT SET",
-      from: smtpFrom || "NOT SET",
-    });
-
-    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
-      console.error("SMTP not configured - missing:", {
-        host: !smtpHost, user: !smtpUser, pass: !smtpPass, from: !smtpFrom
-      });
-      return new Response(
-        JSON.stringify({ error: "Servico de email nao configurado" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email }: PasswordResetRequest = await req.json();
+    const body = await req.json();
+    const email: string = body.email;
+    const channel: string = body.channel || "email";
+    const checkOnly: boolean = body.checkOnly === true;
 
     if (!email || !email.includes("@")) {
       return new Response(
@@ -54,8 +29,45 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Processing password reset request for: ${email}`);
+    console.log(`Processing password reset request for: ${email}, channel: ${channel}, checkOnly: ${checkOnly}`);
 
+    // Look up patient by email
+    const { data: patient, error: patientError } = await supabase
+      .from("patients")
+      .select("id, name, email, phone, clinic_id, password_hash, is_active, birth_date")
+      .eq("email", email)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (patientError) {
+      console.error("Error looking up patient:", patientError);
+    }
+
+    // Check-only mode: return available channels without sending
+    if (checkOnly) {
+      if (!patient || !patient.password_hash) {
+        // Don't reveal whether account exists
+        return new Response(
+          JSON.stringify({ hasEmail: false, hasPhone: false }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const maskedPhone = patient.phone
+        ? patient.phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) *****-$4")
+        : null;
+
+      return new Response(
+        JSON.stringify({
+          hasEmail: !!patient.email,
+          hasPhone: !!patient.phone,
+          maskedPhone,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create reset token via RPC
     const { data: tokenData, error: tokenError } = await supabase.rpc(
       "create_password_reset_token",
       { p_email: email }
@@ -74,51 +86,140 @@ serve(async (req: Request): Promise<Response> => {
     if (!result?.success) {
       console.log(`Token creation failed: ${result?.message}`);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Se o email estiver cadastrado, voce recebera um codigo de recuperacao." 
+        JSON.stringify({
+          success: true,
+          message: "Se o email estiver cadastrado, voce recebera um codigo de recuperacao.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const firstName = result.patient_name?.split(" ")[0] || "Associado";
+    const token = result.token;
+
+    // Store birth_year in the reset record
+    if (patient?.birth_date) {
+      const birthYear = new Date(patient.birth_date).getFullYear();
+      await supabase
+        .from("patient_password_resets")
+        .update({ birth_year: birthYear })
+        .eq("patient_id", patient.id)
+        .eq("token", token)
+        .is("used_at", null);
+    }
+
+    // ─── SEND VIA WHATSAPP ───
+    if (channel === "whatsapp") {
+      if (!patient?.phone) {
+        return new Response(
+          JSON.stringify({ error: "Associado não possui telefone cadastrado" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!patient.clinic_id) {
+        return new Response(
+          JSON.stringify({ error: "Associado sem clínica vinculada" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const resetLink = `https://prosindweb.com.br/app/recuperar-senha?token=${token}&email=${encodeURIComponent(email)}`;
+
+      const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
+
+Olá, ${firstName}!
+
+Recebemos uma solicitação para redefinir sua senha de acesso ao aplicativo.
+
+Clique no link abaixo para criar uma nova senha:
+
+${resetLink}
+
+⏳ Este link é válido por *30 minutos*.
+
+Se preferir, abra o aplicativo manualmente e use o código: *${token}*
+
+_SECMI - Sindicato dos Comerciários_`;
+
+      const authHeader = req.headers.get("Authorization") || `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`;
+
+      const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({
+          phone: patient.phone,
+          message: whatsappMessage,
+          clinicId: patient.clinic_id,
+          type: "custom",
+        }),
+      });
+
+      const whatsappResult = await whatsappResponse.json().catch(() => null);
+
+      if (!whatsappResponse.ok || whatsappResult?.success === false) {
+        const errorMsg = whatsappResult?.error || "Erro ao enviar WhatsApp";
+        console.error("WhatsApp send error:", { status: whatsappResponse.status, whatsappResult });
+        return new Response(
+          JSON.stringify({ error: errorMsg }),
+          { status: whatsappResponse.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Self-service reset code sent via WhatsApp to ${patient.phone}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Código enviado por WhatsApp.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ─── SEND VIA EMAIL (default) ───
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = Deno.env.get("SMTP_PORT");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPass = Deno.env.get("SMTP_PASSWORD");
+    const smtpFrom = Deno.env.get("SMTP_FROM");
+
+    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
+      console.error("SMTP not configured");
+      return new Response(
+        JSON.stringify({ error: "Servico de email nao configurado" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const htmlContent = `
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
       <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
         <div style="background-color: #059669; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 24px;">SECMI</h1>
           <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Sindicato dos Comerciarios</p>
         </div>
-
         <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           <h2 style="color: #333; margin-top: 0;">Ola, ${firstName}!</h2>
-
           <p style="color: #666; line-height: 1.6;">
             Recebemos uma solicitacao para redefinir a senha do seu acesso ao aplicativo SECMI.
           </p>
-
           <div style="background-color: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
             <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu codigo de recuperacao:</p>
-            <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${result.token}</p>
+            <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${token}</p>
           </div>
-
           <p style="color: #666; line-height: 1.6; font-size: 14px;">
             <strong>Este codigo e valido por 30 minutos.</strong>
           </p>
-
           <p style="color: #666; line-height: 1.6; font-size: 14px;">
             Se voce nao solicitou a redefinicao de senha, ignore este email. Sua conta permanece segura.
           </p>
-
           <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
-
           <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
             Este e um email automatico, por favor nao responda.<br>
             SECMI - Todos os direitos reservados.
@@ -126,22 +227,17 @@ serve(async (req: Request): Promise<Response> => {
         </div>
       </body>
       </html>
-    `.replace(/\s+/g, ' ').trim();
+    `.replace(/\s+/g, " ").trim();
 
     const client = new SMTPClient({
       connection: {
         hostname: smtpHost,
         port: parseInt(smtpPort || "465"),
         tls: true,
-        auth: {
-          username: smtpUser,
-          password: smtpPass,
-        },
+        auth: { username: smtpUser, password: smtpPass },
       },
     });
 
-    console.log(`Attempting SMTP send to: ${email} from: ${smtpFrom} via ${smtpHost}:${smtpPort}`);
-    
     await client.send({
       from: smtpFrom,
       to: email,
@@ -149,11 +245,9 @@ serve(async (req: Request): Promise<Response> => {
       html: htmlContent,
     });
 
-    console.log("SMTP send() completed successfully");
-
     await client.close();
 
-    console.log("Password reset email sent and connection closed successfully");
+    console.log(`Self-service reset code sent via email to ${email}`);
 
     return new Response(
       JSON.stringify({
@@ -162,7 +256,6 @@ serve(async (req: Request): Promise<Response> => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error: any) {
     console.error("Error in send-password-reset-email:", error);
     return new Response(
