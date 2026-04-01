@@ -33,12 +33,12 @@ async function bootstrapApp() {
  * Registra Service Worker e renderiza React
  */
 async function renderApp() {
-  // Registrar PWA com estratégia passiva (sem auto-refresh)
-  registerSW({
+  // Registrar PWA e aplicar novas versões automaticamente para evitar shell desatualizado
+  const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      // PWA atualiza silenciosamente no próximo reload
-      console.info('[PWA] Nova versão disponível - será aplicada no próximo reload');
+      console.info('[PWA] Nova versão disponível - aplicando atualização automática');
+      void updateSW(true);
     },
     onOfflineReady() {
       console.info('[PWA] App pronto para uso offline');
@@ -50,6 +50,13 @@ async function renderApp() {
       console.error('[PWA] Erro no registro do SW:', error);
     },
   });
+
+  // Força checagem de atualização ao abrir o app instalado
+  if ('serviceWorker' in navigator) {
+    void navigator.serviceWorker.getRegistrations().then((registrations) =>
+      Promise.all(registrations.map((registration) => registration.update().catch(() => undefined)))
+    );
+  }
 
   // Função global para forçar atualização manual do PWA (opcional)
   (window as any).forceUpdatePWA = async (): Promise<boolean> => {
