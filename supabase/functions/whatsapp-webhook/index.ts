@@ -256,9 +256,16 @@ function getBrazilPhoneVariants(phone55: string): string[] {
 function extractMessageText(data: EvolutionWebhookPayload['data']): string | null {
   if (!data) return null;
   
-  // Check for interactive button response first
+  // Check for interactive button response (plural - Evolution API native)
   if (data.message?.buttonsResponseMessage?.selectedButtonId) {
+    console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
     return data.message.buttonsResponseMessage.selectedButtonId;
+  }
+  
+  // Check for interactive button response (singular - Whazing/alternative format)
+  if (data.message?.buttonResponseMessage?.selectedButtonId) {
+    console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
+    return data.message.buttonResponseMessage.selectedButtonId;
   }
   
   // Check for list response
