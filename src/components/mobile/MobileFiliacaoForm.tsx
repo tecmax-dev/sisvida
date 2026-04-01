@@ -407,7 +407,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           console.error("Error inserting dependents:", depError);
           toast({
             title: "Erro ao incluir dependentes",
-            description: depError.message || "Não foi possível salvar os dependentes. Verifique os dados.",
+            description: "Não foi possível salvar os dependentes. Verifique os dados e tente novamente.",
             variant: "destructive",
           });
         }
