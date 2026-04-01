@@ -84,7 +84,7 @@ serve(async (req) => {
     // Get patient info
     const { data: patient, error: patientError } = await adminClient
       .from("patients")
-      .select("id, name, email, phone, password_hash, is_active")
+      .select("id, name, email, phone, clinic_id, password_hash, is_active")
       .eq("id", patientId)
       .maybeSingle();
 
@@ -228,14 +228,7 @@ Seu código de recuperação é:
 
 _SECMI - Sindicato dos Comerciários_`;
 
-      // Get clinic_id from patient
-      const { data: patientClinic } = await adminClient
-        .from("patients")
-        .select("clinic_id")
-        .eq("id", patientId)
-        .maybeSingle();
-
-      const clinicId = patientClinic?.clinic_id;
+      const clinicId = patient.clinic_id;
       if (!clinicId) {
         return new Response(
           JSON.stringify({ error: "Associado sem clínica vinculada" }),
@@ -247,7 +240,7 @@ _SECMI - Sindicato dos Comerciários_`;
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${supabaseServiceRoleKey}`,
+          Authorization: authHeader,
         },
         body: JSON.stringify({
           phone: patient.phone,
