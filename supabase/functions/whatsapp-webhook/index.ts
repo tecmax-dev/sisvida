@@ -286,6 +286,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     return data.message.templateButtonReplyMessage.selectedId;
   }
   
+  // Fallback: check selectedDisplayText from any button response as last resort
+  const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText ||
+                      data.message?.buttonResponseMessage?.selectedDisplayText;
+  if (displayText) {
+    console.log('[extractMessageText] Fallback to selectedDisplayText:', displayText);
+    // Map display text to action keywords for confirmation flow
+    if (displayText.includes('Confirmar')) return 'SIM';
+    if (displayText.includes('Cancelar')) return 'NÃO';
+    return displayText;
+  }
+
   // Standard text message
   const text = data.message?.conversation || 
                data.message?.extendedTextMessage?.text ||
