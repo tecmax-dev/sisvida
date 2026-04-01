@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
-import { 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   Send, 
   Smartphone, 
   MessageCircle, 

@@ -25,8 +25,8 @@ import { UnionManualReconcileDialog } from "@/components/union/financials/UnionM
 import { UnionGenerateEntryDialog } from "@/components/union/financials/UnionGenerateEntryDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,

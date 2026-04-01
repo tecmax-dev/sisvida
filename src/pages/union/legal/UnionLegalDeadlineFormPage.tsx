@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Loader2, Clock } from "lucide-react";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   deadlineCriticalityLabels,
   DeadlineCriticality,
   DeadlineStatus,

@@ -22,8 +22,8 @@ import {
 } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { Plus, Search, FileText, Filter, Eye, Edit, Loader2 } from "lucide-react";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   caseTypeLabels,
   caseStatusLabels,
   caseStatusColors,

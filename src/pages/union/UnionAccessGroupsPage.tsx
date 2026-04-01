@@ -41,8 +41,8 @@ import {
   Building,
   ShieldCheck,
 } from "lucide-react";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,

@@ -16,8 +16,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnionCashRegisterDialog } from "@/components/union/financials/UnionCashRegisterDialog";
 import { toast } from "sonner";
-import {
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import {
   Plus,
   Wallet,
   Building2,
