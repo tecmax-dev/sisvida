@@ -1539,6 +1539,21 @@ export default function UnionMembersListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Patient Reset Dialog */}
+      <SendPatientResetDialog
+        open={patientResetDialogOpen}
+        onOpenChange={(open) => {
+          setPatientResetDialogOpen(open);
+          if (!open) setSelectedMemberForReset(null);
+        }}
+        patient={selectedMemberForReset ? {
+          id: selectedMemberForReset.id,
+          name: selectedMemberForReset.name,
+          email: selectedMemberForReset.email,
+          phone: selectedMemberForReset.phone,
+        } : null}
+      />
     </div>
   );
 }
