@@ -7,7 +7,7 @@
  */
 export function isScheduleValidationError(error: any): boolean {
   const message = error?.message || error?.toString() || "";
-  return message.includes("HORARIO_INVALIDO:") || message.includes("FERIADO:");
+  return message.includes("HORARIO_INVALIDO:") || message.includes("FERIADO:") || message.includes("CONFLITO:");
 }
 
 /**
