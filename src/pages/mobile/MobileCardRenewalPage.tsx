@@ -123,33 +123,26 @@ export default function MobileCardRenewalPage() {
 
   const loadData = async (pid: string, cid: string) => {
     try {
-      // Check for any pending payslip request FIRST (regardless of card)
-      const { data: pendingRequests } = await supabase
-        .from("payslip_requests")
-        .select("id, status, requested_at, received_at, reviewed_at")
-        .eq("patient_id", pid)
-        .eq("clinic_id", cid)
-        .in("status", ["pending", "received"])
-        .order("created_at", { ascending: false })
-        .limit(1);
+      // Use edge function to bypass RLS (mobile JWT may be expired)
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-patient-card`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ patientId: pid }),
+        }
+      );
 
-      if (pendingRequests && pendingRequests.length > 0) {
-        setPendingRequest(pendingRequests[0]);
-      }
+      if (response.ok) {
+        const data = await response.json();
 
-      // Get card data
-      const { data: card } = await supabase
-        .from("patient_cards")
-        .select("id, card_number, expires_at, is_active")
-        .eq("patient_id", pid)
-        .eq("clinic_id", cid)
-        .eq("is_active", true)
-        .order("expires_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        if (data.payslipRequest) {
+          setPendingRequest(data.payslipRequest);
+        }
 
-      if (card) {
-        setCardData(card);
+        if (data.card) {
+          setCardData(data.card);
+        }
       }
     } catch (err) {
       console.error("Error loading data:", err);

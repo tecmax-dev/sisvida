@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,14 +79,17 @@ export default function MobileCardPage() {
 
   const loadData = async (pid: string) => {
     try {
-      // Fetch patient data
-      const { data: patientData, error: patientError } = await supabase
-        .from("patients")
-        .select("id, name, cpf, photo_url, registration_number, tag, clinic_id")
-        .eq("id", pid)
-        .single();
+      // Use edge function to bypass RLS (mobile JWT may be expired)
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-patient-card`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ patientId: pid }),
+        }
+      );
 
-      if (patientError || !patientData) {
+      if (!response.ok) {
         toast({
           title: "Erro",
           description: "Não foi possível carregar seus dados.",
@@ -95,31 +98,18 @@ export default function MobileCardPage() {
         return;
       }
 
-      setPatient(patientData);
+      const data = await response.json();
 
-      // Fetch card data
-      const { data: cardInfo, error: cardError } = await supabase
-        .from("patient_cards")
-        .select("id, card_number, qr_code_token, issued_at, expires_at, is_active, notes")
-        .eq("patient_id", pid)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!cardError && cardInfo) {
-        setCardData(cardInfo);
+      if (data.patient) {
+        setPatient(data.patient);
       }
 
-      // Fetch clinic data
-      const { data: clinicData } = await supabase
-        .from("clinics")
-        .select("name, logo_url")
-        .eq("id", patientData.clinic_id)
-        .single();
+      if (data.card) {
+        setCardData(data.card);
+      }
 
-      if (clinicData) {
-        setClinic(clinicData);
+      if (data.clinic) {
+        setClinic(data.clinic);
       }
     } catch (err) {
       console.error("Error loading data:", err);
