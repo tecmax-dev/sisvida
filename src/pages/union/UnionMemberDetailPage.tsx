@@ -185,6 +185,7 @@ const initialFormData: PatientFormData = {
   fatherName: '',
   jobFunction: '',
   admissionDate: '',
+  affiliationDate: '',
   notes: '',
   maxAppointmentsPerMonth: null,
   mobilePassword: '',
