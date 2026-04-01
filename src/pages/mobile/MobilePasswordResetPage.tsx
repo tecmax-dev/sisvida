@@ -6,19 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle, ShieldCheck } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-type Step = "email" | "code" | "password" | "success";
+type Step = "email" | "code" | "verify_identity" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cameFromLink, setCameFromLink] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -30,8 +32,9 @@ export default function MobilePasswordResetPage() {
     if (tokenParam) {
       setCode(tokenParam);
       if (emailParam) setEmail(emailParam);
-      // Skip directly to password step since token is pre-filled
-      setStep("password");
+      setCameFromLink(true);
+      // Go to identity verification step instead of directly to password
+      setStep("verify_identity");
     }
   }, [searchParams]);
 
@@ -113,6 +116,21 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
+    setStep("verify_identity");
+  };
+
+  const handleVerifyIdentity = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!birthYear || birthYear.length !== 4) {
+      toast({
+        title: "Ano inválido",
+        description: "Digite o ano de nascimento com 4 dígitos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setStep("password");
   };
 
@@ -143,7 +161,8 @@ export default function MobilePasswordResetPage() {
       const { data, error } = await supabase.rpc("reset_patient_password_with_token", {
         p_email: email,
         p_token: code,
-        p_new_password: newPassword
+        p_new_password: newPassword,
+        p_birth_year: birthYear ? parseInt(birthYear, 10) : null,
       });
 
       if (error) throw error;
@@ -274,6 +293,51 @@ export default function MobilePasswordResetPage() {
           </form>
         );
 
+      case "verify_identity":
+        return (
+          <form onSubmit={handleVerifyIdentity} className="space-y-6">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <ShieldCheck className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Verificação de Identidade</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Para sua segurança, informe seu <strong>ano de nascimento</strong> para continuar.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthYear">Ano de Nascimento</Label>
+              <Input
+                id="birthYear"
+                type="number"
+                placeholder="Ex: 1985"
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value.slice(0, 4))}
+                className="h-12 text-center text-lg tracking-widest"
+                min="1900"
+                max={new Date().getFullYear()}
+                disabled={loading}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              disabled={!birthYear || birthYear.length !== 4}
+            >
+              Verificar e Continuar
+            </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              🔒 Este link é pessoal e intransferível. Não compartilhe.
+            </p>
+          </form>
+        );
+
       case "password":
         return (
           <form onSubmit={handleResetPassword} className="space-y-6">
@@ -374,8 +438,14 @@ export default function MobilePasswordResetPage() {
                   navigate("/app");
                 } else if (step === "code") {
                   setStep("email");
+                } else if (step === "verify_identity") {
+                  if (cameFromLink) {
+                    navigate("/app");
+                  } else {
+                    setStep("code");
+                  }
                 } else if (step === "password") {
-                  setStep("code");
+                  setStep("verify_identity");
                 }
               }}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"

@@ -7062,6 +7062,7 @@ export type Database = {
       }
       patient_password_resets: {
         Row: {
+          birth_year: number | null
           created_at: string
           expires_at: string
           id: string
@@ -7070,6 +7071,7 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          birth_year?: number | null
           created_at?: string
           expires_at: string
           id?: string
@@ -7078,6 +7080,7 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          birth_year?: number | null
           created_at?: string
           expires_at?: string
           id?: string
@@ -16271,13 +16274,26 @@ export type Database = {
         }
         Returns: string
       }
-      reset_patient_password_with_token: {
-        Args: { p_email: string; p_new_password: string; p_token: string }
-        Returns: {
-          message: string
-          success: boolean
-        }[]
-      }
+      reset_patient_password_with_token:
+        | {
+            Args: { p_email: string; p_new_password: string; p_token: string }
+            Returns: {
+              message: string
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_birth_year?: number
+              p_email: string
+              p_new_password: string
+              p_token: string
+            }
+            Returns: {
+              message: string
+              success: boolean
+            }[]
+          }
       reverse_transaction: {
         Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
         Returns: Json
