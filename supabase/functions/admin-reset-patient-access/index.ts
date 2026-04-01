@@ -118,12 +118,16 @@ serve(async (req) => {
     // Generate 6-digit token
     const token = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
 
+    // Extract birth year for identity verification
+    const birthYear = patient.birth_date ? new Date(patient.birth_date).getFullYear() : null;
+
     // Insert new token (valid for 30 minutes)
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     await adminClient.from("patient_password_resets").insert({
       patient_id: patientId,
       token,
       expires_at: expiresAt,
+      birth_year: birthYear,
     });
 
     if (channel === "email") {

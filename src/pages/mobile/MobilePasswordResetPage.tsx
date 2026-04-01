@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle, ShieldCheck } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-type Step = "email" | "code" | "password" | "success";
+type Step = "email" | "code" | "verify_identity" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [searchParams] = useSearchParams();
