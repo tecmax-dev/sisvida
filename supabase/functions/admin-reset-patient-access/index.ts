@@ -103,10 +103,7 @@ serve(async (req) => {
     }
 
     if (!patient.password_hash) {
-      return new Response(
-        JSON.stringify({ error: "Associado ainda não possui senha cadastrada. Oriente-o a fazer o primeiro acesso." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`Patient ${patientId} has no password_hash yet; proceeding with reset token delivery for first password definition`);
     }
 
     const firstName = patient.name?.split(" ")[0] || "Associado";
