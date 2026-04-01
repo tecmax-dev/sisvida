@@ -1148,6 +1148,18 @@ export default function UnionMembersListPage() {
                             {canManageMembers() && (
                               <DropdownMenuItem
                                 onClick={() => {
+                                  setSelectedMemberForReset(member);
+                                  setPatientResetDialogOpen(true);
+                                }}
+                                className="text-orange-600"
+                              >
+                                <KeyRound className="h-4 w-4 mr-2" />
+                                Reset de Senha App
+                              </DropdownMenuItem>
+                            )}
+                            {canManageMembers() && (
+                              <DropdownMenuItem
+                                onClick={() => {
                                   setSelectedMemberForDelete(member);
                                   setDeleteDialogOpen(true);
                                 }}
