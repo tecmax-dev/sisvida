@@ -199,6 +199,7 @@ const unionNavTree: NavCategory[] = [
     icon: FileBarChart,
     color: "contribuicoes",
     items: [
+      { href: "/union/relatorios/associados", icon: Users, label: "Associados", permission: "union_view_members" },
       { href: "/union/relatorios/agendamentos", icon: Calendar, label: "Agendamentos", permission: "union_module_access" },
     ]
   },

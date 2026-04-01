@@ -616,6 +616,7 @@ function App() {
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                   <Route path="relatorios/agendamentos" element={<UnionAppointmentReportsPage />} />
+                  <Route path="relatorios/associados" element={<UnionMembersReportPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
                   <Route path="filiacoes" element={<UnionFiliacoesPage />} />
                   <Route path="aprovacao-dependentes" element={<UnionDependentApprovalsPage />} />
