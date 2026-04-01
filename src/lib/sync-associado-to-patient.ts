@@ -79,6 +79,7 @@ export async function syncAssociadoToPatient(
     father_name: associado.nome_pai || null,
     is_active: true,
     is_union_member: true,
+    union_affiliation_date: new Date().toISOString().split('T')[0],
     notes: "Cadastrado automaticamente via aprovação de filiação pública",
   }).select("id").single();
 
