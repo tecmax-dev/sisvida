@@ -283,8 +283,8 @@ export function MobileCreateDeclarationDialog({
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao gerar declaração",
-        description: error.message,
+        title: "Não foi possível gerar a declaração",
+        description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
         variant: "destructive",
       });
       setConfirmDialogOpen(false);
