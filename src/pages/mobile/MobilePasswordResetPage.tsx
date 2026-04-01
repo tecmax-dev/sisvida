@@ -438,8 +438,14 @@ export default function MobilePasswordResetPage() {
                   navigate("/app");
                 } else if (step === "code") {
                   setStep("email");
+                } else if (step === "verify_identity") {
+                  if (cameFromLink) {
+                    navigate("/app");
+                  } else {
+                    setStep("code");
+                  }
                 } else if (step === "password") {
-                  setStep("code");
+                  setStep("verify_identity");
                 }
               }}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
