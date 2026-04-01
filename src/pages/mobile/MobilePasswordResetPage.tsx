@@ -293,6 +293,51 @@ export default function MobilePasswordResetPage() {
           </form>
         );
 
+      case "verify_identity":
+        return (
+          <form onSubmit={handleVerifyIdentity} className="space-y-6">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <ShieldCheck className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Verificação de Identidade</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Para sua segurança, informe seu <strong>ano de nascimento</strong> para continuar.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthYear">Ano de Nascimento</Label>
+              <Input
+                id="birthYear"
+                type="number"
+                placeholder="Ex: 1985"
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value.slice(0, 4))}
+                className="h-12 text-center text-lg tracking-widest"
+                min="1900"
+                max={new Date().getFullYear()}
+                disabled={loading}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              disabled={!birthYear || birthYear.length !== 4}
+            >
+              Verificar e Continuar
+            </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              🔒 Este link é pessoal e intransferível. Não compartilhe.
+            </p>
+          </form>
+        );
+
       case "password":
         return (
           <form onSubmit={handleResetPassword} className="space-y-6">
