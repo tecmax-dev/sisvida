@@ -195,6 +195,7 @@ import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
 import UnionReportsPage from "./pages/union/UnionReportsPage";
 import UnionLytexReportsPage from "./pages/union/UnionLytexReportsPage";
 import UnionAppointmentReportsPage from "./pages/union/UnionAppointmentReportsPage";
+import UnionMembersReportPage from "./pages/union/UnionMembersReportPage";
 import UnionCategoriesPage from "./pages/union/UnionCategoriesPage";
 import UnionChartOfAccountsPage from "./pages/union/UnionChartOfAccountsPage";
 import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
@@ -616,6 +617,7 @@ function App() {
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                   <Route path="relatorios/agendamentos" element={<UnionAppointmentReportsPage />} />
+                  <Route path="relatorios/associados" element={<UnionMembersReportPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
                   <Route path="filiacoes" element={<UnionFiliacoesPage />} />
                   <Route path="aprovacao-dependentes" element={<UnionDependentApprovalsPage />} />
