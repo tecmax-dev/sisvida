@@ -293,6 +293,43 @@ export default function UnionMemberDetailPage() {
       if (error) throw error;
 
       if (data) {
+        if (isPlaceholderMemberRecord(data)) {
+          const normalizedName = collapseRepeatedLetters(normalizeMemberName(data.name || ''));
+          const rawTokens = normalizedName.split(' ').filter((token) => token.length >= 3);
+          const uniqueTokens = Array.from(new Set(rawTokens));
+          const prioritizedTokens = [
+            uniqueTokens[0],
+            ...uniqueTokens.slice(1).sort((a, b) => b.length - a.length),
+          ].filter(Boolean).slice(0, 3);
+
+          let fallbackQuery = supabase
+            .from('patients')
+            .select('id, name, cpf, birth_date, phone, email, is_union_member')
+            .eq('clinic_id', currentClinic.id)
+            .eq('is_union_member', true)
+            .neq('id', id);
+
+          prioritizedTokens.forEach((token) => {
+            fallbackQuery = fallbackQuery.ilike('name', `%${token}%`);
+          });
+
+          const { data: fallbackMembers, error: fallbackError } = await fallbackQuery.limit(10);
+
+          if (!fallbackError && fallbackMembers?.length) {
+            const bestMatch = fallbackMembers.find((member) => {
+              const candidateName = collapseRepeatedLetters(normalizeMemberName(member.name || ''));
+              return candidateName === normalizedName;
+            }) || fallbackMembers[0];
+
+            navigate(`/union/socios/${bestMatch.id}`, { replace: true });
+            toast({
+              title: 'Cadastro principal localizado',
+              description: 'Abrimos o registro válido deste sócio automaticamente.',
+            });
+            return;
+          }
+        }
+
         const loadedData: PatientFormData = {
           isCompany: data.is_company || false,
           isForeigner: data.is_foreigner || false,
@@ -337,9 +374,6 @@ export default function UnionMemberDetailPage() {
           notes: data.notes || '',
           maxAppointmentsPerMonth: (data as any).max_appointments_per_month ?? null,
         };
-        // Clear any stale localStorage draft BEFORE setting state
-        // This prevents useAutoSave from restoring an old draft that would
-        // overwrite changes made by other users (e.g., non-admin edits)
         try {
           localStorage.removeItem(`union-member-edit-draft:${id}`);
         } catch {
@@ -349,7 +383,6 @@ export default function UnionMemberDetailPage() {
         setFormData(loadedData);
         setInitialData(loadedData);
 
-        // Union specific data
         const effectiveStatus = data.union_member_status || data.tag?.toLowerCase() || "pendente";
         setUnionStatus(effectiveStatus);
         setUnionCategoryId(data.union_category_id || "");
@@ -357,11 +390,8 @@ export default function UnionMemberDetailPage() {
         setUnionPaymentMethod(data.union_payment_method || "");
         setUnionObservations(data.union_observations || "");
         setUnionJoinedAt(data.union_joined_at);
-        
-        // Signature data
         setSignatureUrl((data as any).signature_url || null);
         setSignatureAcceptedAt((data as any).signature_accepted_at || null);
-
         setIsPatientActive(data.is_active ?? true);
         setPatientPhotoUrl(data.photo_url || null);
 

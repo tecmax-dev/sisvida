@@ -320,7 +320,8 @@ export default function UnionMembersListPage() {
         `,
           { count: "exact" }
         )
-        .eq("clinic_id", currentClinic.id);
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_union_member", true);
 
       // Filter by active status
       if (showInactive) {
