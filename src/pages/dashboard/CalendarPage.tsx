@@ -1582,6 +1582,9 @@ export default function CalendarPage() {
     // Determinar os horários a criar: múltiplos slots ou horário único
     const timesToCreate = hasMultipleSlots ? selectedMultipleTimes : [effectiveTime];
 
+    // Refetch para garantir dados atualizados antes de verificar conflitos
+    await fetchAppointments();
+
     // Para cada data recorrente, criar agendamentos para cada horário selecionado
     for (const date of recurringDates) {
       const dateDateStr = toDateKey(date);
