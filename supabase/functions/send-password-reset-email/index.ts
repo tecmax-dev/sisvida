@@ -124,7 +124,9 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
 
-      const resetLink = `https://prosindweb.com.br/app/recuperar-senha?token=${token}&email=${encodeURIComponent(email)}`;
+      const query = new URLSearchParams();
+      query.set("email", email);
+      const resetLink = `https://prosindweb.com.br/app/recuperar-senha?${query.toString()}`;
 
       const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
 
@@ -136,9 +138,7 @@ Clique no link abaixo para criar uma nova senha:
 
 ${resetLink}
 
-⏳ Este link é válido por *30 minutos*.
-
-Se preferir, abra o aplicativo manualmente e use o código: *${token}*
+Ao abrir o link, confirme seu ano de nascimento e cadastre sua nova senha.
 
 _SECMI - Sindicato dos Comerciários_`;
 
