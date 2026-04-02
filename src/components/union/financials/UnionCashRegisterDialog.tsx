@@ -56,6 +56,7 @@ export function UnionCashRegisterDialog({
     name: "",
     type: "bank_account",
     initial_balance: "0",
+    current_balance: "0",
     initial_balance_date: new Date(),
     bank_name: "",
     agency: "",
