@@ -458,6 +458,37 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             }
           }
 
+          // If still not matched, try matching against transfers between accounts
+          if (reconciliationStatus !== "auto_reconciled" && pendingTransfers) {
+            const txDateStr = tx.date.toISOString().split("T")[0];
+            const matchedTransfer = pendingTransfers.find((tr) => {
+              if (Math.abs(tr.amount - tx.amount) >= 0.01) return false;
+              if (tr.transfer_date !== txDateStr) return false;
+              // Debit on OFX = outflow from this account (from_register_id)
+              if (tx.type === "debit" && tr.from_register_id === cashRegisterId && !tr.is_conciliated_from) {
+                // Check number match if available
+                if (tx.checkNumber && tr.check_number) {
+                  return normalizeCheckNumber(tx.checkNumber) === normalizeCheckNumber(tr.check_number);
+                }
+                return true;
+              }
+              // Credit on OFX = inflow to this account (to_register_id)
+              if (tx.type === "credit" && tr.to_register_id === cashRegisterId && !tr.is_conciliated_to) {
+                if (tx.checkNumber && tr.check_number) {
+                  return normalizeCheckNumber(tx.checkNumber) === normalizeCheckNumber(tr.check_number);
+                }
+                return true;
+              }
+              return false;
+            });
+
+            if (matchedTransfer) {
+              reconciliationStatus = "auto_reconciled";
+              matchedTransactionId = `transfer:${matchedTransfer.id}:${tx.type === "debit" ? "from" : "to"}`;
+              autoReconciled++;
+            }
+          }
+
           return {
             import_id: importRecord.id,
             clinic_id: clinicId,
