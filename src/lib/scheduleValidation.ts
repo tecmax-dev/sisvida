@@ -46,6 +46,14 @@ export function handleScheduleValidationError(error: any): {
       message: match ? match[1].trim() : "Já existe um agendamento para este profissional neste horário.",
     };
   }
+
+  // Erro de índice unique (race condition - dois agendamentos simultâneos)
+  if (errorMessage.includes("idx_appointments_no_duplicate_slot") || (errorMessage.includes("duplicate key") && errorMessage.includes("appointments"))) {
+    return {
+      isScheduleError: true,
+      message: "Este horário acabou de ser reservado por outro usuário. Atualize a agenda e tente outro horário.",
+    };
+  }
   
   return {
     isScheduleError: false,

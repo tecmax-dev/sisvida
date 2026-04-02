@@ -1750,6 +1750,9 @@ export default function CalendarPage() {
 
     const durationMinutes = formDuration ?? editingAppointment.duration_minutes ?? 30;
     
+    // Refetch para garantir dados atualizados antes de verificar conflitos
+    await fetchAppointments();
+
     // Check for conflicts before saving (exclude current appointment)
     const conflicts = findConflictingAppointments(appointments, {
       appointmentDate: editingAppointment.appointment_date,
