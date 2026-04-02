@@ -1315,6 +1315,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     refetchImports,
     pendingExpenses,
     pendingIncomes,
+    pendingTransfers,
     fetchImportTransactions,
     importOFX: importOFXMutation.mutateAsync,
     isImporting: importOFXMutation.isPending,
