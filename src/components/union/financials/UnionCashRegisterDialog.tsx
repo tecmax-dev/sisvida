@@ -98,22 +98,28 @@ export function UnionCashRegisterDialog({
     setLoading(true);
     try {
       const balance = parseFloat(formData.initial_balance.replace(",", ".") || "0");
+      const currentBal = parseFloat(formData.current_balance.replace(",", ".") || "0");
       
       const balanceDate = formData.initial_balance_date 
         ? format(formData.initial_balance_date, "yyyy-MM-dd")
         : format(new Date(), "yyyy-MM-dd");
 
-      const data = {
+      const data: any = {
         clinic_id: clinicId,
         name: formData.name,
         type: formData.type,
         initial_balance: balance,
         initial_balance_date: balanceDate,
-        current_balance: register ? undefined : balance,
         bank_name: formData.bank_name || null,
         agency: formData.agency || null,
         account_number: formData.account_number || null,
       };
+
+      if (register) {
+        data.current_balance = currentBal;
+      } else {
+        data.current_balance = balance;
+      }
 
       if (register) {
         const { error } = await supabase
@@ -223,7 +229,7 @@ export function UnionCashRegisterDialog({
               </>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={register ? "grid grid-cols-3 gap-4" : "grid grid-cols-2 gap-4"}>
               <div>
                 <Label htmlFor="initial_balance">Saldo Inicial (R$)</Label>
                 <Input
@@ -233,6 +239,18 @@ export function UnionCashRegisterDialog({
                   placeholder="0,00"
                 />
               </div>
+
+              {register && (
+                <div>
+                  <Label htmlFor="current_balance">Saldo Atual (R$)</Label>
+                  <Input
+                    id="current_balance"
+                    value={formData.current_balance}
+                    onChange={(e) => setFormData({ ...formData, current_balance: e.target.value })}
+                    placeholder="0,00"
+                  />
+                </div>
+              )}
 
               <div>
                 <Label>Data do Saldo</Label>
