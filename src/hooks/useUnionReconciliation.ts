@@ -757,7 +757,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         .from("union_bank_statement_transactions")
         .update({
           reconciliation_status: "manual_reconciled",
-          matched_transaction_id: financialTransactionIds[0],
+          matched_transaction_id: finTxIds[0],
           reconciled_by: userId,
           reconciled_at: new Date().toISOString(),
           reconciliation_notes: notes || null,
@@ -767,7 +767,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       if (stmtError) throw stmtError;
 
       // Update ALL linked financial transactions — mark as paid with compensation date and update balance
-      for (const finId of financialTransactionIds) {
+      for (const finId of finTxIds) {
         const expense = (expenseRows || []).find((e) => e.id === finId);
         const wasPending = expense && expense.status === "pending";
 
@@ -822,13 +822,13 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       // Log audit
       await (supabase as any).rpc("log_reconciliation_action", {
         p_clinic_id: clinicId,
-        p_transaction_id: financialTransactionIds[0],
+        p_transaction_id: finTxIds[0],
         p_statement_transaction_id: statementTransactionId,
         p_action: "manual_reconcile",
         p_origin: "user",
         p_previous_status: "pending",
         p_new_status: "reconciled",
-        p_details: { notes, financial_transaction_ids: financialTransactionIds, count: financialTransactionIds.length },
+        p_details: { notes, financial_transaction_ids: finTxIds, transfer_ids: transferIds, count: finTxIds.length },
         p_performed_by: userId,
       });
 
