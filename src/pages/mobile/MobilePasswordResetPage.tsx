@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, ShieldCheck } from "lucide-react";
 
-type Step = "email" | "verify_identity" | "password" | "success";
+type Step = "email" | "link_sent" | "verify_identity" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [step, setStep] = useState<Step>("email");
@@ -44,7 +44,44 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
-    setStep("verify_identity");
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-password-reset-email", {
+        body: {
+          email,
+          channel: "whatsapp",
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const result = data as { error?: string; message?: string } | null;
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      setStep("link_sent");
+      toast({
+        title: "Link enviado",
+        description:
+          result?.message ||
+          "Se o email estiver cadastrado, você receberá um link de recuperação no WhatsApp.",
+      });
+    } catch (err: any) {
+      console.error("Error sending reset link:", err);
+      toast({
+        title: "Erro ao enviar link",
+        description:
+          err?.message || "Não foi possível enviar o link de recuperação. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerifyIdentity = async (e: React.FormEvent) => {
@@ -212,6 +249,38 @@ export default function MobilePasswordResetPage() {
           </form>
         );
 
+      case "link_sent":
+        return (
+          <div className="text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-10 w-10 text-emerald-600" />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Confira seu WhatsApp</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Se o email estiver cadastrado, enviaremos um link de recuperação para o número de telefone do associado.
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-muted p-4 text-sm text-muted-foreground text-left space-y-2">
+              <p>1. Abra a mensagem recebida no WhatsApp.</p>
+              <p>2. Toque no link enviado.</p>
+              <p>3. Só então será solicitada a validação do ano de nascimento.</p>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => navigate("/app/login")}
+              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
+              Voltar para login
+            </Button>
+          </div>
+        );
+
       case "password":
         return (
           <form onSubmit={handleResetPassword} className="space-y-6">
@@ -310,6 +379,8 @@ export default function MobilePasswordResetPage() {
               onClick={() => {
                 if (step === "email") {
                   navigate("/app");
+                } else if (step === "link_sent") {
+                  setStep("email");
                 } else if (step === "verify_identity") {
                   setStep("email");
                 } else if (step === "password") {
