@@ -856,6 +856,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-transfers-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
