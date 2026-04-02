@@ -67,6 +67,7 @@ export function UnionOFXImportDialog({
   isImporting,
   userId,
 }: UnionOFXImportDialogProps) {
+  const isMobile = useIsMobile();
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState("");
   const [selectedCashRegister, setSelectedCashRegister] = useState("");
