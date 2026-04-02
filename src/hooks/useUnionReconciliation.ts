@@ -694,7 +694,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           .from("union_bank_statement_transactions")
           .update({
             reconciliation_status: "manual_reconciled",
-            matched_transaction_id: `transfer:${firstTransferId}`,
+            matched_transaction_id: null,
+            matched_transfer_id: firstTransferId,
+            matched_type: "transfer",
             reconciled_by: userId,
             reconciled_at: new Date().toISOString(),
             reconciliation_notes: notes || "Conciliado com transferência entre contas",
@@ -1073,7 +1075,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         // Fetch the statement transaction
         const { data: stmtTx, error: fetchErr } = await (supabase as any)
           .from("union_bank_statement_transactions")
-          .select("id, matched_transaction_id, generated_transaction_id, import_id, cash_register_id, amount, transaction_type")
+          .select("id, matched_transaction_id, matched_transfer_id, matched_type, generated_transaction_id, import_id, cash_register_id, amount, transaction_type")
           .eq("id", stmtId)
           .single();
 
@@ -1124,19 +1126,20 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             deletedFinCount++;
           }
-        } else if (matchedId && matchedId.startsWith("transfer:")) {
+        } else if (stmtTx.matched_transfer_id || stmtTx.matched_type === "transfer") {
           // Undo transfer reconciliation
-          const transferId = matchedId.replace("transfer:", "");
-          // Determine side from transaction_type: debit = from, credit = to
+          const transferId = stmtTx.matched_transfer_id;
           const side = stmtTx.transaction_type === "debit" ? "from" : "to";
           const revertPayload: Record<string, any> = side === "from"
             ? { is_conciliated_from: false, conciliated_from_at: null, conciliated_from_by: null, source_statement_tx_id_from: null }
             : { is_conciliated_to: false, conciliated_to_at: null, conciliated_to_by: null, source_statement_tx_id_to: null };
 
-          await supabase
-            .from("union_cash_transfers")
-            .update(revertPayload)
-            .eq("id", transferId);
+          if (transferId) {
+            await supabase
+              .from("union_cash_transfers")
+              .update(revertPayload)
+              .eq("id", transferId);
+          }
         } else if (matchedId) {
           // If matched to existing financial transaction(s), find ALL linked via source_statement_tx_id
           const { data: allLinked } = await supabase
