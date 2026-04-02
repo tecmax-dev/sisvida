@@ -142,7 +142,7 @@ Ao abrir o link, confirme seu ano de nascimento e cadastre sua nova senha.
 
 _SECMI - Sindicato dos Comerciários_`;
 
-      const authHeader = req.headers.get("Authorization") || `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`;
+      const authHeader = `Bearer ${supabaseServiceKey}`;
 
       const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
         method: "POST",
