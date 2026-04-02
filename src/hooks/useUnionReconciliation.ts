@@ -1121,6 +1121,19 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             deletedFinCount++;
           }
+        } else if (matchedId && matchedId.startsWith("transfer:")) {
+          // Undo transfer reconciliation
+          const transferId = matchedId.replace("transfer:", "");
+          // Determine side from transaction_type: debit = from, credit = to
+          const side = stmtTx.transaction_type === "debit" ? "from" : "to";
+          const revertPayload: Record<string, any> = side === "from"
+            ? { is_conciliated_from: false, conciliated_from_at: null, conciliated_from_by: null, source_statement_tx_id_from: null }
+            : { is_conciliated_to: false, conciliated_to_at: null, conciliated_to_by: null, source_statement_tx_id_to: null };
+
+          await supabase
+            .from("union_cash_transfers")
+            .update(revertPayload)
+            .eq("id", transferId);
         } else if (matchedId) {
           // If matched to existing financial transaction(s), find ALL linked via source_statement_tx_id
           const { data: allLinked } = await supabase
