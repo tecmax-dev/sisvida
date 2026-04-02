@@ -11346,6 +11346,8 @@ export type Database = {
           id: string
           import_id: string
           matched_transaction_id: string | null
+          matched_transfer_id: string | null
+          matched_type: string
           reconciled_at: string | null
           reconciled_by: string | null
           reconciliation_notes: string | null
@@ -11368,6 +11370,8 @@ export type Database = {
           id?: string
           import_id: string
           matched_transaction_id?: string | null
+          matched_transfer_id?: string | null
+          matched_type?: string
           reconciled_at?: string | null
           reconciled_by?: string | null
           reconciliation_notes?: string | null
@@ -11390,6 +11394,8 @@ export type Database = {
           id?: string
           import_id?: string
           matched_transaction_id?: string | null
+          matched_transfer_id?: string | null
+          matched_type?: string
           reconciled_at?: string | null
           reconciled_by?: string | null
           reconciliation_notes?: string | null
