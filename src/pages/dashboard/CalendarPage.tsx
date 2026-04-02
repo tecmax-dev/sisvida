@@ -1582,6 +1582,9 @@ export default function CalendarPage() {
     // Determinar os horários a criar: múltiplos slots ou horário único
     const timesToCreate = hasMultipleSlots ? selectedMultipleTimes : [effectiveTime];
 
+    // Refetch para garantir dados atualizados antes de verificar conflitos
+    await fetchAppointments();
+
     // Para cada data recorrente, criar agendamentos para cada horário selecionado
     for (const date of recurringDates) {
       const dateDateStr = toDateKey(date);
@@ -1747,6 +1750,9 @@ export default function CalendarPage() {
 
     const durationMinutes = formDuration ?? editingAppointment.duration_minutes ?? 30;
     
+    // Refetch para garantir dados atualizados antes de verificar conflitos
+    await fetchAppointments();
+
     // Check for conflicts before saving (exclude current appointment)
     const conflicts = findConflictingAppointments(appointments, {
       appointmentDate: editingAppointment.appointment_date,
