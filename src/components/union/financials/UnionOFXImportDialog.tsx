@@ -173,23 +173,23 @@ export function UnionOFXImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
+      <DialogContent className={`max-h-[90vh] flex flex-col ${isMobile ? 'w-[95vw] max-w-[95vw] p-4' : 'max-w-4xl'}`}>
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
             Importar Extrato OFX
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Importe um arquivo OFX do seu banco para conciliar automaticamente as despesas.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 min-h-0">
           {/* Cash Register Selection */}
           <div>
-            <Label>Conta Bancária *</Label>
+            <Label className="text-xs sm:text-sm">Conta Bancária *</Label>
             <Select value={selectedCashRegister} onValueChange={setSelectedCashRegister}>
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 text-xs sm:text-sm">
                 <SelectValue placeholder="Selecione a conta bancária" />
               </SelectTrigger>
               <SelectContent>
@@ -203,9 +203,9 @@ export function UnionOFXImportDialog({
           </div>
 
           {/* File Upload */}
-          <div className="flex items-center gap-4">
+          <div className={`${isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-4'}`}>
             <div className="flex-1">
-              <Label htmlFor="ofx-file">Arquivo OFX *</Label>
+              <Label htmlFor="ofx-file" className="text-xs sm:text-sm">Arquivo OFX *</Label>
               <Input
                 ref={fileInputRef}
                 id="ofx-file"
@@ -213,13 +213,13 @@ export function UnionOFXImportDialog({
                 accept=".ofx,.OFX"
                 onChange={handleFileUpload}
                 disabled={isImporting}
-                className="mt-1"
+                className="mt-1 text-xs sm:text-sm"
               />
             </div>
             {fileName && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-6">
-                <FileText className="h-4 w-4" />
-                {fileName}
+              <div className={`flex items-center gap-2 text-xs sm:text-sm text-muted-foreground ${isMobile ? '' : 'pt-6'}`}>
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="truncate">{fileName}</span>
               </div>
             )}
           </div>
@@ -227,26 +227,26 @@ export function UnionOFXImportDialog({
           {parseError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{parseError}</AlertDescription>
+              <AlertDescription className="text-xs sm:text-sm">{parseError}</AlertDescription>
             </Alert>
           )}
 
           {/* Bank Info */}
           {bankInfo && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 p-3 sm:p-4 bg-muted/30 rounded-lg">
               {bankInfo.bankName && (
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Banco</p>
-                    <p className="text-sm font-medium">{bankInfo.bankName}</p>
+                  <Building2 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Banco</p>
+                    <p className="text-xs sm:text-sm font-medium truncate">{bankInfo.bankName}</p>
                   </div>
                 </div>
               )}
               {bankInfo.accountNumber && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Conta</p>
-                  <p className="text-sm font-medium">
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Conta</p>
+                  <p className="text-xs sm:text-sm font-medium truncate">
                     {bankInfo.agency && `${bankInfo.agency} / `}
                     {bankInfo.accountNumber}
                   </p>
@@ -254,39 +254,39 @@ export function UnionOFXImportDialog({
               )}
               {bankInfo.startDate && bankInfo.endDate && (
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Período</p>
-                    <p className="text-sm font-medium">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Período</p>
+                    <p className="text-xs sm:text-sm font-medium">
                       {format(bankInfo.startDate, "dd/MM/yy")} - {format(bankInfo.endDate, "dd/MM/yy")}
                     </p>
                   </div>
                 </div>
               )}
               <div>
-                <p className="text-xs text-muted-foreground">Transações</p>
-                <p className="text-sm font-medium">{parsedTransactions.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Transações</p>
+                <p className="text-xs sm:text-sm font-medium">{parsedTransactions.length}</p>
               </div>
             </div>
           )}
 
           {/* Summary */}
           {parsedTransactions.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
-                <div>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400">Créditos</p>
-                  <p className="text-lg font-bold text-emerald-600">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-emerald-700 dark:text-emerald-400">Créditos</p>
+                  <p className="text-sm sm:text-lg font-bold text-emerald-600 truncate">
                     {formatCurrency(totalCredits)}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
-                <TrendingDown className="h-5 w-5 text-rose-600" />
-                <div>
-                  <p className="text-xs text-rose-700 dark:text-rose-400">Débitos</p>
-                  <p className="text-lg font-bold text-rose-600">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
+                <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-rose-600 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs text-rose-700 dark:text-rose-400">Débitos</p>
+                  <p className="text-sm sm:text-lg font-bold text-rose-600 truncate">
                     {formatCurrency(totalDebits)}
                   </p>
                 </div>
@@ -296,57 +296,88 @@ export function UnionOFXImportDialog({
 
           {/* Transactions Preview */}
           {parsedTransactions.length > 0 && (
-            <ScrollArea className="h-[300px] border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Nº Cheque</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        {format(tx.date, "dd/MM/yyyy", { locale: ptBR })}
-                      </TableCell>
-                      <TableCell className="font-medium max-w-[280px] truncate">
-                        {tx.description || "—"}
-                      </TableCell>
-                      <TableCell>
-                        {tx.checkNumber ? (
-                          <Badge variant="outline" className="font-mono">
+            isMobile ? (
+              <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
+                {parsedTransactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-2 bg-muted/20 rounded text-xs gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground whitespace-nowrap">
+                          {format(tx.date, "dd/MM/yy", { locale: ptBR })}
+                        </span>
+                        {tx.checkNumber && (
+                          <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
                             {tx.checkNumber}
                           </Badge>
-                        ) : (
-                          "—"
                         )}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${
-                          tx.type === "credit" ? "text-emerald-600" : "text-rose-600"
-                        }`}
-                      >
-                        {tx.type === "debit" ? "- " : "+ "}
-                        {formatCurrency(tx.amount)}
-                      </TableCell>
+                      </div>
+                      <p className="font-medium truncate mt-0.5">{tx.description || "—"}</p>
+                    </div>
+                    <span
+                      className={`font-medium whitespace-nowrap ${
+                        tx.type === "credit" ? "text-emerald-600" : "text-rose-600"
+                      }`}
+                    >
+                      {tx.type === "debit" ? "- " : "+ "}
+                      {formatCurrency(tx.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px] border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Data</TableHead>
+                      <TableHead className="text-xs">Descrição</TableHead>
+                      <TableHead className="text-xs">Nº Cheque</TableHead>
+                      <TableHead className="text-right text-xs">Valor</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedTransactions.map((tx) => (
+                      <TableRow key={tx.id}>
+                        <TableCell className="text-xs">
+                          {format(tx.date, "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[280px] truncate text-xs">
+                          {tx.description || "—"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {tx.checkNumber ? (
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {tx.checkNumber}
+                            </Badge>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-medium text-xs ${
+                            tx.type === "credit" ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          {tx.type === "debit" ? "- " : "+ "}
+                          {formatCurrency(tx.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isImporting}>
+        <DialogFooter className={`flex-shrink-0 ${isMobile ? 'flex-col gap-2' : ''}`}>
+          <Button variant="outline" onClick={handleClose} disabled={isImporting} className={`text-xs sm:text-sm ${isMobile ? 'w-full' : ''}`}>
             Cancelar
           </Button>
           <Button
             onClick={handleImport}
             disabled={isImporting || !selectedCashRegister || parsedTransactions.length === 0}
+            className={`text-xs sm:text-sm ${isMobile ? 'w-full' : ''}`}
           >
             {isImporting ? (
               <>
