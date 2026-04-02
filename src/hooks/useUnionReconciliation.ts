@@ -277,6 +277,25 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     enabled: !!clinicId,
   });
 
+  // Fetch ALL pending (unreconciled) transfers for matching
+  const { data: pendingTransfers } = useQuery({
+    queryKey: ["union-pending-transfers-reconciliation", clinicId],
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      if (!clinicId) return [];
+      const { data, error } = await supabase
+        .from("union_cash_transfers")
+        .select("id, amount, transfer_date, description, check_number, from_register_id, to_register_id, is_conciliated_from, is_conciliated_to")
+        .eq("clinic_id", clinicId)
+        .or("is_conciliated_from.eq.false,is_conciliated_to.eq.false");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clinicId,
+  });
+
   // Import OFX file
   const importOFXMutation = useMutation({
     mutationFn: async ({
