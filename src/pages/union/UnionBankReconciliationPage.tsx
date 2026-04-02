@@ -71,6 +71,7 @@ export default function UnionBankReconciliationPage() {
     isUnreconciling,
     pendingExpenses,
     pendingIncomes,
+    pendingTransfers,
     markVerified,
     isMarkingVerified,
     deleteImport,
