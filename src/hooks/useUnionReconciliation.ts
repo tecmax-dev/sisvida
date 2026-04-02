@@ -1214,6 +1214,8 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           .update({
             reconciliation_status: "pending_review",
             matched_transaction_id: null,
+            matched_transfer_id: null,
+            matched_type: "transaction",
             generated_transaction_id: null,
             reconciled_by: null,
             reconciled_at: null,
