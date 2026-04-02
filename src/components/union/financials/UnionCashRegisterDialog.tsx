@@ -69,6 +69,7 @@ export function UnionCashRegisterDialog({
         name: register.name || "",
         type: register.type || "bank_account",
         initial_balance: register.initial_balance?.toString() || "0",
+        current_balance: register.current_balance?.toString() || "0",
         initial_balance_date: register.initial_balance_date 
           ? new Date(register.initial_balance_date + "T12:00:00") 
           : new Date(),
@@ -81,6 +82,7 @@ export function UnionCashRegisterDialog({
         name: "",
         type: "bank_account",
         initial_balance: "0",
+        current_balance: "0",
         initial_balance_date: new Date(),
         bank_name: "",
         agency: "",
