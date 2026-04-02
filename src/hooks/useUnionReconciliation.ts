@@ -484,11 +484,16 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             if (matchedTransfer) {
               reconciliationStatus = "auto_reconciled";
-              matchedTransactionId = `transfer:${matchedTransfer.id}:${tx.type === "debit" ? "from" : "to"}`;
+              // Store transfer info separately — will be set after insert
+              matchedTransactionId = null;
               autoReconciled++;
+              // Tag this record so we can update it after insert
+              (tx as any)._matchedTransferId = matchedTransfer.id;
+              (tx as any)._matchedTransferSide = tx.type === "debit" ? "from" : "to";
             }
           }
 
+          const hasMatch = matchedTransactionId || (tx as any)._matchedTransferId;
           return {
             import_id: importRecord.id,
             clinic_id: clinicId,
@@ -501,7 +506,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             check_number: tx.checkNumber,
             reconciliation_status: reconciliationStatus,
             matched_transaction_id: matchedTransactionId,
-            reconciled_at: matchedTransactionId ? new Date().toISOString() : null,
+            matched_transfer_id: (tx as any)._matchedTransferId || null,
+            matched_type: (tx as any)._matchedTransferId ? "transfer" : "transaction",
+            reconciled_at: hasMatch ? new Date().toISOString() : null,
           };
         })
       );
@@ -515,27 +522,23 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       // Update auto-reconciled financial transactions and transfers
       for (const rec of transactionRecords) {
-        if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
-          // Check if matched to a transfer
-          if (rec.matched_transaction_id.startsWith("transfer:")) {
-            const parts = rec.matched_transaction_id.split(":");
-            const transferId = parts[1];
-            const side = parts[2]; // "from" or "to"
-            const now = new Date().toISOString();
+        if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transfer_id) {
+          // Handle transfer auto-reconciliation
+          const transferId = rec.matched_transfer_id;
+          const side = rec.transaction_type === "debit" ? "from" : "to";
+          const now = new Date().toISOString();
 
-            const updatePayload: Record<string, any> = side === "from"
-              ? { is_conciliated_from: true, conciliated_from_at: now, conciliated_from_by: userId, source_statement_tx_id_from: null }
-              : { is_conciliated_to: true, conciliated_to_at: now, conciliated_to_by: userId, source_statement_tx_id_to: null };
+          const updatePayload: Record<string, any> = side === "from"
+            ? { is_conciliated_from: true, conciliated_from_at: now, conciliated_from_by: userId, source_statement_tx_id_from: null }
+            : { is_conciliated_to: true, conciliated_to_at: now, conciliated_to_by: userId, source_statement_tx_id_to: null };
 
-            await supabase
-              .from("union_cash_transfers")
-              .update(updatePayload)
-              .eq("id", transferId);
+          await supabase
+            .from("union_cash_transfers")
+            .update(updatePayload)
+            .eq("id", transferId);
 
-            // Clear the prefixed ID — store the raw transfer ID in matched_transaction_id
-            // We need to update the statement transaction after insert
-            continue;
-          }
+          continue;
+        } else if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
 
           // Look in both expenses and incomes
           const matchedTx = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id)
@@ -691,7 +694,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           .from("union_bank_statement_transactions")
           .update({
             reconciliation_status: "manual_reconciled",
-            matched_transaction_id: `transfer:${firstTransferId}`,
+            matched_transaction_id: null,
+            matched_transfer_id: firstTransferId,
+            matched_type: "transfer",
             reconciled_by: userId,
             reconciled_at: new Date().toISOString(),
             reconciliation_notes: notes || "Conciliado com transferência entre contas",
@@ -1070,7 +1075,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         // Fetch the statement transaction
         const { data: stmtTx, error: fetchErr } = await (supabase as any)
           .from("union_bank_statement_transactions")
-          .select("id, matched_transaction_id, generated_transaction_id, import_id, cash_register_id, amount, transaction_type")
+          .select("id, matched_transaction_id, matched_transfer_id, matched_type, generated_transaction_id, import_id, cash_register_id, amount, transaction_type")
           .eq("id", stmtId)
           .single();
 
@@ -1121,19 +1126,20 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             deletedFinCount++;
           }
-        } else if (matchedId && matchedId.startsWith("transfer:")) {
+        } else if (stmtTx.matched_transfer_id || stmtTx.matched_type === "transfer") {
           // Undo transfer reconciliation
-          const transferId = matchedId.replace("transfer:", "");
-          // Determine side from transaction_type: debit = from, credit = to
+          const transferId = stmtTx.matched_transfer_id;
           const side = stmtTx.transaction_type === "debit" ? "from" : "to";
           const revertPayload: Record<string, any> = side === "from"
             ? { is_conciliated_from: false, conciliated_from_at: null, conciliated_from_by: null, source_statement_tx_id_from: null }
             : { is_conciliated_to: false, conciliated_to_at: null, conciliated_to_by: null, source_statement_tx_id_to: null };
 
-          await supabase
-            .from("union_cash_transfers")
-            .update(revertPayload)
-            .eq("id", transferId);
+          if (transferId) {
+            await supabase
+              .from("union_cash_transfers")
+              .update(revertPayload)
+              .eq("id", transferId);
+          }
         } else if (matchedId) {
           // If matched to existing financial transaction(s), find ALL linked via source_statement_tx_id
           const { data: allLinked } = await supabase
@@ -1208,6 +1214,8 @@ export function useUnionReconciliation(clinicId: string | undefined) {
           .update({
             reconciliation_status: "pending_review",
             matched_transaction_id: null,
+            matched_transfer_id: null,
+            matched_type: "transaction",
             generated_transaction_id: null,
             reconciled_by: null,
             reconciled_at: null,
