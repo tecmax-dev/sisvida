@@ -12,25 +12,25 @@ const corsHeaders = {
 
 // Variações de mensagem para evitar banimento
 const messageTemplates = [
-  (name: string) => `Olá ${name}! 😊\n\nGostaríamos de informar que a *agenda médica de Abril/2026* já está disponível para agendamentos!\n\nAproveite para garantir seu horário com antecedência.\n\nAgende pelo app ou entre em contato conosco.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Olá ${name}! 😊\n\nGostaríamos de informar que a *agenda médica de Abril/2026* já está disponível para agendamentos!\n\nAproveite para garantir seu horário com antecedência.\n\nAgende pelo app ou entre em contato conosco.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Oi ${name}! 👋\n\nTemos uma novidade: a *agenda de Abril de 2026* dos nossos profissionais de saúde está aberta!\n\nNão deixe para última hora, agende já sua consulta.\n\nUtilize o app ou fale conosco para agendar.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Oi ${name}! 👋\n\nTemos uma novidade: a *agenda de Abril de 2026* dos nossos profissionais de saúde está aberta!\n\nNão deixe para última hora, agende já sua consulta.\n\nUtilize o app ou fale conosco para agendar.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Bom dia, ${name}! 🌟\n\nInformamos que já é possível realizar agendamentos para *Abril/2026*.\n\nGaranta seu atendimento médico com antecedência!\n\nAgende através do nosso app ou nos contate diretamente.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Bom dia, ${name}! 🌟\n\nInformamos que já é possível realizar agendamentos para *Abril/2026*.\n\nGaranta seu atendimento médico com antecedência!\n\nAgende através do nosso app ou nos contate diretamente.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `${name}, tudo bem? 😄\n\nPassando para avisar que a *agenda médica de Abril 2026* já está liberada para marcações!\n\nQue tal já garantir seu horário?\n\nÉ só agendar pelo app ou entrar em contato.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `${name}, tudo bem? 😄\n\nPassando para avisar que a *agenda médica de Abril 2026* já está liberada para marcações!\n\nQue tal já garantir seu horário?\n\nÉ só agendar pelo app ou entrar em contato.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Olá ${name}! 📋\n\nA *agenda de Abril/2026* está aberta! Nossos profissionais já estão com horários disponíveis.\n\nAgende sua consulta o quanto antes para garantir a melhor data.\n\nUse o app ou entre em contato conosco.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Olá ${name}! 📋\n\nA *agenda de Abril/2026* está aberta! Nossos profissionais já estão com horários disponíveis.\n\nAgende sua consulta o quanto antes para garantir a melhor data.\n\nUse o app ou entre em contato conosco.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Oi, ${name}! ✨\n\nQueremos te avisar que a *agenda médica para Abril de 2026* já pode ser consultada!\n\nOs horários estão sendo preenchidos rápido, garanta o seu.\n\nAgende pelo aplicativo ou nos procure.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Oi, ${name}! ✨\n\nQueremos te avisar que a *agenda médica para Abril de 2026* já pode ser consultada!\n\nOs horários estão sendo preenchidos rápido, garanta o seu.\n\nAgende pelo aplicativo ou nos procure.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Prezado(a) ${name}, 🏥\n\nComunicamos que os agendamentos para *Abril/2026* estão disponíveis!\n\nNão perca tempo, marque já sua consulta.\n\nVocê pode agendar pelo app ou nos contatar.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Prezado(a) ${name}, 🏥\n\nComunicamos que os agendamentos para *Abril/2026* estão disponíveis!\n\nNão perca tempo, marque já sua consulta.\n\nVocê pode agendar pelo app ou nos contatar.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Hey ${name}! 🗓️\n\nNovidade por aqui: *agenda de Abril 2026* liberada para agendamento!\n\nAproveite e marque sua consulta médica com antecedência.\n\nAgende pelo app ou fale com a gente.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Hey ${name}! 🗓️\n\nNovidade por aqui: *agenda de Abril 2026* liberada para agendamento!\n\nAproveite e marque sua consulta médica com antecedência.\n\nAgende pelo app ou fale com a gente.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `${name}, boa notícia! 🎉\n\nA *agenda dos profissionais de saúde para Abril/2026* está aberta!\n\nReserve seu horário antes que os melhores sejam preenchidos.\n\nUse nosso app ou entre em contato para agendar.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `${name}, boa notícia! 🎉\n\nA *agenda dos profissionais de saúde para Abril/2026* está aberta!\n\nReserve seu horário antes que os melhores sejam preenchidos.\n\nUse nosso app ou entre em contato para agendar.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 
-  (name: string) => `Olá ${name}, como vai? 💙\n\nEstamos felizes em comunicar que a *agenda para Abril de 2026* já está disponível!\n\nAgende sua próxima consulta com tranquilidade.\n\nPelo app ou diretamente conosco, estamos à disposição.\n\n_SECMI - Sindicato dos Empregados no Comércio de Itabuna_`,
+  (name: string) => `Olá ${name}, como vai? 💙\n\nEstamos felizes em comunicar que a *agenda para Abril de 2026* já está disponível!\n\nAgende sua próxima consulta com tranquilidade.\n\nPelo app ou diretamente conosco, estamos à disposição.\n\n_SECMI - Sindicato dos Empregados no Comércio de Ilhéus_`,
 ];
 
 // Variações extras de saudação/emojis para tornar ainda mais únicas
