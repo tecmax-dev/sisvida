@@ -484,11 +484,16 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             if (matchedTransfer) {
               reconciliationStatus = "auto_reconciled";
-              matchedTransactionId = `transfer:${matchedTransfer.id}:${tx.type === "debit" ? "from" : "to"}`;
+              // Store transfer info separately — will be set after insert
+              matchedTransactionId = null;
               autoReconciled++;
+              // Tag this record so we can update it after insert
+              (tx as any)._matchedTransferId = matchedTransfer.id;
+              (tx as any)._matchedTransferSide = tx.type === "debit" ? "from" : "to";
             }
           }
 
+          const hasMatch = matchedTransactionId || (tx as any)._matchedTransferId;
           return {
             import_id: importRecord.id,
             clinic_id: clinicId,
@@ -501,7 +506,9 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             check_number: tx.checkNumber,
             reconciliation_status: reconciliationStatus,
             matched_transaction_id: matchedTransactionId,
-            reconciled_at: matchedTransactionId ? new Date().toISOString() : null,
+            matched_transfer_id: (tx as any)._matchedTransferId || null,
+            matched_type: (tx as any)._matchedTransferId ? "transfer" : "transaction",
+            reconciled_at: hasMatch ? new Date().toISOString() : null,
           };
         })
       );
