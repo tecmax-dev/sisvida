@@ -12500,11 +12500,19 @@ export type Database = {
           amount: number
           check_number: string | null
           clinic_id: string
+          conciliated_from_at: string | null
+          conciliated_from_by: string | null
+          conciliated_to_at: string | null
+          conciliated_to_by: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
           from_register_id: string
           id: string
+          is_conciliated_from: boolean
+          is_conciliated_to: boolean
+          source_statement_tx_id_from: string | null
+          source_statement_tx_id_to: string | null
           to_register_id: string
           transfer_date: string
         }
@@ -12512,11 +12520,19 @@ export type Database = {
           amount: number
           check_number?: string | null
           clinic_id: string
+          conciliated_from_at?: string | null
+          conciliated_from_by?: string | null
+          conciliated_to_at?: string | null
+          conciliated_to_by?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           from_register_id: string
           id?: string
+          is_conciliated_from?: boolean
+          is_conciliated_to?: boolean
+          source_statement_tx_id_from?: string | null
+          source_statement_tx_id_to?: string | null
           to_register_id: string
           transfer_date: string
         }
@@ -12524,11 +12540,19 @@ export type Database = {
           amount?: number
           check_number?: string | null
           clinic_id?: string
+          conciliated_from_at?: string | null
+          conciliated_from_by?: string | null
+          conciliated_to_at?: string | null
+          conciliated_to_by?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           from_register_id?: string
           id?: string
+          is_conciliated_from?: boolean
+          is_conciliated_to?: boolean
+          source_statement_tx_id_from?: string | null
+          source_statement_tx_id_to?: string | null
           to_register_id?: string
           transfer_date?: string
         }
