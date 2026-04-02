@@ -108,28 +108,6 @@ serve(async (req) => {
 
     const firstName = patient.name?.split(" ")[0] || "Associado";
 
-    // Invalidate existing tokens
-    await adminClient
-      .from("patient_password_resets")
-      .update({ used_at: new Date().toISOString() })
-      .eq("patient_id", patientId)
-      .is("used_at", null);
-
-    // Generate 6-digit token
-    const token = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
-
-    // Extract birth year for identity verification
-    const birthYear = patient.birth_date ? new Date(patient.birth_date).getFullYear() : null;
-
-    // Insert new token (valid for 30 minutes)
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-    await adminClient.from("patient_password_resets").insert({
-      patient_id: patientId,
-      token,
-      expires_at: expiresAt,
-      birth_year: birthYear,
-    });
-
     if (channel === "email") {
       if (!patient.email) {
         return new Response(
@@ -137,6 +115,23 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      await adminClient
+        .from("patient_password_resets")
+        .update({ used_at: new Date().toISOString() })
+        .eq("patient_id", patientId)
+        .is("used_at", null);
+
+      const token = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      const birthYear = patient.birth_date ? new Date(patient.birth_date).getFullYear() : null;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+      await adminClient.from("patient_password_resets").insert({
+        patient_id: patientId,
+        token,
+        expires_at: expiresAt,
+        birth_year: birthYear,
+      });
 
       const smtpHost = Deno.env.get("SMTP_HOST");
       const smtpPort = Deno.env.get("SMTP_PORT");
@@ -213,8 +208,12 @@ serve(async (req) => {
         );
       }
 
-      // Build deep link to the PWA reset page with token pre-filled
-      const resetLink = `https://prosindweb.com.br/app/recuperar-senha?token=${token}&email=${encodeURIComponent(patient.email || "")}`;
+      const query = new URLSearchParams();
+      if (patient.email) {
+        query.set("email", patient.email);
+      }
+
+      const resetLink = `https://prosindweb.com.br/app/recuperar-senha${query.toString() ? `?${query.toString()}` : ""}`;
 
       const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
 
@@ -226,9 +225,7 @@ Clique no link abaixo para criar uma nova senha:
 
 ${resetLink}
 
-⏳ Este link é válido por *30 minutos*.
-
-Se preferir, abra o aplicativo manualmente e use o código: *${token}*
+Ao abrir o link, confirme seu ano de nascimento e cadastre sua nova senha.
 
 _SECMI - Sindicato dos Comerciários_`;
 
@@ -268,7 +265,7 @@ _SECMI - Sindicato dos Comerciários_`;
         );
       }
 
-      console.log(`Patient reset code sent via WhatsApp to ${patient.phone} by admin ${currentUser.id}`);
+      console.log(`Patient reset link sent via WhatsApp to ${patient.phone} by admin ${currentUser.id}`);
 
     } else {
       return new Response(

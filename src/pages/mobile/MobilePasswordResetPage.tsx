@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,20 @@ export default function MobilePasswordResetPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const emailFromQuery = searchParams.get("email")?.trim();
+
+    if (!emailFromQuery || !emailFromQuery.includes("@")) {
+      return;
+    }
+
+    setEmail((currentEmail) => currentEmail || emailFromQuery);
+    setStep((currentStep) => currentStep === "email" ? "verify_identity" : currentStep);
+  }, [searchParams]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

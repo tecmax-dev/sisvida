@@ -57,12 +57,16 @@ export function SendPatientResetDialog({
       if (error) throw error;
       if (data?.error) throw data;
 
-      const channelLabel = channel === "email" ? "e-mail" : "WhatsApp";
-      toast.success(`Código de recuperação enviado por ${channelLabel}!`, {
-        description: channel === "email"
-          ? `Enviado para ${patient.email}`
-          : `Enviado para ${patient.phone || "telefone cadastrado"}`,
-      });
+      toast.success(
+        channel === "email"
+          ? "Código de recuperação enviado por e-mail!"
+          : "Link de recuperação enviado por WhatsApp!",
+        {
+          description: channel === "email"
+            ? `Enviado para ${patient.email}`
+            : `Enviado para ${patient.phone || "telefone cadastrado"}`,
+        }
+      );
 
       handleClose();
     } catch (err: unknown) {
