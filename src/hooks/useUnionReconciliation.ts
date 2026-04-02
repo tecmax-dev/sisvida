@@ -629,6 +629,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-transfers-reconciliation"] });
       toast.success(
         `Extrato importado! ${data.autoReconciled} de ${data.total} transações conciliadas automaticamente.`
       );
