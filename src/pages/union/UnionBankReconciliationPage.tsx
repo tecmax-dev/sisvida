@@ -71,6 +71,7 @@ export default function UnionBankReconciliationPage() {
     isUnreconciling,
     pendingExpenses,
     pendingIncomes,
+    pendingTransfers,
     markVerified,
     isMarkingVerified,
     deleteImport,
@@ -379,11 +380,13 @@ export default function UnionBankReconciliationPage() {
             ? (pendingIncomes || [])
             : (pendingExpenses || [])
         }
+        pendingTransfers={pendingTransfers || []}
         cashRegisterName={
           reconcileTx
             ? cashRegisters?.find((cr) => cr.id === reconcileTx.cash_register_id)?.name
             : undefined
         }
+        cashRegisters={cashRegisters || []}
         onReconcile={async (stmtId, finIds, notes) => {
           await reconcile({
             statementTransactionId: stmtId,

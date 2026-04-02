@@ -277,6 +277,25 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     enabled: !!clinicId,
   });
 
+  // Fetch ALL pending (unreconciled) transfers for matching
+  const { data: pendingTransfers } = useQuery({
+    queryKey: ["union-pending-transfers-reconciliation", clinicId],
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      if (!clinicId) return [];
+      const { data, error } = await supabase
+        .from("union_cash_transfers")
+        .select("id, amount, transfer_date, description, check_number, from_register_id, to_register_id, is_conciliated_from, is_conciliated_to")
+        .eq("clinic_id", clinicId)
+        .or("is_conciliated_from.eq.false,is_conciliated_to.eq.false");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clinicId,
+  });
+
   // Import OFX file
   const importOFXMutation = useMutation({
     mutationFn: async ({
@@ -439,6 +458,37 @@ export function useUnionReconciliation(clinicId: string | undefined) {
             }
           }
 
+          // If still not matched, try matching against transfers between accounts
+          if (reconciliationStatus !== "auto_reconciled" && pendingTransfers) {
+            const txDateStr = tx.date.toISOString().split("T")[0];
+            const matchedTransfer = pendingTransfers.find((tr) => {
+              if (Math.abs(tr.amount - tx.amount) >= 0.01) return false;
+              if (tr.transfer_date !== txDateStr) return false;
+              // Debit on OFX = outflow from this account (from_register_id)
+              if (tx.type === "debit" && tr.from_register_id === cashRegisterId && !tr.is_conciliated_from) {
+                // Check number match if available
+                if (tx.checkNumber && tr.check_number) {
+                  return normalizeCheckNumber(tx.checkNumber) === normalizeCheckNumber(tr.check_number);
+                }
+                return true;
+              }
+              // Credit on OFX = inflow to this account (to_register_id)
+              if (tx.type === "credit" && tr.to_register_id === cashRegisterId && !tr.is_conciliated_to) {
+                if (tx.checkNumber && tr.check_number) {
+                  return normalizeCheckNumber(tx.checkNumber) === normalizeCheckNumber(tr.check_number);
+                }
+                return true;
+              }
+              return false;
+            });
+
+            if (matchedTransfer) {
+              reconciliationStatus = "auto_reconciled";
+              matchedTransactionId = `transfer:${matchedTransfer.id}:${tx.type === "debit" ? "from" : "to"}`;
+              autoReconciled++;
+            }
+          }
+
           return {
             import_id: importRecord.id,
             clinic_id: clinicId,
@@ -463,9 +513,30 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       if (txError) throw txError;
 
-      // Update auto-reconciled financial transactions: mark as paid, set paid_date, update balance
+      // Update auto-reconciled financial transactions and transfers
       for (const rec of transactionRecords) {
         if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
+          // Check if matched to a transfer
+          if (rec.matched_transaction_id.startsWith("transfer:")) {
+            const parts = rec.matched_transaction_id.split(":");
+            const transferId = parts[1];
+            const side = parts[2]; // "from" or "to"
+            const now = new Date().toISOString();
+
+            const updatePayload: Record<string, any> = side === "from"
+              ? { is_conciliated_from: true, conciliated_from_at: now, conciliated_from_by: userId, source_statement_tx_id_from: null }
+              : { is_conciliated_to: true, conciliated_to_at: now, conciliated_to_by: userId, source_statement_tx_id_to: null };
+
+            await supabase
+              .from("union_cash_transfers")
+              .update(updatePayload)
+              .eq("id", transferId);
+
+            // Clear the prefixed ID — store the raw transfer ID in matched_transaction_id
+            // We need to update the statement transaction after insert
+            continue;
+          }
+
           // Look in both expenses and incomes
           const matchedTx = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id)
             || pendingIncomes?.find((i) => i.id === rec.matched_transaction_id);
@@ -558,6 +629,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-transfers-reconciliation"] });
       toast.success(
         `Extrato importado! ${data.autoReconciled} de ${data.total} transações conciliadas automaticamente.`
       );
@@ -567,7 +639,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     },
   });
 
-  // Manual reconcile mutation (1:N — one statement tx to multiple expenses)
+  // Manual reconcile mutation (1:N — one statement tx to multiple expenses/transfers)
   const reconcileMutation = useMutation({
     mutationFn: async ({
       statementTransactionId,
@@ -580,21 +652,97 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       userId: string;
       notes?: string;
     }) => {
+      // Separate transfer IDs from financial transaction IDs
+      const transferIds = financialTransactionIds.filter((id) => id.startsWith("transfer:"));
+      const finTxIds = financialTransactionIds.filter((id) => !id.startsWith("transfer:"));
+
       // --- Backend validation: ensure all expenses belong to the same cash register as the statement tx ---
       const { data: stmtTx, error: stmtFetchError } = await (supabase as any)
         .from("union_bank_statement_transactions")
-        .select("cash_register_id, transaction_date, check_number")
+        .select("cash_register_id, transaction_date, check_number, transaction_type")
         .eq("id", statementTransactionId)
         .single();
 
       if (stmtFetchError) throw stmtFetchError;
 
-      const compensationDate = stmtTx.transaction_date; // Data de compensação do extrato
+      const compensationDate = stmtTx.transaction_date;
+
+      // Handle transfer reconciliation
+      for (const transferRef of transferIds) {
+        const parts = transferRef.split(":");
+        const transferId = parts[1];
+        const side = parts[2]; // "from" or "to"
+        const now = new Date().toISOString();
+
+        const updatePayload: Record<string, any> = side === "from"
+          ? { is_conciliated_from: true, conciliated_from_at: now, conciliated_from_by: userId, source_statement_tx_id_from: statementTransactionId }
+          : { is_conciliated_to: true, conciliated_to_at: now, conciliated_to_by: userId, source_statement_tx_id_to: statementTransactionId };
+
+        await supabase
+          .from("union_cash_transfers")
+          .update(updatePayload)
+          .eq("id", transferId);
+      }
+
+      // If only transfers (no financial txs), update statement and return
+      if (finTxIds.length === 0 && transferIds.length > 0) {
+        const firstTransferId = transferIds[0].split(":")[1];
+        const { error: stmtError } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .update({
+            reconciliation_status: "manual_reconciled",
+            matched_transaction_id: `transfer:${firstTransferId}`,
+            reconciled_by: userId,
+            reconciled_at: new Date().toISOString(),
+            reconciliation_notes: notes || "Conciliado com transferência entre contas",
+          })
+          .eq("id", statementTransactionId);
+
+        if (stmtError) throw stmtError;
+
+        // Recalculate reconciled count
+        const { data: stmtRow } = await (supabase as any)
+          .from("union_bank_statement_transactions")
+          .select("import_id")
+          .eq("id", statementTransactionId)
+          .single();
+
+        if (stmtRow?.import_id) {
+          const { count } = await (supabase as any)
+            .from("union_bank_statement_transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("import_id", stmtRow.import_id)
+            .in("reconciliation_status", ["auto_reconciled", "manual_reconciled"]);
+
+          await (supabase as any)
+            .from("union_bank_statement_imports")
+            .update({ transactions_reconciled: count || 0 })
+            .eq("id", stmtRow.import_id);
+        }
+
+        // Log audit
+        await (supabase as any).rpc("log_reconciliation_action", {
+          p_clinic_id: clinicId,
+          p_transaction_id: null,
+          p_statement_transaction_id: statementTransactionId,
+          p_action: "manual_reconcile_transfer",
+          p_origin: "user",
+          p_previous_status: "pending",
+          p_new_status: "reconciled",
+          p_details: { notes, transfer_ids: transferIds, count: transferIds.length },
+          p_performed_by: userId,
+        });
+
+        return;
+      }
+
+      // Handle financial transactions (existing logic)
+      if (finTxIds.length === 0) return;
 
       const { data: expenseRows, error: expFetchError } = await supabase
         .from("union_financial_transactions")
         .select("id, cash_register_id, status, amount, type, check_number")
-        .in("id", financialTransactionIds);
+        .in("id", finTxIds);
 
       if (expFetchError) throw expFetchError;
 
@@ -610,7 +758,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
         .from("union_bank_statement_transactions")
         .update({
           reconciliation_status: "manual_reconciled",
-          matched_transaction_id: financialTransactionIds[0],
+          matched_transaction_id: finTxIds[0],
           reconciled_by: userId,
           reconciled_at: new Date().toISOString(),
           reconciliation_notes: notes || null,
@@ -620,7 +768,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       if (stmtError) throw stmtError;
 
       // Update ALL linked financial transactions — mark as paid with compensation date and update balance
-      for (const finId of financialTransactionIds) {
+      for (const finId of finTxIds) {
         const expense = (expenseRows || []).find((e) => e.id === finId);
         const wasPending = expense && expense.status === "pending";
 
@@ -675,13 +823,13 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       // Log audit
       await (supabase as any).rpc("log_reconciliation_action", {
         p_clinic_id: clinicId,
-        p_transaction_id: financialTransactionIds[0],
+        p_transaction_id: finTxIds[0],
         p_statement_transaction_id: statementTransactionId,
         p_action: "manual_reconcile",
         p_origin: "user",
         p_previous_status: "pending",
         p_new_status: "reconciled",
-        p_details: { notes, financial_transaction_ids: financialTransactionIds, count: financialTransactionIds.length },
+        p_details: { notes, financial_transaction_ids: finTxIds, transfer_ids: transferIds, count: finTxIds.length },
         p_performed_by: userId,
       });
 
@@ -709,6 +857,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-imports"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-expenses-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-pending-incomes-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["union-pending-transfers-reconciliation"] });
       queryClient.invalidateQueries({ queryKey: ["union-financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-statement-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["union-bank-statement-transactions"] });
@@ -972,6 +1121,19 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
             deletedFinCount++;
           }
+        } else if (matchedId && matchedId.startsWith("transfer:")) {
+          // Undo transfer reconciliation
+          const transferId = matchedId.replace("transfer:", "");
+          // Determine side from transaction_type: debit = from, credit = to
+          const side = stmtTx.transaction_type === "debit" ? "from" : "to";
+          const revertPayload: Record<string, any> = side === "from"
+            ? { is_conciliated_from: false, conciliated_from_at: null, conciliated_from_by: null, source_statement_tx_id_from: null }
+            : { is_conciliated_to: false, conciliated_to_at: null, conciliated_to_by: null, source_statement_tx_id_to: null };
+
+          await supabase
+            .from("union_cash_transfers")
+            .update(revertPayload)
+            .eq("id", transferId);
         } else if (matchedId) {
           // If matched to existing financial transaction(s), find ALL linked via source_statement_tx_id
           const { data: allLinked } = await supabase
@@ -1244,6 +1406,7 @@ export function useUnionReconciliation(clinicId: string | undefined) {
     refetchImports,
     pendingExpenses,
     pendingIncomes,
+    pendingTransfers,
     fetchImportTransactions,
     importOFX: importOFXMutation.mutateAsync,
     isImporting: importOFXMutation.isPending,
