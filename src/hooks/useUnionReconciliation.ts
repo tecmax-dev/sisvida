@@ -522,27 +522,23 @@ export function useUnionReconciliation(clinicId: string | undefined) {
 
       // Update auto-reconciled financial transactions and transfers
       for (const rec of transactionRecords) {
-        if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
-          // Check if matched to a transfer
-          if (rec.matched_transaction_id.startsWith("transfer:")) {
-            const parts = rec.matched_transaction_id.split(":");
-            const transferId = parts[1];
-            const side = parts[2]; // "from" or "to"
-            const now = new Date().toISOString();
+        if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transfer_id) {
+          // Handle transfer auto-reconciliation
+          const transferId = rec.matched_transfer_id;
+          const side = rec.transaction_type === "debit" ? "from" : "to";
+          const now = new Date().toISOString();
 
-            const updatePayload: Record<string, any> = side === "from"
-              ? { is_conciliated_from: true, conciliated_from_at: now, conciliated_from_by: userId, source_statement_tx_id_from: null }
-              : { is_conciliated_to: true, conciliated_to_at: now, conciliated_to_by: userId, source_statement_tx_id_to: null };
+          const updatePayload: Record<string, any> = side === "from"
+            ? { is_conciliated_from: true, conciliated_from_at: now, conciliated_from_by: userId, source_statement_tx_id_from: null }
+            : { is_conciliated_to: true, conciliated_to_at: now, conciliated_to_by: userId, source_statement_tx_id_to: null };
 
-            await supabase
-              .from("union_cash_transfers")
-              .update(updatePayload)
-              .eq("id", transferId);
+          await supabase
+            .from("union_cash_transfers")
+            .update(updatePayload)
+            .eq("id", transferId);
 
-            // Clear the prefixed ID — store the raw transfer ID in matched_transaction_id
-            // We need to update the statement transaction after insert
-            continue;
-          }
+          continue;
+        } else if (rec.reconciliation_status === "auto_reconciled" && rec.matched_transaction_id) {
 
           // Look in both expenses and incomes
           const matchedTx = pendingExpenses?.find((e) => e.id === rec.matched_transaction_id)
