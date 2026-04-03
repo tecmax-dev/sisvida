@@ -16873,6 +16873,60 @@ export type Database = {
           },
         ]
       }
+      whazing_tickets: {
+        Row: {
+          closed_at: string | null
+          contact_name: string | null
+          contact_number: string
+          holiday_notified: boolean | null
+          holiday_notified_at: string | null
+          id: string
+          last_message: string | null
+          opened_at: string | null
+          queue_id: string | null
+          raw_data: Json | null
+          status: string
+          subject: string | null
+          ticket_id: string
+          updated_at: string | null
+          user_id_whazing: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          contact_name?: string | null
+          contact_number: string
+          holiday_notified?: boolean | null
+          holiday_notified_at?: string | null
+          id?: string
+          last_message?: string | null
+          opened_at?: string | null
+          queue_id?: string | null
+          raw_data?: Json | null
+          status?: string
+          subject?: string | null
+          ticket_id: string
+          updated_at?: string | null
+          user_id_whazing?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          contact_name?: string | null
+          contact_number?: string
+          holiday_notified?: boolean | null
+          holiday_notified_at?: string | null
+          id?: string
+          last_message?: string | null
+          opened_at?: string | null
+          queue_id?: string | null
+          raw_data?: Json | null
+          status?: string
+          subject?: string | null
+          ticket_id?: string
+          updated_at?: string | null
+          user_id_whazing?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       annual_cash_flow: {
