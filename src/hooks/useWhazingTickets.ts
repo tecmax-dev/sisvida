@@ -217,3 +217,21 @@ export async function transferWhazingTicketToUser(ticketId: string, userId: stri
   if (error) throw error;
   return data;
 }
+
+// Assume ticket - disable bot
+export async function assumeWhazingTicket(ticketId: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'assume_ticket', ticketId },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Return ticket to bot
+export async function returnWhazingTicketToBot(ticketId: string, contactNumber: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'return_to_bot', ticketId, contactNumber },
+  });
+  if (error) throw error;
+  return data;
+}
