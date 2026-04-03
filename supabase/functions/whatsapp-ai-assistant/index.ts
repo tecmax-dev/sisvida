@@ -835,6 +835,35 @@ async function executeTool(
         });
       }
 
+      case "abrir_chamado_atendimento": {
+        const { assunto, detalhes } = args;
+        
+        // Get the phone from the closure (passed via the new parameter)
+        const ticketPhone = args._phone || '';
+        
+        if (!ticketPhone) {
+          return JSON.stringify({
+            success: false,
+            message: "Não foi possível identificar o telefone para abrir o chamado."
+          });
+        }
+
+        const result = await createWhazingTicket(ticketPhone, assunto, detalhes);
+        
+        if (result.success) {
+          console.log(`[ai-assistant] Ticket created/updated for ${ticketPhone}: ${assunto}`);
+          return JSON.stringify({
+            success: true,
+            message: `Chamado registrado com sucesso! Assunto: "${assunto}". Um atendente responderá assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h).`
+          });
+        }
+
+        return JSON.stringify({
+          success: false,
+          message: "Não foi possível registrar o chamado no momento. Por favor, tente novamente mais tarde."
+        });
+      }
+
       default:
         return JSON.stringify({ success: false, message: `Função ${toolName} não implementada.` });
     }
