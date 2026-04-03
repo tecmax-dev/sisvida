@@ -23,10 +23,7 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Extract just names for clarity
-    const instances = Array.isArray(data) 
-      ? data.map((i: any) => ({ name: i.instance?.instanceName || i.instanceName, id: i.instance?.instanceId || i.id, status: i.instance?.status || i.status }))
-      : data;
+    const instances = data;
 
     console.log(`[list-instances] Found:`, JSON.stringify(instances));
 
