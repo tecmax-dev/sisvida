@@ -47,8 +47,66 @@ serve(async (req) => {
       'apikey': evoKey,
     };
 
+    const body = await req.json();
+    const { action, ticketId, contactNumber } = body;
+
     switch (action) {
+      case 'send_media': {
+        const { media, mimetype, fileName, mediatype, caption } = body;
+        if (!media || !contactNumber || !mimetype) {
+          return new Response(JSON.stringify({ error: 'media, contactNumber and mimetype are required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        let cleanPhone = contactNumber.replace(/\D/g, '');
+        if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+        const response = await fetch(`${evoUrl}/message/sendMedia/${evoInstance}`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            number: cleanPhone,
+            mediatype: mediatype || 'document',
+            mimetype,
+            media,
+            fileName: fileName || 'attachment',
+            caption: caption || '',
+          }),
+        });
+
+        const responseText = await response.text();
+        console.log(`[whazing-actions] SendMedia response: ${response.status} ${responseText.slice(0, 300)}`);
+
+        if (!response.ok) {
+          return new Response(JSON.stringify({ ok: false, error: `API returned ${response.status}`, details: responseText }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Save locally
+        const now = Math.floor(Date.now() / 1000);
+        await supabase.from('whazing_messages').insert({
+          ticket_id: ticketId,
+          message_id: `sent-media-${now}-${Math.random().toString(36).slice(2, 8)}`,
+          body: caption || `[${mediatype || 'documento'}] ${fileName || 'anexo'}`,
+          from_me: true,
+          sender_name: 'Atendente',
+          timestamp: now,
+          media_type: mimetype,
+        });
+
+        await supabase.from('whazing_tickets')
+          .update({ last_message: `📎 ${fileName || 'Anexo'}`, updated_at: new Date().toISOString() })
+          .eq('ticket_id', ticketId);
+
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       case 'send_message': {
+        const { message } = body;
         if (!message || !contactNumber) {
           return new Response(JSON.stringify({ error: 'message and contactNumber are required' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
