@@ -263,7 +263,7 @@ export function UnionSidebar() {
   const location = useLocation();
   const { hasUnionPermission } = useUnionPermissions();
   const { count: pendingFiliacoesCount } = usePendingFiliacoes();
-  const [openCategories, setOpenCategories] = useState<string[]>([]);
+  const { data: pendingTicketsCount } = useWhazingPendingCount();
 
   const filteredCategories = unionNavTree
     .map(category => ({
