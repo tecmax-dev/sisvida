@@ -29,6 +29,8 @@ import {
   sendWhazingMessage,
   sendWhazingMedia,
   closeWhazingTicket,
+  assumeWhazingTicket,
+  returnWhazingTicketToBot,
   type WhazingTicket,
 } from "@/hooks/useWhazingTickets";
 import { useQueryClient } from "@tanstack/react-query";
