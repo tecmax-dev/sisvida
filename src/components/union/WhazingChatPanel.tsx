@@ -225,6 +225,12 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
                 <Badge variant="outline" className={`text-[10px] ${statusColor[ticket?.status || "pending"]}`}>
                   {statusLabel[ticket?.status || "pending"] || ticket?.status}
                 </Badge>
+                {ticket?.bot_active === false && (
+                  <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-700 border-amber-300">
+                    <UserCheck className="h-2.5 w-2.5 mr-0.5" />
+                    Atendente
+                  </Badge>
+                )}
                 <span className="text-[10px] text-muted-foreground font-mono">
                   #{ticket?.ticket_id}
                 </span>
