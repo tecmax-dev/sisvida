@@ -26,6 +26,7 @@ import {
   List,
   Zap,
   Settings,
+  MessageSquarePlus,
 } from "lucide-react";
 import {
   useWhazingTickets,
@@ -37,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import WhazingChatPanel from "@/components/union/WhazingChatPanel";
 import TicketKanban from "@/components/union/whazing/TicketKanban";
 import QuickResponsesManager from "@/components/union/whazing/QuickResponsesManager";
+import NewChatContactList from "@/components/union/whazing/NewChatContactList";
 import {
   Dialog,
   DialogContent,
@@ -113,6 +115,7 @@ export default function UnionWhatsAppTicketsPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   const [quickResponsesOpen, setQuickResponsesOpen] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const prevPendingRef = useRef<number | null>(null);
 
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
@@ -170,6 +173,13 @@ export default function UnionWhatsAppTicketsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setNewChatOpen(true)}
+          >
+            <MessageSquarePlus className="h-4 w-4 mr-1" />
+            Novo Chat
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -431,6 +441,26 @@ export default function UnionWhatsAppTicketsPage() {
           setSelectedTicket(null);
         }}
       />
+
+      {/* New Chat Dialog */}
+      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="h-5 w-5" />
+              Novo Chat
+            </DialogTitle>
+          </DialogHeader>
+          <NewChatContactList
+            onStartChat={(ticket) => {
+              setNewChatOpen(false);
+              setSelectedTicket(ticket);
+              setChatOpen(true);
+              refetch();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Responses Dialog */}
       <Dialog open={quickResponsesOpen} onOpenChange={setQuickResponsesOpen}>
