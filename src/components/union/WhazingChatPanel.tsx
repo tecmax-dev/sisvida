@@ -80,7 +80,27 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
   }, [messages]);
 
   const handleSend = async () => {
-    if (!message.trim() || !ticket) return;
+    if ((!message.trim() && !selectedFile) || !ticket) return;
+
+    // If there's a file, send media
+    if (selectedFile) {
+      setSendingMedia(true);
+      try {
+        await sendWhazingMedia(ticket.ticket_id, ticket.contact_number, selectedFile, message.trim());
+        setMessage("");
+        setSelectedFile(null);
+        queryClient.invalidateQueries({ queryKey: ["whazing-messages", ticket.ticket_id] });
+        queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+        toast.success("Anexo enviado");
+      } catch (err: any) {
+        toast.error("Erro ao enviar anexo: " + (err.message || "Erro desconhecido"));
+      } finally {
+        setSendingMedia(false);
+      }
+      return;
+    }
+
+    if (!message.trim()) return;
     setSending(true);
     try {
       await sendWhazingMessage(ticket.ticket_id, message.trim(), ticket.contact_number);
@@ -92,6 +112,18 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Max 16MB
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 16MB)");
+      return;
+    }
+    setSelectedFile(file);
+    e.target.value = '';
   };
 
   const handleClose = async () => {
