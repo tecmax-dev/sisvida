@@ -31,7 +31,12 @@ serve(async (req) => {
     // Fall back to environment variables
     if (!apiUrl) apiUrl = Deno.env.get('EVOLUTION_API_URL');
     if (!apiKey) apiKey = Deno.env.get('EVOLUTION_API_KEY');
-    if (!instanceName) instanceName = Deno.env.get('EVOLUTION_INSTANCE');
+    if (!instanceName) {
+      const rawInstance = (Deno.env.get('EVOLUTION_INSTANCE') || '').trim();
+      instanceName = /^[a-z0-9_-]{1,40}$/i.test(rawInstance) && rawInstance !== '2b7dbe72ab69c51e4d37e55329e10aeb'
+        ? rawInstance
+        : 'secmi';
+    }
 
     console.log('[check-evolution-status] Config:', {
       url: apiUrl,

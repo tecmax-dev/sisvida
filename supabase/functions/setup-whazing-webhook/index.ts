@@ -14,7 +14,10 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL')!;
     const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')!;
-    const evolutionInstance = body.instance || Deno.env.get('EVOLUTION_INSTANCE') || 'secmi';
+    const rawInstance = (body.instance || Deno.env.get('EVOLUTION_INSTANCE') || '').trim();
+    const evolutionInstance = /^[a-z0-9_-]{1,40}$/i.test(rawInstance) && rawInstance !== '2b7dbe72ab69c51e4d37e55329e10aeb'
+      ? rawInstance
+      : 'secmi';
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 
     const webhookUrl = `${supabaseUrl}/functions/v1/whazing-ticket-webhook`;
