@@ -19,21 +19,10 @@ serve(async (req) => {
     const payload = await req.json();
     console.log('[whazing-ticket-webhook] Received:', JSON.stringify(payload).slice(0, 800));
 
-    // Whazing webhook payload structure (from official docs):
-    // {
-    //   messageId, messageBody, timestamp, status, fromMe,
-    //   mediaType, mediaUrl, isDeleted, sendType, edited, reactions, dataJson,
-    //   ticket: { id, status, protocol, queueId, apiConfig, isGroup },
-    //   contact: { id, name, phoneNumber, profilePicUrl, email, isGroup, pushname, lid, kanbanId, followupId },
-    //   user: { id, name, email },
-    //   whatsapp: { id, name }
-    // }
-
     const ticket = payload.ticket;
     const contact = payload.contact;
     const user = payload.user;
 
-    // Extract ticket ID - primary from ticket object, fallback to legacy formats
     const ticketId = String(ticket?.id || payload.ticketId || payload.id || '');
 
     if (!ticketId) {
@@ -49,13 +38,14 @@ serve(async (req) => {
     const queueId = String(ticket?.queueId || payload.queueId || '');
     const userId = String(user?.id || payload.userId || '');
     const protocol = ticket?.protocol || '';
-    const isGroup = ticket?.isGroup || false;
     const lastMessage = payload.messageBody || payload.body || payload.lastMessage || '';
+    const messageId = payload.messageId || '';
 
     console.log(`[whazing-ticket-webhook] Ticket #${ticketId} status=${ticketStatus} contact=${contactNumber} queue=${queueId} protocol=${protocol}`);
 
-    // Upsert ticket record
     const now = new Date().toISOString();
+
+    // 1. Upsert ticket record
     const ticketData: any = {
       ticket_id: ticketId,
       contact_number: contactNumber,
@@ -68,25 +58,47 @@ serve(async (req) => {
       raw_data: payload,
     };
 
-    // Set opened_at only on creation
     if (ticketStatus === 'pending' || ticketStatus === 'open') {
       ticketData.opened_at = now;
     }
-
-    // Set closed_at when ticket is closed
     if (ticketStatus === 'closed') {
       ticketData.closed_at = now;
     }
 
-    const { error } = await supabase
+    const { error: ticketError } = await supabase
       .from('whazing_tickets')
       .upsert(ticketData, { onConflict: 'ticket_id' });
 
-    if (error) {
-      console.error('[whazing-ticket-webhook] Upsert error:', error);
-      return new Response(JSON.stringify({ ok: false, error: error.message }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    if (ticketError) {
+      console.error('[whazing-ticket-webhook] Ticket upsert error:', ticketError);
+    }
+
+    // 2. Save message if present
+    if (messageId && lastMessage) {
+      const messageData = {
+        ticket_id: ticketId,
+        message_id: messageId,
+        body: lastMessage.slice(0, 2000),
+        from_me: payload.fromMe || false,
+        media_type: payload.mediaType || null,
+        media_url: payload.mediaUrl || null,
+        sender_name: payload.fromMe 
+          ? (user?.name || 'Atendente') 
+          : (contactName || 'Contato'),
+        sender_phone: payload.fromMe ? null : contactNumber,
+        status: payload.status || null,
+        timestamp: payload.timestamp || Math.floor(Date.now() / 1000),
+      };
+
+      const { error: msgError } = await supabase
+        .from('whazing_messages')
+        .upsert(messageData, { onConflict: 'message_id' });
+
+      if (msgError) {
+        console.error('[whazing-ticket-webhook] Message upsert error:', msgError);
+      } else {
+        console.log(`[whazing-ticket-webhook] ✅ Message ${messageId} saved for ticket #${ticketId}`);
+      }
     }
 
     console.log(`[whazing-ticket-webhook] ✅ Ticket #${ticketId} saved/updated (status=${ticketStatus})`);
