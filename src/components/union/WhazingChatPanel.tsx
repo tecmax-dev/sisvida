@@ -65,7 +65,10 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sendingMedia, setSendingMedia] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const { data: messages, isLoading } = useWhazingMessages(ticket?.ticket_id ?? null);
