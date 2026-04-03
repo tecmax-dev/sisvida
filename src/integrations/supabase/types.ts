@@ -16873,6 +16873,51 @@ export type Database = {
           },
         ]
       }
+      whazing_messages: {
+        Row: {
+          body: string | null
+          created_at: string
+          from_me: boolean
+          id: string
+          media_type: string | null
+          media_url: string | null
+          message_id: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          status: string | null
+          ticket_id: string
+          timestamp: number | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+          ticket_id: string
+          timestamp?: number | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+          ticket_id?: string
+          timestamp?: number | null
+        }
+        Relationships: []
+      }
       whazing_tickets: {
         Row: {
           closed_at: string | null
