@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
 import { usePendingFiliacoes } from "@/hooks/usePendingFiliacoes";
+import { useWhazingPendingCount } from "@/hooks/useWhazingTickets";
 import { cn } from "@/lib/utils";
 import {
   Building2,
