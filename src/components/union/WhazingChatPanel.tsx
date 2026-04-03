@@ -20,10 +20,12 @@ import {
   Loader2,
   Image as ImageIcon,
   FileText,
+  Paperclip,
 } from "lucide-react";
 import {
   useWhazingMessages,
   sendWhazingMessage,
+  sendWhazingMedia,
   closeWhazingTicket,
   type WhazingTicket,
 } from "@/hooks/useWhazingTickets";
