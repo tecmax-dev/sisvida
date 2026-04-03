@@ -6941,6 +6941,7 @@ serve(async (req) => {
         }
         // ===== END WHAZING AGENT TAKEOVER CHECK =====
 
+        if (!botSkipped) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
         // Level 1 buttons: main categories → send sub-menu
         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
