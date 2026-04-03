@@ -161,7 +161,12 @@ serve(async (req) => {
       await supabase.from('whatsapp_ai_conversations').insert({
         clinic_id: resolvedClinicId,
         phone: normalizedPhone,
-        messages: { source: 'external_integration', action, context: context || null },
+        messages: {
+          source: 'external_integration',
+          action,
+          context: context || null,
+          support_stage: action.toLowerCase() === 'atendente' ? 'awaiting_subject' : null,
+        },
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       });
       console.log(`[external-integration] Created AI conversation session for ${normalizedPhone}`);
