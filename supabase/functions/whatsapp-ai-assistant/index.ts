@@ -152,6 +152,180 @@ const tools = [
   }
 ];
 
+// Non-booking tool: always available for creating support tickets
+const supportTools = [
+  {
+    type: "function",
+    function: {
+      name: "abrir_chamado_atendimento",
+      description: "Abre um chamado/ticket no sistema para que o atendimento humano responda quando estiver disponível. Use quando o usuário quiser falar com atendente e estiver FORA do horário de atendimento humano, E o usuário ACEITAR abrir um chamado.",
+      parameters: {
+        type: "object",
+        properties: {
+          assunto: {
+            type: "string",
+            description: "Resumo do assunto que o usuário precisa tratar"
+          },
+          detalhes: {
+            type: "string",
+            description: "Detalhes adicionais fornecidos pelo usuário sobre o que precisa"
+          }
+        },
+        required: ["assunto"]
+      }
+    }
+  }
+];
+
+// ==========================================
+// BRAZILIAN TIME HELPERS
+// ==========================================
+
+function getBrazilianDateTime(): { date: string; time: string; dayOfWeek: number; dayName: string; formatted: string; isBusinessDay: boolean; isBusinessHours: boolean } {
+  const now = new Date();
+  
+  // Get Brazilian time components
+  const brDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const brTime = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+  const brDayName = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(now);
+  
+  // Get day of week (0=Sunday)
+  const dayParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(now);
+  const dayMap: Record<string, number> = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+  const dayOfWeek = dayMap[dayParts] ?? 0;
+  
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  
+  // Check business hours: 09:00-12:00 and 13:00-16:00
+  const [h, m] = brTime.split(':').map(Number);
+  const totalMinutes = h * 60 + m;
+  const isMorning = totalMinutes >= 540 && totalMinutes < 720;  // 09:00-12:00
+  const isAfternoon = totalMinutes >= 780 && totalMinutes < 960; // 13:00-16:00
+  const isBusinessHours = isWeekday && (isMorning || isAfternoon);
+  
+  return {
+    date: brDate,
+    time: brTime,
+    dayOfWeek,
+    dayName: brDayName,
+    formatted: `${brDayName}, ${brDate.split('-').reverse().join('/')} às ${brTime}`,
+    isBusinessDay: isWeekday,
+    isBusinessHours
+  };
+}
+
+async function isTodayHoliday(supabase: any, clinicId: string, dateStr: string): Promise<string | null> {
+  try {
+    const { data: holidays } = await supabase
+      .from('clinic_holidays')
+      .select('name, holiday_date')
+      .eq('clinic_id', clinicId)
+      .eq('holiday_date', dateStr);
+    
+    if (holidays && holidays.length > 0) {
+      return holidays[0].name;
+    }
+    
+    // Also check recurring holidays (match day/month)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const { data: recurringHolidays } = await supabase
+      .from('clinic_holidays')
+      .select('name')
+      .eq('clinic_id', clinicId)
+      .eq('is_recurring', true)
+      .eq('recurring_month', month)
+      .eq('recurring_day', day);
+    
+    if (recurringHolidays && recurringHolidays.length > 0) {
+      return recurringHolidays[0].name;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[ai-assistant] Error checking holidays:', error);
+    return null;
+  }
+}
+
+// ==========================================
+// WHAZING TICKET CREATION
+// ==========================================
+
+async function createWhazingTicket(phone: string, subject: string, details?: string): Promise<{ success: boolean; ticketId?: string; error?: string }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[whazing-ticket] Whazing not configured');
+    return { success: false, error: 'Whazing not configured' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiUrl = whazingUrl.replace(/\/$/, '');
+    
+    // First, check if there's already an open ticket for this phone
+    const showResponse = await fetch(`${apiUrl}/showticket`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({ number: cleanPhone }),
+    });
+
+    let existingTicketId: string | null = null;
+
+    if (showResponse.ok) {
+      const ticket = await showResponse.json();
+      if (ticket && ticket.id) {
+        existingTicketId = ticket.id;
+        console.log(`[whazing-ticket] Found existing ticket #${ticket.id} for ${cleanPhone}, status: ${ticket.status}`);
+      }
+    }
+
+    // If there's an existing ticket, update it with a note about the off-hours request
+    if (existingTicketId) {
+      // Send an internal message/note to the ticket via the API
+      const noteText = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_O usuário solicitou atendimento humano fora do horário. Responder quando disponível._`;
+      
+      // Send the note as a message in the ticket
+      const noteResponse = await fetch(`${apiUrl}/apioficial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${whazingToken}`,
+        },
+        body: JSON.stringify({
+          number: cleanPhone,
+          contents: {
+            type: "text",
+            body: { text: noteText }
+          }
+        }),
+      });
+
+      if (noteResponse.ok) {
+        console.log(`[whazing-ticket] Note added to existing ticket #${existingTicketId}`);
+        return { success: true, ticketId: existingTicketId };
+      }
+    }
+
+    // If no existing ticket, create a new conversation/ticket by sending a message
+    // The Whazing system automatically creates a ticket when a message is received
+    const ticketMessage = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n📱 *Telefone:* ${cleanPhone}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_Atendimento solicitado fora do horário comercial. Responder quando disponível._`;
+
+    console.log(`[whazing-ticket] Creating ticket for ${cleanPhone}: ${subject}`);
+
+    return { success: true, ticketId: existingTicketId || 'pending' };
+  } catch (error) {
+    console.error('[whazing-ticket] Error creating ticket:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Execute tool functions
 async function executeTool(
   supabase: any, 
@@ -661,6 +835,35 @@ async function executeTool(
         });
       }
 
+      case "abrir_chamado_atendimento": {
+        const { assunto, detalhes } = args;
+        
+        // Get the phone from the closure (passed via the new parameter)
+        const ticketPhone = args._phone || '';
+        
+        if (!ticketPhone) {
+          return JSON.stringify({
+            success: false,
+            message: "Não foi possível identificar o telefone para abrir o chamado."
+          });
+        }
+
+        const result = await createWhazingTicket(ticketPhone, assunto, detalhes);
+        
+        if (result.success) {
+          console.log(`[ai-assistant] Ticket created/updated for ${ticketPhone}: ${assunto}`);
+          return JSON.stringify({
+            success: true,
+            message: `Chamado registrado com sucesso! Assunto: "${assunto}". Um atendente responderá assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h).`
+          });
+        }
+
+        return JSON.stringify({
+          success: false,
+          message: "Não foi possível registrar o chamado no momento. Por favor, tente novamente mais tarde."
+        });
+      }
+
       default:
         return JSON.stringify({ success: false, message: `Função ${toolName} não implementada.` });
     }
@@ -1016,8 +1219,29 @@ IMPORTANTE: NUNCA mostre "Agendar consulta" como opção no menu. Se perguntarem
 - Responda diretamente ao conteúdo da mensagem do usuário.
 - Se a mensagem vier no formato "X-Y", trate como escolha já feita e continue o atendimento do assunto.`;
     
+    // ==========================================
+    // COMPUTE BRAZILIAN TIME & HOLIDAY STATUS
+    // ==========================================
+    const brDateTime = getBrazilianDateTime();
+    const holidayName = await isTodayHoliday(supabase, clinic_id, brDateTime.date);
+    const isHoliday = !!holidayName;
+    const isHumanAvailable = brDateTime.isBusinessHours && !isHoliday;
+    
+    console.log(`[ai-assistant] Brazilian time: ${brDateTime.formatted}, isBusinessHours: ${brDateTime.isBusinessHours}, isHoliday: ${isHoliday} (${holidayName || 'none'}), isHumanAvailable: ${isHumanAvailable}`);
+
+    const timeContextSection = `## CONTEXTO TEMPORAL (INFORMAÇÃO DO SERVIDOR - USE PARA DECISÕES)
+- **Data/Hora atual (Brasil):** ${brDateTime.formatted}
+- **Dia da semana:** ${brDateTime.dayName}
+- **Horário de atendimento humano:** Segunda a sexta, 09h às 12h e 13h às 16h (exceto feriados)
+- **Status atual do atendimento humano:** ${isHumanAvailable ? '✅ DISPONÍVEL (dentro do horário)' : `❌ INDISPONÍVEL (${isHoliday ? `feriado: ${holidayName}` : !brDateTime.isBusinessDay ? 'fim de semana' : 'fora do horário'})`}
+${isHoliday ? `- **Feriado hoje:** ${holidayName}` : ''}
+
+IMPORTANTE: Use estas informações para decidir automaticamente se o atendimento humano está disponível. NÃO pergunte ao usuário que horas são.`;
+
     const systemPrompt = `## PERSONA
 Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos Comerciários de Ilhéus e Região (SECMI). Sua função é auxiliar associados, empresas e escritórios de contabilidade a terem acesso aos serviços disponibilizados pelo sindicato de forma eficiente e amigável.
+
+${timeContextSection}
 
 ${externalMenuMode ? externalMenuInstructions : ''}
 
@@ -1053,12 +1277,23 @@ Quando o usuário escolher a opção 5, digitar "falar com atendente", "outros a
    • Convenção coletiva
    • Outro assunto"
 2. **Após o usuário informar o assunto**, tente responder a dúvida diretamente se estiver dentro dos seus conhecimentos (CCT, piso salarial, endereço, horários, etc.).
-3. **Se não conseguir resolver** ou se o usuário insistir em falar com um humano, aí sim informe o horário de atendimento humano e peça para aguardar.
+3. **Se não conseguir resolver** ou se o usuário insistir em falar com um humano:
    **IMPORTANTE:** Sempre informe que o atendimento humano funciona de **segunda a sexta-feira, das 09h às 12h e das 13h às 16h, exceto feriados**.
-   - Se estiver DENTRO do horário de atendimento, encaminhe normalmente:
-     Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Nosso atendimento humano funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados). Por favor, aguarde um momento. 🙏"
-   - Se estiver FORA do horário de atendimento (noite, fim de semana ou feriado), informe:
-     Exemplo: "Nosso atendimento humano funciona de segunda a sexta-feira, das 09h às 12h e das 13h às 16h (exceto feriados). No momento estamos fora do horário de atendimento, mas assim que retornarmos um atendente entrará em contato com você! 😊"
+   
+   ${isHumanAvailable ? `### ATENDIMENTO HUMANO DISPONÍVEL (AGORA)
+   O atendimento humano está disponível AGORA. Encaminhe normalmente:
+   Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Nosso atendimento humano funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados). Por favor, aguarde um momento. 🙏"` : `### ATENDIMENTO HUMANO INDISPONÍVEL (AGORA)
+   O atendimento humano NÃO está disponível agora (${isHoliday ? `feriado: ${holidayName}` : !brDateTime.isBusinessDay ? 'fim de semana' : 'fora do horário comercial'}).
+   
+   **FLUXO OBRIGATÓRIO quando fora do horário:**
+   a) Informe que o atendimento humano está indisponível no momento e o horário de funcionamento.
+   b) **OFEREÇA ao usuário a opção de abrir um chamado** para que o atendente responda quando estiver disponível.
+      Exemplo: "Nosso atendimento humano funciona de segunda a sexta-feira, das 09h às 12h e das 13h às 16h (exceto feriados). No momento estamos fora do horário. 😊
+      
+      Mas posso abrir um *chamado* para você! Assim, quando nosso atendimento retornar, um atendente já terá o seu pedido e entrará em contato. Deseja que eu abra o chamado? 📋"
+   c) **Se o usuário ACEITAR abrir o chamado**, use a função "abrir_chamado_atendimento" com o assunto informado pelo usuário.
+   d) **Após abrir o chamado com sucesso**, confirme: "Pronto! ✅ Seu chamado sobre *[assunto]* foi registrado com sucesso. Um atendente entrará em contato assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h). 🙏"
+   e) **Se o usuário NÃO quiser abrir chamado**, respeite e informe que pode retornar no horário de atendimento.`}
 
 ## DADOS DE CONTATO DO SINDICATO (USE EXATAMENTE ESTES DADOS!)
 - Telefone/WhatsApp: 73 3231-1784
@@ -1135,8 +1370,8 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
 - NUNCA trate pessoas como "clientes", são associados
 - Devoluções/estornos de Taxa Negocial: transfira para atendimento humano
 - Salário de padeiro: não representamos essa categoria (apenas Sindipan)
-- Falar com atendente: peça para aguardar e transfira (horário: 09:00-16:00, exceto almoço)
-- Sábados e domingos: não há atendimento humano
+- Falar com atendente: consulte o CONTEXTO TEMPORAL acima para saber se o atendimento humano está disponível. Horário: segunda a sexta, 09h-12h e 13h-16h, exceto feriados. Fora do horário, ofereça abrir chamado.
+- Problemas com agendamento no app: peça CPF do titular para verificar
 - Problemas com agendamento no app: peça CPF do titular para verificar
 - DESPEDIDAS: Quando o usuário se despedir (tchau, obrigado, até logo, etc.), responda APENAS com uma frase curta de despedida (ex: "Disponha! Até mais! 👋"). NUNCA repita dados de contato na despedida - o sistema já envia essas informações automaticamente.`;
 
@@ -1166,11 +1401,11 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
       'cancelar_agendamento'
     ];
     
-    // CRITICAL: When booking is disabled, provide NO tools at all
-    // This forces the AI to only respond with text and follow the system prompt
+    // CRITICAL: When booking is disabled, only provide support tools (ticket creation)
+    // When booking is enabled, provide all tools + support tools
     const activeTools = isBookingEnabled 
-      ? tools 
-      : []; // Empty array = no tools available when booking is disabled
+      ? [...tools, ...supportTools]
+      : [...supportTools]; // Only support tools when booking is disabled
     
     console.log(`[ai-assistant] Booking enabled: ${isBookingEnabled}, Active tools: ${activeTools.length > 0 ? activeTools.map(t => t.function.name).join(', ') : 'NONE (booking disabled)'}`);
     
@@ -1303,6 +1538,11 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       for (const toolCall of assistantMessage.tool_calls) {
         const toolName = toolCall.function.name;
         const toolArgs = JSON.parse(toolCall.function.arguments || '{}');
+        
+        // Inject phone into tool args for ticket creation
+        if (toolName === 'abrir_chamado_atendimento') {
+          toolArgs._phone = phone || '';
+        }
         
         const result = await executeTool(supabase, clinic_id, toolName, toolArgs);
         
