@@ -18,24 +18,26 @@ export interface WhazingTicket {
   holiday_notified_at: string | null;
 }
 
+async function fetchTickets(statusFilter?: string): Promise<WhazingTicket[]> {
+  let query = (supabase as any)
+    .from("whazing_tickets")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (statusFilter && statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as WhazingTicket[];
+}
+
 export function useWhazingTickets(statusFilter?: string) {
   return useQuery({
     queryKey: ["whazing-tickets", statusFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from("whazing_tickets" as any)
-        .select("*")
-        .order("updated_at", { ascending: false });
-
-      if (statusFilter && statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as unknown as WhazingTicket[];
-    },
-    refetchInterval: 15000, // Refresh every 15 seconds
+    queryFn: () => fetchTickets(statusFilter),
+    refetchInterval: 15000,
   });
 }
 
@@ -43,8 +45,8 @@ export function useWhazingTicketStats() {
   return useQuery({
     queryKey: ["whazing-ticket-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("whazing_tickets" as any)
+      const { data, error } = await (supabase as any)
+        .from("whazing_tickets")
         .select("status");
 
       if (error) throw error;
