@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, ticketId, message, queueId, userId, contactNumber } = await req.json();
+    // Body is parsed below after switch needs it
 
     const evoUrl = (Deno.env.get('EVOLUTION_API_URL') || '').replace(/\/$/, '');
     const evoKey = Deno.env.get('EVOLUTION_API_KEY') || '';
