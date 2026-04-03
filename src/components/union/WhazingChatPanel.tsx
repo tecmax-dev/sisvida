@@ -299,22 +299,61 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
           {/* Input */}
           {ticket?.status !== "closed" && (
             <div className="border-t px-4 py-3">
+              {/* Attachment Preview */}
+              {selectedFile && (
+                <div className="mb-2 flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                  {selectedFile.type.startsWith('image/') ? (
+                    <ImageIcon className="h-4 w-4 text-primary flex-shrink-0" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                  )}
+                  <span className="text-xs truncate flex-1">{selectedFile.name}</span>
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                    {(selectedFile.size / 1024).toFixed(0)}KB
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={() => setSelectedFile(null)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <QuickResponsePicker onSelect={handleQuickResponse} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                  onChange={handleFileSelect}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 flex-shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending || sendingMedia}
+                  title="Enviar anexo"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
                 <Input
                   placeholder="Digite sua mensagem..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="flex-1"
-                  disabled={sending}
+                  disabled={sending || sendingMedia}
                 />
                 <Button
                   size="icon"
                   onClick={handleSend}
-                  disabled={!message.trim() || sending}
+                  disabled={(!message.trim() && !selectedFile) || sending || sendingMedia}
                 >
-                  {sending ? (
+                  {sending || sendingMedia ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Send className="h-4 w-4" />
