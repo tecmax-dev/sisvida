@@ -26,6 +26,7 @@ import {
   List,
   Zap,
   Settings,
+  MessageSquarePlus,
 } from "lucide-react";
 import {
   useWhazingTickets,
