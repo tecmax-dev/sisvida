@@ -166,6 +166,48 @@ serve(async (req) => {
         }
       }
 
+      // 3. Route incoming (non-fromMe) messages to AI assistant
+      if (!fromMe && body && body.length > 0 && !body.startsWith('[')) {
+        console.log(`[webhook] Routing to AI assistant: phone=${contactNumber}, body="${body.slice(0, 80)}"`);
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+          // Get evolution config from DB
+          const { data: evoConfig } = await supabase
+            .from('evolution_configs')
+            .select('clinic_id, api_url, api_key, instance_name')
+            .limit(1)
+            .maybeSingle();
+
+          if (evoConfig) {
+            const aiResp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-ai-assistant`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                clinic_id: evoConfig.clinic_id,
+                phone: contactNumber,
+                message: body,
+                evolution_config: {
+                  api_url: evoConfig.api_url,
+                  api_key: evoConfig.api_key,
+                  instance_name: evoConfig.instance_name,
+                },
+              }),
+            });
+            const aiResult = await aiResp.json();
+            console.log(`[webhook] AI response status: ${aiResp.status}, action: ${aiResult?.action || 'unknown'}`);
+          } else {
+            console.log('[webhook] No evolution_configs found, skipping AI routing');
+          }
+        } catch (aiErr) {
+          console.error('[webhook] AI routing error:', aiErr);
+        }
+      }
+
       return new Response(JSON.stringify({ ok: true, ticketId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
