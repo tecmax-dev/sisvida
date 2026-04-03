@@ -36,6 +36,7 @@ import {
   Download,
   Shield,
   Bell,
+  MessageSquare,
 } from "lucide-react";
 import {
   Collapsible,
