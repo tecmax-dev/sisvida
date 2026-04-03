@@ -6903,25 +6903,54 @@ serve(async (req) => {
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
         // ===== WHAZING AGENT TAKEOVER CHECK =====
-        // If an attendant has assumed the conversation in Whazing, stop the bot
-        const agentHandling = await isWhazingAgentHandling(phone);
-        if (agentHandling) {
-          console.log(`[webhook] Agent takeover detected for ${phone} - bot will NOT process this message`);
-          
-          // Log the skipped message
-          await supabase.from('whatsapp_incoming_logs').insert({
-            clinic_id: clinicId,
-            phone,
-            message_text: messageText,
-            raw_payload: payload,
-            processed: true,
-            processed_action: 'skipped_agent_takeover',
-          });
+        // Check local bot_active flag first (set when agent assumes chat from dashboard)
+        {
+          const { data: localTicket } = await supabase
+            .from('whazing_tickets')
+            .select('bot_active')
+            .eq('ticket_id', phone)
+            .maybeSingle();
 
-          return new Response(
-            JSON.stringify({ success: true, message: 'Agent takeover - bot paused' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          if (localTicket && localTicket.bot_active === false) {
+            console.log(`[webhook] bot_active=false for ${phone} - bot will NOT process this message`);
+            await supabase.from('whatsapp_incoming_logs').insert({
+              clinic_id: clinicId,
+              phone,
+              message_text: messageText,
+              raw_payload: payload,
+              processed: true,
+              processed_action: 'skipped_bot_inactive',
+            });
+            // Still mirror message but skip AI
+          } else {
+            // Also check external Whazing API
+            const agentHandling = await isWhazingAgentHandling(phone);
+            if (agentHandling) {
+              console.log(`[webhook] Agent takeover detected for ${phone} - bot will NOT process this message`);
+              await supabase.from('whatsapp_incoming_logs').insert({
+                clinic_id: clinicId,
+                phone,
+                message_text: messageText,
+                raw_payload: payload,
+                processed: true,
+                processed_action: 'skipped_agent_takeover',
+              });
+            }
+          }
+        }
+
+        // Re-check if bot should be skipped (need to re-query for the goto-like flow)
+        const { data: botCheckTicket } = await supabase
+          .from('whazing_tickets')
+          .select('bot_active')
+          .eq('ticket_id', phone)
+          .maybeSingle();
+
+        const botInactive = botCheckTicket && botCheckTicket.bot_active === false;
+        const agentHandlingExternal = !botInactive && await isWhazingAgentHandling(phone);
+
+        if (botInactive || agentHandlingExternal) {
+          // Skip AI processing but continue to mirror section below
         }
         // ===== END WHAZING AGENT TAKEOVER CHECK =====
 
