@@ -6903,12 +6903,31 @@ serve(async (req) => {
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
         // ===== WHAZING AGENT TAKEOVER CHECK =====
-        // If an attendant has assumed the conversation in Whazing, stop the bot
-        const agentHandling = await isWhazingAgentHandling(phone);
-        if (agentHandling) {
-          console.log(`[webhook] Agent takeover detected for ${phone} - bot will NOT process this message`);
-          
-          // Log the skipped message
+        // 1. Check local bot_active flag (set when agent assumes from dashboard)
+        let botSkipped = false;
+        {
+          const { data: localTicket } = await supabase
+            .from('whazing_tickets')
+            .select('bot_active')
+            .eq('ticket_id', phone)
+            .maybeSingle();
+
+          if (localTicket && localTicket.bot_active === false) {
+            console.log(`[webhook] bot_active=false for ${phone} - bot will NOT process`);
+            botSkipped = true;
+          }
+        }
+
+        // 2. Also check external Whazing API
+        if (!botSkipped) {
+          const agentHandling = await isWhazingAgentHandling(phone);
+          if (agentHandling) {
+            console.log(`[webhook] Agent takeover detected for ${phone} - bot will NOT process`);
+            botSkipped = true;
+          }
+        }
+
+        if (botSkipped) {
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
             phone,
@@ -6918,13 +6937,11 @@ serve(async (req) => {
             processed_action: 'skipped_agent_takeover',
           });
 
-          return new Response(
-            JSON.stringify({ success: true, message: 'Agent takeover - bot paused' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          // Don't return - let it fall through to mirror section
         }
         // ===== END WHAZING AGENT TAKEOVER CHECK =====
 
+        if (!botSkipped) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
         // Level 1 buttons: main categories → send sub-menu
         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
@@ -7695,6 +7712,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             console.error('[webhook] Failed to get or create session');
           }
         }
+        } // end if (!botSkipped)
       } else {
         console.log(`[webhook] No config found with direct_reply_enabled for instance: ${payload.instance}`);
       }

@@ -17040,6 +17040,7 @@ export type Database = {
       whazing_tickets: {
         Row: {
           assigned_queue_id: string | null
+          bot_active: boolean
           closed_at: string | null
           contact_name: string | null
           contact_number: string
@@ -17058,6 +17059,7 @@ export type Database = {
         }
         Insert: {
           assigned_queue_id?: string | null
+          bot_active?: boolean
           closed_at?: string | null
           contact_name?: string | null
           contact_number: string
@@ -17076,6 +17078,7 @@ export type Database = {
         }
         Update: {
           assigned_queue_id?: string | null
+          bot_active?: boolean
           closed_at?: string | null
           contact_name?: string | null
           contact_number?: string

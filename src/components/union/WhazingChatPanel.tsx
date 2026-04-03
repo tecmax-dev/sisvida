@@ -21,12 +21,16 @@ import {
   Image as ImageIcon,
   FileText,
   Paperclip,
+  Bot,
+  UserCheck,
 } from "lucide-react";
 import {
   useWhazingMessages,
   sendWhazingMessage,
   sendWhazingMedia,
   closeWhazingTicket,
+  assumeWhazingTicket,
+  returnWhazingTicketToBot,
   type WhazingTicket,
 } from "@/hooks/useWhazingTickets";
 import { useQueryClient } from "@tanstack/react-query";
@@ -64,6 +68,8 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [assuming, setAssuming] = useState(false);
+  const [returning, setReturning] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sendingMedia, setSendingMedia] = useState(false);
@@ -149,6 +155,35 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
     }
   };
 
+  const handleAssume = async () => {
+    if (!ticket) return;
+    setAssuming(true);
+    try {
+      await assumeWhazingTicket(ticket.ticket_id);
+      queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+      toast.success("Atendimento assumido - IA desativada para este chat");
+    } catch (err: any) {
+      toast.error("Erro ao assumir: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setAssuming(false);
+    }
+  };
+
+  const handleReturnToBot = async () => {
+    if (!ticket) return;
+    setReturning(true);
+    try {
+      await returnWhazingTicketToBot(ticket.ticket_id, ticket.contact_number);
+      queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["whazing-messages", ticket.ticket_id] });
+      toast.success("Chat devolvido à IA");
+    } catch (err: any) {
+      toast.error("Erro ao devolver: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReturning(false);
+    }
+  };
+
   const handleQuickResponse = (body: string) => {
     setMessage(body);
   };
@@ -190,6 +225,12 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
                 <Badge variant="outline" className={`text-[10px] ${statusColor[ticket?.status || "pending"]}`}>
                   {statusLabel[ticket?.status || "pending"] || ticket?.status}
                 </Badge>
+                {ticket?.bot_active === false && (
+                  <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-700 border-amber-300">
+                    <UserCheck className="h-2.5 w-2.5 mr-0.5" />
+                    Atendente
+                  </Badge>
+                )}
                 <span className="text-[10px] text-muted-foreground font-mono">
                   #{ticket?.ticket_id}
                 </span>
@@ -272,7 +313,30 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
           {ticket?.status !== "closed" && (
             <>
               <Separator />
-              <div className="px-4 py-2 flex items-center gap-2">
+              <div className="px-4 py-2 flex items-center gap-2 flex-wrap">
+                {ticket?.bot_active !== false ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                    onClick={handleAssume}
+                    disabled={assuming}
+                  >
+                    {assuming ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <UserCheck className="h-3 w-3 mr-1" />}
+                    Assumir Atendimento
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-blue-600 hover:text-blue-700 border-blue-300"
+                    onClick={handleReturnToBot}
+                    disabled={returning}
+                  >
+                    {returning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Bot className="h-3 w-3 mr-1" />}
+                    Devolver à IA
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

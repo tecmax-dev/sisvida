@@ -188,6 +188,63 @@ serve(async (req) => {
         });
       }
 
+      case 'assume_ticket': {
+        // Agent takes over - disable bot
+        await supabase.from('whazing_tickets')
+          .update({ bot_active: false, status: 'open', updated_at: new Date().toISOString() })
+          .eq('ticket_id', ticketId);
+
+        console.log(`[whazing-actions] Ticket ${ticketId} assumed by agent - bot disabled`);
+
+        return new Response(JSON.stringify({ ok: true, message: 'Bot disabled - agent assumed' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'return_to_bot': {
+        // Return ticket to bot and send notification to contact
+        await supabase.from('whazing_tickets')
+          .update({ bot_active: true, updated_at: new Date().toISOString() })
+          .eq('ticket_id', ticketId);
+
+        // Send message to contact informing they are back with the bot
+        if (contactNumber) {
+          let cleanPhone = contactNumber.replace(/\D/g, '');
+          if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+          const returnMsg = '🤖 Você foi redirecionado(a) de volta para o atendimento automático. Como posso ajudá-lo(a)?';
+
+          try {
+            await fetch(`${evoUrl}/message/sendText/${evoInstance}`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ number: cleanPhone, text: returnMsg }),
+            });
+          } catch (_e) { /* ignore send error */ }
+
+          // Save the bot message locally
+          const now = Math.floor(Date.now() / 1000);
+          await supabase.from('whazing_messages').insert({
+            ticket_id: ticketId,
+            message_id: `bot-return-${now}-${Math.random().toString(36).slice(2, 8)}`,
+            body: returnMsg,
+            from_me: true,
+            sender_name: 'LIA (Bot)',
+            timestamp: now,
+          });
+
+          await supabase.from('whazing_tickets')
+            .update({ last_message: returnMsg.slice(0, 500), updated_at: new Date().toISOString() })
+            .eq('ticket_id', ticketId);
+        }
+
+        console.log(`[whazing-actions] Ticket ${ticketId} returned to bot`);
+
+        return new Response(JSON.stringify({ ok: true, message: 'Bot re-enabled' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }

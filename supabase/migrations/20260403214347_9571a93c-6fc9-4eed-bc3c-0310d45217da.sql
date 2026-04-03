@@ -1,0 +1,1 @@
+ALTER TABLE public.whazing_tickets ADD COLUMN IF NOT EXISTS bot_active boolean NOT NULL DEFAULT true;
