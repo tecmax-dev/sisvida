@@ -155,6 +155,20 @@ serve(async (req) => {
 
     console.log(`[external-integration] Routing to AI assistant: clinic=${resolvedClinicId}, message="${aiMessage}"`);
 
+    // Create/update an AI conversation session so the webhook knows there's an active
+    // session and does NOT re-trigger the initial menu (which causes a loop).
+    try {
+      await supabase.from('whatsapp_ai_conversations').insert({
+        clinic_id: resolvedClinicId,
+        phone: normalizedPhone,
+        messages: { source: 'external_integration', action, context: context || null },
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      });
+      console.log(`[external-integration] Created AI conversation session for ${normalizedPhone}`);
+    } catch (sessionErr) {
+      console.error('[external-integration] Failed to create AI session:', sessionErr);
+    }
+
     // Call the AI assistant edge function
     const aiResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-ai-assistant`, {
       method: 'POST',
