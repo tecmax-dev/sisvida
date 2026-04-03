@@ -17659,6 +17659,17 @@ export type Database = {
         Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
         Returns: Json
       }
+      search_employers_for_filiacao: {
+        Args: { _clinic_id: string; _search_term?: string }
+        Returns: {
+          address: string
+          cnpj: string
+          id: string
+          name: string
+          registration_number: string
+          trade_name: string
+        }[]
+      }
       set_clinic_booking_months_ahead: {
         Args: { p_clinic_id: string; p_months_ahead: number }
         Returns: undefined
@@ -17707,6 +17718,14 @@ export type Database = {
         }[]
       }
       validate_authorization_full: { Args: { p_hash: string }; Returns: Json }
+      verify_employer_for_filiacao: {
+        Args: { _employer_id: string }
+        Returns: {
+          id: string
+          name: string
+          trade_name: string
+        }[]
+      }
       verify_patient_password: {
         Args: { p_clinic_id?: string; p_cpf: string; p_password: string }
         Returns: {
