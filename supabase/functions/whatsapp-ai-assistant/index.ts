@@ -1419,9 +1419,10 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
     // Additional safety: If booking is disabled and message contains booking keywords, 
     // return the maintenance message immediately without calling the AI
     if (!isBookingEnabled) {
+      // Skip booking keyword check if message is clearly about human support (not scheduling)
+      const isHumanSupportRequest = /\b(atendente|falar com|suporte|chamado|ajuda humana|atendimento humano)\b/i.test(message);
+
       // Comprehensive list of booking-related keywords in Portuguese
-      // EXPANDED: comprehensive list covering ALL medical scheduling keywords
-      // Any match = MANDATORY APP_ONLY_MESSAGE, no handoff to human in medical context
       const bookingKeywords = [
         // Verbos de agendamento
         'agendar', 'agendamento', 'agenda', 'marcar', 'marcacao', 'remarcar',
@@ -1435,26 +1436,21 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
         'psicologa', 'pediatrico',
         // Nomes de profissionais do SECMI
         'alcides', 'juliane', 'uiara', 'tiuba',
-        // Horários e disponibilidade
+        // Horários e disponibilidade (scheduling-specific, NOT "atende" alone)
         'horario', 'horarios', 'vaga', 'vagas', 'disponivel', 'disponibilidade',
-        'atende', 'quando atende', 'dias de atendimento',
+        'quando atende', 'dias de atendimento',
         // Frases comuns
         'quero agendar', 'preciso agendar', 'gostaria de agendar',
         'quero marcar', 'preciso marcar', 'gostaria de marcar',
         'tem vaga', 'tem horario', 'proxima data', 'proxima semana',
         'data disponivel', 'quero consulta', 'preciso de consulta',
         'ir ao medico', 'ver medico', 'exame', 'exames',
-        // Numeric options that mean booking when booking is disabled
-        // (options 1-4 are booking in this context)
       ];
       
       const messageLower = message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const keywordsNormalized = bookingKeywords.map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-      // Note: message '6' is NOT included here because when booking is disabled,
-      // option 6 = boleto (handled above as HANDOFF_BOLETO, not a booking request)
-      // Options 1-4 also trigger the block since they map to booking when booking is disabled
       const isBookingMenuOption = /^[1-4]$/.test(message.trim());
-      const isBookingRequest = isBookingMenuOption || keywordsNormalized.some(kw => messageLower.includes(kw));
+      const isBookingRequest = !isHumanSupportRequest && (isBookingMenuOption || keywordsNormalized.some(kw => messageLower.includes(kw)));
       
       const APP_ONLY_RESPONSE = `⚠️ *Agendamento somente pelo aplicativo*
 
