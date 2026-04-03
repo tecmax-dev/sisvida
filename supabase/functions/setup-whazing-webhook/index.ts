@@ -29,17 +29,18 @@ serve(async (req) => {
     const url = `${baseUrl}/webhook/set/${evolutionInstance}`;
     
     const payload = {
-      enabled: true,
-      url: webhookUrl,
-      webhookByEvents: false,
-      webhookBase64: false,
-      events: [
-        "MESSAGES_UPSERT",
-        "MESSAGES_UPDATE",
-        "SEND_MESSAGE",
-        "CONNECTION_UPDATE",
-        "QRCODE_UPDATED",
-      ],
+      webhook: {
+        enabled: true,
+        url: webhookUrl,
+        webhookByEvents: false,
+        webhookBase64: false,
+        events: [
+          "MESSAGES_UPSERT",
+          "MESSAGES_UPDATE",
+          "SEND_MESSAGE",
+          "CONNECTION_UPDATE",
+        ],
+      }
     };
 
     console.log(`[setup-whazing-webhook] POST ${url}`);
