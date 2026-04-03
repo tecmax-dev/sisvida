@@ -1219,8 +1219,29 @@ IMPORTANTE: NUNCA mostre "Agendar consulta" como opção no menu. Se perguntarem
 - Responda diretamente ao conteúdo da mensagem do usuário.
 - Se a mensagem vier no formato "X-Y", trate como escolha já feita e continue o atendimento do assunto.`;
     
+    // ==========================================
+    // COMPUTE BRAZILIAN TIME & HOLIDAY STATUS
+    // ==========================================
+    const brDateTime = getBrazilianDateTime();
+    const holidayName = await isTodayHoliday(supabase, clinic_id, brDateTime.date);
+    const isHoliday = !!holidayName;
+    const isHumanAvailable = brDateTime.isBusinessHours && !isHoliday;
+    
+    console.log(`[ai-assistant] Brazilian time: ${brDateTime.formatted}, isBusinessHours: ${brDateTime.isBusinessHours}, isHoliday: ${isHoliday} (${holidayName || 'none'}), isHumanAvailable: ${isHumanAvailable}`);
+
+    const timeContextSection = `## CONTEXTO TEMPORAL (INFORMAÇÃO DO SERVIDOR - USE PARA DECISÕES)
+- **Data/Hora atual (Brasil):** ${brDateTime.formatted}
+- **Dia da semana:** ${brDateTime.dayName}
+- **Horário de atendimento humano:** Segunda a sexta, 09h às 12h e 13h às 16h (exceto feriados)
+- **Status atual do atendimento humano:** ${isHumanAvailable ? '✅ DISPONÍVEL (dentro do horário)' : `❌ INDISPONÍVEL (${isHoliday ? `feriado: ${holidayName}` : !brDateTime.isBusinessDay ? 'fim de semana' : 'fora do horário'})`}
+${isHoliday ? `- **Feriado hoje:** ${holidayName}` : ''}
+
+IMPORTANTE: Use estas informações para decidir automaticamente se o atendimento humano está disponível. NÃO pergunte ao usuário que horas são.`;
+
     const systemPrompt = `## PERSONA
 Você é LIA, assistente virtual especializada em atendimentos do Sindicato dos Comerciários de Ilhéus e Região (SECMI). Sua função é auxiliar associados, empresas e escritórios de contabilidade a terem acesso aos serviços disponibilizados pelo sindicato de forma eficiente e amigável.
+
+${timeContextSection}
 
 ${externalMenuMode ? externalMenuInstructions : ''}
 
@@ -1256,12 +1277,23 @@ Quando o usuário escolher a opção 5, digitar "falar com atendente", "outros a
    • Convenção coletiva
    • Outro assunto"
 2. **Após o usuário informar o assunto**, tente responder a dúvida diretamente se estiver dentro dos seus conhecimentos (CCT, piso salarial, endereço, horários, etc.).
-3. **Se não conseguir resolver** ou se o usuário insistir em falar com um humano, aí sim informe o horário de atendimento humano e peça para aguardar.
+3. **Se não conseguir resolver** ou se o usuário insistir em falar com um humano:
    **IMPORTANTE:** Sempre informe que o atendimento humano funciona de **segunda a sexta-feira, das 09h às 12h e das 13h às 16h, exceto feriados**.
-   - Se estiver DENTRO do horário de atendimento, encaminhe normalmente:
-     Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Nosso atendimento humano funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados). Por favor, aguarde um momento. 🙏"
-   - Se estiver FORA do horário de atendimento (noite, fim de semana ou feriado), informe:
-     Exemplo: "Nosso atendimento humano funciona de segunda a sexta-feira, das 09h às 12h e das 13h às 16h (exceto feriados). No momento estamos fora do horário de atendimento, mas assim que retornarmos um atendente entrará em contato com você! 😊"
+   
+   ${isHumanAvailable ? `### ATENDIMENTO HUMANO DISPONÍVEL (AGORA)
+   O atendimento humano está disponível AGORA. Encaminhe normalmente:
+   Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Nosso atendimento humano funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados). Por favor, aguarde um momento. 🙏"` : `### ATENDIMENTO HUMANO INDISPONÍVEL (AGORA)
+   O atendimento humano NÃO está disponível agora (${isHoliday ? `feriado: ${holidayName}` : !brDateTime.isBusinessDay ? 'fim de semana' : 'fora do horário comercial'}).
+   
+   **FLUXO OBRIGATÓRIO quando fora do horário:**
+   a) Informe que o atendimento humano está indisponível no momento e o horário de funcionamento.
+   b) **OFEREÇA ao usuário a opção de abrir um chamado** para que o atendente responda quando estiver disponível.
+      Exemplo: "Nosso atendimento humano funciona de segunda a sexta-feira, das 09h às 12h e das 13h às 16h (exceto feriados). No momento estamos fora do horário. 😊
+      
+      Mas posso abrir um *chamado* para você! Assim, quando nosso atendimento retornar, um atendente já terá o seu pedido e entrará em contato. Deseja que eu abra o chamado? 📋"
+   c) **Se o usuário ACEITAR abrir o chamado**, use a função "abrir_chamado_atendimento" com o assunto informado pelo usuário.
+   d) **Após abrir o chamado com sucesso**, confirme: "Pronto! ✅ Seu chamado sobre *[assunto]* foi registrado com sucesso. Um atendente entrará em contato assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h). 🙏"
+   e) **Se o usuário NÃO quiser abrir chamado**, respeite e informe que pode retornar no horário de atendimento.`}
 
 ## DADOS DE CONTATO DO SINDICATO (USE EXATAMENTE ESTES DADOS!)
 - Telefone/WhatsApp: 73 3231-1784
