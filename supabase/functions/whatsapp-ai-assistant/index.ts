@@ -890,6 +890,7 @@ serve(async (req) => {
       evolution_config,
       suppress_internal_menu,
       external_menu_mode,
+      deliver_response_via_caller,
     } = await req.json();
 
     if (!message || !clinic_id) {
@@ -905,17 +906,23 @@ serve(async (req) => {
     const suppressInternalMenu = suppress_internal_menu === true;
     const externalMenuMode = external_menu_mode === true || suppressInternalMenu;
     const shouldBlockInternalMenu = suppressInternalMenu || externalMenuMode;
+    const shouldSendDirectWhatsApp = deliver_response_via_caller !== true;
 
     // Helper: send WhatsApp message directly (used when called from webhook non-booking path)
     const sendDirectWhatsApp = async (text: string): Promise<void> => {
-      if (!evolution_config || !phone) return;
+      if (!shouldSendDirectWhatsApp || !evolution_config || !phone) return;
       try {
         const dest = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
-        await fetch(`${evolution_config.api_url}/message/sendText/${evolution_config.instance_name}`, {
+        const response = await fetch(`${evolution_config.api_url}/message/sendText/${evolution_config.instance_name}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolution_config.api_key },
           body: JSON.stringify({ number: dest, text }),
         });
+        const responseText = await response.text();
+
+        if (!response.ok) {
+          console.error(`[ai-assistant] sendDirectWhatsApp failed (${response.status}):`, responseText);
+        }
       } catch (e) {
         console.error('[ai-assistant] sendDirectWhatsApp error:', e);
       }
