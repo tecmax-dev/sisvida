@@ -24,7 +24,8 @@ serve(async (req) => {
     console.log(`[setup-whazing-webhook] Evolution API: ${evolutionApiUrl}`);
 
     // Evolution API v2: POST /webhook/set/{instance}
-    const url = `${evolutionApiUrl}/webhook/set/${evolutionInstance}`;
+    const baseUrl = evolutionApiUrl.replace(/\/+$/, '');
+    const url = `${baseUrl}/webhook/set/${evolutionInstance}`;
     
     const payload = {
       enabled: true,
