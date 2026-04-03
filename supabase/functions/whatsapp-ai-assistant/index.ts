@@ -1507,6 +1507,11 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         const toolName = toolCall.function.name;
         const toolArgs = JSON.parse(toolCall.function.arguments || '{}');
         
+        // Inject phone into tool args for ticket creation
+        if (toolName === 'abrir_chamado_atendimento') {
+          toolArgs._phone = phone || '';
+        }
+        
         const result = await executeTool(supabase, clinic_id, toolName, toolArgs);
         
         toolResults.push({
