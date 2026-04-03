@@ -21,6 +21,8 @@ import {
   Image as ImageIcon,
   FileText,
   Paperclip,
+  Bot,
+  UserCheck,
 } from "lucide-react";
 import {
   useWhazingMessages,
