@@ -18,6 +18,7 @@ export interface WhazingTicket {
   closed_at: string | null;
   holiday_notified: boolean;
   holiday_notified_at: string | null;
+  bot_active: boolean;
 }
 
 export interface WhazingMessage {
