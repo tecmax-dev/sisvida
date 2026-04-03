@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
 import { usePendingFiliacoes } from "@/hooks/usePendingFiliacoes";
+import { useWhazingPendingCount } from "@/hooks/useWhazingTickets";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -242,7 +243,7 @@ const unionNavTree: NavCategory[] = [
     icon: MessageSquare,
     color: "atendimento",
     items: [
-      { href: "/union/atendimento", icon: MessageSquare, label: "Tickets WhatsApp", permission: "union_module_access" },
+      { href: "/union/atendimento", icon: MessageSquare, label: "Tickets WhatsApp", permission: "union_module_access", badgeKey: "pendingTickets" },
     ]
   },
   {
@@ -262,6 +263,7 @@ export function UnionSidebar() {
   const location = useLocation();
   const { hasUnionPermission } = useUnionPermissions();
   const { count: pendingFiliacoesCount } = usePendingFiliacoes();
+  const { data: pendingTicketsCount } = useWhazingPendingCount();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
   const filteredCategories = unionNavTree
@@ -367,7 +369,9 @@ export function UnionSidebar() {
             <CollapsibleContent className="collapsible-content mt-1">
               <div className={cn("space-y-0.5 ml-4 pl-3 border-l", colors?.border || "border-sidebar-border")}>
                 {category.items.map((item) => {
-                  const badgeCount = item.badgeKey === "pendingFiliacoes" ? pendingFiliacoesCount : 0;
+                  const badgeCount = item.badgeKey === "pendingFiliacoes" ? pendingFiliacoesCount
+                    : item.badgeKey === "pendingTickets" ? (pendingTicketsCount ?? 0)
+                    : 0;
                   return (
                     <Link
                       key={item.href}
