@@ -155,6 +155,41 @@ export async function sendWhazingMessage(ticketId: string, message: string, cont
   return data;
 }
 
+// Send media/attachment action
+export async function sendWhazingMedia(
+  ticketId: string,
+  contactNumber: string,
+  file: File,
+  caption?: string
+) {
+  const reader = new FileReader();
+  const base64 = await new Promise<string>((resolve, reject) => {
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]); // strip data:...;base64, prefix
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const mediatype = file.type.startsWith('image/') ? 'image' : 'document';
+
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: {
+      action: 'send_media',
+      ticketId,
+      contactNumber,
+      media: base64,
+      mimetype: file.type,
+      fileName: file.name,
+      mediatype,
+      caption: caption || '',
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
 // Close ticket action
 export async function closeWhazingTicket(ticketId: string) {
   const { data, error } = await supabase.functions.invoke('whazing-actions', {
