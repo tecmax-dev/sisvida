@@ -212,6 +212,7 @@ import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
 import UnionNotifyAppPage from "./pages/union/UnionNotifyAppPage";
 import PopupNoticesPage from "./pages/union/PopupNoticesPage";
 import UnionDependentApprovalsPage from "./pages/union/UnionDependentApprovalsPage";
+import UnionWhatsAppTicketsPage from "./pages/union/UnionWhatsAppTicketsPage";
 // Legal Module pages
 import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
 import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
