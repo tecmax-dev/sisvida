@@ -17,17 +17,24 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const payload = await req.json();
-    console.log('[whazing-ticket-webhook] Received:', JSON.stringify(payload).slice(0, 500));
+    console.log('[whazing-ticket-webhook] Received:', JSON.stringify(payload).slice(0, 800));
 
-    // Whazing can send different event formats
-    // Common fields: ticketId, status, contact, queueId, userId
-    const ticketId = String(payload.ticketId || payload.ticket?.id || payload.id || '');
-    const status = payload.status || payload.ticket?.status || '';
-    const contactNumber = payload.contact?.number || payload.number || payload.ticket?.contact?.number || '';
-    const contactName = payload.contact?.name || payload.contact?.pushname || payload.ticket?.contact?.name || '';
-    const queueId = String(payload.queueId || payload.ticket?.queueId || '');
-    const userId = String(payload.userId || payload.ticket?.userId || '');
-    const lastMessage = payload.lastMessage || payload.body || '';
+    // Whazing webhook payload structure (from official docs):
+    // {
+    //   messageId, messageBody, timestamp, status, fromMe,
+    //   mediaType, mediaUrl, isDeleted, sendType, edited, reactions, dataJson,
+    //   ticket: { id, status, protocol, queueId, apiConfig, isGroup },
+    //   contact: { id, name, phoneNumber, profilePicUrl, email, isGroup, pushname, lid, kanbanId, followupId },
+    //   user: { id, name, email },
+    //   whatsapp: { id, name }
+    // }
+
+    const ticket = payload.ticket;
+    const contact = payload.contact;
+    const user = payload.user;
+
+    // Extract ticket ID - primary from ticket object, fallback to legacy formats
+    const ticketId = String(ticket?.id || payload.ticketId || payload.id || '');
 
     if (!ticketId) {
       console.log('[whazing-ticket-webhook] No ticketId found, ignoring');
@@ -36,7 +43,16 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[whazing-ticket-webhook] Ticket #${ticketId} status=${status} contact=${contactNumber} queue=${queueId}`);
+    const ticketStatus = ticket?.status || payload.status || '';
+    const contactNumber = contact?.phoneNumber || contact?.number || payload.contact?.number || '';
+    const contactName = contact?.name || contact?.pushname || '';
+    const queueId = String(ticket?.queueId || payload.queueId || '');
+    const userId = String(user?.id || payload.userId || '');
+    const protocol = ticket?.protocol || '';
+    const isGroup = ticket?.isGroup || false;
+    const lastMessage = payload.messageBody || payload.body || payload.lastMessage || '';
+
+    console.log(`[whazing-ticket-webhook] Ticket #${ticketId} status=${ticketStatus} contact=${contactNumber} queue=${queueId} protocol=${protocol}`);
 
     // Upsert ticket record
     const now = new Date().toISOString();
@@ -44,7 +60,7 @@ serve(async (req) => {
       ticket_id: ticketId,
       contact_number: contactNumber,
       contact_name: contactName,
-      status: status || 'pending',
+      status: ticketStatus || 'pending',
       queue_id: queueId || null,
       user_id_whazing: userId || null,
       last_message: lastMessage ? lastMessage.slice(0, 500) : null,
@@ -53,12 +69,12 @@ serve(async (req) => {
     };
 
     // Set opened_at only on creation
-    if (status === 'pending' || status === 'open') {
+    if (ticketStatus === 'pending' || ticketStatus === 'open') {
       ticketData.opened_at = now;
     }
 
     // Set closed_at when ticket is closed
-    if (status === 'closed') {
+    if (ticketStatus === 'closed') {
       ticketData.closed_at = now;
     }
 
@@ -73,9 +89,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[whazing-ticket-webhook] ✅ Ticket #${ticketId} saved/updated`);
+    console.log(`[whazing-ticket-webhook] ✅ Ticket #${ticketId} saved/updated (status=${ticketStatus})`);
 
-    return new Response(JSON.stringify({ ok: true, ticketId, status }), {
+    return new Response(JSON.stringify({ ok: true, ticketId, status: ticketStatus }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
