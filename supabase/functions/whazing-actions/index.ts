@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    // Body is parsed below after switch needs it
+    const body = await req.json();
+    const { action, ticketId, contactNumber } = body;
 
     const evoUrl = (Deno.env.get('EVOLUTION_API_URL') || '').replace(/\/$/, '');
     const evoKey = Deno.env.get('EVOLUTION_API_KEY') || '';
@@ -46,9 +47,6 @@ serve(async (req) => {
       'Content-Type': 'application/json',
       'apikey': evoKey,
     };
-
-    const body = await req.json();
-    const { action, ticketId, contactNumber } = body;
 
     switch (action) {
       case 'send_media': {
