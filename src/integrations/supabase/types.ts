@@ -16918,8 +16918,128 @@ export type Database = {
         }
         Relationships: []
       }
+      whazing_queues: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      whazing_quick_responses: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          media_type: string | null
+          media_url: string | null
+          shortcut: string | null
+          title: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          media_type?: string | null
+          media_url?: string | null
+          shortcut?: string | null
+          title: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          media_type?: string | null
+          media_url?: string | null
+          shortcut?: string | null
+          title?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
+      whazing_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      whazing_ticket_tags: {
+        Row: {
+          created_at: string
+          id: string
+          tag_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tag_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tag_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whazing_ticket_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "whazing_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whazing_tickets: {
         Row: {
+          assigned_queue_id: string | null
           closed_at: string | null
           contact_name: string | null
           contact_number: string
@@ -16937,6 +17057,7 @@ export type Database = {
           user_id_whazing: string | null
         }
         Insert: {
+          assigned_queue_id?: string | null
           closed_at?: string | null
           contact_name?: string | null
           contact_number: string
@@ -16954,6 +17075,7 @@ export type Database = {
           user_id_whazing?: string | null
         }
         Update: {
+          assigned_queue_id?: string | null
           closed_at?: string | null
           contact_name?: string | null
           contact_number?: string
@@ -16970,7 +17092,15 @@ export type Database = {
           updated_at?: string | null
           user_id_whazing?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whazing_tickets_assigned_queue_id_fkey"
+            columns: ["assigned_queue_id"]
+            isOneToOne: false
+            referencedRelation: "whazing_queues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
