@@ -7696,6 +7696,18 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           console.log(`[webhook] booking_enabled=false for clinic ${clinicId} - skipping plan check, routing non-booking message to AI`);
           const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
           const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+          // Ensure an AI conversation session exists so subsequent messages
+          // are NOT treated as "fresh conversations" (which re-triggers the menu → loop)
+          try {
+            await supabase.from('whatsapp_ai_conversations').insert({
+              clinic_id: clinicId,
+              phone,
+              messages: { source: 'webhook_non_booking', text: messageText },
+              expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            });
+          } catch (_e) { /* session may already exist */ }
+
           try {
             await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
               method: 'POST',
