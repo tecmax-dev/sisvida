@@ -188,13 +188,10 @@ export function CnpjEmployerSearch({
             }
             
             const { data, error } = await supabase
-              .from("employers")
-              .select("id, name, cnpj, trade_name, address, registration_number")
-              .eq("clinic_id", clinicId || "")
-              .eq("is_active", true)
-              .or(orParts.join(","))
-              .order("name")
-              .limit(50);
+              .rpc("search_employers_for_filiacao", {
+                _clinic_id: clinicId || "",
+                _search_term: cleanCnpj,
+              });
 
             if (!error && data && data.length > 0) {
               setSuggestions(data);
