@@ -7402,7 +7402,17 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
-          const isFreshConversation = !anyBookingSession && !anyBoletoSession && !anyAiConversation;
+          // Also check for an open whazing ticket — if the user is in the middle of a
+          // Whazing flow (ticket still open), do NOT treat this as a fresh conversation
+          const { data: openWhazingTicket } = await supabase
+            .from('whazing_tickets')
+            .select('id')
+            .in('contact_number', phoneCandidates.map(p => p.replace(/\D/g, '')))
+            .eq('status', 'open')
+            .limit(1)
+            .maybeSingle();
+
+          const isFreshConversation = !anyBookingSession && !anyBoletoSession && !anyAiConversation && !openWhazingTicket;
           
           // Check if message is a greeting or generic first message (not a CPF, number, or specific action)
           const msgClean = messageText.trim();
