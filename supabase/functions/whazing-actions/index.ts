@@ -14,8 +14,9 @@ serve(async (req) => {
   try {
     const { action, ticketId, message, queueId, userId, contactNumber } = await req.json();
     
-    const whazingUrl = (Deno.env.get('WHAZING_API_URL') || '').replace(/\/$/, '');
-    const whazingToken = Deno.env.get('WHAZING_API_TOKEN')!;
+    const evoUrl = (Deno.env.get('EVOLUTION_API_URL') || '').replace(/\/$/, '');
+    const evoKey = Deno.env.get('EVOLUTION_API_KEY')!;
+    const evoInstance = Deno.env.get('EVOLUTION_INSTANCE') || 'secmi';
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -24,11 +25,8 @@ serve(async (req) => {
 
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${whazingToken}`,
+      'apikey': evoKey,
     };
-
-    let response: Response;
-    let responseText: string;
 
     switch (action) {
       case 'send_message': {
@@ -41,17 +39,17 @@ serve(async (req) => {
         let cleanPhone = contactNumber.replace(/\D/g, '');
         if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-        // Send via Chatgoo/Whazing API
-        response = await fetch(`${whazingUrl}/apioficial`, {
+        // Send via Evolution API
+        const response = await fetch(`${evoUrl}/message/sendText/${evoInstance}`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
             number: cleanPhone,
-            body: message,
+            text: message,
           }),
         });
 
-        responseText = await response.text();
+        const responseText = await response.text();
         console.log(`[whazing-actions] Send response: ${response.status} ${responseText.slice(0, 300)}`);
 
         if (!response.ok) {
@@ -60,7 +58,7 @@ serve(async (req) => {
           });
         }
 
-        // Also save the sent message locally
+        // Save the sent message locally
         const now = Math.floor(Date.now() / 1000);
         await supabase.from('whazing_messages').insert({
           ticket_id: ticketId,
@@ -82,12 +80,11 @@ serve(async (req) => {
       }
 
       case 'close_ticket': {
-        // Update status locally
         await supabase.from('whazing_tickets')
           .update({ status: 'closed', closed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
 
-        console.log(`[whazing-actions] Ticket #${ticketId} closed locally`);
+        console.log(`[whazing-actions] Ticket ${ticketId} closed`);
 
         return new Response(JSON.stringify({ ok: true, message: 'Ticket closed' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -95,12 +92,9 @@ serve(async (req) => {
       }
 
       case 'transfer_queue': {
-        // Update queue locally
         await supabase.from('whazing_tickets')
           .update({ queue_id: queueId, updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
-
-        console.log(`[whazing-actions] Ticket #${ticketId} transferred to queue ${queueId}`);
 
         return new Response(JSON.stringify({ ok: true, message: 'Ticket transferred' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -111,8 +105,6 @@ serve(async (req) => {
         await supabase.from('whazing_tickets')
           .update({ user_id_whazing: userId, updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
-
-        console.log(`[whazing-actions] Ticket #${ticketId} assigned to user ${userId}`);
 
         return new Response(JSON.stringify({ ok: true, message: 'Ticket assigned' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
