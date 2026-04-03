@@ -112,6 +112,22 @@ serve(async (req) => {
       );
     }
 
+    const sendWhatsAppReply = async (text: string): Promise<boolean> => {
+      const dest = normalizedPhone.includes('@') ? normalizedPhone : `${normalizedPhone}@s.whatsapp.net`;
+      const response = await fetch(`${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: evolutionConfig.api_key },
+        body: JSON.stringify({
+          number: dest,
+          text,
+        }),
+      });
+
+      const responseText = await response.text();
+      console.log(`[external-integration] WhatsApp send status=${response.status}: ${responseText.substring(0, 300)}`);
+      return response.ok;
+    };
+
     // Map external action to AI message
     const actionMap: Record<string, string> = {
       'associado': 'Sou associado(a) e preciso de ajuda.',
@@ -157,6 +173,7 @@ serve(async (req) => {
         },
         suppress_internal_menu: true,
         external_menu_mode: true,
+        deliver_response_via_caller: true,
       }),
     });
 
@@ -166,15 +183,7 @@ serve(async (req) => {
     // Handle special handoff responses
     if (aiResult.response === 'HANDOFF_BOOKING' && aiResult.handoff_to_booking) {
       // The AI wants to hand off to booking - send a message and let the booking flow handle it
-      const dest = normalizedPhone.includes('@') ? normalizedPhone : `${normalizedPhone}@s.whatsapp.net`;
-      await fetch(`${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: evolutionConfig.api_key },
-        body: JSON.stringify({
-          number: dest,
-          text: 'Para agendar sua consulta, por favor informe seu *CPF* ou *número da carteirinha* (apenas números).',
-        }),
-      });
+      await sendWhatsAppReply('Para agendar sua consulta, por favor informe seu *CPF* ou *número da carteirinha* (apenas números).');
 
       return new Response(
         JSON.stringify({ success: true, action: 'handoff_booking', message: 'Booking flow initiated' }),
@@ -187,6 +196,16 @@ serve(async (req) => {
         JSON.stringify({ success: true, action: 'handoff_boleto', message: 'Boleto flow initiated' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (typeof aiResult.response === 'string' && aiResult.response.trim()) {
+      const delivered = await sendWhatsAppReply(aiResult.response);
+      if (!delivered) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to deliver WhatsApp response' }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Log the interaction
