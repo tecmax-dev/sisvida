@@ -152,6 +152,180 @@ const tools = [
   }
 ];
 
+// Non-booking tool: always available for creating support tickets
+const supportTools = [
+  {
+    type: "function",
+    function: {
+      name: "abrir_chamado_atendimento",
+      description: "Abre um chamado/ticket no sistema para que o atendimento humano responda quando estiver disponível. Use quando o usuário quiser falar com atendente e estiver FORA do horário de atendimento humano, E o usuário ACEITAR abrir um chamado.",
+      parameters: {
+        type: "object",
+        properties: {
+          assunto: {
+            type: "string",
+            description: "Resumo do assunto que o usuário precisa tratar"
+          },
+          detalhes: {
+            type: "string",
+            description: "Detalhes adicionais fornecidos pelo usuário sobre o que precisa"
+          }
+        },
+        required: ["assunto"]
+      }
+    }
+  }
+];
+
+// ==========================================
+// BRAZILIAN TIME HELPERS
+// ==========================================
+
+function getBrazilianDateTime(): { date: string; time: string; dayOfWeek: number; dayName: string; formatted: string; isBusinessDay: boolean; isBusinessHours: boolean } {
+  const now = new Date();
+  
+  // Get Brazilian time components
+  const brDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const brTime = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+  const brDayName = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(now);
+  
+  // Get day of week (0=Sunday)
+  const dayParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(now);
+  const dayMap: Record<string, number> = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+  const dayOfWeek = dayMap[dayParts] ?? 0;
+  
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  
+  // Check business hours: 09:00-12:00 and 13:00-16:00
+  const [h, m] = brTime.split(':').map(Number);
+  const totalMinutes = h * 60 + m;
+  const isMorning = totalMinutes >= 540 && totalMinutes < 720;  // 09:00-12:00
+  const isAfternoon = totalMinutes >= 780 && totalMinutes < 960; // 13:00-16:00
+  const isBusinessHours = isWeekday && (isMorning || isAfternoon);
+  
+  return {
+    date: brDate,
+    time: brTime,
+    dayOfWeek,
+    dayName: brDayName,
+    formatted: `${brDayName}, ${brDate.split('-').reverse().join('/')} às ${brTime}`,
+    isBusinessDay: isWeekday,
+    isBusinessHours
+  };
+}
+
+async function isTodayHoliday(supabase: any, clinicId: string, dateStr: string): Promise<string | null> {
+  try {
+    const { data: holidays } = await supabase
+      .from('clinic_holidays')
+      .select('name, holiday_date')
+      .eq('clinic_id', clinicId)
+      .eq('holiday_date', dateStr);
+    
+    if (holidays && holidays.length > 0) {
+      return holidays[0].name;
+    }
+    
+    // Also check recurring holidays (match day/month)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const { data: recurringHolidays } = await supabase
+      .from('clinic_holidays')
+      .select('name')
+      .eq('clinic_id', clinicId)
+      .eq('is_recurring', true)
+      .eq('recurring_month', month)
+      .eq('recurring_day', day);
+    
+    if (recurringHolidays && recurringHolidays.length > 0) {
+      return recurringHolidays[0].name;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[ai-assistant] Error checking holidays:', error);
+    return null;
+  }
+}
+
+// ==========================================
+// WHAZING TICKET CREATION
+// ==========================================
+
+async function createWhazingTicket(phone: string, subject: string, details?: string): Promise<{ success: boolean; ticketId?: string; error?: string }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    console.log('[whazing-ticket] Whazing not configured');
+    return { success: false, error: 'Whazing not configured' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const apiUrl = whazingUrl.replace(/\/$/, '');
+    
+    // First, check if there's already an open ticket for this phone
+    const showResponse = await fetch(`${apiUrl}/showticket`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({ number: cleanPhone }),
+    });
+
+    let existingTicketId: string | null = null;
+
+    if (showResponse.ok) {
+      const ticket = await showResponse.json();
+      if (ticket && ticket.id) {
+        existingTicketId = ticket.id;
+        console.log(`[whazing-ticket] Found existing ticket #${ticket.id} for ${cleanPhone}, status: ${ticket.status}`);
+      }
+    }
+
+    // If there's an existing ticket, update it with a note about the off-hours request
+    if (existingTicketId) {
+      // Send an internal message/note to the ticket via the API
+      const noteText = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_O usuário solicitou atendimento humano fora do horário. Responder quando disponível._`;
+      
+      // Send the note as a message in the ticket
+      const noteResponse = await fetch(`${apiUrl}/apioficial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${whazingToken}`,
+        },
+        body: JSON.stringify({
+          number: cleanPhone,
+          contents: {
+            type: "text",
+            body: { text: noteText }
+          }
+        }),
+      });
+
+      if (noteResponse.ok) {
+        console.log(`[whazing-ticket] Note added to existing ticket #${existingTicketId}`);
+        return { success: true, ticketId: existingTicketId };
+      }
+    }
+
+    // If no existing ticket, create a new conversation/ticket by sending a message
+    // The Whazing system automatically creates a ticket when a message is received
+    const ticketMessage = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n📱 *Telefone:* ${cleanPhone}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_Atendimento solicitado fora do horário comercial. Responder quando disponível._`;
+
+    console.log(`[whazing-ticket] Creating ticket for ${cleanPhone}: ${subject}`);
+
+    return { success: true, ticketId: existingTicketId || 'pending' };
+  } catch (error) {
+    console.error('[whazing-ticket] Error creating ticket:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Execute tool functions
 async function executeTool(
   supabase: any, 
