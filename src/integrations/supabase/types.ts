@@ -17576,14 +17576,6 @@ export type Database = {
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
       is_union_context: { Args: { p_user_id: string }; Returns: boolean }
-      list_employers_for_filiacao: {
-        Args: { _clinic_id: string }
-        Returns: {
-          id: string
-          name: string
-          trade_name: string
-        }[]
-      }
       log_reconciliation_action: {
         Args: {
           p_action: string
@@ -17666,6 +17658,17 @@ export type Database = {
       reverse_transaction: {
         Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
         Returns: Json
+      }
+      search_employers_for_filiacao: {
+        Args: { _clinic_id: string; _search_term?: string }
+        Returns: {
+          address: string
+          cnpj: string
+          id: string
+          name: string
+          registration_number: string
+          trade_name: string
+        }[]
       }
       set_clinic_booking_months_ahead: {
         Args: { p_clinic_id: string; p_months_ahead: number }
