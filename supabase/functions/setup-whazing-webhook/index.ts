@@ -11,9 +11,10 @@ serve(async (req) => {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL')!;
     const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')!;
-    const evolutionInstance = Deno.env.get('EVOLUTION_INSTANCE')!;
+    const evolutionInstance = body.instance || Deno.env.get('EVOLUTION_INSTANCE') || 'secmi';
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 
     const webhookUrl = `${supabaseUrl}/functions/v1/whazing-ticket-webhook`;
@@ -28,17 +29,18 @@ serve(async (req) => {
     const url = `${baseUrl}/webhook/set/${evolutionInstance}`;
     
     const payload = {
-      enabled: true,
-      url: webhookUrl,
-      webhookByEvents: false,
-      webhookBase64: false,
-      events: [
-        "MESSAGES_UPSERT",
-        "MESSAGES_UPDATE",
-        "SEND_MESSAGE",
-        "CONNECTION_UPDATE",
-        "QRCODE_UPDATED",
-      ],
+      webhook: {
+        enabled: true,
+        url: webhookUrl,
+        webhookByEvents: false,
+        webhookBase64: false,
+        events: [
+          "MESSAGES_UPSERT",
+          "MESSAGES_UPDATE",
+          "SEND_MESSAGE",
+          "CONNECTION_UPDATE",
+        ],
+      }
     };
 
     console.log(`[setup-whazing-webhook] POST ${url}`);
