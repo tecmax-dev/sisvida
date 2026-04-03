@@ -7329,21 +7329,18 @@ serve(async (req) => {
             const extResult = await extResponse.json();
             console.log(`[webhook] External-integration result:`, JSON.stringify(extResult).substring(0, 300));
 
-            // Send follow-up buttons after AI response (with small delay for message ordering)
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            const followUpButtons = action === 'atendente'
-              ? [
-                  { id: "whazing_voltar_sub", title: "Voltar" },
-                  { id: "whazing_voltar_menu", title: "Menu Principal" },
-                ]
-              : [
-                  { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
-                  { id: "whazing_voltar_sub", title: "Voltar" },
-                  { id: "whazing_voltar_menu", title: "Menu Principal" },
-                ];
-            
-            await sendWhazingButtons(phone, "O que deseja fazer agora?", followUpButtons);
+            if (action !== 'atendente') {
+              // Send follow-up buttons only for informational flows.
+              // For human-support handoff, avoid re-opening submenus/buttons and causing loop/re-entry.
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              await sendWhazingButtons(phone, "O que deseja fazer agora?", [
+                { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
+                { id: "whazing_voltar_sub", title: "Voltar" },
+                { id: "whazing_voltar_menu", title: "Menu Principal" },
+              ]);
+            } else {
+              console.log('[webhook] Skipping follow-up buttons after atendente handoff to avoid loop');
+            }
           } catch (extErr) {
             console.error('[webhook] Error calling external-integration for Whazing button:', extErr);
           }
@@ -7419,7 +7416,8 @@ serve(async (req) => {
           const isCpf = /^\d{11}$/.test(msgClean.replace(/\D/g, ''));
           const isNumericOption = /^\d{1,2}$/.test(msgClean);
           const isBoletoKeyword = /^(boleto|2[ª°]?\s*via|segunda\s*via)/i.test(msgClean);
-          const isNotSpecificAction = !isCpf && !isNumericOption && !isBoletoKeyword && !MENU_REGEX.test(msgClean) && !CANCEL_REGEX.test(msgClean);
+          const isHumanSupportShortcut = /^(outro assunto|outro|outros assuntos?|atendente|falar com atendente|falar com humano|quero falar com atendente|preciso de atendente|suporte|ajuda)$/i.test(msgClean);
+          const isNotSpecificAction = !isCpf && !isNumericOption && !isBoletoKeyword && !MENU_REGEX.test(msgClean) && !CANCEL_REGEX.test(msgClean) && !isHumanSupportShortcut;
 
           // Greetings should always restart the menu, even with an active AI session
           const isGreeting = /^(oi|olá|ola|hey|hi|hello|bom\s*dia|boa\s*tarde|boa\s*noite|eai|e\s*ai|opa|fala)/i.test(msgClean);
@@ -7697,6 +7695,41 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
           const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+          let aiMessage = messageText;
+          try {
+            const { data: activeAiContexts } = await supabase
+              .from('whatsapp_ai_conversations')
+              .select('messages, created_at')
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .gt('expires_at', new Date().toISOString())
+              .order('created_at', { ascending: false })
+              .limit(10);
+
+            const latestAtendenteContext = activeAiContexts?.find((row: any) =>
+              row?.messages?.source === 'external_integration' &&
+              row?.messages?.action === 'atendente'
+            );
+
+            if (latestAtendenteContext) {
+              const normalizedInput = (messageText || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[̀-ͯ]/g, '');
+
+              const isGenericSupportReply = /^(outro assunto|outro|outros|outros assuntos?|atendente|falar com atendente|humano|suporte|ajuda)$/i.test((messageText || '').trim());
+
+              aiMessage = isGenericSupportReply
+                ? `[Contexto: o usuário já escolheu falar com atendente no menu externo e respondeu de forma genérica. NÃO pergunte o assunto novamente. Trate isso como pedido direto de atendimento humano e prossiga com o encaminhamento adequado.] ${messageText}`
+                : `[Contexto: o usuário já escolheu falar com atendente no menu externo e a mensagem abaixo é a resposta sobre o assunto para encaminhamento humano.] ${messageText}`;
+
+              console.log(`[webhook] Enriched AI context for atendente flow (${normalizedInput || 'empty'})`);
+            }
+          } catch (contextErr) {
+            console.error('[webhook] Failed to load AI context for non-booking path:', contextErr);
+          }
+
           // Ensure an AI conversation session exists so subsequent messages
           // are NOT treated as "fresh conversations" (which re-triggers the menu → loop)
           try {
@@ -7718,7 +7751,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone,
-                message: messageText,
+                message: aiMessage,
                 evolution_config: {
                   api_url: configData.api_url,
                   api_key: configData.api_key,
