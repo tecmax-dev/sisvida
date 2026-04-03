@@ -20,7 +20,7 @@ serve(async (req) => {
       : 'secmi';
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 
-    const webhookUrl = `${supabaseUrl}/functions/v1/whazing-ticket-webhook`;
+    const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
 
     console.log(`[setup-whazing-webhook] Setting webhook on Evolution API`);
     console.log(`[setup-whazing-webhook] Instance: ${evolutionInstance}`);
