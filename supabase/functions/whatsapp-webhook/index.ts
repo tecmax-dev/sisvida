@@ -6963,6 +6963,34 @@ serve(async (req) => {
           const followUpId = messageText.trim();
           console.log(`[webhook] Whazing follow-up button: "${followUpId}"`);
 
+          // Mirror/reopen local ticket immediately so dashboard reflects the active chat
+          try {
+            const now = new Date().toISOString();
+            const { data: existingFollowUpTicket } = await supabase
+              .from('whazing_tickets')
+              .select('id, status')
+              .eq('ticket_id', phone)
+              .maybeSingle();
+
+            const followUpTicketData: Record<string, unknown> = {
+              ticket_id: phone,
+              contact_number: phone,
+              contact_name: payload.data?.pushName || null,
+              last_message: followUpId,
+              updated_at: now,
+              closed_at: null,
+            };
+
+            if (!existingFollowUpTicket || existingFollowUpTicket.status === 'closed') {
+              followUpTicketData.status = 'open';
+              followUpTicketData.opened_at = now;
+            }
+
+            await supabase.from('whazing_tickets').upsert(followUpTicketData, { onConflict: 'ticket_id' });
+          } catch (mirrorError) {
+            console.error('[webhook] Failed to mirror follow-up ticket locally:', mirrorError);
+          }
+
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
             await sendWhazingMenuButtons(phone);
