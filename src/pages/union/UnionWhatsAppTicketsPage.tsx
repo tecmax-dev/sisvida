@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,21 @@ import {
   MessageSquare,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Search,
   RefreshCw,
   Phone,
   User,
   Inbox,
+  ExternalLink,
 } from "lucide-react";
-import { useWhazingTickets, useWhazingTicketStats } from "@/hooks/useWhazingTickets";
-import { formatDateBR } from "@/lib/date";
+import {
+  useWhazingTickets,
+  useWhazingTicketStats,
+  useWhazingRealtimeSubscription,
+  type WhazingTicket,
+} from "@/hooks/useWhazingTickets";
 import { Skeleton } from "@/components/ui/skeleton";
+import WhazingChatPanel from "@/components/union/WhazingChatPanel";
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   open: {
@@ -72,11 +77,46 @@ function timeAgo(dateStr: string | null) {
   return `${diffD}d`;
 }
 
+// Audio notification
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
+    oscillator.frequency.setValueAtTime(800, ctx.currentTime + 0.2);
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.4);
+  } catch { /* ignore audio errors */ }
+}
+
 export default function UnionWhatsAppTicketsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<WhazingTicket | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const prevPendingRef = useRef<number | null>(null);
+
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
   const { data: stats } = useWhazingTicketStats();
+
+  // Subscribe to realtime updates
+  useWhazingRealtimeSubscription();
+
+  // Audio alert when new pending/open tickets arrive
+  useEffect(() => {
+    if (!stats) return;
+    const currentPending = stats.open + stats.pending;
+    if (prevPendingRef.current !== null && currentPending > prevPendingRef.current) {
+      playNotificationSound();
+    }
+    prevPendingRef.current = currentPending;
+  }, [stats]);
 
   const filtered = (tickets || []).filter((t) => {
     if (!search) return true;
@@ -88,6 +128,11 @@ export default function UnionWhatsAppTicketsPage() {
       t.ticket_id.toLowerCase().includes(s)
     );
   });
+
+  const handleOpenChat = (ticket: WhazingTicket) => {
+    setSelectedTicket(ticket);
+    setChatOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -244,17 +289,21 @@ export default function UnionWhatsAppTicketsPage() {
                       <TableRow>
                         <TableHead className="w-20">#</TableHead>
                         <TableHead>Contato</TableHead>
-                        <TableHead className="hidden md:table-cell">Assunto</TableHead>
+                        <TableHead className="hidden md:table-cell">Última Msg</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="hidden sm:table-cell">Última Msg</TableHead>
-                        <TableHead className="text-right">Aberto há</TableHead>
+                        <TableHead className="hidden sm:table-cell">Aberto há</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filtered.map((ticket) => {
                         const cfg = statusConfig[ticket.status] || statusConfig.pending;
                         return (
-                          <TableRow key={ticket.id} className="hover:bg-muted/50">
+                          <TableRow
+                            key={ticket.id}
+                            className="hover:bg-muted/50 cursor-pointer"
+                            onClick={() => handleOpenChat(ticket)}
+                          >
                             <TableCell className="font-mono text-xs text-muted-foreground">
                               {ticket.ticket_id.length > 8
                                 ? ticket.ticket_id.slice(0, 8)
@@ -272,10 +321,10 @@ export default function UnionWhatsAppTicketsPage() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <span className="text-sm text-muted-foreground line-clamp-1">
-                                {ticket.subject || ticket.last_message || "-"}
-                              </span>
+                            <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-[200px] truncate">
+                              {ticket.last_message
+                                ? ticket.last_message.slice(0, 60) + (ticket.last_message.length > 60 ? "..." : "")
+                                : "-"}
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -290,17 +339,26 @@ export default function UnionWhatsAppTicketsPage() {
                                   variant="outline"
                                   className="ml-1 text-[10px] bg-blue-50 text-blue-600 border-blue-200"
                                 >
-                                  🔔 Notificado
+                                  🔔
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell text-xs text-muted-foreground max-w-[200px] truncate">
-                              {ticket.last_message
-                                ? ticket.last_message.slice(0, 60) + (ticket.last_message.length > 60 ? "..." : "")
-                                : "-"}
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-muted-foreground">
+                            <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                               {timeAgo(ticket.opened_at)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenChat(ticket);
+                                }}
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                Abrir
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -313,6 +371,16 @@ export default function UnionWhatsAppTicketsPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Chat Panel */}
+      <WhazingChatPanel
+        ticket={selectedTicket}
+        open={chatOpen}
+        onClose={() => {
+          setChatOpen(false);
+          setSelectedTicket(null);
+        }}
+      />
     </div>
   );
 }
