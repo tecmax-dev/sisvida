@@ -1401,11 +1401,11 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
       'cancelar_agendamento'
     ];
     
-    // CRITICAL: When booking is disabled, provide NO tools at all
-    // This forces the AI to only respond with text and follow the system prompt
+    // CRITICAL: When booking is disabled, only provide support tools (ticket creation)
+    // When booking is enabled, provide all tools + support tools
     const activeTools = isBookingEnabled 
-      ? tools 
-      : []; // Empty array = no tools available when booking is disabled
+      ? [...tools, ...supportTools]
+      : [...supportTools]; // Only support tools when booking is disabled
     
     console.log(`[ai-assistant] Booking enabled: ${isBookingEnabled}, Active tools: ${activeTools.length > 0 ? activeTools.map(t => t.function.name).join(', ') : 'NONE (booking disabled)'}`);
     
