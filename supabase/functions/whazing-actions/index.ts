@@ -178,6 +178,7 @@ serve(async (req) => {
       }
 
       case 'transfer_user': {
+        const { userId } = body;
         await supabase.from('whazing_tickets')
           .update({ user_id_whazing: userId, updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
