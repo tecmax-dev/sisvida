@@ -36,6 +36,7 @@ import {
   Download,
   Shield,
   Bell,
+  MessageSquare,
 } from "lucide-react";
 import {
   Collapsible,
@@ -107,6 +108,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     text: "text-indigo-200",
     border: "border-indigo-400/30",
     accent: "bg-indigo-500/30"
+  },
+  atendimento: {
+    bg: "bg-green-500/20",
+    text: "text-green-200",
+    border: "border-green-400/30",
+    accent: "bg-green-500/30"
   }
 };
 
@@ -227,6 +234,15 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/juridico/escritorios", icon: Building, label: "Escritórios", permission: "union_module_access" },
       { href: "/union/juridico/prazos", icon: Calendar, label: "Prazos", permission: "union_module_access" },
       { href: "/union/juridico/despesas", icon: DollarSign, label: "Despesas", permission: "union_module_access" },
+    ]
+  },
+  {
+    id: "atendimento",
+    label: "Atendimento",
+    icon: MessageSquare,
+    color: "atendimento",
+    items: [
+      { href: "/union/atendimento", icon: MessageSquare, label: "Tickets WhatsApp", permission: "union_module_access" },
     ]
   },
   {
