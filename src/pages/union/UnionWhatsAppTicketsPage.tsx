@@ -442,6 +442,26 @@ export default function UnionWhatsAppTicketsPage() {
         }}
       />
 
+      {/* New Chat Dialog */}
+      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="h-5 w-5" />
+              Novo Chat
+            </DialogTitle>
+          </DialogHeader>
+          <NewChatContactList
+            onStartChat={(ticket) => {
+              setNewChatOpen(false);
+              setSelectedTicket(ticket);
+              setChatOpen(true);
+              refetch();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Quick Responses Dialog */}
       <Dialog open={quickResponsesOpen} onOpenChange={setQuickResponsesOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
