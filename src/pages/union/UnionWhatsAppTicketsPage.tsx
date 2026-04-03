@@ -174,6 +174,13 @@ export default function UnionWhatsAppTicketsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            size="sm"
+            onClick={() => setNewChatOpen(true)}
+          >
+            <MessageSquarePlus className="h-4 w-4 mr-1" />
+            Novo Chat
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={() => setQuickResponsesOpen(true)}
