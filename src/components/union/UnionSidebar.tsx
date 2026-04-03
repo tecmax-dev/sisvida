@@ -108,6 +108,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     text: "text-indigo-200",
     border: "border-indigo-400/30",
     accent: "bg-indigo-500/30"
+  },
+  atendimento: {
+    bg: "bg-green-500/20",
+    text: "text-green-200",
+    border: "border-green-400/30",
+    accent: "bg-green-500/30"
   }
 };
 
