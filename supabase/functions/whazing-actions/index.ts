@@ -13,15 +13,34 @@ serve(async (req) => {
 
   try {
     const { action, ticketId, message, queueId, userId, contactNumber } = await req.json();
-    
+
     const evoUrl = (Deno.env.get('EVOLUTION_API_URL') || '').replace(/\/$/, '');
-    const evoKey = Deno.env.get('EVOLUTION_API_KEY')!;
-    const evoInstance = Deno.env.get('EVOLUTION_INSTANCE') || 'secmi';
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const evoKey = Deno.env.get('EVOLUTION_API_KEY') || '';
+    const rawInstance = (Deno.env.get('EVOLUTION_INSTANCE') || '').trim();
+    const evoInstance = /^[a-z0-9_-]{1,40}$/i.test(rawInstance) && rawInstance !== '2b7dbe72ab69c51e4d37e55329e10aeb'
+      ? rawInstance
+      : 'secmi';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!evoUrl || !evoKey) {
+      return new Response(JSON.stringify({ error: 'Evolution API não configurada' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[whazing-actions] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`[whazing-actions] Action: ${action}, Ticket: ${ticketId}`);
+    console.log(`[whazing-actions] Action: ${action}, Ticket: ${ticketId}, Instance: ${evoInstance}`);
 
     const headers = {
       'Content-Type': 'application/json',
