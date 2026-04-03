@@ -127,7 +127,8 @@ serve(async (req) => {
       try {
         const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
         const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-        const evolutionInstance = Deno.env.get("EVOLUTION_INSTANCE");
+        const rawEvoInst = (Deno.env.get("EVOLUTION_INSTANCE") || '').trim();
+        const evolutionInstance = /^[a-z0-9_-]{1,40}$/i.test(rawEvoInst) && rawEvoInst !== '2b7dbe72ab69c51e4d37e55329e10aeb' ? rawEvoInst : 'secmi';
 
         if (evolutionUrl && evolutionKey && evolutionInstance) {
           const phone = managerPhone.replace(/\D/g, "");
