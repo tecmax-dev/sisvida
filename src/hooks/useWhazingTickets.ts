@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface WhazingTicket {
   id: string;
@@ -16,6 +18,21 @@ export interface WhazingTicket {
   closed_at: string | null;
   holiday_notified: boolean;
   holiday_notified_at: string | null;
+}
+
+export interface WhazingMessage {
+  id: string;
+  ticket_id: string;
+  message_id: string | null;
+  body: string | null;
+  from_me: boolean;
+  media_type: string | null;
+  media_url: string | null;
+  sender_name: string | null;
+  sender_phone: string | null;
+  status: string | null;
+  timestamp: number | null;
+  created_at: string;
 }
 
 async function fetchTickets(statusFilter?: string): Promise<WhazingTicket[]> {
@@ -61,4 +78,106 @@ export function useWhazingTicketStats() {
     },
     refetchInterval: 15000,
   });
+}
+
+export function useWhazingMessages(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["whazing-messages", ticketId],
+    queryFn: async () => {
+      if (!ticketId) return [];
+      const { data, error } = await (supabase as any)
+        .from("whazing_messages")
+        .select("*")
+        .eq("ticket_id", ticketId)
+        .order("timestamp", { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as WhazingMessage[];
+    },
+    enabled: !!ticketId,
+    refetchInterval: 5000,
+  });
+}
+
+// Realtime hook for ticket updates
+export function useWhazingRealtimeSubscription() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('whazing-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whazing_tickets' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+          queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'whazing_messages' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["whazing-messages"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+}
+
+// Hook for pending ticket count (for sidebar badge)
+export function useWhazingPendingCount() {
+  return useQuery({
+    queryKey: ["whazing-pending-count"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("whazing_tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["open", "pending"]);
+
+      if (error) throw error;
+      return (data as any)?.length ?? 0;
+    },
+    refetchInterval: 15000,
+  });
+}
+
+// Send message action
+export async function sendWhazingMessage(ticketId: string, message: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'send_message', ticketId, message },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Close ticket action
+export async function closeWhazingTicket(ticketId: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'close_ticket', ticketId },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Transfer ticket to queue
+export async function transferWhazingTicketToQueue(ticketId: string, queueId: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'transfer_queue', ticketId, queueId },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Transfer ticket to user
+export async function transferWhazingTicketToUser(ticketId: string, userId: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'transfer_user', ticketId, userId },
+  });
+  if (error) throw error;
+  return data;
 }
