@@ -7712,6 +7712,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             console.error('[webhook] Failed to get or create session');
           }
         }
+        } // end if (!botSkipped)
       } else {
         console.log(`[webhook] No config found with direct_reply_enabled for instance: ${payload.instance}`);
       }
