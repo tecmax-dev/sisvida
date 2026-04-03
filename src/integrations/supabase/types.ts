@@ -17576,6 +17576,14 @@ export type Database = {
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
       is_union_context: { Args: { p_user_id: string }; Returns: boolean }
+      list_employers_for_filiacao: {
+        Args: { _clinic_id: string }
+        Returns: {
+          id: string
+          name: string
+          trade_name: string
+        }[]
+      }
       log_reconciliation_action: {
         Args: {
           p_action: string
@@ -17707,6 +17715,14 @@ export type Database = {
         }[]
       }
       validate_authorization_full: { Args: { p_hash: string }; Returns: Json }
+      verify_employer_for_filiacao: {
+        Args: { _employer_id: string }
+        Returns: {
+          id: string
+          name: string
+          trade_name: string
+        }[]
+      }
       verify_patient_password: {
         Args: { p_clinic_id?: string; p_cpf: string; p_password: string }
         Returns: {
