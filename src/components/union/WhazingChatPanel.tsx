@@ -307,7 +307,30 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
           {ticket?.status !== "closed" && (
             <>
               <Separator />
-              <div className="px-4 py-2 flex items-center gap-2">
+              <div className="px-4 py-2 flex items-center gap-2 flex-wrap">
+                {ticket?.bot_active !== false ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                    onClick={handleAssume}
+                    disabled={assuming}
+                  >
+                    {assuming ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <UserCheck className="h-3 w-3 mr-1" />}
+                    Assumir Atendimento
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-blue-600 hover:text-blue-700 border-blue-300"
+                    onClick={handleReturnToBot}
+                    disabled={returning}
+                  >
+                    {returning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Bot className="h-3 w-3 mr-1" />}
+                    Devolver à IA
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
