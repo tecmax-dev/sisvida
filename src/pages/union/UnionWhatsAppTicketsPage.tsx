@@ -116,6 +116,7 @@ export default function UnionWhatsAppTicketsPage() {
   const prevPendingRef = useRef<number | null>(null);
 
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
+  const allTicketsQuery = useWhazingTickets("all");
   const { data: stats } = useWhazingTicketStats();
 
   useWhazingRealtimeSubscription();
