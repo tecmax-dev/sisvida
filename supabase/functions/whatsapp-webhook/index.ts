@@ -6986,7 +6986,15 @@ serve(async (req) => {
               followUpTicketData.opened_at = now;
             }
 
-            await supabase.from('whazing_tickets').upsert(followUpTicketData, { onConflict: 'ticket_id' });
+            const { error: followUpUpsertError } = await supabase
+              .from('whazing_tickets')
+              .upsert(followUpTicketData, { onConflict: 'ticket_id' });
+
+            if (followUpUpsertError) {
+              console.error('[webhook] Failed to mirror follow-up ticket locally:', followUpUpsertError);
+            } else {
+              console.log(`[webhook] Follow-up ticket mirrored locally for ${phone}`);
+            }
           } catch (mirrorError) {
             console.error('[webhook] Failed to mirror follow-up ticket locally:', mirrorError);
           }
