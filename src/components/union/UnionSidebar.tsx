@@ -237,6 +237,15 @@ const unionNavTree: NavCategory[] = [
     ]
   },
   {
+    id: "atendimento",
+    label: "Atendimento",
+    icon: MessageSquare,
+    color: "atendimento",
+    items: [
+      { href: "/union/atendimento", icon: MessageSquare, label: "Tickets WhatsApp", permission: "union_module_access" },
+    ]
+  },
+  {
     id: "configuracoes",
     label: "Configurações",
     icon: Settings,
