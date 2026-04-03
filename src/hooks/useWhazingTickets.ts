@@ -147,9 +147,9 @@ export function useWhazingPendingCount() {
 }
 
 // Send message action
-export async function sendWhazingMessage(ticketId: string, message: string) {
+export async function sendWhazingMessage(ticketId: string, message: string, contactNumber: string) {
   const { data, error } = await supabase.functions.invoke('whazing-actions', {
-    body: { action: 'send_message', ticketId, message },
+    body: { action: 'send_message', ticketId, message, contactNumber },
   });
   if (error) throw error;
   return data;
