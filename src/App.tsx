@@ -213,6 +213,7 @@ import UnionNotifyAppPage from "./pages/union/UnionNotifyAppPage";
 import PopupNoticesPage from "./pages/union/PopupNoticesPage";
 import UnionDependentApprovalsPage from "./pages/union/UnionDependentApprovalsPage";
 import UnionWhatsAppTicketsPage from "./pages/union/UnionWhatsAppTicketsPage";
+import UnionContactsPage from "./pages/union/UnionContactsPage";
 // Legal Module pages
 import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
 import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
@@ -649,6 +650,7 @@ function App() {
                   <Route path="configuracoes/feriados" element={<UnionHolidaysPage />} />
                   <Route path="configuracoes/grupos-acesso" element={<UnionAccessGroupsPage />} />
                   <Route path="atendimento" element={<UnionWhatsAppTicketsPage />} />
+                  <Route path="contatos" element={<UnionContactsPage />} />
                 </Route>
                 {/* Mobile App Routes - Rotas fixas declarativas (decisão de navegação feita no bootstrap imperativo) */}
                 <Route
