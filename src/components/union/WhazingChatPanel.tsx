@@ -75,7 +75,7 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
     if (!message.trim() || !ticket) return;
     setSending(true);
     try {
-      await sendWhazingMessage(ticket.ticket_id, message.trim());
+      await sendWhazingMessage(ticket.ticket_id, message.trim(), ticket.contact_number);
       setMessage("");
       queryClient.invalidateQueries({ queryKey: ["whazing-messages", ticket.ticket_id] });
       toast.success("Mensagem enviada");
