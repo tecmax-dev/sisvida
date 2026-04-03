@@ -167,6 +167,7 @@ serve(async (req) => {
       }
 
       case 'transfer_queue': {
+        const { queueId } = body;
         await supabase.from('whazing_tickets')
           .update({ queue_id: queueId, updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
