@@ -155,6 +155,35 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
     }
   };
 
+  const handleAssume = async () => {
+    if (!ticket) return;
+    setAssuming(true);
+    try {
+      await assumeWhazingTicket(ticket.ticket_id);
+      queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+      toast.success("Atendimento assumido - IA desativada para este chat");
+    } catch (err: any) {
+      toast.error("Erro ao assumir: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setAssuming(false);
+    }
+  };
+
+  const handleReturnToBot = async () => {
+    if (!ticket) return;
+    setReturning(true);
+    try {
+      await returnWhazingTicketToBot(ticket.ticket_id, ticket.contact_number);
+      queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["whazing-messages", ticket.ticket_id] });
+      toast.success("Chat devolvido à IA");
+    } catch (err: any) {
+      toast.error("Erro ao devolver: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReturning(false);
+    }
+  };
+
   const handleQuickResponse = (body: string) => {
     setMessage(body);
   };
