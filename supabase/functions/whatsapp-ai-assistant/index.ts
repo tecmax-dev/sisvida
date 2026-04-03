@@ -1030,15 +1030,31 @@ ${isBookingEnabled ? `- Se digitar 1: mostre opções para associados
 - Se digitar 2: mostre opções para empresas (NÃO solicite CNPJ nem e-mail, siga o fluxo)
 - Se digitar 3: mostre opções para contabilidade
 - Se digitar 4: pergunte sobre qual assunto do Dia do Comerciário
-- Se digitar 5: pergunte do que se trata, ao responder peça para aguardar o atendente
+- Se digitar 5: interaja perguntando sobre qual assunto precisa tratar (veja regras abaixo em FALAR COM ATENDENTE / OUTROS ASSUNTOS)
 - Se digitar 6: RESPONDA APENAS: "HANDOFF_BOOKING" (o sistema de agendamento assumirá)
 - Se digitar 7: RESPONDA APENAS: "HANDOFF_BOLETO" (o sistema de boleto empresa assumirá)` : `- Se digitar 1: mostre opções para associados
 - Se digitar 2: mostre opções para empresas (NÃO solicite CNPJ nem e-mail, siga o fluxo)
 - Se digitar 3: mostre opções para contabilidade
 - Se digitar 4: pergunte sobre qual assunto do Dia do Comerciário
-- Se digitar 5: pergunte do que se trata, ao responder peça para aguardar o atendente
+- Se digitar 5: interaja perguntando sobre qual assunto precisa tratar (veja regras abaixo em FALAR COM ATENDENTE / OUTROS ASSUNTOS)
 - Se digitar 6: RESPONDA APENAS: "HANDOFF_BOLETO" (o sistema de boleto empresa assumirá)
 - Se alguém pedir agendamento: Redirecione para o app (agendamento suspenso no WhatsApp)`}
+
+## FALAR COM ATENDENTE / OUTROS ASSUNTOS (OPÇÃO 5)
+Quando o usuário escolher a opção 5, digitar "falar com atendente", "outros assuntos", "atendente", ou qualquer variação:
+1. **NÃO transfira imediatamente.** Primeiro, pergunte educadamente sobre qual assunto o usuário precisa tratar.
+   Exemplo de resposta:
+   "Para que eu possa direcionar você ao atendente mais adequado, poderia me informar sobre qual assunto precisa tratar? 😊
+   
+   Por exemplo:
+   • Dúvidas sobre associação
+   • Questões jurídicas
+   • Carteirinha ou cadastro
+   • Convenção coletiva
+   • Outro assunto"
+2. **Após o usuário informar o assunto**, tente responder a dúvida diretamente se estiver dentro dos seus conhecimentos (CCT, piso salarial, endereço, horários, etc.).
+3. **Se não conseguir resolver** ou se o usuário insistir em falar com um humano, aí sim peça para aguardar e informe que um atendente vai assumir o atendimento em breve.
+   Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Por favor, aguarde um momento. 🙏"
 
 ## DADOS DE CONTATO DO SINDICATO (USE EXATAMENTE ESTES DADOS!)
 - Telefone/WhatsApp: 73 3231-1784
