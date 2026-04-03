@@ -7700,6 +7700,69 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       }
     }
 
+    // Mirror to whazing_tickets / whazing_messages for dashboard
+    try {
+      const ticketId = phone;
+      const now = new Date().toISOString();
+      const pushName = payload.data?.pushName || '';
+      const fromMe = payload.data?.key?.fromMe || false;
+      const msgId = payload.data?.key?.id || '';
+
+      // Determine media type
+      let whMediaType: string | null = null;
+      const msg = payload.data?.message;
+      if (msg?.imageMessage) whMediaType = 'image';
+      else if (msg?.videoMessage) whMediaType = 'video';
+      else if (msg?.audioMessage) whMediaType = 'audio';
+      else if (msg?.documentMessage) whMediaType = 'document';
+      else if (msg?.stickerMessage) whMediaType = 'sticker';
+
+      // Upsert ticket
+      const { data: existingTkt } = await supabase
+        .from('whazing_tickets')
+        .select('id, status')
+        .eq('ticket_id', ticketId)
+        .maybeSingle();
+
+      const tktData: Record<string, unknown> = {
+        ticket_id: ticketId,
+        contact_number: phone,
+        contact_name: pushName || null,
+        last_message: messageText ? messageText.slice(0, 500) : null,
+        updated_at: now,
+      };
+
+      if (!existingTkt) {
+        tktData.status = 'open';
+        tktData.opened_at = now;
+      } else if (existingTkt.status === 'closed' && !fromMe) {
+        tktData.status = 'open';
+        tktData.opened_at = now;
+        tktData.closed_at = null;
+      }
+
+      await supabase.from('whazing_tickets').upsert(tktData, { onConflict: 'ticket_id' });
+
+      // Save message
+      if (msgId && messageText) {
+        const ts = payload.data?.messageTimestamp
+          ? Number(payload.data.messageTimestamp)
+          : Math.floor(Date.now() / 1000);
+        await supabase.from('whazing_messages').upsert({
+          ticket_id: ticketId,
+          message_id: msgId,
+          body: messageText.slice(0, 2000),
+          from_me: fromMe,
+          media_type: whMediaType,
+          sender_name: fromMe ? 'Atendente' : (pushName || 'Contato'),
+          sender_phone: fromMe ? null : phone,
+          timestamp: ts,
+        }, { onConflict: 'message_id' });
+      }
+    } catch (mirrorErr) {
+      console.error('[webhook] Whazing mirror error:', mirrorErr);
+    }
+
     if (clinicId) {
       await supabase.from('whatsapp_incoming_logs').insert({
         clinic_id: clinicId,
