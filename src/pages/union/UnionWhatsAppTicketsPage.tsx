@@ -146,8 +146,6 @@ export default function UnionWhatsAppTicketsPage() {
     setChatOpen(true);
   };
 
-  // For kanban, use all tickets (no status filter)
-  const allTicketsQuery = useWhazingTickets("all");
   const kanbanTickets = (allTicketsQuery.data || []).filter((t) => {
     if (!search) return true;
     const s = search.toLowerCase();
