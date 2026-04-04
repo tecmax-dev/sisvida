@@ -17200,6 +17200,7 @@ export type Database = {
         Row: {
           appointment_date: string | null
           clinic_id: string | null
+          created_at: string | null
           end_time: string | null
           id: string | null
           professional_id: string | null
@@ -17210,6 +17211,7 @@ export type Database = {
         Insert: {
           appointment_date?: string | null
           clinic_id?: string | null
+          created_at?: string | null
           end_time?: string | null
           id?: string | null
           professional_id?: string | null
@@ -17220,6 +17222,7 @@ export type Database = {
         Update: {
           appointment_date?: string | null
           clinic_id?: string | null
+          created_at?: string | null
           end_time?: string | null
           id?: string | null
           professional_id?: string | null
