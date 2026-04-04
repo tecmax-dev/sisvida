@@ -6996,7 +6996,7 @@ serve(async (req) => {
             if (!existingOutTkt) {
               outTktData.status = 'open';
               outTktData.opened_at = outNow;
-              outTktData.contact_name = outPushName || null;
+              if (outPushName) outTktData.contact_name = outPushName;
             } else if (existingOutTkt.status === 'closed') {
               outTktData.status = 'open';
               outTktData.opened_at = outNow;
