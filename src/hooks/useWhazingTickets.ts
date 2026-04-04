@@ -42,7 +42,9 @@ async function fetchTickets(statusFilter?: string): Promise<WhazingTicket[]> {
     .select("*")
     .order("updated_at", { ascending: false });
 
-  if (statusFilter && statusFilter !== "all") {
+  if (statusFilter === "chatbot") {
+    query = query.eq("bot_active", true).neq("status", "closed");
+  } else if (statusFilter && statusFilter !== "all") {
     query = query.eq("status", statusFilter);
   }
 
