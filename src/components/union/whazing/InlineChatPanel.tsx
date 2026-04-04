@@ -74,6 +74,7 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { getProfilePic } = useContactProfilePics();
 
   const { data: messages, isLoading } = useWhazingMessages(ticket?.ticket_id ?? null);
 
