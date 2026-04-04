@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Clock, CheckCircle2, User, Phone, GripVertical } from "lucide-react";
+import { ContactAvatar } from "@/components/union/whazing/ContactAvatar";
 import {
   DndContext,
   DragOverlay,
@@ -29,6 +30,7 @@ import { closeWhazingTicket, reopenWhazingTicket } from "@/hooks/useWhazingTicke
 interface TicketKanbanProps {
   tickets: WhazingTicket[];
   onSelectTicket: (ticket: WhazingTicket) => void;
+  getProfilePic?: (phone: string) => string | null;
 }
 
 const columns = [
@@ -77,9 +79,11 @@ function KanbanColumn({ id, children }: { id: string; children: React.ReactNode 
 function SortableTicketCard({
   ticket,
   onSelectTicket,
+  profilePicUrl,
 }: {
   ticket: WhazingTicket;
   onSelectTicket: (ticket: WhazingTicket) => void;
+  profilePicUrl?: string | null;
 }) {
   const {
     attributes,
@@ -116,7 +120,7 @@ function SortableTicketCard({
         <div className="flex-1 min-w-0" onClick={() => onSelectTicket(ticket)}>
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <ContactAvatar profilePicUrl={profilePicUrl || null} name={ticket.contact_name} size="sm" />
               <span className="text-sm font-medium truncate">
                 {ticket.contact_name || "Desconhecido"}
               </span>
@@ -173,7 +177,7 @@ function TicketOverlayCard({ ticket }: { ticket: WhazingTicket }) {
   );
 }
 
-export default function TicketKanban({ tickets, onSelectTicket }: TicketKanbanProps) {
+export default function TicketKanban({ tickets, onSelectTicket, getProfilePic }: TicketKanbanProps) {
   const [activeTicket, setActiveTicket] = useState<WhazingTicket | null>(null);
   const queryClient = useQueryClient();
 
@@ -272,6 +276,7 @@ export default function TicketKanban({ tickets, onSelectTicket }: TicketKanbanPr
                             key={ticket.id}
                             ticket={ticket}
                             onSelectTicket={onSelectTicket}
+                            profilePicUrl={getProfilePic?.(ticket.contact_number)}
                           />
                         ))
                       )}

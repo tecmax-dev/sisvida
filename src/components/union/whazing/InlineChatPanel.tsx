@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import QuickResponsePicker from "@/components/union/whazing/QuickResponsePicker";
 import TicketTagsManager from "@/components/union/whazing/TicketTagsManager";
 import TransferQueueDialog from "@/components/union/whazing/TransferQueueDialog";
+import { useContactProfilePics } from "@/hooks/useContactProfilePics";
+import { ContactAvatar } from "@/components/union/whazing/ContactAvatar";
 
 interface InlineChatPanelProps {
   ticket: WhazingTicket | null;
@@ -72,6 +74,7 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { getProfilePic } = useContactProfilePics();
 
   const { data: messages, isLoading } = useWhazingMessages(ticket?.ticket_id ?? null);
 
@@ -222,9 +225,10 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
       {/* Header */}
       <div className="px-4 py-3 border-b bg-card flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="h-5 w-5 text-primary" />
-          </div>
+          <ContactAvatar
+            profilePicUrl={getProfilePic(ticket.contact_number)}
+            name={ticket.contact_name}
+          />
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">
               {ticket.contact_name || "Desconhecido"}

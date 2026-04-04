@@ -17049,6 +17049,7 @@ export type Database = {
           id: string
           last_message: string | null
           opened_at: string | null
+          profile_pic_url: string | null
           queue_id: string | null
           raw_data: Json | null
           status: string
@@ -17068,6 +17069,7 @@ export type Database = {
           id?: string
           last_message?: string | null
           opened_at?: string | null
+          profile_pic_url?: string | null
           queue_id?: string | null
           raw_data?: Json | null
           status?: string
@@ -17087,6 +17089,7 @@ export type Database = {
           id?: string
           last_message?: string | null
           opened_at?: string | null
+          profile_pic_url?: string | null
           queue_id?: string | null
           raw_data?: Json | null
           status?: string
