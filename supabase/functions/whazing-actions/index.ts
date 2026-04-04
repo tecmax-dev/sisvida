@@ -149,37 +149,22 @@ async function fetchEvolutionChatArchiveState({
   headers: Record<string, string>;
   remoteJid: string;
 }) {
-  const queryBodies = [
-    { where: { id: remoteJid } },
-    { where: { chatId: remoteJid } },
-    { where: { remoteJid } },
-    {},
-  ];
+  // Only try the most specific query to avoid excessive API calls
+  const response = await fetch(`${evoUrl}/chat/findChats/${evoInstance}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ where: { remoteJid } }),
+  });
 
-  for (const body of queryBodies) {
-    const response = await fetch(`${evoUrl}/chat/findChats/${evoInstance}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
+  const responseText = await response.text();
+  console.log(`[whazing-actions] findChats ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`);
 
-    const responseText = await response.text();
-    console.log(`[whazing-actions] findChats ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`);
+  if (!response.ok || !responseText.trim()) return null;
 
-    if (!response.ok || !responseText.trim()) {
-      continue;
-    }
+  const parsed = tryParseJson<unknown>(responseText);
+  if (!parsed) return null;
 
-    const parsed = tryParseJson<unknown>(responseText);
-    if (!parsed) continue;
-
-    const archiveState = extractChatArchiveState(parsed, remoteJid);
-    if (archiveState !== null) {
-      return archiveState;
-    }
-  }
-
-  return null;
+  return extractChatArchiveState(parsed, remoteJid);
 }
 
 async function setEvolutionArchiveStatus({
@@ -244,7 +229,7 @@ async function setEvolutionArchiveStatus({
     ...localCandidates,
     ...evolutionCandidates.filter((candidate) => candidate.fromMe),
     ...evolutionCandidates.filter((candidate) => !candidate.fromMe),
-  ]);
+  ]).slice(0, 5); // Limit to 5 candidates to prevent CPU timeout
 
   if (!candidates.length) {
     throw new Error(`No real message key found for ticket ${ticketId || cleanPhone}`);
@@ -480,16 +465,21 @@ serve(async (req) => {
       }
 
       case 'reopen_ticket': {
+        // Best-effort archive sync - don't block ticket reopen if it fails
         if (contactNumber) {
-          await setEvolutionArchiveStatus({
-            archive: false,
-            contactNumber,
-            ticketId,
-            supabase,
-            evoUrl,
-            evoInstance,
-            headers,
-          });
+          try {
+            await setEvolutionArchiveStatus({
+              archive: false,
+              contactNumber,
+              ticketId,
+              supabase,
+              evoUrl,
+              evoInstance,
+              headers,
+            });
+          } catch (archiveError) {
+            console.warn(`[whazing-actions] Archive sync failed for reopen (best-effort): ${archiveError instanceof Error ? archiveError.message : archiveError}`);
+          }
         }
 
         await supabase.from('whazing_tickets')
