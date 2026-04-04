@@ -11,15 +11,32 @@ function normalizePhone(phone: string) {
   return digits.startsWith('55') ? digits : `55${digits}`;
 }
 
+function isSyntheticMessageId(messageId?: string | null) {
+  if (!messageId) return true;
+  return ['sent-', 'sent-media-', 'bot-return-'].some((prefix) => messageId.startsWith(prefix));
+}
+
+function tryParseJson<T>(value: string): T | null {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
 async function setEvolutionArchiveStatus({
   archive,
   contactNumber,
+  ticketId,
+  supabase,
   evoUrl,
   evoInstance,
   headers,
 }: {
   archive: boolean;
   contactNumber?: string;
+  ticketId?: string;
+  supabase: ReturnType<typeof createClient>;
   evoUrl: string;
   evoInstance: string;
   headers: Record<string, string>;
@@ -28,11 +45,36 @@ async function setEvolutionArchiveStatus({
 
   const cleanPhone = normalizePhone(contactNumber);
   const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+  let lastMessageId: string | null = null;
+  let lastMessageFromMe = false;
+
+  if (ticketId) {
+    const { data: recentMessages, error: recentMessagesError } = await supabase
+      .from('whazing_messages')
+      .select('message_id, from_me, timestamp, created_at')
+      .eq('ticket_id', ticketId)
+      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (recentMessagesError) {
+      throw recentMessagesError;
+    }
+
+    const lastRealMessage = (recentMessages || []).find((message) => !isSyntheticMessageId(message.message_id));
+    lastMessageId = lastRealMessage?.message_id ?? null;
+    lastMessageFromMe = lastRealMessage?.from_me ?? false;
+  }
+
+  if (!lastMessageId) {
+    throw new Error(`No real message key found for ticket ${ticketId || cleanPhone}`);
+  }
+
   const response = await fetch(`${evoUrl}/chat/archiveChat/${evoInstance}`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      lastMessage: { key: { remoteJid, fromMe: false, id: '' } },
+      lastMessage: { key: { remoteJid, fromMe: lastMessageFromMe, id: lastMessageId } },
       chat: remoteJid,
       archive,
     }),
@@ -118,6 +160,7 @@ serve(async (req) => {
         });
 
         const responseText = await response.text();
+        const responseJson = tryParseJson<{ key?: { id?: string }, messageTimestamp?: number, status?: string }>(responseText);
         console.log(`[whazing-actions] SendMedia response: ${response.status} ${responseText.slice(0, 300)}`);
 
         if (!response.ok) {
@@ -130,12 +173,13 @@ serve(async (req) => {
         const now = Math.floor(Date.now() / 1000);
         await supabase.from('whazing_messages').insert({
           ticket_id: ticketId,
-          message_id: `sent-media-${now}-${Math.random().toString(36).slice(2, 8)}`,
+          message_id: responseJson?.key?.id || `sent-media-${now}-${Math.random().toString(36).slice(2, 8)}`,
           body: caption || `[${mediatype || 'documento'}] ${fileName || 'anexo'}`,
           from_me: true,
           sender_name: 'Atendente',
-          timestamp: now,
+          timestamp: responseJson?.messageTimestamp || now,
           media_type: mimetype,
+          status: responseJson?.status || null,
         });
 
         await supabase.from('whazing_tickets')
@@ -169,6 +213,7 @@ serve(async (req) => {
         });
 
         const responseText = await response.text();
+        const responseJson = tryParseJson<{ key?: { id?: string }, messageTimestamp?: number, status?: string }>(responseText);
         console.log(`[whazing-actions] Send response: ${response.status} ${responseText.slice(0, 300)}`);
 
         if (!response.ok) {
@@ -181,11 +226,12 @@ serve(async (req) => {
         const now = Math.floor(Date.now() / 1000);
         await supabase.from('whazing_messages').insert({
           ticket_id: ticketId,
-          message_id: `sent-${now}-${Math.random().toString(36).slice(2, 8)}`,
+          message_id: responseJson?.key?.id || `sent-${now}-${Math.random().toString(36).slice(2, 8)}`,
           body: message,
           from_me: true,
           sender_name: 'Atendente',
-          timestamp: now,
+          timestamp: responseJson?.messageTimestamp || now,
+          status: responseJson?.status || null,
         });
 
         // Update last_message on ticket
@@ -203,6 +249,8 @@ serve(async (req) => {
           await setEvolutionArchiveStatus({
             archive: true,
             contactNumber,
+            ticketId,
+            supabase,
             evoUrl,
             evoInstance,
             headers,
@@ -225,6 +273,8 @@ serve(async (req) => {
           await setEvolutionArchiveStatus({
             archive: false,
             contactNumber,
+            ticketId,
+            supabase,
             evoUrl,
             evoInstance,
             headers,
@@ -257,6 +307,8 @@ serve(async (req) => {
         await setEvolutionArchiveStatus({
           archive: false,
           contactNumber: cleanPhone,
+          ticketId: canonicalTicketId,
+          supabase,
           evoUrl,
           evoInstance,
           headers,
