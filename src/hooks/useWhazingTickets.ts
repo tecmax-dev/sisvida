@@ -7,6 +7,7 @@ import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 export interface WhazingTicket {
   id: string;
   ticket_id: string;
+  ticket_number: number | null;
   contact_number: string;
   contact_name: string | null;
   status: string;
