@@ -3202,6 +3202,71 @@ Deno.serve(async (req) => {
                       return;
                     }
 
+                    // ====== CORREÇÃO: Atualizar contribuições vinculadas à negociação ======
+                    // Quando uma parcela de negociação é paga, as employer_contributions 
+                    // vinculadas via negotiation_items devem ser marcadas como "negotiated"
+                    try {
+                      // Buscar contribuições vinculadas a esta negociação
+                      const { data: linkedItems } = await supabase
+                        .from("negotiation_items")
+                        .select("contribution_id")
+                        .eq("negotiation_id", inst.negotiation_id)
+                        .not("contribution_id", "is", null);
+
+                      if (linkedItems && linkedItems.length > 0) {
+                        const contribIds = linkedItems
+                          .map((item: any) => item.contribution_id)
+                          .filter(Boolean);
+
+                        if (contribIds.length > 0) {
+                          // Atualizar contribuições que ainda não estão como "negotiated"
+                          const { error: contribUpdateErr } = await supabase
+                            .from("employer_contributions")
+                            .update({
+                              status: "negotiated",
+                              is_negotiated_debt: true,
+                              updated_at: new Date().toISOString(),
+                            })
+                            .in("id", contribIds)
+                            .not("status", "eq", "negotiated");
+
+                          if (contribUpdateErr) {
+                            console.error(`[Lytex] Erro ao atualizar contribuições vinculadas à negociação ${inst.negotiation_id}:`, contribUpdateErr.message);
+                          } else {
+                            console.log(`[Lytex] ✅ ${contribIds.length} contribuições vinculadas à negociação ${inst.negotiation_id} atualizadas para 'negotiated'`);
+                          }
+                        }
+                      }
+
+                      // Verificar se TODAS as parcelas da negociação estão pagas → completar negociação
+                      const { data: allInstallments } = await supabase
+                        .from("negotiation_installments")
+                        .select("id, status")
+                        .eq("negotiation_id", inst.negotiation_id);
+
+                      if (allInstallments && allInstallments.length > 0) {
+                        const allPaid = allInstallments.every((i: any) => i.status === "paid");
+                        if (allPaid) {
+                          const { error: negUpdateErr } = await supabase
+                            .from("debt_negotiations")
+                            .update({
+                              status: "completed",
+                              finalized_at: new Date().toISOString(),
+                              updated_at: new Date().toISOString(),
+                            })
+                            .eq("id", inst.negotiation_id)
+                            .neq("status", "completed");
+
+                          if (!negUpdateErr) {
+                            console.log(`[Lytex] ✅ Negociação ${inst.debt_negotiations?.negotiation_code || inst.negotiation_id} completada automaticamente - todas as parcelas pagas`);
+                          }
+                        }
+                      }
+                    } catch (linkErr: any) {
+                      console.error(`[Lytex] Erro ao atualizar vínculos da negociação ${inst.negotiation_id}:`, linkErr?.message);
+                      // Não falhar a conciliação principal
+                    }
+
                     conciliated++;
                     conciliationDetails.push({
                       lytexInvoiceId: invoiceId,
