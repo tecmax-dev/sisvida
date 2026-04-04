@@ -249,7 +249,7 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
               Atendente
             </Badge>
           )}
-          <span className="text-[10px] text-muted-foreground font-mono">#{ticket.ticket_id}</span>
+          <span className="text-[10px] text-muted-foreground font-mono">#{ticket.ticket_number ?? '—'}</span>
         </div>
       </div>
 

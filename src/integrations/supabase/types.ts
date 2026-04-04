@@ -17055,6 +17055,7 @@ export type Database = {
           status: string
           subject: string | null
           ticket_id: string
+          ticket_number: number | null
           updated_at: string | null
           user_id_whazing: string | null
         }
@@ -17075,6 +17076,7 @@ export type Database = {
           status?: string
           subject?: string | null
           ticket_id: string
+          ticket_number?: number | null
           updated_at?: string | null
           user_id_whazing?: string | null
         }
@@ -17095,6 +17097,7 @@ export type Database = {
           status?: string
           subject?: string | null
           ticket_id?: string
+          ticket_number?: number | null
           updated_at?: string | null
           user_id_whazing?: string | null
         }
@@ -17774,31 +17777,25 @@ export type Database = {
       get_whazing_tickets_for_clinic: {
         Args: { p_clinic_id: string }
         Returns: {
-          assigned_queue_id: string | null
+          assigned_queue_id: string
           bot_active: boolean
-          closed_at: string | null
-          contact_name: string | null
+          closed_at: string
+          contact_name: string
           contact_number: string
-          holiday_notified: boolean | null
-          holiday_notified_at: string | null
+          holiday_notified: boolean
+          holiday_notified_at: string
           id: string
-          last_message: string | null
-          opened_at: string | null
-          profile_pic_url: string | null
-          queue_id: string | null
-          raw_data: Json | null
+          last_message: string
+          opened_at: string
+          profile_pic_url: string
+          queue_id: string
           status: string
-          subject: string | null
+          subject: string
           ticket_id: string
-          updated_at: string | null
-          user_id_whazing: string | null
+          ticket_number: number
+          updated_at: string
+          user_id_whazing: string
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "whazing_tickets"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
