@@ -64,6 +64,7 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [assuming, setAssuming] = useState(false);
   const [returning, setReturning] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
