@@ -124,6 +124,7 @@ function SortableTicketCard({
               <span className="text-sm font-medium truncate">
                 {ticket.contact_name || "Desconhecido"}
               </span>
+              <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">#{ticket.ticket_number ?? '—'}</span>
             </div>
             <span className="text-[10px] text-muted-foreground flex-shrink-0">
               {timeAgo(ticket.updated_at)}

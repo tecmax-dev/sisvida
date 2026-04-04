@@ -285,9 +285,12 @@ export default function UnionWhatsAppTicketsPage() {
                               </ContactAvatar>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-1">
-                                  <span className="text-sm font-medium truncate">
-                                    {ticket.contact_name || "Desconhecido"}
-                                  </span>
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <span className="text-sm font-medium truncate">
+                                      {ticket.contact_name || "Desconhecido"}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">#{ticket.ticket_number ?? '—'}</span>
+                                  </div>
                                   <span className="text-[10px] text-muted-foreground flex-shrink-0">
                                     {timeAgo(ticket.opened_at)}
                                   </span>
