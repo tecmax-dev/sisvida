@@ -276,9 +276,12 @@ export default function UnionWhatsAppTicketsPage() {
                               )}
                               onClick={() => handleOpenChat(ticket)}
                             >
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 relative">
-                                <User className="h-5 w-5 text-primary" />
+                              <ContactAvatar
+                                profilePicUrl={getProfilePic(ticket.contact_number)}
+                                name={ticket.contact_name}
+                              >
                                 <span className={cn("absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card", cfg.dotColor)} />
+                              </ContactAvatar>
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-1">
