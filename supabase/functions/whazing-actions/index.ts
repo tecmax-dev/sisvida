@@ -28,10 +28,14 @@ async function setEvolutionArchiveStatus({
 
   const cleanPhone = normalizePhone(contactNumber);
   const remoteJid = `${cleanPhone}@s.whatsapp.net`;
-  const response = await fetch(`${evoUrl}/chat/archive/${evoInstance}`, {
-    method: 'PUT',
+  const response = await fetch(`${evoUrl}/chat/archiveChat/${evoInstance}`, {
+    method: 'POST',
     headers,
-    body: JSON.stringify({ lastMessage: { key: { remoteJid } }, archive }),
+    body: JSON.stringify({
+      lastMessage: { key: { remoteJid, fromMe: false, id: '' } },
+      chat: remoteJid,
+      archive,
+    }),
   });
 
   const responseText = await response.text();
