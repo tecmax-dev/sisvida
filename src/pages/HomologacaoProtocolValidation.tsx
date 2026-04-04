@@ -142,7 +142,7 @@ export default function HomologacaoProtocolValidation() {
   const defaultAddressComplement = "Ao lado da Sorveteria Chiquinho";
   const defaultCity = "Ilhéus";
   const defaultStateCode = "BA";
-  const defaultPhone = "(11) 5194-3839";
+  const defaultPhone = "(73) 3231-1784";
   
   const address = professional?.address || clinic?.address || defaultAddress;
   const city = professional?.city || clinic?.city || defaultCity;

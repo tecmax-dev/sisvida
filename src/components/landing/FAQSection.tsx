@@ -74,7 +74,7 @@ export function FAQSection() {
             </p>
             <Button asChild size="lg" className="bg-primary hover:bg-primary-dark text-primary-foreground rounded-full px-8 font-semibold">
               <a
-                href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o ProsindWeb"
+                href="https://wa.me/557332311784?text=Olá! Tenho uma dúvida sobre o ProsindWeb"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
