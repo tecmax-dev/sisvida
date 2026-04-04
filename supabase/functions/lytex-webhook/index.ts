@@ -145,49 +145,152 @@ Deno.serve(async (req) => {
       contribution = data;
     }
 
+    // ====== NOVO: Buscar em negotiation_installments se não encontrou em employer_contributions ======
+    let negotiationInstallment: { id: string; negotiation_id: string; status: string | null; paid_at: string | null; clinic_id: string } | null = null;
+
+    if (!contribution && invoiceId) {
+      const { data } = await supabase
+        .from("negotiation_installments")
+        .select("id, negotiation_id, status, paid_at, debt_negotiations!inner(clinic_id)")
+        .eq("lytex_invoice_id", invoiceId)
+        .maybeSingle();
+      if (data) {
+        negotiationInstallment = {
+          id: data.id,
+          negotiation_id: data.negotiation_id,
+          status: data.status,
+          paid_at: data.paid_at,
+          clinic_id: (data.debt_negotiations as any)?.clinic_id,
+        };
+      }
+    }
+
+    if (!contribution && referenceId) {
+      const { data } = await supabase
+        .from("negotiation_installments")
+        .select("id, negotiation_id, status, paid_at, debt_negotiations!inner(clinic_id)")
+        .eq("id", referenceId)
+        .maybeSingle();
+      if (data) {
+        negotiationInstallment = {
+          id: data.id,
+          negotiation_id: data.negotiation_id,
+          status: data.status,
+          paid_at: data.paid_at,
+          clinic_id: (data.debt_negotiations as any)?.clinic_id,
+        };
+      }
+    }
+
     // Registrar log do webhook (sempre)
     await supabase.from("lytex_webhook_logs").insert({
-      clinic_id: contribution?.clinic_id || null,
-      contribution_id: contribution?.id || null,
+      clinic_id: contribution?.clinic_id || negotiationInstallment?.clinic_id || null,
+      contribution_id: contribution?.id || negotiationInstallment?.id || null,
       webhook_type: payload.webhookType || "unknown",
       payload: payload,
-      processed: !!contribution,
+      processed: !!(contribution || negotiationInstallment),
     });
 
-    if (!contribution) {
-      console.log("[Lytex Webhook] Contribuição não encontrada para:", invoiceId, referenceId);
+    if (!contribution && !negotiationInstallment) {
+      console.log("[Lytex Webhook] Contribuição/Parcela não encontrada para:", invoiceId, referenceId);
       return new Response(JSON.stringify({ success: true, message: "Contribuição não encontrada" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const newStatus = mapToContributionStatus(payload);
-
-    // Só gravar paid_at quando for pago, e nunca sobrescrever por null
     const paidAt = payload.data?.paidAt || null;
     const payedValue = payload.data?.payedValue;
     const paymentMethod = payload.data?.paymentMethod || null;
 
-    const updateData: Record<string, unknown> = {
-      status: newStatus,
-    };
+    // ====== Fluxo para CONTRIBUIÇÕES normais ======
+    if (contribution) {
+      const updateData: Record<string, unknown> = {
+        status: newStatus,
+      };
 
-    if (newStatus === "paid") {
-      updateData.paid_at = paidAt || contribution.paid_at || new Date().toISOString();
-      // IMPORTANTE: Lytex envia payedValue em CENTAVOS, NÃO multiplicar por 100!
-      if (typeof payedValue === "number") updateData.paid_value = Math.round(payedValue);
-      if (paymentMethod) updateData.payment_method = paymentMethod;
+      if (newStatus === "paid") {
+        updateData.paid_at = paidAt || contribution.paid_at || new Date().toISOString();
+        if (typeof payedValue === "number") updateData.paid_value = Math.round(payedValue);
+        if (paymentMethod) updateData.payment_method = paymentMethod;
+      }
+
+      const { error } = await supabase
+        .from("employer_contributions")
+        .update(updateData)
+        .eq("id", contribution.id);
+
+      if (error) {
+        console.error("[Lytex Webhook] Erro ao atualizar contribuição:", error);
+      } else {
+        console.log("[Lytex Webhook] Contribuição atualizada:", contribution.id, "=>", newStatus);
+      }
     }
 
-    const { error } = await supabase
-      .from("employer_contributions")
-      .update(updateData)
-      .eq("id", contribution.id);
+    // ====== Fluxo para PARCELAS DE NEGOCIAÇÃO ======
+    if (negotiationInstallment) {
+      const instUpdateData: Record<string, unknown> = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
 
-    if (error) {
-      console.error("[Lytex Webhook] Erro ao atualizar contribuição:", error);
-    } else {
-      console.log("[Lytex Webhook] Atualizado:", contribution.id, "=>", newStatus);
+      if (newStatus === "paid") {
+        // negotiation_installments.paid_value é em REAIS, Lytex envia em centavos
+        instUpdateData.paid_at = paidAt || negotiationInstallment.paid_at || new Date().toISOString();
+        if (typeof payedValue === "number") instUpdateData.paid_value = payedValue / 100;
+        if (paymentMethod) instUpdateData.payment_method = paymentMethod;
+      }
+
+      const { error: instError } = await supabase
+        .from("negotiation_installments")
+        .update(instUpdateData)
+        .eq("id", negotiationInstallment.id);
+
+      if (instError) {
+        console.error("[Lytex Webhook] Erro ao atualizar parcela de negociação:", instError);
+      } else {
+        console.log("[Lytex Webhook] Parcela de negociação atualizada:", negotiationInstallment.id, "=>", newStatus);
+
+        // Se pagou, atualizar contribuições vinculadas e verificar conclusão da negociação
+        if (newStatus === "paid") {
+          try {
+            // Atualizar contribuições vinculadas para "negotiated"
+            const { data: linkedItems } = await supabase
+              .from("negotiation_items")
+              .select("contribution_id")
+              .eq("negotiation_id", negotiationInstallment.negotiation_id)
+              .not("contribution_id", "is", null);
+
+            if (linkedItems && linkedItems.length > 0) {
+              const contribIds = linkedItems.map((item: any) => item.contribution_id).filter(Boolean);
+              if (contribIds.length > 0) {
+                await supabase
+                  .from("employer_contributions")
+                  .update({ status: "negotiated", is_negotiated_debt: true, updated_at: new Date().toISOString() })
+                  .in("id", contribIds)
+                  .not("status", "eq", "negotiated");
+              }
+            }
+
+            // Verificar se todas as parcelas estão pagas → completar negociação
+            const { data: allInst } = await supabase
+              .from("negotiation_installments")
+              .select("id, status")
+              .eq("negotiation_id", negotiationInstallment.negotiation_id);
+
+            if (allInst && allInst.length > 0 && allInst.every((i: any) => i.status === "paid")) {
+              await supabase
+                .from("debt_negotiations")
+                .update({ status: "completed", finalized_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+                .eq("id", negotiationInstallment.negotiation_id)
+                .neq("status", "completed");
+              console.log("[Lytex Webhook] ✅ Negociação completada automaticamente:", negotiationInstallment.negotiation_id);
+            }
+          } catch (linkErr: any) {
+            console.error("[Lytex Webhook] Erro ao atualizar vínculos da negociação:", linkErr?.message);
+          }
+        }
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
