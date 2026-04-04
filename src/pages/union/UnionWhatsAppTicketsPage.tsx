@@ -16,6 +16,8 @@ import {
   Zap,
   MessageSquarePlus,
   Bot,
+  LayoutList,
+  Columns3,
 } from "lucide-react";
 import {
   useWhazingTickets,
