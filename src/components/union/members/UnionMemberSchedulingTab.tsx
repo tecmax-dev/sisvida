@@ -319,8 +319,8 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
   return (
     <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-hidden">
       {/* Main Tabs: History vs Schedule */}
-      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "history" | "schedule")}>
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "history" | "schedule" | "report")}>
+        <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             <span className="hidden sm:inline">Histórico</span>
@@ -335,6 +335,11 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
             <CalendarDays className="h-4 w-4" />
             <span className="hidden sm:inline">Novo Agendamento</span>
             <span className="sm:hidden">Agendar</span>
+          </TabsTrigger>
+          <TabsTrigger value="report" className="flex items-center gap-2">
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">Relatório</span>
+            <span className="sm:hidden">Relatório</span>
           </TabsTrigger>
         </TabsList>
 
