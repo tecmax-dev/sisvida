@@ -83,27 +83,22 @@ export default function NewChatContactList({ onStartChat }: NewChatContactListPr
       let cleanPhone = phone.replace(/\D/g, "");
       if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
 
-      // Upsert ticket
-      const { data, error } = await (supabase as any)
-        .from("whazing_tickets")
-        .upsert(
-          {
-            ticket_id: cleanPhone,
-            contact_number: cleanPhone,
-            contact_name: name || null,
-            status: "open",
-            opened_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "ticket_id" }
-        )
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke("whazing-actions", {
+        body: {
+          action: "ensure_ticket_open",
+          ticketId: cleanPhone,
+          contactNumber: cleanPhone,
+          contactName: name || null,
+        },
+      });
 
       if (error) throw error;
+      if (!data?.ok || !data?.ticket) {
+        throw new Error(data?.error || "Falha ao sincronizar chat com Whazing");
+      }
 
       toast.success("Chat aberto com " + (name || formatPhone(cleanPhone)));
-      onStartChat(data as WhazingTicket);
+      onStartChat(data.ticket as WhazingTicket);
     } catch (err: any) {
       toast.error("Erro ao abrir chat: " + (err.message || "erro desconhecido"));
     } finally {

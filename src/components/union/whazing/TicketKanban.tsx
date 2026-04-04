@@ -22,9 +22,9 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import type { WhazingTicket } from "@/hooks/useWhazingTickets";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { closeWhazingTicket, reopenWhazingTicket } from "@/hooks/useWhazingTickets";
 
 interface TicketKanbanProps {
   tickets: WhazingTicket[];
@@ -216,12 +216,11 @@ export default function TicketKanban({ tickets, onSelectTicket }: TicketKanbanPr
     };
 
     try {
-      const { error } = await (supabase as any)
-        .from("whazing_tickets")
-        .update({ status: targetStatus, updated_at: new Date().toISOString() })
-        .eq("id", ticket.id);
-
-      if (error) throw error;
+      if (targetStatus === "closed") {
+        await closeWhazingTicket(ticket.ticket_id, ticket.contact_number);
+      } else {
+        await reopenWhazingTicket(ticket.ticket_id, ticket.contact_number);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
