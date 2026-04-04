@@ -99,6 +99,7 @@ export default function UnionWhatsAppTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<WhazingTicket | null>(null);
   const [quickResponsesOpen, setQuickResponsesOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   const prevPendingRef = useRef<number | null>(null);
 
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
