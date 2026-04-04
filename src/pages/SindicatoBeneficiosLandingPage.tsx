@@ -39,7 +39,7 @@ import perfilAlcides from "@/assets/sindicato/perfil-dalcides.jpg";
 const LOGO_URL =
   "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
 
-const OG_IMAGE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-image.jpg";
+const OG_IMAGE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-hero-dashboard.png";
 
 const FILIACAO_URL = `/sindical/filiacao/${SINDICATO_UNION_ENTITY_ID}`;
 const WHATSAPP_URL = "https://wa.me/551151943839?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
