@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 export interface WhazingTicket {
   id: string;
@@ -37,20 +38,21 @@ export interface WhazingMessage {
 }
 
 async function fetchTickets(statusFilter?: string): Promise<WhazingTicket[]> {
-  let query = (supabase as any)
-    .from("whazing_tickets")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  const { data, error } = await supabase.rpc('get_whazing_tickets_for_clinic' as any, {
+    p_clinic_id: SINDICATO_CLINIC_ID,
+  });
+
+  if (error) throw error;
+
+  let tickets = (data || []) as WhazingTicket[];
 
   if (statusFilter === "chatbot") {
-    query = query.eq("bot_active", true).neq("status", "closed");
+    tickets = tickets.filter(t => t.bot_active && t.status !== "closed");
   } else if (statusFilter && statusFilter !== "all") {
-    query = query.eq("status", statusFilter);
+    tickets = tickets.filter(t => t.status === statusFilter);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data || []) as WhazingTicket[];
+  return tickets;
 }
 
 export function useWhazingTickets(statusFilter?: string) {
@@ -65,9 +67,9 @@ export function useWhazingTicketStats() {
   return useQuery({
     queryKey: ["whazing-ticket-stats"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("whazing_tickets")
-        .select("status");
+      const { data, error } = await supabase.rpc('get_whazing_tickets_for_clinic' as any, {
+        p_clinic_id: SINDICATO_CLINIC_ID,
+      });
 
       if (error) throw error;
 
@@ -88,11 +90,10 @@ export function useWhazingMessages(ticketId: string | null) {
     queryKey: ["whazing-messages", ticketId],
     queryFn: async () => {
       if (!ticketId) return [];
-      const { data, error } = await (supabase as any)
-        .from("whazing_messages")
-        .select("*")
-        .eq("ticket_id", ticketId)
-        .order("timestamp", { ascending: true });
+      const { data, error } = await supabase.rpc('get_whazing_messages_for_ticket' as any, {
+        p_ticket_id: ticketId,
+        p_clinic_id: SINDICATO_CLINIC_ID,
+      });
 
       if (error) throw error;
       return (data || []) as WhazingMessage[];
@@ -137,13 +138,13 @@ export function useWhazingPendingCount() {
   return useQuery({
     queryKey: ["whazing-pending-count"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("whazing_tickets")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["open", "pending"]);
+      const { data, error } = await supabase.rpc('get_whazing_tickets_for_clinic' as any, {
+        p_clinic_id: SINDICATO_CLINIC_ID,
+      });
 
       if (error) throw error;
-      return (data as any)?.length ?? 0;
+      const tickets = (data || []) as WhazingTicket[];
+      return tickets.filter(t => t.status === "open" || t.status === "pending").length;
     },
     refetchInterval: 15000,
   });
@@ -169,7 +170,7 @@ export async function sendWhazingMedia(
   const base64 = await new Promise<string>((resolve, reject) => {
     reader.onload = () => {
       const result = reader.result as string;
-      resolve(result.split(',')[1]); // strip data:...;base64, prefix
+      resolve(result.split(',')[1]);
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
