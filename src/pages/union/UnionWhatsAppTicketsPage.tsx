@@ -140,6 +140,22 @@ export default function UnionWhatsAppTicketsPage() {
     setSelectedTicket(ticket);
   };
 
+  const handleSyncContacts = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whazing-actions', {
+        body: { action: 'sync_contact_names' },
+      });
+      if (error) throw error;
+      toast.success(`Nomes sincronizados: ${data?.updated || 0} tickets atualizados`);
+      refetch();
+    } catch (err: any) {
+      toast.error('Erro ao sincronizar nomes: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [refetch]);
+
   return (
     <div className="h-[calc(100vh-5rem)] flex flex-col">
       {/* Compact Header */}
