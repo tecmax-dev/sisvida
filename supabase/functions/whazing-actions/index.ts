@@ -159,9 +159,55 @@ serve(async (req) => {
           .update({ status: 'closed', closed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
 
+        // Sync: archive chat in Evolution API
+        if (contactNumber) {
+          let cleanPhone = contactNumber.replace(/\D/g, '');
+          if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+          const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+          try {
+            await fetch(`${evoUrl}/chat/archive/${evoInstance}`, {
+              method: 'PUT',
+              headers,
+              body: JSON.stringify({ lastMessage: { key: { remoteJid } }, archive: true }),
+            });
+            console.log(`[whazing-actions] Chat ${remoteJid} archived in Evolution`);
+          } catch (e) {
+            console.error(`[whazing-actions] Failed to archive chat in Evolution:`, e);
+          }
+        }
+
         console.log(`[whazing-actions] Ticket ${ticketId} closed`);
 
         return new Response(JSON.stringify({ ok: true, message: 'Ticket closed' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'reopen_ticket': {
+        await supabase.from('whazing_tickets')
+          .update({ status: 'open', closed_at: null, updated_at: new Date().toISOString() })
+          .eq('ticket_id', ticketId);
+
+        // Sync: unarchive chat in Evolution API
+        if (contactNumber) {
+          let cleanPhone = contactNumber.replace(/\D/g, '');
+          if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+          const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+          try {
+            await fetch(`${evoUrl}/chat/archive/${evoInstance}`, {
+              method: 'PUT',
+              headers,
+              body: JSON.stringify({ lastMessage: { key: { remoteJid } }, archive: false }),
+            });
+            console.log(`[whazing-actions] Chat ${remoteJid} unarchived in Evolution`);
+          } catch (e) {
+            console.error(`[whazing-actions] Failed to unarchive chat in Evolution:`, e);
+          }
+        }
+
+        console.log(`[whazing-actions] Ticket ${ticketId} reopened`);
+
+        return new Response(JSON.stringify({ ok: true, message: 'Ticket reopened' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }

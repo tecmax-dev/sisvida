@@ -136,7 +136,7 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
     if (!ticket) return;
     setClosing(true);
     try {
-      await closeWhazingTicket(ticket.ticket_id);
+      await closeWhazingTicket(ticket.ticket_id, ticket.contact_number);
       queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
       toast.success("Ticket fechado");
