@@ -66,7 +66,8 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
   }, [conversation]);
 
   const handleSectorSelect = async (sector: Sector) => {
-    await initializeWithSector(sector.id, sector.name);
+    const createdConversation = await initializeWithSector(sector.id, sector.name);
+    if (!createdConversation) return;
     setShowSectorSelector(false);
     inputRef.current?.focus();
   };
