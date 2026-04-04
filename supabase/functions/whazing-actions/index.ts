@@ -6,6 +6,50 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function normalizePhone(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  return digits.startsWith('55') ? digits : `55${digits}`;
+}
+
+async function setEvolutionArchiveStatus({
+  archive,
+  contactNumber,
+  evoUrl,
+  evoInstance,
+  headers,
+}: {
+  archive: boolean;
+  contactNumber?: string;
+  evoUrl: string;
+  evoInstance: string;
+  headers: Record<string, string>;
+}) {
+  if (!contactNumber) return null;
+
+  const cleanPhone = normalizePhone(contactNumber);
+  const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+  const response = await fetch(`${evoUrl}/chat/archiveChat/${evoInstance}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      lastMessage: { key: { remoteJid, fromMe: false, id: '' } },
+      chat: remoteJid,
+      archive,
+    }),
+  });
+
+  const responseText = await response.text();
+  console.log(
+    `[whazing-actions] Archive sync (${archive ? 'archive' : 'unarchive'}) ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Evolution archive sync failed (${response.status}): ${responseText}`);
+  }
+
+  return { cleanPhone, remoteJid, responseText };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -155,26 +199,19 @@ serve(async (req) => {
       }
 
       case 'close_ticket': {
+        if (contactNumber) {
+          await setEvolutionArchiveStatus({
+            archive: true,
+            contactNumber,
+            evoUrl,
+            evoInstance,
+            headers,
+          });
+        }
+
         await supabase.from('whazing_tickets')
           .update({ status: 'closed', closed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('ticket_id', ticketId);
-
-        // Sync: archive chat in Evolution API
-        if (contactNumber) {
-          let cleanPhone = contactNumber.replace(/\D/g, '');
-          if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
-          const remoteJid = `${cleanPhone}@s.whatsapp.net`;
-          try {
-            await fetch(`${evoUrl}/chat/archive/${evoInstance}`, {
-              method: 'PUT',
-              headers,
-              body: JSON.stringify({ lastMessage: { key: { remoteJid } }, archive: true }),
-            });
-            console.log(`[whazing-actions] Chat ${remoteJid} archived in Evolution`);
-          } catch (e) {
-            console.error(`[whazing-actions] Failed to archive chat in Evolution:`, e);
-          }
-        }
 
         console.log(`[whazing-actions] Ticket ${ticketId} closed`);
 
@@ -184,30 +221,78 @@ serve(async (req) => {
       }
 
       case 'reopen_ticket': {
-        await supabase.from('whazing_tickets')
-          .update({ status: 'open', closed_at: null, updated_at: new Date().toISOString() })
-          .eq('ticket_id', ticketId);
-
-        // Sync: unarchive chat in Evolution API
         if (contactNumber) {
-          let cleanPhone = contactNumber.replace(/\D/g, '');
-          if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
-          const remoteJid = `${cleanPhone}@s.whatsapp.net`;
-          try {
-            await fetch(`${evoUrl}/chat/archive/${evoInstance}`, {
-              method: 'PUT',
-              headers,
-              body: JSON.stringify({ lastMessage: { key: { remoteJid } }, archive: false }),
-            });
-            console.log(`[whazing-actions] Chat ${remoteJid} unarchived in Evolution`);
-          } catch (e) {
-            console.error(`[whazing-actions] Failed to unarchive chat in Evolution:`, e);
-          }
+          await setEvolutionArchiveStatus({
+            archive: false,
+            contactNumber,
+            evoUrl,
+            evoInstance,
+            headers,
+          });
         }
+
+        await supabase.from('whazing_tickets')
+          .update({ status: 'open', closed_at: null, opened_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('ticket_id', ticketId);
 
         console.log(`[whazing-actions] Ticket ${ticketId} reopened`);
 
         return new Response(JSON.stringify({ ok: true, message: 'Ticket reopened' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'ensure_ticket_open': {
+        const { contactName } = body;
+        if (!contactNumber) {
+          return new Response(JSON.stringify({ error: 'contactNumber is required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const cleanPhone = normalizePhone(contactNumber);
+        const canonicalTicketId = ticketId || cleanPhone;
+        const nowIso = new Date().toISOString();
+
+        await setEvolutionArchiveStatus({
+          archive: false,
+          contactNumber: cleanPhone,
+          evoUrl,
+          evoInstance,
+          headers,
+        });
+
+        const { data: existingTicket, error: existingTicketError } = await supabase
+          .from('whazing_tickets')
+          .select('opened_at, contact_name')
+          .eq('ticket_id', canonicalTicketId)
+          .maybeSingle();
+
+        if (existingTicketError) {
+          throw existingTicketError;
+        }
+
+        const { data: upsertedTicket, error: upsertError } = await supabase
+          .from('whazing_tickets')
+          .upsert({
+            ticket_id: canonicalTicketId,
+            contact_number: cleanPhone,
+            contact_name: contactName || existingTicket?.contact_name || null,
+            status: 'open',
+            opened_at: existingTicket?.opened_at || nowIso,
+            closed_at: null,
+            updated_at: nowIso,
+          }, { onConflict: 'ticket_id' })
+          .select()
+          .single();
+
+        if (upsertError) {
+          throw upsertError;
+        }
+
+        console.log(`[whazing-actions] Ticket ${canonicalTicketId} ensured open and synced`);
+
+        return new Response(JSON.stringify({ ok: true, message: 'Ticket ensured open', ticket: upsertedTicket }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
