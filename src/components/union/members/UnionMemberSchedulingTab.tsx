@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MemberAppointmentsPrintReport } from "./MemberAppointmentsPrintReport";
 
 import { 
   User,
@@ -23,6 +24,8 @@ import {
   FileText,
   CalendarDays,
   Loader2,
+  Users,
+  Printer,
 } from "lucide-react";
 
 interface Professional {
@@ -50,11 +53,16 @@ interface Appointment {
   status: string;
   type: string;
   notes: string | null;
+  dependent_id: string | null;
   professional: {
     id: string;
     name: string;
   } | null;
   procedure: {
+    id: string;
+    name: string;
+  } | null;
+  dependent: {
     id: string;
     name: string;
   } | null;
@@ -87,7 +95,7 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
   const navigate = useNavigate();
   
   // Main tab state
-  const [mainTab, setMainTab] = useState<"history" | "schedule">("history");
+  const [mainTab, setMainTab] = useState<"history" | "schedule" | "report">("history");
   
   // Appointments state
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -127,8 +135,10 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
           status,
           type,
           notes,
+          dependent_id,
           professional:professionals(id, name),
-          procedure:procedures(id, name)
+          procedure:procedures(id, name),
+          dependent:patient_dependents!appointments_dependent_id_fkey(id, name)
         `)
         .eq("patient_id", patientId)
         .eq("clinic_id", currentClinic.id)
@@ -265,6 +275,12 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={status.variant}>{status.label}</Badge>
               <span className="text-xs text-muted-foreground">{typeLabel}</span>
+              {apt.dependent_id && apt.dependent && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Users className="h-3 w-3" />
+                  {apt.dependent.name}
+                </Badge>
+              )}
               {apt.professional && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <User className="h-3 w-3" />
@@ -303,8 +319,8 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
   return (
     <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-hidden">
       {/* Main Tabs: History vs Schedule */}
-      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "history" | "schedule")}>
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "history" | "schedule" | "report")}>
+        <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             <span className="hidden sm:inline">Histórico</span>
@@ -319,6 +335,11 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
             <CalendarDays className="h-4 w-4" />
             <span className="hidden sm:inline">Novo Agendamento</span>
             <span className="sm:hidden">Agendar</span>
+          </TabsTrigger>
+          <TabsTrigger value="report" className="flex items-center gap-2">
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">Relatório</span>
+            <span className="sm:hidden">Relatório</span>
           </TabsTrigger>
         </TabsList>
 
@@ -512,6 +533,11 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
               </div>
             </div>
           )}
+        </TabsContent>
+
+        {/* Report Tab */}
+        <TabsContent value="report" className="mt-0">
+          <MemberAppointmentsPrintReport patientId={patientId} patientName={patientName} />
         </TabsContent>
       </Tabs>
     </div>
