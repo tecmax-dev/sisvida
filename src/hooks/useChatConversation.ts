@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { SINDICATO_CLINIC_ID } from '@/constants/sindicato';
 
 interface Message {
   id: string;
@@ -38,12 +39,43 @@ interface AttachmentData {
   size: number;
 }
 
+function normalizeWhazingPhone(phone: string | null | undefined) {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  return digits.startsWith('55') ? digits : `55${digits}`;
+}
+
 export const useChatConversation = () => {
   const { user, profile, currentClinic } = useAuth();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const syncConversationToWhazing = useCallback(async (contactName?: string | null) => {
+    if (currentClinic?.id !== SINDICATO_CLINIC_ID) return;
+
+    const cleanPhone = normalizeWhazingPhone(profile?.phone);
+    if (!cleanPhone) {
+      throw new Error('Seu cadastro não possui telefone válido para abrir o ticket no WhatsApp.');
+    }
+
+    const { data, error } = await supabase.functions.invoke('whazing-actions', {
+      body: {
+        action: 'ensure_ticket_open',
+        ticketId: cleanPhone,
+        contactNumber: cleanPhone,
+        contactName: contactName || profile?.name || user?.email?.split('@')[0] || 'Usuário',
+        allowLocalFallback: true,
+      },
+    });
+
+    if (error) throw error;
+    if (!data?.ok) {
+      throw new Error(data?.error || 'Falha ao sincronizar ticket com o Whazing');
+    }
+  }, [currentClinic?.id, profile?.name, profile?.phone, user?.email]);
 
   // Fetch existing conversation
   const fetchExistingConversation = useCallback(async () => {
@@ -98,6 +130,8 @@ export const useChatConversation = () => {
 
       if (createError) throw createError;
 
+      await syncConversationToWhazing(newConv.user_name);
+
       const conv: Conversation = {
         ...newConv,
         status: newConv.status as 'open' | 'closed' | 'pending',
@@ -108,7 +142,7 @@ export const useChatConversation = () => {
       console.error('Error creating conversation with sector:', error);
       return null;
     }
-  }, [user, profile, currentClinic]);
+  }, [user, profile, currentClinic, syncConversationToWhazing]);
 
   // Fetch messages for current conversation
   const fetchMessages = useCallback(async () => {
