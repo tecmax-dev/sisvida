@@ -173,6 +173,7 @@ export default function UnionWhatsAppTicketsPage() {
             <Zap className="h-4 w-4 mr-1" />
             Respostas Rápidas
           </Button>
+          <QueueUsersManager />
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
