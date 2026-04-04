@@ -20,6 +20,7 @@ import {
   Bot,
   LayoutList,
   Columns3,
+  Users,
 } from "lucide-react";
 import {
   useWhazingTickets,
