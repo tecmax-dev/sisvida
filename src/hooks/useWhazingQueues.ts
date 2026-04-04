@@ -25,6 +25,53 @@ export function useWhazingQueues() {
   });
 }
 
+export function useCreateQueue() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; color: string; description?: string }) => {
+      const { error } = await (supabase as any)
+        .from("whazing_queues")
+        .insert({ name: input.name, color: input.color, description: input.description || null });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["whazing-queues"] });
+    },
+  });
+}
+
+export function useUpdateQueue() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; color?: string; description?: string; is_active?: boolean }) => {
+      const { error } = await (supabase as any)
+        .from("whazing_queues")
+        .update(updates)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["whazing-queues"] });
+    },
+  });
+}
+
+export function useDeleteQueue() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("whazing_queues")
+        .update({ is_active: false })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["whazing-queues"] });
+    },
+  });
+}
+
 export function useTransferToQueue() {
   const qc = useQueryClient();
   return useMutation({
