@@ -17055,6 +17055,7 @@ export type Database = {
           status: string
           subject: string | null
           ticket_id: string
+          ticket_number: number | null
           updated_at: string | null
           user_id_whazing: string | null
         }
@@ -17075,6 +17076,7 @@ export type Database = {
           status?: string
           subject?: string | null
           ticket_id: string
+          ticket_number?: number | null
           updated_at?: string | null
           user_id_whazing?: string | null
         }
@@ -17095,6 +17097,7 @@ export type Database = {
           status?: string
           subject?: string | null
           ticket_id?: string
+          ticket_number?: number | null
           updated_at?: string | null
           user_id_whazing?: string | null
         }
@@ -17790,6 +17793,7 @@ export type Database = {
           status: string
           subject: string | null
           ticket_id: string
+          ticket_number: number | null
           updated_at: string | null
           user_id_whazing: string | null
         }[]
