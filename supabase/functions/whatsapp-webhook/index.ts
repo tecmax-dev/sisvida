@@ -8222,7 +8222,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       const tktData: Record<string, unknown> = {
         ticket_id: ticketId,
         contact_number: phone,
-        contact_name: pushName || null,
+        ...(pushName ? { contact_name: pushName } : {}),
         last_message: mirrorText ? mirrorText.slice(0, 500) : null,
         updated_at: now,
       };
