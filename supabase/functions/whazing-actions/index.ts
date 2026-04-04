@@ -24,6 +24,164 @@ function tryParseJson<T>(value: string): T | null {
   }
 }
 
+type MessageCandidate = {
+  id: string;
+  fromMe: boolean;
+  participant?: string;
+  source: 'local' | 'evolution';
+};
+
+function dedupeMessageCandidates(candidates: MessageCandidate[]) {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = `${candidate.id}:${candidate.fromMe}:${candidate.participant || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function extractChatArchiveState(payload: unknown, remoteJid: string): boolean | null {
+  const queue: unknown[] = [payload];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object') continue;
+
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+
+    const record = current as Record<string, unknown>;
+    const identifiers = [record.id, record.chatId, record.remoteJid, record.jid];
+    const matchesChat = identifiers.some((value) => typeof value === 'string' && value === remoteJid);
+
+    if (matchesChat) {
+      if (typeof record.archived === 'boolean') return record.archived;
+      if (typeof record.archive === 'boolean') return record.archive;
+    }
+
+    queue.push(...Object.values(record));
+  }
+
+  return null;
+}
+
+function extractMessageCandidatesFromPayload(payload: unknown, remoteJid: string): MessageCandidate[] {
+  const queue: unknown[] = [payload];
+  const candidates: MessageCandidate[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object') continue;
+
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+
+    const record = current as Record<string, unknown>;
+    const rawKey = record.key;
+
+    if (rawKey && typeof rawKey === 'object' && !Array.isArray(rawKey)) {
+      const key = rawKey as Record<string, unknown>;
+      if (typeof key.id === 'string' && typeof key.remoteJid === 'string' && key.remoteJid === remoteJid) {
+        candidates.push({
+          id: key.id,
+          fromMe: Boolean(key.fromMe),
+          participant: typeof key.participant === 'string' ? key.participant : undefined,
+          source: 'evolution',
+        });
+      }
+    }
+
+    queue.push(...Object.values(record));
+  }
+
+  return dedupeMessageCandidates(candidates);
+}
+
+async function fetchEvolutionMessageCandidates({
+  evoUrl,
+  evoInstance,
+  headers,
+  remoteJid,
+}: {
+  evoUrl: string;
+  evoInstance: string;
+  headers: Record<string, string>;
+  remoteJid: string;
+}) {
+  const response = await fetch(`${evoUrl}/chat/findMessages/${evoInstance}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      where: {
+        key: {
+          remoteJid,
+        },
+      },
+    }),
+  });
+
+  const responseText = await response.text();
+  console.log(`[whazing-actions] findMessages ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`);
+
+  if (!response.ok || !responseText.trim()) {
+    return [] as MessageCandidate[];
+  }
+
+  const parsed = tryParseJson<unknown>(responseText);
+  if (!parsed) return [] as MessageCandidate[];
+
+  return extractMessageCandidatesFromPayload(parsed, remoteJid);
+}
+
+async function fetchEvolutionChatArchiveState({
+  evoUrl,
+  evoInstance,
+  headers,
+  remoteJid,
+}: {
+  evoUrl: string;
+  evoInstance: string;
+  headers: Record<string, string>;
+  remoteJid: string;
+}) {
+  const queryBodies = [
+    { where: { id: remoteJid } },
+    { where: { chatId: remoteJid } },
+    { where: { remoteJid } },
+    {},
+  ];
+
+  for (const body of queryBodies) {
+    const response = await fetch(`${evoUrl}/chat/findChats/${evoInstance}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    const responseText = await response.text();
+    console.log(`[whazing-actions] findChats ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`);
+
+    if (!response.ok || !responseText.trim()) {
+      continue;
+    }
+
+    const parsed = tryParseJson<unknown>(responseText);
+    if (!parsed) continue;
+
+    const archiveState = extractChatArchiveState(parsed, remoteJid);
+    if (archiveState !== null) {
+      return archiveState;
+    }
+  }
+
+  return null;
+}
+
 async function setEvolutionArchiveStatus({
   archive,
   contactNumber,
@@ -45,8 +203,7 @@ async function setEvolutionArchiveStatus({
 
   const cleanPhone = normalizePhone(contactNumber);
   const remoteJid = `${cleanPhone}@s.whatsapp.net`;
-  let lastMessageId: string | null = null;
-  let lastMessageFromMe = false;
+  const localCandidates: MessageCandidate[] = [];
 
   if (ticketId) {
     const { data: recentMessages, error: recentMessagesError } = await supabase
@@ -55,41 +212,95 @@ async function setEvolutionArchiveStatus({
       .eq('ticket_id', ticketId)
       .order('timestamp', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(25);
+      .limit(50);
 
     if (recentMessagesError) {
       throw recentMessagesError;
     }
 
-    const lastRealMessage = (recentMessages || []).find((message) => !isSyntheticMessageId(message.message_id));
-    lastMessageId = lastRealMessage?.message_id ?? null;
-    lastMessageFromMe = lastRealMessage?.from_me ?? false;
+    const realLocalMessages = (recentMessages || []).filter((message) => !isSyntheticMessageId(message.message_id));
+    const orderedLocalMessages = [
+      ...realLocalMessages.filter((message) => message.from_me),
+      ...realLocalMessages.filter((message) => !message.from_me),
+    ];
+
+    localCandidates.push(
+      ...orderedLocalMessages.flatMap((message) => (
+        message.message_id
+          ? [{ id: message.message_id, fromMe: Boolean(message.from_me), source: 'local' as const }]
+          : []
+      ))
+    );
   }
 
-  if (!lastMessageId) {
+  const evolutionCandidates = await fetchEvolutionMessageCandidates({
+    evoUrl,
+    evoInstance,
+    headers,
+    remoteJid,
+  });
+
+  const candidates = dedupeMessageCandidates([
+    ...localCandidates,
+    ...evolutionCandidates.filter((candidate) => candidate.fromMe),
+    ...evolutionCandidates.filter((candidate) => !candidate.fromMe),
+  ]);
+
+  if (!candidates.length) {
     throw new Error(`No real message key found for ticket ${ticketId || cleanPhone}`);
   }
 
-  const response = await fetch(`${evoUrl}/chat/archiveChat/${evoInstance}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      lastMessage: { key: { remoteJid, fromMe: lastMessageFromMe, id: lastMessageId } },
-      chat: remoteJid,
-      archive,
-    }),
-  });
+  let lastFailure = 'No archive candidate succeeded';
 
-  const responseText = await response.text();
-  console.log(
-    `[whazing-actions] Archive sync (${archive ? 'archive' : 'unarchive'}) ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`
-  );
+  for (const candidate of candidates) {
+    const response = await fetch(`${evoUrl}/chat/archiveChat/${evoInstance}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        lastMessage: {
+          key: {
+            remoteJid,
+            fromMe: candidate.fromMe,
+            id: candidate.id,
+            ...(candidate.participant ? { participant: candidate.participant } : {}),
+          },
+        },
+        chat: remoteJid,
+        archive,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Evolution archive sync failed (${response.status}): ${responseText}`);
+    const responseText = await response.text();
+    const responseJson = tryParseJson<{ archived?: boolean }>(responseText);
+    let effectiveArchivedState = typeof responseJson?.archived === 'boolean' ? responseJson.archived : null;
+
+    if (effectiveArchivedState !== archive) {
+      const verifiedArchiveState = await fetchEvolutionChatArchiveState({
+        evoUrl,
+        evoInstance,
+        headers,
+        remoteJid,
+      });
+
+      if (verifiedArchiveState !== null) {
+        effectiveArchivedState = verifiedArchiveState;
+      }
+    }
+
+    console.log(
+      `[whazing-actions] Archive sync (${archive ? 'archive' : 'unarchive'}) ${remoteJid} candidate=${candidate.id} fromMe=${candidate.fromMe} source=${candidate.source}: ${response.status} ${responseText.slice(0, 300)} | effectiveArchived=${effectiveArchivedState}`
+    );
+
+    if (response.ok && effectiveArchivedState === archive) {
+      return { cleanPhone, remoteJid, responseText, messageId: candidate.id };
+    }
+
+    lastFailure = response.ok
+      ? `candidate ${candidate.id} returned archived=${effectiveArchivedState}`
+      : `candidate ${candidate.id} failed (${response.status}): ${responseText}`;
   }
 
-  return { cleanPhone, remoteJid, responseText };
+  throw new Error(`Evolution archive sync failed for ${remoteJid}: ${lastFailure}`);
 }
 
 serve(async (req) => {
