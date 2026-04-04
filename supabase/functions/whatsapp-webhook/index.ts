@@ -744,7 +744,7 @@ async function freezeBotForHumanHandoff(
     .upsert({
       ticket_id: phone,
       contact_number: phone,
-      contact_name: contactName,
+      ...(contactName ? { contact_name: contactName } : {}),
       last_message: lastMessage.slice(0, 500),
       status: 'open',
       opened_at: now,
