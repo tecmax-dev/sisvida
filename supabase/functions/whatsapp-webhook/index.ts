@@ -744,7 +744,7 @@ async function freezeBotForHumanHandoff(
     .upsert({
       ticket_id: phone,
       contact_number: phone,
-      contact_name: contactName,
+      ...(contactName ? { contact_name: contactName } : {}),
       last_message: lastMessage.slice(0, 500),
       status: 'open',
       opened_at: now,
@@ -6996,7 +6996,7 @@ serve(async (req) => {
             if (!existingOutTkt) {
               outTktData.status = 'open';
               outTktData.opened_at = outNow;
-              outTktData.contact_name = outPushName || null;
+              if (outPushName) outTktData.contact_name = outPushName;
             } else if (existingOutTkt.status === 'closed') {
               outTktData.status = 'open';
               outTktData.opened_at = outNow;
@@ -7299,10 +7299,11 @@ serve(async (req) => {
               .eq('ticket_id', phone)
               .maybeSingle();
 
+            const followUpPushName = payload.data?.pushName;
             const followUpTicketData: Record<string, unknown> = {
               ticket_id: phone,
               contact_number: phone,
-              contact_name: payload.data?.pushName || null,
+              ...(followUpPushName ? { contact_name: followUpPushName } : {}),
               last_message: followUpId,
               updated_at: now,
               closed_at: null,
@@ -8221,7 +8222,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       const tktData: Record<string, unknown> = {
         ticket_id: ticketId,
         contact_number: phone,
-        contact_name: pushName || null,
+        ...(pushName ? { contact_name: pushName } : {}),
         last_message: mirrorText ? mirrorText.slice(0, 500) : null,
         updated_at: now,
       };

@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +20,7 @@ import {
   Bot,
   LayoutList,
   Columns3,
+  Users,
 } from "lucide-react";
 import {
   useWhazingTickets,
@@ -103,6 +106,7 @@ export default function UnionWhatsAppTicketsPage() {
   const [quickResponsesOpen, setQuickResponsesOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
+  const [isSyncing, setIsSyncing] = useState(false);
   const prevPendingRef = useRef<number | null>(null);
 
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
@@ -135,6 +139,22 @@ export default function UnionWhatsAppTicketsPage() {
   const handleOpenChat = (ticket: WhazingTicket) => {
     setSelectedTicket(ticket);
   };
+
+  const handleSyncContacts = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whazing-actions', {
+        body: { action: 'sync_contact_names' },
+      });
+      if (error) throw error;
+      toast.success(`Nomes sincronizados: ${data?.updated || 0} tickets atualizados`);
+      refetch();
+    } catch (err: any) {
+      toast.error('Erro ao sincronizar nomes: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [refetch]);
 
   return (
     <div className="h-[calc(100vh-5rem)] flex flex-col">
@@ -174,6 +194,10 @@ export default function UnionWhatsAppTicketsPage() {
             Respostas Rápidas
           </Button>
           <QueueUsersManager />
+          <Button variant="outline" size="sm" onClick={handleSyncContacts} disabled={isSyncing} title="Sincronizar nomes dos contatos via Evolution API">
+            <Users className={`h-4 w-4 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
+            Sync Nomes
+          </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>

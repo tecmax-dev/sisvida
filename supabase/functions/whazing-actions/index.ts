@@ -683,6 +683,73 @@ serve(async (req) => {
         });
       }
 
+      case 'sync_contact_names': {
+        // Fetch contacts from Evolution API and update whazing_tickets contact_name
+        const evoUrl = (Deno.env.get('EVOLUTION_API_URL') || '').replace(/\/$/, '');
+        const evoKey = Deno.env.get('EVOLUTION_API_KEY') || '';
+        const rawInstance = (Deno.env.get('EVOLUTION_INSTANCE') || '').trim();
+        const evoInstance = /^[a-z0-9_-]{1,40}$/i.test(rawInstance) && rawInstance !== '2b7dbe72ab69c51e4d37e55329e10aeb'
+          ? rawInstance
+          : 'secmi';
+
+        if (!evoUrl || !evoKey) {
+          return new Response(JSON.stringify({ error: 'Evolution API não configurada' }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // 1. Fetch all contacts from Evolution API
+        const evoResp = await fetch(`${evoUrl}/chat/findContacts/${evoInstance}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': evoKey },
+          body: JSON.stringify({ where: {} }),
+        });
+
+        if (!evoResp.ok) {
+          const errText = await evoResp.text();
+          return new Response(JSON.stringify({ error: `Evolution API: ${evoResp.status}`, details: errText.slice(0, 300) }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const evoContacts = await evoResp.json() as Array<{ remoteJid?: string; pushName?: string; profilePicUrl?: string }>;
+        
+        // 2. Build phone→name+pic map
+        const contactMap = new Map<string, { name: string; pic: string | null }>();
+        for (const c of evoContacts) {
+          if (!c.remoteJid?.endsWith('@s.whatsapp.net') || !c.pushName) continue;
+          const phone = c.remoteJid.replace(/@.*$/, '');
+          contactMap.set(phone, { name: c.pushName, pic: c.profilePicUrl || null });
+        }
+
+        // 3. Fetch all tickets missing contact_name
+        const { data: tickets } = await supabase
+          .from('whazing_tickets')
+          .select('id, ticket_id, contact_number, contact_name, profile_pic_url');
+
+        let updated = 0;
+        for (const ticket of (tickets || [])) {
+          const phone = ticket.contact_number || ticket.ticket_id;
+          const match = contactMap.get(phone);
+          if (!match) continue;
+          
+          const updates: Record<string, string> = {};
+          if (!ticket.contact_name && match.name) updates.contact_name = match.name;
+          if (!ticket.profile_pic_url && match.pic) updates.profile_pic_url = match.pic;
+          
+          if (Object.keys(updates).length === 0) continue;
+          
+          await supabase.from('whazing_tickets').update(updates).eq('id', ticket.id);
+          updated++;
+        }
+
+        console.log(`[whazing-actions] sync_contact_names: ${updated} tickets updated from ${contactMap.size} contacts`);
+
+        return new Response(JSON.stringify({ ok: true, updated, totalContacts: contactMap.size }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
