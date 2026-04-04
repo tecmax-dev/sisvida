@@ -30,6 +30,7 @@ import { closeWhazingTicket, reopenWhazingTicket } from "@/hooks/useWhazingTicke
 interface TicketKanbanProps {
   tickets: WhazingTicket[];
   onSelectTicket: (ticket: WhazingTicket) => void;
+  getProfilePic?: (phone: string) => string | null;
 }
 
 const columns = [
