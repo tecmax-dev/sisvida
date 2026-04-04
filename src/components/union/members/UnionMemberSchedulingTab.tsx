@@ -95,7 +95,7 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
   const navigate = useNavigate();
   
   // Main tab state
-  const [mainTab, setMainTab] = useState<"history" | "schedule">("history");
+  const [mainTab, setMainTab] = useState<"history" | "schedule" | "report">("history");
   
   // Appointments state
   const [appointments, setAppointments] = useState<Appointment[]>([]);
