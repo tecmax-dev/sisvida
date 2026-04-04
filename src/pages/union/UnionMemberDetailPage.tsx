@@ -942,6 +942,7 @@ export default function UnionMemberDetailPage() {
                 isAdmin={isAdmin}
                 canChangePassword={canChangePassword}
                 clinicDefaultLimit={clinicDefaultLimit}
+                canEditConvenio={canEditMemberConvenio()}
               />
             </form>
           </div>
