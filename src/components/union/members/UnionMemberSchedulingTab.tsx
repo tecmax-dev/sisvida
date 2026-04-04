@@ -534,6 +534,11 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
             </div>
           )}
         </TabsContent>
+
+        {/* Report Tab */}
+        <TabsContent value="report" className="mt-0">
+          <MemberAppointmentsPrintReport patientId={patientId} patientName={patientName} />
+        </TabsContent>
       </Tabs>
     </div>
   );
