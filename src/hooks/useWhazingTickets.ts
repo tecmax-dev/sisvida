@@ -194,9 +194,18 @@ export async function sendWhazingMedia(
 }
 
 // Close ticket action
-export async function closeWhazingTicket(ticketId: string) {
+export async function closeWhazingTicket(ticketId: string, contactNumber?: string) {
   const { data, error } = await supabase.functions.invoke('whazing-actions', {
-    body: { action: 'close_ticket', ticketId },
+    body: { action: 'close_ticket', ticketId, contactNumber },
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Reopen ticket action
+export async function reopenWhazingTicket(ticketId: string, contactNumber?: string) {
+  const { data, error } = await supabase.functions.invoke('whazing-actions', {
+    body: { action: 'reopen_ticket', ticketId, contactNumber },
   });
   if (error) throw error;
   return data;
