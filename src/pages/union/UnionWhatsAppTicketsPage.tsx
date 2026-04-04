@@ -27,6 +27,7 @@ import {
 } from "@/hooks/useWhazingTickets";
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineChatPanel from "@/components/union/whazing/InlineChatPanel";
+import TicketKanban from "@/components/union/whazing/TicketKanban";
 import QuickResponsesManager from "@/components/union/whazing/QuickResponsesManager";
 import NewChatContactList from "@/components/union/whazing/NewChatContactList";
 import {
