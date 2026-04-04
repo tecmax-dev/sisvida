@@ -32,6 +32,7 @@ interface PatientFormFieldsProps {
   isAdmin?: boolean;
   canChangePassword?: boolean;
   clinicDefaultLimit?: number | null;
+  canEditConvenio?: boolean;
 }
 
 export interface PatientFormData {
