@@ -109,7 +109,7 @@ function playNotificationSound() {
 }
 
 export default function UnionWhatsAppTicketsPage() {
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("open");
   const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<WhazingTicket | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
