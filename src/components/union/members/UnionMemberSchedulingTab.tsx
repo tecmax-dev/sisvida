@@ -275,6 +275,12 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={status.variant}>{status.label}</Badge>
               <span className="text-xs text-muted-foreground">{typeLabel}</span>
+              {apt.dependent_id && apt.dependent && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Users className="h-3 w-3" />
+                  {apt.dependent.name}
+                </Badge>
+              )}
               {apt.professional && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <User className="h-3 w-3" />
