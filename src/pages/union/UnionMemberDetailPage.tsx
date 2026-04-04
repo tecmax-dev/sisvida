@@ -958,6 +958,10 @@ export default function UnionMemberDetailPage() {
             patientPhone={formData.phone}
             autoOpenForm={showDependentsForm}
           />
+          <DependentAppointmentsList
+            patientId={id}
+            clinicId={resolvedClinic.id}
+          />
         </div>
       )}
 
