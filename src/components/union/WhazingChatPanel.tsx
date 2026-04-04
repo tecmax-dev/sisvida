@@ -23,7 +23,8 @@ import {
   Paperclip,
   Bot,
   UserCheck,
-MessageSquare,
+  MessageSquare,
+} from "lucide-react";
 import {
   useWhazingMessages,
   sendWhazingMessage,
