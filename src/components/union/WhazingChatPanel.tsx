@@ -23,12 +23,14 @@ import {
   Paperclip,
   Bot,
   UserCheck,
+  MessageSquare,
 } from "lucide-react";
 import {
   useWhazingMessages,
   sendWhazingMessage,
   sendWhazingMedia,
   closeWhazingTicket,
+  reopenWhazingTicket,
   assumeWhazingTicket,
   returnWhazingTicketToBot,
   type WhazingTicket,
@@ -68,6 +70,7 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [assuming, setAssuming] = useState(false);
   const [returning, setReturning] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -145,6 +148,21 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
       toast.error("Erro ao fechar: " + (err.message || "Erro desconhecido"));
     } finally {
       setClosing(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!ticket) return;
+    setReopening(true);
+    try {
+      await reopenWhazingTicket(ticket.ticket_id, ticket.contact_number);
+      queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
+      toast.success("Ticket reaberto");
+    } catch (err: any) {
+      toast.error("Erro ao reabrir: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReopening(false);
     }
   };
 
@@ -310,51 +328,38 @@ export default function WhazingChatPanel({ ticket, open, onClose }: WhazingChatP
           </div>
 
           {/* Quick Actions */}
-          {ticket?.status !== "closed" && (
+          {ticket?.status !== "closed" ? (
             <>
               <Separator />
               <div className="px-4 py-2 flex items-center gap-2 flex-wrap">
                 {ticket?.bot_active !== false ? (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="text-xs"
-                    onClick={handleAssume}
-                    disabled={assuming}
-                  >
+                  <Button variant="default" size="sm" className="text-xs" onClick={handleAssume} disabled={assuming}>
                     {assuming ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <UserCheck className="h-3 w-3 mr-1" />}
                     Assumir Atendimento
                   </Button>
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs text-blue-600 hover:text-blue-700 border-blue-300"
-                    onClick={handleReturnToBot}
-                    disabled={returning}
-                  >
+                  <Button variant="outline" size="sm" className="text-xs text-blue-600 hover:text-blue-700 border-blue-300" onClick={handleReturnToBot} disabled={returning}>
                     {returning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Bot className="h-3 w-3 mr-1" />}
                     Devolver à IA
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs text-destructive hover:text-destructive"
-                  onClick={handleClose}
-                  disabled={closing}
-                >
+                <Button variant="outline" size="sm" className="text-xs text-destructive hover:text-destructive" onClick={handleClose} disabled={closing}>
                   {closing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <X className="h-3 w-3 mr-1" />}
                   Fechar Ticket
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setTransferOpen(true)}
-                >
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => setTransferOpen(true)}>
                   <ArrowRightLeft className="h-3 w-3 mr-1" />
                   Transferir
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Separator />
+              <div className="px-4 py-2 flex items-center gap-2">
+                <Button variant="default" size="sm" className="text-xs" onClick={handleReopen} disabled={reopening}>
+                  {reopening ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MessageSquare className="h-3 w-3 mr-1" />}
+                  Reabrir Ticket
                 </Button>
               </div>
             </>
