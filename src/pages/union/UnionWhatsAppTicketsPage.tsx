@@ -183,6 +183,7 @@ export default function UnionWhatsAppTicketsPage() {
           <TicketKanban
             tickets={tickets || []}
             onSelectTicket={handleOpenChat}
+            getProfilePic={getProfilePic}
           />
         </div>
       ) : (
