@@ -6856,6 +6856,57 @@ serve(async (req) => {
     console.log('[webhook] Received event:', payload.event);
     console.log('[webhook] Instance:', payload.instance);
 
+    // Handle chat close/archive/delete events from Whazing/Evolution
+    const chatCloseEvents = ['CHATS_UPDATE', 'chats.update', 'CHATS_DELETE', 'chats.delete'];
+    if (chatCloseEvents.includes(payload.event)) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const now = new Date().toISOString();
+
+        // CHATS_UPDATE may contain array or single chat data
+        const chats = Array.isArray(payload.data) ? payload.data : [payload.data];
+
+        for (const chat of chats) {
+          // Extract phone from remoteJid or id
+          const jid = chat?.id || chat?.remoteJid || chat?.chatId || '';
+          const phone = jid.replace(/@.*$/, '').replace(/\D/g, '');
+
+          if (!phone) continue;
+
+          // Detect archive or delete → close ticket
+          const isArchived = chat?.archive === true || chat?.archived === true;
+          const isDelete = payload.event === 'CHATS_DELETE' || payload.event === 'chats.delete';
+
+          if (isArchived || isDelete) {
+            const { error } = await supabase
+              .from('whazing_tickets')
+              .update({ status: 'closed', closed_at: now, updated_at: now })
+              .eq('ticket_id', phone)
+              .neq('status', 'closed');
+
+            if (error) {
+              console.error(`[webhook] Error closing ticket for ${phone}:`, error);
+            } else {
+              console.log(`[webhook] Ticket closed for ${phone} (event: ${payload.event})`);
+            }
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, message: 'Chat event processed' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (chatErr) {
+        console.error('[webhook] Error processing chat event:', chatErr);
+        return new Response(
+          JSON.stringify({ success: true, message: 'Chat event error logged' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     if (payload.event !== 'MESSAGES_UPSERT' && payload.event !== 'messages.upsert') {
       return new Response(
         JSON.stringify({ success: true, message: 'Event ignored' }),
