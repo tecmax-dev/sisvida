@@ -12,6 +12,7 @@ export type UnionPermission =
   // Sócios
   | "union_view_members"
   | "union_manage_members"
+  | "union_edit_member_convenio"
   // Contribuições
   | "union_view_contributions"
   | "union_manage_contributions"
