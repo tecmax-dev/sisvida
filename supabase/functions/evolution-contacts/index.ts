@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,15 +26,10 @@ serve(async (req) => {
       });
     }
 
-    const headers = {
-      'Content-Type': 'application/json',
-      'apikey': evoKey,
-    };
-
-    // Fetch all contacts
+    // Fetch all contacts from Evolution API
     const response = await fetch(`${evoUrl}/chat/findContacts/${evoInstance}`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json', 'apikey': evoKey },
       body: JSON.stringify({ where: {} }),
     });
 
@@ -49,7 +45,56 @@ serve(async (req) => {
     const contacts = await response.json();
     console.log(`[evolution-contacts] Fetched ${Array.isArray(contacts) ? contacts.length : '?'} contacts`);
 
-    return new Response(JSON.stringify(contacts), {
+    if (!Array.isArray(contacts)) {
+      return new Response(JSON.stringify(contacts), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Enrich contacts without pushName by cross-referencing with patients table
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Fetch all patients with phone numbers (select only needed fields)
+    const { data: patients } = await supabase
+      .from('patients')
+      .select('name, phone')
+      .not('phone', 'is', null)
+      .neq('phone', '');
+
+    // Build phone→name map from patients
+    // Patients store phone as "73991691428", Evolution uses "5573991691428@s.whatsapp.net"
+    const phoneNameMap = new Map<string, string>();
+    for (const p of (patients || [])) {
+      if (!p.phone || !p.name) continue;
+      const digits = p.phone.replace(/\D/g, '');
+      // Store with country code prefix
+      const withCC = digits.startsWith('55') ? digits : `55${digits}`;
+      phoneNameMap.set(withCC, p.name);
+      // Also store without country code for fallback
+      phoneNameMap.set(digits, p.name);
+    }
+
+    let enriched = 0;
+    // Enrich contacts
+    const enrichedContacts = contacts.map((c: any) => {
+      if (c.pushName) return c; // Already has a name
+      if (!c.remoteJid?.endsWith('@s.whatsapp.net')) return c;
+
+      const phone = c.remoteJid.replace(/@.*$/, '');
+      const name = phoneNameMap.get(phone);
+      if (name) {
+        enriched++;
+        return { ...c, pushName: name, _enrichedFromPatients: true };
+      }
+      return c;
+    });
+
+    console.log(`[evolution-contacts] Enriched ${enriched} contacts from patients database`);
+
+    return new Response(JSON.stringify(enrichedContacts), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
