@@ -276,6 +276,7 @@ export default function TicketKanban({ tickets, onSelectTicket, getProfilePic }:
                             key={ticket.id}
                             ticket={ticket}
                             onSelectTicket={onSelectTicket}
+                            profilePicUrl={getProfilePic?.(ticket.contact_number)}
                           />
                         ))
                       )}
