@@ -126,6 +126,7 @@ export function useUnionPermissions() {
     // Sócios
     canViewMembers,
     canManageMembers,
+    canEditMemberConvenio,
     
     // Contribuições
     canViewContributions,

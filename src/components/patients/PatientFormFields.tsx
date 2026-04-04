@@ -375,6 +375,7 @@ export function PatientFormFields({
           <Select
             value={formData.insurancePlanId || 'none'}
             onValueChange={(val) => updateField('insurancePlanId', val === 'none' ? '' : val)}
+            disabled={!canEditConvenio}
           >
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="Selecione" />
@@ -386,6 +387,9 @@ export function PatientFormFields({
               ))}
             </SelectContent>
           </Select>
+          {!canEditConvenio && (
+            <p className="text-xs text-muted-foreground mt-1">Sem permissão para alterar</p>
+          )}
         </div>
       </div>
 
