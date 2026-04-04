@@ -126,7 +126,8 @@ export default function UnionWhatsAppTicketsPage() {
       (t.contact_name || "").toLowerCase().includes(s) ||
       t.contact_number.includes(s) ||
       (t.subject || "").toLowerCase().includes(s) ||
-      t.ticket_id.toLowerCase().includes(s)
+      t.ticket_id.toLowerCase().includes(s) ||
+      String(t.ticket_number ?? "").includes(s)
     );
   });
 
