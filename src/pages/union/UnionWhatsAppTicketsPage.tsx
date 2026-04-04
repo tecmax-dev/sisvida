@@ -331,8 +331,9 @@ export default function UnionWhatsAppTicketsPage() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      )}
 
-      {/* Dialogs */}
+
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
