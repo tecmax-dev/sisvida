@@ -149,37 +149,22 @@ async function fetchEvolutionChatArchiveState({
   headers: Record<string, string>;
   remoteJid: string;
 }) {
-  const queryBodies = [
-    { where: { id: remoteJid } },
-    { where: { chatId: remoteJid } },
-    { where: { remoteJid } },
-    {},
-  ];
+  // Only try the most specific query to avoid excessive API calls
+  const response = await fetch(`${evoUrl}/chat/findChats/${evoInstance}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ where: { remoteJid } }),
+  });
 
-  for (const body of queryBodies) {
-    const response = await fetch(`${evoUrl}/chat/findChats/${evoInstance}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
+  const responseText = await response.text();
+  console.log(`[whazing-actions] findChats ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`);
 
-    const responseText = await response.text();
-    console.log(`[whazing-actions] findChats ${remoteJid}: ${response.status} ${responseText.slice(0, 300)}`);
+  if (!response.ok || !responseText.trim()) return null;
 
-    if (!response.ok || !responseText.trim()) {
-      continue;
-    }
+  const parsed = tryParseJson<unknown>(responseText);
+  if (!parsed) return null;
 
-    const parsed = tryParseJson<unknown>(responseText);
-    if (!parsed) continue;
-
-    const archiveState = extractChatArchiveState(parsed, remoteJid);
-    if (archiveState !== null) {
-      return archiveState;
-    }
-  }
-
-  return null;
+  return extractChatArchiveState(parsed, remoteJid);
 }
 
 async function setEvolutionArchiveStatus({
