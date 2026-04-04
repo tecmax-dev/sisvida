@@ -8180,6 +8180,37 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       else if (msg?.documentMessage) whMediaType = 'document';
       else if (msg?.stickerMessage) whMediaType = 'sticker';
 
+      // For mirroring, prefer human-readable display text for button/list responses
+      let mirrorText = messageText;
+      if (msg?.buttonsResponseMessage) {
+        const displayText = msg.buttonsResponseMessage.selectedDisplayText as string | undefined;
+        const buttonId = msg.buttonsResponseMessage.selectedButtonId as string | undefined;
+        mirrorText = displayText || buttonId || messageText;
+        console.log(`[mirror] Button response: display="${displayText}", id="${buttonId}"`);
+      } else if (msg?.buttonResponseMessage) {
+        const displayText = msg.buttonResponseMessage.selectedDisplayText as string | undefined;
+        const buttonId = msg.buttonResponseMessage.selectedButtonId as string | undefined;
+        mirrorText = displayText || buttonId || messageText;
+        console.log(`[mirror] Button response (alt): display="${displayText}", id="${buttonId}"`);
+      } else if (msg?.listResponseMessage) {
+        const rowId = msg.listResponseMessage?.singleSelectReply?.selectedRowId as string | undefined;
+        mirrorText = rowId || messageText;
+        console.log(`[mirror] List response: rowId="${rowId}"`);
+      } else if (msg?.templateButtonReplyMessage) {
+        const selectedId = msg.templateButtonReplyMessage.selectedId as string | undefined;
+        mirrorText = selectedId || messageText;
+        console.log(`[mirror] Template button reply: id="${selectedId}"`);
+      } else if (msg?.interactiveResponseMessage) {
+        try {
+          const paramsJson = msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson as string | undefined;
+          if (paramsJson) {
+            const params = JSON.parse(paramsJson);
+            mirrorText = params.display || params.id || messageText;
+          }
+        } catch { /* ignore */ }
+        console.log(`[mirror] Interactive response: "${mirrorText}"`);
+      }
+
       // Upsert ticket
       const { data: existingTkt } = await supabase
         .from('whazing_tickets')
@@ -8191,7 +8222,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         ticket_id: ticketId,
         contact_number: phone,
         contact_name: pushName || null,
-        last_message: messageText ? messageText.slice(0, 500) : null,
+        last_message: mirrorText ? mirrorText.slice(0, 500) : null,
         updated_at: now,
       };
 
@@ -8199,7 +8230,6 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         tktData.status = 'open';
         tktData.opened_at = now;
       } else if (existingTkt?.status === 'closed') {
-        // Reopen on ANY new message (incoming or outgoing from another client like Whazing)
         tktData.status = 'open';
         tktData.opened_at = now;
         tktData.closed_at = null;
@@ -8207,15 +8237,15 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
       await supabase.from('whazing_tickets').upsert(tktData, { onConflict: 'ticket_id' });
 
-      // Save message
-      if (msgId && messageText) {
+      // Save message (including button clicks that may have no standard text)
+      if (msgId && (mirrorText || whMediaType)) {
         const ts = payload.data?.messageTimestamp
           ? Number(payload.data.messageTimestamp)
           : Math.floor(Date.now() / 1000);
         await supabase.from('whazing_messages').upsert({
           ticket_id: ticketId,
           message_id: msgId,
-          body: messageText.slice(0, 2000),
+          body: (mirrorText || '[mídia]').slice(0, 2000),
           from_me: fromMe,
           media_type: whMediaType,
           sender_name: fromMe ? 'Atendente' : (pushName || 'Contato'),
