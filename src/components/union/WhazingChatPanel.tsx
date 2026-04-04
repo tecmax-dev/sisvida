@@ -29,6 +29,7 @@ import {
   sendWhazingMessage,
   sendWhazingMedia,
   closeWhazingTicket,
+  reopenWhazingTicket,
   assumeWhazingTicket,
   returnWhazingTicketToBot,
   type WhazingTicket,
