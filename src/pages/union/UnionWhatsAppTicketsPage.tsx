@@ -28,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineChatPanel from "@/components/union/whazing/InlineChatPanel";
 import TicketKanban from "@/components/union/whazing/TicketKanban";
+import QueueUsersManager from "@/components/union/whazing/QueueUsersManager";
 import QuickResponsesManager from "@/components/union/whazing/QuickResponsesManager";
 import NewChatContactList from "@/components/union/whazing/NewChatContactList";
 import {
@@ -172,6 +173,7 @@ export default function UnionWhatsAppTicketsPage() {
             <Zap className="h-4 w-4 mr-1" />
             Respostas Rápidas
           </Button>
+          <QueueUsersManager />
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
