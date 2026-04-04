@@ -119,8 +119,17 @@ interface EvolutionWebhookPayload {
         directPath?: string;
         mediaKey?: string;
       };
+      // Outgoing interactive message (bot menus)
+      interactiveMessage?: Record<string, unknown>;
+      buttonsMessage?: Record<string, unknown>;
+      templateMessage?: Record<string, unknown>;
+      videoMessage?: Record<string, unknown>;
+      audioMessage?: Record<string, unknown>;
+      stickerMessage?: Record<string, unknown>;
     };
     messageType?: string;
+    messageTimestamp?: number | string;
+    pushName?: string;
   };
 }
 
