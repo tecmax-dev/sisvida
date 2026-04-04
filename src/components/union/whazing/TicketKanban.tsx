@@ -177,7 +177,7 @@ function TicketOverlayCard({ ticket }: { ticket: WhazingTicket }) {
   );
 }
 
-export default function TicketKanban({ tickets, onSelectTicket }: TicketKanbanProps) {
+export default function TicketKanban({ tickets, onSelectTicket, getProfilePic }: TicketKanbanProps) {
   const [activeTicket, setActiveTicket] = useState<WhazingTicket | null>(null);
   const queryClient = useQueryClient();
 
