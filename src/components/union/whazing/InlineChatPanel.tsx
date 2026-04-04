@@ -320,7 +320,7 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
       </div>
 
       {/* Quick Actions */}
-      {ticket.status !== "closed" && (
+      {ticket.status !== "closed" ? (
         <>
           <Separator />
           <div className="px-4 py-2 flex items-center gap-2 flex-wrap">
@@ -342,6 +342,16 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
             <Button variant="outline" size="sm" className="text-xs" onClick={() => setTransferOpen(true)}>
               <ArrowRightLeft className="h-3 w-3 mr-1" />
               Transferir
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <Separator />
+          <div className="px-4 py-2 flex items-center gap-2">
+            <Button variant="default" size="sm" className="text-xs" onClick={handleReopen} disabled={reopening}>
+              {reopening ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <MessageSquare className="h-3 w-3 mr-1" />}
+              Reabrir Ticket
             </Button>
           </div>
         </>
