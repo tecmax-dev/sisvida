@@ -324,6 +324,9 @@ export default function UnionWhatsAppTicketsPage() {
                       </Badge>
                     )}
                   </TabsTrigger>
+                  <TabsTrigger value="chatbot" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none pb-3 px-1">
+                    Chatbot
+                  </TabsTrigger>
                   <TabsTrigger value="closed" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-muted-foreground rounded-none pb-3 px-1">
                     Fechados
                   </TabsTrigger>
