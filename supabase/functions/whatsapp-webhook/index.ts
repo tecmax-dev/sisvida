@@ -8080,7 +8080,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       if (!existingTkt) {
         tktData.status = 'open';
         tktData.opened_at = now;
-      } else if (existingTkt.status === 'closed' && !fromMe) {
+      } else if (existingTkt?.status === 'closed') {
+        // Reopen on ANY new message (incoming or outgoing from another client like Whazing)
         tktData.status = 'open';
         tktData.opened_at = now;
         tktData.closed_at = null;
