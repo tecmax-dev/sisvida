@@ -108,6 +108,7 @@ export default function UnionWhatsAppTicketsPage() {
   const { data: stats } = useWhazingTicketStats();
 
   useWhazingRealtimeSubscription();
+  const { getProfilePic } = useContactProfilePics();
 
   useEffect(() => {
     if (!stats) return;
