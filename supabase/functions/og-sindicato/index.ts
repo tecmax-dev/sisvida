@@ -67,7 +67,7 @@ serve(async (req) => {
     // Use union entity data if available, otherwise fall back to clinic
     const entityName = unionEntity?.nome_fantasia || unionEntity?.razao_social || clinic?.name || "Sindicato";
     const logoUrl = unionEntity?.logo_url || clinic?.logo_url || "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
-    const ogImageUrl = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-image.jpg";
+    const ogImageUrl = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-hero-dashboard.png";
     
     // Determinar base URL baseado no domínio customizado ou padrão
     let baseUrl = "https://prosindweb.com.br";
