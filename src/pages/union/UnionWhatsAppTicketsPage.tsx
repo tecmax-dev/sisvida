@@ -16,6 +16,8 @@ import {
   Zap,
   MessageSquarePlus,
   Bot,
+  LayoutList,
+  Columns3,
 } from "lucide-react";
 import {
   useWhazingTickets,
@@ -25,6 +27,7 @@ import {
 } from "@/hooks/useWhazingTickets";
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineChatPanel from "@/components/union/whazing/InlineChatPanel";
+import TicketKanban from "@/components/union/whazing/TicketKanban";
 import QuickResponsesManager from "@/components/union/whazing/QuickResponsesManager";
 import NewChatContactList from "@/components/union/whazing/NewChatContactList";
 import {
@@ -96,6 +99,7 @@ export default function UnionWhatsAppTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<WhazingTicket | null>(null);
   const [quickResponsesOpen, setQuickResponsesOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   const prevPendingRef = useRef<number | null>(null);
 
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
@@ -136,6 +140,26 @@ export default function UnionWhatsAppTicketsPage() {
           <h1 className="text-lg font-bold">Atendimento WhatsApp</h1>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex border rounded-md">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-r-none"
+              onClick={() => setViewMode("list")}
+              title="Lista"
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-l-none"
+              onClick={() => setViewMode("kanban")}
+              title="Kanban"
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <Button size="sm" onClick={() => setNewChatOpen(true)}>
             <MessageSquarePlus className="h-4 w-4 mr-1" />
             Novo Chat
@@ -150,7 +174,16 @@ export default function UnionWhatsAppTicketsPage() {
         </div>
       </div>
 
-      {/* Split Layout */}
+      {/* Main Content */}
+      {viewMode === "kanban" ? (
+        <div className="flex-1 overflow-hidden border rounded-lg bg-card p-4">
+          <TicketKanban
+            tickets={tickets || []}
+            onSelectTicket={handleOpenChat}
+          />
+        </div>
+      ) : (
+      /* Split Layout */
       <div className="flex-1 border rounded-lg overflow-hidden bg-card">
         <ResizablePanelGroup direction="horizontal">
           {/* Left Panel - Ticket List */}
@@ -298,8 +331,9 @@ export default function UnionWhatsAppTicketsPage() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      )}
 
-      {/* Dialogs */}
+
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
