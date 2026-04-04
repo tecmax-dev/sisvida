@@ -119,8 +119,17 @@ interface EvolutionWebhookPayload {
         directPath?: string;
         mediaKey?: string;
       };
+      // Outgoing interactive message (bot menus)
+      interactiveMessage?: Record<string, unknown>;
+      buttonsMessage?: Record<string, unknown>;
+      templateMessage?: Record<string, unknown>;
+      videoMessage?: Record<string, unknown>;
+      audioMessage?: Record<string, unknown>;
+      stickerMessage?: Record<string, unknown>;
     };
     messageType?: string;
+    messageTimestamp?: number | string;
+    pushName?: string;
   };
 }
 
@@ -6921,16 +6930,125 @@ serve(async (req) => {
       }
     }
 
-    if (payload.event !== 'MESSAGES_UPSERT' && payload.event !== 'messages.upsert') {
-      return new Response(
-        JSON.stringify({ success: true, message: 'Event ignored' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // ---- Mirror outgoing / non-upsert messages to whazing dashboard ----
+    const isSendMessage = payload.event === 'send.message' || payload.event === 'SEND_MESSAGE';
+    const isMessagesUpsert = payload.event === 'MESSAGES_UPSERT' || payload.event === 'messages.upsert';
+    const isFromMe = payload.data?.key?.fromMe === true;
+
+    if (isSendMessage || (isMessagesUpsert && isFromMe)) {
+      // Mirror outgoing messages so the dashboard shows the full conversation
+      try {
+        const outRemoteJid = payload.data?.key?.remoteJid || '';
+        if (!outRemoteJid.endsWith('@g.us')) {
+          const outPhone = normalizePhone(outRemoteJid.replace('@s.whatsapp.net', ''));
+          const outMsgId = payload.data?.key?.id || '';
+          const outPushName = payload.data?.pushName || '';
+          const outNow = new Date().toISOString();
+
+          // Extract text from various message formats (outgoing can be conversation, interactive, etc.)
+          let outText: string | null = null;
+          const outMsg = payload.data?.message;
+          if (outMsg?.conversation) {
+            outText = outMsg.conversation;
+          } else if (outMsg?.extendedTextMessage?.text) {
+            outText = outMsg.extendedTextMessage.text;
+          } else if (outMsg?.interactiveMessage) {
+            // Bot menus sent via Whazing apioficial
+            const im = outMsg.interactiveMessage as Record<string, any>;
+            const headerTitle = im?.header?.title || '';
+            const bodyText = im?.body?.text || '';
+            outText = [headerTitle, bodyText].filter(Boolean).join('\n').trim() || null;
+          } else if (outMsg?.buttonsMessage) {
+            const bm = outMsg.buttonsMessage as Record<string, any>;
+            outText = bm?.contentText || bm?.text || null;
+          } else if (outMsg?.templateMessage) {
+            const tm = outMsg.templateMessage as Record<string, any>;
+            outText = tm?.hydratedTemplate?.hydratedContentText || tm?.hydratedFourRowTemplate?.hydratedContentText || null;
+          }
+
+          // Also extract from templateButtonReplyMessage (user selecting a button echoed as fromMe)
+          if (!outText) {
+            outText = extractMessageText(payload.data);
+          }
+
+          // Determine media type for outgoing
+          let outMediaType: string | null = null;
+          if (outMsg?.imageMessage) outMediaType = 'image';
+          else if (outMsg?.videoMessage) outMediaType = 'video';
+          else if (outMsg?.audioMessage) outMediaType = 'audio';
+          else if (outMsg?.documentMessage) outMediaType = 'document';
+          else if (outMsg?.stickerMessage) outMediaType = 'sticker';
+
+          if (outPhone && (outText || outMediaType)) {
+            // Upsert ticket (update last_message, reopen if closed)
+            const { data: existingOutTkt } = await supabase
+              .from('whazing_tickets')
+              .select('id, status')
+              .eq('ticket_id', outPhone)
+              .maybeSingle();
+
+            const outTktData: Record<string, unknown> = {
+              ticket_id: outPhone,
+              contact_number: outPhone,
+              last_message: outText ? outText.slice(0, 500) : '[mídia]',
+              updated_at: outNow,
+            };
+            if (!existingOutTkt) {
+              outTktData.status = 'open';
+              outTktData.opened_at = outNow;
+              outTktData.contact_name = outPushName || null;
+            } else if (existingOutTkt.status === 'closed') {
+              outTktData.status = 'open';
+              outTktData.opened_at = outNow;
+              outTktData.closed_at = null;
+            }
+
+            await supabase.from('whazing_tickets').upsert(outTktData, { onConflict: 'ticket_id' });
+
+            // Save outgoing message
+            if (outMsgId) {
+              const outTs = (payload.data as any)?.messageTimestamp
+                ? Number((payload.data as any).messageTimestamp)
+                : Math.floor(Date.now() / 1000);
+              await supabase.from('whazing_messages').upsert({
+                ticket_id: outPhone,
+                message_id: outMsgId,
+                body: (outText || '[mídia]').slice(0, 2000),
+                from_me: true,
+                media_type: outMediaType,
+                sender_name: outPushName || 'Bot',
+                sender_phone: null,
+                timestamp: outTs,
+              }, { onConflict: 'message_id' });
+            }
+
+            console.log(`[webhook] Mirrored outgoing message for ${outPhone}: "${(outText || '[mídia]').slice(0, 80)}"`);
+          }
+        }
+      } catch (mirrorOutErr) {
+        console.error('[webhook] Error mirroring outgoing message:', mirrorOutErr);
+      }
+
+      // For send.message events, stop here (no further processing needed)
+      if (isSendMessage) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'Outgoing message mirrored' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // For fromMe messages.upsert, also stop (don't process as incoming)
+      if (isFromMe) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'Self message mirrored' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    if (payload.data?.key?.fromMe) {
+    if (!isMessagesUpsert) {
       return new Response(
-        JSON.stringify({ success: true, message: 'Self message ignored' }),
+        JSON.stringify({ success: true, message: 'Event ignored' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
