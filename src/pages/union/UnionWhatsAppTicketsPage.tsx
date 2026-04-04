@@ -140,6 +140,26 @@ export default function UnionWhatsAppTicketsPage() {
           <h1 className="text-lg font-bold">Atendimento WhatsApp</h1>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex border rounded-md">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-r-none"
+              onClick={() => setViewMode("list")}
+              title="Lista"
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-l-none"
+              onClick={() => setViewMode("kanban")}
+              title="Kanban"
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <Button size="sm" onClick={() => setNewChatOpen(true)}>
             <MessageSquarePlus className="h-4 w-4 mr-1" />
             Novo Chat
@@ -154,7 +174,16 @@ export default function UnionWhatsAppTicketsPage() {
         </div>
       </div>
 
-      {/* Split Layout */}
+      {/* Main Content */}
+      {viewMode === "kanban" ? (
+        <div className="flex-1 overflow-hidden border rounded-lg bg-card p-4">
+          <TicketKanban
+            tickets={tickets || []}
+            onSelectTicket={handleOpenChat}
+          />
+        </div>
+      ) : (
+      /* Split Layout */
       <div className="flex-1 border rounded-lg overflow-hidden bg-card">
         <ResizablePanelGroup direction="horizontal">
           {/* Left Panel - Ticket List */}
