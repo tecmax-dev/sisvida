@@ -135,8 +135,10 @@ export function UnionMemberSchedulingTab({ patientId, patientName }: UnionMember
           status,
           type,
           notes,
+          dependent_id,
           professional:professionals(id, name),
-          procedure:procedures(id, name)
+          procedure:procedures(id, name),
+          dependent:patient_dependents!appointments_dependent_id_fkey(id, name)
         `)
         .eq("patient_id", patientId)
         .eq("clinic_id", currentClinic.id)
