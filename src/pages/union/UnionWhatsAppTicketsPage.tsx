@@ -194,6 +194,10 @@ export default function UnionWhatsAppTicketsPage() {
             Respostas Rápidas
           </Button>
           <QueueUsersManager />
+          <Button variant="outline" size="sm" onClick={handleSyncContacts} disabled={isSyncing} title="Sincronizar nomes dos contatos via Evolution API">
+            <Users className={`h-4 w-4 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
+            Sync Nomes
+          </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
