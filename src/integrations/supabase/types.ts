@@ -17200,33 +17200,27 @@ export type Database = {
         Row: {
           appointment_date: string | null
           clinic_id: string | null
-          created_at: string | null
           end_time: string | null
           id: string | null
           professional_id: string | null
-          service_type_id: string | null
           start_time: string | null
           status: string | null
         }
         Insert: {
           appointment_date?: string | null
           clinic_id?: string | null
-          created_at?: string | null
           end_time?: string | null
           id?: string | null
           professional_id?: string | null
-          service_type_id?: string | null
           start_time?: string | null
           status?: string | null
         }
         Update: {
           appointment_date?: string | null
           clinic_id?: string | null
-          created_at?: string | null
           end_time?: string | null
           id?: string | null
           professional_id?: string | null
-          service_type_id?: string | null
           start_time?: string | null
           status?: string | null
         }
@@ -17250,13 +17244,6 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "homologacao_professionals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "homologacao_appointments_service_type_id_fkey"
-            columns: ["service_type_id"]
-            isOneToOne: false
-            referencedRelation: "homologacao_service_types"
             referencedColumns: ["id"]
           },
         ]
@@ -17760,6 +17747,58 @@ export type Database = {
         Returns: {
           permission_key: string
         }[]
+      }
+      get_whazing_messages_for_ticket: {
+        Args: { p_clinic_id: string; p_ticket_id: string }
+        Returns: {
+          body: string | null
+          created_at: string
+          from_me: boolean
+          id: string
+          media_type: string | null
+          media_url: string | null
+          message_id: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          status: string | null
+          ticket_id: string
+          timestamp: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whazing_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_whazing_tickets_for_clinic: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          assigned_queue_id: string | null
+          bot_active: boolean
+          closed_at: string | null
+          contact_name: string | null
+          contact_number: string
+          holiday_notified: boolean | null
+          holiday_notified_at: string | null
+          id: string
+          last_message: string | null
+          opened_at: string | null
+          profile_pic_url: string | null
+          queue_id: string | null
+          raw_data: Json | null
+          status: string
+          subject: string | null
+          ticket_id: string
+          updated_at: string | null
+          user_id_whazing: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whazing_tickets"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
