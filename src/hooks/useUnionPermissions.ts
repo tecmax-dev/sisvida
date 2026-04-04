@@ -76,6 +76,7 @@ export function useUnionPermissions() {
   // Sócios
   const canViewMembers = (): boolean => hasUnionPermission("union_view_members");
   const canManageMembers = (): boolean => hasUnionPermission("union_manage_members");
+  const canEditMemberConvenio = (): boolean => hasUnionPermission("union_edit_member_convenio");
 
   // Contribuições
   const canViewContributions = (): boolean => hasUnionPermission("union_view_contributions");
