@@ -465,16 +465,21 @@ serve(async (req) => {
       }
 
       case 'reopen_ticket': {
+        // Best-effort archive sync - don't block ticket reopen if it fails
         if (contactNumber) {
-          await setEvolutionArchiveStatus({
-            archive: false,
-            contactNumber,
-            ticketId,
-            supabase,
-            evoUrl,
-            evoInstance,
-            headers,
-          });
+          try {
+            await setEvolutionArchiveStatus({
+              archive: false,
+              contactNumber,
+              ticketId,
+              supabase,
+              evoUrl,
+              evoInstance,
+              headers,
+            });
+          } catch (archiveError) {
+            console.warn(`[whazing-actions] Archive sync failed for reopen (best-effort): ${archiveError instanceof Error ? archiveError.message : archiveError}`);
+          }
         }
 
         await supabase.from('whazing_tickets')
