@@ -79,9 +79,11 @@ function KanbanColumn({ id, children }: { id: string; children: React.ReactNode 
 function SortableTicketCard({
   ticket,
   onSelectTicket,
+  profilePicUrl,
 }: {
   ticket: WhazingTicket;
   onSelectTicket: (ticket: WhazingTicket) => void;
+  profilePicUrl?: string | null;
 }) {
   const {
     attributes,
