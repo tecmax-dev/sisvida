@@ -282,7 +282,6 @@ export default function UnionWhatsAppTicketsPage() {
                               >
                                 <span className={cn("absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card", cfg.dotColor)} />
                               </ContactAvatar>
-                              </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-1">
                                   <span className="text-sm font-medium truncate">
