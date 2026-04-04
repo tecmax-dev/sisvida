@@ -11,15 +11,32 @@ function normalizePhone(phone: string) {
   return digits.startsWith('55') ? digits : `55${digits}`;
 }
 
+function isSyntheticMessageId(messageId?: string | null) {
+  if (!messageId) return true;
+  return ['sent-', 'sent-media-', 'bot-return-'].some((prefix) => messageId.startsWith(prefix));
+}
+
+function tryParseJson<T>(value: string): T | null {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
 async function setEvolutionArchiveStatus({
   archive,
   contactNumber,
+  ticketId,
+  supabase,
   evoUrl,
   evoInstance,
   headers,
 }: {
   archive: boolean;
   contactNumber?: string;
+  ticketId?: string;
+  supabase: ReturnType<typeof createClient>;
   evoUrl: string;
   evoInstance: string;
   headers: Record<string, string>;
@@ -28,11 +45,36 @@ async function setEvolutionArchiveStatus({
 
   const cleanPhone = normalizePhone(contactNumber);
   const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+  let lastMessageId: string | null = null;
+  let lastMessageFromMe = false;
+
+  if (ticketId) {
+    const { data: recentMessages, error: recentMessagesError } = await supabase
+      .from('whazing_messages')
+      .select('message_id, from_me, timestamp, created_at')
+      .eq('ticket_id', ticketId)
+      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (recentMessagesError) {
+      throw recentMessagesError;
+    }
+
+    const lastRealMessage = (recentMessages || []).find((message) => !isSyntheticMessageId(message.message_id));
+    lastMessageId = lastRealMessage?.message_id ?? null;
+    lastMessageFromMe = lastRealMessage?.from_me ?? false;
+  }
+
+  if (!lastMessageId) {
+    throw new Error(`No real message key found for ticket ${ticketId || cleanPhone}`);
+  }
+
   const response = await fetch(`${evoUrl}/chat/archiveChat/${evoInstance}`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      lastMessage: { key: { remoteJid, fromMe: false, id: '' } },
+      lastMessage: { key: { remoteJid, fromMe: lastMessageFromMe, id: lastMessageId } },
       chat: remoteJid,
       archive,
     }),
