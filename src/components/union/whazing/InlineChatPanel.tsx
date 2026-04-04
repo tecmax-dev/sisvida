@@ -150,6 +150,21 @@ export default function InlineChatPanel({ ticket, onClose }: InlineChatPanelProp
     }
   };
 
+  const handleReopen = async () => {
+    if (!ticket) return;
+    setReopening(true);
+    try {
+      await reopenWhazingTicket(ticket.ticket_id, ticket.contact_number);
+      queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
+      toast.success("Ticket reaberto");
+    } catch (err: any) {
+      toast.error("Erro ao reabrir: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReopening(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
