@@ -229,7 +229,7 @@ async function setEvolutionArchiveStatus({
     ...localCandidates,
     ...evolutionCandidates.filter((candidate) => candidate.fromMe),
     ...evolutionCandidates.filter((candidate) => !candidate.fromMe),
-  ]);
+  ]).slice(0, 5); // Limit to 5 candidates to prevent CPU timeout
 
   if (!candidates.length) {
     throw new Error(`No real message key found for ticket ${ticketId || cleanPhone}`);
