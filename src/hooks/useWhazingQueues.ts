@@ -29,11 +29,11 @@ export function useTransferToQueue() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ ticketId, queueId }: { ticketId: string; queueId: string }) => {
-      const { error } = await (supabase as any)
-        .from("whazing_tickets")
-        .update({ assigned_queue_id: queueId, updated_at: new Date().toISOString() })
-        .eq("ticket_id", ticketId);
+      const { data, error } = await supabase.functions.invoke('whazing-actions', {
+        body: { action: 'transfer_queue', ticketId, queueId },
+      });
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["whazing-tickets"] });
