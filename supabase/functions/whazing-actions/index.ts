@@ -13,7 +13,7 @@ function normalizePhone(phone: string) {
 
 function isSyntheticMessageId(messageId?: string | null) {
   if (!messageId) return true;
-  return ['sent-', 'sent-media-', 'bot-return-'].some((prefix) => messageId.startsWith(prefix));
+  return ['sent-', 'sent-media-', 'bot-return-', 'support-chat-'].some((prefix) => messageId.startsWith(prefix));
 }
 
 function tryParseJson<T>(value: string): T | null {
@@ -504,7 +504,7 @@ serve(async (req) => {
       }
 
       case 'ensure_ticket_open': {
-        const { contactName } = body;
+        const { contactName, allowLocalFallback, lastMessage, messageId, messageTimestamp, senderName } = body;
         if (!contactNumber) {
           return new Response(JSON.stringify({ error: 'contactNumber is required' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -514,16 +514,30 @@ serve(async (req) => {
         const cleanPhone = normalizePhone(contactNumber);
         const canonicalTicketId = ticketId || cleanPhone;
         const nowIso = new Date().toISOString();
+        const trimmedLastMessage = typeof lastMessage === 'string' ? lastMessage.trim() : '';
+        const normalizedMessageId = typeof messageId === 'string' && messageId.trim()
+          ? (messageId.startsWith('support-chat-') ? messageId : `support-chat-${messageId}`)
+          : null;
+        let externalSyncError: string | null = null;
 
-        await setEvolutionArchiveStatus({
-          archive: false,
-          contactNumber: cleanPhone,
-          ticketId: canonicalTicketId,
-          supabase,
-          evoUrl,
-          evoInstance,
-          headers,
-        });
+        try {
+          await setEvolutionArchiveStatus({
+            archive: false,
+            contactNumber: cleanPhone,
+            ticketId: canonicalTicketId,
+            supabase,
+            evoUrl,
+            evoInstance,
+            headers,
+          });
+        } catch (error) {
+          externalSyncError = error instanceof Error ? error.message : 'Unknown external sync error';
+          if (!allowLocalFallback) {
+            throw error;
+          }
+
+          console.warn(`[whazing-actions] Local fallback enabled for ${canonicalTicketId}: ${externalSyncError}`);
+        }
 
         const { data: existingTicket, error: existingTicketError } = await supabase
           .from('whazing_tickets')
@@ -535,17 +549,20 @@ serve(async (req) => {
           throw existingTicketError;
         }
 
+        const ticketPayload = {
+          ticket_id: canonicalTicketId,
+          contact_number: cleanPhone,
+          contact_name: contactName || existingTicket?.contact_name || null,
+          status: 'open',
+          opened_at: existingTicket?.opened_at || nowIso,
+          closed_at: null,
+          updated_at: nowIso,
+          ...(trimmedLastMessage ? { last_message: trimmedLastMessage.slice(0, 500) } : {}),
+        };
+
         const { data: upsertedTicket, error: upsertError } = await supabase
           .from('whazing_tickets')
-          .upsert({
-            ticket_id: canonicalTicketId,
-            contact_number: cleanPhone,
-            contact_name: contactName || existingTicket?.contact_name || null,
-            status: 'open',
-            opened_at: existingTicket?.opened_at || nowIso,
-            closed_at: null,
-            updated_at: nowIso,
-          }, { onConflict: 'ticket_id' })
+          .upsert(ticketPayload, { onConflict: 'ticket_id' })
           .select()
           .single();
 
@@ -553,9 +570,46 @@ serve(async (req) => {
           throw upsertError;
         }
 
+        if (trimmedLastMessage) {
+          const finalMessageId = normalizedMessageId || `support-chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+          const { data: existingMessage, error: existingMessageError } = await supabase
+            .from('whazing_messages')
+            .select('id')
+            .eq('ticket_id', canonicalTicketId)
+            .eq('message_id', finalMessageId)
+            .maybeSingle();
+
+          if (existingMessageError) {
+            throw existingMessageError;
+          }
+
+          if (!existingMessage) {
+            const effectiveTimestamp = typeof messageTimestamp === 'number' && Number.isFinite(messageTimestamp)
+              ? Math.floor(messageTimestamp)
+              : Math.floor(Date.now() / 1000);
+
+            const { error: insertMessageError } = await supabase
+              .from('whazing_messages')
+              .insert({
+                ticket_id: canonicalTicketId,
+                message_id: finalMessageId,
+                body: trimmedLastMessage,
+                from_me: false,
+                sender_name: senderName || contactName || existingTicket?.contact_name || null,
+                sender_phone: cleanPhone,
+                timestamp: effectiveTimestamp,
+              });
+
+            if (insertMessageError) {
+              throw insertMessageError;
+            }
+          }
+        }
+
         console.log(`[whazing-actions] Ticket ${canonicalTicketId} ensured open and synced`);
 
-        return new Response(JSON.stringify({ ok: true, message: 'Ticket ensured open', ticket: upsertedTicket }), {
+        return new Response(JSON.stringify({ ok: true, message: 'Ticket ensured open', ticket: upsertedTicket, externalSyncError }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
