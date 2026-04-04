@@ -78,8 +78,10 @@ export function PricingSection() {
     }
   };
 
-  // Find most popular plan (middle one or marked)
-  const popularIndex = plans.length === 3 ? 1 : Math.floor(plans.length / 2);
+  // Find most popular plan - prioritize the Essence plan (R$ 299)
+  const popularIndex = plans.findIndex(p => p.name === 'Essence') !== -1 
+    ? plans.findIndex(p => p.name === 'Essence') 
+    : 0;
 
   if (loading) {
     return (
