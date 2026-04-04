@@ -7299,10 +7299,11 @@ serve(async (req) => {
               .eq('ticket_id', phone)
               .maybeSingle();
 
+            const followUpPushName = payload.data?.pushName;
             const followUpTicketData: Record<string, unknown> = {
               ticket_id: phone,
               contact_number: phone,
-              contact_name: payload.data?.pushName || null,
+              ...(followUpPushName ? { contact_name: followUpPushName } : {}),
               last_message: followUpId,
               updated_at: now,
               closed_at: null,
