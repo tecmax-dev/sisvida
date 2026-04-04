@@ -7,8 +7,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowRightLeft, Loader2 } from "lucide-react";
+import { ArrowRightLeft, Loader2, Users } from "lucide-react";
 import { useWhazingQueues, useTransferToQueue } from "@/hooks/useWhazingQueues";
+import { useQueueUsers } from "@/hooks/useWhazingQueueUsers";
 import { toast } from "sonner";
 
 interface TransferQueueDialogProps {
@@ -16,6 +17,18 @@ interface TransferQueueDialogProps {
   currentQueueId?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+function QueueUserCount({ queueId }: { queueId: string }) {
+  const { data: users } = useQueueUsers(queueId);
+  const count = (users || []).length;
+  if (count === 0) return null;
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+      <Users className="h-3 w-3" />
+      {count}
+    </span>
+  );
 }
 
 export default function TransferQueueDialog({
@@ -64,14 +77,15 @@ export default function TransferQueueDialog({
               disabled={currentQueueId === q.id}
             >
               <span className="h-4 w-4 rounded-full flex-shrink-0" style={{ backgroundColor: q.color }} />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{q.name}</p>
                 {q.description && (
                   <p className="text-xs text-muted-foreground">{q.description}</p>
                 )}
               </div>
+              <QueueUserCount queueId={q.id} />
               {currentQueueId === q.id && (
-                <span className="ml-auto text-xs text-muted-foreground">Atual</span>
+                <span className="text-xs text-muted-foreground">Atual</span>
               )}
             </button>
           ))}
