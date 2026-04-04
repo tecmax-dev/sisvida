@@ -28,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineChatPanel from "@/components/union/whazing/InlineChatPanel";
 import TicketKanban from "@/components/union/whazing/TicketKanban";
+import QueueUsersManager from "@/components/union/whazing/QueueUsersManager";
 import QuickResponsesManager from "@/components/union/whazing/QuickResponsesManager";
 import NewChatContactList from "@/components/union/whazing/NewChatContactList";
 import {
