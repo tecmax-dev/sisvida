@@ -714,7 +714,7 @@ serve(async (req) => {
 
         const evoContacts = await evoResp.json() as Array<{ remoteJid?: string; pushName?: string; profilePicUrl?: string }>;
         
-        // 2. Build phone→name+pic map
+        // 2. Build phone→name+pic map from Evolution contacts
         const contactMap = new Map<string, { name: string; pic: string | null }>();
         for (const c of evoContacts) {
           if (!c.remoteJid?.endsWith('@s.whatsapp.net') || !c.pushName) continue;
@@ -722,7 +722,23 @@ serve(async (req) => {
           contactMap.set(phone, { name: c.pushName, pic: c.profilePicUrl || null });
         }
 
-        // 3. Fetch all tickets missing contact_name
+        // 3. Also fetch patients to cross-reference phones without Evolution pushName
+        const { data: patients } = await supabase
+          .from('patients')
+          .select('name, phone')
+          .not('phone', 'is', null)
+          .neq('phone', '');
+
+        const patientMap = new Map<string, string>();
+        for (const p of (patients || [])) {
+          if (!p.phone || !p.name) continue;
+          const digits = p.phone.replace(/\D/g, '');
+          const withCC = digits.startsWith('55') ? digits : `55${digits}`;
+          patientMap.set(withCC, p.name);
+          patientMap.set(digits, p.name);
+        }
+
+        // 4. Fetch all tickets
         const { data: tickets } = await supabase
           .from('whazing_tickets')
           .select('id, ticket_id, contact_number, contact_name, profile_pic_url');
@@ -730,12 +746,18 @@ serve(async (req) => {
         let updated = 0;
         for (const ticket of (tickets || [])) {
           const phone = ticket.contact_number || ticket.ticket_id;
-          const match = contactMap.get(phone);
-          if (!match) continue;
+          
+          const evoMatch = contactMap.get(phone);
+          const patientName = patientMap.get(phone);
           
           const updates: Record<string, string> = {};
-          if (!ticket.contact_name && match.name) updates.contact_name = match.name;
-          if (!ticket.profile_pic_url && match.pic) updates.profile_pic_url = match.pic;
+          if (!ticket.contact_name) {
+            const resolvedName = evoMatch?.name || patientName;
+            if (resolvedName) updates.contact_name = resolvedName;
+          }
+          if (!ticket.profile_pic_url && evoMatch?.pic) {
+            updates.profile_pic_url = evoMatch.pic;
+          }
           
           if (Object.keys(updates).length === 0) continue;
           
@@ -743,9 +765,9 @@ serve(async (req) => {
           updated++;
         }
 
-        console.log(`[whazing-actions] sync_contact_names: ${updated} tickets updated from ${contactMap.size} contacts`);
+        console.log(`[whazing-actions] sync_contact_names: ${updated} tickets updated (evo: ${contactMap.size}, patients: ${patientMap.size / 2})`);
 
-        return new Response(JSON.stringify({ ok: true, updated, totalContacts: contactMap.size }), {
+        return new Response(JSON.stringify({ ok: true, updated, totalContacts: contactMap.size, totalPatients: patients?.length || 0 }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
