@@ -6877,6 +6877,7 @@ serve(async (req) => {
 
           // Detect archive or delete → close ticket
           const isArchived = chat?.archive === true || chat?.archived === true;
+          const isUnarchived = chat?.archive === false || chat?.archived === false;
           const isDelete = payload.event === 'CHATS_DELETE' || payload.event === 'chats.delete';
 
           if (isArchived || isDelete) {
@@ -6890,6 +6891,19 @@ serve(async (req) => {
               console.error(`[webhook] Error closing ticket for ${phone}:`, error);
             } else {
               console.log(`[webhook] Ticket closed for ${phone} (event: ${payload.event})`);
+            }
+          } else if (isUnarchived) {
+            // Unarchive → reopen ticket
+            const { error } = await supabase
+              .from('whazing_tickets')
+              .update({ status: 'open', closed_at: null, updated_at: now })
+              .eq('ticket_id', phone)
+              .eq('status', 'closed');
+
+            if (error) {
+              console.error(`[webhook] Error reopening ticket for ${phone}:`, error);
+            } else {
+              console.log(`[webhook] Ticket reopened for ${phone} (event: ${payload.event}, unarchived)`);
             }
           }
         }
