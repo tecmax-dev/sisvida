@@ -109,7 +109,7 @@ function playNotificationSound() {
 }
 
 export default function UnionWhatsAppTicketsPage() {
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("open");
   const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<WhazingTicket | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -304,31 +304,33 @@ export default function UnionWhatsAppTicketsPage() {
           <CardContent className="p-0">
             <Tabs value={statusFilter} onValueChange={setStatusFilter}>
               <div className="px-6 border-b">
-                <TabsList className="bg-transparent h-auto p-0 gap-4">
-                  <TabsTrigger value="all" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1">
-                    Todos
-                  </TabsTrigger>
-                  <TabsTrigger value="open" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 px-1">
+                <TabsList className="bg-transparent h-auto p-0 gap-6">
+                  <TabsTrigger value="open" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-700 rounded-none pb-3 px-1 uppercase text-xs font-semibold tracking-wide">
                     Abertos
                     {(stats?.open ?? 0) > 0 && (
-                      <Badge variant="secondary" className="ml-1.5 h-5 text-[10px] bg-emerald-100 text-emerald-700">
+                      <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 text-[10px] bg-emerald-100 text-emerald-700">
                         {stats?.open}
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="pending" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 rounded-none pb-3 px-1">
+                  <TabsTrigger value="pending" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-700 rounded-none pb-3 px-1 uppercase text-xs font-semibold tracking-wide">
                     Pendentes
                     {(stats?.pending ?? 0) > 0 && (
-                      <Badge variant="secondary" className="ml-1.5 h-5 text-[10px] bg-amber-100 text-amber-700">
+                      <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 text-[10px] bg-amber-100 text-amber-700">
                         {stats?.pending}
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="chatbot" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none pb-3 px-1">
-                    Chatbot
-                  </TabsTrigger>
-                  <TabsTrigger value="closed" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-muted-foreground rounded-none pb-3 px-1">
+                  <TabsTrigger value="closed" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-muted-foreground rounded-none pb-3 px-1 uppercase text-xs font-semibold tracking-wide">
                     Fechados
+                    {(stats?.closed ?? 0) > 0 && (
+                      <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 text-[10px]">
+                        {stats?.closed}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="chatbot" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-700 rounded-none pb-3 px-1 uppercase text-xs font-semibold tracking-wide">
+                    Chatbot
                   </TabsTrigger>
                 </TabsList>
               </div>
