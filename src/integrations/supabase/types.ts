@@ -16918,6 +16918,38 @@ export type Database = {
         }
         Relationships: []
       }
+      whazing_queue_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          queue_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          queue_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          queue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whazing_queue_users_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "whazing_queues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whazing_queues: {
         Row: {
           color: string
@@ -17510,6 +17542,15 @@ export type Database = {
           specialty: string
         }[]
       }
+      get_available_users_for_queue: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          role: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       get_booking_window_end_date: {
         Args: { p_clinic_id: string }
         Returns: string
@@ -17700,6 +17741,17 @@ export type Database = {
           type: string
         }[]
       }
+      get_queue_users: {
+        Args: { p_queue_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          queue_id: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       get_signature_token: {
         Args: { p_token: string }
         Returns: {
@@ -17749,6 +17801,14 @@ export type Database = {
         Args: { _clinic_id: string; _user_id: string }
         Returns: {
           permission_key: string
+        }[]
+      }
+      get_user_queues: {
+        Args: { p_user_id: string }
+        Returns: {
+          queue_color: string
+          queue_id: string
+          queue_name: string
         }[]
       }
       get_whazing_messages_for_ticket: {
