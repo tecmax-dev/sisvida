@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Clock, CheckCircle2, User, Phone, GripVertical } from "lucide-react";
+import { ContactAvatar } from "@/components/union/whazing/ContactAvatar";
 import {
   DndContext,
   DragOverlay,

@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import QuickResponsePicker from "@/components/union/whazing/QuickResponsePicker";
 import TicketTagsManager from "@/components/union/whazing/TicketTagsManager";
 import TransferQueueDialog from "@/components/union/whazing/TransferQueueDialog";
+import { useContactProfilePics } from "@/hooks/useContactProfilePics";
+import { ContactAvatar } from "@/components/union/whazing/ContactAvatar";
 
 interface InlineChatPanelProps {
   ticket: WhazingTicket | null;

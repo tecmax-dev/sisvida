@@ -42,6 +42,8 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { useContactProfilePics } from "@/hooks/useContactProfilePics";
+import { ContactAvatar } from "@/components/union/whazing/ContactAvatar";
 
 function formatPhone(phone: string) {
   const clean = phone.replace(/\D/g, "");
