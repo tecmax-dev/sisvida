@@ -621,6 +621,150 @@ async function getWhazingCategory(
   return fallback;
 }
 
+function normalizeSupportText(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function getBrazilSupportContext(): {
+  date: string;
+  formatted: string;
+  isBusinessDay: boolean;
+  isBusinessHours: boolean;
+} {
+  const now = new Date();
+  const date = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  const time = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(now);
+  const dayName = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'long',
+  }).format(now);
+  const dayShort = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'short',
+  }).format(now);
+
+  const dayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  const dayOfWeek = dayMap[dayShort] ?? 0;
+  const isBusinessDay = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const [hours, minutes] = time.split(':').map(Number);
+  const totalMinutes = (hours * 60) + minutes;
+  const isBusinessHours = isBusinessDay && (
+    (totalMinutes >= 540 && totalMinutes < 720) ||
+    (totalMinutes >= 780 && totalMinutes < 960)
+  );
+
+  return {
+    date,
+    formatted: `${dayName}, ${date.split('-').reverse().join('/')} às ${time}`,
+    isBusinessDay,
+    isBusinessHours,
+  };
+}
+
+async function getHumanSupportAvailability(
+  supabase: ReturnType<typeof createClient>,
+  clinicId: string,
+): Promise<{ isHumanAvailable: boolean; reason: string; formatted: string }> {
+  const brazilContext = getBrazilSupportContext();
+  let isHoliday = false;
+
+  try {
+    const { data, error } = await supabase.rpc('is_holiday', {
+      p_clinic_id: clinicId,
+      p_date: brazilContext.date,
+    });
+
+    if (error) {
+      console.error('[webhook] is_holiday RPC error during support handoff:', error);
+    } else {
+      const row = Array.isArray(data) ? data[0] : null;
+      isHoliday = Boolean(row?.is_holiday);
+    }
+  } catch (error) {
+    console.error('[webhook] Failed to check holiday during support handoff:', error);
+  }
+
+  const isHumanAvailable = brazilContext.isBusinessHours && !isHoliday;
+  const reason = isHoliday
+    ? 'feriado'
+    : !brazilContext.isBusinessDay
+      ? 'fim de semana'
+      : !brazilContext.isBusinessHours
+        ? 'fora do horário'
+        : 'disponível';
+
+  return {
+    isHumanAvailable,
+    reason,
+    formatted: brazilContext.formatted,
+  };
+}
+
+async function freezeBotForHumanHandoff(
+  supabase: ReturnType<typeof createClient>,
+  phone: string,
+  contactName: string | null,
+  lastMessage: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('whazing_tickets')
+    .upsert({
+      ticket_id: phone,
+      contact_number: phone,
+      contact_name: contactName,
+      last_message: lastMessage.slice(0, 500),
+      status: 'open',
+      opened_at: now,
+      updated_at: now,
+      closed_at: null,
+      bot_active: false,
+    }, { onConflict: 'ticket_id' });
+
+  if (error) {
+    console.error('[webhook] Failed to freeze bot for human handoff:', error);
+  }
+}
+
+function buildDirectHumanHandoffMessage(isHumanAvailable: boolean): string {
+  if (isHumanAvailable) {
+    return `Entendi! Vou encaminhar você para um atendente humano. 🙏
+
+Nosso atendimento funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados).
+
+Por favor, aguarde um momento por aqui.`;
+  }
+
+  return `Entendi! Registrei seu pedido para atendimento humano. 🙏
+
+Nosso atendimento funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados).
+
+No momento estamos fora do horário, mas um atendente continuará seu atendimento por aqui assim que estiver disponível.`;
+}
+
 // ==========================================
 // TEXT-BASED LIST SENDER (no interactive lists)
 // Always uses numbered text format for maximum compatibility
