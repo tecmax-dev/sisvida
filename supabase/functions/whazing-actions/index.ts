@@ -249,6 +249,8 @@ serve(async (req) => {
           await setEvolutionArchiveStatus({
             archive: true,
             contactNumber,
+            ticketId,
+            supabase,
             evoUrl,
             evoInstance,
             headers,
@@ -271,6 +273,8 @@ serve(async (req) => {
           await setEvolutionArchiveStatus({
             archive: false,
             contactNumber,
+            ticketId,
+            supabase,
             evoUrl,
             evoInstance,
             headers,
@@ -303,6 +307,8 @@ serve(async (req) => {
         await setEvolutionArchiveStatus({
           archive: false,
           contactNumber: cleanPhone,
+          ticketId: canonicalTicketId,
+          supabase,
           evoUrl,
           evoInstance,
           headers,
