@@ -39,6 +39,7 @@ import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModa
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
+import { DependentAppointmentsList } from "@/components/union/members/DependentAppointmentsList";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
