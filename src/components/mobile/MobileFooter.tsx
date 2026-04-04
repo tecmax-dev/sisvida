@@ -36,7 +36,7 @@ export function MobileFooter() {
   ];
 
   const handleWhatsApp = () => {
-    window.open("https://wa.me/551151943839", "_blank");
+    window.open("https://wa.me/557332311784", "_blank");
   };
 
   return (

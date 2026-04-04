@@ -594,7 +594,7 @@ export default function ClinicPresentationPage() {
                 </div>
                 <div>
                   <p className="text-cyan-300 text-[10px]">Telefone</p>
-                  <p className="text-base font-semibold">(11) 5194-3839</p>
+                  <p className="text-base font-semibold">(73) 3231-1784</p>
                 </div>
               </div>
 

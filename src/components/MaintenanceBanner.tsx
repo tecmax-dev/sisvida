@@ -18,7 +18,7 @@ export function MaintenanceBanner({ reason }: MaintenanceBannerProps) {
           {reason || "Estamos realizando ajustes para melhorar sua experiência."}
         </span>
         <a 
-          href="tel:+551151943839" 
+          href="tel:+557332311784" 
           className="flex items-center gap-1 text-primary hover:underline ml-2"
         >
           <Phone className="h-3 w-3" />

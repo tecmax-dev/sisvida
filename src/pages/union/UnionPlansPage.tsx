@@ -123,7 +123,7 @@ export default function UnionPlansPage() {
           </p>
           <Button className="mt-6" asChild>
             <a 
-              href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre os planos do Sistema Sindical."
+              href="https://wa.me/557332311784?text=Olá! Gostaria de saber mais sobre os planos do Sistema Sindical."
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -254,7 +254,7 @@ export default function UnionPlansPage() {
               <CardFooter className="flex flex-col gap-2">
                 <Button className="w-full btn-eclini" asChild>
                   <a 
-                    href={`https://wa.me/551151943839?text=Olá! Tenho interesse no plano ${plan.name} do Sistema Sindical.`}
+                    href={`https://wa.me/557332311784?text=Olá! Tenho interesse no plano ${plan.name} do Sistema Sindical.`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -282,7 +282,7 @@ export default function UnionPlansPage() {
         </p>
         <Button variant="outline" asChild>
           <a 
-            href="https://wa.me/551151943839?text=Olá! Preciso de um plano personalizado para minha entidade sindical."
+            href="https://wa.me/557332311784?text=Olá! Preciso de um plano personalizado para minha entidade sindical."
             target="_blank"
             rel="noopener noreferrer"
           >

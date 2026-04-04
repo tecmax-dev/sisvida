@@ -60,12 +60,12 @@ export default function GenericArticle() {
             <AlertDescription>
               Entre em contato com nosso suporte via WhatsApp: 
               <a 
-                href="https://wa.me/551151943839" 
+                href="https://wa.me/557332311784" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-primary hover:underline ml-1"
               >
-                (11) 5194-3839
+                (73) 3231-1784
               </a>
             </AlertDescription>
           </Alert>
