@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, parseISO, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MemberAppointmentsPrintReport } from "./MemberAppointmentsPrintReport";
 
 import { 
   User,
@@ -23,6 +24,8 @@ import {
   FileText,
   CalendarDays,
   Loader2,
+  Users,
+  Printer,
 } from "lucide-react";
 
 interface Professional {
@@ -50,11 +53,16 @@ interface Appointment {
   status: string;
   type: string;
   notes: string | null;
+  dependent_id: string | null;
   professional: {
     id: string;
     name: string;
   } | null;
   procedure: {
+    id: string;
+    name: string;
+  } | null;
+  dependent: {
     id: string;
     name: string;
   } | null;
