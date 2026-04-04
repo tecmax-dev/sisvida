@@ -12,6 +12,7 @@ export type UnionPermission =
   // Sócios
   | "union_view_members"
   | "union_manage_members"
+  | "union_edit_member_convenio"
   // Contribuições
   | "union_view_contributions"
   | "union_manage_contributions"
@@ -75,6 +76,7 @@ export function useUnionPermissions() {
   // Sócios
   const canViewMembers = (): boolean => hasUnionPermission("union_view_members");
   const canManageMembers = (): boolean => hasUnionPermission("union_manage_members");
+  const canEditMemberConvenio = (): boolean => hasUnionPermission("union_edit_member_convenio");
 
   // Contribuições
   const canViewContributions = (): boolean => hasUnionPermission("union_view_contributions");
@@ -124,6 +126,7 @@ export function useUnionPermissions() {
     // Sócios
     canViewMembers,
     canManageMembers,
+    canEditMemberConvenio,
     
     // Contribuições
     canViewContributions,

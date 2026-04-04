@@ -32,6 +32,7 @@ interface PatientFormFieldsProps {
   isAdmin?: boolean;
   canChangePassword?: boolean;
   clinicDefaultLimit?: number | null;
+  canEditConvenio?: boolean;
 }
 
 export interface PatientFormData {
@@ -164,6 +165,7 @@ export function PatientFormFields({
   isAdmin = false,
   canChangePassword = false,
   clinicDefaultLimit,
+  canEditConvenio = true,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
     field: K,
@@ -373,6 +375,7 @@ export function PatientFormFields({
           <Select
             value={formData.insurancePlanId || 'none'}
             onValueChange={(val) => updateField('insurancePlanId', val === 'none' ? '' : val)}
+            disabled={!canEditConvenio}
           >
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="Selecione" />
@@ -384,6 +387,9 @@ export function PatientFormFields({
               ))}
             </SelectContent>
           </Select>
+          {!canEditConvenio && (
+            <p className="text-xs text-muted-foreground mt-1">Sem permissão para alterar</p>
+          )}
         </div>
       </div>
 

@@ -202,7 +202,7 @@ export default function UnionMemberDetailPage() {
     [currentClinic, userRoles]
   );
   const { hasPermission, isAdmin } = usePermissions();
-  const { canManageMembers } = useUnionPermissions();
+  const { canManageMembers, canEditMemberConvenio } = useUnionPermissions();
   const canChangePassword = isAdmin || hasPermission("change_password");
   const { openModal, closeModal, isModalOpen, getModalData } = useModal();
   const { toast } = useToast();
@@ -942,6 +942,7 @@ export default function UnionMemberDetailPage() {
                 isAdmin={isAdmin}
                 canChangePassword={canChangePassword}
                 clinicDefaultLimit={clinicDefaultLimit}
+                canEditConvenio={canEditMemberConvenio()}
               />
             </form>
           </div>
