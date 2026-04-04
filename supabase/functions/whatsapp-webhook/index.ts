@@ -7856,17 +7856,44 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             );
 
             if (latestAtendenteContext) {
-              const normalizedInput = (messageText || '')
-                .trim()
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[̀-ͯ]/g, '');
+              const normalizedInput = normalizeSupportText(messageText || '');
+              const isGenericSupportReply = /^(outro assunto|outro|outros|outros assuntos?|atendente|falar com atendente|humano|suporte|ajuda)$/.test(normalizedInput);
 
-              const isGenericSupportReply = /^(outro assunto|outro|outros|outros assuntos?|atendente|falar com atendente|humano|suporte|ajuda)$/i.test((messageText || '').trim());
+              if (isGenericSupportReply) {
+                const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
+                console.log(`[webhook] Deterministic human handoff for generic support reply (${normalizedInput || 'empty'}) - availability=${supportAvailability.isHumanAvailable} (${supportAvailability.reason}) at ${supportAvailability.formatted}`);
 
-              aiMessage = isGenericSupportReply
-                ? `[Contexto: o usuário já escolheu falar com atendente no menu externo e respondeu de forma genérica. NÃO pergunte o assunto novamente. Trate isso como pedido direto de atendimento humano e prossiga com o encaminhamento adequado.] ${messageText}`
-                : `[Contexto: o usuário já escolheu falar com atendente no menu externo e a mensagem abaixo é a resposta sobre o assunto para encaminhamento humano.] ${messageText}`;
+                await freezeBotForHumanHandoff(
+                  supabase,
+                  phone,
+                  payload.data?.pushName || null,
+                  messageText || 'Outro assunto'
+                );
+
+                await supabase.from('whatsapp_ai_conversations').insert({
+                  clinic_id: clinicId,
+                  phone,
+                  messages: {
+                    source: 'webhook_human_handoff',
+                    action: 'atendente_generic_reply',
+                    support_stage: 'human_handoff_requested',
+                    original_text: messageText,
+                    human_available: supportAvailability.isHumanAvailable,
+                    reason: supportAvailability.reason,
+                  },
+                  expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+                });
+
+                const directHandoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
+                await sendWhatsAppMessage(configData, phone, directHandoffMessage);
+
+                return new Response(
+                  JSON.stringify({ success: true, message: 'Deterministic human handoff sent' }),
+                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
+
+              aiMessage = `[Contexto: o usuário já escolheu falar com atendente no menu externo e a mensagem abaixo é a resposta sobre o assunto para encaminhamento humano.] ${messageText}`;
 
               console.log(`[webhook] Enriched AI context for atendente flow (${normalizedInput || 'empty'})`);
             }
