@@ -6877,6 +6877,7 @@ serve(async (req) => {
 
           // Detect archive or delete → close ticket
           const isArchived = chat?.archive === true || chat?.archived === true;
+          const isUnarchived = chat?.archive === false || chat?.archived === false;
           const isDelete = payload.event === 'CHATS_DELETE' || payload.event === 'chats.delete';
 
           if (isArchived || isDelete) {
@@ -6890,6 +6891,19 @@ serve(async (req) => {
               console.error(`[webhook] Error closing ticket for ${phone}:`, error);
             } else {
               console.log(`[webhook] Ticket closed for ${phone} (event: ${payload.event})`);
+            }
+          } else if (isUnarchived) {
+            // Unarchive → reopen ticket
+            const { error } = await supabase
+              .from('whazing_tickets')
+              .update({ status: 'open', closed_at: null, updated_at: now })
+              .eq('ticket_id', phone)
+              .eq('status', 'closed');
+
+            if (error) {
+              console.error(`[webhook] Error reopening ticket for ${phone}:`, error);
+            } else {
+              console.log(`[webhook] Ticket reopened for ${phone} (event: ${payload.event}, unarchived)`);
             }
           }
         }
@@ -8066,7 +8080,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       if (!existingTkt) {
         tktData.status = 'open';
         tktData.opened_at = now;
-      } else if (existingTkt.status === 'closed' && !fromMe) {
+      } else if (existingTkt?.status === 'closed') {
+        // Reopen on ANY new message (incoming or outgoing from another client like Whazing)
         tktData.status = 'open';
         tktData.opened_at = now;
         tktData.closed_at = null;
