@@ -400,8 +400,19 @@ export default function UnionMemberDetailPage() {
         setUnionPaymentMethod(data.union_payment_method || "");
         setUnionObservations(data.union_observations || "");
         setUnionJoinedAt(data.union_joined_at);
-        setSignatureUrl((data as any).signature_url || null);
+        const rawSignatureUrl = (data as any).signature_url || null;
+        setSignatureUrl(rawSignatureUrl);
         setSignatureAcceptedAt((data as any).signature_accepted_at || null);
+
+        // Generate signed URL for the signature image
+        if (rawSignatureUrl) {
+          const { data: signedData } = await supabase.storage
+            .from("patient-signatures")
+            .createSignedUrl(rawSignatureUrl, 3600);
+          setSignatureImageUrl(signedData?.signedUrl || null);
+        } else {
+          setSignatureImageUrl(null);
+        }
         setIsPatientActive(data.is_active ?? true);
         setPatientPhotoUrl(data.photo_url || null);
 
