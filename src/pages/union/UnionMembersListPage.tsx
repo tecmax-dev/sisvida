@@ -1140,6 +1140,15 @@ export default function UnionMembersListPage() {
                                 Assinar Ficha (WhatsApp)
                               </DropdownMenuItem>
                             )}
+                            {member.phone && canManageMembers() && member.signature_accepted && (
+                              <DropdownMenuItem
+                                onClick={() => handleSendSignatureWhatsApp(member, true)}
+                                className="text-amber-600"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Re-assinatura (Ilegível)
+                              </DropdownMenuItem>
+                            )}
                             {member.email && canManageMembers() && !member.signature_accepted && (
                               <DropdownMenuItem
                                 onClick={() => handleSendSignatureRequest(member)}
