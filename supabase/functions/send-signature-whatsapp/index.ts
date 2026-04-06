@@ -11,6 +11,8 @@ type JsonObject = Record<string, unknown>;
 interface Payload {
   associadoId: string;
   clinicId: string;
+  forceResign?: boolean;
+  resignReason?: string;
 }
 
 class HttpError extends Error {
@@ -51,7 +53,7 @@ Deno.serve(async (req) => {
       throw new HttpError(400, "JSON inválido");
     }
 
-    const { associadoId, clinicId } = payload;
+    const { associadoId, clinicId, forceResign, resignReason } = payload;
     if (!associadoId || !clinicId) {
       throw new HttpError(400, "associadoId e clinicId são obrigatórios");
     }
@@ -110,8 +112,34 @@ Deno.serve(async (req) => {
       throw new HttpError(400, "Sócio não possui telefone cadastrado");
     }
 
-    if (associado.signature_accepted) {
+    if (associado.signature_accepted && !forceResign) {
       throw new HttpError(400, "Sócio já possui autorização de desconto assinada");
+    }
+
+    // If forcing re-sign, reset the signature fields
+    if (associado.signature_accepted && forceResign) {
+      const { error: resetError } = await admin
+        .from("patients")
+        .update({
+          signature_accepted: false,
+          signature_url: null,
+          signature_accepted_at: null,
+        })
+        .eq("id", associadoId);
+
+      if (resetError) {
+        throw new HttpError(500, "Erro ao resetar assinatura", { resetError });
+      }
+
+      // Also invalidate any existing active tokens
+      await admin
+        .from("signature_request_tokens")
+        .update({ used_at: new Date().toISOString() })
+        .eq("patient_id", associadoId)
+        .eq("clinic_id", clinicId)
+        .is("used_at", null);
+
+      console.log(JSON.stringify({ requestId, at: "signature.reset", associadoId, reason: resignReason }));
     }
 
     console.log(JSON.stringify({
@@ -183,12 +211,15 @@ Deno.serve(async (req) => {
     const signatureUrl = `${baseUrl}/assinar/${token}`;
 
     // Send via WhatsApp using send-whatsapp edge function
-    const whatsappMessage = `✍️ *Autorização de Desconto em Folha*
+    const reasonBlock = forceResign && resignReason
+      ? `\n⚠️ *Motivo da nova solicitação:*\n${resignReason}\n`
+      : "";
 
-Olá, *${associado.name}*!
+    const resignPrefix = forceResign
+      ? `🔄 *Nova Solicitação de Assinatura*\n\nOlá, *${associado.name}*!\n\nO *${unionName}* identificou que sua assinatura anterior não ficou legível e precisa ser refeita.\n${reasonBlock}`
+      : `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${associado.name}*!\n\nO *${unionName}* solicita que você assine digitalmente a autorização de desconto em folha de pagamento.\n`;
 
-O *${unionName}* solicita que você assine digitalmente a autorização de desconto em folha de pagamento.
-
+    const whatsappMessage = `${resignPrefix}
 📝 *Acesse o link abaixo para assinar:*
 ${signatureUrl}
 
@@ -196,7 +227,7 @@ ${signatureUrl}
 • Este link é válido por 7 dias
 • É de uso único
 • A assinatura tem validade legal
-
+${forceResign ? "• Por favor, assine com cuidado para que fique legível\n" : ""}
 Em caso de dúvidas, entre em contato com o sindicato.
 
 Atenciosamente,
