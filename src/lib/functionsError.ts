@@ -1,4 +1,4 @@
-// Helper to extract meaningful error messages from Lovable Cloud function calls
+// Helper to extract meaningful error messages from cloud function calls
 
 export type FunctionsErrorExtract = {
   message: string;
