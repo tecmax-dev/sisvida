@@ -1092,7 +1092,7 @@ export default function UnionMemberDetailPage() {
                     Assinatura Digital - Autorização de Desconto
                   </h4>
                   
-                  {signatureUrl ? (
+                   {signatureUrl ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200">
                         <CheckCircle className="h-4 w-4" />
@@ -1105,11 +1105,18 @@ export default function UnionMemberDetailPage() {
                       </div>
                       <div className="border rounded-lg p-4 bg-muted/30">
                         <Label className="text-xs text-muted-foreground mb-2 block">Assinatura do Sócio</Label>
-                        <img
-                          src={signatureUrl}
-                          alt="Assinatura digital"
-                          className="max-h-24 bg-white rounded border p-2"
-                        />
+                        {signatureImageUrl ? (
+                          <img
+                            src={signatureImageUrl}
+                            alt="Assinatura digital"
+                            className="max-h-32 bg-white rounded border p-2"
+                            onError={() => setSignatureImageUrl(null)}
+                          />
+                        ) : (
+                          <div className="text-xs text-muted-foreground italic py-2">
+                            Não foi possível carregar a imagem da assinatura.
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
