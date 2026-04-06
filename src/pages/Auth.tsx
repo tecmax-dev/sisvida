@@ -471,12 +471,12 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const isPreviewOrLovable =
+      const isPreviewEnvironment =
         window.location.hostname.includes("lovable.app") ||
         window.location.hostname.includes("lovableproject.com");
 
-      if (isPreviewOrLovable) {
-        // No preview/lovable.app, usar skipBrowserRedirect para evitar redirecionamento ao domínio customizado
+      if (isPreviewEnvironment) {
+        // No ambiente de preview, usar skipBrowserRedirect para evitar redirecionamento ao domínio customizado
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
