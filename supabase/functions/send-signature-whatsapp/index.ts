@@ -211,12 +211,15 @@ Deno.serve(async (req) => {
     const signatureUrl = `${baseUrl}/assinar/${token}`;
 
     // Send via WhatsApp using send-whatsapp edge function
-    const whatsappMessage = `✍️ *Autorização de Desconto em Folha*
+    const reasonBlock = forceResign && resignReason
+      ? `\n⚠️ *Motivo da nova solicitação:*\n${resignReason}\n`
+      : "";
 
-Olá, *${associado.name}*!
+    const resignPrefix = forceResign
+      ? `🔄 *Nova Solicitação de Assinatura*\n\nOlá, *${associado.name}*!\n\nO *${unionName}* identificou que sua assinatura anterior não ficou legível e precisa ser refeita.\n${reasonBlock}`
+      : `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${associado.name}*!\n\nO *${unionName}* solicita que você assine digitalmente a autorização de desconto em folha de pagamento.\n`;
 
-O *${unionName}* solicita que você assine digitalmente a autorização de desconto em folha de pagamento.
-
+    const whatsappMessage = `${resignPrefix}
 📝 *Acesse o link abaixo para assinar:*
 ${signatureUrl}
 
@@ -224,7 +227,7 @@ ${signatureUrl}
 • Este link é válido por 7 dias
 • É de uso único
 • A assinatura tem validade legal
-
+${forceResign ? "• Por favor, assine com cuidado para que fique legível\n" : ""}
 Em caso de dúvidas, entre em contato com o sindicato.
 
 Atenciosamente,
