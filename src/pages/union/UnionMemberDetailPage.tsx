@@ -233,6 +233,7 @@ export default function UnionMemberDetailPage() {
   
   // Signature data
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null);
   const [signatureAcceptedAt, setSignatureAcceptedAt] = useState<string | null>(null);
   const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
 
