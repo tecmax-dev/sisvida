@@ -654,7 +654,7 @@ export default function UnionMembersListPage() {
   };
 
   // Enviar solicitação de assinatura digital via WhatsApp
-  const handleSendSignatureWhatsApp = async (member: UnionMember) => {
+  const handleSendSignatureWhatsApp = async (member: UnionMember, forceResign = false) => {
     if (!currentClinic || !member.phone) {
       toast({
         title: "Erro",
@@ -664,7 +664,7 @@ export default function UnionMembersListPage() {
       return;
     }
 
-    if (member.signature_accepted) {
+    if (member.signature_accepted && !forceResign) {
       toast({
         title: "Assinatura já registrada",
         description: "Este sócio já possui autorização de desconto assinada.",
@@ -677,10 +677,14 @@ export default function UnionMembersListPage() {
         body: {
           associadoId: member.id,
           clinicId: resolvedClinic.id,
+          ...(forceResign ? {
+            forceResign: true,
+            resignReason: "A assinatura anterior foi revisada e constatou-se que não ficou legível. Por favor, refaça sua assinatura com cuidado.",
+          } : {}),
         },
       });
 
-      console.log("[send-signature-whatsapp] response", { data, error, memberId: member.id });
+      console.log("[send-signature-whatsapp] response", { data, error, memberId: member.id, forceResign });
 
       if (error) {
         const extracted = extractFunctionsError(error);
@@ -692,7 +696,7 @@ export default function UnionMembersListPage() {
       }
 
       toast({
-        title: "WhatsApp enviado!",
+        title: forceResign ? "Re-assinatura solicitada!" : "WhatsApp enviado!",
         description: `Link de assinatura enviado para ${member.phone}`,
       });
     } catch (err: any) {
