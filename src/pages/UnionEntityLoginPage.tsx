@@ -99,11 +99,11 @@ export default function UnionEntityLoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const isPreviewOrLovable =
+      const isPreviewEnvironment =
         window.location.hostname.includes("lovable.app") ||
         window.location.hostname.includes("lovableproject.com");
 
-      if (isPreviewOrLovable) {
+      if (isPreviewEnvironment) {
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
