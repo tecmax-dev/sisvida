@@ -305,10 +305,15 @@ export default function UnionAccessGroupsPage() {
 
       // Update permissions
       // First, delete all existing permissions
-      await supabase
+      const { error: deleteError } = await supabase
         .from('access_group_permissions')
         .delete()
         .eq('access_group_id', groupId);
+
+      if (deleteError) {
+        console.error('Error deleting existing permissions:', deleteError);
+        throw deleteError;
+      }
 
       // Then insert new permissions
       if (selectedPermissions.size > 0) {
