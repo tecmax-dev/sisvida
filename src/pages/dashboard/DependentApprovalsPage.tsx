@@ -211,26 +211,31 @@ export default function DependentApprovalsPage() {
     setPhotoDialogOpen(true);
     
     try {
-      // If it's already a full URL (from dependent-documents public bucket), use directly
+      // If it's already a full URL (from dependent-documents bucket), extract path for signed URL
       if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-        setSelectedPhotoUrl(photoUrl);
-      } else {
-        // Try signed URL from dependent-cpf-photos bucket (legacy)
-        const { data, error } = await supabase.storage
-          .from('dependent-cpf-photos')
-          .createSignedUrl(photoUrl, 300);
-        
-        if (error) {
-          // Fallback: try dependent-documents bucket
-          const { data: data2, error: error2 } = await supabase.storage
-            .from('dependent-documents')
-            .createSignedUrl(photoUrl, 300);
-          
-          if (error2) throw error2;
-          setSelectedPhotoUrl(data2.signedUrl);
+        const match = photoUrl.match(/\/object\/public\/dependent-documents\/(.+)$/);
+        if (match) {
+          const path = decodeURIComponent(match[1]);
+          const { data, error } = await supabase.functions.invoke('get-dependent-doc-signed-url', {
+            body: { path, bucket: 'dependent-documents' },
+          });
+          if (!error && data?.signedUrl) {
+            setSelectedPhotoUrl(data.signedUrl);
+          } else {
+            // Fallback: try direct URL
+            setSelectedPhotoUrl(photoUrl);
+          }
         } else {
-          setSelectedPhotoUrl(data.signedUrl);
+          setSelectedPhotoUrl(photoUrl);
         }
+      } else {
+        // It's a path - get signed URL via edge function
+        const { data, error } = await supabase.functions.invoke('get-dependent-doc-signed-url', {
+          body: { path: photoUrl, bucket: 'dependent-cpf-photos' },
+        });
+        
+        if (error || !data?.signedUrl) throw new Error('Failed to get signed URL');
+        setSelectedPhotoUrl(data.signedUrl);
       }
     } catch (error) {
       console.error('Error getting photo URL:', error);
