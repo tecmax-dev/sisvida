@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+// Upload now handled by edge function (mobile-payslip-upload)
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -257,39 +257,31 @@ export default function MobileCardRenewalPage() {
     setUploading(true);
 
     try {
-      // Generate unique file path - use contra-cheques bucket with correct path structure
-      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${clinicId}/${patientId}/${Date.now()}.${fileExt}`;
+      // Use edge function with SERVICE_ROLE_KEY to bypass RLS/JWT issues
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('patientId', patientId);
+      formData.append('clinicId', clinicId);
+      formData.append('cardId', cardData.id);
 
-      // Upload file to contra-cheques storage bucket
-      const { error: uploadError } = await supabase.storage
-        .from('contra-cheques')
-        .upload(fileName, selectedFile, {
-          cacheControl: '3600',
-          upsert: true
-        });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-payslip-upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw new Error(`Erro ao fazer upload do arquivo: ${uploadError.message}`);
-      }
+      const result = await response.json();
 
-      // Create payslip request record
-      const { error: requestError } = await supabase
-        .from('payslip_requests')
-        .insert({
-          clinic_id: clinicId,
-          patient_id: patientId,
-          card_id: cardData.id,
-          status: 'received',
-          received_at: new Date().toISOString(),
-          attachment_path: fileName,
-          notes: 'Enviado via app mobile - Atualização de Carteirinha',
-        });
-
-      if (requestError) {
-        console.error("Request error:", requestError);
-        throw new Error("Erro ao registrar solicitação");
+      if (!response.ok) {
+        const errorMessages: Record<string, string> = {
+          patient_not_found: "Paciente não encontrado.",
+          card_not_found: "Carteirinha não encontrada.",
+          upload_failed: "Erro ao fazer upload do arquivo.",
+          request_creation_failed: "Erro ao registrar solicitação.",
+        };
+        throw new Error(errorMessages[result.error] || result.details || "Erro ao enviar contracheque.");
       }
 
       toast({
