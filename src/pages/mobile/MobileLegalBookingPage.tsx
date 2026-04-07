@@ -516,39 +516,30 @@ export default function MobileLegalBookingPage() {
         throw new Error("Sessão inválida");
       }
 
-      // Generate unique file path
-      const fileExt = payslipFile.name.split('.').pop()?.toLowerCase() || 'pdf';
-      const fileName = `${authPatientId}/${Date.now()}_contracheque.${fileExt}`;
+      const formData = new FormData();
+      formData.append("file", payslipFile);
+      formData.append("patientId", authPatientId);
+      formData.append("clinicId", authClinicId);
+      formData.append("cardId", cardInfo.id);
 
-      // Upload file to storage
-      const { error: uploadError } = await supabase.storage
-        .from('patient-attachments')
-        .upload(fileName, payslipFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mobile-payslip-upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw new Error("Erro ao fazer upload do arquivo");
-      }
+      const result = await response.json();
 
-      // Create payslip request record
-      const { error: requestError } = await supabase
-        .from('payslip_requests')
-        .insert({
-          clinic_id: authClinicId,
-          patient_id: authPatientId,
-          card_id: cardInfo.id,
-          status: 'received',
-          received_at: new Date().toISOString(),
-          attachment_path: fileName,
-          notes: 'Enviado via app mobile - Agendamento Jurídico',
-        });
-
-      if (requestError) {
-        console.error("Request error:", requestError);
-        throw new Error("Erro ao registrar solicitação");
+      if (!response.ok) {
+        const errorMessages: Record<string, string> = {
+          patient_not_found: "Paciente não encontrado.",
+          card_not_found: "Carteirinha não encontrada.",
+          upload_failed: "Erro ao fazer upload do arquivo.",
+          request_creation_failed: "Erro ao registrar solicitação.",
+        };
+        throw new Error(errorMessages[result.error] || result.details || "Erro ao enviar contracheque.");
       }
 
       toast({
