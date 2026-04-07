@@ -349,11 +349,8 @@ export function DependentInclusionForm({
         throw new Error("Erro ao enviar documento");
       }
 
-      const { data: urlData } = supabase.storage
-        .from("dependent-documents")
-        .getPublicUrl(fileName);
-
-      return urlData.publicUrl;
+      // Return just the path (not public URL) since bucket is private
+      return fileName;
     } catch (error) {
       console.error("Error uploading document:", error);
       throw error;
