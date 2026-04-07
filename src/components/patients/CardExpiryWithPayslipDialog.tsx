@@ -8,6 +8,7 @@ import { Upload, FileCheck, Loader2, ShieldCheck, ShieldAlert, Calendar, UserChe
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { pdfToImageBase64 } from "@/utils/pdfToImage";
 
 interface CardExpiryWithPayslipDialogProps {
   open: boolean;
