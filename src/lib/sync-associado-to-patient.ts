@@ -45,10 +45,14 @@ export async function syncAssociadoToPatient(
     .maybeSingle();
 
   if (existing) {
-    // Já existe — apenas garantir que is_union_member = true
+    // Já existe — garantir is_union_member = true e atribuir convênio Secmi-Titular
+    const updateData: Record<string, unknown> = { is_union_member: true, is_active: true };
+    if (secmiPlanId) {
+      updateData.insurance_plan_id = secmiPlanId;
+    }
     await supabase
       .from("patients")
-      .update({ is_union_member: true, is_active: true })
+      .update(updateData)
       .eq("id", existing.id);
 
     // Anexar documentos de filiação ao paciente existente
