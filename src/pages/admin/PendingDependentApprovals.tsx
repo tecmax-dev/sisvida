@@ -176,13 +176,33 @@ export default function PendingDependentApprovals() {
     setPhotoDialogOpen(true);
     
     try {
-      // Get signed URL for private bucket
-      const { data, error } = await supabase.storage
-        .from('dependent-cpf-photos')
-        .createSignedUrl(photoUrl, 300); // 5 min expiry
-      
-      if (error) throw error;
-      setSelectedPhoto(data.signedUrl);
+      // If it's already a full URL, try to use it but may fail for private buckets
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        // Extract path from public URL to get signed URL instead
+        const match = photoUrl.match(/\/object\/public\/dependent-documents\/(.+)$/);
+        if (match) {
+          const path = decodeURIComponent(match[1]);
+          const { data, error } = await supabase.functions.invoke('get-dependent-doc-signed-url', {
+            body: { path, bucket: 'dependent-documents' },
+          });
+          if (!error && data?.signedUrl) {
+            setSelectedPhoto(data.signedUrl);
+            return;
+          }
+        }
+        // Fallback: use direct URL
+        setSelectedPhoto(photoUrl);
+      } else {
+        // It's a path - get signed URL via edge function
+        const { data, error } = await supabase.functions.invoke('get-dependent-doc-signed-url', {
+          body: { path: photoUrl, bucket: 'dependent-cpf-photos' },
+        });
+        
+        if (error || !data?.signedUrl) {
+          throw new Error('Failed to get signed URL');
+        }
+        setSelectedPhoto(data.signedUrl);
+      }
     } catch (error) {
       console.error('Error getting photo URL:', error);
       toast({
