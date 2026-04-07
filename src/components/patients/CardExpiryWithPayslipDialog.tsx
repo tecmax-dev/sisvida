@@ -8,6 +8,7 @@ import { Upload, FileCheck, Loader2, ShieldCheck, ShieldAlert, Calendar, UserChe
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { pdfToImageBase64 } from "@/utils/pdfToImage";
 
 interface CardExpiryWithPayslipDialogProps {
   open: boolean;
@@ -114,13 +115,19 @@ export function CardExpiryWithPayslipDialog({
     setVerificationStatus("uploading");
 
     try {
-      // Convert to base64 for AI analysis
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(fileToVerify);
-      });
+      let base64: string;
+
+      // If PDF, convert first page to image for AI vision analysis
+      if (fileToVerify.type === "application/pdf") {
+        base64 = await pdfToImageBase64(fileToVerify);
+      } else {
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(fileToVerify);
+        });
+      }
 
       setVerificationStatus("verifying");
 
