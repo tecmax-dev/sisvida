@@ -25,6 +25,17 @@ export async function syncAssociadoToPatient(
   const cleanCpf = (associado.cpf || "").replace(/\D/g, "");
   if (!cleanCpf) return;
 
+  // Buscar o convênio "Secmi - Titular" para atribuir automaticamente
+  const { data: secmiPlan } = await supabase
+    .from("insurance_plans")
+    .select("id")
+    .eq("clinic_id", clinicId)
+    .ilike("name", "Secmi - Titular")
+    .limit(1)
+    .maybeSingle();
+
+  const secmiPlanId = secmiPlan?.id || null;
+
   // Verificar se já existe paciente com esse CPF na clínica
   const { data: existing } = await supabase
     .from("patients")
@@ -34,10 +45,14 @@ export async function syncAssociadoToPatient(
     .maybeSingle();
 
   if (existing) {
-    // Já existe — apenas garantir que is_union_member = true
+    // Já existe — garantir is_union_member = true e atribuir convênio Secmi-Titular
+    const updateData: Record<string, unknown> = { is_union_member: true, is_active: true };
+    if (secmiPlanId) {
+      updateData.insurance_plan_id = secmiPlanId;
+    }
     await supabase
       .from("patients")
-      .update({ is_union_member: true, is_active: true })
+      .update(updateData)
       .eq("id", existing.id);
 
     // Anexar documentos de filiação ao paciente existente
@@ -79,6 +94,7 @@ export async function syncAssociadoToPatient(
     father_name: associado.nome_pai || null,
     is_active: true,
     is_union_member: true,
+    insurance_plan_id: secmiPlanId,
     union_affiliation_date: new Date().toISOString().split('T')[0],
     notes: "Cadastrado automaticamente via aprovação de filiação pública",
   }).select("id").single();
