@@ -123,12 +123,18 @@ export default function PendingPayslipReviews() {
     setDependentsCount(count || 0);
     
     if (request.attachment_path) {
-      const { data } = await supabase.storage
-        .from('contra-cheques')
-        .createSignedUrl(request.attachment_path, 300);
-      
-      if (data?.signedUrl) {
-        setPreviewUrl(data.signedUrl);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-payslip-signed-url', {
+          body: { path: request.attachment_path },
+        });
+        
+        if (!error && data?.signedUrl) {
+          setPreviewUrl(data.signedUrl);
+        } else {
+          console.error('[PendingPayslipReviews] Error getting signed URL:', error || 'No signedUrl returned');
+        }
+      } catch (err) {
+        console.error('[PendingPayslipReviews] Error invoking get-payslip-signed-url:', err);
       }
     }
   };
