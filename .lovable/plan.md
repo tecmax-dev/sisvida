@@ -1,75 +1,58 @@
 
-Objetivo
-Corrigir o motivo pelo qual lançamentos conciliados via OFX não aparecem em “Movimentação e Saldo > Extrato detalhado por portador” quando o OFX foi importado em um portador específico (ex.: “Conta Teste”).
+Objetivo: corrigir de forma definitiva o bloqueio da edição de convênio no cadastro de sócios em `/sindicato`, já que o campo está sendo desabilitado pela UI mesmo quando a permissão deveria estar liberada.
 
-Diagnóstico confirmado
-1) O extrato detalhado lista somente lançamentos da tabela financeira do portador selecionado e com status “paid”.
-2) Na conciliação manual atual, a lista de despesas pendentes não está restrita ao mesmo portador do lançamento OFX.
-3) Resultado prático: a conciliação foi feita no OFX da “Conta Teste”, mas 38 vínculos foram gravados em despesas de outro portador (“Fluxo Sicoob”).  
-4) Para “Conta Teste”, existe apenas 1 despesa conciliada e ainda com status “pending”; por isso ela também não entra no extrato detalhado (que filtra “paid”).
+1. Confirmar a causa raiz na camada de permissões
+- O campo “Convênio” é bloqueado apenas por `canEditMemberConvenio()` em `src/pages/union/UnionMemberDetailPage.tsx`.
+- Esse valor vem de `useUnionPermissions`, que por sua vez delega para `usePermissions`.
+- Pela leitura do banco, a permissão `union_edit_member_convenio` existe, mas não aparece nas permissões efetivas da Tatiane via `get_user_permissions(...)`.
+- Isso indica que o problema real está na atribuição/propagação da permissão, não no componente do formulário.
 
-Plano de implementação
-1) Blindar conciliação manual por portador (correção principal)
-- Arquivo: src/components/union/financials/UnionManualReconcileDialog.tsx
-- Ajustes:
-  - Filtrar a lista de despesas para exibir apenas itens com cash_register_id igual ao cash_register_id do lançamento do extrato.
-  - Aplicar esse filtro também na pré-seleção automática por número de cheque.
-  - Exibir no topo do diálogo um aviso do portador do extrato para deixar explícito o contexto da conciliação.
-- Resultado esperado:
-  - Não será mais possível vincular OFX de um portador com despesa de outro portador.
+2. Corrigir o cadastro/listagem de permissões no gerenciamento de grupos
+- Revisar `src/pages/union/UnionAccessGroupsPage.tsx` para garantir que a permissão `union_edit_member_convenio` apareça no grupo “Recepcionista Sênior”.
+- Hoje a tela carrega permissões de `permission_definitions`, então é provável que a permissão não esteja sendo exibida corretamente por ordenação/categoria/filtro de módulo ou por ausência de seed complementar.
+- Implementar exibição confiável dessa permissão na categoria “Sindical - Sócios”.
 
-2) Criar validação de segurança no backend da própria mutation (defesa em profundidade)
-- Arquivo: src/hooks/useUnionReconciliation.ts
-- Ajustes:
-  - Antes de confirmar reconcile, buscar os financialTransactionIds selecionados e validar:
-    - todos pertencem à mesma clinic_id;
-    - todos possuem cash_register_id igual ao da statement transaction.
-  - Se houver divergência, abortar com erro claro (“Não é permitido conciliar despesas de outro portador”).
-- Resultado esperado:
-  - Mesmo que a UI falhe no futuro, o vínculo cruzado entre portadores fica bloqueado.
+3. Corrigir a base de permissões do sistema
+- Adicionar uma migration para garantir que `union_edit_member_convenio` exista oficialmente em `permission_definitions` com:
+  - `module_type = 'union'`
+  - categoria `Sindical - Sócios`
+  - nome amigável “Alterar Convênio do Sócio”
+- Validar se ela precisa de `order_index` para aparecer no lugar certo na tela.
 
-3) Corrigir dados já conciliados incorretamente (seu caso atual)
-- Ação de dados (sem alterar schema):
-  - Identificar transações conciliadas do import da “Conta Teste” cujo matched_transaction_id aponta para despesa de outro portador.
-  - Para esses casos:
-    - remover conciliação da despesa financeira (is_conciliated=false, conciliated_at/by=null);
-    - voltar o lançamento OFX para pending_review (ou status equivalente de revisão);
-    - limpar matched_transaction_id/reconciled_at/reconciled_by para permitir reconciliação correta.
-- Resultado esperado:
-  - Você poderá reconciliar novamente, agora apenas com despesas da “Conta Teste”, e o extrato detalhado passará a refletir corretamente quando o status for “paid”.
+4. Corrigir a propagação da permissão para grupos de acesso
+- Verificar se o fluxo de salvar permissões de grupos sindicais está persistindo essa chave específica em `access_group_permissions`.
+- Se necessário, ajustar o salvamento para evitar que permissões novas/fora de listas antigas sejam descartadas silenciosamente.
+- Garantir que, após salvar, o grupo “Recepcionista Sênior” retenha `union_edit_member_convenio`.
 
-4) Melhorar feedback no fluxo para evitar nova confusão
-- Arquivos:
-  - src/components/union/financials/UnionManualReconcileDialog.tsx
-  - src/pages/union/UnionBankReconciliationPage.tsx (se necessário para mensagens)
-- Ajustes:
-  - Mostrar contagem “X despesas deste portador disponíveis”.
-  - Mensagem quando não houver despesas do portador para vincular.
-  - Se encontrar apenas despesas pending, orientar que “Movimentação e Saldo” mostra somente status pago.
+5. Endurecer a lógica de leitura no frontend
+- Em `usePermissions.ts`, manter a priorização do contexto sindical em rotas `/union` e `/sindicato`.
+- Adicionar logging defensivo temporário e/ou tratamento explícito para facilitar diagnóstico quando a permissão existir no grupo, mas não vier em `dbPermissions`.
+- Se houver cache de React Query segurando estado antigo, invalidar/refrescar a query de permissões após salvar grupos.
 
-5) Tratar consistência de indicadores pós-conciliação
-- Arquivo: src/hooks/useUnionReconciliation.ts
-- Ajustes:
-  - Recalcular/atualizar transactions_reconciled no import após conciliar/desconciliar, para o card do OFX não ficar “0 conciliadas” quando já houve conciliações manuais.
-- Resultado esperado:
-  - Indicadores da tela de conciliação ficam alinhados com o estado real.
+6. Validar a tela do sócio
+- Confirmar que `PatientFormFields` continue usando `canEditConvenio`, mas que o valor reflita corretamente a permissão atualizada.
+- Testar o cenário real:
+  - usuário Tatiane Santos
+  - grupo “Recepcionista Sênior”
+  - rota `/sindicato` → `/union` → Sócios
+  - campo “Convênio” habilitado quando a permissão estiver marcada
+  - mensagem “Sem permissão para alterar” não deve aparecer nesse caso
 
-Validação (aceite)
-1) Reconciliar novamente no OFX da “Conta Teste” escolhendo apenas despesas desse portador.
-2) Marcar essas despesas como “paid” (se estiverem pendentes).
-3) Abrir “Movimentação e Saldo”, selecionar “Conta Teste” e período correto.
-4) Confirmar presença das transações na grade e no PDF.
-5) Testar cenário negativo: tentar vincular despesa de outro portador e validar bloqueio.
+Detalhes técnicos
+- Arquivos principais:
+  - `src/hooks/usePermissions.ts`
+  - `src/hooks/useUnionPermissions.ts`
+  - `src/pages/union/UnionMemberDetailPage.tsx`
+  - `src/components/patients/PatientFormFields.tsx`
+  - `src/pages/union/UnionAccessGroupsPage.tsx`
+  - nova migration em `supabase/migrations/...sql`
+- Evidência já encontrada:
+  - a UI desabilita o select apenas por `canEditConvenio`
+  - a permissão existe em `permission_definitions`
+  - Tatiane está no grupo `Recepcionista Sênior`
+  - as permissões efetivas retornadas para ela não incluem `union_edit_member_convenio`
+- Conclusão prática:
+  - o bug está entre “permissão marcada no grupo” e “permissão efetivamente retornada ao usuário”, não no campo em si
 
-Sequelas técnicas e risco
-- Risco baixo de regressão visual (mudança concentrada no diálogo e na mutation).
-- Risco médio em dados históricos se o reparo for aplicado de forma ampla; por isso farei o reparo de dados com filtro estrito por import/portador afetado.
-
-Arquivos previstos para alteração
-- src/components/union/financials/UnionManualReconcileDialog.tsx
-- src/hooks/useUnionReconciliation.ts
-- (opcional de UX) src/pages/union/UnionBankReconciliationPage.tsx
-
-Observação técnica importante
-- O extrato detalhado por natureza contábil usa apenas lançamentos “paid”.  
-- Portanto, após corrigir o vínculo por portador, qualquer item ainda “pending” continuará fora do extrato até ser baixado/pago.
+Resultado esperado após implementação
+- Ao marcar “Alterar Convênio do Sócio” no grupo sindical correto e salvar, usuários desse grupo passam a editar o convênio imediatamente na tela de sócio.
