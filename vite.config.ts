@@ -162,6 +162,7 @@ export default defineConfig(({ mode }) => ({
     esbuildOptions: {
       target: "es2022",
     },
+    exclude: ["pdfjs-dist"],
   },
   build: {
     target: "es2022",
