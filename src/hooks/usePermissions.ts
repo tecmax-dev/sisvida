@@ -1,6 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 // All permission keys from the database (permission_definitions table)
 export type Permission =
@@ -280,13 +282,19 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
 
 export function usePermissions() {
   const { user, userRoles, currentClinic, isSuperAdmin } = useAuth();
+  const location = useLocation();
 
-  // Get current role for the current clinic
-  // Also try SINDICATO_CLINIC_ID as fallback for /sindicato routes where currentClinic may differ
-  const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-  const currentUserRole =
-    userRoles.find((r) => r.clinic_id === currentClinic?.id) ||
-    userRoles.find((r) => r.clinic_id === SINDICATO_CLINIC_ID);
+  const isUnionRoute =
+    location.pathname.startsWith("/union") || location.pathname.startsWith("/sindicato");
+
+  const currentClinicRole = userRoles.find((r) => r.clinic_id === currentClinic?.id);
+  const sindicatoClinicRole = userRoles.find((r) => r.clinic_id === SINDICATO_CLINIC_ID);
+
+  // In union routes, always prioritize the Sindicato clinic role/access group.
+  // This avoids reading permissions from another clinic when the user has multiple vínculos.
+  const currentUserRole = isUnionRoute
+    ? sindicatoClinicRole || currentClinicRole
+    : currentClinicRole || sindicatoClinicRole;
   const currentRole = currentUserRole?.role || null;
   const accessGroupId = currentUserRole?.access_group_id || null;
   // Use the resolved clinic id for permission queries (may differ from currentClinic in /sindicato)
