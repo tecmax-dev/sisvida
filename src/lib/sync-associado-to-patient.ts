@@ -25,6 +25,17 @@ export async function syncAssociadoToPatient(
   const cleanCpf = (associado.cpf || "").replace(/\D/g, "");
   if (!cleanCpf) return;
 
+  // Buscar o convênio "Secmi - Titular" para atribuir automaticamente
+  const { data: secmiPlan } = await supabase
+    .from("insurance_plans")
+    .select("id")
+    .eq("clinic_id", clinicId)
+    .ilike("name", "Secmi - Titular")
+    .limit(1)
+    .maybeSingle();
+
+  const secmiPlanId = secmiPlan?.id || null;
+
   // Verificar se já existe paciente com esse CPF na clínica
   const { data: existing } = await supabase
     .from("patients")
