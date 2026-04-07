@@ -110,8 +110,38 @@ export default function PatientPayslipHistoryPage() {
     if (!photoUrl) return;
     setLoadingImage(true);
     setViewerOpen(true);
-    setViewingImageUrl(photoUrl);
-    setLoadingImage(false);
+    
+    try {
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        const match = photoUrl.match(/\/object\/public\/dependent-documents\/(.+)$/);
+        if (match) {
+          const path = decodeURIComponent(match[1]);
+          const { data, error } = await supabase.functions.invoke('get-dependent-doc-signed-url', {
+            body: { path, bucket: 'dependent-documents' },
+          });
+          if (!error && data?.signedUrl) {
+            setViewingImageUrl(data.signedUrl);
+          } else {
+            setViewingImageUrl(photoUrl);
+          }
+        } else {
+          setViewingImageUrl(photoUrl);
+        }
+      } else {
+        const { data, error } = await supabase.functions.invoke('get-dependent-doc-signed-url', {
+          body: { path: photoUrl, bucket: 'dependent-documents' },
+        });
+        if (!error && data?.signedUrl) {
+          setViewingImageUrl(data.signedUrl);
+        } else {
+          setViewingImageUrl(photoUrl);
+        }
+      }
+    } catch {
+      setViewingImageUrl(photoUrl);
+    } finally {
+      setLoadingImage(false);
+    }
   };
 
   const formatDate = (dateString: string | null) => {
