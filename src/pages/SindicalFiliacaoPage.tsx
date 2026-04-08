@@ -551,6 +551,78 @@ export default function SindicalFiliacaoPage() {
   const onSubmit = async (data: FiliacaoFormData) => {
     if (!sindicato) return;
 
+    // ===== EDIT MODE: Update via edge function =====
+    if (editMode && editFiliacaoId) {
+      if (!employerData || !employerData.cnpj) {
+        toast({ title: "Empresa obrigatória", description: "Por favor, informe a empresa onde trabalha.", variant: "destructive" });
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const updatePayload = {
+          nome: data.nome,
+          rg: data.rg || null,
+          data_nascimento: data.data_nascimento,
+          sexo: data.sexo || null,
+          estado_civil: data.estado_civil || null,
+          nome_pai: data.nome_pai || null,
+          nome_mae: data.nome_mae || null,
+          cep: data.cep?.replace(/\D/g, "") || null,
+          logradouro: data.endereco || null,
+          numero: data.numero || null,
+          complemento: data.complemento || null,
+          bairro: data.bairro || null,
+          cidade: data.cidade || null,
+          uf: data.uf || null,
+          email: data.email,
+          telefone: data.celular.replace(/\D/g, ""),
+          cargo: data.funcao || null,
+          data_admissao: data.data_admissao || null,
+          employer_id: employerData?.employer_id || null,
+          empresa_cnpj: employerData?.cnpj || null,
+          empresa_razao_social: employerData?.razao_social || null,
+          empresa_nome_fantasia: employerData?.nome_fantasia || null,
+          empresa_endereco: employerData?.endereco || null,
+          empresa_matricula: employerData?.matricula || null,
+          forma_pagamento: data.forma_pagamento || null,
+          documento_foto_url: fotoUrl,
+          documento_rg_url: docFrenteUrl,
+          documento_rg_verso_url: docVersoUrl,
+          assinatura_digital_url: signatureUrl,
+        };
+
+        const { data: result, error } = await supabase.functions.invoke("public-filiacao-manage", {
+          body: {
+            action: "update",
+            filiacao_id: editFiliacaoId,
+            cpf: data.cpf.replace(/\D/g, ""),
+            data: updatePayload,
+            dependents: dependents.map(dep => ({
+              nome: dep.nome,
+              grau_parentesco: dep.grau_parentesco,
+              data_nascimento: dep.data_nascimento,
+              cpf: dep.cpf || null,
+            })),
+          },
+        });
+
+        if (error || result?.error) {
+          throw new Error(result?.error || "Erro ao atualizar filiação.");
+        }
+
+        setSuccess(true);
+        toast({ title: "Filiação atualizada!", description: "Seus dados foram atualizados com sucesso." });
+      } catch (error: any) {
+        console.error("Erro ao atualizar filiação:", error);
+        toast({ title: "Erro ao atualizar", description: error.message || "Não foi possível atualizar.", variant: "destructive" });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // ===== NEW MODE: Original insert logic =====
     if (cpfExists) {
       toast({
         title: cpfExistsType === 'paciente' ? "Você já possui cadastro" : "CPF já possui solicitação",
@@ -564,27 +636,18 @@ export default function SindicalFiliacaoPage() {
     }
 
     if (!employerData || !employerData.cnpj) {
-      toast({
-        title: "Empresa obrigatória",
-        description: "Por favor, informe a empresa onde trabalha.",
-        variant: "destructive",
-      });
+      toast({ title: "Empresa obrigatória", description: "Por favor, informe a empresa onde trabalha.", variant: "destructive" });
       return;
     }
 
     if (!signatureUrl) {
-      toast({
-        title: "Assinatura obrigatória",
-        description: "Por favor, assine digitalmente para autorizar o desconto.",
-        variant: "destructive",
-      });
+      toast({ title: "Assinatura obrigatória", description: "Por favor, assine digitalmente para autorizar o desconto.", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Gera ID no cliente para evitar necessidade de .select() que exige permissão SELECT
       const associadoId = crypto.randomUUID();
 
       const { error: associadoError } = await supabase
@@ -650,7 +713,6 @@ export default function SindicalFiliacaoPage() {
         }
       }
 
-      // Notify manager about new pending filiation (fire & forget)
       try {
         await supabase.functions.invoke("notify-new-filiacao", {
           body: {
@@ -666,17 +728,10 @@ export default function SindicalFiliacaoPage() {
       }
 
       setSuccess(true);
-      toast({
-        title: "Solicitação enviada!",
-        description: "Sua filiação foi registrada e será analisada em breve.",
-      });
+      toast({ title: "Solicitação enviada!", description: "Sua filiação foi registrada e será analisada em breve." });
     } catch (error: any) {
       console.error("Erro ao enviar filiação:", error);
-      toast({
-        title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar sua solicitação.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao enviar", description: error.message || "Não foi possível enviar sua solicitação.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
