@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Clock,
   Filter,
+  Edit,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FiliacaoDetailDialog } from "@/components/union/filiacoes/FiliacaoDetailDialog";
 import { FiliacaoApprovalDialog } from "@/components/union/filiacoes/FiliacaoApprovalDialog";
+import { FiliacaoEditDialog } from "@/components/union/filiacoes/FiliacaoEditDialog";
 
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 interface Filiacao {
@@ -102,6 +104,7 @@ export default function UnionFiliacoesPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Stats
   const [stats, setStats] = useState({
@@ -465,6 +468,12 @@ export default function UnionFiliacoesPage() {
                               <Eye className="h-4 w-4 mr-2" />
                               Ver Detalhes
                             </DropdownMenuItem>
+                            {canManageMembers() && (
+                              <DropdownMenuItem onClick={() => { setSelectedFiliacao(filiacao); setEditDialogOpen(true); }}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar Cadastro
+                              </DropdownMenuItem>
+                            )}
                             {filiacao.status === "pendente" && canManageMembers() && (
                               <>
                                 <DropdownMenuSeparator />
