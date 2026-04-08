@@ -576,6 +576,14 @@ export function FiliacaoDetailDialog({
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-4 border-t">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setEditDialogOpen(true)}
+          >
+            <Edit className="h-4 w-4" />
+            Editar Cadastro
+          </Button>
           {data.status === "pendente" ? (
             <>
               <Button onClick={onApprove} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
@@ -607,6 +615,29 @@ export function FiliacaoDetailDialog({
             Fechar
           </Button>
         </div>
+
+        <FiliacaoEditDialog
+          filiacaoId={data.id}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSaved={() => {
+            setEditDialogOpen(false);
+            // Re-fetch the data
+            if (filiacao?.id) {
+              setLoading(true);
+              supabase
+                .from("sindical_associados")
+                .select("*")
+                .eq("id", filiacao.id)
+                .single()
+                .then(({ data: refreshed }) => {
+                  if (refreshed) setData(refreshed);
+                  setLoading(false);
+                });
+            }
+            onRefresh();
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
