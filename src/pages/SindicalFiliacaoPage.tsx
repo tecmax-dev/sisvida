@@ -975,6 +975,12 @@ export default function SindicalFiliacaoPage() {
               <CardContent className="p-6 md:p-8 space-y-10">
                 
                 {/* CPF DESTACADO - PRIMEIRO CAMPO */}
+                {editMode ? (
+                  <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                    <label className="text-sm font-medium text-muted-foreground mb-1 block">CPF (não editável)</label>
+                    <p className="text-lg font-semibold text-foreground tracking-wider">{form.getValues("cpf")}</p>
+                  </div>
+                ) : (
                 <FormField
                   control={form.control}
                   name="cpf"
