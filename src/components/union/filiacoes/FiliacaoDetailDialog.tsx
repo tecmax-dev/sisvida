@@ -121,6 +121,7 @@ export function FiliacaoDetailDialog({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Fetch full data when dialog opens
   useEffect(() => {
