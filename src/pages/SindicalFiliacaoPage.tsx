@@ -253,6 +253,13 @@ export default function SindicalFiliacaoPage() {
   const [docVersoUrl, setDocVersoUrl] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
 
+  // ===== EDIT MODE STATE =====
+  const [editMode, setEditMode] = useState(false);
+  const [editLookup, setEditLookup] = useState(false);
+  const [editCpf, setEditCpf] = useState("");
+  const [editFiliacaoId, setEditFiliacaoId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
   const form = useForm<FiliacaoFormData>({
     resolver: zodResolver(filiacaoSchema),
     defaultValues: {
@@ -293,6 +300,122 @@ export default function SindicalFiliacaoPage() {
     if (fotoUrl || docFrenteUrl) step = 7;
     setCurrentStep(step);
   }, [watchedFields, employerData, dependents, fotoUrl, docFrenteUrl]);
+
+  // ===== EDIT: Lookup pending filiacao =====
+  const handleEditLookup = async () => {
+    const cleanCpf = editCpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11 || !sindicato) {
+      toast({ title: "CPF inválido", description: "Digite um CPF válido com 11 dígitos.", variant: "destructive" });
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      // Search for pending filiacao by CPF via edge function
+      const { data: result, error } = await supabase.functions.invoke("public-filiacao-manage", {
+        body: { action: "fetch", cpf: cleanCpf, filiacao_id: "lookup" },
+      });
+
+      // If lookup by ID fails, we need a different approach - search by CPF
+      // Actually, the edge function requires filiacao_id. Let's use a different approach:
+      // First check if there's a pending associado with this CPF
+      const { data: checkResult, error: checkError } = await supabase.functions.invoke(
+        "check-sindical-associado-by-cpf",
+        { body: { sindicatoId: sindicato.id, cpf: cleanCpf } }
+      );
+
+      if (checkError || !checkResult?.exists) {
+        toast({
+          title: "Filiação não encontrada",
+          description: "Não há solicitação pendente para este CPF neste sindicato.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Now fetch the full record using the ID
+      const filiacaoId = checkResult.id;
+      const { data: fetchResult, error: fetchError } = await supabase.functions.invoke("public-filiacao-manage", {
+        body: { action: "fetch", cpf: cleanCpf, filiacao_id: filiacaoId },
+      });
+
+      if (fetchError || fetchResult?.error) {
+        toast({
+          title: "Erro ao buscar",
+          description: fetchResult?.error || "Não foi possível carregar os dados da filiação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const f = fetchResult.filiacao;
+      setEditFiliacaoId(f.id);
+      setEditMode(true);
+      setEditLookup(false);
+
+      // Populate form with existing data
+      form.reset({
+        nome: f.nome || "",
+        cpf: formatCpf(f.cpf || ""),
+        rg: f.rg || "",
+        data_nascimento: f.data_nascimento || "",
+        sexo: f.sexo || "",
+        estado_civil: f.estado_civil || "",
+        nome_pai: f.nome_pai || "",
+        nome_mae: f.nome_mae || "",
+        cep: f.cep ? formatCep(f.cep) : "",
+        endereco: f.logradouro || "",
+        numero: f.numero || "",
+        complemento: f.complemento || "",
+        bairro: f.bairro || "",
+        cidade: f.cidade || "",
+        uf: f.uf || "",
+        email: f.email || "",
+        celular: f.telefone ? formatPhone(f.telefone) : "",
+        funcao: f.cargo || "",
+        data_admissao: f.data_admissao || "",
+        forma_pagamento: f.forma_pagamento || "",
+        aceite_lgpd: f.aceite_lgpd || false,
+      });
+
+      // Populate employer data
+      if (f.empresa_cnpj) {
+        setEmployerData({
+          employer_id: f.employer_id || undefined,
+          cnpj: f.empresa_cnpj,
+          razao_social: f.empresa_razao_social || "",
+          nome_fantasia: f.empresa_nome_fantasia || undefined,
+          endereco: f.empresa_endereco || undefined,
+          matricula: f.empresa_matricula || undefined,
+        });
+      }
+
+      // Populate documents
+      if (f.documento_foto_url) setFotoUrl(f.documento_foto_url);
+      if (f.documento_rg_url) setDocFrenteUrl(f.documento_rg_url);
+      if (f.documento_rg_verso_url) setDocVersoUrl(f.documento_rg_verso_url);
+      if (f.assinatura_digital_url) setSignatureUrl(f.assinatura_digital_url);
+
+      // Populate dependents
+      if (fetchResult.dependents?.length > 0) {
+        setDependents(
+          fetchResult.dependents.map((d: any) => ({
+            nome: d.nome || "",
+            grau_parentesco: d.grau_parentesco || "",
+            data_nascimento: d.data_nascimento || "",
+            cpf: d.cpf || "",
+          }))
+        );
+      }
+
+      toast({ title: "Dados carregados!", description: "Edite os campos e salve as alterações." });
+    } catch (err) {
+      console.error("Edit lookup error:", err);
+      toast({ title: "Erro", description: "Erro ao buscar filiação.", variant: "destructive" });
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
