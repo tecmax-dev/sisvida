@@ -28,7 +28,9 @@ import {
   Loader2,
   Pen,
   Users,
+  Edit,
 } from "lucide-react";
+import { FiliacaoEditDialog } from "./FiliacaoEditDialog";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
 
