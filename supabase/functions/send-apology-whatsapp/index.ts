@@ -55,20 +55,23 @@ Atenciosamente,
 
     const formattedPhone = phone.startsWith("55") ? phone : `55${phone}`;
 
-    const response = await fetch(
-      `${config.api_url}/message/sendText/${config.instance_name}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: config.api_key,
-        },
-        body: JSON.stringify({
-          number: `${formattedPhone}@s.whatsapp.net`,
-          text: message,
-        }),
-      }
-    );
+    // Try sendText endpoint (Evolution API v2)
+    let endpoint = `${config.api_url}/message/sendText/${config.instance_name}`;
+    let body: any = {
+      number: formattedPhone,
+      text: message,
+    };
+
+    console.log(`Sending to ${endpoint} with number ${formattedPhone}`);
+
+    let response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: config.api_key,
+      },
+      body: JSON.stringify(body),
+    });
 
     const result = await response.text();
     console.log("Evolution API response:", result);
