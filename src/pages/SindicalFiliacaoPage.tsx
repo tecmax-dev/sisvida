@@ -831,7 +831,61 @@ export default function SindicalFiliacaoPage() {
     );
   }
 
-  return (
+  // ===== EDIT LOOKUP SCREEN =====
+  if (editLookup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full p-8 shadow-xl border-0">
+          {clinicData?.logo_url && (
+            <img src={clinicData.logo_url} alt={sindicato.razao_social} className="h-16 w-auto object-contain mx-auto mb-6" />
+          )}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Editar Filiação</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Digite seu CPF para buscar sua solicitação pendente
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">CPF</label>
+              <Input
+                placeholder="000.000.000-00"
+                value={editCpf}
+                onChange={(e) => setEditCpf(formatCpf(e.target.value))}
+                className="h-12 rounded-xl text-center text-lg tracking-wider"
+                maxLength={14}
+              />
+            </div>
+            
+            <Button
+              onClick={handleEditLookup}
+              disabled={editLoading || editCpf.replace(/\D/g, "").length !== 11}
+              className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {editLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando...</>
+              ) : (
+                <><FileText className="h-4 w-4 mr-2" /> Buscar Filiação</>
+              )}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              onClick={() => setEditLookup(false)}
+              className="w-full"
+            >
+              Voltar para nova filiação
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
     <div className="min-h-screen bg-background">
       {/* Modern Header */}
       <header className="bg-white/80 backdrop-blur-lg border-b border-gray-100 sticky top-0 z-50 shadow-sm">
