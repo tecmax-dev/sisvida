@@ -133,12 +133,19 @@ export function FiliacaoEditDialog({ filiacaoId, open, onOpenChange, onSaved }: 
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("sindical_associados")
         .update(updateData)
-        .eq("id", filiacaoId);
+        .eq("id", filiacaoId)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+
+      if (!updated) {
+        toast({ title: "Nenhum registro foi atualizado", description: "Verifique suas permissões de acesso.", variant: "destructive" });
+        return;
+      }
 
       toast({ title: "Filiação atualizada com sucesso!" });
       onSaved();
