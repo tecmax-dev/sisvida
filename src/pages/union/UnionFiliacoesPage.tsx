@@ -576,6 +576,16 @@ export default function UnionFiliacoesPage() {
         onOpenChange={setApprovalDialogOpen}
         onComplete={handleApprovalComplete}
       />
+
+      <FiliacaoEditDialog
+        filiacaoId={selectedFiliacao?.id || null}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSaved={() => {
+          fetchFiliacoes();
+          fetchStats();
+        }}
+      />
     </div>
   );
 }
