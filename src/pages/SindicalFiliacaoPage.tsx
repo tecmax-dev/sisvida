@@ -886,6 +886,7 @@ export default function SindicalFiliacaoPage() {
     );
   }
 
+  return (
     <div className="min-h-screen bg-background">
       {/* Modern Header */}
       <header className="bg-white/80 backdrop-blur-lg border-b border-gray-100 sticky top-0 z-50 shadow-sm">
