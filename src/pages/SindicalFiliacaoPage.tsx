@@ -945,13 +945,28 @@ export default function SindicalFiliacaoPage() {
                   <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
                     <User className="h-6 w-6" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold mb-1">Bem-vindo ao Sindicato! 👋</h2>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold mb-1">
+                      {editMode ? "Editando sua Filiação ✏️" : "Bem-vindo ao Sindicato! 👋"}
+                    </h2>
                     <p className="text-emerald-100 text-sm">
-                      Preencha o formulário abaixo para solicitar sua filiação. É rápido e fácil!
+                      {editMode
+                        ? "Atualize os campos desejados e salve as alterações."
+                        : "Preencha o formulário abaixo para solicitar sua filiação. É rápido e fácil!"}
                     </p>
                   </div>
                 </div>
+                {!editMode && (
+                  <div className="mt-4 pt-3 border-t border-white/20">
+                    <button
+                      type="button"
+                      onClick={() => setEditLookup(true)}
+                      className="text-sm text-white/80 hover:text-white underline underline-offset-2 transition-colors"
+                    >
+                      Já enviou sua filiação? Clique aqui para editar
+                    </button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
