@@ -1647,21 +1647,41 @@ export default function SindicalFiliacaoPage() {
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg md:static md:p-0 md:bg-transparent md:border-0 md:shadow-none">
               <Button
                 type="submit"
-                disabled={submitting || cpfChecking || cpfExists}
+                disabled={submitting || (!editMode && (cpfChecking || cpfExists))}
                 className="w-full h-14 text-lg font-semibold rounded-xl bg-primary hover:bg-primary-dark text-primary-foreground shadow-lg transition-all duration-300"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Enviando solicitação...
+                    {editMode ? "Salvando alterações..." : "Enviando solicitação..."}
                   </>
                 ) : (
                   <>
-                    Enviar Filiação
+                    {editMode ? "Salvar Alterações" : "Enviar Filiação"}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </>
                 )}
               </Button>
+              {editMode && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditMode(false);
+                    setEditFiliacaoId(null);
+                    form.reset();
+                    setEmployerData(null);
+                    setDependents([]);
+                    setFotoUrl(null);
+                    setDocFrenteUrl(null);
+                    setDocVersoUrl(null);
+                    setSignatureUrl(null);
+                  }}
+                  className="w-full mt-2 text-muted-foreground"
+                >
+                  Cancelar edição
+                </Button>
+              )}
             </div>
 
           </form>
