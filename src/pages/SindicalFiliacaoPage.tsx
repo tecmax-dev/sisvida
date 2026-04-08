@@ -1036,6 +1036,7 @@ export default function SindicalFiliacaoPage() {
                     </FormItem>
                   )}
                 />
+                )}
 
                 {/* DADOS PESSOAIS */}
                 <FormSection icon={User} title="Dados Pessoais" subtitle="Conte-nos sobre você" accentColor="emerald">
