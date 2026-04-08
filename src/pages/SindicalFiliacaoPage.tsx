@@ -798,11 +798,14 @@ export default function SindicalFiliacaoPage() {
           </div>
           
           <h2 className="text-2xl font-bold text-primary mb-4">
-            Solicitação Enviada com Sucesso! 🎉
+            {editMode ? "Filiação Atualizada! ✅" : "Solicitação Enviada com Sucesso! 🎉"}
           </h2>
           
           <p className="text-muted-foreground mb-4">
-            Sua filiação ao <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span> foi registrada.
+            {editMode
+              ? <>Seus dados foram atualizados no cadastro do <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span>.</>
+              : <>Sua filiação ao <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span> foi registrada.</>
+            }
           </p>
           
           <div className="bg-primary/5 rounded-xl p-4 mb-6 border border-primary/10">
@@ -813,7 +816,10 @@ export default function SindicalFiliacaoPage() {
               <div className="text-left">
                 <p className="text-sm font-medium text-foreground">Próximos passos</p>
                 <p className="text-xs text-muted-foreground">
-                  Nossa equipe irá analisar sua solicitação e entrar em contato através do e-mail ou WhatsApp informados. Você receberá sua <span className="font-medium">Carteira Digital</span> após a aprovação.
+                  {editMode
+                    ? "As alterações foram salvas. Nossa equipe irá analisar sua solicitação atualizada."
+                    : <>Nossa equipe irá analisar sua solicitação e entrar em contato através do e-mail ou WhatsApp informados. Você receberá sua <span className="font-medium">Carteira Digital</span> após a aprovação.</>
+                  }
                 </p>
               </div>
             </div>
@@ -824,7 +830,7 @@ export default function SindicalFiliacaoPage() {
             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25"
           >
             <Heart className="h-4 w-4 mr-2" />
-            Nova Filiação
+            {editMode ? "Voltar ao Início" : "Nova Filiação"}
           </Button>
         </Card>
       </div>
