@@ -64,7 +64,7 @@ Atenciosamente,
           apikey: config.api_key,
         },
         body: JSON.stringify({
-          number: formattedPhone,
+          number: `${formattedPhone}@s.whatsapp.net`,
           text: message,
         }),
       }
