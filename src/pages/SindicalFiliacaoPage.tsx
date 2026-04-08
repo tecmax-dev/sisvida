@@ -334,7 +334,7 @@ export default function SindicalFiliacaoPage() {
       }
 
       // Now fetch the full record using the ID
-      const filiacaoId = checkResult.id;
+      const filiacaoId = checkResult.associado?.id;
       const { data: fetchResult, error: fetchError } = await supabase.functions.invoke("public-filiacao-manage", {
         body: { action: "fetch", cpf: cleanCpf, filiacao_id: filiacaoId },
       });
