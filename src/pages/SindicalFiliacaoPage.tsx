@@ -253,6 +253,13 @@ export default function SindicalFiliacaoPage() {
   const [docVersoUrl, setDocVersoUrl] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
 
+  // ===== EDIT MODE STATE =====
+  const [editMode, setEditMode] = useState(false);
+  const [editLookup, setEditLookup] = useState(false);
+  const [editCpf, setEditCpf] = useState("");
+  const [editFiliacaoId, setEditFiliacaoId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
   const form = useForm<FiliacaoFormData>({
     resolver: zodResolver(filiacaoSchema),
     defaultValues: {
@@ -293,6 +300,122 @@ export default function SindicalFiliacaoPage() {
     if (fotoUrl || docFrenteUrl) step = 7;
     setCurrentStep(step);
   }, [watchedFields, employerData, dependents, fotoUrl, docFrenteUrl]);
+
+  // ===== EDIT: Lookup pending filiacao =====
+  const handleEditLookup = async () => {
+    const cleanCpf = editCpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11 || !sindicato) {
+      toast({ title: "CPF inválido", description: "Digite um CPF válido com 11 dígitos.", variant: "destructive" });
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      // Search for pending filiacao by CPF via edge function
+      const { data: result, error } = await supabase.functions.invoke("public-filiacao-manage", {
+        body: { action: "fetch", cpf: cleanCpf, filiacao_id: "lookup" },
+      });
+
+      // If lookup by ID fails, we need a different approach - search by CPF
+      // Actually, the edge function requires filiacao_id. Let's use a different approach:
+      // First check if there's a pending associado with this CPF
+      const { data: checkResult, error: checkError } = await supabase.functions.invoke(
+        "check-sindical-associado-by-cpf",
+        { body: { sindicatoId: sindicato.id, cpf: cleanCpf } }
+      );
+
+      if (checkError || !checkResult?.exists) {
+        toast({
+          title: "Filiação não encontrada",
+          description: "Não há solicitação pendente para este CPF neste sindicato.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Now fetch the full record using the ID
+      const filiacaoId = checkResult.associado?.id;
+      const { data: fetchResult, error: fetchError } = await supabase.functions.invoke("public-filiacao-manage", {
+        body: { action: "fetch", cpf: cleanCpf, filiacao_id: filiacaoId },
+      });
+
+      if (fetchError || fetchResult?.error) {
+        toast({
+          title: "Erro ao buscar",
+          description: fetchResult?.error || "Não foi possível carregar os dados da filiação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const f = fetchResult.filiacao;
+      setEditFiliacaoId(f.id);
+      setEditMode(true);
+      setEditLookup(false);
+
+      // Populate form with existing data
+      form.reset({
+        nome: f.nome || "",
+        cpf: formatCpf(f.cpf || ""),
+        rg: f.rg || "",
+        data_nascimento: f.data_nascimento || "",
+        sexo: f.sexo || "",
+        estado_civil: f.estado_civil || "",
+        nome_pai: f.nome_pai || "",
+        nome_mae: f.nome_mae || "",
+        cep: f.cep ? formatCep(f.cep) : "",
+        endereco: f.logradouro || "",
+        numero: f.numero || "",
+        complemento: f.complemento || "",
+        bairro: f.bairro || "",
+        cidade: f.cidade || "",
+        uf: f.uf || "",
+        email: f.email || "",
+        celular: f.telefone ? formatPhone(f.telefone) : "",
+        funcao: f.cargo || "",
+        data_admissao: f.data_admissao || "",
+        forma_pagamento: f.forma_pagamento || "",
+        aceite_lgpd: f.aceite_lgpd || false,
+      });
+
+      // Populate employer data
+      if (f.empresa_cnpj) {
+        setEmployerData({
+          employer_id: f.employer_id || undefined,
+          cnpj: f.empresa_cnpj,
+          razao_social: f.empresa_razao_social || "",
+          nome_fantasia: f.empresa_nome_fantasia || undefined,
+          endereco: f.empresa_endereco || undefined,
+          matricula: f.empresa_matricula || undefined,
+        });
+      }
+
+      // Populate documents
+      if (f.documento_foto_url) setFotoUrl(f.documento_foto_url);
+      if (f.documento_rg_url) setDocFrenteUrl(f.documento_rg_url);
+      if (f.documento_rg_verso_url) setDocVersoUrl(f.documento_rg_verso_url);
+      if (f.assinatura_digital_url) setSignatureUrl(f.assinatura_digital_url);
+
+      // Populate dependents
+      if (fetchResult.dependents?.length > 0) {
+        setDependents(
+          fetchResult.dependents.map((d: any) => ({
+            nome: d.nome || "",
+            grau_parentesco: d.grau_parentesco || "",
+            data_nascimento: d.data_nascimento || "",
+            cpf: d.cpf || "",
+          }))
+        );
+      }
+
+      toast({ title: "Dados carregados!", description: "Edite os campos e salve as alterações." });
+    } catch (err) {
+      console.error("Edit lookup error:", err);
+      toast({ title: "Erro", description: "Erro ao buscar filiação.", variant: "destructive" });
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -428,6 +551,78 @@ export default function SindicalFiliacaoPage() {
   const onSubmit = async (data: FiliacaoFormData) => {
     if (!sindicato) return;
 
+    // ===== EDIT MODE: Update via edge function =====
+    if (editMode && editFiliacaoId) {
+      if (!employerData || !employerData.cnpj) {
+        toast({ title: "Empresa obrigatória", description: "Por favor, informe a empresa onde trabalha.", variant: "destructive" });
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const updatePayload = {
+          nome: data.nome,
+          rg: data.rg || null,
+          data_nascimento: data.data_nascimento,
+          sexo: data.sexo || null,
+          estado_civil: data.estado_civil || null,
+          nome_pai: data.nome_pai || null,
+          nome_mae: data.nome_mae || null,
+          cep: data.cep?.replace(/\D/g, "") || null,
+          logradouro: data.endereco || null,
+          numero: data.numero || null,
+          complemento: data.complemento || null,
+          bairro: data.bairro || null,
+          cidade: data.cidade || null,
+          uf: data.uf || null,
+          email: data.email,
+          telefone: data.celular.replace(/\D/g, ""),
+          cargo: data.funcao || null,
+          data_admissao: data.data_admissao || null,
+          employer_id: employerData?.employer_id || null,
+          empresa_cnpj: employerData?.cnpj || null,
+          empresa_razao_social: employerData?.razao_social || null,
+          empresa_nome_fantasia: employerData?.nome_fantasia || null,
+          empresa_endereco: employerData?.endereco || null,
+          empresa_matricula: employerData?.matricula || null,
+          forma_pagamento: data.forma_pagamento || null,
+          documento_foto_url: fotoUrl,
+          documento_rg_url: docFrenteUrl,
+          documento_rg_verso_url: docVersoUrl,
+          assinatura_digital_url: signatureUrl,
+        };
+
+        const { data: result, error } = await supabase.functions.invoke("public-filiacao-manage", {
+          body: {
+            action: "update",
+            filiacao_id: editFiliacaoId,
+            cpf: data.cpf.replace(/\D/g, ""),
+            data: updatePayload,
+            dependents: dependents.map(dep => ({
+              nome: dep.nome,
+              grau_parentesco: dep.grau_parentesco,
+              data_nascimento: dep.data_nascimento,
+              cpf: dep.cpf || null,
+            })),
+          },
+        });
+
+        if (error || result?.error) {
+          throw new Error(result?.error || "Erro ao atualizar filiação.");
+        }
+
+        setSuccess(true);
+        toast({ title: "Filiação atualizada!", description: "Seus dados foram atualizados com sucesso." });
+      } catch (error: any) {
+        console.error("Erro ao atualizar filiação:", error);
+        toast({ title: "Erro ao atualizar", description: error.message || "Não foi possível atualizar.", variant: "destructive" });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // ===== NEW MODE: Original insert logic =====
     if (cpfExists) {
       toast({
         title: cpfExistsType === 'paciente' ? "Você já possui cadastro" : "CPF já possui solicitação",
@@ -441,27 +636,18 @@ export default function SindicalFiliacaoPage() {
     }
 
     if (!employerData || !employerData.cnpj) {
-      toast({
-        title: "Empresa obrigatória",
-        description: "Por favor, informe a empresa onde trabalha.",
-        variant: "destructive",
-      });
+      toast({ title: "Empresa obrigatória", description: "Por favor, informe a empresa onde trabalha.", variant: "destructive" });
       return;
     }
 
     if (!signatureUrl) {
-      toast({
-        title: "Assinatura obrigatória",
-        description: "Por favor, assine digitalmente para autorizar o desconto.",
-        variant: "destructive",
-      });
+      toast({ title: "Assinatura obrigatória", description: "Por favor, assine digitalmente para autorizar o desconto.", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Gera ID no cliente para evitar necessidade de .select() que exige permissão SELECT
       const associadoId = crypto.randomUUID();
 
       const { error: associadoError } = await supabase
@@ -527,7 +713,6 @@ export default function SindicalFiliacaoPage() {
         }
       }
 
-      // Notify manager about new pending filiation (fire & forget)
       try {
         await supabase.functions.invoke("notify-new-filiacao", {
           body: {
@@ -543,17 +728,10 @@ export default function SindicalFiliacaoPage() {
       }
 
       setSuccess(true);
-      toast({
-        title: "Solicitação enviada!",
-        description: "Sua filiação foi registrada e será analisada em breve.",
-      });
+      toast({ title: "Solicitação enviada!", description: "Sua filiação foi registrada e será analisada em breve." });
     } catch (error: any) {
       console.error("Erro ao enviar filiação:", error);
-      toast({
-        title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar sua solicitação.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao enviar", description: error.message || "Não foi possível enviar sua solicitação.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -620,11 +798,14 @@ export default function SindicalFiliacaoPage() {
           </div>
           
           <h2 className="text-2xl font-bold text-primary mb-4">
-            Solicitação Enviada com Sucesso! 🎉
+            {editMode ? "Filiação Atualizada! ✅" : "Solicitação Enviada com Sucesso! 🎉"}
           </h2>
           
           <p className="text-muted-foreground mb-4">
-            Sua filiação ao <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span> foi registrada.
+            {editMode
+              ? <>Seus dados foram atualizados no cadastro do <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span>.</>
+              : <>Sua filiação ao <span className="font-semibold text-foreground">{sindicato.nome_fantasia || sindicato.razao_social}</span> foi registrada.</>
+            }
           </p>
           
           <div className="bg-primary/5 rounded-xl p-4 mb-6 border border-primary/10">
@@ -635,7 +816,10 @@ export default function SindicalFiliacaoPage() {
               <div className="text-left">
                 <p className="text-sm font-medium text-foreground">Próximos passos</p>
                 <p className="text-xs text-muted-foreground">
-                  Nossa equipe irá analisar sua solicitação e entrar em contato através do e-mail ou WhatsApp informados. Você receberá sua <span className="font-medium">Carteira Digital</span> após a aprovação.
+                  {editMode
+                    ? "As alterações foram salvas. Nossa equipe irá analisar sua solicitação atualizada."
+                    : <>Nossa equipe irá analisar sua solicitação e entrar em contato através do e-mail ou WhatsApp informados. Você receberá sua <span className="font-medium">Carteira Digital</span> após a aprovação.</>
+                  }
                 </p>
               </div>
             </div>
@@ -646,8 +830,63 @@ export default function SindicalFiliacaoPage() {
             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25"
           >
             <Heart className="h-4 w-4 mr-2" />
-            Nova Filiação
+            {editMode ? "Voltar ao Início" : "Nova Filiação"}
           </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // ===== EDIT LOOKUP SCREEN =====
+  if (editLookup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full p-8 shadow-xl border-0">
+          {clinicData?.logo_url && (
+            <img src={clinicData.logo_url} alt={sindicato.razao_social} className="h-16 w-auto object-contain mx-auto mb-6" />
+          )}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Editar Filiação</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Digite seu CPF para buscar sua solicitação pendente
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">CPF</label>
+              <Input
+                placeholder="000.000.000-00"
+                value={editCpf}
+                onChange={(e) => setEditCpf(formatCpf(e.target.value))}
+                className="h-12 rounded-xl text-center text-lg tracking-wider"
+                maxLength={14}
+              />
+            </div>
+            
+            <Button
+              onClick={handleEditLookup}
+              disabled={editLoading || editCpf.replace(/\D/g, "").length !== 11}
+              className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {editLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando...</>
+              ) : (
+                <><FileText className="h-4 w-4 mr-2" /> Buscar Filiação</>
+              )}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              onClick={() => setEditLookup(false)}
+              className="w-full"
+            >
+              Voltar para nova filiação
+            </Button>
+          </div>
         </Card>
       </div>
     );
@@ -712,13 +951,28 @@ export default function SindicalFiliacaoPage() {
                   <div className="p-3 rounded-xl bg-white/20 backdrop-blur">
                     <User className="h-6 w-6" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold mb-1">Bem-vindo ao Sindicato! 👋</h2>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold mb-1">
+                      {editMode ? "Editando sua Filiação ✏️" : "Bem-vindo ao Sindicato! 👋"}
+                    </h2>
                     <p className="text-emerald-100 text-sm">
-                      Preencha o formulário abaixo para solicitar sua filiação. É rápido e fácil!
+                      {editMode
+                        ? "Atualize os campos desejados e salve as alterações."
+                        : "Preencha o formulário abaixo para solicitar sua filiação. É rápido e fácil!"}
                     </p>
                   </div>
                 </div>
+                {!editMode && (
+                  <div className="mt-4 pt-3 border-t border-white/20">
+                    <button
+                      type="button"
+                      onClick={() => setEditLookup(true)}
+                      className="text-sm text-white/80 hover:text-white underline underline-offset-2 transition-colors"
+                    >
+                      Já enviou sua filiação? Clique aqui para editar
+                    </button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -727,6 +981,12 @@ export default function SindicalFiliacaoPage() {
               <CardContent className="p-6 md:p-8 space-y-10">
                 
                 {/* CPF DESTACADO - PRIMEIRO CAMPO */}
+                {editMode ? (
+                  <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                    <label className="text-sm font-medium text-muted-foreground mb-1 block">CPF (não editável)</label>
+                    <p className="text-lg font-semibold text-foreground tracking-wider">{form.getValues("cpf")}</p>
+                  </div>
+                ) : (
                 <FormField
                   control={form.control}
                   name="cpf"
@@ -782,6 +1042,7 @@ export default function SindicalFiliacaoPage() {
                     </FormItem>
                   )}
                 />
+                )}
 
                 {/* DADOS PESSOAIS */}
                 <FormSection icon={User} title="Dados Pessoais" subtitle="Conte-nos sobre você" accentColor="emerald">
@@ -1399,21 +1660,41 @@ export default function SindicalFiliacaoPage() {
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-lg md:static md:p-0 md:bg-transparent md:border-0 md:shadow-none">
               <Button
                 type="submit"
-                disabled={submitting || cpfChecking || cpfExists}
+                disabled={submitting || (!editMode && (cpfChecking || cpfExists))}
                 className="w-full h-14 text-lg font-semibold rounded-xl bg-primary hover:bg-primary-dark text-primary-foreground shadow-lg transition-all duration-300"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Enviando solicitação...
+                    {editMode ? "Salvando alterações..." : "Enviando solicitação..."}
                   </>
                 ) : (
                   <>
-                    Enviar Filiação
+                    {editMode ? "Salvar Alterações" : "Enviar Filiação"}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </>
                 )}
               </Button>
+              {editMode && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditMode(false);
+                    setEditFiliacaoId(null);
+                    form.reset();
+                    setEmployerData(null);
+                    setDependents([]);
+                    setFotoUrl(null);
+                    setDocFrenteUrl(null);
+                    setDocVersoUrl(null);
+                    setSignatureUrl(null);
+                  }}
+                  className="w-full mt-2 text-muted-foreground"
+                >
+                  Cancelar edição
+                </Button>
+              )}
             </div>
 
           </form>
