@@ -392,7 +392,11 @@ export function UnionCreateMemberDialog({
           });
           if (depError) {
             console.error("Error inserting dependent:", dep.nome, depError);
-            failedDeps.push(dep.nome);
+            if (depError.message?.includes("CPF_ASSOCIADO_EXISTENTE")) {
+              failedDeps.push(`${dep.nome} (CPF já cadastrado como titular)`);
+            } else {
+              failedDeps.push(dep.nome);
+            }
           }
         }
         if (failedDeps.length > 0) {
@@ -426,7 +430,11 @@ export function UnionCreateMemberDialog({
       onCreated?.(patientId);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Erro ao criar sócio");
+      if (e?.message?.includes("CPF_DEPENDENTE_EXISTENTE")) {
+        toast.error("Este CPF já está cadastrado como dependente. Não é permitido cadastrar como associado/titular.");
+      } else {
+        toast.error(e?.message || "Erro ao criar sócio");
+      }
     } finally {
       setSaving(false);
     }
