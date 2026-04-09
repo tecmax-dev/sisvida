@@ -1409,6 +1409,7 @@ export default function PatientsPage() {
                         entityType="patient"
                         currentExpiryDate={patient.card_expires_at || null}
                         cardNumber={patient.card_number}
+                        insurancePlanName={patient.insurance_plan?.name || null}
                         onUpdate={fetchPatients}
                         requirePayslip={!patient.insurance_plan?.name?.toLowerCase().includes('rodoviário') && !patient.insurance_plan?.name?.toLowerCase().includes('rodoviarios')}
                       />
