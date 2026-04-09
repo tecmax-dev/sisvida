@@ -82,8 +82,8 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260409a', revision: null },
-          { url: '/manifest-sindicato.webmanifest', revision: '20260409a' },
+          { url: '/cache-bust-v20260409b', revision: null },
+          { url: '/manifest-sindicato.webmanifest', revision: '20260409b' },
         ],
         runtimeCaching: [
           // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
