@@ -101,6 +101,7 @@ interface Contribution {
   paid_at: string | null;
   paid_value: number | null;
   payment_method: string | null;
+  notes?: string | null;
   employers?: Employer;
   contribution_types?: ContributionType;
 }
@@ -829,7 +830,10 @@ export default function ContributionDialogs({
                 {selectedContribution.status === "paid" && (
                   <Button
                     variant="outline"
-                    onClick={() => setReceiptDialogOpen(true)}
+                    onClick={() => {
+                      onViewDialogChange(false);
+                      setReceiptDialogOpen(true);
+                    }}
                   >
                     <Receipt className="h-4 w-4 mr-2" />
                     Gerar Recibo
