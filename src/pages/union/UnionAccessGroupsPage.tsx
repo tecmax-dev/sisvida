@@ -565,6 +565,32 @@ export default function UnionAccessGroupsPage() {
                     onChange={(e) => setGroupDescription(e.target.value)}
                   />
                 </div>
+                {moduleFilter === 'clinic' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="swapDeadline">Limite de horas para troca de paciente no slot</Label>
+                    <Select
+                      value={groupSwapDeadline}
+                      onValueChange={setGroupSwapDeadline}
+                    >
+                      <SelectTrigger id="swapDeadline">
+                        <SelectValue placeholder="Sem limite (padrão)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem limite</SelectItem>
+                        <SelectItem value="0.5">30 minutos antes</SelectItem>
+                        <SelectItem value="1">1 hora antes</SelectItem>
+                        <SelectItem value="2">2 horas antes</SelectItem>
+                        <SelectItem value="6">6 horas antes</SelectItem>
+                        <SelectItem value="12">12 horas antes</SelectItem>
+                        <SelectItem value="24">24 horas antes</SelectItem>
+                        <SelectItem value="48">48 horas antes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Define com quantas horas de antecedência o usuário pode trocar o paciente em um agendamento existente
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
