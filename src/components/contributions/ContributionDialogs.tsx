@@ -826,6 +826,15 @@ export default function ContributionDialogs({
               )}
 
               <DialogFooter className="flex-col sm:flex-row gap-2">
+                {selectedContribution.status === "paid" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setReceiptDialogOpen(true)}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Gerar Recibo
+                  </Button>
+                )}
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
                   <>
                     <Button
