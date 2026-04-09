@@ -430,7 +430,11 @@ export function UnionCreateMemberDialog({
       onCreated?.(patientId);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "Erro ao criar sócio");
+      if (e?.message?.includes("CPF_DEPENDENTE_EXISTENTE")) {
+        toast.error("Este CPF já está cadastrado como dependente. Não é permitido cadastrar como associado/titular.");
+      } else {
+        toast.error(e?.message || "Erro ao criar sócio");
+      }
     } finally {
       setSaving(false);
     }
