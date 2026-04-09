@@ -17,6 +17,7 @@ import { usePatientCards, PatientCard } from '@/hooks/usePatientCards';
 import { PatientCardView } from '@/components/patients/PatientCardView';
 import { PatientCardDialog } from '@/components/patients/PatientCardDialog';
 import { PayslipRequestsList } from '@/components/patients/PayslipRequestsList';
+import { CardExpiryWithPayslipDialog } from '@/components/patients/CardExpiryWithPayslipDialog';
 
 interface PatientCardsModalProps {
   open: boolean;
@@ -33,13 +34,13 @@ export function PatientCardsModal({
 }: PatientCardsModalProps) {
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
-  const { cards, isLoading, createCard, renewCard, isCreating, isRenewing } = usePatientCards(
+  const { cards, isLoading, createCard, renewCard, isCreating, isRenewing, refetch } = usePatientCards(
     currentClinic?.id,
     patientId
   );
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [renewDialogOpen, setRenewDialogOpen] = useState(false);
+  const [payslipRenewOpen, setPayslipRenewOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<PatientCard | null>(null);
   const [activeTab, setActiveTab] = useState('carteirinha');
 
@@ -51,17 +52,9 @@ export function PatientCardsModal({
     });
   };
 
-  const handleRenewCard = (data: { patient_id: string; expires_at: string }) => {
-    if (!selectedCard) return;
-    renewCard(
-      { cardId: selectedCard.id, newExpiresAt: data.expires_at },
-      { onSuccess: () => setRenewDialogOpen(false) }
-    );
-  };
-
   const openRenewDialog = (card: PatientCard) => {
     setSelectedCard(card);
-    setRenewDialogOpen(true);
+    setPayslipRenewOpen(true);
   };
 
   const handlePrint = () => {
@@ -190,17 +183,15 @@ export function PatientCardsModal({
         mode="create"
       />
 
-      {/* Renew Card Dialog */}
+      {/* Renew Card with Payslip Verification */}
       {selectedCard && (
-        <PatientCardDialog
-          open={renewDialogOpen}
-          onOpenChange={setRenewDialogOpen}
-          patientId={patientId}
-          patientName={patientName}
-          onSubmit={handleRenewCard}
-          isLoading={isRenewing}
-          mode="renew"
-          currentExpiresAt={selectedCard.expires_at}
+        <CardExpiryWithPayslipDialog
+          open={payslipRenewOpen}
+          onOpenChange={setPayslipRenewOpen}
+          entityId={patientId}
+          entityType="patient"
+          currentExpiryDate={selectedCard.expires_at}
+          onSuccess={() => refetch()}
         />
       )}
     </>
