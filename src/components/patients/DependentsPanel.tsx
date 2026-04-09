@@ -219,6 +219,14 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
             });
             return;
           }
+          if (error.message.includes("CPF_ASSOCIADO_EXISTENTE")) {
+            toast({
+              title: "CPF de associado",
+              description: "Este CPF já está cadastrado como associado/titular. Não é permitido cadastrar como dependente.",
+              variant: "destructive",
+            });
+            return;
+          }
           throw error;
         }
         toast({
