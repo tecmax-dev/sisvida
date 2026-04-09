@@ -1077,6 +1077,13 @@ export default function ContributionDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Receipt Dialog */}
+      <UnionContributionReceiptDialog
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        contribution={selectedContribution}
+        unionEntity={unionEntity}
+      />
     </>
   );
 }
