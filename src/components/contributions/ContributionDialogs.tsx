@@ -140,6 +140,8 @@ export default function ContributionDialogs({
   generatingInvoice,
   allowDuplicateCompetence = false,
 }: ContributionDialogsProps) {
+  const { entity: unionEntity } = useUnionEntity();
+
   // Create form states
   const [formEmployerId, setFormEmployerId] = useState("");
   const [formTypeId, setFormTypeId] = useState("");
@@ -168,6 +170,9 @@ export default function ContributionDialogs({
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Receipt dialog
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
 
   // Duplicate check for edit dialog
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
