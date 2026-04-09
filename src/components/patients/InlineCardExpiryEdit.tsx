@@ -53,12 +53,8 @@ export function InlineCardExpiryEdit({
     daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 
   const normalizedInsurancePlan = insurancePlanName?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
-  const shouldRequirePayslip =
-    requirePayslip ||
-    (entityType === "patient" &&
-      normalizedInsurancePlan.length > 0 &&
-      !normalizedInsurancePlan.includes("rodoviario") &&
-      !normalizedInsurancePlan.includes("rodoviarios"));
+  const isRodoviario = normalizedInsurancePlan.includes("rodoviario");
+  const shouldRequirePayslip = requirePayslip || (entityType === "patient" && !isRodoviario);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
