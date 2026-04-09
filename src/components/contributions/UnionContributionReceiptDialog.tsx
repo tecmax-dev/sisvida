@@ -39,7 +39,7 @@ interface Contribution {
   paid_at: string | null;
   paid_value: number | null;
   payment_method: string | null;
-  notes: string | null;
+  notes?: string | null;
   employers?: Employer;
   contribution_types?: ContributionType;
 }
