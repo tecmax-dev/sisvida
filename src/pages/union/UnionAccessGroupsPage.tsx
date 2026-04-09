@@ -78,6 +78,7 @@ interface AccessGroup {
   is_active: boolean;
   clinic_id: string | null;
   module_type: string;
+  patient_swap_deadline_hours: number | null;
   created_at: string;
 }
 
@@ -157,6 +158,7 @@ export default function UnionAccessGroupsPage() {
   const [moduleFilter, setModuleFilter] = useState<"clinic" | "union">("union");
   const [searchTerm, setSearchTerm] = useState("");
   const [permissionSearch, setPermissionSearch] = useState("");
+  const [groupSwapDeadline, setGroupSwapDeadline] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -218,6 +220,7 @@ export default function UnionAccessGroupsPage() {
     setGroupName(group.name);
     setGroupDescription(group.description || "");
     setGroupModuleType((group.module_type as "clinic" | "union") || "union");
+    setGroupSwapDeadline(group.patient_swap_deadline_hours?.toString() || "");
 
     // Fetch group permissions
     const { data, error } = await supabase
@@ -239,6 +242,7 @@ export default function UnionAccessGroupsPage() {
     setGroupName("");
     setGroupDescription("");
     setGroupModuleType(moduleFilter);
+    setGroupSwapDeadline("");
     setSelectedPermissions(new Set());
   };
 
