@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { fetchAllEmployers, fetchAllContributions } from "@/lib/supabase-helpers";
 import { formatCompetence } from "@/lib/competence-format";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 // Existing components from dashboard pattern
 import ContributionsOverviewTab from "@/components/contributions/ContributionsOverviewTab";
@@ -114,9 +115,13 @@ const getInitialYear = () => {
 };
 
 export default function UnionContributionsPageRedesign() {
-  const { currentClinic, session } = useAuth();
+  const { currentClinic: authClinic, session, userRoles } = useAuth();
   const { validateSession } = useSessionValidator();
   const { entity: unionEntity } = useUnionEntity();
+  const currentClinic = useMemo(
+    () => userRoles.find((role) => role.clinic_id === SINDICATO_CLINIC_ID)?.clinic || authClinic,
+    [authClinic, userRoles]
+  );
   
   // Data state
   const [contributions, setContributions] = useState<Contribution[]>([]);
