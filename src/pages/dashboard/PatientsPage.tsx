@@ -1410,6 +1410,7 @@ export default function PatientsPage() {
                         currentExpiryDate={patient.card_expires_at || null}
                         cardNumber={patient.card_number}
                         onUpdate={fetchPatients}
+                        requirePayslip={!patient.insurance_plan?.name?.toLowerCase().includes('rodoviário') && !patient.insurance_plan?.name?.toLowerCase().includes('rodoviarios')}
                       />
                     </TableCell>
                     {isAdmin && (
