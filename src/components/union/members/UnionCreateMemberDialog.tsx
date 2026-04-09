@@ -430,10 +430,13 @@ export function UnionCreateMemberDialog({
       onCreated?.(patientId);
     } catch (e: any) {
       console.error(e);
-      if (e?.message?.includes("CPF_DEPENDENTE_EXISTENTE")) {
+      const msg = e?.message || "";
+      if (msg.includes("CPF_DEPENDENTE_EXISTENTE")) {
         toast.error("Este CPF já está cadastrado como dependente. Não é permitido cadastrar como associado/titular.");
+      } else if (msg.includes("CPF_DUPLICADO") || msg.includes("idx_patients_unique_cpf_clinic") || msg.includes("idx_patients_cpf_clinic")) {
+        toast.error("Este CPF já está cadastrado como associado. Não é permitido duplicar.");
       } else {
-        toast.error(e?.message || "Erro ao criar sócio");
+        toast.error(msg || "Erro ao criar sócio");
       }
     } finally {
       setSaving(false);
