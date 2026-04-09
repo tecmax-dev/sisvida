@@ -292,6 +292,7 @@ export default function UnionAccessGroupsPage() {
           .update({
             name: groupName.trim(),
             description: groupDescription.trim() || null,
+            patient_swap_deadline_hours: groupModuleType === 'clinic' && groupSwapDeadline ? parseFloat(groupSwapDeadline) : null,
           })
           .eq('id', selectedGroup.id);
 
@@ -304,6 +305,7 @@ export default function UnionAccessGroupsPage() {
             name: groupName.trim(),
             description: groupDescription.trim() || null,
             module_type: groupModuleType,
+            patient_swap_deadline_hours: groupModuleType === 'clinic' && groupSwapDeadline ? parseFloat(groupSwapDeadline) : null,
             clinic_id: resolvedClinic?.id || null,
             is_system: false,
           })
