@@ -15,6 +15,7 @@ interface InlineCardExpiryEditProps {
   entityType: "patient" | "dependent";
   currentExpiryDate: string | null;
   cardNumber?: string | null;
+  insurancePlanName?: string | null;
   onUpdate?: () => void;
   requirePayslip?: boolean;
 }
@@ -24,6 +25,7 @@ export function InlineCardExpiryEdit({
   entityType,
   currentExpiryDate,
   cardNumber,
+  insurancePlanName,
   onUpdate,
   requirePayslip = false,
 }: InlineCardExpiryEditProps) {
@@ -50,6 +52,14 @@ export function InlineCardExpiryEdit({
   const isExpiringSoon =
     daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 
+  const normalizedInsurancePlan = insurancePlanName?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
+  const shouldRequirePayslip =
+    requirePayslip ||
+    (entityType === "patient" &&
+      normalizedInsurancePlan.length > 0 &&
+      !normalizedInsurancePlan.includes("rodoviario") &&
+      !normalizedInsurancePlan.includes("rodoviarios"));
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -58,9 +68,16 @@ export function InlineCardExpiryEdit({
 
   const handleStartEdit = () => {
     if (!canEditExpiry) return;
+
+    console.info("[InlineCardExpiryEdit] start", {
+      entityId,
+      entityType,
+      insurancePlanName,
+      requirePayslip,
+      shouldRequirePayslip,
+    });
     
-    // If payslip is required, open the dialog instead of inline edit
-    if (requirePayslip) {
+    if (shouldRequirePayslip) {
       setShowPayslipDialog(true);
       return;
     }
@@ -230,7 +247,7 @@ export function InlineCardExpiryEdit({
         >
           —
         </button>
-        {requirePayslip && (
+        {shouldRequirePayslip && (
           <CardExpiryWithPayslipDialog
             open={showPayslipDialog}
             onOpenChange={setShowPayslipDialog}
@@ -273,7 +290,7 @@ export function InlineCardExpiryEdit({
       >
         {badgeContent}
       </button>
-      {requirePayslip && (
+      {shouldRequirePayslip && (
         <CardExpiryWithPayslipDialog
           open={showPayslipDialog}
           onOpenChange={setShowPayslipDialog}
