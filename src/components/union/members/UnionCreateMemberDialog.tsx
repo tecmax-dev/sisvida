@@ -392,7 +392,11 @@ export function UnionCreateMemberDialog({
           });
           if (depError) {
             console.error("Error inserting dependent:", dep.nome, depError);
-            failedDeps.push(dep.nome);
+            if (depError.message?.includes("CPF_ASSOCIADO_EXISTENTE")) {
+              failedDeps.push(`${dep.nome} (CPF já cadastrado como titular)`);
+            } else {
+              failedDeps.push(dep.nome);
+            }
           }
         }
         if (failedDeps.length > 0) {
