@@ -1045,8 +1045,8 @@ export default function UnionMembersListPage() {
                           entityType="patient"
                           currentExpiryDate={member.card_expires_at || null}
                           cardNumber={member.card_number}
+                          insurancePlanName={member.insurance_plan?.name || null}
                           onUpdate={fetchMembers}
-                          requirePayslip={!member.insurance_plan?.name?.toLowerCase().includes('rodoviário') && !member.insurance_plan?.name?.toLowerCase().includes('rodoviarios')}
                         />
                       </TableCell>
                       {isAdmin && (

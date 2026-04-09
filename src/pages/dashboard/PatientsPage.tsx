@@ -1411,7 +1411,6 @@ export default function PatientsPage() {
                         cardNumber={patient.card_number}
                         insurancePlanName={patient.insurance_plan?.name || null}
                         onUpdate={fetchPatients}
-                        requirePayslip={!patient.insurance_plan?.name?.toLowerCase().includes('rodoviário') && !patient.insurance_plan?.name?.toLowerCase().includes('rodoviarios')}
                       />
                     </TableCell>
                     {isAdmin && (
