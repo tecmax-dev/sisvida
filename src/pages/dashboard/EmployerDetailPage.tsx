@@ -86,9 +86,11 @@ import { SendOverdueNotificationDialog } from "@/components/contributions/SendOv
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
 import CreateAwaitingValueDialog from "@/components/contributions/CreateAwaitingValueDialog";
+import UnionContributionReceiptDialog from "@/components/contributions/UnionContributionReceiptDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
+import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -165,6 +167,7 @@ export default function EmployerDetailPage() {
   const backUrl = isUnionModule ? "/union/empresas" : "/dashboard/empresas";
   const { currentClinic, session } = useAuth();
   const { lookupCnpj, cnpjLoading } = useCnpjLookup();
+  const { entity: unionEntity } = useUnionEntity();
 
   const [employer, setEmployer] = useState<Employer | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -190,6 +193,7 @@ export default function EmployerDetailPage() {
   const [createContribDialogOpen, setCreateContribDialogOpen] = useState(false);
   const [viewContribDialogOpen, setViewContribDialogOpen] = useState(false);
   const [manualPaymentDialogOpen, setManualPaymentDialogOpen] = useState(false);
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1292,7 +1296,7 @@ export default function EmployerDetailPage() {
 
       {/* View Contribution Dialog */}
       <Dialog open={viewContribDialogOpen} onOpenChange={setViewContribDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Contribuição</DialogTitle>
           </DialogHeader>
@@ -1394,6 +1398,18 @@ export default function EmployerDetailPage() {
               )}
 
               <DialogFooter className="flex-wrap gap-2">
+                {selectedContribution.status === "paid" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setViewContribDialogOpen(false);
+                      setReceiptDialogOpen(true);
+                    }}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Gerar Recibo
+                  </Button>
+                )}
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
                   <>
                     <Button
@@ -1503,6 +1519,13 @@ export default function EmployerDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UnionContributionReceiptDialog
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        contribution={selectedContribution}
+        unionEntity={unionEntity}
+      />
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

@@ -716,7 +716,7 @@ export default function ContributionDialogs({
 
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={onViewDialogChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Contribuição</DialogTitle>
           </DialogHeader>
