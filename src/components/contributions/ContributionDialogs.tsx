@@ -830,7 +830,10 @@ export default function ContributionDialogs({
                 {selectedContribution.status === "paid" && (
                   <Button
                     variant="outline"
-                    onClick={() => setReceiptDialogOpen(true)}
+                    onClick={() => {
+                      onViewDialogChange(false);
+                      setReceiptDialogOpen(true);
+                    }}
                   >
                     <Receipt className="h-4 w-4 mr-2" />
                     Gerar Recibo
