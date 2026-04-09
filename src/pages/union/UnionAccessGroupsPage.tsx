@@ -14,6 +14,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Plus, 
   Search, 
@@ -71,6 +78,7 @@ interface AccessGroup {
   is_active: boolean;
   clinic_id: string | null;
   module_type: string;
+  patient_swap_deadline_hours: number | null;
   created_at: string;
 }
 
@@ -150,6 +158,7 @@ export default function UnionAccessGroupsPage() {
   const [moduleFilter, setModuleFilter] = useState<"clinic" | "union">("union");
   const [searchTerm, setSearchTerm] = useState("");
   const [permissionSearch, setPermissionSearch] = useState("");
+  const [groupSwapDeadline, setGroupSwapDeadline] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -211,6 +220,7 @@ export default function UnionAccessGroupsPage() {
     setGroupName(group.name);
     setGroupDescription(group.description || "");
     setGroupModuleType((group.module_type as "clinic" | "union") || "union");
+    setGroupSwapDeadline(group.patient_swap_deadline_hours?.toString() || "");
 
     // Fetch group permissions
     const { data, error } = await supabase
@@ -232,6 +242,7 @@ export default function UnionAccessGroupsPage() {
     setGroupName("");
     setGroupDescription("");
     setGroupModuleType(moduleFilter);
+    setGroupSwapDeadline("");
     setSelectedPermissions(new Set());
   };
 
@@ -281,6 +292,7 @@ export default function UnionAccessGroupsPage() {
           .update({
             name: groupName.trim(),
             description: groupDescription.trim() || null,
+            patient_swap_deadline_hours: groupModuleType === 'clinic' && groupSwapDeadline ? parseFloat(groupSwapDeadline) : null,
           })
           .eq('id', selectedGroup.id);
 
@@ -293,6 +305,7 @@ export default function UnionAccessGroupsPage() {
             name: groupName.trim(),
             description: groupDescription.trim() || null,
             module_type: groupModuleType,
+            patient_swap_deadline_hours: groupModuleType === 'clinic' && groupSwapDeadline ? parseFloat(groupSwapDeadline) : null,
             clinic_id: resolvedClinic?.id || null,
             is_system: false,
           })
@@ -552,6 +565,32 @@ export default function UnionAccessGroupsPage() {
                     onChange={(e) => setGroupDescription(e.target.value)}
                   />
                 </div>
+                {moduleFilter === 'clinic' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="swapDeadline">Limite de horas para troca de paciente no slot</Label>
+                    <Select
+                      value={groupSwapDeadline}
+                      onValueChange={setGroupSwapDeadline}
+                    >
+                      <SelectTrigger id="swapDeadline">
+                        <SelectValue placeholder="Sem limite (padrão)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem limite</SelectItem>
+                        <SelectItem value="0.5">30 minutos antes</SelectItem>
+                        <SelectItem value="1">1 hora antes</SelectItem>
+                        <SelectItem value="2">2 horas antes</SelectItem>
+                        <SelectItem value="6">6 horas antes</SelectItem>
+                        <SelectItem value="12">12 horas antes</SelectItem>
+                        <SelectItem value="24">24 horas antes</SelectItem>
+                        <SelectItem value="48">48 horas antes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Define com quantas horas de antecedência o usuário pode trocar o paciente em um agendamento existente
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
