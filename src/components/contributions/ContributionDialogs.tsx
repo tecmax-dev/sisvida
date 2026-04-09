@@ -56,6 +56,7 @@ import {
   Trash2,
   Check,
   ChevronsUpDown,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
