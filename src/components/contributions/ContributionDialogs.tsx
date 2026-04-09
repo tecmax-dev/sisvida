@@ -56,12 +56,15 @@ import {
   Trash2,
   Check,
   ChevronsUpDown,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import UnionContributionReceiptDialog from "./UnionContributionReceiptDialog";
+import { useUnionEntity } from "@/hooks/useUnionEntity";
 
 interface Employer {
   id: string;
@@ -138,6 +141,8 @@ export default function ContributionDialogs({
   generatingInvoice,
   allowDuplicateCompetence = false,
 }: ContributionDialogsProps) {
+  const { entity: unionEntity } = useUnionEntity();
+
   // Create form states
   const [formEmployerId, setFormEmployerId] = useState("");
   const [formTypeId, setFormTypeId] = useState("");
@@ -166,6 +171,9 @@ export default function ContributionDialogs({
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Receipt dialog
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
 
   // Duplicate check for edit dialog
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
@@ -818,6 +826,15 @@ export default function ContributionDialogs({
               )}
 
               <DialogFooter className="flex-col sm:flex-row gap-2">
+                {selectedContribution.status === "paid" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setReceiptDialogOpen(true)}
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Gerar Recibo
+                  </Button>
+                )}
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
                   <>
                     <Button
@@ -1060,6 +1077,13 @@ export default function ContributionDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Receipt Dialog */}
+      <UnionContributionReceiptDialog
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        contribution={selectedContribution}
+        unionEntity={unionEntity}
+      />
     </>
   );
 }
