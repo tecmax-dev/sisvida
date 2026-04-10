@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +54,8 @@ interface UnionEntity {
   telefone?: string | null;
   email_contato?: string | null;
   logo_url?: string | null;
+  president_name?: string | null;
+  president_signature_url?: string | null;
 }
 
 interface UnionContributionReceiptDialogProps {
@@ -103,6 +103,13 @@ export default function UnionContributionReceiptDialog({
       contribution_type_name: contribution.contribution_types?.name || "Contribuição",
       notes: contribution.notes,
     },
+    presidentSignature: unionEntity?.president_signature_url
+      ? {
+          signature_data: unionEntity.president_signature_url,
+          president_name: unionEntity.president_name || "Presidente",
+          president_title: "Presidente",
+        }
+      : null,
     receiptNumber: generateUnionReceiptNumber(),
     occurrence: occurrence.trim() || undefined,
   });
