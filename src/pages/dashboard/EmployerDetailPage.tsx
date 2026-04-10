@@ -1451,16 +1451,39 @@ export default function EmployerDetailPage() {
 
               <DialogFooter className="flex-wrap gap-2">
                 {selectedContribution.status === "paid" && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setViewContribDialogOpen(false);
-                      setReceiptDialogOpen(true);
-                    }}
-                  >
-                    <Receipt className="h-4 w-4 mr-2" />
-                    Gerar Recibo
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setViewContribDialogOpen(false);
+                        setReceiptDialogOpen(true);
+                      }}
+                    >
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Gerar Recibo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditPaymentValue(
+                          selectedContribution.paid_value
+                            ? (selectedContribution.paid_value / 100).toFixed(2).replace(".", ",")
+                            : (selectedContribution.value / 100).toFixed(2).replace(".", ",")
+                        );
+                        setEditPaymentMethod(selectedContribution.payment_method || "dinheiro");
+                        setEditPaymentDate(
+                          selectedContribution.paid_at
+                            ? format(new Date(selectedContribution.paid_at), "yyyy-MM-dd")
+                            : format(new Date(), "yyyy-MM-dd")
+                        );
+                        setEditPaymentDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar Baixa
+                    </Button>
+                  </>
+                )}
                 )}
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
                   <>
