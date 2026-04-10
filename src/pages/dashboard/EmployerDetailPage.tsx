@@ -1595,7 +1595,63 @@ export default function EmployerDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <UnionContributionReceiptDialog
+      {/* Edit Manual Payment Dialog */}
+      <Dialog open={editPaymentDialogOpen} onOpenChange={setEditPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Baixa Manual</DialogTitle>
+            <DialogDescription>
+              Alterar dados do pagamento registrado
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Valor Pago (R$) *</Label>
+              <Input
+                placeholder="0,00"
+                value={editPaymentValue}
+                onChange={(e) => setEditPaymentValue(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Forma de Pagamento</Label>
+              <Select value={editPaymentMethod} onValueChange={setEditPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data do Pagamento</Label>
+              <Input
+                type="date"
+                value={editPaymentDate}
+                onChange={(e) => setEditPaymentDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPaymentDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditPayment} disabled={updatingPayment}>
+              {updatingPayment ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
         open={receiptDialogOpen}
         onOpenChange={setReceiptDialogOpen}
         contribution={receiptContribution}
