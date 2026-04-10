@@ -1652,6 +1652,7 @@ export default function EmployerDetailPage() {
         </DialogContent>
       </Dialog>
 
+      <UnionContributionReceiptDialog
         open={receiptDialogOpen}
         onOpenChange={setReceiptDialogOpen}
         contribution={receiptContribution}
