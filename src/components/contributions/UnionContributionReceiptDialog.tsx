@@ -103,6 +103,13 @@ export default function UnionContributionReceiptDialog({
       contribution_type_name: contribution.contribution_types?.name || "Contribuição",
       notes: contribution.notes,
     },
+    presidentSignature: unionEntity?.president_signature_url
+      ? {
+          signature_data: unionEntity.president_signature_url,
+          president_name: unionEntity.president_name || "Presidente",
+          president_title: "Presidente",
+        }
+      : null,
     receiptNumber: generateUnionReceiptNumber(),
     occurrence: occurrence.trim() || undefined,
   });
