@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Printer, Download } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   generateUnionContributionReceiptPDF,
   printUnionContributionReceipt,
@@ -45,6 +47,7 @@ interface Contribution {
 }
 
 interface UnionEntity {
+  id?: string;
   razao_social?: string;
   nome_fantasia?: string;
   cnpj?: string | null;
@@ -56,6 +59,13 @@ interface UnionEntity {
   logo_url?: string | null;
   president_name?: string | null;
   president_signature_url?: string | null;
+}
+
+interface PresidentSignature {
+  signature_data?: string | null;
+  signature_url?: string | null;
+  president_name?: string | null;
+  president_title?: string | null;
 }
 
 interface UnionContributionReceiptDialogProps {
@@ -71,10 +81,70 @@ export default function UnionContributionReceiptDialog({
   contribution,
   unionEntity,
 }: UnionContributionReceiptDialogProps) {
+  const { currentClinic } = useAuth();
   const [occurrence, setOccurrence] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [presidentSignature, setPresidentSignature] = useState<PresidentSignature | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    const loadPresidentSignature = async () => {
+      const baseSelect = "signature_data, signature_url, president_name, president_title";
+      let resolvedSignature: PresidentSignature | null = null;
+
+      if (unionEntity?.id) {
+        const { data } = await supabase
+          .from("union_president_signatures")
+          .select(baseSelect)
+          .eq("union_entity_id", unionEntity.id)
+          .eq("is_active", true)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        resolvedSignature = (data as PresidentSignature | null) ?? null;
+      }
+
+      if (!resolvedSignature && currentClinic?.id) {
+        const { data } = await supabase
+          .from("union_president_signatures")
+          .select(baseSelect)
+          .eq("clinic_id", currentClinic.id)
+          .eq("is_active", true)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        resolvedSignature = (data as PresidentSignature | null) ?? null;
+      }
+
+      if (!cancelled) {
+        setPresidentSignature(resolvedSignature);
+      }
+    };
+
+    void loadPresidentSignature();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, unionEntity?.id, currentClinic?.id]);
 
   if (!contribution || !contribution.paid_at || !contribution.employers) return null;
+
+  const resolvedPresidentSignature =
+    presidentSignature?.signature_data ||
+    presidentSignature?.signature_url ||
+    unionEntity?.president_signature_url ||
+    null;
+
+  const resolvedPresidentName =
+    presidentSignature?.president_name || unionEntity?.president_name || "Crismélia Silva";
+
+  const resolvedPresidentTitle = presidentSignature?.president_title || "Presidente";
 
   const buildReceiptData = (): UnionContributionReceiptData => ({
     entity: {
@@ -103,11 +173,11 @@ export default function UnionContributionReceiptDialog({
       contribution_type_name: contribution.contribution_types?.name || "Contribuição",
       notes: contribution.notes,
     },
-    presidentSignature: unionEntity?.president_signature_url
+    presidentSignature: resolvedPresidentSignature
       ? {
-          signature_data: unionEntity.president_signature_url,
-          president_name: unionEntity.president_name || "Presidente",
-          president_title: "Presidente",
+          signature_data: resolvedPresidentSignature,
+          president_name: resolvedPresidentName,
+          president_title: resolvedPresidentTitle,
         }
       : null,
     receiptNumber: generateUnionReceiptNumber(),

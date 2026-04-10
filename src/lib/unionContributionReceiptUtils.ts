@@ -70,6 +70,68 @@ function formatCNPJ(cnpj: string): string {
   return cnpj;
 }
 
+function inferImageFormat(imageSource: string): 'PNG' | 'JPEG' {
+  return /data:image\/(jpeg|jpg)/i.test(imageSource) ? 'JPEG' : 'PNG';
+}
+
+async function resolveImageForPdf(imageSource?: string | null): Promise<{
+  dataUrl: string;
+  format: 'PNG' | 'JPEG';
+} | null> {
+  if (!imageSource) return null;
+
+  if (imageSource.startsWith('data:image/')) {
+    return {
+      dataUrl: imageSource,
+      format: inferImageFormat(imageSource),
+    };
+  }
+
+  return await new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          resolve(null);
+          return;
+        }
+
+        context.drawImage(img, 0, 0);
+        resolve({
+          dataUrl: canvas.toDataURL('image/png'),
+          format: 'PNG',
+        });
+      } catch {
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => resolve(null);
+    img.src = imageSource;
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatMultilineText(value?: string | null): string {
+  if (!value) return '';
+  return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
 export function generateUnionReceiptNumber(): string {
   const now = new Date();
   const dateStr = format(now, 'yyyyMMdd');
@@ -90,6 +152,23 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
 
   const centerText = (text: string, yPos: number) => {
     doc.text(text, pageWidth / 2, yPos, { align: 'center' });
+  };
+
+  const drawSignatureBlock = (
+    label: string,
+    title: string,
+    x: number,
+    lineY: number,
+    width: number,
+  ) => {
+    doc.line(x, lineY, x + width, lineY);
+
+    const labelLines = doc.splitTextToSize(label, width - 8);
+    doc.text(labelLines, x + width / 2, lineY + 5, { align: 'center' });
+
+    const titleLines = doc.splitTextToSize(title, width - 8);
+    const titleY = lineY + 5 + labelLines.length * 4.2;
+    doc.text(titleLines, x + width / 2, titleY, { align: 'center' });
   };
 
   // === HEADER ===
@@ -255,19 +334,23 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   y += splitDecl.length * 5 + 20;
 
   // === SIGNATURES ===
-  const signWidth = 70;
-  const leftSignX = margin + 10;
-  const rightSignX = pageWidth - margin - signWidth - 10;
-  const signY = Math.min(y + 15, pageHeight - 55);
+  const signGap = 16;
+  const signWidth = (pageWidth - 2 * margin - signGap) / 2;
+  const leftSignX = margin;
+  const rightSignX = margin + signWidth + signGap;
+  const signY = Math.min(y + 14, pageHeight - 48);
 
   // Left signature - President's digital signature
   if (data.presidentSignature?.signature_data) {
     try {
-      const sigImg = data.presidentSignature.signature_data;
-      const sigImgWidth = 50;
-      const sigImgHeight = 20;
-      const sigImgX = leftSignX + (signWidth - sigImgWidth) / 2;
-      doc.addImage(sigImg, 'PNG', sigImgX, signY - sigImgHeight - 2, sigImgWidth, sigImgHeight);
+      const sigImg = await resolveImageForPdf(data.presidentSignature.signature_data);
+
+      if (sigImg) {
+        const sigImgWidth = 44;
+        const sigImgHeight = 18;
+        const sigImgX = leftSignX + (signWidth - sigImgWidth) / 2;
+        doc.addImage(sigImg.dataUrl, sigImg.format, sigImgX, signY - sigImgHeight - 3, sigImgWidth, sigImgHeight);
+      }
     } catch (e) {
       console.warn('Failed to add president signature image to PDF:', e);
     }
@@ -281,13 +364,10 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   doc.setFont('helvetica', 'normal');
   const presName = data.presidentSignature?.president_name || data.entity.name;
   const presTitle = data.presidentSignature?.president_title || 'Presidente';
-  doc.text(presName, leftSignX + signWidth / 2, signY + 5, { align: 'center' });
-  doc.text(presTitle, leftSignX + signWidth / 2, signY + 10, { align: 'center' });
+  drawSignatureBlock(presName, presTitle, leftSignX, signY, signWidth);
 
   // Right signature
-  doc.line(rightSignX, signY, rightSignX + signWidth, signY);
-  doc.text(data.employer.name.slice(0, 35), rightSignX + signWidth / 2, signY + 5, { align: 'center' });
-  doc.text('Recebedor', rightSignX + signWidth / 2, signY + 10, { align: 'center' });
+  drawSignatureBlock(data.employer.name, 'Recebedor', rightSignX, signY, signWidth);
 
   // === FOOTER ===
   const footerY = pageHeight - 12;
@@ -318,7 +398,7 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
   const presNameHtml = data.presidentSignature?.president_name || data.entity.name;
   const presTitleHtml = data.presidentSignature?.president_title || 'Presidente';
   const sigImageHtml = data.presidentSignature?.signature_data
-    ? `<img src="${data.presidentSignature.signature_data}" alt="Assinatura" style="height:40px;width:auto;display:block;margin:0 auto 4px auto;object-fit:contain;" />`
+    ? `<div class="signature-image-wrap"><img src="${data.presidentSignature.signature_data}" alt="Assinatura da presidente" /></div>`
     : '';
 
   const html = `<!DOCTYPE html>
@@ -341,12 +421,15 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
     .section-content { font-size: 12px; line-height: 1.6; }
     .amount { font-size: 20px; color: #006432; font-weight: bold; }
     .amount-words { color: #666; font-style: italic; font-size: 11px; margin-top: 2px; }
-    .occurrence-box { border: 1px solid #ccc; min-height: 80px; padding: 12px; margin-top: 6px; font-size: 11px; color: #333; }
+    .occurrence-box { border: 1px solid #ccc; min-height: 80px; padding: 12px; margin-top: 6px; font-size: 11px; color: #333; line-height: 1.5; }
     .declaration { margin-top: 25px; color: #666; font-size: 10px; text-align: justify; line-height: 1.5; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
-    .signature { text-align: center; width: 40%; }
-    .signature-line { border-top: 1px solid #000; margin-bottom: 5px; }
-    .signature-text { font-size: 10px; }
+    .signatures { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; margin-top: 50px; align-items: end; }
+    .signature { text-align: center; min-width: 0; }
+    .signature-image-wrap { height: 48px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
+    .signature-image-wrap img { max-height: 40px; max-width: 100%; width: auto; object-fit: contain; }
+    .signature-line { border-top: 1px solid #000; margin-bottom: 6px; }
+    .signature-text { font-size: 10px; line-height: 1.3; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+    .signature-role { font-size: 10px; color: #444; line-height: 1.3; }
     .footer { margin-top: 40px; text-align: center; color: #999; font-size: 8px; }
     @media print { body { padding: 20px; } }
   </style>
@@ -401,7 +484,7 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
 
   <div class="section">
     <div class="section-title">OCORRÊNCIA / OBSERVAÇÕES:</div>
-    <div class="occurrence-box">${data.occurrence || data.contribution.notes || ''}</div>
+    <div class="occurrence-box">${formatMultilineText(data.occurrence || data.contribution.notes || '')}</div>
   </div>
 
   <div class="declaration">
@@ -414,12 +497,12 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
       ${sigImageHtml}
       <div class="signature-line"></div>
       <div class="signature-text">${presNameHtml}</div>
-      <div class="signature-text">${presTitleHtml}</div>
+      <div class="signature-role">${presTitleHtml}</div>
     </div>
     <div class="signature">
       <div class="signature-line"></div>
-      <div class="signature-text">${data.employer.name.slice(0, 40)}</div>
-      <div class="signature-text">Recebedor</div>
+      <div class="signature-text">${escapeHtml(data.employer.name)}</div>
+      <div class="signature-role">Recebedor</div>
     </div>
   </div>
 
@@ -428,7 +511,43 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
     Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
   </div>
 
-  <script>window.onload = function() { window.print(); }</script>
+  <script>
+    (function() {
+      const triggerPrint = () => setTimeout(() => window.print(), 150);
+      const images = Array.from(document.images);
+
+      if (images.length === 0) {
+        window.onload = triggerPrint;
+        return;
+      }
+
+      let pending = images.length;
+      let done = false;
+
+      const finish = () => {
+        if (done) return;
+        done = true;
+        triggerPrint();
+      };
+
+      const handleAssetReady = () => {
+        pending -= 1;
+        if (pending <= 0) finish();
+      };
+
+      images.forEach((image) => {
+        if (image.complete) {
+          handleAssetReady();
+          return;
+        }
+
+        image.addEventListener('load', handleAssetReady, { once: true });
+        image.addEventListener('error', handleAssetReady, { once: true });
+      });
+
+      setTimeout(finish, 1800);
+    })();
+  </script>
 </body>
 </html>`;
 
