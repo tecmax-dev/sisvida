@@ -576,7 +576,7 @@ export default function UnionAccessGroupsPage() {
                         <SelectValue placeholder="Sem limite (padrão)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem limite</SelectItem>
+                        <SelectItem value="none">Sem limite</SelectItem>
                         <SelectItem value="0.5">30 minutos antes</SelectItem>
                         <SelectItem value="1">1 hora antes</SelectItem>
                         <SelectItem value="2">2 horas antes</SelectItem>
