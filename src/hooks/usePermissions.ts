@@ -324,8 +324,10 @@ export function usePermissions() {
       return new Set(data?.map((p: { permission_key: string }) => p.permission_key) || []);
     },
     enabled: !!user?.id && !!resolvedClinicId && !!accessGroupId,
-    staleTime: 30 * 1000, // 30 seconds - reduced to pick up permission changes faster
+    staleTime: 0,
+    gcTime: 0,
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const hasPermission = (permission: Permission): boolean => {
