@@ -1,0 +1,2 @@
+INSERT INTO public.permission_definitions (key, name, description, category, order_index, module_type, is_active)
+VALUES ('edit_patient_convenio_clinic', 'Editar Convênio do Paciente', 'Permite alterar o tipo de convênio no cadastro do paciente/cliente', 'Clientes', 7, 'clinic', true);
