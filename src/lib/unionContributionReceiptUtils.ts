@@ -331,14 +331,20 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   const declaration = `Para maior clareza, firmo o presente recibo, dando plena, total e irrevogável quitação do valor acima especificado, referente à contribuição sindical da competência ${competence}.`;
   const splitDecl = doc.splitTextToSize(declaration, pageWidth - 2 * margin);
   doc.text(splitDecl, margin, y);
-  y += splitDecl.length * 5 + 20;
+   y += splitDecl.length * 5 + 20;
 
-  // === SIGNATURES ===
-  const signGap = 16;
-  const signWidth = (pageWidth - 2 * margin - signGap) / 2;
-  const leftSignX = margin;
-  const rightSignX = margin + signWidth + signGap;
-  const signY = Math.min(y + 34, pageHeight - 48);
+   // === SIGNATURES ===
+   const signGap = 16;
+   const signWidth = (pageWidth - 2 * margin - signGap) / 2;
+   const leftSignX = margin;
+   const rightSignX = margin + signWidth + signGap;
+   // Ensure enough space for signatures (image + line + name + title ≈ 50mm)
+   const signatureBlockHeight = 50;
+   if (y + signatureBlockHeight > pageHeight - 20) {
+     doc.addPage();
+     y = 30;
+   }
+   const signY = y + 34;
 
   // Left signature - President's digital signature
   if (data.presidentSignature?.signature_data) {
