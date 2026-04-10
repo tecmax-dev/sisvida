@@ -1627,6 +1627,7 @@ export default function EmployerDetailPage() {
                   <SelectItem value="cheque">Cheque</SelectItem>
                   <SelectItem value="cartao">Cartão</SelectItem>
                   <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="compensacao">Compensação</SelectItem>
                   <SelectItem value="outros">Outros</SelectItem>
                 </SelectContent>
               </Select>
