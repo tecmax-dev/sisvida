@@ -428,6 +428,8 @@ export default function UnionExpensesPage() {
       debit_card: "Cartão Débito",
       check: "Cheque",
       boleto: "Boleto",
+      reimbursement: "Ressarcimento",
+      chargeback: "Estorno",
     };
     return methods[method] || method;
   };

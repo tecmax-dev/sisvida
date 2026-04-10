@@ -63,6 +63,8 @@ const paymentMethodLabels: Record<string, string> = {
   bank_transfer: "Transferência",
   check: "Cheque",
   insurance: "Convênio",
+  reimbursement: "Ressarcimento",
+  chargeback: "Estorno",
 };
 
 export function TransactionTable({ clinicId, filterType }: TransactionTableProps) {
