@@ -836,7 +836,7 @@ export default function PatientEditPage() {
                 </div>
               </div>
               
-              <PatientFormFields
+               <PatientFormFields
                 formData={formData}
                 setFormData={setFormData}
                 errors={errors}
@@ -847,6 +847,7 @@ export default function PatientEditPage() {
                 cnpjLoading={cnpjLoading}
                 isAdmin={isAdmin}
                 clinicDefaultLimit={clinicDefaultLimit}
+                canEditConvenio={isAdmin || hasPermission("edit_patient_convenio_clinic")}
               />
             </form>
           </div>
