@@ -258,18 +258,31 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   const signWidth = 70;
   const leftSignX = margin + 10;
   const rightSignX = pageWidth - margin - signWidth - 10;
-  const signY = Math.min(y + 15, pageHeight - 45);
+  const signY = Math.min(y + 15, pageHeight - 55);
+
+  // Left signature - President's digital signature
+  if (data.presidentSignature?.signature_data) {
+    try {
+      const sigImg = data.presidentSignature.signature_data;
+      const sigImgWidth = 50;
+      const sigImgHeight = 20;
+      const sigImgX = leftSignX + (signWidth - sigImgWidth) / 2;
+      doc.addImage(sigImg, 'PNG', sigImgX, signY - sigImgHeight - 2, sigImgWidth, sigImgHeight);
+    } catch (e) {
+      console.warn('Failed to add president signature image to PDF:', e);
+    }
+  }
 
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.3);
-
-  // Left signature
   doc.line(leftSignX, signY, leftSignX + signWidth, signY);
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.entity.name, leftSignX + signWidth / 2, signY + 5, { align: 'center' });
-  doc.text('Assinatura e Carimbo', leftSignX + signWidth / 2, signY + 10, { align: 'center' });
+  const presName = data.presidentSignature?.president_name || data.entity.name;
+  const presTitle = data.presidentSignature?.president_title || 'Presidente';
+  doc.text(presName, leftSignX + signWidth / 2, signY + 5, { align: 'center' });
+  doc.text(presTitle, leftSignX + signWidth / 2, signY + 10, { align: 'center' });
 
   // Right signature
   doc.line(rightSignX, signY, rightSignX + signWidth, signY);
