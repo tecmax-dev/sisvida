@@ -26,6 +26,7 @@ export type Permission =
   | "manage_patients"
   | "delete_patients"
   | "unblock_patients"
+  | "edit_patient_convenio_clinic"
   // Attachments
   | "view_attachments"
   | "manage_attachments"
