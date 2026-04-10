@@ -338,7 +338,7 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   const signWidth = (pageWidth - 2 * margin - signGap) / 2;
   const leftSignX = margin;
   const rightSignX = margin + signWidth + signGap;
-  const signY = Math.min(y + 14, pageHeight - 48);
+  const signY = Math.min(y + 34, pageHeight - 48);
 
   // Left signature - President's digital signature
   if (data.presidentSignature?.signature_data) {
@@ -423,7 +423,7 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
     .amount-words { color: #666; font-style: italic; font-size: 11px; margin-top: 2px; }
     .occurrence-box { border: 1px solid #ccc; min-height: 80px; padding: 12px; margin-top: 6px; font-size: 11px; color: #333; line-height: 1.5; }
     .declaration { margin-top: 25px; color: #666; font-size: 10px; text-align: justify; line-height: 1.5; }
-    .signatures { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; margin-top: 50px; align-items: end; }
+    .signatures { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; margin-top: 80px; align-items: end; }
     .signature { text-align: center; min-width: 0; }
     .signature-image-wrap { height: 48px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
     .signature-image-wrap img { max-height: 40px; max-width: 100%; width: auto; object-fit: contain; }
