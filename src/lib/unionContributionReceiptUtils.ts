@@ -411,9 +411,10 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
 
   <div class="signatures">
     <div class="signature">
+      ${sigImageHtml}
       <div class="signature-line"></div>
-      <div class="signature-text">${data.entity.name}</div>
-      <div class="signature-text">Assinatura e Carimbo</div>
+      <div class="signature-text">${presNameHtml}</div>
+      <div class="signature-text">${presTitleHtml}</div>
     </div>
     <div class="signature">
       <div class="signature-line"></div>
