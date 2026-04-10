@@ -217,6 +217,13 @@ export default function EmployerDetailPage() {
   const [manualPaymentMethod, setManualPaymentMethod] = useState("dinheiro");
   const [manualPaymentDate, setManualPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
+  // Edit manual payment form
+  const [editPaymentDialogOpen, setEditPaymentDialogOpen] = useState(false);
+  const [editPaymentValue, setEditPaymentValue] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState("dinheiro");
+  const [editPaymentDate, setEditPaymentDate] = useState("");
+  const [updatingPayment, setUpdatingPayment] = useState(false);
+
   // Edit contribution form
   const [editValue, setEditValue] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
