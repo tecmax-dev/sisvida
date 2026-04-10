@@ -145,6 +145,7 @@ interface Contribution {
   paid_value: number | null;
   payment_method: string | null;
   notes: string | null;
+  employers?: Pick<Employer, "id" | "name" | "cnpj" | "registration_number">;
   contribution_types?: ContributionType;
 }
 
