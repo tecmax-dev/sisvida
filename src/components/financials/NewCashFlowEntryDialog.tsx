@@ -302,6 +302,8 @@ export function NewCashFlowEntryDialog({
                       <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
                       <SelectItem value="debit_card">Cartão de Débito</SelectItem>
                       <SelectItem value="check">Cheque</SelectItem>
+                      <SelectItem value="reimbursement">Ressarcimento</SelectItem>
+                      <SelectItem value="chargeback">Estorno</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
