@@ -645,6 +645,7 @@ export default function EmployerDetailPage() {
     }
   };
 
+  const handleCancelContribution = async () => {
     if (!selectedContribution) return;
 
     try {
