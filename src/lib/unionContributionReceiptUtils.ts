@@ -30,6 +30,11 @@ export interface UnionContributionReceiptData {
     contribution_type_name: string;
     notes?: string | null;
   };
+  presidentSignature?: {
+    signature_data?: string | null;
+    president_name?: string | null;
+    president_title?: string | null;
+  } | null;
   receiptNumber: string;
   occurrence?: string;
 }
