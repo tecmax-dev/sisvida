@@ -1483,7 +1483,7 @@ export default function EmployerDetailPage() {
                       Editar Baixa
                     </Button>
                   </>
-                )
+                )}
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
                   <>
                     <Button
