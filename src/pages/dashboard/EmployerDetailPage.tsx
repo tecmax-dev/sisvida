@@ -217,6 +217,13 @@ export default function EmployerDetailPage() {
   const [manualPaymentMethod, setManualPaymentMethod] = useState("dinheiro");
   const [manualPaymentDate, setManualPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
+  // Edit manual payment form
+  const [editPaymentDialogOpen, setEditPaymentDialogOpen] = useState(false);
+  const [editPaymentValue, setEditPaymentValue] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState("dinheiro");
+  const [editPaymentDate, setEditPaymentDate] = useState("");
+  const [updatingPayment, setUpdatingPayment] = useState(false);
+
   // Edit contribution form
   const [editValue, setEditValue] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
@@ -602,6 +609,39 @@ export default function EmployerDetailPage() {
     } catch (error) {
       console.error("Error registering payment:", error);
       toast.error("Erro ao registrar pagamento");
+    }
+  };
+
+  const handleEditPayment = async () => {
+    if (!selectedContribution || !editPaymentValue) {
+      toast.error("Preencha o valor do pagamento");
+      return;
+    }
+
+    setUpdatingPayment(true);
+    try {
+      const valueInCents = Math.round(parseFloat(editPaymentValue.replace(",", ".")) * 100);
+
+      const { error } = await supabase
+        .from("employer_contributions")
+        .update({
+          paid_at: new Date(editPaymentDate + "T12:00:00").toISOString(),
+          paid_value: valueInCents,
+          payment_method: editPaymentMethod,
+        })
+        .eq("id", selectedContribution.id);
+
+      if (error) throw error;
+
+      toast.success("Pagamento atualizado com sucesso");
+      setEditPaymentDialogOpen(false);
+      setViewContribDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error("Error updating payment:", error);
+      toast.error("Erro ao atualizar pagamento");
+    } finally {
+      setUpdatingPayment(false);
     }
   };
 
@@ -1412,16 +1452,38 @@ export default function EmployerDetailPage() {
 
               <DialogFooter className="flex-wrap gap-2">
                 {selectedContribution.status === "paid" && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setViewContribDialogOpen(false);
-                      setReceiptDialogOpen(true);
-                    }}
-                  >
-                    <Receipt className="h-4 w-4 mr-2" />
-                    Gerar Recibo
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setViewContribDialogOpen(false);
+                        setReceiptDialogOpen(true);
+                      }}
+                    >
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Gerar Recibo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditPaymentValue(
+                          selectedContribution.paid_value
+                            ? (selectedContribution.paid_value / 100).toFixed(2).replace(".", ",")
+                            : (selectedContribution.value / 100).toFixed(2).replace(".", ",")
+                        );
+                        setEditPaymentMethod(selectedContribution.payment_method || "dinheiro");
+                        setEditPaymentDate(
+                          selectedContribution.paid_at
+                            ? format(new Date(selectedContribution.paid_at), "yyyy-MM-dd")
+                            : format(new Date(), "yyyy-MM-dd")
+                        );
+                        setEditPaymentDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar Baixa
+                    </Button>
+                  </>
                 )}
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
                   <>
@@ -1528,6 +1590,63 @@ export default function EmployerDetailPage() {
             </Button>
             <Button onClick={handleManualPayment}>
               Confirmar Baixa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Manual Payment Dialog */}
+      <Dialog open={editPaymentDialogOpen} onOpenChange={setEditPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Baixa Manual</DialogTitle>
+            <DialogDescription>
+              Alterar dados do pagamento registrado
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Valor Pago (R$) *</Label>
+              <Input
+                placeholder="0,00"
+                value={editPaymentValue}
+                onChange={(e) => setEditPaymentValue(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Forma de Pagamento</Label>
+              <Select value={editPaymentMethod} onValueChange={setEditPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data do Pagamento</Label>
+              <Input
+                type="date"
+                value={editPaymentDate}
+                onChange={(e) => setEditPaymentDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPaymentDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditPayment} disabled={updatingPayment}>
+              {updatingPayment ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
