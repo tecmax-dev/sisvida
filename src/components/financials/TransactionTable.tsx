@@ -65,6 +65,7 @@ const paymentMethodLabels: Record<string, string> = {
   insurance: "Convênio",
   reimbursement: "Ressarcimento",
   chargeback: "Estorno",
+  compensation: "Compensação",
 };
 
 export function TransactionTable({ clinicId, filterType }: TransactionTableProps) {
