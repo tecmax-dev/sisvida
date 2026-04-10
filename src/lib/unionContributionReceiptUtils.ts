@@ -373,7 +373,7 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   const footerY = pageHeight - 12;
   doc.setFontSize(7);
   doc.setTextColor(150, 150, 150);
-  centerText('Documento gerado eletronicamente pelo sistema SisVida', footerY);
+  centerText('Documento gerado eletronicamente pelo sistema ProsindWeb', footerY);
   centerText(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, footerY + 4);
 
   // Generate outputs
@@ -507,7 +507,7 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
   </div>
 
   <div class="footer">
-    Documento gerado eletronicamente pelo sistema SisVida<br>
+    Documento gerado eletronicamente pelo sistema ProsindWeb<br>
     Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
   </div>
 
