@@ -228,6 +228,18 @@ export default function EmployerDetailPage() {
 
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
+  const receiptContribution = selectedContribution && employer
+    ? {
+        ...selectedContribution,
+        employers: selectedContribution.employers ?? {
+          id: employer.id,
+          name: employer.name,
+          cnpj: employer.cnpj,
+          registration_number: employer.registration_number ?? null,
+        },
+      }
+    : selectedContribution;
+
   // Accounting office link
   const [linkedAccountingOfficeId, setLinkedAccountingOfficeId] = useState<string | null>(null);
 
@@ -1523,7 +1535,7 @@ export default function EmployerDetailPage() {
       <UnionContributionReceiptDialog
         open={receiptDialogOpen}
         onOpenChange={setReceiptDialogOpen}
-        contribution={selectedContribution}
+        contribution={receiptContribution}
         unionEntity={unionEntity}
       />
 
