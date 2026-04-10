@@ -612,7 +612,39 @@ export default function EmployerDetailPage() {
     }
   };
 
-  const handleCancelContribution = async () => {
+  const handleEditPayment = async () => {
+    if (!selectedContribution || !editPaymentValue) {
+      toast.error("Preencha o valor do pagamento");
+      return;
+    }
+
+    setUpdatingPayment(true);
+    try {
+      const valueInCents = Math.round(parseFloat(editPaymentValue.replace(",", ".")) * 100);
+
+      const { error } = await supabase
+        .from("employer_contributions")
+        .update({
+          paid_at: new Date(editPaymentDate + "T12:00:00").toISOString(),
+          paid_value: valueInCents,
+          payment_method: editPaymentMethod,
+        })
+        .eq("id", selectedContribution.id);
+
+      if (error) throw error;
+
+      toast.success("Pagamento atualizado com sucesso");
+      setEditPaymentDialogOpen(false);
+      setViewContribDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error("Error updating payment:", error);
+      toast.error("Erro ao atualizar pagamento");
+    } finally {
+      setUpdatingPayment(false);
+    }
+  };
+
     if (!selectedContribution) return;
 
     try {
