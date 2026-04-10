@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +54,8 @@ interface UnionEntity {
   telefone?: string | null;
   email_contato?: string | null;
   logo_url?: string | null;
+  president_name?: string | null;
+  president_signature_url?: string | null;
 }
 
 interface UnionContributionReceiptDialogProps {
