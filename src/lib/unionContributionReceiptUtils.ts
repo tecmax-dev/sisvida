@@ -315,6 +315,12 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
   const methodLabel = PAYMENT_METHOD_LABELS[data.contribution.payment_method] || data.contribution.payment_method;
   const receiptDate = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
+  const presNameHtml = data.presidentSignature?.president_name || data.entity.name;
+  const presTitleHtml = data.presidentSignature?.president_title || 'Presidente';
+  const sigImageHtml = data.presidentSignature?.signature_data
+    ? `<img src="${data.presidentSignature.signature_data}" alt="Assinatura" style="height:40px;width:auto;display:block;margin:0 auto 4px auto;object-fit:contain;" />`
+    : '';
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
