@@ -14,13 +14,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { 
   Plus, 
   Search, 
@@ -568,24 +561,21 @@ export default function UnionAccessGroupsPage() {
                 {moduleFilter === 'clinic' && (
                   <div className="space-y-2">
                     <Label htmlFor="swapDeadline">Limite de horas para troca de paciente no slot</Label>
-                    <Select
+                    <select
+                      id="swapDeadline"
                       value={groupSwapDeadline || "none"}
-                      onValueChange={(v) => setGroupSwapDeadline(v === "none" ? "" : v)}
+                      onChange={(e) => setGroupSwapDeadline(e.target.value === "none" ? "" : e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     >
-                      <SelectTrigger id="swapDeadline">
-                        <SelectValue placeholder="Sem limite (padrão)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem limite</SelectItem>
-                        <SelectItem value="0.5">30 minutos antes</SelectItem>
-                        <SelectItem value="1">1 hora antes</SelectItem>
-                        <SelectItem value="2">2 horas antes</SelectItem>
-                        <SelectItem value="6">6 horas antes</SelectItem>
-                        <SelectItem value="12">12 horas antes</SelectItem>
-                        <SelectItem value="24">24 horas antes</SelectItem>
-                        <SelectItem value="48">48 horas antes</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="none">Sem limite</option>
+                      <option value="0.5">30 minutos antes</option>
+                      <option value="1">1 hora antes</option>
+                      <option value="2">2 horas antes</option>
+                      <option value="6">6 horas antes</option>
+                      <option value="12">12 horas antes</option>
+                      <option value="24">24 horas antes</option>
+                      <option value="48">48 horas antes</option>
+                    </select>
                     <p className="text-xs text-muted-foreground">
                       Define com quantas horas de antecedência o usuário pode trocar o paciente em um agendamento existente
                     </p>
