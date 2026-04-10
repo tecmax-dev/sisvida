@@ -364,6 +364,7 @@ export default function UnionIncomePage() {
       boleto: "Boleto",
       reimbursement: "Ressarcimento",
       chargeback: "Estorno",
+      compensation: "Compensação",
     };
     return methods[method] || method;
   };

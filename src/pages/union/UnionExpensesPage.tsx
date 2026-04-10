@@ -430,6 +430,7 @@ export default function UnionExpensesPage() {
       boleto: "Boleto",
       reimbursement: "Ressarcimento",
       chargeback: "Estorno",
+      compensation: "Compensação",
     };
     return methods[method] || method;
   };

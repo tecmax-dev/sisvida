@@ -304,6 +304,7 @@ export function NewCashFlowEntryDialog({
                       <SelectItem value="check">Cheque</SelectItem>
                       <SelectItem value="reimbursement">Ressarcimento</SelectItem>
                       <SelectItem value="chargeback">Estorno</SelectItem>
+                      <SelectItem value="compensation">Compensação</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
