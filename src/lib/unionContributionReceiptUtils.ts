@@ -373,7 +373,7 @@ export async function generateUnionContributionReceiptPDF(data: UnionContributio
   drawSignatureBlock(presName, presTitle, leftSignX, signY, signWidth);
 
   // Right signature
-  drawSignatureBlock(data.employer.name, 'Recebedor', rightSignX, signY, signWidth);
+  drawSignatureBlock(data.employer.name, 'Pagador', rightSignX, signY, signWidth);
 
   // === FOOTER ===
   const footerY = pageHeight - 12;
@@ -508,7 +508,7 @@ export function printUnionContributionReceipt(data: UnionContributionReceiptData
     <div class="signature">
       <div class="signature-line"></div>
       <div class="signature-text">${escapeHtml(data.employer.name)}</div>
-      <div class="signature-role">Recebedor</div>
+      <div class="signature-role">Pagador</div>
     </div>
   </div>
 
