@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Camera, X, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,29 +14,6 @@ interface PatientPhotoUploadProps {
   className?: string;
 }
 
-/**
- * Resolve a patient photo URL - if it's a storage path, create a signed URL.
- * If it's already a full URL (legacy), return as-is.
- */
-async function resolvePhotoUrl(url: string): Promise<string> {
-  // If it's a relative path (not a full URL), create a signed URL
-  if (!url.startsWith("http")) {
-    const { data } = await supabase.storage
-      .from("patient-photos")
-      .createSignedUrl(url, 3600); // 1 hour
-    return data?.signedUrl || url;
-  }
-  // Legacy full URLs - try to extract path and create signed URL
-  const pathMatch = url.match(/patient-photos\/(.+?)(?:\?|$)/);
-  if (pathMatch) {
-    const { data } = await supabase.storage
-      .from("patient-photos")
-      .createSignedUrl(pathMatch[1], 3600);
-    return data?.signedUrl || url;
-  }
-  return url;
-}
-
 export function PatientPhotoUpload({
   patientId,
   currentPhotoUrl,
@@ -46,35 +23,20 @@ export function PatientPhotoUpload({
   className,
 }: PatientPhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
-  const [storedUrl, setStoredUrl] = useState<string | null>(currentPhotoUrl || null);
-  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(currentPhotoUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Sync with prop changes
-  useEffect(() => {
-    if (currentPhotoUrl !== undefined && currentPhotoUrl !== storedUrl && !uploading) {
-      setStoredUrl(currentPhotoUrl);
-    }
-  }, [currentPhotoUrl]);
-
-  // Resolve display URL whenever storedUrl changes
-  useEffect(() => {
-    if (!storedUrl) {
-      setDisplayUrl(null);
-      return;
-    }
-    let cancelled = false;
-    resolvePhotoUrl(storedUrl).then((url) => {
-      if (!cancelled) setDisplayUrl(url);
-    });
-    return () => { cancelled = true; };
-  }, [storedUrl]);
+  if (currentPhotoUrl !== undefined && currentPhotoUrl !== photoUrl && !uploading) {
+    setPhotoUrl(currentPhotoUrl);
+  }
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Arquivo inválido",
@@ -84,6 +46,7 @@ export function PatientPhotoUpload({
       return;
     }
 
+    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -97,12 +60,12 @@ export function PatientPhotoUpload({
 
     try {
       // Delete old photo if exists
-      if (storedUrl) {
-        const pathMatch = storedUrl.match(/patient-photos\/(.+?)(?:\?|$)/);
-        const oldPath = pathMatch ? pathMatch[1] : storedUrl.split("/").slice(-2).join("/");
+      if (photoUrl) {
+        const oldPath = photoUrl.split("/").slice(-2).join("/");
         await supabase.storage.from("patient-photos").remove([oldPath]);
       }
 
+      // Upload new photo
       const fileExt = file.name.split(".").pop();
       const filePath = `${patientId}/photo-${Date.now()}.${fileExt}`;
 
@@ -112,16 +75,23 @@ export function PatientPhotoUpload({
 
       if (uploadError) throw uploadError;
 
-      // Store the file path (not a public URL) in the database
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("patient-photos")
+        .getPublicUrl(filePath);
+
+      const newPhotoUrl = urlData.publicUrl;
+
+      // Update patient record
       const { error: updateError } = await supabase
         .from("patients")
-        .update({ photo_url: filePath })
+        .update({ photo_url: newPhotoUrl })
         .eq("id", patientId);
 
       if (updateError) throw updateError;
 
-      setStoredUrl(filePath);
-      onPhotoChange?.(filePath);
+      setPhotoUrl(newPhotoUrl);
+      onPhotoChange?.(newPhotoUrl);
 
       toast({
         title: "Foto atualizada",
@@ -143,15 +113,18 @@ export function PatientPhotoUpload({
   };
 
   const handleRemovePhoto = async () => {
-    if (!storedUrl) return;
+    if (!photoUrl) return;
 
     setUploading(true);
 
     try {
-      const pathMatch = storedUrl.match(/patient-photos\/(.+?)(?:\?|$)/);
-      const path = pathMatch ? pathMatch[1] : storedUrl;
-      await supabase.storage.from("patient-photos").remove([path]);
+      // Extract path from URL
+      const pathMatch = photoUrl.match(/patient-photos\/(.+)$/);
+      if (pathMatch) {
+        await supabase.storage.from("patient-photos").remove([pathMatch[1]]);
+      }
 
+      // Update patient record
       const { error: updateError } = await supabase
         .from("patients")
         .update({ photo_url: null })
@@ -159,8 +132,7 @@ export function PatientPhotoUpload({
 
       if (updateError) throw updateError;
 
-      setStoredUrl(null);
-      setDisplayUrl(null);
+      setPhotoUrl(null);
       onPhotoChange?.(null);
 
       toast({
@@ -181,10 +153,11 @@ export function PatientPhotoUpload({
 
   return (
     <div className={cn("relative", className)}>
+      {/* Photo container - 3x4 aspect ratio */}
       <div className="w-24 h-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30 relative">
-        {displayUrl ? (
+        {photoUrl ? (
           <img
-            src={displayUrl}
+            src={photoUrl}
             alt={patientName || "Foto do associado"}
             className="w-full h-full object-cover"
           />
@@ -198,13 +171,14 @@ export function PatientPhotoUpload({
           </div>
         )}
 
-        {uploading && displayUrl && (
+        {uploading && photoUrl && (
           <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
       </div>
 
+      {/* Action buttons */}
       {editable && (
         <div className="flex gap-1 mt-2 justify-center">
           <Button
@@ -218,7 +192,7 @@ export function PatientPhotoUpload({
             <Camera className="h-3.5 w-3.5" />
           </Button>
 
-          {storedUrl && (
+          {photoUrl && (
             <Button
               type="button"
               variant="outline"
@@ -233,6 +207,7 @@ export function PatientPhotoUpload({
         </div>
       )}
 
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
