@@ -17522,6 +17522,16 @@ export type Database = {
           value: number
         }[]
       }
+      get_appointment_slots: {
+        Args: { p_clinic_id: string; p_date: string; p_professional_id: string }
+        Returns: {
+          appointment_date: string
+          clinic_id: string
+          end_time: string
+          professional_id: string
+          start_time: string
+        }[]
+      }
       get_available_permissions_for_clinic: {
         Args: { _clinic_id: string }
         Returns: {
