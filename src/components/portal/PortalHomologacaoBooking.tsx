@@ -159,21 +159,21 @@ export function PortalHomologacaoBooking({
     },
   });
 
-  // Fetch existing appointments
+  // Fetch existing appointments via edge function (bypasses RLS for anon)
   const { data: appointments } = useQuery({
     queryKey: ["portal-homologacao-appointments", selectedProfessional?.id, selectedDate],
     queryFn: async () => {
       if (!selectedProfessional?.id || !selectedDate) return [];
       const dateStr = format(selectedDate, "yyyy-MM-dd");
-      const { data, error } = await supabase
-        .from("homologacao_appointments")
-        .select("start_time, end_time, status")
-        .eq("professional_id", selectedProfessional.id)
-        .eq("appointment_date", dateStr)
-        .neq("status", "cancelled");
-      
+      const { data, error } = await supabase.functions.invoke("mobile-slot-availability", {
+        body: {
+          professionalId: selectedProfessional.id,
+          date: dateStr,
+          type: "legal",
+        },
+      });
       if (error) throw error;
-      return data;
+      return (data?.appointments || []) as { start_time: string; end_time: string; status: string }[];
     },
     enabled: !!selectedProfessional?.id && !!selectedDate,
   });
