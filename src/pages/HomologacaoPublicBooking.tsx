@@ -400,7 +400,7 @@ export default function HomologacaoPublicBooking() {
       if (error) throw error;
 
       // Build the result object locally for the confirmation screen
-      const service = serviceTypes?.find(s => s.id === selectedService);
+      const matchedService = serviceTypes?.find(s => s.id === selectedService);
       return {
         ...appointmentData,
         professional: professional,
