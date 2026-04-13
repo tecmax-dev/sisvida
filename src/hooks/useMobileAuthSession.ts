@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { persistSession, clearSession, restoreSession } from "./useMobileSession";
+import { getBootstrapResult } from "@/mobileBootstrap";
 
 interface MobileAuthState {
   isLoggedIn: boolean;
