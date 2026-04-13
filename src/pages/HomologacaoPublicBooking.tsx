@@ -404,7 +404,7 @@ export default function HomologacaoPublicBooking() {
       return {
         ...appointmentData,
         professional: professional,
-        service_type: service || null,
+        service_type: matchedService || null,
       };
     },
     onSuccess: (data) => {
