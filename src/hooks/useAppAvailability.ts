@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
+import { getPreloadedAvailability, getAvailabilityPromise } from "@/mobileBootstrap";
 
 interface AppAvailabilityData {
   isUnavailable: boolean;
@@ -12,27 +13,34 @@ interface AppAvailabilityData {
 
 /**
  * Hook para verificar se o app está disponível para uso.
- * Usado no MobileAppLayout para mostrar tela de indisponibilidade.
- * 
- * IMPORTANTE: Verifica novamente ao focar no app para capturar mudanças.
+ * Usa dados pré-carregados do bootstrap para evitar loading extra.
+ * Re-verifica ao focar no app para capturar mudanças.
  */
 export function useAppAvailability(): AppAvailabilityData {
-  const [data, setData] = useState<AppAvailabilityData>({
-    isUnavailable: false,
-    message: null,
-    clinicName: "Sindicato",
-    clinicPhone: null,
-    loading: true,
+  const [data, setData] = useState<AppAvailabilityData>(() => {
+    // Tentar usar resultado pré-carregado do bootstrap (sem loading!)
+    const preloaded = getPreloadedAvailability();
+    if (preloaded) {
+      return {
+        isUnavailable: preloaded.isUnavailable,
+        message: preloaded.message,
+        clinicName: preloaded.clinicName,
+        clinicPhone: preloaded.clinicPhone,
+        loading: false,
+      };
+    }
+    return {
+      isUnavailable: false,
+      message: null,
+      clinicName: "Sindicato",
+      clinicPhone: null,
+      loading: true,
+    };
   });
 
-  const checkAvailability = useCallback(async () => {
+  const fetchAvailability = useCallback(async () => {
     try {
       const clinicId = localStorage.getItem('mobile_clinic_id') || SINDICATO_CLINIC_ID;
-
-      // Adicionar timestamp para evitar cache
-      const timestamp = Date.now();
-      console.log(`[useAppAvailability] Checking availability at ${timestamp}`);
-
       const { data: clinic, error } = await supabase
         .from("clinics")
         .select("name, phone, app_unavailable, app_unavailable_message")
@@ -40,15 +48,10 @@ export function useAppAvailability(): AppAvailabilityData {
         .single();
 
       if (error) {
-        console.error("[useAppAvailability] Error fetching clinic:", error);
+        console.error("[useAppAvailability] Error:", error);
         setData(prev => ({ ...prev, loading: false }));
         return;
       }
-
-      console.log("[useAppAvailability] Result:", { 
-        app_unavailable: clinic?.app_unavailable,
-        message: clinic?.app_unavailable_message 
-      });
 
       setData({
         isUnavailable: clinic?.app_unavailable || false,
@@ -63,33 +66,33 @@ export function useAppAvailability(): AppAvailabilityData {
     }
   }, []);
 
-  // Verificar na montagem
+  // Na montagem: usar promise pré-carregada se ainda loading, senão já temos dados
   useEffect(() => {
-    checkAvailability();
-  }, [checkAvailability]);
+    if (data.loading) {
+      // Usar a promise já em andamento do bootstrap (não faz nova query)
+      getAvailabilityPromise().then(result => {
+        setData({
+          isUnavailable: result.isUnavailable,
+          message: result.message,
+          clinicName: result.clinicName,
+          clinicPhone: result.clinicPhone,
+          loading: false,
+        });
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Verificar quando o app ganha foco (útil para PWA)
+  // Re-verificar quando o app ganha foco (útil para PWA)
   useEffect(() => {
-    const handleFocus = () => {
-      console.log("[useAppAvailability] Window focused, re-checking...");
-      checkAvailability();
-    };
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log("[useAppAvailability] Page visible, re-checking...");
-        checkAvailability();
+        fetchAvailability();
       }
     };
 
-    window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [checkAvailability]);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchAvailability]);
 
   return data;
 }
