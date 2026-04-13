@@ -32,6 +32,7 @@ import { HomologacaoProtocolReceipt } from "@/components/homologacao/Homologacao
 import { EmployerAutocomplete } from "@/components/homologacao/EmployerAutocomplete";
 import { EmployeeAutocomplete } from "@/components/homologacao/EmployeeAutocomplete";
 import { cn } from "@/lib/utils";
+import { createHomologacaoAppointment } from "@/lib/homologacaoBooking";
 
 interface Professional {
   id: string;
@@ -358,21 +359,7 @@ export default function HomologacaoPublicBooking() {
       endDate.setHours(hours, minutes + service.duration_minutes);
       const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-      const { data: protocolData, error: protocolError } = await supabase.rpc(
-        'generate_homologacao_protocol',
-        { p_clinic_id: professional.clinic_id }
-      );
-
-      if (protocolError) {
-        console.error("Protocol generation error:", protocolError);
-      }
-
-      // Generate a unique confirmation token
-      const confirmationToken = crypto.randomUUID();
-      const appointmentId = crypto.randomUUID();
-
-      const appointmentData = {
-        id: appointmentId,
+      const appointment = await createHomologacaoAppointment({
         clinic_id: professional.clinic_id,
         professional_id: professional.id,
         service_type_id: selectedService,
@@ -388,21 +375,12 @@ export default function HomologacaoPublicBooking() {
         company_email: formData.company_email || null,
         company_contact_name: formData.company_contact_name || null,
         notes: formData.notes || null,
-        status: 'scheduled',
-        protocol_number: protocolData || null,
-        confirmation_token: confirmationToken,
-      };
-
-      const { error } = await supabase
-        .from("homologacao_appointments")
-        .insert(appointmentData);
-
-      if (error) throw error;
+      });
 
       // Build the result object locally for the confirmation screen
       const matchedService = serviceTypes?.find(s => s.id === selectedService);
       return {
-        ...appointmentData,
+        ...appointment,
         professional: professional,
         service_type: matchedService || null,
       };

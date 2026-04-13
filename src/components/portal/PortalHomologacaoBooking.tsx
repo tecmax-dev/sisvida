@@ -21,6 +21,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createHomologacaoAppointment } from "@/lib/homologacaoBooking";
 
 interface Employer {
   id: string;
@@ -193,9 +194,7 @@ export function PortalHomologacaoBooking({
       endDate.setHours(hours, minutes + service.duration_minutes);
       const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-      const appointmentId = crypto.randomUUID();
-      const appointmentData = {
-        id: appointmentId,
+      const appointment = await createHomologacaoAppointment({
         clinic_id: clinicId,
         professional_id: selectedProfessional.id,
         service_type_id: selectedService,
@@ -209,15 +208,9 @@ export function PortalHomologacaoBooking({
         company_phone: employer.phone || '',
         company_email: employer.email || null,
         notes: `Agendado via Portal do Contador`,
-        status: 'scheduled',
-      };
+      });
 
-      const { error } = await supabase
-        .from("homologacao_appointments")
-        .insert(appointmentData);
-
-      if (error) throw error;
-      return { id: appointmentId };
+      return { id: appointment.id };
     },
     onSuccess: (data) => {
       toast.success("Agendamento realizado com sucesso!");

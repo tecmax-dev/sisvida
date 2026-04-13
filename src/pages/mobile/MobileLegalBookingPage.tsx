@@ -29,6 +29,7 @@ import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
+import { createHomologacaoAppointment } from "@/lib/homologacaoBooking";
 
 interface LegalProfessional {
   id: string;
@@ -440,9 +441,7 @@ export default function MobileLegalBookingPage() {
       const [hours, minutes] = selectedTime.split(":").map(Number);
       const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), duration), "HH:mm");
 
-      const appointmentId = crypto.randomUUID();
-      const appointmentData = {
-        id: appointmentId,
+      const appointment = await createHomologacaoAppointment({
         clinic_id: authClinicId,
         professional_id: selectedProfessionalId,
         service_type_id: selectedServiceTypeId || null,
@@ -454,19 +453,10 @@ export default function MobileLegalBookingPage() {
         company_name: "Associado",
         company_phone: patientData.phone || '',
         company_email: patientData.email,
-        status: "scheduled",
         notes: "Agendamento realizado via app mobile",
-      };
+      });
 
-      const { error } = await (supabase
-        .from("homologacao_appointments") as any)
-        .insert([appointmentData]);
-
-      if (error) {
-        throw error;
-      }
-
-      const insertedData = { id: appointmentId };
+      const insertedData = { id: appointment.id };
 
       // Send WhatsApp notifications (fire-and-forget) - same as homologação
       if (insertedData?.id) {
