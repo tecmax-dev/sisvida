@@ -308,21 +308,21 @@ export default function HomologacaoPublicBooking() {
     }
   }, [serviceTypes, selectedService]);
 
-  // Fetch existing appointments for selected date
+  // Fetch existing appointments for selected date via edge function (bypasses RLS for anon)
   const { data: appointments } = useQuery({
     queryKey: ["homologacao-appointments-public", professional?.id, selectedDate],
     queryFn: async () => {
       if (!professional?.id || !selectedDate) return [];
       const dateStr = format(selectedDate, "yyyy-MM-dd");
-      const { data, error } = await supabase
-        .from("homologacao_appointments")
-        .select("start_time, end_time")
-        .eq("professional_id", professional.id)
-        .eq("appointment_date", dateStr)
-        .not("status", "in", "(cancelled)");
-      
+      const { data, error } = await supabase.functions.invoke("mobile-slot-availability", {
+        body: {
+          professionalId: professional.id,
+          date: dateStr,
+          type: "legal",
+        },
+      });
       if (error) throw error;
-      return data;
+      return (data?.appointments || []) as { start_time: string; end_time: string; status: string }[];
     },
     enabled: !!professional?.id && !!selectedDate,
   });
@@ -369,8 +369,10 @@ export default function HomologacaoPublicBooking() {
 
       // Generate a unique confirmation token
       const confirmationToken = crypto.randomUUID();
+      const appointmentId = crypto.randomUUID();
 
       const appointmentData = {
+        id: appointmentId,
         clinic_id: professional.clinic_id,
         professional_id: professional.id,
         service_type_id: selectedService,
@@ -382,7 +384,7 @@ export default function HomologacaoPublicBooking() {
         employee_prior_notice_date: formData.employee_prior_notice_date || null,
         company_name: formData.company_name,
         company_cnpj: formData.company_cnpj || null,
-        company_phone: formData.company_phone,
+        company_phone: formData.company_phone || '',
         company_email: formData.company_email || null,
         company_contact_name: formData.company_contact_name || null,
         notes: formData.notes || null,
@@ -391,18 +393,19 @@ export default function HomologacaoPublicBooking() {
         confirmation_token: confirmationToken,
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("homologacao_appointments")
-        .insert(appointmentData)
-        .select(`
-          *,
-          professional:homologacao_professionals(*),
-          service_type:homologacao_service_types(*)
-        `)
-        .single();
+        .insert(appointmentData);
 
       if (error) throw error;
-      return data;
+
+      // Build the result object locally for the confirmation screen
+      const matchedService = serviceTypes?.find(s => s.id === selectedService);
+      return {
+        ...appointmentData,
+        professional: professional,
+        service_type: matchedService || null,
+      };
     },
     onSuccess: (data) => {
       setCreatedAppointment(data);
