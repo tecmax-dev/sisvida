@@ -110,6 +110,20 @@ export default defineConfig(({ mode }) => ({
             form_factor: "narrow",
             label: "Agendamento de consultas",
           },
+          {
+            src: "/screenshots/screenshot-wide-1.png",
+            sizes: "1920x1080",
+            type: "image/png",
+            form_factor: "wide",
+            label: "Carteirinha digital em tela ampla",
+          },
+        ],
+        related_applications: [
+          {
+            platform: "play",
+            url: "https://play.google.com/store/apps/details?id=br.org.secmi.app",
+            id: "br.org.secmi.app",
+          },
         ],
         prefer_related_applications: false,
         categories: ["business", "utilities"],
