@@ -9,10 +9,12 @@
  * 2. Decisão síncrona após verificação
  * 3. Não depende de useState, useEffect ou contextos
  * 4. Timeout obrigatório de 3 segundos
+ * 5. Pré-carrega disponibilidade do app em paralelo
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { restoreSession } from "@/hooks/useMobileSession";
+import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 const BOOTSTRAP_TIMEOUT = 3000; // 3 segundos máximo
@@ -25,9 +27,61 @@ export interface BootstrapResult {
   clinicId: string | null;
 }
 
+export interface AppAvailabilityResult {
+  isUnavailable: boolean;
+  message: string | null;
+  clinicName: string;
+  clinicPhone: string | null;
+}
+
 // Cache do resultado do bootstrap para evitar re-execução
 let bootstrapResult: BootstrapResult | null = null;
 let bootstrapPromise: Promise<BootstrapResult> | null = null;
+
+// Cache de disponibilidade do app (pré-carregada em paralelo)
+let availabilityResult: AppAvailabilityResult | null = null;
+let availabilityPromise: Promise<AppAvailabilityResult> | null = null;
+
+/**
+ * Pré-carrega disponibilidade do app em paralelo com auth
+ */
+async function preloadAvailability(): Promise<AppAvailabilityResult> {
+  try {
+    const clinicId = localStorage.getItem('mobile_clinic_id') || SINDICATO_CLINIC_ID;
+    const { data: clinic, error } = await supabase
+      .from("clinics")
+      .select("name, phone, app_unavailable, app_unavailable_message")
+      .eq("id", clinicId)
+      .single();
+
+    if (error || !clinic) {
+      return { isUnavailable: false, message: null, clinicName: "Sindicato", clinicPhone: null };
+    }
+
+    return {
+      isUnavailable: clinic.app_unavailable || false,
+      message: clinic.app_unavailable_message || null,
+      clinicName: clinic.name || "Sindicato",
+      clinicPhone: clinic.phone || null,
+    };
+  } catch {
+    return { isUnavailable: false, message: null, clinicName: "Sindicato", clinicPhone: null };
+  }
+}
+
+/**
+ * Retorna disponibilidade pré-carregada (ou carrega se não disponível)
+ */
+export function getPreloadedAvailability(): AppAvailabilityResult | null {
+  return availabilityResult;
+}
+
+export function getAvailabilityPromise(): Promise<AppAvailabilityResult> {
+  if (!availabilityPromise) {
+    availabilityPromise = preloadAvailability().then(r => { availabilityResult = r; return r; });
+  }
+  return availabilityPromise;
+}
 
 /**
  * Executa verificação de sessão de forma imperativa
@@ -83,7 +137,6 @@ async function checkSession(): Promise<BootstrapResult> {
     
   } catch (err) {
     console.error("[MobileBootstrap] Erro na verificação:", err);
-    // Em caso de erro, ir para login como fallback seguro
     return {
       initialRoute: "/app/login",
       isAuthenticated: false,
@@ -96,7 +149,7 @@ async function checkSession(): Promise<BootstrapResult> {
 
 /**
  * Bootstrap principal - executa verificação com timeout obrigatório
- * Garante que SEMPRE retorna um resultado em no máximo 3 segundos
+ * Agora também pré-carrega disponibilidade do app em paralelo
  */
 export async function mobileBootstrap(): Promise<BootstrapResult> {
   // Se já temos resultado, retornar imediatamente
@@ -112,10 +165,12 @@ export async function mobileBootstrap(): Promise<BootstrapResult> {
   }
   
   console.log("[MobileBootstrap] Iniciando bootstrap...");
+
+  // Iniciar pré-carregamento de disponibilidade em paralelo (fire-and-forget)
+  getAvailabilityPromise();
   
   // Criar promise com timeout obrigatório
   bootstrapPromise = new Promise<BootstrapResult>((resolve) => {
-    // Timeout de segurança - SEMPRE resolve após 3 segundos
     const timeoutId = setTimeout(() => {
       console.warn("[MobileBootstrap] TIMEOUT - forçando navegação para login");
       const fallback: BootstrapResult = {
@@ -129,7 +184,6 @@ export async function mobileBootstrap(): Promise<BootstrapResult> {
       resolve(fallback);
     }, BOOTSTRAP_TIMEOUT);
     
-    // Verificação real
     checkSession().then((result) => {
       clearTimeout(timeoutId);
       bootstrapResult = result;
@@ -153,7 +207,6 @@ export async function mobileBootstrap(): Promise<BootstrapResult> {
 
 /**
  * Retorna o resultado do bootstrap se já foi executado
- * Retorna null se o bootstrap ainda não foi executado
  */
 export function getBootstrapResult(): BootstrapResult | null {
   return bootstrapResult;
@@ -161,7 +214,6 @@ export function getBootstrapResult(): BootstrapResult | null {
 
 /**
  * Limpa o cache do bootstrap (usado no logout)
- * INSTRUMENTADO: Log de auditoria
  */
 export function clearBootstrapCache(): void {
   const stack = new Error().stack;
@@ -173,5 +225,8 @@ export function clearBootstrapCache(): void {
   
   bootstrapResult = null;
   bootstrapPromise = null;
+  // Também limpar cache de disponibilidade
+  availabilityResult = null;
+  availabilityPromise = null;
   console.warn("[MobileBootstrap] Cache LIMPO");
 }
