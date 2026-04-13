@@ -108,16 +108,34 @@ export function useMobileAuthSession() {
     if (initializationDone.current) return;
     initializationDone.current = true;
     
-    console.log("[MobileAuth] Inicializando a partir do localStorage...");
+    console.log("[MobileAuth] Inicializando...");
     
     (async () => {
       try {
-        // Restaurar de qualquer camada (primary localStorage > backup localStorage > IndexedDB)
-        const restored = await restoreSession();
+        // OTIMIZAÇÃO: Usar resultado do bootstrap se disponível (evita restoreSession duplicado)
+        const bootstrapData = getBootstrapResult();
+        
+        let patientId: string | null = null;
+        let clinicId: string | null = null;
+        let patientName: string | null = null;
 
-        if (restored.patientId) {
+        if (bootstrapData?.isAuthenticated && bootstrapData.patientId) {
+          // Bootstrap já validou - usar diretamente
+          patientId = bootstrapData.patientId;
+          clinicId = bootstrapData.clinicId;
+          patientName = bootstrapData.patientName;
+          console.log("[MobileAuth] Usando dados do bootstrap:", patientName);
+        } else {
+          // Fallback: restaurar de storage (caso bootstrap não executou)
+          const restored = await restoreSession();
+          patientId = restored.patientId;
+          clinicId = restored.clinicId;
+          patientName = restored.patientName;
+        }
+
+        if (patientId) {
           // Verificar se sessão foi invalidada pelo admin
-          const shouldForceLogout = await checkForceLogout(restored.clinicId || TARGET_CLINIC_ID);
+          const shouldForceLogout = await checkForceLogout(clinicId || TARGET_CLINIC_ID);
           
           if (shouldForceLogout) {
             console.warn("[MobileAuth] Forçando logout por invalidação de sessão");
@@ -136,40 +154,19 @@ export function useMobileAuthSession() {
             return;
           }
 
-          const { data: currentUserData } = await supabase.auth.getUser();
-          const currentUser = currentUserData?.user;
-          const currentAppMeta = (currentUser?.app_metadata ?? {}) as Record<string, any>;
-          const currentUserMeta = (currentUser?.user_metadata ?? {}) as Record<string, any>;
-          const authPatientId =
-            (currentAppMeta.patient_id as string | undefined) ??
-            (currentUserMeta.patient_id as string | undefined) ??
-            null;
-
-          if (currentUser && authPatientId !== restored.patientId) {
-            console.warn("[MobileAuth] Sessão backend divergente da sessão mobile local. Limpando auth para evitar bypass.", {
-              authUserId: currentUser.id,
-              authPatientId,
-              restoredPatientId: restored.patientId,
-            });
-            try {
-              await supabase.auth.signOut({ scope: 'local' });
-            } catch {}
-          }
-          
-          console.log("[MobileAuth] Sessão restaurada:", restored.patientName);
+          console.log("[MobileAuth] Sessão restaurada:", patientName);
           setState({
             isLoggedIn: true,
-            patientId: restored.patientId,
-            clinicId: restored.clinicId || TARGET_CLINIC_ID,
-            patientName: restored.patientName,
+            patientId,
+            clinicId: clinicId || TARGET_CLINIC_ID,
+            patientName,
             loading: false,
             initialized: true,
           });
           return;
         }
 
-        // Fallback: se o usuário está autenticado no backend mas perdeu storage local,
-        // recuperar patient_id do metadata e repersistir.
+        // Fallback: recuperar do auth backend se storage local vazio
         const { data, error } = await supabase.auth.getUser();
         if (error) {
           console.warn("[MobileAuth] getUser() falhou:", error);
@@ -194,7 +191,6 @@ export function useMobileAuthSession() {
           null;
 
         if (patientIdFromMeta) {
-          // Verificar se sessão foi invalidada pelo admin
           const shouldForceLogout = await checkForceLogout(clinicIdFromMeta || TARGET_CLINIC_ID);
           
           if (shouldForceLogout) {
