@@ -193,7 +193,9 @@ export function PortalHomologacaoBooking({
       endDate.setHours(hours, minutes + service.duration_minutes);
       const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
+      const appointmentId = crypto.randomUUID();
       const appointmentData = {
+        id: appointmentId,
         clinic_id: clinicId,
         professional_id: selectedProfessional.id,
         service_type_id: selectedService,
@@ -204,20 +206,18 @@ export function PortalHomologacaoBooking({
         employee_cpf: employeeData.employee_cpf || null,
         company_name: employer.name,
         company_cnpj: employer.cnpj || null,
-        company_phone: employer.phone || null,
+        company_phone: employer.phone || '',
         company_email: employer.email || null,
         notes: `Agendado via Portal do Contador`,
         status: 'scheduled',
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("homologacao_appointments")
-        .insert(appointmentData)
-        .select()
-        .single();
+        .insert(appointmentData);
 
       if (error) throw error;
-      return data;
+      return { id: appointmentId };
     },
     onSuccess: (data) => {
       toast.success("Agendamento realizado com sucesso!");
