@@ -301,6 +301,28 @@ serve(async (req) => {
       }
     }
 
+    // For broadcast notifications (target_type === 'all'), also create a system_notification
+    // so ALL PWA users (including anonymous) see it in the bell icon
+    if (target_type === 'all') {
+      const { error: sysNotifError } = await supabase
+        .from('system_notifications')
+        .insert({
+          title,
+          message: body,
+          type: 'info',
+          priority: 'medium',
+          is_active: true,
+          target_audience: 'all',
+          scheduled_at: new Date().toISOString(),
+        });
+
+      if (sysNotifError) {
+        console.error('Error saving system notification for bell:', sysNotifError);
+      } else {
+        console.log('Saved broadcast push as system_notification for bell display');
+      }
+    }
+
     // Record in history
     const { error: historyError } = await supabase
       .from('push_notification_history')
