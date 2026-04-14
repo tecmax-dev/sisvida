@@ -163,6 +163,9 @@ serve(async (req) => {
     const hasMore = nextOffset < uniquePatients.length;
 
     if (hasMore) {
+      // Wait delay before chaining to respect anti-ban interval
+      console.log(`Waiting ${delayMs/1000}s before chaining batch at offset ${nextOffset}...`);
+      await new Promise((r) => setTimeout(r, delayMs));
       console.log(`Chaining batch at offset ${nextOffset}...`);
       const allSentPhones = Array.from(sentPhones);
       supabase.functions
