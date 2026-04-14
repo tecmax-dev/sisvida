@@ -206,7 +206,7 @@ serve(async (req) => {
       const allSentPhones = Array.from(sentPhones);
       supabase.functions
         .invoke("send-pediatra-availability", {
-          body: { offset: nextOffset, batch_size: batchSize, delay_ms: delayMs, sent_phones: allSentPhones },
+          body: { offset: nextOffset, batch_size: batchSize, delay_ms: delayMs, sent_phones: allSentPhones, _bell_created: true },
         })
         .catch((e: any) => console.error("Chain error:", e));
     }
