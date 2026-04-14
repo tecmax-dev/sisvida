@@ -48,10 +48,13 @@ serve(async (req) => {
     );
 
     const body = await req.json().catch(() => ({}));
+    const notificationTitle = body.notification_title || "🩺 Vagas disponíveis - Pediatria";
+    const notificationMessage = body.notification_message || "Novas vagas disponíveis para Pediatria com a Dra. Uiara Tiuba. Agende pelo aplicativo!";
     const offset = body.offset || 0;
     const batchSize = body.batch_size || 2;
     const delayMs = body.delay_ms || 120000; // 120 seconds
     const sentPhonesFromPrev: string[] = body.sent_phones || [];
+    const bellCreated = body._bell_created || false;
 
     // Get patients who had appointments with Dra Uiara in Jan-Mar 2026
     const { data: appointmentPatients, error: apError } = await supabase
@@ -104,6 +107,39 @@ serve(async (req) => {
         JSON.stringify({ success: true, message: "Todas as notificações foram enviadas!", total_sent: offset, total_unique: uniquePatients.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // On first batch, create system_notification + patient_notifications for bell icon
+    if (offset === 0 && !bellCreated) {
+      // System notification (visible to all in the bell)
+      const { error: sysErr } = await supabase.from("system_notifications").insert({
+        title: notificationTitle,
+        message: notificationMessage,
+        type: "info",
+        priority: "medium",
+        target_type: "all_clinics",
+        is_active: true,
+        created_by: "00000000-0000-0000-0000-000000000000",
+        scheduled_at: new Date().toISOString(),
+      });
+      if (sysErr) console.error("Error creating system notification:", sysErr);
+      else console.log("✅ System notification created for bell icon");
+
+      // Patient-specific notifications
+      const patNotifs = uniquePatients.map((p: any) => ({
+        clinic_id: CLINIC_ID,
+        patient_id: p.id,
+        title: notificationTitle,
+        body: notificationMessage,
+        type: "push",
+        data: {},
+        is_read: false,
+      }));
+      if (patNotifs.length > 0) {
+        const { error: patErr } = await supabase.from("patient_notifications").insert(patNotifs);
+        if (patErr) console.error("Error creating patient notifications:", patErr);
+        else console.log(`✅ Created ${patNotifs.length} patient notifications`);
+      }
     }
 
     // Get Evolution config
@@ -170,7 +206,7 @@ serve(async (req) => {
       const allSentPhones = Array.from(sentPhones);
       supabase.functions
         .invoke("send-pediatra-availability", {
-          body: { offset: nextOffset, batch_size: batchSize, delay_ms: delayMs, sent_phones: allSentPhones },
+          body: { offset: nextOffset, batch_size: batchSize, delay_ms: delayMs, sent_phones: allSentPhones, _bell_created: true },
         })
         .catch((e: any) => console.error("Chain error:", e));
     }

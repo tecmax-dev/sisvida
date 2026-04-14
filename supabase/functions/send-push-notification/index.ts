@@ -312,7 +312,7 @@ serve(async (req) => {
           type: 'info',
           priority: 'medium',
           is_active: true,
-          target_type: 'all',
+          target_type: 'all_clinics',
           created_by: '00000000-0000-0000-0000-000000000000',
           scheduled_at: new Date().toISOString(),
         });
