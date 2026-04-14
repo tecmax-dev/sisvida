@@ -109,6 +109,39 @@ serve(async (req) => {
       );
     }
 
+    // On first batch, create system_notification + patient_notifications for bell icon
+    if (offset === 0 && !bellCreated) {
+      // System notification (visible to all in the bell)
+      const { error: sysErr } = await supabase.from("system_notifications").insert({
+        title: notificationTitle,
+        message: notificationMessage,
+        type: "info",
+        priority: "medium",
+        target_type: "all_clinics",
+        is_active: true,
+        created_by: "00000000-0000-0000-0000-000000000000",
+        scheduled_at: new Date().toISOString(),
+      });
+      if (sysErr) console.error("Error creating system notification:", sysErr);
+      else console.log("✅ System notification created for bell icon");
+
+      // Patient-specific notifications
+      const patNotifs = uniquePatients.map((p: any) => ({
+        clinic_id: CLINIC_ID,
+        patient_id: p.id,
+        title: notificationTitle,
+        body: notificationMessage,
+        type: "push",
+        data: {},
+        is_read: false,
+      }));
+      if (patNotifs.length > 0) {
+        const { error: patErr } = await supabase.from("patient_notifications").insert(patNotifs);
+        if (patErr) console.error("Error creating patient notifications:", patErr);
+        else console.log(`✅ Created ${patNotifs.length} patient notifications`);
+      }
+    }
+
     // Get Evolution config
     const { data: evolutionConfig } = await supabase
       .from("evolution_configs")
