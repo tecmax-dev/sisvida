@@ -139,7 +139,7 @@ Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
-Se a competência do contracheque for anterior ao mês permitido, retorne is_payslip como false.
+NÃO rejeite o contracheque por causa da competência/data — o sistema validará isso automaticamente.
 Nome do arquivo: ${file_name}`;
 
     const imageContent = {
