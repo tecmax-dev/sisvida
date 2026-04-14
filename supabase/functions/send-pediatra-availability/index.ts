@@ -54,6 +54,7 @@ serve(async (req) => {
     const batchSize = body.batch_size || 2;
     const delayMs = body.delay_ms || 120000; // 120 seconds
     const sentPhonesFromPrev: string[] = body.sent_phones || [];
+    const bellCreated = body._bell_created || false;
 
     // Get patients who had appointments with Dra Uiara in Jan-Mar 2026
     const { data: appointmentPatients, error: apError } = await supabase
