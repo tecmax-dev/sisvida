@@ -33,9 +33,16 @@ Extraia o mês e ano de competência do documento e retorne nos campos "competen
 Não há restrição de prazo para a competência do contracheque.`;
   }
   const monthsBack = Math.ceil(acceptanceDays / 30);
-  return `Identifique o mês/ano de competência (período de referência) do contracheque. O contracheque deve ser recente (não mais de ${acceptanceDays} dias retroativo). 
+  let minMonth = currentMonth - monthsBack;
+  let minYear = currentYear;
+  while (minMonth < 1) {
+    minMonth += 12;
+    minYear -= 1;
+  }
+  return `Identifique o mês/ano de competência (período de referência) do contracheque.
 Extraia o mês e ano de competência do documento e retorne nos campos "competence_month" (1-12) e "competence_year" (YYYY).
-Se a competência for muito antiga (mais de ${monthsBack} meses atrás), retorne is_payslip como false e explique que o contracheque está fora do prazo.`;
+NÃO valide se a competência está dentro do prazo — apenas extraia o mês e ano. A validação de prazo será feita pelo sistema automaticamente.
+Para referência: o mês mínimo aceito é ${String(minMonth).padStart(2, '0')}/${minYear} (inclusive).`;
 }
 
 function validateCompetence(
@@ -132,7 +139,7 @@ Responda EXATAMENTE no formato JSON (sem markdown, sem backticks):
 
 Se o documento é um contracheque mas NÃO contém nenhum dos itens sindicais listados, retorne is_payslip como false e explique quais itens estão faltando.
 Se o nome no documento não corresponde ao nome do associado, retorne is_payslip como false.
-Se a competência do contracheque for anterior ao mês permitido, retorne is_payslip como false.
+NÃO rejeite o contracheque por causa da competência/data — o sistema validará isso automaticamente.
 Nome do arquivo: ${file_name}`;
 
     const imageContent = {
