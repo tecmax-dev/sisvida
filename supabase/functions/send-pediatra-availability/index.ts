@@ -48,6 +48,8 @@ serve(async (req) => {
     );
 
     const body = await req.json().catch(() => ({}));
+    const notificationTitle = body.notification_title || "🩺 Vagas disponíveis - Pediatria";
+    const notificationMessage = body.notification_message || "Novas vagas disponíveis para Pediatria com a Dra. Uiara Tiuba. Agende pelo aplicativo!";
     const offset = body.offset || 0;
     const batchSize = body.batch_size || 2;
     const delayMs = body.delay_ms || 120000; // 120 seconds
