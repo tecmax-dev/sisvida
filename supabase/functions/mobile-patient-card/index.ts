@@ -85,10 +85,11 @@ Deno.serve(async (req) => {
       card
         ? supabase
             .from("payslip_requests")
-            .select("id, status, requested_at, received_at, reviewed_at")
+            .select("id, status, requested_at, received_at, reviewed_at, attachment_path")
             .eq("patient_id", patientId)
             .eq("clinic_id", clinicId)
             .in("status", ["pending", "received"])
+            .not("attachment_path", "is", null)
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle()
