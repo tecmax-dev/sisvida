@@ -210,6 +210,7 @@ export default function HomologacaoPublicBooking() {
   const [formData, setFormData] = useState<FormData>({
     employee_name: '',
     employee_cpf: '',
+    employee_phone: '',
     employee_prior_notice_date: '',
     company_name: prefillCompanyName,
     company_cnpj: prefillCompanyCnpj,
