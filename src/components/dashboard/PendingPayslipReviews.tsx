@@ -364,14 +364,25 @@ export default function PendingPayslipReviews() {
               {requests.length} {requests.length === 1 ? 'documento pendente' : 'documentos pendentes'}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={fetchPendingRequests}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={fetchPendingRequests}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/dashboard/contracheques')}
+              className="gap-1"
+            >
+              Ver todos
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
