@@ -10,6 +10,7 @@ interface HomologacaoAppointment {
   start_time: string;
   protocol_number?: string | null;
   professional?: { name: string } | null;
+  service_type?: { id: string; name: string } | null;
 }
 
 interface SendWhatsAppResult {
@@ -17,19 +18,31 @@ interface SendWhatsAppResult {
   error?: string;
 }
 
-// Generate unique protocol number: HOM-YYYYMMDD-NNNN
-export async function generateProtocolNumber(clinicId: string, date: string): Promise<string> {
+// Detect if service is "Assessoria Jurídica"
+function isAssessoriaJuridica(appointment: HomologacaoAppointment): boolean {
+  const name = appointment.service_type?.name?.toLowerCase() || "";
+  return name.includes("assessoria") || name.includes("jurídic") || name.includes("juridic");
+}
+
+function getServiceLabel(appointment: HomologacaoAppointment): string {
+  return isAssessoriaJuridica(appointment) ? "Assessoria Jurídica" : "Homologação";
+}
+
+// Generate unique protocol number: HOM-YYYYMMDD-NNNN or JUR-YYYYMMDD-NNNN
+export async function generateProtocolNumber(clinicId: string, date: string, serviceType?: string): Promise<string> {
   const dateStr = date.replace(/-/g, "");
+  const isJuridico = serviceType?.toLowerCase().includes("assessoria") || serviceType?.toLowerCase().includes("jurídic") || serviceType?.toLowerCase().includes("juridic");
+  const prefix = isJuridico ? "JUR" : "HOM";
   
   // Count existing protocols for this date
   const { count } = await supabase
     .from("homologacao_appointments")
     .select("*", { count: "exact", head: true })
     .eq("clinic_id", clinicId)
-    .ilike("protocol_number", `HOM-${dateStr}-%`);
+    .ilike("protocol_number", `${prefix}-${dateStr}-%`);
   
   const sequence = String((count || 0) + 1).padStart(4, "0");
-  return `HOM-${dateStr}-${sequence}`;
+  return `${prefix}-${dateStr}-${sequence}`;
 }
 
 // Format phone number for WhatsApp
@@ -47,9 +60,11 @@ function formatWhatsAppPhone(phone: string): string {
 }
 
 // Format reminder message
-export function formatReminderMessage(appointment: HomologacaoAppointment, recipientType?: "company" | "manager" | "professional"): string {
+export function formatReminderMessage(appointment: HomologacaoAppointment, recipientType?: "company" | "manager" | "professional" | "worker"): string {
   const date = format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy");
   const time = appointment.start_time?.slice(0, 5) || "";
+  const serviceLabel = getServiceLabel(appointment);
+  const isJuridico = isAssessoriaJuridica(appointment);
 
   const greeting = recipientType === "professional"
     ? `Prezado(a) ${appointment.professional?.name || "Profissional"},`
@@ -58,20 +73,23 @@ export function formatReminderMessage(appointment: HomologacaoAppointment, recip
     : "Prezado(a),";
 
   const instruction = recipientType === "professional"
-    ? "Você possui uma homologação agendada. Confira os detalhes abaixo:"
+    ? `Você possui ${isJuridico ? "um atendimento de assessoria jurídica agendado" : "uma homologação agendada"}. Confira os detalhes abaixo:`
     : recipientType === "manager"
-    ? "Segue lembrete de uma homologação sob sua gestão:"
-    : "Este é um lembrete do agendamento de homologação:";
+    ? `Segue lembrete de ${isJuridico ? "um atendimento de assessoria jurídica" : "uma homologação"} sob sua gestão:`
+    : `Este é um lembrete do agendamento de ${isJuridico ? "assessoria jurídica" : "homologação"}:`;
 
-  return `🔔 *Lembrete de Homologação*
+  const docInstruction = isJuridico
+    ? "Por favor, compareça no horário agendado com toda a documentação relacionada ao seu caso."
+    : "Por favor, compareça no horário agendado com toda a documentação necessária.";
+
+  return `🔔 *Lembrete de ${serviceLabel}*
 
 ${greeting}
 
 ${instruction}
 
-📋 *Funcionário:* ${appointment.employee_name}
-🏢 *Empresa:* ${appointment.company_name}
-📅 *Data:* ${date}
+📋 *${isJuridico ? "Nome:" : "Funcionário:"}* ${appointment.employee_name}
+${!isJuridico ? `🏢 *Empresa:* ${appointment.company_name}\n` : ""}📅 *Data:* ${date}
 🕐 *Horário:* ${time}
 ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.name}` : ""}
 
@@ -80,7 +98,7 @@ ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.na
    _(Ao lado da Sorveteria Chiquinho)_
 📞 *Telefone:* (73) 3231-1784
 
-Por favor, compareça no horário agendado com toda a documentação necessária.
+${docInstruction}
 
 _Esta é uma mensagem automática._`;
 }
@@ -89,16 +107,21 @@ _Esta é uma mensagem automática._`;
 export function formatConfirmationMessage(appointment: HomologacaoAppointment): string {
   const date = format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy");
   const time = appointment.start_time?.slice(0, 5) || "";
+  const serviceLabel = getServiceLabel(appointment);
+  const isJuridico = isAssessoriaJuridica(appointment);
 
-  return `✅ *Confirmação de Homologação*
+  const docInstruction = isJuridico
+    ? "Por favor, compareça no horário agendado com toda a documentação relacionada ao seu caso."
+    : "Por favor, compareça no horário agendado com toda a documentação necessária.";
+
+  return `✅ *Confirmação de ${serviceLabel}*
 
 Prezado(a),
 
-Seu agendamento de homologação foi *confirmado* com sucesso!
+Seu agendamento de ${isJuridico ? "assessoria jurídica" : "homologação"} foi *confirmado* com sucesso!
 
-📋 *Funcionário:* ${appointment.employee_name}
-🏢 *Empresa:* ${appointment.company_name}
-📅 *Data:* ${date}
+📋 *${isJuridico ? "Nome:" : "Funcionário:"}* ${appointment.employee_name}
+${!isJuridico ? `🏢 *Empresa:* ${appointment.company_name}\n` : ""}📅 *Data:* ${date}
 🕐 *Horário:* ${time}
 ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.name}` : ""}
 
@@ -107,7 +130,7 @@ ${appointment.professional ? `👤 *Profissional:* ${appointment.professional.na
    _(Ao lado da Sorveteria Chiquinho)_
 📞 *Telefone:* (73) 3231-1784
 
-Por favor, compareça no horário agendado com toda a documentação necessária.
+${docInstruction}
 
 _Esta é uma mensagem automática._`;
 }
@@ -115,14 +138,15 @@ _Esta é uma mensagem automática._`;
 // Format protocol message
 export function formatProtocolMessage(appointment: HomologacaoAppointment): string {
   const date = format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy");
+  const serviceLabel = getServiceLabel(appointment);
+  const isJuridico = isAssessoriaJuridica(appointment);
   
-  return `✅ *Protocolo de Homologação*
+  return `✅ *Protocolo de ${serviceLabel}*
 
-O processo de homologação foi concluído com sucesso.
+O ${isJuridico ? "atendimento de assessoria jurídica" : "processo de homologação"} foi concluído com sucesso.
 
-📋 *Funcionário:* ${appointment.employee_name}
-🏢 *Empresa:* ${appointment.company_name}
-📅 *Data:* ${date}
+📋 *${isJuridico ? "Nome:" : "Funcionário:"}* ${appointment.employee_name}
+${!isJuridico ? `🏢 *Empresa:* ${appointment.company_name}\n` : ""}📅 *Data:* ${date}
 📝 *Protocolo:* ${appointment.protocol_number || "N/A"}
 
 📍 *Local:* Rua Coronel Paiva, 99, Centro
