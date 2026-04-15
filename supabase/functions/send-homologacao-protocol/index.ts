@@ -120,14 +120,19 @@ function formatProtocolMessage(data: {
   appointmentDate: string;
   address: string;
   clinicName: string;
+  serviceTypeName?: string;
 }): string {
+  const isJuridico = data.serviceTypeName?.toLowerCase().includes('jurídic') || data.serviceTypeName?.toLowerCase().includes('juridic') || data.serviceTypeName?.toLowerCase().includes('assessoria');
+  const label = isJuridico ? 'Assessoria Jurídica' : 'Homologação';
+  const conclusion = isJuridico ? 'O atendimento de assessoria jurídica foi concluído com sucesso.' : 'O processo de homologação foi concluído com sucesso.';
+
   return [
-    `✅ *Protocolo de Homologação*`,
+    `✅ *Protocolo de ${label}*`,
     ``,
-    `O processo de homologação foi concluído com sucesso.`,
+    conclusion,
     ``,
-    `📋 *Funcionário:* ${data.employeeName}`,
-    `🏢 *Empresa:* ${data.companyName}`,
+    `📋 *${isJuridico ? 'Nome' : 'Funcionário'}:* ${data.employeeName}`,
+    ...(isJuridico ? [] : [`🏢 *Empresa:* ${data.companyName}`]),
     `📅 *Data:* ${data.appointmentDate}`,
     `📝 *Protocolo:* ${data.protocolNumber}`,
     ``,
@@ -267,7 +272,8 @@ serve(async (req) => {
       .from('homologacao_appointments')
       .select(`
         *,
-        professional:homologacao_professionals(name, address, city, state_code)
+        professional:homologacao_professionals(name, address, city, state_code),
+        service_type:homologacao_service_types(name)
       `)
       .eq('id', appointment_id)
       .single();
@@ -331,6 +337,9 @@ serve(async (req) => {
 
     const address = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho)";
 
+    const serviceType = appointment.service_type as any;
+    const serviceTypeName = serviceType?.name || 'Homologação';
+
     const messageData = {
       protocolNumber: appointment.protocol_number,
       companyName: appointment.company_name || 'Não informado',
@@ -338,6 +347,7 @@ serve(async (req) => {
       appointmentDate,
       address,
       clinicName,
+      serviceTypeName,
     };
 
     let whatsappSent = false;
@@ -361,9 +371,11 @@ serve(async (req) => {
         ...messageData,
         logoUrl,
       });
+      const isJur = serviceTypeName.toLowerCase().includes('jurídic') || serviceTypeName.toLowerCase().includes('juridic') || serviceTypeName.toLowerCase().includes('assessoria');
+      const emailLabel = isJur ? 'Assessoria Jurídica' : 'Homologação';
       emailSent = await sendEmailViaSMTP(
         appointment.company_email,
-        `✅ Protocolo de Homologação - ${appointment.protocol_number}`,
+        `✅ Protocolo de ${emailLabel} - ${appointment.protocol_number}`,
         emailHtml
       );
       console.log(`Email protocol sent: ${emailSent ? '✓' : '✗'}`);

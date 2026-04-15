@@ -242,17 +242,21 @@ function formatReminderMessage(
     address: string;
     publicWhatsapp?: string;
     clinicName: string;
+    serviceTypeName?: string;
   }
 ): string {
-  const { protocolNumber, companyName, employeeName, appointmentDate, startTime, address, publicWhatsapp, clinicName } = data;
+  const { protocolNumber, companyName, employeeName, appointmentDate, startTime, address, publicWhatsapp, clinicName, serviceTypeName } = data;
+
+  const isJuridico = serviceTypeName?.toLowerCase().includes('jurídic') || serviceTypeName?.toLowerCase().includes('juridic') || serviceTypeName?.toLowerCase().includes('assessoria');
+  const label = isJuridico ? 'Assessoria Jurídica' : 'Homologação';
 
   if (type === 'company') {
     const lines = [
-      `⏰ *Lembrete - Homologação Amanhã*`,
+      `⏰ *Lembrete - ${label} Amanhã*`,
       ``,
       `📋 *Protocolo:* ${protocolNumber}`,
-      `🏢 *Empresa:* ${companyName}`,
-      `👤 *Funcionário:* ${employeeName}`,
+      ...(isJuridico ? [] : [`🏢 *Empresa:* ${companyName}`]),
+      `👤 *${isJuridico ? 'Nome' : 'Funcionário'}:* ${employeeName}`,
       `📅 *Data:* ${appointmentDate}`,
       `🕐 *Horário:* ${startTime}`,
       `📍 *Local:* ${address}`,
@@ -268,11 +272,11 @@ function formatReminderMessage(
 
   if (type === 'manager') {
     return [
-      `⏰ *Lembrete - Homologação Amanhã*`,
+      `⏰ *Lembrete - ${label} Amanhã*`,
       ``,
       `📋 *Protocolo:* ${protocolNumber}`,
-      `🏢 *Empresa:* ${companyName}`,
-      `👤 *Funcionário:* ${employeeName}`,
+      ...(isJuridico ? [] : [`🏢 *Empresa:* ${companyName}`]),
+      `👤 *${isJuridico ? 'Nome' : 'Funcionário'}:* ${employeeName}`,
       `📅 *Data:* ${appointmentDate}`,
       `🕐 *Horário:* ${startTime}`,
     ].join('\n');
@@ -280,11 +284,11 @@ function formatReminderMessage(
 
   // professional
   return [
-    `⏰ *Lembrete - Homologação Amanhã*`,
+    `⏰ *Lembrete - ${label} Amanhã*`,
     ``,
     `📋 *Protocolo:* ${protocolNumber}`,
-    `🏢 *Empresa:* ${companyName}`,
-    `👤 *Funcionário:* ${employeeName}`,
+    ...(isJuridico ? [] : [`🏢 *Empresa:* ${companyName}`]),
+    `👤 *${isJuridico ? 'Nome' : 'Funcionário'}:* ${employeeName}`,
     `📅 *Data:* ${appointmentDate}`,
     `🕐 *Horário:* ${startTime}`,
     `📍 *Local:* ${address}`,
@@ -363,7 +367,8 @@ serve(async (req) => {
         .from('homologacao_appointments')
         .select(`
           *,
-          professional:homologacao_professionals(name, phone, address, city, state_code)
+          professional:homologacao_professionals(name, phone, address, city, state_code),
+          service_type:homologacao_service_types(name)
         `)
         .eq('clinic_id', clinic.id)
         .eq('appointment_date', targetDate)
@@ -381,6 +386,8 @@ serve(async (req) => {
 
       for (const appointment of appointments || []) {
         const professional = appointment.professional as any;
+        const serviceType = appointment.service_type as any;
+        const serviceTypeName = serviceType?.name || 'Homologação';
         const address = [
           professional?.address,
           professional?.city,
@@ -396,6 +403,7 @@ serve(async (req) => {
           address,
           publicWhatsapp: settings?.public_whatsapp,
           clinicName: settings?.display_name || clinic.name || 'HomologaNet',
+          serviceTypeName,
         };
 
         let anySuccess = false;
