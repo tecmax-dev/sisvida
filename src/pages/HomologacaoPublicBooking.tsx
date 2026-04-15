@@ -76,6 +76,7 @@ interface TimeSlot {
 interface FormData {
   employee_name: string;
   employee_cpf: string;
+  employee_phone: string;
   employee_prior_notice_date: string;
   company_name: string;
   company_cnpj: string;
@@ -209,6 +210,7 @@ export default function HomologacaoPublicBooking() {
   const [formData, setFormData] = useState<FormData>({
     employee_name: '',
     employee_cpf: '',
+    employee_phone: '',
     employee_prior_notice_date: '',
     company_name: prefillCompanyName,
     company_cnpj: prefillCompanyCnpj,
@@ -229,7 +231,7 @@ export default function HomologacaoPublicBooking() {
 
   // Track completed sections
   const isEmployerComplete = formData.company_name && formData.company_cnpj && formData.company_phone;
-  const isEmployeeComplete = formData.employee_name && formData.employee_cpf;
+  const isEmployeeComplete = formData.employee_name && formData.employee_cpf && formData.employee_phone;
   
   // Fetch professional by slug
   const { data: professional, isLoading: loadingProfessional } = useQuery({
@@ -368,6 +370,7 @@ export default function HomologacaoPublicBooking() {
         end_time: endTime,
         employee_name: formData.employee_name,
         employee_cpf: formData.employee_cpf || null,
+        employee_phone: formData.employee_phone || null,
         employee_prior_notice_date: formData.employee_prior_notice_date || null,
         company_name: formData.company_name,
         company_cnpj: formData.company_cnpj || null,
@@ -519,6 +522,7 @@ export default function HomologacaoPublicBooking() {
       ...prev,
       employee_name: employee.name,
       employee_cpf: employee.cpf || prev.employee_cpf,
+      employee_phone: employee.phone || prev.employee_phone,
     }));
     
     toast.success("Dados do funcionário preenchidos!");
@@ -537,6 +541,11 @@ export default function HomologacaoPublicBooking() {
     
     if (!formData.employee_name.trim()) {
       toast.error("Nome do funcionário é obrigatório");
+      setOpenSections(prev => ({ ...prev, employee: true }));
+      return;
+    }
+    if (!formData.employee_phone.trim()) {
+      toast.error("Telefone do trabalhador é obrigatório");
       setOpenSections(prev => ({ ...prev, employee: true }));
       return;
     }
@@ -745,6 +754,16 @@ export default function HomologacaoPublicBooking() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="employee_phone">Telefone do Trabalhador *</Label>
+                    <Input
+                      id="employee_phone"
+                      value={formData.employee_phone}
+                      onChange={(e) => setFormData({ ...formData, employee_phone: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="employee_prior_notice_date">Data do Aviso Prévio</Label>
                     <Input
                       id="employee_prior_notice_date"
@@ -759,7 +778,7 @@ export default function HomologacaoPublicBooking() {
                   type="button"
                   className="w-full bg-green-600 hover:bg-green-700"
                   onClick={() => setOpenSections(prev => ({ ...prev, employee: false, professional: true }))}
-                  disabled={!formData.employee_name}
+                  disabled={!formData.employee_name || !formData.employee_phone}
                 >
                   Continuar
                   <ChevronDown className="w-4 h-4 ml-2" />

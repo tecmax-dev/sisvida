@@ -32,6 +32,7 @@ interface HomologacaoAppointment {
   id: string;
   employee_name: string;
   employee_cpf?: string | null;
+  employee_phone?: string | null;
   company_name: string;
   company_cnpj?: string | null;
   company_phone: string;
@@ -66,6 +67,7 @@ export function HomologacaoEditDialog({
   const [formData, setFormData] = useState({
     employee_name: "",
     employee_cpf: "",
+    employee_phone: "",
     company_name: "",
     company_cnpj: "",
     company_phone: "",
@@ -83,6 +85,7 @@ export function HomologacaoEditDialog({
       setFormData({
         employee_name: appointment.employee_name || "",
         employee_cpf: appointment.employee_cpf || "",
+        employee_phone: (appointment as any).employee_phone || "",
         company_name: appointment.company_name || "",
         company_cnpj: appointment.company_cnpj || "",
         company_phone: appointment.company_phone || "",
@@ -144,6 +147,7 @@ export function HomologacaoEditDialog({
       id: appointment?.id,
       employee_name: formData.employee_name,
       employee_cpf: formData.employee_cpf || null,
+      employee_phone: formData.employee_phone || null,
       company_name: formData.company_name,
       company_cnpj: formData.company_cnpj || null,
       company_phone: formData.company_phone,
@@ -224,6 +228,15 @@ export function HomologacaoEditDialog({
                   value={formData.employee_cpf}
                   onChange={(e) => setFormData({ ...formData, employee_cpf: e.target.value })}
                   placeholder="000.000.000-00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="employee_phone">Telefone do Trabalhador</Label>
+                <Input
+                  id="employee_phone"
+                  value={formData.employee_phone}
+                  onChange={(e) => setFormData({ ...formData, employee_phone: e.target.value })}
+                  placeholder="(00) 00000-0000"
                 />
               </div>
             </div>

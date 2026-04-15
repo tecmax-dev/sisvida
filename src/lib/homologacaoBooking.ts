@@ -10,6 +10,7 @@ export interface CreateHomologacaoAppointmentInput {
   end_time: string;
   employee_name: string;
   employee_cpf?: string | null;
+  employee_phone?: string | null;
   employee_prior_notice_date?: string | null;
   company_name: string;
   company_cnpj?: string | null;
