@@ -18,6 +18,7 @@ import {
   ZoomIn
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow, addYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
