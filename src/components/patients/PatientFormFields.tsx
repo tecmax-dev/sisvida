@@ -167,6 +167,7 @@ export function PatientFormFields({
   canChangePassword = false,
   clinicDefaultLimit,
   canEditConvenio = true,
+  onNavigateToEmployer,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
     field: K,
