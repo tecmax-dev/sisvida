@@ -31,6 +31,7 @@ import {
   Settings,
   FolderTree,
   FileCheck2,
+  FileCheck,
   HeartPulse,
   Smartphone,
   Send,
