@@ -53,6 +53,7 @@ interface PayslipRequest {
 export default function PendingPayslipReviews() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<PayslipRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<PayslipRequest | null>(null);
