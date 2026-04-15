@@ -29,6 +29,7 @@ interface HomologacaoAppointment {
   id: string;
   employee_name: string;
   employee_cpf?: string | null;
+  employee_phone?: string | null;
   company_name: string;
   company_cnpj?: string | null;
   company_phone: string;
@@ -77,6 +78,7 @@ export function HomologacaoSendNotificationDialog({
   const [customMessage, setCustomMessage] = useState("");
   
   // Individual party selection
+  const [sendToWorker, setSendToWorker] = useState(true);
   const [sendToCompany, setSendToCompany] = useState(true);
   const [sendToManager, setSendToManager] = useState(true);
   const [sendToProfessional, setSendToProfessional] = useState(true);
@@ -129,6 +131,7 @@ export function HomologacaoSendNotificationDialog({
   useEffect(() => {
     if (!open) {
       setCustomMessage("");
+      setSendToWorker(true);
       setSendToCompany(true);
       setSendToManager(true);
       setSendToProfessional(true);
@@ -149,6 +152,14 @@ export function HomologacaoSendNotificationDialog({
     : formatProtocolMessage(appointment as any);
 
   const parties: { key: string; label: string; icon: React.ReactNode; phone: string | null; checked: boolean; setChecked: (v: boolean) => void }[] = [
+    {
+      key: "worker",
+      label: "Trabalhador",
+      icon: <User className="h-4 w-4 text-orange-600" />,
+      phone: appointment.employee_phone || null,
+      checked: sendToWorker,
+      setChecked: setSendToWorker,
+    },
     {
       key: "company",
       label: "Empresa",
