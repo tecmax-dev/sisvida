@@ -248,10 +248,12 @@ export function useDeleteAlbumPhoto() {
 // Upload photo file
 export function useUploadAlbumPhoto() {
   return useMutation({
-    mutationFn: async ({ file }: { file: File }) => {
+    mutationFn: async ({ file, clinicId }: { file: File; clinicId: string }) => {
+      if (!clinicId) throw new Error("Clínica não encontrada");
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `album-photos/${fileName}`;
+      const filePath = `${clinicId}/album-photos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("union-app-content")

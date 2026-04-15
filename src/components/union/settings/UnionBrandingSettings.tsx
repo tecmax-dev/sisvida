@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface UnionBrandingSettingsProps {
   entityId: string;
@@ -23,6 +24,7 @@ export function UnionBrandingSettings({
 }: UnionBrandingSettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currentClinic } = useAuth();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,9 +33,9 @@ export function UnionBrandingSettings({
   const [localPresidentName, setLocalPresidentName] = useState(presidentName || "");
   const [savingName, setSavingName] = useState(false);
 
-  const uploadFile = async (file: File, type: "logo" | "signature") => {
+  const uploadFile = async (file: File, type: "logo" | "signature", clinicId: string) => {
     const fileExt = file.name.split(".").pop();
-    const fileName = `${entityId}/${type}-${Date.now()}.${fileExt}`;
+    const fileName = `${clinicId}/${type}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("union-entity-files")
@@ -59,7 +61,7 @@ export function UnionBrandingSettings({
 
     setUploadingLogo(true);
     try {
-      const url = await uploadFile(file, "logo");
+      const url = await uploadFile(file, "logo", currentClinic?.id || entityId);
       
       const { error } = await supabase
         .from("union_entities")
@@ -89,7 +91,7 @@ export function UnionBrandingSettings({
 
     setUploadingSignature(true);
     try {
-      const url = await uploadFile(file, "signature");
+      const url = await uploadFile(file, "signature", currentClinic?.id || entityId);
       
       const { error } = await supabase
         .from("union_entities")
