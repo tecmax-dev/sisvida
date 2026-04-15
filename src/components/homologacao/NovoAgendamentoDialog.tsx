@@ -46,6 +46,7 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
   const [formData, setFormData] = useState({
     employee_name: "",
     employee_cpf: "",
+    employee_phone: "",
     company_name: "",
     company_cnpj: "",
     company_phone: "",
@@ -148,6 +149,7 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
         .insert({
           employee_name: data.employee_name,
           employee_cpf: data.employee_cpf || null,
+          employee_phone: data.employee_phone || null,
           company_name: data.company_name,
           company_cnpj: data.company_cnpj || null,
           company_phone: data.company_phone,
@@ -176,6 +178,7 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     setFormData({
       employee_name: "",
       employee_cpf: "",
+      employee_phone: "",
       company_name: "",
       company_cnpj: "",
       company_phone: "",

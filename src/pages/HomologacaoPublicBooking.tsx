@@ -749,6 +749,16 @@ export default function HomologacaoPublicBooking() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="employee_phone">Telefone do Trabalhador *</Label>
+                    <Input
+                      id="employee_phone"
+                      value={formData.employee_phone}
+                      onChange={(e) => setFormData({ ...formData, employee_phone: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="employee_prior_notice_date">Data do Aviso Prévio</Label>
                     <Input
                       id="employee_prior_notice_date"
@@ -763,7 +773,7 @@ export default function HomologacaoPublicBooking() {
                   type="button"
                   className="w-full bg-green-600 hover:bg-green-700"
                   onClick={() => setOpenSections(prev => ({ ...prev, employee: false, professional: true }))}
-                  disabled={!formData.employee_name}
+                  disabled={!formData.employee_name || !formData.employee_phone}
                 >
                   Continuar
                   <ChevronDown className="w-4 h-4 ml-2" />

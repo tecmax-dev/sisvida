@@ -66,6 +66,7 @@ export function HomologacaoEditDialog({
   const [formData, setFormData] = useState({
     employee_name: "",
     employee_cpf: "",
+    employee_phone: "",
     company_name: "",
     company_cnpj: "",
     company_phone: "",
