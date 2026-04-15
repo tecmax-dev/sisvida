@@ -386,6 +386,7 @@ function App() {
                 <Route path="/sindicato/beneficios/imprimir" element={<SindicatoBeneficiosPrintPage />} />
                 <Route path="/sindicato/politica-de-privacidade" element={<SindicatoPrivacyPolicy />} />
                 <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
+                <Route path="/sindicato/recuperar-senha" element={<MobilePasswordResetPage />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
                 <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
                 <Route path="/sindicato/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
