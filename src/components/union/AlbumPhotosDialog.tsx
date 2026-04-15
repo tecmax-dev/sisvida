@@ -115,7 +115,7 @@ export function AlbumPhotosDialog({ album, isOpen, onClose }: AlbumPhotosDialogP
 
       for (let i = 0; i < files.length; i++) {
         try {
-          const url = await uploadPhoto.mutateAsync({ file: files[i] });
+          const url = await uploadPhoto.mutateAsync({ file: files[i], clinicId: album.clinic_id });
           await addPhoto.mutateAsync({
             album_id: album.id,
             image_url: url,

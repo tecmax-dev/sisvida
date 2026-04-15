@@ -31,9 +31,9 @@ export function UnionBrandingSettings({
   const [localPresidentName, setLocalPresidentName] = useState(presidentName || "");
   const [savingName, setSavingName] = useState(false);
 
-  const uploadFile = async (file: File, type: "logo" | "signature") => {
+  const uploadFile = async (file: File, type: "logo" | "signature", clinicId: string) => {
     const fileExt = file.name.split(".").pop();
-    const fileName = `${entityId}/${type}-${Date.now()}.${fileExt}`;
+    const fileName = `${clinicId}/${type}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("union-entity-files")
