@@ -10,41 +10,40 @@ import marcosSilva from "@/assets/testimonials/marcos-silva.jpg";
 const testimonials = [
   {
     name: "Dra. Carla Mendes",
-    role: "Dermatologista",
+    role: "Presidente de Sindicato",
     image: carlaMendes,
-    quote: "O ProsindWeb transformou a rotina da minha clínica. Antes eu perdia tempo com papelada e controles manuais, agora tudo é automatizado. A agenda integrada com o prontuário eletrônico me dá muito mais agilidade nos atendimentos."
+    quote:
+      "O ProsindWeb transformou a gestão do nosso sindicato. Antes perdíamos tempo com controles manuais, agora tudo é automatizado. A carteirinha digital foi um sucesso entre os associados.",
   },
   {
     name: "Dr. Ricardo Oliveira",
-    role: "Ortopedista",
+    role: "Diretor Administrativo",
     image: ricardoOliveira,
-    quote: "Depois que adotamos o ProsindWeb, nosso faturamento melhorou 40%. O controle financeiro é impecável e a gestão de convênios ficou muito mais simples. Recomendo para qualquer clínica que queira crescer de forma organizada."
+    quote:
+      "Depois que adotamos o ProsindWeb, nossa arrecadação melhorou 40%. O controle financeiro é impecável e a gestão de boletos ficou muito mais simples.",
   },
   {
     name: "Fernanda Lima",
-    role: "Nutricionista",
+    role: "Secretária Executiva",
     image: fernandaLima,
-    quote: "A praticidade do sistema é incrível. Consigo acessar o histórico completo dos meus pacientes de qualquer lugar, agendar retornos e enviar lembretes automáticos. Meus pacientes adoram a experiência."
+    quote:
+      "A praticidade do sistema é incrível. Consigo acessar o cadastro completo dos associados de qualquer lugar e enviar notificações automáticas pelo WhatsApp.",
   },
   {
     name: "Marcos Silva",
-    role: "Psicólogo",
+    role: "Tesoureiro",
     image: marcosSilva,
-    quote: "O que mais me impressiona no ProsindWeb é a segurança dos dados. Trabalho com informações sensíveis e sei que tudo está protegido. Além disso, o prontuário digital facilita muito o acompanhamento das sessões."
-  }
+    quote:
+      "O que mais me impressiona é a segurança dos dados. Trabalhamos com informações sensíveis e tudo está protegido. O módulo financeiro facilita muito o dia a dia.",
+  },
 ];
 
 export const TestimonialsSection = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "center" });
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -55,66 +54,53 @@ export const TestimonialsSection = () => {
     if (!emblaApi) return;
     onSelect();
     emblaApi.on("select", onSelect);
-    return () => {
-      emblaApi.off("select", onSelect);
-    };
+    return () => { emblaApi.off("select", onSelect); };
   }, [emblaApi, onSelect]);
 
-  // Auto-play
   useEffect(() => {
     if (!emblaApi) return;
-    const interval = setInterval(() => {
-      emblaApi.scrollNext();
-    }, 5000);
+    const interval = setInterval(() => emblaApi.scrollNext(), 5000);
     return () => clearInterval(interval);
   }, [emblaApi]);
 
   return (
-    <section className="py-20 md:py-28 bg-muted/30 relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-card relative overflow-hidden">
       <div className="container relative z-10">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Opiniões reais de quem usa{" "}
-            <span className="gradient-text">nosso software médico</span>
+            O que nossos clientes dizem
           </h2>
+          <p className="text-muted-foreground text-lg">
+            Veja como o ProsindWeb está impulsionando a eficiência de sindicatos em todo o Brasil
+          </p>
         </div>
 
-        {/* Carousel */}
         <div className="relative max-w-4xl mx-auto">
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
-              {testimonials.map((testimonial, index) => (
-                <div
-                  key={index}
-                  className="flex-[0_0_100%] min-w-0 px-4"
-                >
-                  <div className="bg-card border border-border rounded-3xl p-8 md:p-12 shadow-lg">
-                    {/* Stars */}
+              {testimonials.map((t, index) => (
+                <div key={index} className="flex-[0_0_100%] min-w-0 px-4">
+                  <div className="bg-background border border-border rounded-3xl p-8 md:p-12 shadow-lg">
+                    <div className="flex justify-center mb-6">
+                      <Quote className="h-10 w-10 text-primary/20" />
+                    </div>
                     <div className="flex gap-1 mb-6 justify-center">
                       {[...Array(5)].map((_, i) => (
                         <Star key={i} className="h-5 w-5 fill-warning text-warning" />
                       ))}
                     </div>
-                    
-                    {/* Quote */}
-                    <p className="text-lg md:text-xl text-foreground leading-relaxed mb-8 text-center">
-                      "{testimonial.quote}"
+                    <p className="text-lg md:text-xl text-foreground leading-relaxed mb-8 text-center italic">
+                      "{t.quote}"
                     </p>
-                    
-                    {/* Author */}
                     <div className="flex flex-col items-center gap-4">
                       <img
-                        src={testimonial.image}
-                        alt={testimonial.name}
+                        src={t.image}
+                        alt={t.name}
                         className="w-16 h-16 rounded-full object-cover border-4 border-primary/20"
                       />
                       <div className="text-center">
-                        <h4 className="font-bold text-foreground">
-                          {testimonial.name}
-                        </h4>
-                        <p className="text-muted-foreground text-sm">
-                          {testimonial.role}
-                        </p>
+                        <h4 className="font-bold text-foreground">{t.name}</h4>
+                        <p className="text-muted-foreground text-sm">{t.role}</p>
                       </div>
                     </div>
                   </div>
@@ -123,7 +109,6 @@ export const TestimonialsSection = () => {
             </div>
           </div>
 
-          {/* Navigation Arrows */}
           <Button
             variant="outline"
             size="icon"
@@ -142,16 +127,13 @@ export const TestimonialsSection = () => {
           </Button>
         </div>
 
-        {/* Dots */}
         <div className="flex justify-center gap-2 mt-8">
           {testimonials.map((_, index) => (
             <button
               key={index}
               onClick={() => emblaApi?.scrollTo(index)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === selectedIndex 
-                  ? "bg-primary w-6" 
-                  : "bg-muted-foreground/30"
+                index === selectedIndex ? "bg-primary w-6" : "bg-muted-foreground/30"
               }`}
             />
           ))}

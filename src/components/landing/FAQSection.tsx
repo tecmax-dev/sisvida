@@ -9,44 +9,47 @@ import { MessageCircle } from "lucide-react";
 
 const faqs = [
   {
-    question: "Como funciona o período de teste gratuito?",
-    answer: "Você tem acesso completo a todas as funcionalidades por 7 dias, sem precisar cadastrar cartão de crédito. Após o período, você escolhe o plano ideal para sua clínica."
+    question: "O que é o ProsindWeb?",
+    answer:
+      "O ProsindWeb é um sistema de gestão completo para sindicatos, associações e federações, integrando módulos administrativos, financeiros, jurídicos e de relacionamento com o associado, de forma segura e conforme a legislação vigente.",
   },
   {
-    question: "Preciso instalar algum software?",
-    answer: "Não! O ProsindWeb funciona 100% na nuvem, acessível de qualquer navegador. Basta fazer login e começar a usar, sem instalações ou atualizações manuais."
+    question: "O ProsindWeb atende sindicatos de qualquer porte?",
+    answer:
+      "Sim. O ProsindWeb possui planos para entidades de pequeno, médio ou grande porte, oferecendo recursos escaláveis conforme o número de associados ou a complexidade das operações.",
   },
   {
-    question: "Meus dados estão seguros?",
-    answer: "Absolutamente. Utilizamos criptografia de ponta a ponta, servidores seguros e estamos em conformidade com a LGPD. Seus dados e os de seus pacientes são nossa prioridade."
+    question: "É possível emitir boletos bancários pelo sistema?",
+    answer:
+      "Sim. O ProsindWeb permite a emissão de boletos bancários e integração com diversos bancos. O Portal do Associado também permite a geração de segunda via de boletos.",
   },
   {
-    question: "Posso cancelar a qualquer momento?",
-    answer: "Sim, sem multas ou burocracias. Você pode cancelar sua assinatura quando quiser diretamente pelo painel, e seus dados ficam disponíveis para exportação."
+    question: "O sistema controla a inadimplência dos associados?",
+    answer:
+      "Sim. O ProsindWeb possui recursos de controle de vencimentos, cobrança automática e envio de notificações por e-mail ou WhatsApp, ajudando a reduzir a inadimplência.",
   },
   {
-    question: "Como funciona o suporte técnico?",
-    answer: "Oferecemos suporte via WhatsApp, e-mail e chat dentro da plataforma. Nossa equipe está disponível em horário comercial para ajudar com qualquer dúvida."
+    question: "Existe um portal para o associado?",
+    answer:
+      "Sim. O Portal do Associado permite que o filiado emita 2ª via de boletos, atualize seus dados cadastrais, solicite documentos e acompanhe informações junto ao sindicato.",
   },
   {
-    question: "O sistema funciona no celular?",
-    answer: "Sim! O ProsindWeb é totalmente responsivo e funciona perfeitamente em smartphones e tablets. Você pode gerenciar sua clínica de qualquer lugar."
-  }
+    question: "O ProsindWeb oferece suporte?",
+    answer:
+      "Sim. Nossa equipe oferece suporte técnico, treinamentos e orientação para garantir o melhor aproveitamento de todas as funcionalidades do ProsindWeb.",
+  },
 ];
 
 export function FAQSection() {
   return (
-    <section id="faq" className="py-24 bg-card">
+    <section id="faq" className="py-20 lg:py-28 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <span className="section-badge mb-4">
-            Tire suas dúvidas
-          </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Perguntas Frequentes
+            Perguntas Frequentes (FAQ)
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Encontre respostas para as dúvidas mais comuns sobre o ProsindWeb
+            Tire suas principais dúvidas sobre o ProsindWeb e descubra como podemos ajudar seu sindicato ou associação.
           </p>
         </div>
 
@@ -56,7 +59,7 @@ export function FAQSection() {
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-background border border-border rounded-2xl px-6 data-[state=open]:shadow-lg data-[state=open]:border-primary/30 transition-all"
+                className="bg-card border border-border rounded-2xl px-6 data-[state=open]:shadow-lg data-[state=open]:border-primary/30 transition-all"
               >
                 <AccordionTrigger className="text-left text-base md:text-lg font-medium hover:no-underline py-5 hover:text-primary">
                   {faq.question}
@@ -69,10 +72,12 @@ export function FAQSection() {
           </Accordion>
 
           <div className="mt-12 text-center">
-            <p className="text-muted-foreground mb-4">
-              Ainda tem dúvidas? Fale com nossa equipe
-            </p>
-            <Button asChild size="lg" className="bg-primary hover:bg-primary-dark text-primary-foreground rounded-full px-8 font-semibold">
+            <p className="text-muted-foreground mb-4">Ainda tem dúvidas? Fale com nossa equipe</p>
+            <Button
+              asChild
+              size="lg"
+              className="btn-eclini px-8 font-semibold"
+            >
               <a
                 href="https://wa.me/557332311784?text=Olá! Tenho uma dúvida sobre o ProsindWeb"
                 target="_blank"
