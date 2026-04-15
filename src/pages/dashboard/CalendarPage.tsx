@@ -1775,6 +1775,26 @@ export default function CalendarPage() {
       return;
     }
 
+    // Validação de carteirinha válida
+    if (currentClinic) {
+      const { data: cardValidity } = await supabase.rpc('is_patient_card_valid', {
+        p_patient_id: formPatient,
+        p_clinic_id: currentClinic.id,
+      });
+      const cardCheck = cardValidity?.[0];
+      if (cardCheck?.card_number && cardCheck?.is_valid === false) {
+        const expiresFormatted = cardCheck.expires_at 
+          ? new Date(cardCheck.expires_at).toLocaleDateString('pt-BR') 
+          : '';
+        toast({
+          title: "Carteirinha vencida",
+          description: `A carteirinha (${cardCheck.card_number}) expirou em ${expiresFormatted}. Renove a carteirinha para agendar.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const durationMinutes = formDuration ?? editingAppointment.duration_minutes ?? 30;
     
     // Refetch para garantir dados atualizados antes de verificar conflitos
