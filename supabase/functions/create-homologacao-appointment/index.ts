@@ -25,6 +25,7 @@ const bodySchema = z.object({
   end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   employee_name: z.string().trim().min(1).max(255),
   employee_cpf: z.string().trim().max(32).nullable().optional(),
+  employee_phone: z.string().max(32).nullable().optional(),
   employee_prior_notice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   company_name: z.string().trim().min(1).max(255),
   company_cnpj: z.string().trim().max(32).nullable().optional(),

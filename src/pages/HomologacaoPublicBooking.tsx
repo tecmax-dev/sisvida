@@ -76,6 +76,7 @@ interface TimeSlot {
 interface FormData {
   employee_name: string;
   employee_cpf: string;
+  employee_phone: string;
   employee_prior_notice_date: string;
   company_name: string;
   company_cnpj: string;
