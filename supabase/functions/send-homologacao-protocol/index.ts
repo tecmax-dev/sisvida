@@ -272,7 +272,8 @@ serve(async (req) => {
       .from('homologacao_appointments')
       .select(`
         *,
-        professional:homologacao_professionals(name, address, city, state_code)
+        professional:homologacao_professionals(name, address, city, state_code),
+        service_type:homologacao_service_types(name)
       `)
       .eq('id', appointment_id)
       .single();
@@ -336,6 +337,9 @@ serve(async (req) => {
 
     const address = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho)";
 
+    const serviceType = appointment.service_type as any;
+    const serviceTypeName = serviceType?.name || 'Homologação';
+
     const messageData = {
       protocolNumber: appointment.protocol_number,
       companyName: appointment.company_name || 'Não informado',
@@ -343,6 +347,7 @@ serve(async (req) => {
       appointmentDate,
       address,
       clinicName,
+      serviceTypeName,
     };
 
     let whatsappSent = false;
