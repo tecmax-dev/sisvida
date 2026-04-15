@@ -210,6 +210,7 @@ import UnionHolidaysPage from "./pages/union/UnionHolidaysPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 import UnionPayslipApprovalsPage from "./pages/union/UnionPayslipApprovalsPage";
+import PayslipApprovalsPage from "./pages/dashboard/PayslipApprovalsPage";
 import UnionNotifyAppPage from "./pages/union/UnionNotifyAppPage";
 import PopupNoticesPage from "./pages/union/PopupNoticesPage";
 import UnionDependentApprovalsPage from "./pages/union/UnionDependentApprovalsPage";
@@ -577,6 +578,7 @@ function App() {
                   <Route path="contribuicoes" element={<ContributionsPage />} />
                   <Route path="negociacoes" element={<NegotiationsPage />} />
                   <Route path="escritorios" element={<AccountingOfficesPage />} />
+                  <Route path="contracheques" element={<PayslipApprovalsPage />} />
                 </Route>
                 {/* Union Module Routes - Módulo Sindical Independente */}
                 <Route
