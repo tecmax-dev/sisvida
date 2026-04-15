@@ -231,7 +231,7 @@ export default function HomologacaoPublicBooking() {
 
   // Track completed sections
   const isEmployerComplete = formData.company_name && formData.company_cnpj && formData.company_phone;
-  const isEmployeeComplete = formData.employee_name && formData.employee_cpf;
+  const isEmployeeComplete = formData.employee_name && formData.employee_cpf && formData.employee_phone;
   
   // Fetch professional by slug
   const { data: professional, isLoading: loadingProfessional } = useQuery({
@@ -541,6 +541,11 @@ export default function HomologacaoPublicBooking() {
     
     if (!formData.employee_name.trim()) {
       toast.error("Nome do funcionário é obrigatório");
+      setOpenSections(prev => ({ ...prev, employee: true }));
+      return;
+    }
+    if (!formData.employee_phone.trim()) {
+      toast.error("Telefone do trabalhador é obrigatório");
       setOpenSections(prev => ({ ...prev, employee: true }));
       return;
     }
