@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, MessageSquare, Send, AlertCircle } from "lucide-react";
+import { Loader2, Mail, MessageSquare, Send, AlertCircle, Copy, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SendPasswordResetDialogProps {
@@ -33,10 +33,38 @@ export function SendPasswordResetDialog({
 }: SendPasswordResetDialogProps) {
   const [loading, setLoading] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<"email" | "whatsapp" | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleClose = () => {
     setSelectedChannel(null);
+    setCopied(false);
     onOpenChange(false);
+  };
+
+  const handleCopyResetLink = async () => {
+    if (!user?.email) return;
+
+    const resetLink = `${window.location.origin}/app/recuperar-senha?email=${encodeURIComponent(user.email)}`;
+
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setCopied(true);
+      toast.success("Link copiado!", {
+        description: "Cole e envie manualmente para o usuário",
+      });
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = resetLink;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 3000);
+    }
   };
 
   const handleSend = async (channel: "email" | "whatsapp") => {
@@ -108,6 +136,35 @@ export function SendPasswordResetDialog({
                 Usuário não possui e-mail cadastrado. Não é possível enviar reset.
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Manual copy link section */}
+          {user?.email && (
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Compartilhamento manual (copie e envie por qualquer canal):
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={`${window.location.origin}/app/recuperar-senha?email=${encodeURIComponent(user.email)}`}
+                  readOnly
+                  className="text-xs bg-background"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={handleCopyResetLink}
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
