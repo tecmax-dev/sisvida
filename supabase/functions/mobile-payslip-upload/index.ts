@@ -134,23 +134,58 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create payslip request record
-    const { data: payslipRequest, error: requestError } = await supabase
+    // Check for existing pending request (system-generated) to update instead of creating new
+    const { data: existingRequest } = await supabase
       .from("payslip_requests")
-      .insert({
-        clinic_id: clinicId,
-        patient_id: patientId,
-        card_id: cardId,
-        status: "received",
-        received_at: new Date().toISOString(),
-        attachment_path: fileName,
-        notes: "Enviado via app mobile - Atualização de Carteirinha",
-      })
-      .select("id, status")
-      .single();
+      .select("id")
+      .eq("patient_id", patientId)
+      .eq("clinic_id", clinicId)
+      .eq("status", "pending")
+      .is("attachment_path", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let payslipRequest;
+    let requestError;
+
+    if (existingRequest) {
+      // Update existing pending request with the uploaded file
+      const result = await supabase
+        .from("payslip_requests")
+        .update({
+          card_id: cardId,
+          status: "received",
+          received_at: new Date().toISOString(),
+          attachment_path: fileName,
+          notes: "Enviado via app mobile - Atualização de Carteirinha",
+        })
+        .eq("id", existingRequest.id)
+        .select("id, status")
+        .single();
+      payslipRequest = result.data;
+      requestError = result.error;
+    } else {
+      // Create new payslip request record
+      const result = await supabase
+        .from("payslip_requests")
+        .insert({
+          clinic_id: clinicId,
+          patient_id: patientId,
+          card_id: cardId,
+          status: "received",
+          received_at: new Date().toISOString(),
+          attachment_path: fileName,
+          notes: "Enviado via app mobile - Atualização de Carteirinha",
+        })
+        .select("id, status")
+        .single();
+      payslipRequest = result.data;
+      requestError = result.error;
+    }
 
     if (requestError) {
-      console.error("[mobile-payslip-upload] Insert error:", requestError);
+      console.error("[mobile-payslip-upload] DB error:", requestError);
       return new Response(
         JSON.stringify({ error: "request_creation_failed", details: requestError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
