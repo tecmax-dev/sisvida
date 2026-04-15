@@ -34,6 +34,31 @@ export function SendPatientResetDialog({
 }: SendPatientResetDialogProps) {
   const [loading, setLoading] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<"email" | "whatsapp" | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const resetLink = patient?.email
+    ? `${window.location.origin}/sindicato/recuperar-senha?email=${encodeURIComponent(patient.email)}`
+    : null;
+
+  const handleCopyResetLink = async () => {
+    if (!resetLink) return;
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setCopied(true);
+      toast.success("Link copiado!", { description: "Cole e envie manualmente para o associado" });
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = resetLink;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 3000);
+    }
+  };
 
   const handleClose = () => {
     setSelectedChannel(null);
