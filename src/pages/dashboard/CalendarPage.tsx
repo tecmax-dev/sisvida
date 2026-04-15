@@ -1857,9 +1857,20 @@ export default function CalendarPage() {
       fetchAppointments();
     } catch (error: any) {
       const { isScheduleError, message } = handleScheduleValidationError(error);
+      const isCardExpiredError = error.message?.includes('CARTEIRINHA_VENCIDA');
+      
+      let title = isScheduleError ? "Horário indisponível" : "Erro ao atualizar";
+      let description = message;
+      
+      if (isCardExpiredError) {
+        title = "Carteirinha vencida";
+        const match = error.message?.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
+        description = match?.[1] || "A carteirinha do paciente está vencida. Renove para agendar.";
+      }
+      
       toast({
-        title: isScheduleError ? "Horário indisponível" : "Erro ao atualizar",
-        description: message,
+        title,
+        description,
         variant: "destructive",
       });
     } finally {
