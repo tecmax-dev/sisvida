@@ -370,6 +370,7 @@ export default function HomologacaoPublicBooking() {
         end_time: endTime,
         employee_name: formData.employee_name,
         employee_cpf: formData.employee_cpf || null,
+        employee_phone: formData.employee_phone || null,
         employee_prior_notice_date: formData.employee_prior_notice_date || null,
         company_name: formData.company_name,
         company_cnpj: formData.company_cnpj || null,
@@ -521,6 +522,7 @@ export default function HomologacaoPublicBooking() {
       ...prev,
       employee_name: employee.name,
       employee_cpf: employee.cpf || prev.employee_cpf,
+      employee_phone: employee.phone || prev.employee_phone,
     }));
     
     toast.success("Dados do funcionário preenchidos!");
