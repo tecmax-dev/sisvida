@@ -450,6 +450,7 @@ export default function MobileLegalBookingPage() {
         end_time: endTime,
         employee_name: patientData.name,
         employee_cpf: patientData.cpf,
+        employee_phone: patientData.phone || null,
         company_name: "Associado",
         company_phone: patientData.phone || '',
         company_email: patientData.email,
