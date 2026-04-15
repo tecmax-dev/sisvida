@@ -145,6 +145,34 @@ export function SendPatientResetDialog({
             </Alert>
           )}
 
+          {resetLink && (
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Compartilhamento manual (copie e envie por qualquer canal):
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={resetLink}
+                  readOnly
+                  className="text-xs bg-background"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={handleCopyResetLink}
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {!hasNoContact && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <Button
