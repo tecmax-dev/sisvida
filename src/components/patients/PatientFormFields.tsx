@@ -1,4 +1,4 @@
-import { MessageCircle, Search, Loader2 } from "lucide-react";
+import { MessageCircle, Search, Loader2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +33,7 @@ interface PatientFormFieldsProps {
   canChangePassword?: boolean;
   clinicDefaultLimit?: number | null;
   canEditConvenio?: boolean;
+  onNavigateToEmployer?: () => void;
 }
 
 export interface PatientFormData {
@@ -166,6 +167,7 @@ export function PatientFormFields({
   canChangePassword = false,
   clinicDefaultLimit,
   canEditConvenio = true,
+  onNavigateToEmployer,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
     field: K,
@@ -718,7 +720,21 @@ export function PatientFormFields({
       </div>
       
       <div>
-        <Label htmlFor="employerName">Nome da Empresa</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="employerName">Nome da Empresa</Label>
+          {onNavigateToEmployer && formData.employerCnpj && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs gap-1 text-primary"
+              onClick={onNavigateToEmployer}
+            >
+              <ExternalLink className="h-3 w-3" />
+              Ver cadastro
+            </Button>
+          )}
+        </div>
         <Input
           id="employerName"
           value={formData.employerName}

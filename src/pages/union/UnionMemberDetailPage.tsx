@@ -486,7 +486,24 @@ export default function UnionMemberDetailPage() {
     }
   };
 
-  // Auto-save function
+  const handleNavigateToEmployer = async () => {
+    const cnpj = formData.employerCnpj?.replace(/\D/g, '');
+    if (!cnpj || !resolvedClinic?.id) return;
+    const { data } = await supabase
+      .from("employers")
+      .select("id")
+      .eq("clinic_id", resolvedClinic.id)
+      .or(`cnpj.eq.${cnpj},cnpj.eq.${formData.employerCnpj}`)
+      .limit(1)
+      .maybeSingle();
+    if (data?.id) {
+      navigate(`/union/empresas/${data.id}`);
+    } else {
+      toast({ title: "Empresa não encontrada", description: "Nenhum cadastro de empresa encontrado com este CNPJ.", variant: "destructive" });
+    }
+  };
+
+
   const performAutoSave = useCallback(async (dataToSave: PatientFormData) => {
     if (!resolvedClinic || !id) return;
 
@@ -956,6 +973,7 @@ export default function UnionMemberDetailPage() {
                 canChangePassword={canChangePassword}
                 clinicDefaultLimit={clinicDefaultLimit}
                 canEditConvenio={canEditMemberConvenio()}
+                onNavigateToEmployer={handleNavigateToEmployer}
               />
             </form>
           </div>
