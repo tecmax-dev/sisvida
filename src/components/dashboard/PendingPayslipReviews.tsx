@@ -18,6 +18,7 @@ import {
   ZoomIn
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow, addYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,6 +53,7 @@ interface PayslipRequest {
 export default function PendingPayslipReviews() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<PayslipRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<PayslipRequest | null>(null);
@@ -362,14 +364,25 @@ export default function PendingPayslipReviews() {
               {requests.length} {requests.length === 1 ? 'documento pendente' : 'documentos pendentes'}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={fetchPendingRequests}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={fetchPendingRequests}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/dashboard/contracheques')}
+              className="gap-1"
+            >
+              Ver todos
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
