@@ -62,6 +62,7 @@ export function SendPatientResetDialog({
 
   const handleClose = () => {
     setSelectedChannel(null);
+    setCopied(false);
     onOpenChange(false);
   };
 
