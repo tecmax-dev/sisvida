@@ -318,7 +318,8 @@ serve(async (req) => {
       .from('homologacao_appointments')
       .select(`
         *,
-        professional:homologacao_professionals(name, address, city, state_code)
+        professional:homologacao_professionals(name, address, city, state_code),
+        service_type:homologacao_service_types(name)
       `)
       .eq('id', appointment_id)
       .single();
@@ -369,13 +370,17 @@ serve(async (req) => {
     }
 
     const professional = appointment.professional as any;
+    const serviceType = appointment.service_type as any;
+    const serviceTypeName = serviceType?.name || 'Homologação';
+    const isJuridico = serviceTypeName.toLowerCase().includes('jurídic') || serviceTypeName.toLowerCase().includes('juridic') || serviceTypeName.toLowerCase().includes('assessoria');
+    const serviceLabel = isJuridico ? 'Assessoria Jurídica' : 'Homologação';
     const address = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3231-1784";
 
     let subject: string;
     let htmlBody: string;
 
     if (type === 'protocol' && appointment.protocol_number) {
-      subject = `✅ Protocolo de Homologação - ${appointment.protocol_number}`;
+      subject = `✅ Protocolo de ${serviceLabel} - ${appointment.protocol_number}`;
       htmlBody = formatProtocolEmailHtml({
         employeeName: appointment.employee_name || 'Não informado',
         companyName: appointment.company_name || 'Não informado',
@@ -386,7 +391,7 @@ serve(async (req) => {
         clinicName,
       });
     } else {
-      subject = `⏰ Lembrete de Homologação - ${appointment.company_name}`;
+      subject = `⏰ Lembrete de ${serviceLabel} - ${isJuridico ? (appointment.employee_name || '') : (appointment.company_name || '')}`;
       htmlBody = formatReminderEmailHtml({
         employeeName: appointment.employee_name || 'Não informado',
         companyName: appointment.company_name || 'Não informado',
