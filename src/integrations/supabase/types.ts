@@ -18049,6 +18049,10 @@ export type Database = {
         Args: { p_status?: string; p_token: string }
         Returns: boolean
       }
+      user_has_clinic_storage_access: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
         Returns: boolean
