@@ -210,13 +210,14 @@ export default function MobileLegalBookingPage() {
           if (expiryDate < todayMidDay) {
             setCardExpired(true);
             
-            // Check if there's already a pending payslip request
+            // Check if there's already a pending payslip request with an uploaded file
             const { data: pendingRequest } = await supabase
               .from("payslip_requests")
-              .select("id, status")
+              .select("id, status, attachment_path")
               .eq("patient_id", authPatientId)
               .eq("card_id", cardData.id)
               .in("status", ["pending", "received"])
+              .not("attachment_path", "is", null)
               .limit(1);
             
             if (pendingRequest && pendingRequest.length > 0) {
