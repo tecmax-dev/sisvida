@@ -1,24 +1,56 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Check, Loader2 } from "lucide-react";
-import heroMockupScreens from "@/assets/hero-mockup-screens.png";
+import { Loader2, Monitor, CheckCircle, Shield, Headphones } from "lucide-react";
 import { useHeroSettings } from "@/hooks/useHeroSettings";
+import { useState, useEffect } from "react";
+import heroMockupScreens from "@/assets/hero-mockup-screens.png";
+
+const typewriterWords = ["humanizado", "eficiente", "completo", "inovador"];
+
+function useTypewriter(words: string[], speed = 100, pause = 2000) {
+  const [text, setText] = useState("");
+  const [wordIndex, setWordIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = words[wordIndex];
+    const timeout = setTimeout(() => {
+      if (!isDeleting) {
+        setText(current.slice(0, text.length + 1));
+        if (text.length + 1 === current.length) {
+          setTimeout(() => setIsDeleting(true), pause);
+        }
+      } else {
+        setText(current.slice(0, text.length - 1));
+        if (text.length === 0) {
+          setIsDeleting(false);
+          setWordIndex((prev) => (prev + 1) % words.length);
+        }
+      }
+    }, isDeleting ? speed / 2 : speed);
+
+    return () => clearTimeout(timeout);
+  }, [text, isDeleting, wordIndex, words, speed, pause]);
+
+  return text;
+}
+
+const highlights = [
+  { icon: Monitor, title: "Simples e Moderno", desc: "Interface intuitiva e design atualizado" },
+  { icon: CheckCircle, title: "Fácil e Customizável", desc: "Adaptamos às suas necessidades" },
+  { icon: Shield, title: "Rápido e Seguro", desc: "Dados protegidos com criptografia" },
+  { icon: Headphones, title: "Excelente Suporte", desc: "Atendimento dedicado e humanizado" },
+];
 
 export function HeroSection() {
   const { data: settings, isLoading } = useHeroSettings();
+  const typedWord = useTypewriter(typewriterWords);
 
-  const title = settings?.title || "O software que resolve a gestão da clínica";
-  const subtitle = settings?.subtitle || "";
-  const description = settings?.description || "O ProsindWeb é um sistema para clínicas com prontuário eletrônico, agenda médica online, controle financeiro e mais de 200 outros recursos.";
-  const primaryButtonText = settings?.primary_button_text || "Solicite uma demonstração";
+  const title = settings?.title || "Nosso atendimento é";
+  const description = settings?.description || "Mais resultados para seu sindicato. Agende uma apresentação online ou uma visita presencial.";
+  const primaryButtonText = settings?.primary_button_text || "Peça seu orçamento";
   const primaryButtonLink = settings?.primary_button_link || "/cadastro";
   const heroImage = settings?.hero_image_url || heroMockupScreens;
-
-  const benefits = [
-    "Reduza em até 50% a falta de pacientes",
-    "Aumente em até 20% a receita com agendamentos online",
-    "Mais de 70 mil profissionais"
-  ];
 
   if (isLoading) {
     return (
@@ -29,140 +61,92 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative min-h-[85vh] flex items-center pt-24 lg:pt-28 pb-16 bg-background overflow-hidden">
-      <div className="container relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          {/* Left Column - Content */}
-          <div className="text-left">
-            {/* Badge */}
-            <span className="text-muted-foreground text-sm font-medium tracking-wide mb-4 block">
-              Sistema para clínicas
-            </span>
+    <>
+      <section className="relative min-h-[85vh] flex items-center pt-24 lg:pt-28 pb-16 bg-background overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)',
+          backgroundSize: '40px 40px'
+        }} />
 
-            {/* Main headline - Clinica nas Nuvens style */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] mb-6">
-              <span className="gradient-text">{title}</span>
-              {subtitle && (
-                <>
-                  <br />
-                  <span className="text-foreground">{subtitle}</span>
-                </>
-              )}
-            </h1>
-            
-            <p className="text-lg text-muted-foreground max-w-xl mb-8 leading-relaxed">
-              {description}
-            </p>
-
-            {/* Benefits List */}
-            <ul className="space-y-3 mb-8">
-              {benefits.map((benefit, index) => (
-                <li key={index} className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Check className="h-3 w-3 text-primary" />
-                  </div>
-                  <span className="text-foreground">{benefit}</span>
-                </li>
-              ))}
-            </ul>
-
-            {/* CTA Button - Outlined style like Clinica nas Nuvens */}
-            <Button 
-              size="lg" 
-              variant="outline"
-className="btn-eclini-outline px-8 h-14 text-base"
-              asChild
-            >
-              <Link to={primaryButtonLink}>
-                {primaryButtonText}
-              </Link>
-            </Button>
-          </div>
-
-          {/* Right Column - Hero Image with floating cards */}
-          <div className="relative flex justify-center lg:justify-end">
-            {/* Background decorative circle */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl" />
-            
-            {/* Main image container */}
-            <div className="relative">
-              <img 
-                src={heroImage}
-                alt="Múltiplas telas do sistema ProsindWeb - Dashboard, agenda e prontuário"
-                className="w-full max-w-lg h-auto object-contain drop-shadow-xl animate-fade-in"
-              />
-              
-              {/* Floating Card - Agendamentos */}
-              <div className="absolute -left-4 top-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block">
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Agendamentos</p>
-                    <p className="text-lg font-bold text-foreground">450</p>
-                  </div>
-                  <div className="w-12 h-8 flex items-end gap-0.5">
-                    <div className="w-2 h-4 bg-primary/40 rounded-t" />
-                    <div className="w-2 h-6 bg-primary/60 rounded-t" />
-                    <div className="w-2 h-5 bg-primary/50 rounded-t" />
-                    <div className="w-2 h-8 bg-primary rounded-t" />
-                  </div>
-                </div>
+        <div className="container relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+            {/* Left Column - Content */}
+            <div className="text-left">
+              {/* Trust badge */}
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-sm font-semibold px-4 py-2 rounded-full mb-6 border border-primary/20">
+                <span className="text-base">⭐</span>
+                +200 Sindicatos confiam em nós
               </div>
 
-              {/* Floating Card - Resumo financeiro */}
-              <div className="absolute -left-8 top-1/2 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '0.5s' }}>
-                <p className="text-xs text-muted-foreground mb-2">Resumo financeiro</p>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-xs text-muted-foreground">Total a receber</span>
-                    <span className="text-xs font-semibold text-success">R$ 2.000,00</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-xs text-muted-foreground">A vencer</span>
-                    <span className="text-xs font-medium">R$ 1.000,00</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-xs text-muted-foreground">Vencidos</span>
-                    <span className="text-xs font-medium text-destructive">R$ 1.000,00</span>
-                  </div>
-                </div>
-              </div>
+              {/* Main headline with typewriter */}
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold leading-[1.1] mb-6 text-foreground">
+                {title}{" "}
+                <span className="gradient-text">
+                  {typedWord}
+                  <span className="animate-pulse">|</span>
+                </span>
+              </h1>
 
-              {/* Floating Card - Atendimentos */}
-              <div className="absolute right-0 top-1/3 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '1s' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs text-muted-foreground">Atendimentos</span>
-                  <span className="text-xs text-primary">→</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="text-sm font-bold">Total</p>
-                    <p className="text-lg font-bold gradient-text">1500</p>
-                  </div>
-                  <div className="flex gap-1 items-center">
-                    <div className="w-3 h-3 rounded-full bg-primary" />
-                    <span className="text-xs">Particular</span>
-                  </div>
-                </div>
-              </div>
+              <p className="text-lg text-muted-foreground max-w-xl mb-8 leading-relaxed">
+                {description}
+              </p>
 
-              {/* Floating Card - Últimos 12 meses */}
-              <div className="absolute right-4 bottom-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '1.5s' }}>
-                <p className="text-xs text-muted-foreground mb-2">Atendimentos últ. 12 meses</p>
-                <div className="w-24 h-10">
-                  <svg viewBox="0 0 100 40" className="w-full h-full">
-                    <polyline
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="2"
-                      points="0,35 15,30 30,20 45,25 60,15 75,10 90,5 100,8"
-                    />
-                  </svg>
-                </div>
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  size="lg"
+                  className="btn-eclini px-8 h-14 text-base font-semibold"
+                  asChild
+                >
+                  <Link to={primaryButtonLink}>
+                    {primaryButtonText}
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="btn-eclini-outline px-8 h-14 text-base"
+                  asChild
+                >
+                  <Link to="/cadastro">
+                    Agende uma demo
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Column - Hero Image */}
+            <div className="relative flex justify-center lg:justify-end">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl" />
+              <div className="relative">
+                <img
+                  src={heroImage}
+                  alt="ProsindWeb - Sistema de Gestão Sindical"
+                  className="w-full max-w-lg h-auto object-contain drop-shadow-2xl animate-fade-in"
+                />
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Highlight Cards - Below hero like SindSystem */}
+      <section className="py-12 bg-card border-y border-border">
+        <div className="container">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {highlights.map((item, i) => (
+              <div key={i} className="flex flex-col items-center text-center group">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                  <item.icon className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-bold text-foreground mb-1 text-sm lg:text-base">{item.title}</h3>
+                <p className="text-xs lg:text-sm text-muted-foreground">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
