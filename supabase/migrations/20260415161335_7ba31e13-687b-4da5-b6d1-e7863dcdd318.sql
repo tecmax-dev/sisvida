@@ -1,0 +1,1 @@
+ALTER TABLE public.homologacao_appointments ADD COLUMN employee_phone TEXT DEFAULT NULL;
