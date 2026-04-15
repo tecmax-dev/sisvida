@@ -1498,6 +1498,25 @@ export default function CalendarPage() {
       return;
     }
 
+    // Validação de carteirinha válida
+    const { data: cardValidity } = await supabase.rpc('is_patient_card_valid', {
+      p_patient_id: formPatient,
+      p_clinic_id: currentClinic!.id,
+    });
+    const cardCheck = cardValidity?.[0];
+    if (cardCheck?.card_number && cardCheck?.is_valid === false) {
+      const expiresFormatted = cardCheck.expires_at 
+        ? new Date(cardCheck.expires_at).toLocaleDateString('pt-BR') 
+        : '';
+      toast({
+        title: "Carteirinha vencida",
+        description: `A carteirinha (${cardCheck.card_number}) expirou em ${expiresFormatted}. Renove a carteirinha para agendar.`,
+        variant: "destructive",
+      });
+      setSaving(false);
+      return;
+    }
+
     // Validação de idade máxima do profissional (ex: pediatra até 14 anos)
     const selectedProfessional = professionals.find(p => p.id === formProfessional);
     if (selectedProfessional?.max_patient_age != null) {
@@ -1655,6 +1674,9 @@ export default function CalendarPage() {
     } catch (error: any) {
       const { isScheduleError, message } = handleScheduleValidationError(error);
       
+      // Verificar erro de carteirinha vencida (trigger server-side)
+      const isCardExpiredError = error.message?.includes('CARTEIRINHA_VENCIDA');
+      
       // Verificar erro de janela de agendamento (trigger server-side)
       const isBookingWindowError = error.message?.includes('booking_window_exceeded') || 
                                    error.message?.includes('Agendamento indisponível');
@@ -1666,6 +1688,7 @@ export default function CalendarPage() {
       const isCpfLimitError = error.message?.includes('LIMITE_AGENDAMENTO_CPF');
       
       const getErrorTitle = () => {
+        if (isCardExpiredError) return "Carteirinha vencida";
         if (isBookingWindowError) return "Período indisponível";
         if (isDependentLimitError) return "Limite de dependente atingido";
         if (isCpfLimitError) return "Limite de agendamento atingido";
@@ -1674,6 +1697,10 @@ export default function CalendarPage() {
       };
       
       const getErrorMessage = () => {
+        if (isCardExpiredError) {
+          const match = error.message?.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
+          return match?.[1] || "A carteirinha do paciente está vencida. Renove para agendar.";
+        }
         if (isBookingWindowError) return "Agendamento indisponível para este período";
         if (isDependentLimitError) return "O limite de agendamentos de dependentes para este profissional neste período já foi atingido.";
         if (isCpfLimitError) return "Já existe agendamento para este profissional neste mês.";
@@ -1748,6 +1775,26 @@ export default function CalendarPage() {
       return;
     }
 
+    // Validação de carteirinha válida
+    if (currentClinic) {
+      const { data: cardValidity } = await supabase.rpc('is_patient_card_valid', {
+        p_patient_id: formPatient,
+        p_clinic_id: currentClinic.id,
+      });
+      const cardCheck = cardValidity?.[0];
+      if (cardCheck?.card_number && cardCheck?.is_valid === false) {
+        const expiresFormatted = cardCheck.expires_at 
+          ? new Date(cardCheck.expires_at).toLocaleDateString('pt-BR') 
+          : '';
+        toast({
+          title: "Carteirinha vencida",
+          description: `A carteirinha (${cardCheck.card_number}) expirou em ${expiresFormatted}. Renove a carteirinha para agendar.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const durationMinutes = formDuration ?? editingAppointment.duration_minutes ?? 30;
     
     // Refetch para garantir dados atualizados antes de verificar conflitos
@@ -1810,9 +1857,20 @@ export default function CalendarPage() {
       fetchAppointments();
     } catch (error: any) {
       const { isScheduleError, message } = handleScheduleValidationError(error);
+      const isCardExpiredError = error.message?.includes('CARTEIRINHA_VENCIDA');
+      
+      let title = isScheduleError ? "Horário indisponível" : "Erro ao atualizar";
+      let description = message;
+      
+      if (isCardExpiredError) {
+        title = "Carteirinha vencida";
+        const match = error.message?.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
+        description = match?.[1] || "A carteirinha do paciente está vencida. Renove para agendar.";
+      }
+      
       toast({
-        title: isScheduleError ? "Horário indisponível" : "Erro ao atualizar",
-        description: message,
+        title,
+        description,
         variant: "destructive",
       });
     } finally {
