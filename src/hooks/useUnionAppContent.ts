@@ -245,9 +245,13 @@ export function useDeleteUnionAppContent() {
 
 export function useUploadContentFile() {
   const { toast } = useToast();
+  const { currentClinic } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ file, folder }: { file: File; folder: string }) => {
+    mutationFn: async ({ file, folder, clinicId }: { file: File; folder: string; clinicId?: string }) => {
+      const effectiveClinicId = clinicId || currentClinic?.id;
+      if (!effectiveClinicId) throw new Error("Clínica não encontrada");
+
       // Check if user is authenticated before attempting upload
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -255,7 +259,7 @@ export function useUploadContentFile() {
       }
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${effectiveClinicId}/${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       console.log("[useUploadContentFile] Uploading to union-app-content:", fileName);
 
