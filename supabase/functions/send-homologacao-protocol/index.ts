@@ -120,14 +120,19 @@ function formatProtocolMessage(data: {
   appointmentDate: string;
   address: string;
   clinicName: string;
+  serviceTypeName?: string;
 }): string {
+  const isJuridico = data.serviceTypeName?.toLowerCase().includes('jurídic') || data.serviceTypeName?.toLowerCase().includes('juridic') || data.serviceTypeName?.toLowerCase().includes('assessoria');
+  const label = isJuridico ? 'Assessoria Jurídica' : 'Homologação';
+  const conclusion = isJuridico ? 'O atendimento de assessoria jurídica foi concluído com sucesso.' : 'O processo de homologação foi concluído com sucesso.';
+
   return [
-    `✅ *Protocolo de Homologação*`,
+    `✅ *Protocolo de ${label}*`,
     ``,
-    `O processo de homologação foi concluído com sucesso.`,
+    conclusion,
     ``,
-    `📋 *Funcionário:* ${data.employeeName}`,
-    `🏢 *Empresa:* ${data.companyName}`,
+    `📋 *${isJuridico ? 'Nome' : 'Funcionário'}:* ${data.employeeName}`,
+    ...(isJuridico ? [] : [`🏢 *Empresa:* ${data.companyName}`]),
     `📅 *Data:* ${data.appointmentDate}`,
     `📝 *Protocolo:* ${data.protocolNumber}`,
     ``,
