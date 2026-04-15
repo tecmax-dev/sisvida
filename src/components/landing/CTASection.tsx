@@ -10,26 +10,25 @@ const badges = [
 
 export function CTASection() {
   return (
-    <section id="contact" className="py-20 lg:py-28 relative overflow-hidden bg-primary">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+    <section id="contact" className="relative py-24 lg:py-32 overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary-foreground/10" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(220, 80%, 35%))' }} />
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px]" />
 
       <div className="container relative z-10">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-4">
-            Pronto para transformar sua gestão?
-          </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Comece a usar o ProsindWeb hoje mesmo
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 tracking-tight">
+            Transforme a gestão do seu sindicato
           </h2>
-          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-            Junte-se a mais de 200 sindicatos que já confiam em nossa solução
+          <p className="text-lg text-white/80 mb-10 max-w-lg mx-auto leading-relaxed">
+            Junte-se a mais de 200 entidades que já confiam no ProsindWeb
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button
               size="lg"
-              className="bg-card text-primary hover:bg-card/90 rounded-full px-8 h-14 text-base font-semibold shadow-xl transition-all duration-300 hover:scale-105"
+              className="bg-white text-primary hover:bg-white/90 rounded-full px-8 h-14 text-base font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5"
               asChild
             >
               <Link to="/cadastro" className="flex items-center gap-2">
@@ -40,7 +39,7 @@ export function CTASection() {
             <Button
               size="lg"
               variant="outline"
-              className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold"
+              className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold backdrop-blur-sm"
               asChild
             >
               <a
@@ -55,11 +54,10 @@ export function CTASection() {
             </Button>
           </div>
 
-          {/* Trust badges */}
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex flex-wrap justify-center gap-8">
             {badges.map((badge, i) => (
               <div key={i} className="flex items-center gap-2 text-white/80">
-                <badge.icon className="h-5 w-5" />
+                <badge.icon className="h-4 w-4" />
                 <span className="text-sm font-medium">{badge.text}</span>
               </div>
             ))}

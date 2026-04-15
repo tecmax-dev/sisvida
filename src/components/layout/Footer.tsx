@@ -1,116 +1,86 @@
 import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
-import { MessageCircle, Mail, Shield, Instagram, Linkedin, Youtube, Phone } from "lucide-react";
+import { MessageCircle, Mail, Shield, Instagram, Linkedin, Youtube } from "lucide-react";
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-card">
-      <div className="container py-12 lg:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          {/* Brand Column */}
-          <div className="lg:col-span-1">
+      <div className="container py-14 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
+          <div>
             <Logo size="md" />
-            <p className="mt-4 text-sm text-muted-foreground max-w-xs">
-              Sistema completo de agendamento e gestão para clínicas de todas as especialidades.
+            <p className="mt-4 text-sm text-muted-foreground max-w-xs leading-relaxed">
+              Sistema completo de gestão para sindicatos, associações e federações de todo o Brasil.
             </p>
-            
-            {/* Social Links */}
-            <div className="mt-6 flex gap-3">
-              <a 
-                href="#" 
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 bg-primary/10"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5 text-primary" />
-              </a>
-              <a 
-                href="#" 
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 bg-primary/10"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5 text-primary" />
-              </a>
-              <a 
-                href="#" 
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 bg-primary/10"
-                aria-label="YouTube"
-              >
-                <Youtube className="h-5 w-5 text-primary" />
-              </a>
+            <div className="mt-6 flex gap-2">
+              {[
+                { icon: Instagram, label: "Instagram" },
+                { icon: Linkedin, label: "LinkedIn" },
+                { icon: Youtube, label: "YouTube" },
+              ].map(({ icon: Icon, label }) => (
+                <a
+                  key={label}
+                  href="#"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center bg-muted/50 hover:bg-primary/10 transition-colors"
+                  aria-label={label}
+                >
+                  <Icon className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                </a>
+              ))}
             </div>
           </div>
-          
-          {/* Product Links */}
+
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Produto</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Produto</h4>
             <ul className="space-y-3">
-              <li>
-                <a href="/#features" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Recursos
-                </a>
-              </li>
-              <li>
-                <a href="/#pricing" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Planos e preços
-                </a>
-              </li>
-              <li>
-                <a href="/#specialties" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Especialidades
-                </a>
-              </li>
-              <li>
-                <Link to="/ajuda" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Central de Ajuda
-                </Link>
-              </li>
-              <li>
-                <Link to="/cadastro" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Criar conta gratuita
-                </Link>
-              </li>
-            </ul>
-          </div>
-          
-          {/* Legal Links */}
-          <div>
-            <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Termos de Uso
-                </Link>
-              </li>
-              <li>
-                <Link to="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Política de Privacidade
-                </Link>
-              </li>
-              <li>
-                <Link to="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  LGPD
-                </Link>
-              </li>
+              {[
+                { href: "/#features", label: "Funcionalidades" },
+                { href: "/#pricing", label: "Planos" },
+                { href: "/cadastro", label: "Solicitar Demo" },
+                { href: "/ajuda", label: "Central de Ajuda" },
+              ].map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Contato</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Legal</h4>
+            <ul className="space-y-3">
+              {[
+                { to: "/lgpd", label: "Termos de Uso" },
+                { to: "/lgpd", label: "Política de Privacidade" },
+                { to: "/lgpd", label: "LGPD" },
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link to={link.to} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Contato</h4>
             <ul className="space-y-3">
               <li>
-                <a 
-                  href="https://wa.me/557332311784" 
-                  target="_blank" 
+                <a
+                  href="https://wa.me/557332311784"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  WhatsApp: (73) 3231-1784
+                  (73) 3231-1784
                 </a>
               </li>
               <li>
-                <a 
+                <a
                   href="mailto:contato@prosindweb.com.br"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
@@ -121,32 +91,15 @@ export function Footer() {
             </ul>
           </div>
         </div>
-        
-        {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-border">
+
+        <div className="mt-12 pt-8 border-t border-border/50">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <p className="text-sm text-muted-foreground">
-                © 2026 ProSindWeb - Todos os Direitos Reservados
-              </p>
-            </div>
-            
-            {/* Developer credit */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Desenvolvido por ProsindWeb</span>
-            </div>
-          </div>
-          
-          {/* LGPD Compliance */}
-          <div className="mt-6 pt-6 border-t border-border/50">
-            <div className="flex flex-col md:flex-row justify-center items-center gap-3 text-center">
-              <div className="section-badge py-1.5 px-3">
-                <Shield className="h-4 w-4" />
-                <span className="text-xs font-medium">Em conformidade com a LGPD</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                ProSindWeb
-              </p>
+            <p className="text-xs text-muted-foreground">
+              © 2026 ProsindWeb — Todos os direitos reservados
+            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="h-3.5 w-3.5" />
+              <span>Em conformidade com a LGPD</span>
             </div>
           </div>
         </div>
