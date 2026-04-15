@@ -253,6 +253,15 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                   placeholder="000.000.000-00"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="employee_phone">Telefone do Trabalhador</Label>
+                <Input
+                  id="employee_phone"
+                  value={formData.employee_phone}
+                  onChange={(e) => setFormData({ ...formData, employee_phone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
             </div>
           </div>
 
