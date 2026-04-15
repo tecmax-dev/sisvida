@@ -371,9 +371,11 @@ serve(async (req) => {
         ...messageData,
         logoUrl,
       });
+      const isJur = serviceTypeName.toLowerCase().includes('jurídic') || serviceTypeName.toLowerCase().includes('juridic') || serviceTypeName.toLowerCase().includes('assessoria');
+      const emailLabel = isJur ? 'Assessoria Jurídica' : 'Homologação';
       emailSent = await sendEmailViaSMTP(
         appointment.company_email,
-        `✅ Protocolo de Homologação - ${appointment.protocol_number}`,
+        `✅ Protocolo de ${emailLabel} - ${appointment.protocol_number}`,
         emailHtml
       );
       console.log(`Email protocol sent: ${emailSent ? '✓' : '✗'}`);
