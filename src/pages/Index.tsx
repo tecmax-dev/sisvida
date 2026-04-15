@@ -15,31 +15,14 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1">
-        {/* 1. Hero + Highlight cards */}
         <HeroSection />
-
-        {/* 2. Números */}
         <StatsSection />
-
-        {/* 3. Funcionalidades alternadas */}
         <AlternatingFeaturesSection />
-
-        {/* 4. Grid de benefícios */}
         <QuickFeaturesGrid />
-
-        {/* 5. Por que escolher */}
         <ProblemsSection />
-
-        {/* 6. Depoimentos */}
         <TestimonialsSection />
-
-        {/* 7. Planos e preços */}
         <PricingSection />
-
-        {/* 8. FAQ */}
         <FAQSection />
-
-        {/* 9. CTA Final */}
         <CTASection />
       </main>
       <Footer />

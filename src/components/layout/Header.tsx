@@ -1,21 +1,16 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { UserMenu } from "./UserMenu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
-  { href: "/#features", label: "Recursos" },
-  { href: "/#pricing", label: "Planos e preços" },
-  { href: "/#faq", label: "Conteúdos" },
+  { href: "/#features", label: "Funcionalidades" },
+  { href: "/#pricing", label: "Planos" },
+  { href: "/#testimonials", label: "Depoimentos" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 export function Header() {
@@ -25,13 +20,9 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect logged-in users from home page to dashboard
   useEffect(() => {
     if (loading || !rolesLoaded) return;
-    
-    // Only redirect from home page
     if (location.pathname !== "/") return;
-    
     if (user) {
       if (isSuperAdmin) {
         navigate("/admin", { replace: true });
@@ -44,31 +35,28 @@ export function Header() {
   }, [user, isSuperAdmin, userRoles, loading, rolesLoaded, navigate, location.pathname]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <header 
+    <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? "bg-card shadow-md border-b border-border/30" 
-          : "bg-card"
+        isScrolled
+          ? "bg-card/95 backdrop-blur-lg shadow-sm border-b border-border/40"
+          : "bg-transparent"
       }`}
     >
-      <div className="container flex h-16 lg:h-18 items-center justify-between">
+      <div className="container flex h-16 lg:h-20 items-center justify-between">
         <Logo />
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-1">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+              className="text-sm font-medium text-foreground/70 hover:text-primary px-4 py-2 rounded-lg hover:bg-primary/5 transition-all"
             >
               {link.label}
             </a>
@@ -76,19 +64,17 @@ export function Header() {
           {user && isSuperAdmin && (
             <Link
               to="/admin"
-              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              className="text-sm font-medium text-primary px-4 py-2 rounded-lg hover:bg-primary/5 transition-all"
             >
               Admin
             </Link>
           )}
         </nav>
 
-        {/* Actions - Always visible */}
         <div className="flex items-center gap-3">
           {user ? (
             <>
               <UserMenu onAfterAction={() => setIsMenuOpen(false)} />
-              {/* Mobile Menu Button - only for navigation links */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -100,27 +86,14 @@ export function Header() {
             </>
           ) : (
             <>
-              {/* Desktop login buttons - Clinica nas Nuvens style */}
               <div className="hidden lg:flex items-center gap-3">
-                <Button 
-                  className="btn-eclini px-6 font-semibold"
-                  asChild
-                >
-                  <Link to="/cadastro">
-                    Solicite uma demonstração
-                  </Link>
+                <Button variant="ghost" className="text-sm font-medium" asChild>
+                  <Link to="/auth">Entrar</Link>
                 </Button>
-                <Button 
-                  variant="outline"
-                  className="rounded-full px-6 border-border text-foreground hover:bg-muted font-medium"
-                  asChild
-                >
-                  <Link to="/auth">
-                    Entrar
-                  </Link>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 text-sm font-semibold shadow-md" asChild>
+                  <Link to="/cadastro">Solicitar Demo</Link>
                 </Button>
               </div>
-              {/* Mobile Menu Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -134,46 +107,27 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden bg-card border-b border-border shadow-lg animate-fade-in">
-          <div className="container py-4 space-y-4">
-            <nav className="flex flex-col gap-1">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm font-medium text-foreground/80 hover:text-primary hover:bg-primary/5 transition-colors py-3 px-4 rounded-lg"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ))}
-              {user && isSuperAdmin && (
-                <Link
-                  to="/admin"
-                  className="text-sm font-medium text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors py-3 px-4 rounded-lg"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin
-                </Link>
-              )}
-            </nav>
+        <div className="lg:hidden bg-card border-b border-border shadow-xl animate-fade-in">
+          <div className="container py-6 space-y-2">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="block text-sm font-medium text-foreground/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-primary/5 transition-all"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {link.label}
+              </a>
+            ))}
             {!user && (
-              <div className="flex flex-col gap-3 pt-4 border-t border-border">
-                <Button 
-                  className="btn-eclini w-full font-semibold"
-                  asChild
-                >
+              <div className="flex flex-col gap-3 pt-4 mt-2 border-t border-border">
+                <Button className="w-full bg-primary text-primary-foreground rounded-full font-semibold" asChild>
                   <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>
-                    Solicite uma demonstração
+                    Solicitar Demo
                   </Link>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full rounded-full border-border text-foreground"
-                  asChild
-                >
+                <Button variant="outline" className="w-full rounded-full" asChild>
                   <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                     Entrar
                   </Link>
