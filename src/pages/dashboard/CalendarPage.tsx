@@ -1655,6 +1655,9 @@ export default function CalendarPage() {
     } catch (error: any) {
       const { isScheduleError, message } = handleScheduleValidationError(error);
       
+      // Verificar erro de carteirinha vencida (trigger server-side)
+      const isCardExpiredError = error.message?.includes('CARTEIRINHA_VENCIDA');
+      
       // Verificar erro de janela de agendamento (trigger server-side)
       const isBookingWindowError = error.message?.includes('booking_window_exceeded') || 
                                    error.message?.includes('Agendamento indisponível');
@@ -1666,6 +1669,7 @@ export default function CalendarPage() {
       const isCpfLimitError = error.message?.includes('LIMITE_AGENDAMENTO_CPF');
       
       const getErrorTitle = () => {
+        if (isCardExpiredError) return "Carteirinha vencida";
         if (isBookingWindowError) return "Período indisponível";
         if (isDependentLimitError) return "Limite de dependente atingido";
         if (isCpfLimitError) return "Limite de agendamento atingido";
@@ -1674,6 +1678,10 @@ export default function CalendarPage() {
       };
       
       const getErrorMessage = () => {
+        if (isCardExpiredError) {
+          const match = error.message?.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
+          return match?.[1] || "A carteirinha do paciente está vencida. Renove para agendar.";
+        }
         if (isBookingWindowError) return "Agendamento indisponível para este período";
         if (isDependentLimitError) return "O limite de agendamentos de dependentes para este profissional neste período já foi atingido.";
         if (isCpfLimitError) return "Já existe agendamento para este profissional neste mês.";
