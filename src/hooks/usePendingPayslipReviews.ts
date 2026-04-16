@@ -44,10 +44,27 @@ export function usePendingPayslipReviews() {
     };
 
     fetchCount();
-    const interval = setInterval(fetchCount, 60000);
+    const interval = setInterval(fetchCount, 30000);
+
+    // Realtime: atualiza contagem assim que houver mudanças nos pedidos
+    const channel = supabase
+      .channel(`payslip-reviews-${clinicId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "payslip_requests",
+          filter: `clinic_id=eq.${clinicId}`,
+        },
+        () => fetchCount()
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      supabase.removeChannel(channel);
     };
   }, [clinicId]);
 

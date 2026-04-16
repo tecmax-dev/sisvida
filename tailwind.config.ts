@@ -157,6 +157,10 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        blink: {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.25", transform: "scale(0.92)" },
+        },
         bounce: {
           "0%, 100%": { transform: "translateY(-5%)", animationTimingFunction: "cubic-bezier(0.8, 0, 1, 1)" },
           "50%": { transform: "translateY(0)", animationTimingFunction: "cubic-bezier(0, 0, 0.2, 1)" },
@@ -196,6 +200,7 @@ export default {
         "bounce-soft": "bounce-soft 2s ease-in-out infinite",
         shimmer: "shimmer 8s ease-in-out infinite",
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        blink: "blink 1s ease-in-out infinite",
         bounce: "bounce 1s infinite",
         shake: "shake 0.5s ease-in-out infinite",
         "element": "fade-slide-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards",

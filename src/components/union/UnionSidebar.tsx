@@ -395,11 +395,12 @@ export function UnionSidebar() {
                       {badgeCount > 0 && (
                         <span
                           className={cn(
-                            "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white animate-pulse",
+                            "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white",
                             isUrgentBadge
-                              ? "bg-red-600 ring-2 ring-red-400/40 shadow-[0_0_8px_rgba(220,38,38,0.6)]"
-                              : "bg-amber-500"
+                              ? "bg-[#FF0000] ring-2 ring-red-300/50 shadow-[0_0_10px_rgba(255,0,0,0.8)] animate-blink"
+                              : "bg-amber-500 animate-pulse"
                           )}
+                          aria-label={isUrgentBadge ? `${badgeCount} contracheques aguardando avaliação` : undefined}
                         >
                           {badgeCount}
                         </span>
