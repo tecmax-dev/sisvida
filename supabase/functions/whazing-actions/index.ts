@@ -441,16 +441,21 @@ serve(async (req) => {
       }
 
       case 'close_ticket': {
+        // Best-effort archive sync - don't block ticket close if it fails (rate limits, etc.)
         if (contactNumber) {
-          await setEvolutionArchiveStatus({
-            archive: true,
-            contactNumber,
-            ticketId,
-            supabase,
-            evoUrl,
-            evoInstance,
-            headers,
-          });
+          try {
+            await setEvolutionArchiveStatus({
+              archive: true,
+              contactNumber,
+              ticketId,
+              supabase,
+              evoUrl,
+              evoInstance,
+              headers,
+            });
+          } catch (archiveError) {
+            console.log(`[whazing-actions] Archive failed for ${ticketId}, proceeding with close:`, archiveError);
+          }
         }
 
         await supabase.from('whazing_tickets')
