@@ -95,6 +95,7 @@ export default function AppointmentEditPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentClinic, user } = useAuth();
+  const { isAdmin, accessGroupId } = usePermissions();
   const { toast } = useToast();
   
   const returnTo = searchParams.get('returnTo') || '/dashboard/calendar';
