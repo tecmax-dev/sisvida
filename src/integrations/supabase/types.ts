@@ -17615,6 +17615,10 @@ export type Database = {
         Args: { p_cpf: string; p_password: string }
         Returns: Json
       }
+      can_access_clinic_full_info: {
+        Args: { check_clinic_id: string }
+        Returns: boolean
+      }
       can_mobile_cancel_homologacao: {
         Args: { p_appointment_id: string; p_employee_cpf: string }
         Returns: boolean
