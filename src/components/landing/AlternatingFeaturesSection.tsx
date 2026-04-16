@@ -173,7 +173,8 @@ export function AlternatingFeaturesSection() {
         ]}
         imagePosition="left"
         icon={<Smartphone className="h-6 w-6 text-primary" />}
-        gradient="bg-primary"
+        gradient="bg-emerald-500"
+        imageSrc={appScreenshot}
       />
     </section>
   );
