@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { PatientSelect } from "@/components/patients/PatientSelect";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { handleScheduleValidationError } from "@/lib/scheduleValidation";
@@ -23,6 +24,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
+import { useQuery } from "@tanstack/react-query";
 
 const appointmentTypes = [
   { value: "first_visit", label: "Primeira Consulta" },
@@ -93,6 +95,7 @@ export default function AppointmentEditPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentClinic, user } = useAuth();
+  const { isAdmin, accessGroupId } = usePermissions();
   const { toast } = useToast();
   
   const returnTo = searchParams.get('returnTo') || '/dashboard/calendar';
@@ -112,8 +115,62 @@ export default function AppointmentEditPage() {
   const [notes, setNotes] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
   const [status, setStatus] = useState("scheduled");
-  
-  // Initial data for auto-save
+
+  // === Swap deadline: busca horas de antecedência para troca de paciente ===
+  const { data: swapDeadlineHours } = useQuery({
+    queryKey: ['swap-deadline-edit', accessGroupId, currentClinic?.id],
+    queryFn: async (): Promise<number | null> => {
+      if (isAdmin) return null;
+
+      if (accessGroupId) {
+        const { data: groupData } = await supabase
+          .from('access_groups')
+          .select('patient_swap_deadline_hours')
+          .eq('id', accessGroupId)
+          .single();
+        if (groupData?.patient_swap_deadline_hours != null) {
+          return groupData.patient_swap_deadline_hours;
+        }
+      }
+
+      if (currentClinic?.id) {
+        const { data: clinicData } = await supabase
+          .from('clinics')
+          .select('patient_swap_deadline_hours')
+          .eq('id', currentClinic.id)
+          .single();
+        return clinicData?.patient_swap_deadline_hours ?? null;
+      }
+
+      return null;
+    },
+    enabled: !!currentClinic?.id && !isAdmin,
+    staleTime: 5 * 60_000,
+  });
+
+  /** Returns true (and shows toast) if the patient swap is blocked by deadline */
+  const isSwapBlocked = useCallback((originalPatientId: string, newPatientId: string): boolean => {
+    if (isAdmin || swapDeadlineHours == null || originalPatientId === newPatientId || !appointment) return false;
+
+    const appointmentDateTime = new Date(
+      `${appointment.appointment_date}T${appointment.start_time}`
+    );
+    const hoursUntil = (appointmentDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (hoursUntil < swapDeadlineHours) {
+      const label = swapDeadlineHours < 1
+        ? `${Math.round(swapDeadlineHours * 60)} minutos`
+        : `${swapDeadlineHours} hora${swapDeadlineHours > 1 ? 's' : ''}`;
+      toast({
+        title: "Operação não permitida",
+        description: `Não é possível trocar o paciente com menos de ${label} de antecedência do horário agendado.`,
+        variant: "destructive",
+      });
+      return true;
+    }
+    return false;
+  }, [isAdmin, swapDeadlineHours, appointment, toast]);
+
   const [initialFormData, setInitialFormData] = useState({
     patientId: "",
     professionalId: "",
@@ -187,6 +244,11 @@ export default function AppointmentEditPage() {
     
     // Skip if required fields are missing
     if (!data.patientId || !data.professionalId || !data.startTime || !data.appointmentDate) {
+      return;
+    }
+
+    // Block auto-save if patient changed and swap deadline applies
+    if (data.patientId !== appointment.patient_id && isSwapBlocked(appointment.patient_id, data.patientId)) {
       return;
     }
     
@@ -331,6 +393,11 @@ export default function AppointmentEditPage() {
     }
 
     if (!currentClinic || !id) return;
+
+    // === Validação de troca de paciente (swap deadline) ===
+    if (appointment && patientId !== appointment.patient_id && isSwapBlocked(appointment.patient_id, patientId)) {
+      return;
+    }
 
     setSaving(true);
 
