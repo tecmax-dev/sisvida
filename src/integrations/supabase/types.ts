@@ -17291,99 +17291,81 @@ export type Database = {
           address: string | null
           app_unavailable: boolean | null
           app_unavailable_message: string | null
-          booking_months_ahead: number | null
+          birthday_enabled: boolean | null
+          birthday_message: string | null
           city: string | null
           closing_time: string | null
+          created_at: string | null
           custom_map_embed_url: string | null
-          dependent_booking_limit: number | null
-          dependent_booking_limit_enabled: boolean | null
-          dependent_booking_period: string | null
           email: string | null
-          enforce_schedule_validation: boolean | null
           entity_nomenclature: string | null
           holidays_enabled: boolean | null
           id: string | null
-          is_blocked: boolean | null
-          is_maintenance: boolean | null
           logo_url: string | null
-          maintenance_reason: string | null
           map_view_type: string | null
-          max_appointments_per_cpf_month: number | null
-          min_advance_booking_hours: number | null
           name: string | null
           opening_time: string | null
-          patient_swap_deadline_hours: number | null
           phone: string | null
+          reminder_enabled: boolean | null
+          reminder_hours: number | null
           slug: string | null
           state_code: string | null
-          titular_booking_limit_enabled: boolean | null
-          use_ai_booking: boolean | null
+          updated_at: string | null
+          whatsapp_header_image_url: string | null
           whatsapp_provider: string | null
         }
         Insert: {
           address?: string | null
           app_unavailable?: boolean | null
           app_unavailable_message?: string | null
-          booking_months_ahead?: number | null
+          birthday_enabled?: boolean | null
+          birthday_message?: string | null
           city?: string | null
           closing_time?: string | null
+          created_at?: string | null
           custom_map_embed_url?: string | null
-          dependent_booking_limit?: number | null
-          dependent_booking_limit_enabled?: boolean | null
-          dependent_booking_period?: string | null
           email?: string | null
-          enforce_schedule_validation?: boolean | null
           entity_nomenclature?: string | null
           holidays_enabled?: boolean | null
           id?: string | null
-          is_blocked?: boolean | null
-          is_maintenance?: boolean | null
           logo_url?: string | null
-          maintenance_reason?: string | null
           map_view_type?: string | null
-          max_appointments_per_cpf_month?: number | null
-          min_advance_booking_hours?: number | null
           name?: string | null
           opening_time?: string | null
-          patient_swap_deadline_hours?: number | null
           phone?: string | null
+          reminder_enabled?: boolean | null
+          reminder_hours?: number | null
           slug?: string | null
           state_code?: string | null
-          titular_booking_limit_enabled?: boolean | null
-          use_ai_booking?: boolean | null
+          updated_at?: string | null
+          whatsapp_header_image_url?: string | null
           whatsapp_provider?: string | null
         }
         Update: {
           address?: string | null
           app_unavailable?: boolean | null
           app_unavailable_message?: string | null
-          booking_months_ahead?: number | null
+          birthday_enabled?: boolean | null
+          birthday_message?: string | null
           city?: string | null
           closing_time?: string | null
+          created_at?: string | null
           custom_map_embed_url?: string | null
-          dependent_booking_limit?: number | null
-          dependent_booking_limit_enabled?: boolean | null
-          dependent_booking_period?: string | null
           email?: string | null
-          enforce_schedule_validation?: boolean | null
           entity_nomenclature?: string | null
           holidays_enabled?: boolean | null
           id?: string | null
-          is_blocked?: boolean | null
-          is_maintenance?: boolean | null
           logo_url?: string | null
-          maintenance_reason?: string | null
           map_view_type?: string | null
-          max_appointments_per_cpf_month?: number | null
-          min_advance_booking_hours?: number | null
           name?: string | null
           opening_time?: string | null
-          patient_swap_deadline_hours?: number | null
           phone?: string | null
+          reminder_enabled?: boolean | null
+          reminder_hours?: number | null
           slug?: string | null
           state_code?: string | null
-          titular_booking_limit_enabled?: boolean | null
-          use_ai_booking?: boolean | null
+          updated_at?: string | null
+          whatsapp_header_image_url?: string | null
           whatsapp_provider?: string | null
         }
         Relationships: []
