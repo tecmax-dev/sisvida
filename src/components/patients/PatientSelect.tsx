@@ -68,44 +68,58 @@ export function PatientSelect({
     fetchSelectedPatient();
   }, [value, currentClinic]);
 
-  // Search patients
+  // Search patients — only when user types at least 1 char
   useEffect(() => {
+    if (!open) return;
+
+    const searchTerm = search.trim();
+
+    // No search term → show empty list (user must type to search)
+    if (!searchTerm) {
+      setPatients(selectedPatient ? [selectedPatient] : []);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const controller = new AbortController();
+
     const searchPatients = async () => {
       if (!currentClinic) return;
 
-      setLoading(true);
       try {
-        const searchTerm = search.trim();
         const searchTermNumbers = searchTerm.replace(/\D/g, "");
 
         let query = supabase
           .from("patients")
           .select("id, name, cpf, phone")
           .eq("clinic_id", currentClinic.id)
+          .or(
+            `name.ilike.%${searchTerm}%,cpf.ilike.%${searchTermNumbers}%,phone.ilike.%${searchTermNumbers}%`
+          )
           .order("name")
           .limit(50);
 
-        if (searchTerm) {
-          query = query.or(
-            `name.ilike.%${searchTerm}%,cpf.ilike.%${searchTermNumbers}%,phone.ilike.%${searchTermNumbers}%`
-          );
-        }
-
         const { data, error } = await query;
 
+        if (controller.signal.aborted) return;
         if (error) throw error;
         setPatients(data || []);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Error searching patients:", error);
         setPatients([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
-    const debounce = setTimeout(searchPatients, 200);
-    return () => clearTimeout(debounce);
-  }, [search, currentClinic, open]);
+    const debounce = setTimeout(searchPatients, 250);
+    return () => {
+      clearTimeout(debounce);
+      controller.abort();
+    };
+  }, [search, currentClinic, open, selectedPatient]);
 
   const formatCPF = (cpf: string | null) => {
     if (!cpf) return "";
