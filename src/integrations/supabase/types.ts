@@ -511,6 +511,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anamnese_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "anamnese_responses_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -902,6 +909,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -3205,6 +3219,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "exam_results_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       exams: {
@@ -3684,6 +3705,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
           {
@@ -4965,6 +4993,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "medical_documents_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       medical_records: {
@@ -5063,6 +5098,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -5170,6 +5212,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
           {
@@ -5282,6 +5331,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_payments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -5453,6 +5509,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_rules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -6630,6 +6693,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "nps_surveys_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       odontogram_records: {
@@ -6712,6 +6782,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "odontogram_records_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -6926,6 +7003,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_sessions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -8050,6 +8134,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patients_no_show_blocked_professional_id_fkey"
+            columns: ["no_show_blocked_professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payment_plans: {
@@ -8634,6 +8725,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "prescriptions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       procedure_insurance_prices: {
@@ -8811,6 +8909,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "professional_commissions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "professional_commissions_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
@@ -8853,6 +8958,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "professional_insurance_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       professional_procedures: {
@@ -8887,6 +8999,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_procedures_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -8953,6 +9072,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "professional_schedule_exceptions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       professional_specialties: {
@@ -8980,6 +9106,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_specialties_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
           {
@@ -9414,6 +9547,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "queue_calls_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "queue_calls_queue_id_fkey"
             columns: ["queue_id"]
             isOneToOne: false
@@ -9643,6 +9783,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -11301,6 +11448,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guide_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -15674,6 +15828,13 @@ export type Database = {
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_roles_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_settings_widgets: {
@@ -15826,6 +15987,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "waiting_list_offered_professional_id_fkey"
+            columns: ["offered_professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "waiting_list_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -15837,6 +16005,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiting_list_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
           {
@@ -16329,6 +16504,13 @@ export type Database = {
             columns: ["selected_professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_booking_sessions_selected_professional_id_fkey"
+            columns: ["selected_professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -17291,102 +17473,135 @@ export type Database = {
           address: string | null
           app_unavailable: boolean | null
           app_unavailable_message: string | null
-          booking_months_ahead: number | null
+          birthday_enabled: boolean | null
+          birthday_message: string | null
           city: string | null
           closing_time: string | null
+          created_at: string | null
           custom_map_embed_url: string | null
-          dependent_booking_limit: number | null
-          dependent_booking_limit_enabled: boolean | null
-          dependent_booking_period: string | null
           email: string | null
-          enforce_schedule_validation: boolean | null
           entity_nomenclature: string | null
           holidays_enabled: boolean | null
           id: string | null
-          is_blocked: boolean | null
-          is_maintenance: boolean | null
           logo_url: string | null
-          maintenance_reason: string | null
           map_view_type: string | null
-          max_appointments_per_cpf_month: number | null
-          min_advance_booking_hours: number | null
           name: string | null
           opening_time: string | null
-          patient_swap_deadline_hours: number | null
           phone: string | null
+          reminder_enabled: boolean | null
+          reminder_hours: number | null
           slug: string | null
           state_code: string | null
-          titular_booking_limit_enabled: boolean | null
-          use_ai_booking: boolean | null
+          updated_at: string | null
+          whatsapp_header_image_url: string | null
           whatsapp_provider: string | null
         }
         Insert: {
           address?: string | null
           app_unavailable?: boolean | null
           app_unavailable_message?: string | null
-          booking_months_ahead?: number | null
+          birthday_enabled?: boolean | null
+          birthday_message?: string | null
           city?: string | null
           closing_time?: string | null
+          created_at?: string | null
           custom_map_embed_url?: string | null
-          dependent_booking_limit?: number | null
-          dependent_booking_limit_enabled?: boolean | null
-          dependent_booking_period?: string | null
           email?: string | null
-          enforce_schedule_validation?: boolean | null
           entity_nomenclature?: string | null
           holidays_enabled?: boolean | null
           id?: string | null
-          is_blocked?: boolean | null
-          is_maintenance?: boolean | null
           logo_url?: string | null
-          maintenance_reason?: string | null
           map_view_type?: string | null
-          max_appointments_per_cpf_month?: number | null
-          min_advance_booking_hours?: number | null
           name?: string | null
           opening_time?: string | null
-          patient_swap_deadline_hours?: number | null
           phone?: string | null
+          reminder_enabled?: boolean | null
+          reminder_hours?: number | null
           slug?: string | null
           state_code?: string | null
-          titular_booking_limit_enabled?: boolean | null
-          use_ai_booking?: boolean | null
+          updated_at?: string | null
+          whatsapp_header_image_url?: string | null
           whatsapp_provider?: string | null
         }
         Update: {
           address?: string | null
           app_unavailable?: boolean | null
           app_unavailable_message?: string | null
-          booking_months_ahead?: number | null
+          birthday_enabled?: boolean | null
+          birthday_message?: string | null
           city?: string | null
           closing_time?: string | null
+          created_at?: string | null
           custom_map_embed_url?: string | null
-          dependent_booking_limit?: number | null
-          dependent_booking_limit_enabled?: boolean | null
-          dependent_booking_period?: string | null
           email?: string | null
-          enforce_schedule_validation?: boolean | null
           entity_nomenclature?: string | null
           holidays_enabled?: boolean | null
           id?: string | null
-          is_blocked?: boolean | null
-          is_maintenance?: boolean | null
           logo_url?: string | null
-          maintenance_reason?: string | null
           map_view_type?: string | null
-          max_appointments_per_cpf_month?: number | null
-          min_advance_booking_hours?: number | null
           name?: string | null
           opening_time?: string | null
-          patient_swap_deadline_hours?: number | null
           phone?: string | null
+          reminder_enabled?: boolean | null
+          reminder_hours?: number | null
           slug?: string | null
           state_code?: string | null
-          titular_booking_limit_enabled?: boolean | null
-          use_ai_booking?: boolean | null
+          updated_at?: string | null
+          whatsapp_header_image_url?: string | null
           whatsapp_provider?: string | null
         }
         Relationships: []
+      }
+      public_professionals: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          clinic_id: string | null
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          slug: string | null
+          specialty: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          slug?: string | null
+          specialty?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          slug?: string | null
+          specialty?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professionals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professionals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
