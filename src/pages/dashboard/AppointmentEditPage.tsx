@@ -246,6 +246,11 @@ export default function AppointmentEditPage() {
     if (!data.patientId || !data.professionalId || !data.startTime || !data.appointmentDate) {
       return;
     }
+
+    // Block auto-save if patient changed and swap deadline applies
+    if (data.patientId !== appointment.patient_id && isSwapBlocked(appointment.patient_id, data.patientId)) {
+      return;
+    }
     
     const endTime = calculateEndTime(data.startTime, data.durationMinutes);
     
