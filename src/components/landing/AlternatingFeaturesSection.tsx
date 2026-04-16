@@ -2,6 +2,7 @@ import { Check, ArrowRight, BarChart3, Users, Smartphone, FileText, Shield, Zap 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import appScreenshot from "@/assets/app-screenshot.png";
 
 interface FeatureBlockProps {
   title: string;
