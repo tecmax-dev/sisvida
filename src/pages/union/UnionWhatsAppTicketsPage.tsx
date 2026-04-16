@@ -234,6 +234,10 @@ export default function UnionWhatsAppTicketsPage() {
             <Users className={`h-4 w-4 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
             Sync Nomes
           </Button>
+          <Button variant="destructive" size="sm" onClick={handleCloseAllTickets} disabled={isClosingAll} title="Fechar todos os tickets abertos e pendentes">
+            {isClosingAll ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
+            Fechar Todos
+          </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
