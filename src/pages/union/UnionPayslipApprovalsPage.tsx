@@ -99,6 +99,8 @@ export default function UnionPayslipApprovalsPage() {
   const [newExpiresAt, setNewExpiresAt] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [isSendingBatch, setIsSendingBatch] = useState(false);
+  const [reviewImageUrl, setReviewImageUrl] = useState<string | null>(null);
+  const [reviewImageLoading, setReviewImageLoading] = useState(false);
 
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
@@ -112,13 +114,21 @@ export default function UnionPayslipApprovalsPage() {
     setLoadingImage(false);
   };
 
-  const openReviewDialog = (request: PayslipRequest) => {
+  const openReviewDialog = async (request: PayslipRequest) => {
     setSelectedRequest(request);
     setReviewNotes('');
     const defaultExpiry = new Date();
     defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
     setNewExpiresAt(defaultExpiry.toISOString().split('T')[0]);
+    setReviewImageUrl(null);
     setReviewDialogOpen(true);
+
+    if (request.attachment_path) {
+      setReviewImageLoading(true);
+      const url = await getAttachmentUrl(request.attachment_path);
+      setReviewImageUrl(url);
+      setReviewImageLoading(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -639,7 +649,7 @@ export default function UnionPayslipApprovalsPage() {
 
       {/* Review Dialog */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Revisar Contracheque</DialogTitle>
           </DialogHeader>
@@ -652,6 +662,34 @@ export default function UnionPayslipApprovalsPage() {
                 ? format(parseISO(selectedRequest.patient_cards.expires_at), "dd/MM/yyyy", { locale: ptBR })
                 : 'N/A'}</p>
             </div>
+
+            {/* Payslip Image */}
+            {selectedRequest?.attachment_path && (
+              <div className="space-y-2">
+                <Label className="text-sm">Contracheque enviado</Label>
+                <div className="border rounded-lg overflow-hidden bg-muted/30 max-h-64 flex items-center justify-center">
+                  {reviewImageLoading ? (
+                    <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="text-xs">Carregando imagem...</span>
+                    </div>
+                  ) : reviewImageUrl ? (
+                    <img
+                      src={reviewImageUrl}
+                      alt="Contracheque"
+                      className="max-h-64 w-full object-contain cursor-pointer"
+                      onClick={() => {
+                        setViewingImageUrl(reviewImageUrl);
+                        setViewingPatientName(selectedRequest?.patients?.name || 'Sócio');
+                        setViewerOpen(true);
+                      }}
+                    />
+                  ) : (
+                    <p className="py-4 text-xs text-muted-foreground">Não foi possível carregar a imagem</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="new-expiry" className="flex items-center gap-2">
