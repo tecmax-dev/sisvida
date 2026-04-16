@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
 import { usePendingFiliacoes } from "@/hooks/usePendingFiliacoes";
+import { usePendingPayslipReviews } from "@/hooks/usePendingPayslipReviews";
 import { useWhazingPendingCount } from "@/hooks/useWhazingTickets";
 import { cn } from "@/lib/utils";
 import {
@@ -138,7 +139,7 @@ const unionNavTree: NavCategory[] = [
     color: "socios",
     items: [
       { href: "/union/socios", icon: Users, label: "Gestão de Sócios", permission: "union_view_members" },
-      { href: "/union/socios/contracheques", icon: FileCheck, label: "Contracheques", permission: "union_view_members" },
+      { href: "/union/socios/contracheques", icon: FileCheck, label: "Contracheques", permission: "union_view_members", badgeKey: "pendingPayslipReviews" },
       { href: "/union/aprovacao-dependentes", icon: Shield, label: "Aprovação Dependentes", permission: "union_manage_members" },
       { href: "/union/beneficios", icon: Gift, label: "Benefícios", permission: "union_view_members" },
       { href: "/union/autorizacoes", icon: FileCheck2, label: "Autorizações", permission: "union_view_members" },
@@ -266,6 +267,7 @@ export function UnionSidebar() {
   const location = useLocation();
   const { hasUnionPermission } = useUnionPermissions();
   const { count: pendingFiliacoesCount } = usePendingFiliacoes();
+  const { count: pendingPayslipReviewsCount } = usePendingPayslipReviews();
   const { data: pendingTicketsCount } = useWhazingPendingCount();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
@@ -374,7 +376,9 @@ export function UnionSidebar() {
                 {category.items.map((item) => {
                   const badgeCount = item.badgeKey === "pendingFiliacoes" ? pendingFiliacoesCount
                     : item.badgeKey === "pendingTickets" ? (pendingTicketsCount ?? 0)
+                    : item.badgeKey === "pendingPayslipReviews" ? pendingPayslipReviewsCount
                     : 0;
+                  const isUrgentBadge = item.badgeKey === "pendingPayslipReviews";
                   return (
                     <Link
                       key={item.href}
@@ -389,7 +393,14 @@ export function UnionSidebar() {
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span className="truncate flex-1">{item.label}</span>
                       {badgeCount > 0 && (
-                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white animate-pulse">
+                        <span
+                          className={cn(
+                            "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white animate-pulse",
+                            isUrgentBadge
+                              ? "bg-red-600 ring-2 ring-red-400/40 shadow-[0_0_8px_rgba(220,38,38,0.6)]"
+                              : "bg-amber-500"
+                          )}
+                        >
                           {badgeCount}
                         </span>
                       )}
