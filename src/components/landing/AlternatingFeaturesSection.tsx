@@ -12,6 +12,7 @@ interface FeatureBlockProps {
   imagePosition: "left" | "right";
   icon: React.ReactNode;
   gradient: string;
+  imageSrc?: string;
 }
 
 function FeatureBlock({
@@ -22,6 +23,7 @@ function FeatureBlock({
   imagePosition,
   icon,
   gradient,
+  imageSrc,
 }: FeatureBlockProps) {
   return (
     <div className="py-20 lg:py-28">
@@ -36,45 +38,55 @@ function FeatureBlock({
           <div className="lg:w-1/2 flex justify-center">
             <div className={cn("relative w-full max-w-md")}>
               <div className={cn("absolute inset-0 rounded-3xl blur-2xl opacity-20", gradient)} />
-              <div className="relative bg-card border border-border/60 rounded-2xl p-8 shadow-xl">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    {icon}
+              {imageSrc ? (
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/60">
+                  <img 
+                    src={imageSrc} 
+                    alt={title}
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="relative bg-card border border-border/60 rounded-2xl p-8 shadow-xl">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      {icon}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-foreground text-sm">{subtitle}</h4>
+                      <p className="text-xs text-muted-foreground">Painel em tempo real</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-foreground text-sm">{subtitle}</h4>
-                    <p className="text-xs text-muted-foreground">Painel em tempo real</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Associados ativos</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">12.450</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: "85%" }} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Arrecadação mensal</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">R$ 245.000</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary/70 rounded-full transition-all duration-1000" style={{ width: "72%" }} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 pt-4">
+                      {[
+                        { label: "Novos", value: "+128" },
+                        { label: "Inativos", value: "32" },
+                        { label: "Pendentes", value: "15" },
+                      ].map((item) => (
+                        <div key={item.label} className="bg-muted/50 rounded-xl p-3 text-center">
+                          <p className="text-lg font-bold text-foreground">{item.value}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Associados ativos</span>
-                    <span className="text-sm font-bold text-foreground tabular-nums">12.450</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: "85%" }} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Arrecadação mensal</span>
-                    <span className="text-sm font-bold text-foreground tabular-nums">R$ 245.000</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary/70 rounded-full transition-all duration-1000" style={{ width: "72%" }} />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 pt-4">
-                    {[
-                      { label: "Novos", value: "+128" },
-                      { label: "Inativos", value: "32" },
-                      { label: "Pendentes", value: "15" },
-                    ].map((item) => (
-                      <div key={item.label} className="bg-muted/50 rounded-xl p-3 text-center">
-                        <p className="text-lg font-bold text-foreground">{item.value}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{item.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
