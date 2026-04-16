@@ -663,6 +663,34 @@ export default function UnionPayslipApprovalsPage() {
                 : 'N/A'}</p>
             </div>
 
+            {/* Payslip Image */}
+            {selectedRequest?.attachment_path && (
+              <div className="space-y-2">
+                <Label className="text-sm">Contracheque enviado</Label>
+                <div className="border rounded-lg overflow-hidden bg-muted/30 max-h-64 flex items-center justify-center">
+                  {reviewImageLoading ? (
+                    <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="text-xs">Carregando imagem...</span>
+                    </div>
+                  ) : reviewImageUrl ? (
+                    <img
+                      src={reviewImageUrl}
+                      alt="Contracheque"
+                      className="max-h-64 w-full object-contain cursor-pointer"
+                      onClick={() => {
+                        setViewingImageUrl(reviewImageUrl);
+                        setViewingPatientName(selectedRequest?.patients?.name || 'Sócio');
+                        setViewerOpen(true);
+                      }}
+                    />
+                  ) : (
+                    <p className="py-4 text-xs text-muted-foreground">Não foi possível carregar a imagem</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="new-expiry" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
