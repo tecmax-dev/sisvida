@@ -21,13 +21,17 @@ import {
   LayoutList,
   Columns3,
   Users,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import {
   useWhazingTickets,
   useWhazingTicketStats,
   useWhazingRealtimeSubscription,
+  closeWhazingTicket,
   type WhazingTicket,
 } from "@/hooks/useWhazingTickets";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineChatPanel from "@/components/union/whazing/InlineChatPanel";
 import TicketKanban from "@/components/union/whazing/TicketKanban";
@@ -107,7 +111,9 @@ export default function UnionWhatsAppTicketsPage() {
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isClosingAll, setIsClosingAll] = useState(false);
   const prevPendingRef = useRef<number | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: tickets, isLoading, refetch, isFetching } = useWhazingTickets(statusFilter);
   const { data: stats } = useWhazingTicketStats();
@@ -156,6 +162,36 @@ export default function UnionWhatsAppTicketsPage() {
     }
   }, [refetch]);
 
+  const handleCloseAllTickets = useCallback(async () => {
+    const openTickets = (tickets || []).filter(t => t.status === "open" || t.status === "pending");
+    if (openTickets.length === 0) {
+      toast.info("Nenhum ticket aberto ou pendente para fechar.");
+      return;
+    }
+    const confirmed = window.confirm(`Deseja fechar ${openTickets.length} ticket(s) aberto(s)/pendente(s)?`);
+    if (!confirmed) return;
+
+    setIsClosingAll(true);
+    let closed = 0;
+    let errors = 0;
+    for (const ticket of openTickets) {
+      try {
+        await closeWhazingTicket(ticket.ticket_id, ticket.contact_number);
+        closed++;
+      } catch {
+        errors++;
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+    queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
+    setIsClosingAll(false);
+    if (errors > 0) {
+      toast.warning(`${closed} ticket(s) fechado(s), ${errors} erro(s).`);
+    } else {
+      toast.success(`${closed} ticket(s) fechado(s) com sucesso!`);
+    }
+  }, [tickets, queryClient]);
+
   return (
     <div className="h-[calc(100vh-5rem)] flex flex-col">
       {/* Compact Header */}
@@ -197,6 +233,10 @@ export default function UnionWhatsAppTicketsPage() {
           <Button variant="outline" size="sm" onClick={handleSyncContacts} disabled={isSyncing} title="Sincronizar nomes dos contatos via Evolution API">
             <Users className={`h-4 w-4 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
             Sync Nomes
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleCloseAllTickets} disabled={isClosingAll} title="Fechar todos os tickets abertos e pendentes">
+            {isClosingAll ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
+            Fechar Todos
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
