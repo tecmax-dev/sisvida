@@ -30,19 +30,28 @@ export default function SindicatoPrivacyPolicy() {
             <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10">
               <Shield className="h-6 w-6 text-primary flex-shrink-0" />
               <p className="text-sm text-muted-foreground">
-                Esta política descreve como o aplicativo <strong>SECMI - Sindicato dos Comerciários de Ilhéus</strong> (Package ID: <code className="text-xs bg-muted px-1 py-0.5 rounded">br.com.prosindweb.twa</code>), desenvolvido e mantido pelo <strong>Sindicato dos Comerciários de Ilhéus e Região</strong>, coleta, usa e protege suas informações pessoais, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)</strong>.
+                Esta Política de Privacidade aplica-se ao aplicativo <strong>SECMI - Sindicato dos Comerciários de Ilhéus</strong> (Package ID: <code className="text-xs bg-muted px-1 py-0.5 rounded">br.com.prosindweb.twa</code>), publicado na Google Play Store pelo desenvolvedor <strong>Tecmax Tecnologia</strong> em nome da entidade <strong>Sindicato dos Comerciários de Ilhéus e Região</strong>. Este documento descreve como coletamos, usamos e protegemos suas informações pessoais, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)</strong>.
               </p>
             </div>
-            <div className="bg-muted/30 rounded-lg p-4 space-y-1.5 text-sm border border-border">
-              <p className="font-semibold text-foreground">Identificação da Entidade Responsável</p>
-              <p className="text-muted-foreground"><strong>Nome do Aplicativo:</strong> SECMI - Sindicato dos Comerciários de Ilhéus</p>
-              <p className="text-muted-foreground"><strong>Package ID (Google Play):</strong> br.com.prosindweb.twa</p>
-              <p className="text-muted-foreground"><strong>Entidade Legal (Titular dos Dados):</strong> Sindicato dos Comerciários de Ilhéus e Região</p>
-              <p className="text-muted-foreground"><strong>CNPJ da Entidade:</strong> 14.173.298/0001-46</p>
-              <p className="text-muted-foreground"><strong>Endereço:</strong> Rua Coronel Paiva, nº 99, Centro, Ilhéus - BA, CEP 45653-310</p>
-              <p className="text-muted-foreground"><strong>Desenvolvedor do Aplicativo:</strong> Tecmax Tecnologia</p>
-              <p className="text-muted-foreground"><strong>CNPJ do Desenvolvedor:</strong> 03.025.212/0001-11</p>
-              <p className="text-muted-foreground"><strong>E-mail de Contato:</strong> contato@prosindweb.com.br</p>
+            <div className="bg-muted/30 rounded-lg p-4 space-y-3 text-sm border border-border">
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">📱 Aplicativo</p>
+                <p className="text-muted-foreground"><strong>Nome:</strong> SECMI - Sindicato dos Comerciários de Ilhéus</p>
+                <p className="text-muted-foreground"><strong>Package ID (Google Play):</strong> br.com.prosindweb.twa</p>
+                <p className="text-muted-foreground"><strong>Plataforma:</strong> Google Play Store (Android)</p>
+              </div>
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <p className="font-semibold text-foreground">🏢 Desenvolvedor (Publicador na Google Play)</p>
+                <p className="text-muted-foreground"><strong>Nome:</strong> Tecmax Tecnologia</p>
+                <p className="text-muted-foreground"><strong>CNPJ:</strong> 03.025.212/0001-11</p>
+                <p className="text-muted-foreground"><strong>E-mail de Contato:</strong> contato@prosindweb.com.br</p>
+              </div>
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <p className="font-semibold text-foreground">⚖️ Entidade Legal (Controladora dos Dados)</p>
+                <p className="text-muted-foreground"><strong>Nome:</strong> Sindicato dos Comerciários de Ilhéus e Região</p>
+                <p className="text-muted-foreground"><strong>CNPJ:</strong> 14.173.298/0001-46</p>
+                <p className="text-muted-foreground"><strong>Endereço:</strong> Rua Coronel Paiva, nº 99, Centro, Ilhéus - BA, CEP 45653-310</p>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               Última atualização: 16 de abril de 2026
