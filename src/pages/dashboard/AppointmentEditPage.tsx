@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { PatientSelect } from "@/components/patients/PatientSelect";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { handleScheduleValidationError } from "@/lib/scheduleValidation";
@@ -23,6 +24,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
+import { useQuery } from "@tanstack/react-query";
 
 const appointmentTypes = [
   { value: "first_visit", label: "Primeira Consulta" },
