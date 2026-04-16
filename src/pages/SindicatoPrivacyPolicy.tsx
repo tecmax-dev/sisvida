@@ -37,9 +37,11 @@ export default function SindicatoPrivacyPolicy() {
               <p className="font-semibold text-foreground">Identificação da Entidade Responsável</p>
               <p className="text-muted-foreground"><strong>Nome do Aplicativo:</strong> SECMI - Sindicato dos Comerciários de Ilhéus</p>
               <p className="text-muted-foreground"><strong>Package ID (Google Play):</strong> br.com.prosindweb.twa</p>
-              <p className="text-muted-foreground"><strong>Desenvolvedor / Entidade Legal:</strong> Sindicato dos Comerciários de Ilhéus e Região</p>
-              <p className="text-muted-foreground"><strong>CNPJ:</strong> 14.173.298/0001-46</p>
+              <p className="text-muted-foreground"><strong>Entidade Legal (Titular dos Dados):</strong> Sindicato dos Comerciários de Ilhéus e Região</p>
+              <p className="text-muted-foreground"><strong>CNPJ da Entidade:</strong> 14.173.298/0001-46</p>
               <p className="text-muted-foreground"><strong>Endereço:</strong> Rua Coronel Paiva, nº 99, Centro, Ilhéus - BA, CEP 45653-310</p>
+              <p className="text-muted-foreground"><strong>Desenvolvedor do Aplicativo:</strong> Tecmax Tecnologia</p>
+              <p className="text-muted-foreground"><strong>CNPJ do Desenvolvedor:</strong> 03.025.212/0001-11</p>
               <p className="text-muted-foreground"><strong>E-mail de Contato:</strong> contato@prosindweb.com.br</p>
             </div>
             <p className="text-xs text-muted-foreground">
