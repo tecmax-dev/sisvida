@@ -174,12 +174,16 @@ export default function UnionWhatsAppTicketsPage() {
     setIsClosingAll(true);
     let closed = 0;
     let errors = 0;
-    for (const ticket of openTickets) {
-      try {
-        await closeWhazingTicket(ticket.ticket_id, ticket.contact_number);
-        closed++;
-      } catch {
-        errors++;
+    const BATCH_SIZE = 5;
+    const DELAY_MS = 1500;
+    for (let i = 0; i < openTickets.length; i += BATCH_SIZE) {
+      const batch = openTickets.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(ticket => closeWhazingTicket(ticket.ticket_id, ticket.contact_number))
+      );
+      results.forEach(r => r.status === 'fulfilled' ? closed++ : errors++);
+      if (i + BATCH_SIZE < openTickets.length) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
       }
     }
     queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
