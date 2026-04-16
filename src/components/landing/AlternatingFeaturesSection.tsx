@@ -36,14 +36,14 @@ function FeatureBlock({
         >
           {/* Visual */}
           <div className="lg:w-1/2 flex justify-center">
-            <div className={cn("relative w-full max-w-md")}>
+            <div className={cn("relative w-full max-w-xs")}>
               <div className={cn("absolute inset-0 rounded-3xl blur-2xl opacity-20", gradient)} />
               {imageSrc ? (
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/60">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/60 max-h-[400px]">
                   <img 
                     src={imageSrc} 
                     alt={title}
-                    className="w-full h-auto object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               ) : (
