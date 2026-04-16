@@ -99,6 +99,8 @@ export default function UnionPayslipApprovalsPage() {
   const [newExpiresAt, setNewExpiresAt] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [isSendingBatch, setIsSendingBatch] = useState(false);
+  const [reviewImageUrl, setReviewImageUrl] = useState<string | null>(null);
+  const [reviewImageLoading, setReviewImageLoading] = useState(false);
 
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
@@ -112,13 +114,21 @@ export default function UnionPayslipApprovalsPage() {
     setLoadingImage(false);
   };
 
-  const openReviewDialog = (request: PayslipRequest) => {
+  const openReviewDialog = async (request: PayslipRequest) => {
     setSelectedRequest(request);
     setReviewNotes('');
     const defaultExpiry = new Date();
     defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
     setNewExpiresAt(defaultExpiry.toISOString().split('T')[0]);
+    setReviewImageUrl(null);
     setReviewDialogOpen(true);
+
+    if (request.attachment_path) {
+      setReviewImageLoading(true);
+      const url = await getAttachmentUrl(request.attachment_path);
+      setReviewImageUrl(url);
+      setReviewImageLoading(false);
+    }
   };
 
   const handleApprove = async () => {
