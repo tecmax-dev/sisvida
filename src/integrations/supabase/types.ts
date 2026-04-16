@@ -17474,7 +17474,7 @@ export type Database = {
           app_unavailable: boolean | null
           app_unavailable_message: string | null
           birthday_enabled: boolean | null
-          birthday_message: string | null
+          booking_months_ahead: number | null
           city: string | null
           closing_time: string | null
           created_at: string | null
@@ -17483,8 +17483,11 @@ export type Database = {
           entity_nomenclature: string | null
           holidays_enabled: boolean | null
           id: string | null
+          is_blocked: boolean | null
           logo_url: string | null
           map_view_type: string | null
+          max_appointments_per_cpf_month: number | null
+          min_advance_booking_hours: number | null
           name: string | null
           opening_time: string | null
           phone: string | null
@@ -17493,15 +17496,13 @@ export type Database = {
           slug: string | null
           state_code: string | null
           updated_at: string | null
-          whatsapp_header_image_url: string | null
-          whatsapp_provider: string | null
         }
         Insert: {
           address?: string | null
           app_unavailable?: boolean | null
           app_unavailable_message?: string | null
           birthday_enabled?: boolean | null
-          birthday_message?: string | null
+          booking_months_ahead?: number | null
           city?: string | null
           closing_time?: string | null
           created_at?: string | null
@@ -17510,8 +17511,11 @@ export type Database = {
           entity_nomenclature?: string | null
           holidays_enabled?: boolean | null
           id?: string | null
+          is_blocked?: boolean | null
           logo_url?: string | null
           map_view_type?: string | null
+          max_appointments_per_cpf_month?: number | null
+          min_advance_booking_hours?: number | null
           name?: string | null
           opening_time?: string | null
           phone?: string | null
@@ -17520,15 +17524,13 @@ export type Database = {
           slug?: string | null
           state_code?: string | null
           updated_at?: string | null
-          whatsapp_header_image_url?: string | null
-          whatsapp_provider?: string | null
         }
         Update: {
           address?: string | null
           app_unavailable?: boolean | null
           app_unavailable_message?: string | null
           birthday_enabled?: boolean | null
-          birthday_message?: string | null
+          booking_months_ahead?: number | null
           city?: string | null
           closing_time?: string | null
           created_at?: string | null
@@ -17537,8 +17539,11 @@ export type Database = {
           entity_nomenclature?: string | null
           holidays_enabled?: boolean | null
           id?: string | null
+          is_blocked?: boolean | null
           logo_url?: string | null
           map_view_type?: string | null
+          max_appointments_per_cpf_month?: number | null
+          min_advance_booking_hours?: number | null
           name?: string | null
           opening_time?: string | null
           phone?: string | null
@@ -17547,8 +17552,6 @@ export type Database = {
           slug?: string | null
           state_code?: string | null
           updated_at?: string | null
-          whatsapp_header_image_url?: string | null
-          whatsapp_provider?: string | null
         }
         Relationships: []
       }
@@ -17563,6 +17566,7 @@ export type Database = {
           name: string | null
           slug: string | null
           specialty: string | null
+          updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -17574,6 +17578,7 @@ export type Database = {
           name?: string | null
           slug?: string | null
           specialty?: string | null
+          updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -17585,6 +17590,7 @@ export type Database = {
           name?: string | null
           slug?: string | null
           specialty?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -17608,6 +17614,10 @@ export type Database = {
       authenticate_patient_hybrid: {
         Args: { p_cpf: string; p_password: string }
         Returns: Json
+      }
+      can_access_clinic_full_info: {
+        Args: { check_clinic_id: string }
+        Returns: boolean
       }
       can_mobile_cancel_homologacao: {
         Args: { p_appointment_id: string; p_employee_cpf: string }
