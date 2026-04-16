@@ -164,6 +164,10 @@ export function PatientSelect({
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
+            ) : !search.trim() && patients.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Digite o nome ou CPF para buscar...
+              </div>
             ) : patients.length === 0 ? (
               <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
             ) : (
