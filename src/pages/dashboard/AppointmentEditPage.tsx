@@ -394,6 +394,11 @@ export default function AppointmentEditPage() {
 
     if (!currentClinic || !id) return;
 
+    // === Validação de troca de paciente (swap deadline) ===
+    if (appointment && patientId !== appointment.patient_id && isSwapBlocked(appointment.patient_id, patientId)) {
+      return;
+    }
+
     setSaving(true);
 
     try {
