@@ -28,8 +28,10 @@ import {
   useWhazingTickets,
   useWhazingTicketStats,
   useWhazingRealtimeSubscription,
+  closeWhazingTicket,
   type WhazingTicket,
 } from "@/hooks/useWhazingTickets";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import InlineChatPanel from "@/components/union/whazing/InlineChatPanel";
 import TicketKanban from "@/components/union/whazing/TicketKanban";
