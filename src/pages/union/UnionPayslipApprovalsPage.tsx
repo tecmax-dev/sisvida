@@ -649,7 +649,7 @@ export default function UnionPayslipApprovalsPage() {
 
       {/* Review Dialog */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Revisar Contracheque</DialogTitle>
           </DialogHeader>
