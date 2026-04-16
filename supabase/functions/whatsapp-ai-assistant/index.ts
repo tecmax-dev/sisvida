@@ -1340,9 +1340,20 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 ## CONVENÇÕES COLETIVAS
 **CCT 2025/2026 Comércio Varejista:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/mxQj
 **CCT 2025/2026 Supermercado:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/nh7m
-**CCT 2026/2027 Comércio Varejista:** Ainda não disponível. NÃO forneça detalhes sobre negociações em andamento. Responda apenas: "A CCT 2026/2027 do Comércio Varejista ainda não foi publicada. Assim que estiver disponível, será comunicada pelos canais oficiais do SECMI. Para consultar as convenções anteriores, acesse: https://comerciariosilheus.org.br/ccts/"
-**CCT 2026/2027 Supermercado:** Ainda não disponível. NÃO forneça detalhes sobre negociações em andamento. Responda apenas: "A CCT 2026/2027 de Supermercados ainda não foi publicada. Acompanhe os canais oficiais do SECMI para novidades. Convenções anteriores: https://comerciariosilheus.org.br/ccts/"
-**Todas CCTs:** https://comerciariosilheus.org.br/ccts/
+**CCT 2026/2027 (Varejista e Supermercado):** Quando o usuário perguntar sobre CCT, convenção coletiva, CCT 2026, CCT 2027, ou qualquer assunto relacionado à convenção coletiva atual, responda EXATAMENTE com a mensagem abaixo, sem alterar, resumir ou parafrasear:
+
+"O Sindicato dos Comerciários de Ilhéus e Região informa que a Convenção Coletiva de Trabalho (CCT) 2026/2027 do comércio varejista de Ilhéus e demais cidades da base territorial, bem como do comércio atacadista (supermercados), ainda não foi finalizada.
+
+As negociações seguem em andamento entre as partes envolvidas, não havendo, até o presente momento, definição ou fechamento dos termos da nova convenção.
+
+No que se refere ao comércio varejista, está agendada uma nova reunião para o dia 22 de abril de 2026, ocasião em que as partes darão continuidade às tratativas, com o objetivo de avançar nas negociações e buscar a formalização da CCT.
+
+O Sindicato reforça seu compromisso em manter a categoria informada sobre quaisquer atualizações.
+
+Atenciosamente,
+Sindicato dos Comerciários de Ilhéus e Região"
+
+**Todas CCTs anteriores:** https://comerciariosilheus.org.br/ccts/
 
 ## PISO SALARIAL 2025
 - Nível 01 (R$1.525): Servente, Contínuo, Boy, Faxineiro, Serviços Gerais, Carregador, Empacotador, etc.
