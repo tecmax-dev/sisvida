@@ -162,6 +162,36 @@ export default function UnionWhatsAppTicketsPage() {
     }
   }, [refetch]);
 
+  const handleCloseAllTickets = useCallback(async () => {
+    const openTickets = (tickets || []).filter(t => t.status === "open" || t.status === "pending");
+    if (openTickets.length === 0) {
+      toast.info("Nenhum ticket aberto ou pendente para fechar.");
+      return;
+    }
+    const confirmed = window.confirm(`Deseja fechar ${openTickets.length} ticket(s) aberto(s)/pendente(s)?`);
+    if (!confirmed) return;
+
+    setIsClosingAll(true);
+    let closed = 0;
+    let errors = 0;
+    for (const ticket of openTickets) {
+      try {
+        await closeWhazingTicket(ticket.ticket_id, ticket.contact_number);
+        closed++;
+      } catch {
+        errors++;
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["whazing-tickets"] });
+    queryClient.invalidateQueries({ queryKey: ["whazing-ticket-stats"] });
+    setIsClosingAll(false);
+    if (errors > 0) {
+      toast.warning(`${closed} ticket(s) fechado(s), ${errors} erro(s).`);
+    } else {
+      toast.success(`${closed} ticket(s) fechado(s) com sucesso!`);
+    }
+  }, [tickets, queryClient]);
+
   return (
     <div className="h-[calc(100vh-5rem)] flex flex-col">
       {/* Compact Header */}
