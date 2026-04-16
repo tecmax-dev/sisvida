@@ -257,6 +257,75 @@ function getProfessionalLocation(professionalName: string): string | null {
   return null;
 }
 
+// Arrays de variação para gerar mensagens únicas e evitar bloqueio do WhatsApp
+const GREETINGS = [
+  'Olá', 'Oi', 'Bom dia', 'Boa tarde', 'Hey', 'Prezado(a)',
+  'Saudações', 'Tudo bem', 'Tudo certo', 'E aí',
+];
+
+const GREETING_EMOJIS = ['👋', '😊', '🙂', '💙', '✨', '🌟', '😃', '🤗', '💛', '🩺'];
+
+const REMINDER_INTROS = [
+  'Lembramos que você tem uma consulta agendada:',
+  'Passando para lembrar da sua consulta:',
+  'Não se esqueça, você tem uma consulta marcada:',
+  'Sua consulta está chegando! Confira os detalhes:',
+  'Relembrando sobre o seu agendamento:',
+  'Confirmamos seu agendamento para:',
+  'Aqui vai o lembrete da sua consulta:',
+  'Estamos te esperando! Detalhes do agendamento:',
+  'Segue o lembrete do seu horário agendado:',
+  'Um lembrete importante sobre sua consulta:',
+];
+
+const ARRIVAL_INSTRUCTIONS = [
+  '⏳ *Compareça com 15 minutos de antecedência.*',
+  '⏰ *Chegue 15 minutos antes do horário marcado.*',
+  '🕐 *Pedimos que chegue com 15 min de antecedência.*',
+  '⏳ *Por favor, apresente-se 15 minutos antes.*',
+  '⌚ *Recomendamos chegar 15 min antes do horário.*',
+];
+
+const NO_SHOW_WARNINGS = [
+  [
+    `⚠️ *Atenção, Associado(a):*`,
+    `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
+    ``,
+    `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
+  ],
+  [
+    `⚠️ *Importante:*`,
+    `Se não puder comparecer, por favor *avise com antecedência*. Sua vaga será oferecida a outro associado na fila de espera.`,
+    ``,
+    `❗ A *ausência sem aviso prévio* pode acarretar *restrição temporária* de novos agendamentos.`,
+  ],
+  [
+    `⚠️ *Lembrete:*`,
+    `Caso surja algum imprevisto, *cancele antes do horário* para liberar a vaga a outros associados que aguardam na fila.`,
+    ``,
+    `❗ *Faltas sem justificativa* poderão gerar *suspensão temporária* de agendamentos com este profissional.`,
+  ],
+  [
+    `⚠️ *Atenção:*`,
+    `Pedimos que, em caso de impossibilidade, *comunique o cancelamento com antecedência*. Outros associados na lista de espera poderão ser beneficiados.`,
+    ``,
+    `❗ A *não comunicação de ausência* pode resultar em *bloqueio temporário* para futuros agendamentos.`,
+  ],
+];
+
+const CLOSINGS = [
+  ['Atenciosamente,', 'Equipe {clinic}'],
+  ['Com carinho,', 'Equipe {clinic}'],
+  ['Um abraço,', 'Equipe {clinic} 💙'],
+  ['Conte conosco!', '{clinic}'],
+  ['Estamos te esperando!', 'Equipe {clinic} ✨'],
+  ['Até lá!', 'Equipe {clinic}'],
+];
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 function formatAppointmentReminder(
   patientName: string,
   clinicName: string,
@@ -264,22 +333,21 @@ function formatAppointmentReminder(
   time: string,
   professionalName: string,
 ): string {
-  const noShowWarning = [
-    `⚠️ *Atenção, Associado(a):*`,
-    `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
-    ``,
-    `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
-  ];
-
-  const arrivalInstruction = `⏳ *Compareça com 15 minutos de antecedência.*`;
+  const firstName = patientName.split(' ')[0];
+  const greeting = pickRandom(GREETINGS);
+  const emoji = pickRandom(GREETING_EMOJIS);
+  const intro = pickRandom(REMINDER_INTROS);
+  const arrival = pickRandom(ARRIVAL_INSTRUCTIONS);
+  const noShow = pickRandom(NO_SHOW_WARNINGS);
+  const closing = pickRandom(CLOSINGS);
   const specificLocation = getProfessionalLocation(professionalName);
 
   const lines = [
-    `Olá ${patientName}! 👋`,
+    `${greeting}, ${firstName}! ${emoji}`,
     ``,
-    arrivalInstruction,
+    arrival,
     ``,
-    `Lembramos que você tem uma consulta agendada:`,
+    intro,
     ``,
     `📅 *Data:* ${date}`,
     `🕐 *Horário:* ${time}`,
@@ -288,11 +356,11 @@ function formatAppointmentReminder(
     specificLocation ? `` : null,
     specificLocation,
     ``,
-    ...noShowWarning,
+    ...noShow,
     ``,
-    `Atenciosamente,`,
-    `Equipe ${clinicName}`,
-  ].filter(Boolean);
+    closing[0],
+    closing[1].replace('{clinic}', clinicName),
+  ].filter(line => line !== null);
   return lines.join('\n');
 }
 
