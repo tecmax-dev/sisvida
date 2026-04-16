@@ -115,8 +115,62 @@ export default function AppointmentEditPage() {
   const [notes, setNotes] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
   const [status, setStatus] = useState("scheduled");
-  
-  // Initial data for auto-save
+
+  // === Swap deadline: busca horas de antecedência para troca de paciente ===
+  const { data: swapDeadlineHours } = useQuery({
+    queryKey: ['swap-deadline-edit', accessGroupId, currentClinic?.id],
+    queryFn: async (): Promise<number | null> => {
+      if (isAdmin) return null;
+
+      if (accessGroupId) {
+        const { data: groupData } = await supabase
+          .from('access_groups')
+          .select('patient_swap_deadline_hours')
+          .eq('id', accessGroupId)
+          .single();
+        if (groupData?.patient_swap_deadline_hours != null) {
+          return groupData.patient_swap_deadline_hours;
+        }
+      }
+
+      if (currentClinic?.id) {
+        const { data: clinicData } = await supabase
+          .from('clinics')
+          .select('patient_swap_deadline_hours')
+          .eq('id', currentClinic.id)
+          .single();
+        return clinicData?.patient_swap_deadline_hours ?? null;
+      }
+
+      return null;
+    },
+    enabled: !!currentClinic?.id && !isAdmin,
+    staleTime: 5 * 60_000,
+  });
+
+  /** Returns true (and shows toast) if the patient swap is blocked by deadline */
+  const isSwapBlocked = useCallback((originalPatientId: string, newPatientId: string): boolean => {
+    if (isAdmin || swapDeadlineHours == null || originalPatientId === newPatientId || !appointment) return false;
+
+    const appointmentDateTime = new Date(
+      `${appointment.appointment_date}T${appointment.start_time}`
+    );
+    const hoursUntil = (appointmentDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (hoursUntil < swapDeadlineHours) {
+      const label = swapDeadlineHours < 1
+        ? `${Math.round(swapDeadlineHours * 60)} minutos`
+        : `${swapDeadlineHours} hora${swapDeadlineHours > 1 ? 's' : ''}`;
+      toast({
+        title: "Operação não permitida",
+        description: `Não é possível trocar o paciente com menos de ${label} de antecedência do horário agendado.`,
+        variant: "destructive",
+      });
+      return true;
+    }
+    return false;
+  }, [isAdmin, swapDeadlineHours, appointment, toast]);
+
   const [initialFormData, setInitialFormData] = useState({
     patientId: "",
     professionalId: "",
