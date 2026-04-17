@@ -85,6 +85,7 @@ import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmai
 import { SendOverdueNotificationDialog } from "@/components/contributions/SendOverdueNotificationDialog";
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
+import { EmployerCnpjSearch } from "@/components/employers/EmployerCnpjSearch";
 import CreateAwaitingValueDialog from "@/components/contributions/CreateAwaitingValueDialog";
 import UnionContributionReceiptDialog from "@/components/contributions/UnionContributionReceiptDialog";
 import { supabase } from "@/integrations/supabase/client";
