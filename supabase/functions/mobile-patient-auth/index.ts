@@ -45,11 +45,19 @@ async function findExistingPatientAuthUser(
   patientId: string,
   fallbackEmails: string[]
 ) {
+  const canonicalEmail = buildPatientAuthEmail(patientId).trim().toLowerCase();
   const normalizedFallbackEmails = fallbackEmails
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 
   const users = await listAllUsers(supabaseAdmin);
+
+  const canonicalUser = users.find((user) => {
+    const email = user.email?.trim().toLowerCase();
+    return email === canonicalEmail;
+  });
+
+  if (canonicalUser) return canonicalUser;
 
   const byPatientId = users.find((user) => {
     const appMeta = (user.app_metadata ?? {}) as Record<string, unknown>;
