@@ -278,6 +278,28 @@ export default function DependentApprovalsPage() {
       
       if (dependentError) throw dependentError;
 
+      // Copy the inclusion document to the titular's attachments ("Doc Dependentes" folder)
+      if (selectedApproval.cpf_photo_url) {
+        try {
+          const { error: copyError } = await supabase.functions.invoke(
+            'copy-dependent-doc-to-attachments',
+            {
+              body: {
+                clinic_id: currentClinic.id,
+                patient_id: selectedApproval.patient_id,
+                dependent_name: selectedApproval.dependent?.name,
+                cpf_photo_url: selectedApproval.cpf_photo_url,
+              },
+            }
+          );
+          if (copyError) {
+            console.error('[Approval] Error copying dependent doc to attachments:', copyError);
+          }
+        } catch (copyErr) {
+          console.error('[Approval] Unexpected error copying dependent doc:', copyErr);
+        }
+      }
+
       // Auto-create digital card for the dependent inheriting titular's expiry date
       let cardNumber: string | null = null;
       try {

@@ -242,7 +242,29 @@ export default function PendingDependentApprovals() {
         .eq('id', selectedApproval.id);
       
       if (approvalError) throw approvalError;
-      
+
+      // 2.5 Copy the inclusion document to titular's attachments ("Doc Dependentes" folder)
+      if (selectedApproval.cpf_photo_url) {
+        try {
+          const { error: copyError } = await supabase.functions.invoke(
+            'copy-dependent-doc-to-attachments',
+            {
+              body: {
+                clinic_id: selectedApproval.clinic_id,
+                patient_id: selectedApproval.patient_id,
+                dependent_name: selectedApproval.dependent?.name,
+                cpf_photo_url: selectedApproval.cpf_photo_url,
+              },
+            }
+          );
+          if (copyError) {
+            console.error('[Approval] Error copying dependent doc to attachments:', copyError);
+          }
+        } catch (copyErr) {
+          console.error('[Approval] Unexpected error copying dependent doc:', copyErr);
+        }
+      }
+
       // 3. Send WhatsApp notification to requester
       if (selectedApproval.requester_phone) {
         const clinicName = selectedApproval.clinic?.name || 'a clínica';
