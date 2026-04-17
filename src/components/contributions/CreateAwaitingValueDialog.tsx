@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { DateInputPicker } from "@/components/ui/date-input-picker";
 import {
   Dialog,
   DialogContent,
@@ -424,30 +425,12 @@ export default function CreateAwaitingValueDialog({
 
               {/* Due Date */}
               <div className="space-y-2">
-                <Label>Data de Vencimento *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "dd/MM/yyyy") : "Selecione..."}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      locale={ptBR}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="due-date-input">Data de Vencimento *</Label>
+                <DateInputPicker
+                  id="due-date-input"
+                  value={dueDate}
+                  onChange={setDueDate}
+                />
               </div>
 
               {/* Send Options (only for without_value mode) */}
