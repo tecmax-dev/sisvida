@@ -857,13 +857,13 @@ export default function EmployerDetailPage() {
   return (
     <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Building2 className="h-6 w-6 text-primary shrink-0" />
             <h1 className="text-2xl font-bold text-foreground">{employer.name}</h1>
             {employer.registration_number && (
               <Badge variant="outline" className="font-mono">
@@ -886,6 +886,14 @@ export default function EmployerDetailPage() {
             )}
           </div>
         </div>
+        {currentClinic && (
+          <EmployerCnpjSearch
+            clinicId={currentClinic.id}
+            isUnionModule={isUnionModule}
+            currentEmployerId={employer.id}
+            className="shrink-0 mt-1"
+          />
+        )}
       </div>
 
       {/* Tabs */}
