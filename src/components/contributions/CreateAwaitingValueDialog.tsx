@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { DateInputPicker } from "@/components/ui/date-input-picker";
 import {
   Dialog,
   DialogContent,
