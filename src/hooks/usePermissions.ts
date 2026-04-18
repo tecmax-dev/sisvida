@@ -153,6 +153,9 @@ export type Permission =
   | "manage_card_expiry_clinic"
   | "manage_patient_swap_deadline"
   | "union_unblock_patients"
+  // CPF visibility (LGPD/Privacidade)
+  | "view_full_cpf_clinic"
+  | "view_full_cpf_union"
   // Legacy aliases (for backward compatibility)
   | "manage_cash_registers"
   | "manage_categories"

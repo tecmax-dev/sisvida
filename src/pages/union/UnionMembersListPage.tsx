@@ -78,6 +78,7 @@ import { ptBR } from "date-fns/locale";
 import { calculateAge } from "@/lib/utils";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
+import { CpfDisplay } from "@/components/common/CpfDisplay";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointmentLimitEdit";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -1017,8 +1018,8 @@ export default function UnionMembersListPage() {
                       </TableCell>
                       <TableCell className="hidden sm:table-cell py-2">
                         {member.cpf ? (
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                            {formatCPF(member.cpf)}
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            <CpfDisplay value={member.cpf} />
                           </code>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
@@ -1327,8 +1328,8 @@ export default function UnionMembersListPage() {
                       </TableCell>
                       <TableCell className="hidden sm:table-cell py-2">
                         {dep.cpf ? (
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                            {formatCPF(dep.cpf)}
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            <CpfDisplay value={dep.cpf} />
                           </code>
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
