@@ -89,19 +89,28 @@ Deno.serve(async (req) => {
 
     const userIds = clinicRoles.map(r => r.user_id);
 
-    // Get auth users to check email confirmation status
-    const { data: { users: authUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (listError) {
-      console.error("Failed to list auth users:", listError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao listar usuários" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Get auth users to check email confirmation status — paginate to bypass default 50/page limit
+    const clinicAuthUsers: any[] = [];
+    const userIdsSet = new Set(userIds);
+    const perPage = 1000;
+    let page = 1;
+    while (true) {
+      const { data: pageData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      if (listError) {
+        console.error("Failed to list auth users:", listError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao listar usuários" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const batch = pageData?.users || [];
+      for (const u of batch) {
+        if (userIdsSet.has(u.id)) clinicAuthUsers.push(u);
+      }
+      if (batch.length < perPage) break;
+      page++;
+      if (page > 50) break; // safety cap
     }
-
-    // Filter to only users in this clinic
-    const clinicAuthUsers = authUsers?.filter(u => userIds.includes(u.id)) || [];
 
     // Get profiles
     const { data: profiles } = await supabaseAdmin
