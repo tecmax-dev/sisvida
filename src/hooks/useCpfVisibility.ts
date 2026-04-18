@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { displayCpf as displayCpfUtil } from "@/lib/cpf-utils";
 
