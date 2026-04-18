@@ -381,12 +381,22 @@ export function formatProfessionalCancellation(
   date: string,
   time: string,
   professionalName: string,
-  reason?: string
+  reason?: string,
+  dependentName?: string | null
 ): string {
+  // Saudação direcionada ao titular; quando há dependente, indicar de quem é a consulta
+  const greeting = dependentName
+    ? `Olá ${patientName}! 😊`
+    : `Olá ${patientName}! 😊`;
+
+  const consultaLine = dependentName
+    ? `Entramos em contato para informar que, infelizmente, precisaremos remarcar a consulta do(a) dependente *${dependentName}* agendada para:`
+    : `Entramos em contato para informar que, infelizmente, precisaremos remarcar sua consulta agendada para:`;
+
   const lines = [
-    `Olá ${patientName}! 😊`,
+    greeting,
     ``,
-    `Entramos em contato para informar que, infelizmente, precisaremos remarcar sua consulta agendada para:`,
+    consultaLine,
     ``,
     `📅 *Data:* ${date}`,
     `🕐 *Horário:* ${time}`,
@@ -397,7 +407,7 @@ export function formatProfessionalCancellation(
     `Pedimos sinceras desculpas pelo transtorno. O(a) ${professionalName} não poderá realizar atendimentos neste horário devido a um imprevisto.`,
     ``,
     `🔄 *Reagendamento:*`,
-    `O Sindicato entrará em contato em breve para informar uma nova data para a sua consulta.`,
+    `O Sindicato entrará em contato em breve para informar uma nova data para a consulta.`,
     ``,
     `Não é necessário responder esta mensagem.`,
     ``,
