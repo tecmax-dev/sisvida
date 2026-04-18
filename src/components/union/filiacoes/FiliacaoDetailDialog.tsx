@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { CpfDisplay } from "@/components/common/CpfDisplay";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -331,7 +332,7 @@ export function FiliacaoDetailDialog({
                 )}
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold">{data.nome}</h3>
-                  <p className="text-sm font-mono text-muted-foreground">{formatCPF(data.cpf)}</p>
+                  <CpfDisplay value={data.cpf} revealable className="text-sm text-muted-foreground" />
                   {data.matricula && (
                     <p className="text-sm text-purple-600 mt-1">Matrícula: {data.matricula}</p>
                   )}
