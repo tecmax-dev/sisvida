@@ -198,7 +198,7 @@ export function CpfInputCard({
             )}
             {isReadOnly && !canSeeFull && (
               <p className="text-[11px] text-muted-foreground mt-1.5">
-                Você não tem permissão para visualizar o CPF completo.
+                Em conformidade com a LGPD, a visualização do CPF completo é permitida apenas na presença do titular, mediante apresentação de documento oficial.
               </p>
             )}
           </div>
