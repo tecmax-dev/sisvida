@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { QuickPatientRegistration } from "./QuickPatientRegistration";
+import { useCpfVisibility } from "@/hooks/useCpfVisibility";
+import { displayCpf } from "@/lib/cpf-utils";
 
 interface PatientResult {
   id: string;
@@ -24,6 +26,7 @@ export function PatientSearchBox() {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showQuickRegister, setShowQuickRegister] = useState(false);
   const { currentClinic } = useAuth();
+  const { canSeeFull } = useCpfVisibility();
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -110,9 +113,8 @@ export function PatientSearchBox() {
   };
 
   const formatCPF = (cpf: string | null) => {
-    if (!cpf) return "";
-    const cleaned = cpf.replace(/\D/g, "");
-    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    // Respeita a permissão de visualização de CPF completo.
+    return displayCpf(cpf, canSeeFull);
   };
 
   const formatPhone = (phone: string | null) => {
