@@ -163,14 +163,24 @@ function DynamicAnamnesisContent() {
   const fetchPatients = async () => {
     if (!currentClinic) return;
 
-    const { data } = await supabase
-      .from("patients")
-      .select("id, name, phone")
-      .eq("clinic_id", currentClinic.id)
-      .order("name");
+    try {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("id, name, phone")
+        .eq("clinic_id", currentClinic.id)
+        .order("name")
+        .limit(5000);
 
-    setPatients(data || []);
-    setLoading(false);
+      if (error) {
+        console.error("[DynamicAnamnesis] fetchPatients error:", error);
+      }
+      setPatients(data || []);
+    } catch (err) {
+      console.error("[DynamicAnamnesis] fetchPatients exception:", err);
+      setPatients([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchTemplates = async () => {
@@ -582,11 +592,13 @@ function DynamicAnamnesisContent() {
     }
   };
 
-  const filteredPatients = patients.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.phone.includes(searchQuery)
-  );
+  const filteredPatients = patients.filter((p) => {
+    const q = (searchQuery || "").toLowerCase().trim();
+    if (!q) return true;
+    const name = (p.name || "").toLowerCase();
+    const phone = (p.phone || "").toLowerCase();
+    return name.includes(q) || phone.includes(q);
+  });
 
   return (
     <div className="space-y-6">
@@ -634,7 +646,7 @@ function DynamicAnamnesisContent() {
                   }`}
                 >
                   <p className="font-medium text-foreground">{patient.name}</p>
-                  <p className="text-sm text-muted-foreground">{patient.phone}</p>
+                  <p className="text-sm text-muted-foreground">{patient.phone || ""}</p>
                 </div>
               ))
             ) : (
