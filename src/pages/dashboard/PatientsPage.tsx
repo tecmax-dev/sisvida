@@ -92,6 +92,7 @@ import { calculateAge } from "@/lib/utils";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
+import { CpfDisplay } from "@/components/common/CpfDisplay";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -1381,8 +1382,8 @@ export default function PatientsPage() {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell py-2">
                       {patient.cpf ? (
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {formatCPF(patient.cpf)}
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                          <CpfDisplay value={patient.cpf} />
                         </code>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
@@ -1630,7 +1631,7 @@ export default function PatientsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell py-2">
-                        {dep.cpf ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{formatCPF(dep.cpf)}</code> : <span className="text-muted-foreground text-xs">—</span>}
+                        {dep.cpf ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded"><CpfDisplay value={dep.cpf} /></code> : <span className="text-muted-foreground text-xs">—</span>}
                       </TableCell>
                       <TableCell className="py-2">
                         <Badge variant="secondary" className="text-xs">{dep.relationship || '—'}</Badge>
