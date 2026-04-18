@@ -105,9 +105,16 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Password update error:", updateError);
+      let friendlyMessage = updateError.message;
+      const code = (updateError as any).code;
+      if (code === "weak_password" || /weak|pwned/i.test(updateError.message)) {
+        friendlyMessage = "Esta senha é muito comum ou foi exposta em vazamentos conhecidos. Escolha uma senha mais forte (combine letras maiúsculas, minúsculas, números e símbolos).";
+      } else if (code === "same_password") {
+        friendlyMessage = "A nova senha deve ser diferente da atual.";
+      }
       return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: friendlyMessage, code }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
