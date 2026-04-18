@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +24,9 @@ import {
   Download,
   Loader2,
   ChevronDown,
-  Settings
+  Settings,
+  ExternalLink,
+  Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +42,13 @@ interface RecentClinic {
   name: string;
   slug: string;
   created_at: string;
+  address: string | null;
+  phone: string | null;
+  cnpj: string | null;
+  is_blocked: boolean | null;
+  blocked_reason: string | null;
+  is_maintenance: boolean | null;
+  maintenance_reason: string | null;
 }
 
 export default function SuperAdminDashboard() {
@@ -263,13 +274,48 @@ export default function SuperAdminDashboard() {
   const fetchRecentClinics = async () => {
     const { data } = await supabase
       .from('clinics')
-      .select('id, name, slug, created_at')
+      .select('id, name, slug, created_at, address, phone, cnpj, is_blocked, blocked_reason, is_maintenance, maintenance_reason')
       .order('created_at', { ascending: false })
       .limit(5);
     
     if (data) {
-      setRecentClinics(data);
+      setRecentClinics(data as RecentClinic[]);
     }
+  };
+
+  const navigate = useNavigate();
+  const { setCurrentClinic } = useAuth();
+  const { logAction } = useAuditLog();
+
+  const handleAccessClinic = (clinic: RecentClinic) => {
+    logAction({
+      action: 'access_clinic',
+      entityType: 'clinic',
+      entityId: clinic.id,
+      details: { clinic_name: clinic.name, source: 'super_admin_dashboard' }
+    });
+
+    setCurrentClinic({
+      id: clinic.id,
+      name: clinic.name,
+      slug: clinic.slug,
+      address: clinic.address,
+      phone: clinic.phone,
+      cnpj: clinic.cnpj,
+      logo_url: null,
+      created_at: clinic.created_at,
+      is_blocked: clinic.is_blocked,
+      blocked_reason: clinic.blocked_reason,
+      is_maintenance: clinic.is_maintenance,
+      maintenance_reason: clinic.maintenance_reason,
+    } as any);
+
+    toast.success(`Acessando: ${clinic.name}`);
+    navigate("/dashboard");
+  };
+
+  const handleEditClinic = (clinic: RecentClinic) => {
+    navigate(`/admin/clinics?edit=${clinic.id}`);
   };
 
   const statCards = [
@@ -415,20 +461,39 @@ export default function SuperAdminDashboard() {
               {recentClinics.map((clinic) => (
                 <div
                   key={clinic.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <Building2 className="h-4 w-4 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{clinic.name}</p>
-                      <p className="text-xs text-muted-foreground">/{clinic.slug}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{clinic.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">/{clinic.slug}</p>
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="hidden sm:inline text-xs text-muted-foreground">
+                      {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditClinic(clinic)}
+                      title="Editar clínica"
+                    >
+                      <Pencil className="h-3.5 w-3.5 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Editar</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAccessClinic(clinic)}
+                      title="Acessar clínica"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Acessar</span>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
