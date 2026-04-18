@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { displayCpf as displayCpfUtil } from "@/lib/cpf-utils";
 
@@ -15,15 +16,18 @@ import { displayCpf as displayCpfUtil } from "@/lib/cpf-utils";
  * usando o valor real do banco (string sem formatação).
  */
 export function useCpfVisibility() {
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission } = usePermissions();
+  const { isSuperAdmin } = useAuth();
   const location = useLocation();
 
   const isUnionRoute =
     location.pathname.startsWith("/union") ||
     location.pathname.startsWith("/sindicato");
 
+  // Apenas Super Admin bypassa globalmente. Admins de clínica NÃO veem CPF
+  // completo automaticamente — precisam da permissão específica do módulo.
   const canSeeFull =
-    isAdmin ||
+    isSuperAdmin ||
     (isUnionRoute
       ? hasPermission("view_full_cpf_union")
       : hasPermission("view_full_cpf_clinic"));
