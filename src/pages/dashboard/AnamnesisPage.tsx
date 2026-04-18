@@ -210,10 +210,13 @@ export default function AnamnesisPage() {
     });
   };
 
-  const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.phone.includes(searchQuery)
-  );
+  const filteredPatients = patients.filter((p) => {
+    const q = (searchQuery || '').toLowerCase().trim();
+    if (!q) return true;
+    const name = (p.name || '').toLowerCase();
+    const phone = (p.phone || '').toLowerCase();
+    return name.includes(q) || phone.includes(q);
+  });
 
   return (
     <div className="space-y-6">
