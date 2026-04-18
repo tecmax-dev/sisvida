@@ -67,16 +67,26 @@ Deno.serve(async (req) => {
 
     console.log("Super admin verified, listing users...");
 
-    // Get all users from auth.users using Admin API
-    const { data: { users: authUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-
-    if (listError) {
-      console.error("Failed to list users:", listError);
-      return new Response(
-        JSON.stringify({ error: "Erro ao listar usuários" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Get ALL users from auth.users using Admin API (paginated - default page size is 50)
+    const authUsers: any[] = [];
+    const perPage = 1000;
+    let page = 1;
+    while (true) {
+      const { data, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      if (listError) {
+        console.error("Failed to list users:", listError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao listar usuários" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const batch = data?.users || [];
+      authUsers.push(...batch);
+      if (batch.length < perPage) break;
+      page++;
+      if (page > 50) break; // safety cap (50k users)
     }
+    console.log(`Fetched ${authUsers.length} auth users across ${page} page(s)`);
 
     // Get all profiles
     const { data: profiles, error: profilesError } = await supabaseAdmin
