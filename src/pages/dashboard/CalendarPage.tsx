@@ -3404,12 +3404,14 @@ const updateData: Record<string, any> = {
     return (
       <div
         className={cn(
-          "flex items-start gap-2 px-2 py-2 transition-all group cursor-pointer hover:bg-muted/50 sm:items-center sm:gap-3 sm:px-3",
+          "flex items-start gap-2 px-2 py-2 transition-all group sm:items-center sm:gap-3 sm:px-3",
+          isBlocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/50",
           isCancelled && "opacity-50",
           isNoShow && "opacity-60",
           hasConflict && !isCancelled && "bg-destructive/5"
         )}
         onClick={() => {
+          if (isBlocked) return;
           if (batchCancelMode && !['cancelled', 'completed', 'no_show', 'blocked'].includes(appointment.status)) {
             toggleBatchSelect(appointment.id);
             return;
