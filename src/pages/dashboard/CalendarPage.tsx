@@ -1913,7 +1913,8 @@ export default function CalendarPage() {
             formattedDate,
             cancellingAppointment.start_time.slice(0, 5),
             professional?.name || 'o profissional',
-            cancelReason.trim() || undefined
+            cancelReason.trim() || undefined,
+            (cancellingAppointment as any).dependent?.name || null
           );
           
           const result = await sendWhatsAppMessage({
@@ -2321,7 +2322,8 @@ const updateData: Record<string, any> = {
             formattedDate,
             apt.start_time.slice(0, 5),
             apt.professional?.name || 'o profissional',
-            batchCancelReason.trim() || undefined
+            batchCancelReason.trim() || undefined,
+            (apt as any).dependent?.name || null
           );
 
           try {
@@ -4586,7 +4588,8 @@ const updateData: Record<string, any> = {
                     new Date(cancellingAppointment.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR'),
                     cancellingAppointment.start_time.slice(0, 5),
                     cancellingAppointment.professional?.name || 'o profissional',
-                    cancelReason.trim() || undefined
+                    cancelReason.trim() || undefined,
+                    (cancellingAppointment as any).dependent?.name || null
                   )}
                 </p>
               </div>
