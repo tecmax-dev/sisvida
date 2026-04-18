@@ -646,7 +646,7 @@ function DynamicAnamnesisContent() {
                   }`}
                 >
                   <p className="font-medium text-foreground">{patient.name}</p>
-                  <p className="text-sm text-muted-foreground">{patient.phone}</p>
+                  <p className="text-sm text-muted-foreground">{patient.phone || ""}</p>
                 </div>
               ))
             ) : (
