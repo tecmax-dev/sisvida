@@ -1431,14 +1431,13 @@ export default function CalendarPage() {
       return;
     }
     
-    // Verificar se tem múltiplos horários selecionados (modo manual de recorrência)
-    // Só usar branch de múltiplos slots quando há 2+ horários selecionados no mesmo dia
-    const hasMultipleSlots = recurrenceConfig.enabled && Array.isArray(selectedMultipleTimes) && selectedMultipleTimes.length > 1;
-    // Se recorrência está ativa e apenas 1 horário foi selecionado via multi-select, usar esse horário como formTime
-    const effectiveTime = hasMultipleSlots 
-      ? selectedMultipleTimes[0] 
-      : (recurrenceConfig.enabled && selectedMultipleTimes.length === 1) 
-        ? selectedMultipleTimes[0] 
+    // Multi-select sempre habilitado: 2+ horários selecionados criam múltiplos agendamentos no mesmo dia
+    // (combinado com recorrência, replica em todas as datas recorrentes)
+    const hasMultipleSlots = Array.isArray(selectedMultipleTimes) && selectedMultipleTimes.length > 1;
+    const effectiveTime = hasMultipleSlots
+      ? selectedMultipleTimes[0]
+      : (selectedMultipleTimes.length === 1)
+        ? selectedMultipleTimes[0]
         : formTime;
     
     // Validação mais robusta do horário
@@ -3282,7 +3281,7 @@ const updateData: Record<string, any> = {
           existingAppointments={professionalAppointmentsForDate}
           selectedTime={formTime}
           onSelectTime={setFormTime}
-          multiSelectEnabled={recurrenceConfig.enabled}
+          multiSelectEnabled={true}
           selectedTimes={selectedMultipleTimes}
           onSelectMultiple={setSelectedMultipleTimes}
           duration={currentDuration}
@@ -4290,9 +4289,14 @@ const updateData: Record<string, any> = {
                     </Button>
                     <Button type="submit" disabled={saving}>
                       {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {recurrenceConfig.enabled 
-                        ? `Agendar ${calculateRecurringDates(selectedDate, recurrenceConfig).length * Math.max(1, selectedMultipleTimes.length)} consultas`
-                        : "Agendar"}
+                      {(() => {
+                        const slots = Math.max(1, selectedMultipleTimes.length);
+                        const dates = recurrenceConfig.enabled
+                          ? calculateRecurringDates(selectedDate, recurrenceConfig).length
+                          : 1;
+                        const total = slots * dates;
+                        return total > 1 ? `Agendar ${total} consultas` : "Agendar";
+                      })()}
                     </Button>
                   </div>
                 </form>
