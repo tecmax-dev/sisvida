@@ -102,14 +102,25 @@ export default function AnamnesisPage() {
   const fetchPatients = async () => {
     if (!currentClinic) return;
 
-    const { data } = await supabase
-      .from('patients')
-      .select('id, name, phone')
-      .eq('clinic_id', currentClinic.id)
-      .order('name');
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('id, name, phone')
+        .eq('clinic_id', currentClinic.id)
+        .order('name')
+        .limit(5000);
 
-    setPatients(data || []);
-    setLoading(false);
+      if (error) {
+        console.error('[AnamnesisPage] fetchPatients error:', error);
+      }
+
+      setPatients(data || []);
+    } catch (err) {
+      console.error('[AnamnesisPage] fetchPatients exception:', err);
+      setPatients([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchAnamnesis = async () => {
