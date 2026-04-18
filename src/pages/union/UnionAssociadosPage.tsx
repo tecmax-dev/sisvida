@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CpfDisplay } from "@/components/common/CpfDisplay";
 import { 
   Search, 
   UserPlus, 
@@ -369,8 +370,8 @@ export default function UnionAssociadosPage() {
                   return (
                     <TableRow key={associado.id}>
                       <TableCell className="font-medium">{associado.nome}</TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {formatCPF(associado.cpf)}
+                      <TableCell className="text-sm">
+                        <CpfDisplay value={associado.cpf} />
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -446,7 +447,7 @@ export default function UnionAssociadosPage() {
                   </h4>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div><span className="text-muted-foreground">Nome:</span> {selectedAssociado.nome}</div>
-                    <div><span className="text-muted-foreground">CPF:</span> {formatCPF(selectedAssociado.cpf)}</div>
+                    <div><span className="text-muted-foreground">CPF:</span> <CpfDisplay value={selectedAssociado.cpf} revealable /></div>
                     <div><span className="text-muted-foreground">Nascimento:</span> {format(new Date(selectedAssociado.data_nascimento), "dd/MM/yyyy")}</div>
                     <div><span className="text-muted-foreground">Sexo:</span> {selectedAssociado.sexo || "-"}</div>
                   </div>

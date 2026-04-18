@@ -20,6 +20,7 @@ import {
   Filter,
   Edit,
 } from "lucide-react";
+import { CpfDisplay } from "@/components/common/CpfDisplay";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -424,9 +425,7 @@ export default function UnionFiliacoesPage() {
                       <TableCell>
                         <div>
                           <span className="font-medium">{filiacao.nome}</span>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {formatCPF(filiacao.cpf)}
-                          </p>
+                          <CpfDisplay value={filiacao.cpf} className="text-xs text-muted-foreground" />
                         </div>
                       </TableCell>
                       <TableCell>
