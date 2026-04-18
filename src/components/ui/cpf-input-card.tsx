@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserCircle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { UserCircle, CheckCircle2, XCircle, Loader2, Eye, EyeOff, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCpfVisibility } from "@/hooks/useCpfVisibility";
+import { cleanCpf, maskCpf } from "@/lib/cpf-utils";
 
 interface CpfInputCardProps {
   value: string;
@@ -16,6 +18,8 @@ interface CpfInputCardProps {
   showValidation?: boolean;
   loading?: boolean;
   className?: string;
+  /** Quando true, mantém edição liberada mesmo com valor preenchido (uso em fluxos de busca/login). */
+  allowEdit?: boolean;
 }
 
 const formatCPF = (value: string) => {
@@ -61,8 +65,19 @@ export function CpfInputCard({
   showValidation = true,
   loading = false,
   className,
+  allowEdit = false,
 }: CpfInputCardProps) {
+  const { canSeeFull } = useCpfVisibility();
+  const [revealed, setRevealed] = useState(false);
+
+  // Bloqueio de edição: se já existe um CPF de 11 dígitos salvo e não estamos
+  // em modo "allowEdit" (ex.: tela de busca/login), o campo é readonly por
+  // segurança. O trigger do banco também impede UPDATE.
+  const hasFullCpf = cleanCpf(value).length === 11;
+  const isReadOnly = !allowEdit && hasFullCpf;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return;
     onChange(formatCPF(e.target.value));
   };
 
@@ -71,6 +86,15 @@ export function CpfInputCard({
     if (!isCpfComplete) return undefined;
     return isValidCPF(value);
   }, [value, isCpfComplete]);
+
+  // O que exibir no input quando bloqueado:
+  // - Tem permissão + revelado: valor real formatado.
+  // - Sem permissão: mascarado.
+  const displayValue = useMemo(() => {
+    if (!isReadOnly) return value;
+    if (canSeeFull && revealed) return value;
+    return maskCpf(value);
+  }, [value, isReadOnly, canSeeFull, revealed]);
 
   return (
     <Card
@@ -110,43 +134,72 @@ export function CpfInputCard({
           <div className="flex-1 min-w-0">
             <Label
               className={cn(
-                "font-semibold text-sm",
+                "font-semibold text-sm flex items-center gap-1.5",
                 error || isValid === false
                   ? "text-destructive"
                   : "text-purple-700 dark:text-purple-300"
               )}
             >
               {label}
-              {required && <span className="text-destructive ml-1">*</span>}
+              {required && <span className="text-destructive">*</span>}
+              {isReadOnly && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-normal text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  somente leitura
+                </span>
+              )}
             </Label>
             <div className="relative mt-1.5">
               <Input
-                value={value}
+                value={displayValue}
                 onChange={handleChange}
                 placeholder={placeholder}
                 disabled={disabled || loading}
+                readOnly={isReadOnly}
                 className={cn(
-                  "font-mono text-base pr-10",
+                  "font-mono text-base pr-16",
+                  isReadOnly && "bg-muted/50 cursor-not-allowed",
                   (error || isValid === false) &&
                     "border-destructive focus-visible:ring-destructive"
                 )}
               />
-              {showValidation && isCpfComplete && !loading && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {isValid === true && (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  )}
-                  {isValid === false && (
-                    <XCircle className="h-5 w-5 text-destructive" />
-                  )}
-                </div>
-              )}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {isReadOnly && canSeeFull && (
+                  <button
+                    type="button"
+                    onClick={() => setRevealed((r) => !r)}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label={revealed ? "Ocultar CPF" : "Mostrar CPF"}
+                  >
+                    {revealed ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+                {showValidation && isCpfComplete && !loading && !isReadOnly && (
+                  <>
+                    {isValid === true && (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    )}
+                    {isValid === false && (
+                      <XCircle className="h-5 w-5 text-destructive" />
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             {error && (
               <p className="text-xs text-destructive mt-1.5">{error}</p>
             )}
-            {!error && isValid === false && (
+            {!error && isValid === false && !isReadOnly && (
               <p className="text-xs text-destructive mt-1.5">CPF inválido</p>
+            )}
+            {isReadOnly && !canSeeFull && (
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Você não tem permissão para visualizar o CPF completo.
+              </p>
             )}
           </div>
         </div>
