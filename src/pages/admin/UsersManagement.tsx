@@ -25,10 +25,12 @@ import {
   Trash2,
   Key,
   UserX,
-  Phone
+  Phone,
+  ShieldCheck
 } from "lucide-react";
 import { EditUserEmailDialog } from "@/components/admin/EditUserEmailDialog";
 import { EditUserPasswordDialog } from "@/components/admin/EditUserPasswordDialog";
+import { EditUserRoleDialog } from "@/components/admin/EditUserRoleDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -83,8 +85,10 @@ export default function UsersManagement() {
   const [activeTab, setActiveTab] = useState<"clinics" | "all" | "unlinked">("clinics");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithEmail | null>(null);
+  const [selectedClinicContext, setSelectedClinicContext] = useState<string | undefined>(undefined);
   const { logAction } = useAuditLog();
   const { user: currentUser } = useAuth();
 
@@ -128,6 +132,12 @@ export default function UsersManagement() {
   const handleEditPassword = (user: UserWithEmail) => {
     setSelectedUser(user);
     setPasswordDialogOpen(true);
+  };
+
+  const handleEditRole = (user: UserWithEmail, clinicCtx?: string) => {
+    setSelectedUser(user);
+    setSelectedClinicContext(clinicCtx);
+    setRoleDialogOpen(true);
   };
 
   const handleDeleteUser = (user: UserWithEmail) => {
@@ -257,6 +267,23 @@ export default function UsersManagement() {
               <TooltipContent>Alterar senha</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          {!user.isSuperAdmin && user.clinics.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleEditRole(user, clinicContext)}
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Alterar tipo de acesso</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
           <TooltipProvider>
             <Tooltip>
@@ -498,6 +525,14 @@ export default function UsersManagement() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         user={selectedUser}
+        onSuccess={fetchUsers}
+      />
+
+      <EditUserRoleDialog
+        open={roleDialogOpen}
+        onOpenChange={setRoleDialogOpen}
+        user={selectedUser}
+        defaultClinicId={selectedClinicContext}
         onSuccess={fetchUsers}
       />
     </div>
