@@ -268,6 +268,23 @@ export default function UsersManagement() {
             </Tooltip>
           </TooltipProvider>
 
+          {!user.isSuperAdmin && user.clinics.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleEditRole(user, clinicContext)}
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Alterar tipo de acesso</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -508,6 +525,14 @@ export default function UsersManagement() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         user={selectedUser}
+        onSuccess={fetchUsers}
+      />
+
+      <EditUserRoleDialog
+        open={roleDialogOpen}
+        onOpenChange={setRoleDialogOpen}
+        user={selectedUser}
+        defaultClinicId={selectedClinicContext}
         onSuccess={fetchUsers}
       />
     </div>
