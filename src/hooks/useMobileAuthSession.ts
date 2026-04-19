@@ -296,27 +296,45 @@ export function useMobileAuthSession() {
         patient_email: authBootstrap.patient_email as string,
       };
 
-      const loginAttempts = 3;
       let authSuccess = false;
-      let lastSignInError: unknown = null;
+      let lastAuthError: unknown = null;
 
-      for (let attempt = 1; attempt <= loginAttempts; attempt++) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: patient.patient_email,
-          password,
+      if (authBootstrap?.access_token && authBootstrap?.refresh_token) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: authBootstrap.access_token as string,
+          refresh_token: authBootstrap.refresh_token as string,
         });
 
-        if (!signInError) {
+        if (!setSessionError) {
           authSuccess = true;
-          console.log('[MobileAuth] Login Supabase bem sucedido', { attempt });
-          break;
+          console.log('[MobileAuth] Sessão restaurada a partir do backend');
+        } else {
+          lastAuthError = setSessionError;
+          console.warn('[MobileAuth] setSession falhou após bootstrap', setSessionError);
         }
+      }
 
-        lastSignInError = signInError;
-        console.warn('[MobileAuth] signInWithPassword falhou', { attempt, signInError });
+      if (!authSuccess) {
+        const loginAttempts = 3;
 
-        if (attempt < loginAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 350));
+        for (let attempt = 1; attempt <= loginAttempts; attempt++) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: patient.patient_email,
+            password,
+          });
+
+          if (!signInError) {
+            authSuccess = true;
+            console.log('[MobileAuth] Login Supabase bem sucedido', { attempt });
+            break;
+          }
+
+          lastAuthError = signInError;
+          console.warn('[MobileAuth] signInWithPassword falhou', { attempt, signInError });
+
+          if (attempt < loginAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 350));
+          }
         }
       }
 
@@ -342,7 +360,7 @@ export function useMobileAuthSession() {
       console.log('[MobileAuth] Login completo:', {
         supabaseAuth: authSuccess,
         localPersistence: true,
-        lastSignInError,
+        lastAuthError,
       });
 
       return {
