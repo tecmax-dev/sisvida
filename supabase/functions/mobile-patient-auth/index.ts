@@ -23,6 +23,16 @@ function buildPatientAuthEmail(patientId: string) {
   return `patient.${patientId}@${MOBILE_AUTH_DOMAIN}`;
 }
 
+async function buildInternalAuthPassword(patientId: string, clinicId: string, serviceRoleKey: string) {
+  const raw = `${patientId}:${clinicId}:${serviceRoleKey}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  const hash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+  return `Pw!${hash.slice(0, 24)}Aa9#`;
+}
+
 async function listAllUsers(supabaseAdmin: ReturnType<typeof createClient>) {
   const users: User[] = [];
 
@@ -82,12 +92,17 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (!supabaseUrl || !serviceRoleKey || !supabaseAnonKey) {
       return json({ success: false, error: "Configuração do backend ausente", code: "missing_backend_config" }, 500);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
@@ -124,7 +139,10 @@ Deno.serve(async (req) => {
       return json({ success: false, error: "Sua conta está inativa. Entre em contato com o sindicato.", code: "inactive_account" }, 200);
     }
 
-    const canonicalAuthEmail = buildPatientAuthEmail(String(patient.patient_id));
+    const patientId = String(patient.patient_id);
+    const clinicId = String(patient.clinic_id ?? targetClinicId);
+    const canonicalAuthEmail = buildPatientAuthEmail(patientId);
+    const internalAuthPassword = await buildInternalAuthPassword(patientId, clinicId, serviceRoleKey);
     const legacyEmails = [
       canonicalAuthEmail,
       `paciente_${normalizedCpf}@app.internal`,
@@ -134,18 +152,18 @@ Deno.serve(async (req) => {
     const appMetadata = {
       provider: "custom",
       patient_id: patient.patient_id,
-      clinic_id: patient.clinic_id,
+      clinic_id: clinicId,
     };
 
     const userMetadata = {
       name: patient.patient_name,
       patient_id: patient.patient_id,
-      clinic_id: patient.clinic_id,
+      clinic_id: clinicId,
     };
 
     const existingUser = await findExistingPatientAuthUser(
       supabaseAdmin,
-      String(patient.patient_id),
+      patientId,
       legacyEmails
     );
 
@@ -157,7 +175,7 @@ Deno.serve(async (req) => {
       const emailNeedsChange = currentEmail !== targetEmail;
 
       const updatePayload: Record<string, unknown> = {
-        password,
+        password: internalAuthPassword,
         app_metadata: {
           ...(existingUser.app_metadata ?? {}),
           ...appMetadata,
@@ -180,7 +198,6 @@ Deno.serve(async (req) => {
         updatePayload as any
       );
 
-      // Fallback: se a atualização de email falhar (conflito raro), tenta sem alterar email
       if (updateError && emailNeedsChange) {
         console.warn("[mobile-patient-auth] updateUserById falhou ao alterar email, tentando sem alterar email", updateError);
         const retryPayload = { ...updatePayload };
@@ -205,27 +222,53 @@ Deno.serve(async (req) => {
     } else {
       const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: canonicalAuthEmail,
-        password,
+        password: internalAuthPassword,
         email_confirm: true,
         app_metadata: appMetadata,
         user_metadata: userMetadata,
       });
 
-      if (createError) {
-        console.error("[mobile-patient-auth] createUser error", createError);
-        return json({ success: false, error: "Não foi possível criar sua conta de acesso", code: "auth_create_failed" }, 500);
+      if (createError || !createdUser?.user) {
+        console.error("[mobile-patient-auth] createUser error", createError, "patient_id:", patient.patient_id);
+        return json({
+          success: false,
+          error: "Não foi possível criar sua conta de acesso",
+          code: "auth_create_failed",
+          details: createError?.message ?? null,
+        }, 500);
       }
 
       authUser = createdUser.user;
+    }
+
+    const signInEmail = (authUser?.email ?? canonicalAuthEmail).trim().toLowerCase();
+    const { data: signInData, error: signInError } = await supabaseAuth.auth.signInWithPassword({
+      email: signInEmail,
+      password: internalAuthPassword,
+    });
+
+    if (signInError || !signInData.session) {
+      console.error("[mobile-patient-auth] signInWithPassword error", signInError, "auth_user_id:", authUser?.id);
+      return json({
+        success: false,
+        error: "Não foi possível iniciar sua sessão",
+        code: "auth_signin_failed",
+        details: signInError?.message ?? null,
+      }, 500);
     }
 
     return json({
       success: true,
       patient_id: patient.patient_id,
       patient_name: patient.patient_name,
-      clinic_id: patient.clinic_id,
-      patient_email: canonicalAuthEmail,
+      clinic_id: clinicId,
+      patient_email: signInEmail,
       auth_user_id: authUser?.id ?? null,
+      access_token: signInData.session.access_token,
+      refresh_token: signInData.session.refresh_token,
+      expires_at: signInData.session.expires_at ?? null,
+      expires_in: signInData.session.expires_in ?? null,
+      token_type: signInData.session.token_type,
     });
   } catch (error) {
     console.error("[mobile-patient-auth] unexpected error", error);
