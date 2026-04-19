@@ -296,55 +296,33 @@ export function useMobileAuthSession() {
         patient_email: authBootstrap.patient_email as string,
       };
 
-      let authSuccess = false;
-      let lastAuthError: unknown = null;
-
-      if (authBootstrap?.access_token && authBootstrap?.refresh_token) {
-        const { error: setSessionError } = await supabase.auth.setSession({
-          access_token: authBootstrap.access_token as string,
-          refresh_token: authBootstrap.refresh_token as string,
-        });
-
-        if (!setSessionError) {
-          authSuccess = true;
-          console.log('[MobileAuth] Sessão restaurada a partir do backend');
-        } else {
-          lastAuthError = setSessionError;
-          console.warn('[MobileAuth] setSession falhou após bootstrap', setSessionError);
-        }
+      if (!authBootstrap?.access_token || !authBootstrap?.refresh_token) {
+        console.error('[MobileAuth] mobile-patient-auth retornou sucesso sem tokens de sessão', authBootstrap);
+        await clearSession();
+        return {
+          success: false,
+          error: 'Não foi possível iniciar sua sessão no app. Tente novamente.',
+        };
       }
 
-      if (!authSuccess) {
-        const loginAttempts = 3;
+      const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+        access_token: authBootstrap.access_token as string,
+        refresh_token: authBootstrap.refresh_token as string,
+      });
 
-        for (let attempt = 1; attempt <= loginAttempts; attempt++) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: patient.patient_email,
-            password,
-          });
-
-          if (!signInError) {
-            authSuccess = true;
-            console.log('[MobileAuth] Login Supabase bem sucedido', { attempt });
-            break;
-          }
-
-          lastAuthError = signInError;
-          console.warn('[MobileAuth] signInWithPassword falhou', { attempt, signInError });
-
-          if (attempt < loginAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 350));
-          }
-        }
-      }
-
-      if (!authSuccess) {
+      if (setSessionError || !setSessionData.session) {
+        console.error('[MobileAuth] setSession falhou após bootstrap', setSessionError);
         await clearSession();
         return {
           success: false,
           error: 'Não foi possível validar sua sessão de acesso. Entre novamente.',
         };
       }
+
+      console.log('[MobileAuth] Sessão restaurada a partir do backend', {
+        authUserId: setSessionData.session.user.id,
+        patientId: patient.patient_id,
+      });
 
       await persistSession(patient.patient_id, patient.clinic_id, patient.patient_name);
 
@@ -358,9 +336,9 @@ export function useMobileAuthSession() {
       });
 
       console.log('[MobileAuth] Login completo:', {
-        supabaseAuth: authSuccess,
+        supabaseAuth: true,
         localPersistence: true,
-        lastAuthError,
+        authUserId: setSessionData.session.user.id,
       });
 
       return {
