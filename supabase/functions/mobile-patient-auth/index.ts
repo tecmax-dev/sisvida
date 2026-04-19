@@ -152,10 +152,12 @@ Deno.serve(async (req) => {
     let authUser: User | null = null;
 
     if (existingUser) {
-      const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-        email: canonicalAuthEmail,
+      const currentEmail = (existingUser.email ?? "").trim().toLowerCase();
+      const targetEmail = canonicalAuthEmail.trim().toLowerCase();
+      const emailNeedsChange = currentEmail !== targetEmail;
+
+      const updatePayload: Record<string, unknown> = {
         password,
-        email_confirm: true,
         app_metadata: {
           ...(existingUser.app_metadata ?? {}),
           ...appMetadata,
@@ -164,11 +166,39 @@ Deno.serve(async (req) => {
           ...(existingUser.user_metadata ?? {}),
           ...userMetadata,
         },
-      });
+      };
 
-      if (updateError) {
-        console.error("[mobile-patient-auth] updateUserById error", updateError);
-        return json({ success: false, error: "Não foi possível preparar sua conta de acesso", code: "auth_update_failed" }, 500);
+      if (emailNeedsChange) {
+        updatePayload.email = canonicalAuthEmail;
+        updatePayload.email_confirm = true;
+      } else if (!existingUser.email_confirmed_at) {
+        updatePayload.email_confirm = true;
+      }
+
+      let { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        existingUser.id,
+        updatePayload as any
+      );
+
+      // Fallback: se a atualização de email falhar (conflito raro), tenta sem alterar email
+      if (updateError && emailNeedsChange) {
+        console.warn("[mobile-patient-auth] updateUserById falhou ao alterar email, tentando sem alterar email", updateError);
+        const retryPayload = { ...updatePayload };
+        delete (retryPayload as any).email;
+        delete (retryPayload as any).email_confirm;
+        const retry = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, retryPayload as any);
+        updatedUser = retry.data;
+        updateError = retry.error;
+      }
+
+      if (updateError || !updatedUser?.user) {
+        console.error("[mobile-patient-auth] updateUserById error", updateError, "user_id:", existingUser.id, "patient_id:", patient.patient_id);
+        return json({
+          success: false,
+          error: "Não foi possível preparar sua conta de acesso",
+          code: "auth_update_failed",
+          details: updateError?.message ?? null,
+        }, 500);
       }
 
       authUser = updatedUser.user;
