@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
         "favicon.ico",
       ],
       manifest: {
-        name: "SECMI - Sindicato dos Comerciários de Itabuna",
+        name: "SECMI - Sindicato dos Comerciários de Ilhéus e Região",
         short_name: "SECMI",
         description: "Aplicativo do associado para acesso a serviços, carteirinha digital, boletos e muito mais.",
         theme_color: "#16a394",
