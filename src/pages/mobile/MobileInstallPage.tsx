@@ -32,7 +32,7 @@ export default function MobileInstallPage() {
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [clinicName, setClinicName] = useState("Sindicato dos Comerciários");
+  const [clinicName, setClinicName] = useState("Sindicato dos Comerciários de Ilhéus e Região");
   const [clinicLogo, setClinicLogo] = useState<string | null>(null);
   
   const [isIOS, setIsIOS] = useState(false);
@@ -241,39 +241,64 @@ export default function MobileInstallPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header com identidade visual */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="px-4 py-3">
-          <Link 
-            to="/app" 
-            className="inline-flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground text-sm font-medium"
+      {/* Header com identidade visual - gradiente e destaque */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
+        {/* Decoração de fundo */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white blur-3xl" />
+          <div className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-white blur-3xl" />
+        </div>
+
+        <div className="relative px-4 py-3">
+          <Link
+            to="/app"
+            className="inline-flex items-center gap-2 text-primary-foreground/90 hover:text-primary-foreground text-sm font-medium transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar ao App
           </Link>
         </div>
-        
-        <div className="px-6 pb-8 pt-2">
-          <div className="flex items-center gap-4">
-            {clinicLogo ? (
-              <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-lg">
-                <img 
-                  src={clinicLogo} 
-                  alt={clinicName} 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
-              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
-                <Smartphone className="h-8 w-8" />
-              </div>
-            )}
-            <div>
-              <h1 className="text-xl font-bold">Instalar Aplicativo</h1>
-              <p className="text-primary-foreground/80 text-sm">{clinicName}</p>
+
+        <div className="relative px-6 pb-10 pt-4 text-center">
+          {clinicLogo ? (
+            <div className="mx-auto w-24 h-24 rounded-3xl bg-white p-3 shadow-2xl ring-4 ring-white/30">
+              <img
+                src={clinicLogo}
+                alt={clinicName}
+                className="w-full h-full object-contain"
+              />
             </div>
+          ) : (
+            <div className="mx-auto w-24 h-24 rounded-3xl bg-white/20 flex items-center justify-center ring-4 ring-white/30 shadow-2xl">
+              <Smartphone className="h-12 w-12" />
+            </div>
+          )}
+
+          <h1 className="mt-5 text-2xl font-extrabold tracking-tight">
+            Instalar Aplicativo
+          </h1>
+          <p className="mt-1 text-primary-foreground/90 text-sm font-medium px-4">
+            {clinicName}
+          </p>
+
+          {/* Badges de destaques */}
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-xs font-semibold ring-1 ring-white/30">
+              <Zap className="h-3 w-3" /> Rápido
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-xs font-semibold ring-1 ring-white/30">
+              <Wifi className="h-3 w-3" /> Offline
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-xs font-semibold ring-1 ring-white/30">
+              <Shield className="h-3 w-3" /> Seguro
+            </span>
           </div>
         </div>
+
+        {/* Curva inferior */}
+        <svg className="block w-full h-6 text-background" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true">
+          <path fill="currentColor" d="M0,32 C360,64 1080,0 1440,32 L1440,48 L0,48 Z" />
+        </svg>
       </header>
 
       <main className="px-4 py-6 space-y-6 max-w-lg mx-auto">
