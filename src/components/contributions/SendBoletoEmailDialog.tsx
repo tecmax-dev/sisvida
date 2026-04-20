@@ -21,7 +21,8 @@ import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { supabase } from "@/integrations/supabase/client";
 
-const BOLETOS_PER_EMAIL = 15; // Maximum boletos per email to avoid timeout
+const BOLETOS_PER_EMAIL = 50; // Maximum boletos per email to avoid timeout
+const PARALLEL_SENDS = 5; // Number of emails sent in parallel
 
 interface Contribution {
   id: string;
@@ -215,13 +216,22 @@ export function SendBoletoEmailDialog({
       let errorCount = 0;
       let currentBatch = 0;
 
+      // Build list of all batches across all email groups
+      type BatchJob = {
+        email: string;
+        recipientName: string;
+        batch: any[];
+        index: number;
+      };
+      const allJobs: BatchJob[] = [];
+
       for (const [email, contribs] of emailGroups) {
         const boletos = contribs.map((c) => {
           const isAwaitingValue = c.status === "awaiting_value" || (!c.lytex_invoice_url && c.public_access_token);
           const invoiceUrl = isAwaitingValue && c.public_access_token
             ? `${window.location.origin}/contribuicao/${c.public_access_token}`
             : c.lytex_invoice_url || "";
-          
+
           return {
             employerName: c.employers?.name || "Empresa",
             employerCnpj: c.employers?.cnpj || "",
@@ -238,45 +248,52 @@ export function SendBoletoEmailDialog({
           };
         });
 
-        // Split boletos into batches to avoid timeout
-        const batches: typeof boletos[] = [];
-        for (let i = 0; i < boletos.length; i += BOLETOS_PER_EMAIL) {
-          batches.push(boletos.slice(i, i + BOLETOS_PER_EMAIL));
-        }
-
         const recipientName = contribs[0]?.employers?.name || email;
 
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          currentBatch++;
-          setSendProgress({ current: currentBatch, total: totalBatches, sent: successCount, errors: errorCount });
+        for (let i = 0; i < boletos.length; i += BOLETOS_PER_EMAIL) {
+          allJobs.push({
+            email,
+            recipientName,
+            batch: boletos.slice(i, i + BOLETOS_PER_EMAIL),
+            index: Math.floor(i / BOLETOS_PER_EMAIL) + 1,
+          });
+        }
+      }
 
-          try {
-            const { error } = await supabase.functions.invoke("send-boleto-email", {
+      // Process jobs in parallel chunks of PARALLEL_SENDS
+      for (let i = 0; i < allJobs.length; i += PARALLEL_SENDS) {
+        const chunk = allJobs.slice(i, i + PARALLEL_SENDS);
+        const results = await Promise.allSettled(
+          chunk.map((job) =>
+            supabase.functions.invoke("send-boleto-email", {
               body: {
-                recipientEmail: email,
-                recipientName: recipientName,
+                recipientEmail: job.email,
+                recipientName: job.recipientName,
                 ccEmail: ccEmail.trim() || undefined,
                 clinicName: clinicName || "Sindicato",
-                boletos: batch,
+                boletos: job.batch,
               },
-            });
+            })
+          )
+        );
 
-            if (error) {
-              console.error(`Erro ao enviar para ${email} (lote ${i + 1}):`, error);
-              errorCount++;
-            } else {
-              successCount++;
-            }
-          } catch (batchError) {
-            console.error(`Erro ao enviar para ${email} (lote ${i + 1}):`, batchError);
+        results.forEach((result, idx) => {
+          currentBatch++;
+          const job = chunk[idx];
+          if (result.status === "rejected" || (result.status === "fulfilled" && result.value.error)) {
+            const err = result.status === "rejected" ? result.reason : result.value.error;
+            console.error(`Erro ao enviar para ${job.email} (lote ${job.index}):`, err);
             errorCount++;
+          } else {
+            successCount++;
           }
+        });
 
-          // Small delay between batches to avoid rate limiting
-          if (currentBatch < totalBatches) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+        setSendProgress({ current: currentBatch, total: totalBatches, sent: successCount, errors: errorCount });
+
+        // Small delay between parallel chunks to avoid overwhelming SMTP
+        if (i + PARALLEL_SENDS < allJobs.length) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
         }
       }
 
