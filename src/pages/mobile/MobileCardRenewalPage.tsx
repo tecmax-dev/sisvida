@@ -286,7 +286,7 @@ export default function MobileCardRenewalPage() {
 
       toast({
         title: "Contracheque enviado!",
-        description: "Seu documento foi enviado para análise.",
+        description: "Seu documento foi recebido com sucesso.",
       });
 
       setSubmitted(true);
@@ -353,16 +353,16 @@ export default function MobileCardRenewalPage() {
           <h1 className="text-lg font-semibold flex-1 text-center pr-8">Atualizar Carteirinha</h1>
         </div>
         <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
-          <Clock className="h-20 w-20 text-amber-500 mb-6" />
-          <h2 className="text-2xl font-semibold text-foreground mb-3 text-center">Aguardando Análise</h2>
+          <Clock className="h-20 w-20 text-emerald-500 mb-6" />
+          <h2 className="text-2xl font-semibold text-foreground mb-3 text-center">Contracheque Recebido</h2>
           <p className="text-muted-foreground text-center mb-2">
-            Você já enviou seu contracheque e ele está em análise.
+            Seu contracheque foi recebido com sucesso.
           </p>
           <p className="text-sm text-muted-foreground text-center mb-2">
             Enviado em: {format(new Date(pendingRequest.received_at || pendingRequest.requested_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </p>
           <Badge variant="secondary" className="mb-8">
-            Status: {pendingRequest.status === 'pending' ? 'Pendente' : 'Recebido'}
+            Status: Recebido
           </Badge>
           <Button 
             className="w-full max-w-xs bg-emerald-600 hover:bg-emerald-700"
