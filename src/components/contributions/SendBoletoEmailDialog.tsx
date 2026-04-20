@@ -21,7 +21,8 @@ import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { supabase } from "@/integrations/supabase/client";
 
-const BOLETOS_PER_EMAIL = 15; // Maximum boletos per email to avoid timeout
+const BOLETOS_PER_EMAIL = 50; // Maximum boletos per email to avoid timeout
+const PARALLEL_SENDS = 5; // Number of emails sent in parallel
 
 interface Contribution {
   id: string;
