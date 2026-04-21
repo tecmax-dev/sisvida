@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
+ import { motion, AnimatePresence } from "motion/react";
 import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 interface ClinicData {
