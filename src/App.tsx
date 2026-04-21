@@ -27,6 +27,7 @@ import DocsLayout from "./pages/docs/DocsLayout";
 // Landing page (carregamento imediato - primeira página)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import HubLandingPage from "./pages/HubLandingPage";
 
 // Documentation pages
 import AjudaIndex from "./pages/docs/AjudaIndex";
@@ -374,7 +375,9 @@ function App() {
                   <DomainRedirect />
                   <Suspense fallback={<LoadingFallback />}>
                     <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<HubLandingPage />} />
+                <Route path="/clinica" element={<Index />} />
+                <Route path="/sindicato-saas" element={<SindicalLandingPage />} />
                 {/* Aliases para evitar 404 por URLs antigas/alternativas */}
                 <Route path="/agendar-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
                 <Route path="/agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
