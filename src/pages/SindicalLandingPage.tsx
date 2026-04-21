@@ -1018,7 +1018,6 @@ export default function SindicalLandingPage() {
         <FeaturesSection />
         <ModulesSection />
         <MiniFeatures />
-        <PricingSection />
         <FAQSection />
         <CTASection />
       </main>
