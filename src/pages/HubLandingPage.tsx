@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ArrowRight, Building2, Stethoscope, CheckCircle2 } from "lucide-react";
-import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
 
 const clinicaFeatures = [
   "Agenda inteligente e prontuário eletrônico",
@@ -20,17 +20,22 @@ const sindicatoFeatures = [
 ];
 
 export default function HubLandingPage() {
+  useEffect(() => {
+    document.title = "ProsindWeb — Sistema completo para Clínicas e Sindicatos";
+    const meta = document.querySelector('meta[name="description"]');
+    const content =
+      "Escolha o módulo ideal: ProsindWeb Clínica para gestão de clínicas e consultórios, ou ProsindWeb Sindicato para sindicatos, associações e federações.";
+    if (meta) meta.setAttribute("content", content);
+    else {
+      const m = document.createElement("meta");
+      m.name = "description";
+      m.content = content;
+      document.head.appendChild(m);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Helmet>
-        <title>ProsindWeb — Sistema completo para Clínicas e Sindicatos</title>
-        <meta
-          name="description"
-          content="Escolha o módulo ideal: ProsindWeb Clínica para gestão de clínicas e consultórios, ou ProsindWeb Sindicato para sindicatos, associações e federações."
-        />
-        <link rel="canonical" href="https://prosindweb.com.br/" />
-      </Helmet>
-
       <Header />
 
       <main className="flex-1">
