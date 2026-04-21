@@ -139,13 +139,13 @@ export default function SindicatoBeneficiosLandingPage() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <img src={LOGO_URL} alt="SECMI" className="w-10 h-10 rounded-xl" />
             <div>
               <span className="font-bold text-gray-900 text-sm leading-tight block">Sindicato dos Comerciários</span>
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">Ilhéus • Itacaré • Ubaitaba • Una • Uruçuca</span>
             </div>
-          </div>
+          </a>
           <Button className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 text-sm font-semibold shadow-md" asChild>
             <a href={FILIACAO_URL}>Filiar-se agora</a>
           </Button>
