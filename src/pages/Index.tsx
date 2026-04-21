@@ -6,7 +6,6 @@ import { AlternatingFeaturesSection } from "@/components/landing/AlternatingFeat
 import { QuickFeaturesGrid } from "@/components/landing/QuickFeaturesGrid";
 import { ProblemsSection } from "@/components/landing/ProblemsSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
-import { PricingSection } from "@/components/landing/PricingSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { CTASection } from "@/components/landing/CTASection";
 
@@ -21,7 +20,6 @@ const Index = () => {
         <QuickFeaturesGrid />
         <ProblemsSection />
         <TestimonialsSection />
-        <PricingSection />
         <FAQSection />
         <CTASection />
       </main>
