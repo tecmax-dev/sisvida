@@ -967,7 +967,7 @@ function SindicalFooter() {
           <div>
             <h4 className="font-bold text-white mb-4 text-sm">Contato</h4>
             <ul className="space-y-3 text-white/40 text-sm">
-              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(73) 3231-1784</li>
+              <li className="flex items-center gap-2"><Phone className="h-4 w-4" />(11) 5194-3839</li>
               <li className="flex items-center gap-2"><Mail className="h-4 w-4" />contato@prosindweb.com.br</li>
               <li className="flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />São Paulo, SP - Brasil</li>
             </ul>
