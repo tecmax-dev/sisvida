@@ -7,10 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { UserMenu } from "./UserMenu";
 
 const navLinks = [
-  { href: "/#features", label: "Funcionalidades" },
-  { href: "/#pricing", label: "Planos" },
-  { href: "/#testimonials", label: "Depoimentos" },
-  { href: "/#faq", label: "FAQ" },
+   { href: "/#features", label: "Funcionalidades" },
+   { href: "/apresentacao-clinica", label: "Clínica" },
+   { href: "/#pricing", label: "Planos" },
+   { href: "/#testimonials", label: "Depoimentos" },
+   { href: "/#faq", label: "FAQ" },
 ];
 
 export function Header() {

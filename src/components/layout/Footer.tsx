@@ -34,10 +34,11 @@ export function Footer() {
             <h4 className="font-semibold text-foreground mb-4 text-sm">Produto</h4>
             <ul className="space-y-3">
               {[
-                { href: "/#features", label: "Funcionalidades" },
-                { href: "/#pricing", label: "Planos" },
-                { href: "/cadastro", label: "Solicitar Demo" },
-                { href: "/ajuda", label: "Central de Ajuda" },
+                 { href: "/#features", label: "Funcionalidades" },
+                 { href: "/apresentacao-clinica", label: "Módulo Clínica" },
+                 { href: "/#pricing", label: "Planos" },
+                 { href: "/cadastro", label: "Solicitar Demo" },
+                 { href: "/ajuda", label: "Central de Ajuda" },
               ].map((link) => (
                 <li key={link.href}>
                   <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
