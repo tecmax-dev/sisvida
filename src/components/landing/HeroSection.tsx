@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Loader2, ArrowRight, Play } from "lucide-react";
 import { useHeroSettings } from "@/hooks/useHeroSettings";
 import { useState, useEffect } from "react";
-import heroMockupScreens from "@/assets/hero-mockup-screens.png";
+ import heroMockupScreens from "@/assets/sindical-hero-dashboard.png";
 
 const typewriterWords = ["humanizado", "eficiente", "completo", "inovador"];
 
