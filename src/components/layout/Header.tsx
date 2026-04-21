@@ -7,10 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { UserMenu } from "./UserMenu";
 
 const navLinks = [
-   { href: "/#features", label: "Funcionalidades" },
-   { href: "/apresentacao-clinica", label: "Clínica" },
+   { href: "/clinica", label: "Clínica" },
+   { href: "/sindicato-saas", label: "Sindicato" },
    { href: "/#pricing", label: "Planos" },
-   { href: "/#testimonials", label: "Depoimentos" },
    { href: "/#faq", label: "FAQ" },
 ];
 
