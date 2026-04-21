@@ -71,13 +71,13 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://wa.me/557332311784"
+                  href="https://wa.me/551151943839"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  (73) 3231-1784
+                  (11) 5194-3839
                 </a>
               </li>
               <li>

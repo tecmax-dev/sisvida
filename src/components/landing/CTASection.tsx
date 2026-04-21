@@ -43,7 +43,7 @@ export function CTASection() {
               asChild
             >
               <a
-                href="https://wa.me/557332311784?text=Olá! Gostaria de saber mais sobre o ProsindWeb."
+                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o ProsindWeb."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
