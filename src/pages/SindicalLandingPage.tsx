@@ -830,7 +830,7 @@ function PricingSection() {
               className="w-full h-12 font-bold bg-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,28%)] text-white"
               asChild
             >
-              <a href="https://wa.me/557332311784" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer">
                 Vamos conversar
               </a>
             </Button>
@@ -886,7 +886,7 @@ function FAQSection() {
             className="font-bold border-[hsl(215,85%,35%)] text-[hsl(215,85%,35%)] hover:bg-[hsl(215,85%,97%)]"
             asChild
           >
-            <a href="https://wa.me/557332311784?text=Olá! Tenho uma dúvida sobre o ProsindWeb" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+            <a href="https://wa.me/551151943839?text=Olá! Tenho uma dúvida sobre o ProsindWeb" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4" />
               Falar no WhatsApp
             </a>
@@ -927,7 +927,7 @@ function CTASection() {
               asChild
             >
               <a
-                href="https://wa.me/557332311784?text=Olá! Gostaria de saber mais sobre o ProsindWeb."
+                href="https://wa.me/551151943839?text=Olá! Gostaria de saber mais sobre o ProsindWeb."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -955,7 +955,7 @@ function SindicalFooter() {
               Solução completa para gestão de entidades sindicais. Transparência, organização e eficiência.
             </p>
             <div className="flex gap-3">
-              <a href="https://wa.me/557332311784" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+              <a href="https://wa.me/551151943839" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <MessageCircle className="h-5 w-5" />
               </a>
               <a href="mailto:contato@prosindweb.com.br" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
