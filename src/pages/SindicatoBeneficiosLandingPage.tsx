@@ -551,10 +551,10 @@ export default function SindicatoBeneficiosLandingPage() {
       <footer className="bg-gray-900 text-gray-400 py-10">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src={LOGO_URL} alt="SECMI" className="w-8 h-8 rounded-lg" />
+            <a href="/" className="flex items-center gap-3 hover:text-white transition-colors group">
+              <img src={LOGO_URL} alt="SECMI" className="w-8 h-8 rounded-lg group-hover:opacity-80 transition-opacity" />
               <span className="text-sm">SECMI — Sindicato dos Empregados no Comércio de Ilhéus e Região</span>
-            </div>
+            </a>
             <div className="flex items-center gap-4 text-sm">
               <a href="https://www.comerciariosilheus.org.br" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                 Site oficial
