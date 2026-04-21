@@ -7,7 +7,6 @@ import { ClinicaFeaturesSection } from "@/components/landing/clinica/ClinicaFeat
 import { ClinicaQuickFeaturesGrid } from "@/components/landing/clinica/ClinicaQuickFeaturesGrid";
 import { ClinicaProblemsSection } from "@/components/landing/clinica/ClinicaProblemsSection";
 import { ClinicaTestimonialsSection } from "@/components/landing/clinica/ClinicaTestimonialsSection";
-import { PricingSection } from "@/components/landing/PricingSection";
 import { ClinicaFAQSection } from "@/components/landing/clinica/ClinicaFAQSection";
 import { ClinicaCTASection } from "@/components/landing/clinica/ClinicaCTASection";
 
@@ -34,7 +33,6 @@ export default function ClinicaLandingPage() {
         <ClinicaQuickFeaturesGrid />
         <ClinicaProblemsSection />
         <ClinicaTestimonialsSection />
-        <PricingSection />
         <ClinicaFAQSection />
         <ClinicaCTASection />
       </main>
