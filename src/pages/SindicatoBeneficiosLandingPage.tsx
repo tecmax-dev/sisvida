@@ -423,15 +423,17 @@ export default function SindicatoBeneficiosLandingPage() {
               { icon: Users, title: "Representação Forte", desc: "Negociações coletivas que valorizam o seu trabalho." },
               { icon: Zap, title: "Serviços Digitais", desc: "App exclusivo com carteirinha digital e agendamento online." },
             ].map((r, i) => (
-              <Card key={i} className="border-gray-200 bg-white hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4">
-                    <r.icon className="w-6 h-6 text-[#16a394]" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{r.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
-                </CardContent>
-              </Card>
+              <a key={i} href={FILIACAO_URL} className="block group">
+                <Card className="border-gray-200 bg-white hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#16a394]/30 h-full">
+                  <CardContent className="p-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4 group-hover:bg-[#16a394]/20 transition-colors">
+                      <r.icon className="w-6 h-6 text-[#16a394]" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-[#16a394] transition-colors">{r.title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
+                  </CardContent>
+                </Card>
+              </a>
             ))}
           </div>
         </div>
