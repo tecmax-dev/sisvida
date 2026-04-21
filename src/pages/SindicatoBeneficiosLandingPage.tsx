@@ -139,13 +139,13 @@ export default function SindicatoBeneficiosLandingPage() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <img src={LOGO_URL} alt="SECMI" className="w-10 h-10 rounded-xl" />
             <div>
               <span className="font-bold text-gray-900 text-sm leading-tight block">Sindicato dos Comerciários</span>
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">Ilhéus • Itacaré • Ubaitaba • Una • Uruçuca</span>
             </div>
-          </div>
+          </a>
           <Button className="bg-[#16a394] hover:bg-[#138a7d] text-white rounded-full px-6 text-sm font-semibold shadow-md" asChild>
             <a href={FILIACAO_URL}>Filiar-se agora</a>
           </Button>
@@ -326,9 +326,10 @@ export default function SindicatoBeneficiosLandingPage() {
                   {/* Benefit cards */}
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((b, i) => (
-                      <div
+                      <a
                         key={i}
-                        className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
+                        href={FILIACAO_URL}
+                        className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1 cursor-pointer`}
                       >
                         {b.photo ? (
                           <img src={b.photo} alt={b.name} className="w-10 h-10 rounded-lg object-cover shrink-0 group-hover:scale-110 transition-transform" />
@@ -338,10 +339,10 @@ export default function SindicatoBeneficiosLandingPage() {
                           </div>
                         )}
                         <div>
-                          <div className="font-semibold text-gray-900 text-sm">{b.name}</div>
+                          <div className="font-semibold text-gray-900 text-sm group-hover:text-[#16a394] transition-colors">{b.name}</div>
                           <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{b.description}</div>
                         </div>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -422,15 +423,17 @@ export default function SindicatoBeneficiosLandingPage() {
               { icon: Users, title: "Representação Forte", desc: "Negociações coletivas que valorizam o seu trabalho." },
               { icon: Zap, title: "Serviços Digitais", desc: "App exclusivo com carteirinha digital e agendamento online." },
             ].map((r, i) => (
-              <Card key={i} className="border-gray-200 bg-white hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4">
-                    <r.icon className="w-6 h-6 text-[#16a394]" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{r.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
-                </CardContent>
-              </Card>
+              <a key={i} href={FILIACAO_URL} className="block group">
+                <Card className="border-gray-200 bg-white hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#16a394]/30 h-full">
+                  <CardContent className="p-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#16a394]/10 flex items-center justify-center mb-4 group-hover:bg-[#16a394]/20 transition-colors">
+                      <r.icon className="w-6 h-6 text-[#16a394]" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-[#16a394] transition-colors">{r.title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{r.desc}</p>
+                  </CardContent>
+                </Card>
+              </a>
             ))}
           </div>
         </div>
@@ -548,10 +551,10 @@ export default function SindicatoBeneficiosLandingPage() {
       <footer className="bg-gray-900 text-gray-400 py-10">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src={LOGO_URL} alt="SECMI" className="w-8 h-8 rounded-lg" />
+            <a href="/" className="flex items-center gap-3 hover:text-white transition-colors group">
+              <img src={LOGO_URL} alt="SECMI" className="w-8 h-8 rounded-lg group-hover:opacity-80 transition-opacity" />
               <span className="text-sm">SECMI — Sindicato dos Empregados no Comércio de Ilhéus e Região</span>
-            </div>
+            </a>
             <div className="flex items-center gap-4 text-sm">
               <a href="https://www.comerciariosilheus.org.br" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                 Site oficial
