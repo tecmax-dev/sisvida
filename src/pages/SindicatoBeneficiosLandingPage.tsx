@@ -326,9 +326,10 @@ export default function SindicatoBeneficiosLandingPage() {
                   {/* Benefit cards */}
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((b, i) => (
-                      <div
+                      <a
                         key={i}
-                        className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
+                        href={FILIACAO_URL}
+                        className={`group flex items-start gap-4 p-4 rounded-xl border ${config.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1 cursor-pointer`}
                       >
                         {b.photo ? (
                           <img src={b.photo} alt={b.name} className="w-10 h-10 rounded-lg object-cover shrink-0 group-hover:scale-110 transition-transform" />
@@ -338,10 +339,10 @@ export default function SindicatoBeneficiosLandingPage() {
                           </div>
                         )}
                         <div>
-                          <div className="font-semibold text-gray-900 text-sm">{b.name}</div>
+                          <div className="font-semibold text-gray-900 text-sm group-hover:text-[#16a394] transition-colors">{b.name}</div>
                           <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{b.description}</div>
                         </div>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </div>
