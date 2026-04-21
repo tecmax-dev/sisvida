@@ -28,6 +28,7 @@ import DocsLayout from "./pages/docs/DocsLayout";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import HubLandingPage from "./pages/HubLandingPage";
+import ClinicaLandingPage from "./pages/ClinicaLandingPage";
 
 // Documentation pages
 import AjudaIndex from "./pages/docs/AjudaIndex";
