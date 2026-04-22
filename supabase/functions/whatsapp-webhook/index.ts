@@ -8125,36 +8125,94 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               const normalizedInput = normalizeSupportText(messageText || '');
               const isGenericSupportReply = /^(outro assunto|outro|outros|outros assuntos?|atendente|falar com atendente|humano|suporte|ajuda)$/.test(normalizedInput);
 
-              if (isGenericSupportReply) {
+              // Check if we are already waiting for the user to describe the subject
+              const isAwaitingSubject = activeAiContexts?.some((row: any) =>
+                row?.messages?.action === 'awaiting_handoff_subject'
+              );
+
+              if (isAwaitingSubject && messageText && messageText.trim().length > 0 && !isGenericSupportReply) {
+                console.log(`[webhook] Received subject for human handoff: "${messageText}"`);
+
+                // Classify the subject into a queue using Lovable AI
+                const chosenQueue = await classifySubjectToQueue(supabase, messageText);
                 const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
-                console.log(`[webhook] Deterministic human handoff for generic support reply (${normalizedInput || 'empty'}) - availability=${supportAvailability.isHumanAvailable} (${supportAvailability.reason}) at ${supportAvailability.formatted}`);
 
                 await freezeBotForHumanHandoff(
                   supabase,
                   phone,
                   payload.data?.pushName || null,
-                  messageText || 'Outro assunto'
+                  messageText
                 );
+
+                // Update the ticket with the chosen queue and the subject text
+                if (chosenQueue) {
+                  const cleanedPhone = phone.replace(/\D/g, '');
+                  await supabase
+                    .from('whazing_tickets')
+                    .update({
+                      assigned_queue_id: chosenQueue.id,
+                      subject: messageText.slice(0, 250),
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('contact_number', cleanedPhone);
+                  console.log(`[webhook] Ticket routed to queue "${chosenQueue.name}" (${chosenQueue.id})`);
+                }
+
+                // Expire the awaiting_subject session
+                await supabase
+                  .from('whatsapp_ai_conversations')
+                  .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+                  .eq('clinic_id', clinicId)
+                  .in('phone', phoneCandidates);
 
                 await supabase.from('whatsapp_ai_conversations').insert({
                   clinic_id: clinicId,
                   phone,
                   messages: {
                     source: 'webhook_human_handoff',
-                    action: 'atendente_generic_reply',
-                    support_stage: 'human_handoff_requested',
-                    original_text: messageText,
-                    human_available: supportAvailability.isHumanAvailable,
-                    reason: supportAvailability.reason,
+                    action: 'handoff_completed',
+                    subject: messageText,
+                    queue_id: chosenQueue?.id || null,
+                    queue_name: chosenQueue?.name || null,
                   },
                   expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
                 });
 
-                const directHandoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
-                await sendWhatsAppMessage(configData, phone, directHandoffMessage);
+                const queueLine = chosenQueue
+                  ? `\n\n📌 Encaminhei para a equipe de *${chosenQueue.name}*.`
+                  : '';
+                const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
+                await sendWhatsAppMessage(configData, phone, handoffMessage);
 
                 return new Response(
-                  JSON.stringify({ success: true, message: 'Deterministic human handoff sent' }),
+                  JSON.stringify({ success: true, message: 'Subject captured and routed to queue' }),
+                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
+
+              if (isGenericSupportReply) {
+                const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
+                console.log(`[webhook] User requested human support (${normalizedInput || 'empty'}) - asking for subject before routing. availability=${supportAvailability.isHumanAvailable}`);
+
+                // Ask for subject first; do NOT freeze the bot yet, so we can still classify the reply
+                await supabase.from('whatsapp_ai_conversations').insert({
+                  clinic_id: clinicId,
+                  phone,
+                  messages: {
+                    source: 'webhook_human_handoff',
+                    action: 'awaiting_handoff_subject',
+                    support_stage: 'awaiting_subject',
+                    original_text: messageText,
+                    human_available: supportAvailability.isHumanAvailable,
+                    reason: supportAvailability.reason,
+                  },
+                  expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                });
+
+                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage());
+
+                return new Response(
+                  JSON.stringify({ success: true, message: 'Asked user for subject' }),
                   { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                 );
               }
