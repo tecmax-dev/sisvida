@@ -527,6 +527,36 @@ serve(async (req) => {
 
     console.log(`[Clinic ${clinicId}] User ${userId} sending WhatsApp message to ${formattedPhone} via instance ${instance_name} with logo`);
 
+    // Resolve canonical WhatsApp JID via Evolution to handle BR mobiles
+    // where the real account is registered without the extra "9" (or vice-versa).
+    // This prevents silent delivery ERRORs (status=ERROR) when sending to a
+    // non-existent variant of the number.
+    try {
+      const lookupResp = await fetch(`${api_url}/chat/whatsappNumbers/${instance_name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: api_key },
+        body: JSON.stringify({ numbers: [formattedPhone] }),
+      });
+      if (lookupResp.ok) {
+        const lookupData = await lookupResp.json();
+        const entry = Array.isArray(lookupData) ? lookupData[0] : null;
+        if (entry?.exists && entry?.jid) {
+          const canonical = String(entry.jid).split('@')[0].replace(/\D/g, '');
+          if (canonical && canonical !== formattedPhone) {
+            console.log(`[Clinic ${clinicId}] Canonical JID differs: ${formattedPhone} -> ${canonical}`);
+            formattedPhone = canonical;
+          }
+        } else {
+          console.warn(`[Clinic ${clinicId}] Number ${formattedPhone} not found on WhatsApp via lookup`);
+        }
+      } else {
+        await lookupResp.text();
+        console.warn(`[Clinic ${clinicId}] WhatsApp number lookup failed: ${lookupResp.status}`);
+      }
+    } catch (lookupErr) {
+      console.warn(`[Clinic ${clinicId}] WhatsApp number lookup error:`, lookupErr);
+    }
+
     // Envia mensagem com imagem (logo) no cabeçalho
     const response = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
       method: 'POST',
