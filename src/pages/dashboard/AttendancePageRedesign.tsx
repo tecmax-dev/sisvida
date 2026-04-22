@@ -1580,7 +1580,7 @@ export default function AttendancePageRedesign() {
                 <PatientMedicalHistory 
                   records={medicalHistory} 
                   loading={loadingData}
-                  patientName={appointment?.patient?.name}
+                  patientName={getDisplayName(appointment)}
                 />
               </div>
             )}
