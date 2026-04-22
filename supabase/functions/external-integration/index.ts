@@ -155,6 +155,72 @@ serve(async (req) => {
 
     console.log(`[external-integration] Routing to AI assistant: clinic=${resolvedClinicId}, message="${aiMessage}"`);
 
+    // Special-case: when the external menu sends action="atendente", we should
+    // NOT route to the AI assistant. Instead we ask the user for the subject
+    // and create the "awaiting_handoff_subject" session so the webhook
+    // captures the next reply, classifies it into a Whazing queue and freezes
+    // the bot for human handoff. This guarantees the subject capture step
+    // works even when the AI assistant has its own handoff tool.
+    if (action.toLowerCase() === 'atendente') {
+      const askSubjectText = `Claro! Para que eu possa te encaminhar para a equipe certa, *qual é o assunto* que você gostaria de tratar com nosso atendimento? 📝\n\nPode descrever em poucas palavras (ex: dúvida sobre boleto, questão jurídica, contribuição da empresa, etc.).`;
+
+      try {
+        // Expire any previous AI sessions for this phone in this clinic so the
+        // webhook does not get confused by older "atendente" rows.
+        await supabase
+          .from('whatsapp_ai_conversations')
+          .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+          .eq('clinic_id', resolvedClinicId)
+          .eq('phone', normalizedPhone)
+          .gt('expires_at', new Date().toISOString());
+
+        await supabase.from('whatsapp_ai_conversations').insert({
+          clinic_id: resolvedClinicId,
+          phone: normalizedPhone,
+          messages: {
+            source: 'external_integration',
+            action: 'awaiting_handoff_subject',
+            support_stage: 'awaiting_subject',
+            original_action: action,
+            context: context || null,
+          },
+          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        });
+        console.log(`[external-integration] Created awaiting_handoff_subject session for ${normalizedPhone}`);
+      } catch (sessionErr) {
+        console.error('[external-integration] Failed to create awaiting_handoff_subject session:', sessionErr);
+      }
+
+      const delivered = await sendWhatsAppReply(askSubjectText);
+      if (!delivered) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to deliver subject prompt via WhatsApp' }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        await supabase.from('whatsapp_incoming_logs').insert({
+          clinic_id: resolvedClinicId,
+          phone: normalizedPhone,
+          message_text: `[external-integration] action=atendente → asked for subject`,
+          raw_payload: body,
+          processed: true,
+          processed_action: 'external_integration_ask_subject',
+        });
+      } catch (_logErr) { /* ignore */ }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          action: 'ask_subject',
+          response: askSubjectText,
+          message: 'Asked user for subject before human handoff',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create/update an AI conversation session so the webhook knows there's an active
     // session and does NOT re-trigger the initial menu (which causes a loop).
     try {

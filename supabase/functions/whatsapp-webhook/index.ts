@@ -8121,14 +8121,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               row?.messages?.action === 'atendente'
             );
 
-            if (latestAtendenteContext) {
+            // Check if we are already waiting for the user to describe the subject
+            const isAwaitingSubject = activeAiContexts?.some((row: any) =>
+              row?.messages?.action === 'awaiting_handoff_subject'
+            );
+
+            if (latestAtendenteContext || isAwaitingSubject) {
               const normalizedInput = normalizeSupportText(messageText || '');
               const isGenericSupportReply = /^(outro assunto|outro|outros|outros assuntos?|atendente|falar com atendente|humano|suporte|ajuda)$/.test(normalizedInput);
-
-              // Check if we are already waiting for the user to describe the subject
-              const isAwaitingSubject = activeAiContexts?.some((row: any) =>
-                row?.messages?.action === 'awaiting_handoff_subject'
-              );
 
               if (isAwaitingSubject && messageText && messageText.trim().length > 0 && !isGenericSupportReply) {
                 console.log(`[webhook] Received subject for human handoff: "${messageText}"`);
