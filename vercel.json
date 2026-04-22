@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/s", "destination": "/s/index.html" },
     { "source": "/s/", "destination": "/s/index.html" },
+    { "source": "/.well-known/assetlinks.json", "destination": "/.well-known/assetlinks.json" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
