@@ -5247,6 +5247,24 @@ const updateData: Record<string, any> = {
                                   // Slot livre
                                   const slotTime = slot.time || '';
                                   const profId = group?.professional?.id || '';
+                                  const slotTooClose = slotTime ? isSlotTooClose(slotTime, selectedDate) : false;
+
+                                  if (slotTooClose) {
+                                    return (
+                                      <div
+                                        key={`tooclose-${slotTime || index}-${index}`}
+                                        className="flex items-center gap-3 px-3 py-2 bg-muted/40 cursor-not-allowed"
+                                        title={`Agendamento requer antecedência mínima de ${minAdvanceBookingHours ?? 6}h`}
+                                      >
+                                        <div className="w-14 text-center py-1 rounded text-xs font-medium bg-muted text-muted-foreground/60">
+                                          {slotTime || '--:--'}
+                                        </div>
+                                        <div className="flex-1 text-sm text-muted-foreground/60 italic">
+                                          Indisponível (antecedência mínima)
+                                        </div>
+                                      </div>
+                                    );
+                                  }
 
                                   return (
                                     <div
