@@ -3905,7 +3905,8 @@ const updateData: Record<string, any> = {
                       className={cn(
                         "p-1 border-r border-border/20 relative min-h-[80px]",
                         holidayName && "bg-red-50/50 dark:bg-red-950/10",
-                        isFreeSlot && "bg-primary/5"
+                        isFreeSlot && "bg-primary/5",
+                        tooClose && !holidayName && !hasNonCancelledAppointment && "bg-muted/40 cursor-not-allowed"
                       )}
                     >
                       {holidayName && timeIndex === 5 ? (
