@@ -78,6 +78,18 @@ const formatCPF = (cpf: string) => {
   return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
 
+/**
+ * Mascara o CPF para impressão na ficha de filiação.
+ * A empresa que recebe o documento já possui os dados do funcionário,
+ * então exibimos apenas os 2 últimos dígitos por proteção de PII (LGPD).
+ */
+const maskCPFForPrint = (cpf: string) => {
+  if (!cpf) return "";
+  const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length >= 2) return `***.***.***-${cleaned.slice(-2)}`;
+  return "***.***.***-**";
+};
+
 const formatCNPJ = (cnpj: string) => {
   if (!cnpj) return "";
   const cleaned = cnpj.replace(/\D/g, "");
@@ -482,7 +494,7 @@ async function buildFiliacaoPDF(
 
   // Row 3
   drawField("E-mail", filiacao.email || "", col1X, yPos, col1Width);
-  drawField("CPF", formatCPF(filiacao.cpf), col2X, yPos, col2Width);
+  drawField("CPF", maskCPFForPrint(filiacao.cpf), col2X, yPos, col2Width);
   drawField("RG", filiacao.rg || "", col3X, yPos, col3Width);
   yPos += lineHeight;
 
