@@ -187,10 +187,23 @@ async function resolveImage(
     // If it's a PUBLIC storage URL, fetch via HTTP (don't use storage API)
     if (storageRef && storageRef.isPublic) {
       console.log("[resolve-filiacao-assets] fetching public storage URL via HTTP", { requestId, label, url: input });
-      const out = await fetchPublicImageToDataUrl(input, requestId);
-      const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
-      const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
-      return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
+        try {
+          const out = await fetchPublicImageToDataUrl(input, requestId);
+          const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
+          const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
+          return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
+        } catch (httpErr) {
+          // Bucket may actually be PRIVATE even though URL uses /public/.
+          // Fallback to admin storage download.
+          console.warn("[resolve-filiacao-assets] public HTTP fetch failed, falling back to admin storage download", {
+            requestId, label, bucket: storageRef.bucket, path: storageRef.path,
+            err: (httpErr as Error)?.message,
+          });
+          const out = await downloadStorageToDataUrl(supabaseAdmin, { bucket: storageRef.bucket, path: storageRef.path, isPublic: false });
+          const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
+          const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
+          return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
+        }
     }
     
     // If it's a PRIVATE storage URL, use storage API with service role
