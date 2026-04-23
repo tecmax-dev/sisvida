@@ -494,7 +494,7 @@ async function buildFiliacaoPDF(
 
   // Row 3
   drawField("E-mail", filiacao.email || "", col1X, yPos, col1Width);
-  drawField("CPF", formatCPF(filiacao.cpf), col2X, yPos, col2Width);
+  drawField("CPF", maskCPFForPrint(filiacao.cpf), col2X, yPos, col2Width);
   drawField("RG", filiacao.rg || "", col3X, yPos, col3Width);
   yPos += lineHeight;
 
