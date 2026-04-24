@@ -16,6 +16,8 @@ async function waitForWhatsAppFinalStatus(
   pollMs = 1500,
 ): Promise<{ status: string | null; error?: string }> {
   const startedAt = Date.now();
+  let sawMessageRecord = false;
+  let lastObservedStatus: string | null = null;
 
   while (Date.now() - startedAt < timeoutMs) {
     const { data, error } = await supabase
@@ -30,7 +32,14 @@ async function waitForWhatsAppFinalStatus(
     }
 
     const typedData = data as { status?: string } | null;
+    if (typedData) {
+      sawMessageRecord = true;
+    }
+
     const status = typeof typedData?.status === "string" ? typedData.status.toUpperCase() : null;
+    if (status) {
+      lastObservedStatus = status;
+    }
 
     if (status === "ERROR" || status === "FAILED") {
       return { status, error: "WhatsApp recusou a entrega da mensagem" };
@@ -41,6 +50,12 @@ async function waitForWhatsAppFinalStatus(
     }
 
     await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+
+  if (sawMessageRecord) {
+    return {
+      status: lastObservedStatus ?? "PENDING",
+    };
   }
 
   return {
@@ -197,7 +212,7 @@ _SECMI - Sindicato dos Comerciários_`;
           message: whatsappMessage,
           clinicId: patient.clinic_id,
           type: "custom",
-          sendAsTextOnly: true,
+          sendAsTextOnly: false,
         }),
       });
 
