@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowLeft, Check, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
@@ -140,55 +139,65 @@ export default function MobileFirstAccessPage() {
     
     try {
       const normalizedCpf = cpf.replace(/\D/g, '');
-      
-      // Buscar paciente pelo CPF que não tenha senha cadastrada
-      const { data: patients, error } = await supabase
-        .from('patients')
-        .select('id, name, birth_date')
-        .or(`cpf.eq.${normalizedCpf},cpf.eq.${cpf}`)
-        .eq('clinic_id', SINDICATO_CLINIC_ID)
-        .eq('is_active', true);
+
+      // Usa RPC SECURITY DEFINER porque a página roda sem autenticação
+      // e a RLS de patients bloqueia leitura anônima.
+      const { data, error } = await supabase.rpc(
+        'find_patient_for_first_access' as never,
+        { p_cpf: normalizedCpf } as never,
+      );
 
       if (error) throw error;
 
-      if (!patients || patients.length === 0) {
+      const result = (data ?? {}) as {
+        found?: boolean;
+        reason?: string;
+        id?: string;
+        name?: string;
+        birth_date?: string;
+        has_password?: boolean;
+        has_birth_date?: boolean;
+      };
+
+      if (!result.found) {
+        const reasonMsg =
+          result.reason === 'invalid_cpf'
+            ? 'CPF inválido. Confira os dígitos e tente novamente.'
+            : result.reason === 'inactive'
+            ? 'Seu cadastro está inativo. Entre em contato com o sindicato.'
+            : 'Este CPF não está cadastrado no sistema. Entre em contato com o sindicato.';
         toast({
-          title: "CPF não encontrado",
-          description: "Este CPF não está cadastrado no sistema. Entre em contato com o sindicato.",
-          variant: "destructive",
+          title: 'CPF não encontrado',
+          description: reasonMsg,
+          variant: 'destructive',
         });
         return;
       }
 
-      const patient = patients[0];
-
-      // Check if patient already has a password via server-side RPC
-      const { data: hasPassword } = await supabase
-        .rpc('check_patient_has_password', { p_patient_id: patient.id });
-
-      if (hasPassword) {
+      if (result.has_password) {
         toast({
-          title: "Senha já cadastrada",
-          description: "Você já possui uma senha. Use a opção 'Entrar' para acessar ou 'Esqueci minha senha' para recuperá-la.",
-          variant: "destructive",
+          title: 'Senha já cadastrada',
+          description:
+            "Você já possui uma senha. Use a opção 'Entrar' para acessar ou 'Esqueci minha senha' para recuperá-la.",
+          variant: 'destructive',
         });
         return;
       }
 
-      // Verificar se tem data de nascimento cadastrada
-      if (!patient.birth_date) {
+      if (!result.has_birth_date || !result.birth_date) {
         toast({
-          title: "Dados incompletos",
-          description: "Seu cadastro está incompleto. Entre em contato com o sindicato para atualizar seus dados.",
-          variant: "destructive",
+          title: 'Dados incompletos',
+          description:
+            'Seu cadastro está incompleto. Entre em contato com o sindicato para atualizar seus dados.',
+          variant: 'destructive',
         });
         return;
       }
 
       setPatientData({
-        id: patient.id,
-        name: patient.name,
-        birth_date: patient.birth_date
+        id: result.id!,
+        name: result.name || 'Associado',
+        birth_date: result.birth_date,
       });
       setStep('birthdate');
       
@@ -196,7 +205,7 @@ export default function MobileFirstAccessPage() {
       console.error("Error checking CPF:", err);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao verificar o CPF. Tente novamente.",
+        description: err?.message || "Ocorreu um erro ao verificar o CPF. Tente novamente.",
         variant: "destructive",
       });
     } finally {

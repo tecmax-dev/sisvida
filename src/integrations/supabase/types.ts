@@ -17666,6 +17666,7 @@ export type Database = {
           token: string
         }[]
       }
+      find_patient_for_first_access: { Args: { p_cpf: string }; Returns: Json }
       generate_associado_matricula: {
         Args: { p_sindicato_id: string }
         Returns: string
