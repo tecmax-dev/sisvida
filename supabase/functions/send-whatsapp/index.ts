@@ -75,11 +75,11 @@ function phonesEquivalent(a: string, b: string): boolean {
 }
 
 async function resolveReminderAppointmentId(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
   phone: string,
   message: string,
-): Promise<string | null> {
+): Promise<string | undefined> {
   // 1) Tenta extrair token do link de confirmação (modo antigo)
   const tokenMatch = message.match(/\/consulta\/([a-zA-Z0-9_-]+)/);
   const confirmationToken = tokenMatch?.[1];
@@ -91,13 +91,14 @@ async function resolveReminderAppointmentId(
       .eq('clinic_id', clinicId)
       .eq('confirmation_token', confirmationToken)
       .maybeSingle();
+    const typedByToken = byToken as { id?: string } | null;
 
     if (byTokenError) {
       console.error('[send-whatsapp] Error resolving appointment by confirmation token:', byTokenError);
     }
 
-    if (byToken?.id) {
-      return byToken.id;
+    if (typedByToken?.id) {
+      return typedByToken.id;
     }
   }
 
@@ -120,10 +121,15 @@ async function resolveReminderAppointmentId(
 
   if (upcomingError) {
     console.error('[send-whatsapp] Error resolving appointment by phone:', upcomingError);
-    return null;
+    return undefined;
   }
 
-  const matchedAppointment = (upcomingAppointments || []).find((appointment: any) => {
+  const typedUpcomingAppointments = (upcomingAppointments || []) as Array<{
+    id?: string;
+    patient?: { phone?: string } | Array<{ phone?: string }>;
+  }>;
+
+  const matchedAppointment = typedUpcomingAppointments.find((appointment) => {
     const patientData = appointment?.patient;
     const patientPhone = Array.isArray(patientData)
       ? patientData[0]?.phone
@@ -132,7 +138,7 @@ async function resolveReminderAppointmentId(
     return typeof patientPhone === 'string' && phonesEquivalent(phone, patientPhone);
   });
 
-  return matchedAppointment?.id || null;
+  return matchedAppointment?.id;
 }
 
 async function sendWhazingConfirmationButtons(

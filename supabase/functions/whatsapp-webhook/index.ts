@@ -7015,7 +7015,47 @@ serve(async (req) => {
     // ---- Mirror outgoing / non-upsert messages to whazing dashboard ----
     const isSendMessage = payload.event === 'send.message' || payload.event === 'SEND_MESSAGE';
     const isMessagesUpsert = payload.event === 'MESSAGES_UPSERT' || payload.event === 'messages.upsert';
+    const isMessagesUpdate = payload.event === 'MESSAGES_UPDATE' || payload.event === 'messages.update';
     const isFromMe = payload.data?.key?.fromMe === true;
+
+    if (isMessagesUpdate && isFromMe) {
+      try {
+        const statusMessageId = payload.data?.keyId || payload.data?.key?.id || '';
+        const statusRemoteJid = payload.data?.remoteJid || payload.data?.key?.remoteJid || '';
+        const statusPhone = normalizePhone(String(statusRemoteJid).replace('@s.whatsapp.net', ''));
+        const deliveryStatus = String(payload.data?.status || '').toUpperCase();
+
+        if (statusMessageId && deliveryStatus) {
+          const updatePayload: Record<string, unknown> = {
+            status: deliveryStatus,
+          };
+
+          if (statusPhone) {
+            updatePayload.ticket_id = statusPhone;
+          }
+
+          const { error: statusUpdateError } = await supabase
+            .from('whazing_messages')
+            .upsert({
+              message_id: statusMessageId,
+              ...updatePayload,
+            }, { onConflict: 'message_id' });
+
+          if (statusUpdateError) {
+            console.error('[webhook] Error updating outgoing message status:', statusUpdateError);
+          } else {
+            console.log(`[webhook] Updated outgoing message ${statusMessageId} to status ${deliveryStatus}`);
+          }
+        }
+      } catch (statusErr) {
+        console.error('[webhook] Error processing messages.update status:', statusErr);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Outgoing message status updated' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (isSendMessage || (isMessagesUpsert && isFromMe)) {
       // Mirror outgoing messages so the dashboard shows the full conversation

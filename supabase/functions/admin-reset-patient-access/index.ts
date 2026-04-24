@@ -7,6 +7,48 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SUCCESS_WHATSAPP_STATUSES = new Set(["PENDING", "SERVER_ACK", "DELIVERY_ACK", "READ"]);
+
+async function waitForWhatsAppFinalStatus(
+  adminClient: any,
+  messageId: string,
+  timeoutMs = 20000,
+  pollMs = 1500,
+): Promise<{ status: string | null; error?: string }> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const { data, error } = await adminClient
+      .from("whazing_messages")
+      .select("status")
+      .eq("message_id", messageId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking WhatsApp final status:", error);
+      return { status: null, error: "Erro ao validar o status final do WhatsApp" };
+    }
+
+    const typedData = data as { status?: string } | null;
+    const status = typeof typedData?.status === "string" ? typedData.status.toUpperCase() : null;
+
+    if (status === "ERROR" || status === "FAILED") {
+      return { status, error: "WhatsApp recusou a entrega da mensagem" };
+    }
+
+    if (status && SUCCESS_WHATSAPP_STATUSES.has(status)) {
+      return { status };
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+
+  return {
+    status: null,
+    error: "Não foi possível confirmar a entrega do WhatsApp. Tente novamente.",
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -268,7 +310,24 @@ _SECMI - Sindicato dos Comerciários_`;
         );
       }
 
-      console.log(`Patient reset link sent via WhatsApp to ${patient.phone} by admin ${currentUser.id}`);
+      const messageId = whatsappResult?.data?.key?.id;
+      if (!messageId) {
+        console.error("WhatsApp send did not return message id:", whatsappResult);
+        return new Response(
+          JSON.stringify({ error: "Envio aceito, mas sem protocolo de rastreamento do WhatsApp" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const finalStatus = await waitForWhatsAppFinalStatus(adminClient, messageId);
+      if (finalStatus.error) {
+        return new Response(
+          JSON.stringify({ error: finalStatus.error, status: finalStatus.status, messageId }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Patient reset link sent via WhatsApp to ${patient.phone} by admin ${currentUser.id} with final status ${finalStatus.status}`);
 
     } else {
       return new Response(
