@@ -126,7 +126,7 @@ serve(async (req: Request): Promise<Response> => {
 
       const query = new URLSearchParams();
       query.set("email", email);
-      const resetLink = `https://prosindweb.com.br/app/recuperar-senha?${query.toString()}`;
+      const resetLink = `https://prosindweb.com.br/sindicato/recuperar-senha?${query.toString()}`;
 
       const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
 
