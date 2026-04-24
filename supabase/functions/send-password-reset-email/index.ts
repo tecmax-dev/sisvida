@@ -226,7 +226,7 @@ serve(async (req: Request): Promise<Response> => {
           message: whatsappMessage,
           clinicId: patient.clinic_id,
           type: "custom",
-          sendAsTextOnly: false,
+          sendAsTextOnly: true,
         }),
       });
 
