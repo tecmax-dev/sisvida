@@ -225,7 +225,7 @@ async function resolveImage(
   // Storage path (bucketHint) - use correct bucket based on label
   const actualBucket = label === "signature" ? "patient-signatures" : bucketHint;
   console.log("[resolve-filiacao-assets] downloading from storage path", { requestId, label, bucket: actualBucket, path: input });
-  const out = await downloadStorageToDataUrl(supabaseAdmin, { bucket: actualBucket, path: input });
+  const out = await downloadStorageToDataUrl(supabaseAdmin, { bucket: actualBucket, path: input, isPublic: false });
   const bytesArr = Uint8Array.from(atob(out.base64), (c) => c.charCodeAt(0));
   const pngDims = out.contentType === "image/png" ? getPngDimensions(bytesArr) : null;
   return { contentType: out.contentType, bytes: out.bytes, dataUrl: out.dataUrl, pngDims };
