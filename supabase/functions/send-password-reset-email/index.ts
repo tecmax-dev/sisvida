@@ -27,7 +27,8 @@ O código vale por 30 minutos. Se não foi você quem pediu, pode ignorar esta m
 Equipe SECMI`;
 }
 
-function buildResetEmailHtml(firstName: string, token: string): string {
+function buildResetEmailHtmlWithLink(firstName: string, token: string, email: string): string {
+  const appUrl = `https://prosindweb.com.br/sindicato/recuperar-senha?email=${encodeURIComponent(email)}`;
   return `
       <!DOCTYPE html>
       <html>
@@ -46,6 +47,15 @@ function buildResetEmailHtml(firstName: string, token: string): string {
             <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu codigo de recuperacao:</p>
             <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${token}</p>
           </div>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${appUrl}" style="display: inline-block; background-color: #059669; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              Abrir app e redefinir senha
+            </a>
+          </div>
+          <p style="color: #666; line-height: 1.6; font-size: 14px; text-align: center;">
+            Ou acesse manualmente: <a href="${appUrl}" style="color: #059669;">${appUrl}</a><br>
+            e informe o codigo acima na tela de recuperacao.
+          </p>
           <p style="color: #666; line-height: 1.6; font-size: 14px;">
             <strong>Este codigo e valido por 30 minutos.</strong>
           </p>
@@ -92,7 +102,7 @@ async function sendResetCodeByEmail(params: {
       from: smtpFrom,
       to: params.toEmail,
       subject: "Codigo de Recuperacao de Senha - SECMI",
-      html: buildResetEmailHtml(params.firstName, params.token),
+      html: buildResetEmailHtmlWithLink(params.firstName, params.token, params.toEmail),
     });
 
     await client.close();
