@@ -107,25 +107,57 @@ export function SendPatientResetDialog({
     appendLog({ level: "info", message: `Iniciando envio (${channel})`, data: { patientId: patient.id, name: patient.name, email: patient.email, phone: patient.phone, traceId: newTraceId } });
 
     try {
-      appendLog({ level: "info", message: "Chamando edge function admin-reset-patient-access" });
-      const { data, error } = await supabase.functions.invoke("admin-reset-patient-access", {
-        body: {
+      appendLog({ level: "info", message: "Chamando edge function admin-reset-patient-access (fetch direto)" });
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error("Sessão expirada — faça login novamente");
+      }
+
+      const supabaseUrl = (supabase as any).supabaseUrl as string;
+      const anonKey = (supabase as any).supabaseKey as string;
+      const url = `${supabaseUrl}/functions/v1/admin-reset-patient-access`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          apikey: anonKey,
+        },
+        body: JSON.stringify({
           patientId: patient.id,
           channel,
           traceId: newTraceId,
-        },
+        }),
       });
 
       const elapsed = Math.round(performance.now() - t0);
-      appendLog({ level: "info", message: `Resposta recebida em ${elapsed}ms`, data: { error, data } });
+      const rawText = await response.text();
+      let data: any = null;
+      try { data = rawText ? JSON.parse(rawText) : null; } catch { data = rawText; }
 
-      if (error) {
-        appendLog({ level: "error", message: "Erro retornado pela edge function (transport)", data: error });
-        throw error;
+      appendLog({ level: "info", message: `Resposta recebida em ${elapsed}ms (status ${response.status})`, data });
+
+      if (!response.ok) {
+        const serverMessage =
+          (data && typeof data === "object" && (data.error || data.message)) ||
+          (typeof data === "string" && data) ||
+          `Erro HTTP ${response.status}`;
+        appendLog({ level: "error", message: "Erro retornado pela edge function", data: { status: response.status, body: data } });
+        const err: any = new Error(serverMessage);
+        err.status = response.status;
+        err.body = data;
+        throw err;
       }
-      if (data?.error) {
-        appendLog({ level: "error", message: "Erro retornado pela edge function (payload)", data: data });
-        throw data;
+
+      if (data && typeof data === "object" && data.error) {
+        appendLog({ level: "error", message: "Erro no payload de sucesso", data });
+        const err: any = new Error(data.error);
+        err.status = response.status;
+        err.body = data;
+        throw err;
       }
 
       appendLog({ level: "success", message: `Envio concluído com sucesso via ${channel}`, data });
@@ -145,7 +177,8 @@ export function SendPatientResetDialog({
     } catch (err: unknown) {
       const parsedError = await extractFunctionsErrorAsync(err);
       console.error("Error sending patient reset:", err);
-      const msg = String(parsedError.message || "");
+      const directMsg = (err as any)?.message;
+      const msg = String(directMsg || parsedError.message || "");
       const isAuth =
         msg.toLowerCase().includes("unauthorized") ||
         msg.toLowerCase().includes("não autenticado") ||
