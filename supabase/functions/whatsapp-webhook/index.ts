@@ -8050,7 +8050,7 @@ serve(async (req) => {
             // including doctor names, specialties, scheduling verbs and non-external numeric fallbacks
             const bookingIntentRegex = /\b(agendar|agendamento|agenda|consulta|consultas|marcar|desmarcar|cancelar|remarcar|reagendar|retorno|retornar|horario|horarios|medico|medicos|doutor|doutora|dentista|exame|exames|profissional|disponivel|disponibilidade|vaga|vagas|atendimento|especialidade|pediatra|clinico|ginecologista|especialista|ortopedista|cardiologista|alcides|juliane|uiara|tiuba|dr |dra |dr\.|dra\.|pediatrico|nutricionist|fisioterapeuta|psicologo|psicologa|data|datas|quando atende|proxima data|proximos dias|proxima semana|tem vaga|tem horario|quero agendar|preciso agendar|gostaria de agendar|quero marcar|preciso marcar|quero consulta|preciso de consulta|quero ver medico|ir ao medico)\b/i;
             const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed) && !isExternalMenuSelection;
-            const hasBookingIntent = bookingIntentRegex.test(msgLower) || isBookingMenuOption;
+            const hasBookingIntent = (bookingIntentRegex.test(msgLower) || isBookingMenuOption) && !isBoletoRequest;
 
             if (hasBookingIntent) {
               console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false, booking intent detected for clinic ${clinicId}. Message: "${messageText}"`);
