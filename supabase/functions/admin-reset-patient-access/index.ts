@@ -12,7 +12,7 @@ const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]
 function buildWhatsAppResetMessage(params: {
   firstName: string;
   email?: string | null;
-  protocolCode: string;
+  code: string;
 }) {
   const emailLine = params.email
     ? `• E-mail da conta: ${params.email}`
@@ -24,13 +24,17 @@ Olá, ${params.firstName}!
 
 Recebemos uma solicitação para redefinir sua senha de acesso.
 
-Para continuar:
+Seu código de recuperação:
+
+*${params.code}*
+
+Como usar:
 • Abra o app SECMI e toque em *Esqueci minha senha*
 ${emailLine}
-• Confirme seu ano de nascimento
+• Informe o código acima
 • Cadastre sua nova senha
 
-Protocolo: ${params.protocolCode}
+Este código é válido por 30 minutos.
 
 _SECMI - Sindicato dos Comerciários_`;
 }
@@ -292,11 +296,29 @@ serve(async (req) => {
       }
 
       console.log(`[admin-reset-patient-access${traceId ? `:${traceId}` : ""}] Sending WhatsApp reset for patient ${patientId} to ${patient.phone}`);
-      const protocolCode = (traceId?.split("-").pop() || crypto.randomUUID().slice(0, 6)).toUpperCase();
+
+      // Generate and persist a 6-digit recovery code (same table used by self-service flow)
+      await adminClient
+        .from("patient_password_resets")
+        .update({ used_at: new Date().toISOString() })
+        .eq("patient_id", patientId)
+        .is("used_at", null);
+
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+      const birthYear = patient.birth_date ? new Date(patient.birth_date).getFullYear() : null;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+      await adminClient.from("patient_password_resets").insert({
+        patient_id: patientId,
+        token: code,
+        expires_at: expiresAt,
+        birth_year: birthYear,
+      });
+
       const whatsappMessage = buildWhatsAppResetMessage({
         firstName,
         email: patient.email,
-        protocolCode,
+        code,
       });
 
       const clinicId = patient.clinic_id;
