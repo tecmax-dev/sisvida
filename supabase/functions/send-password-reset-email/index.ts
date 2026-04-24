@@ -155,6 +155,7 @@ _SECMI - Sindicato dos Comerciários_`;
           message: whatsappMessage,
           clinicId: patient.clinic_id,
           type: "custom",
+          sendAsTextOnly: true,
         }),
       });
 
