@@ -545,6 +545,7 @@ serve(async (req) => {
     // where the real account is registered without the extra "9" (or vice-versa).
     // This prevents silent delivery ERRORs (status=ERROR) when sending to a
     // non-existent variant of the number.
+    let numberExistsOnWhatsApp: boolean | null = null;
     try {
       const lookupResp = await fetch(`${api_url}/chat/whatsappNumbers/${instance_name}`, {
         method: 'POST',
@@ -555,12 +556,14 @@ serve(async (req) => {
         const lookupData = await lookupResp.json();
         const entry = Array.isArray(lookupData) ? lookupData[0] : null;
         if (entry?.exists && entry?.jid) {
+          numberExistsOnWhatsApp = true;
           const canonical = String(entry.jid).split('@')[0].replace(/\D/g, '');
           if (canonical && canonical !== formattedPhone) {
             console.log(`[Clinic ${clinicId}] Canonical JID differs: ${formattedPhone} -> ${canonical}`);
             formattedPhone = canonical;
           }
         } else {
+          numberExistsOnWhatsApp = false;
           console.warn(`[Clinic ${clinicId}] Number ${formattedPhone} not found on WhatsApp via lookup`);
         }
       } else {
@@ -569,6 +572,20 @@ serve(async (req) => {
       }
     } catch (lookupErr) {
       console.warn(`[Clinic ${clinicId}] WhatsApp number lookup error:`, lookupErr);
+    }
+
+    // CRITICAL: If lookup definitively says the number is NOT on WhatsApp, abort.
+    // Sending anyway results in a silent ERROR via webhook (messages.update),
+    // and the frontend wrongly thinks the message was delivered.
+    if (numberExistsOnWhatsApp === false) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `O número ${formattedPhone} não possui WhatsApp ativo. Verifique se o número está correto e cadastrado no WhatsApp.`,
+          code: 'NUMBER_NOT_ON_WHATSAPP',
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const shouldUseTextOnly = sendAsTextOnly === true;
