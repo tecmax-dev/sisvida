@@ -72,7 +72,7 @@ serve(async (req) => {
       );
     }
 
-    const { patientId, channel } = await req.json();
+    const { patientId, channel, traceId } = await req.json();
 
     if (!patientId || !channel) {
       return new Response(
@@ -213,7 +213,8 @@ serve(async (req) => {
         query.set("email", patient.email);
       }
 
-      const resetLink = `https://prosindweb.com.br/app/recuperar-senha${query.toString() ? `?${query.toString()}` : ""}`;
+      const resetLink = `https://prosindweb.com.br/sindicato/recuperar-senha${query.toString() ? `?${query.toString()}` : ""}`;
+      console.log(`[admin-reset-patient-access${traceId ? `:${traceId}` : ""}] Sending WhatsApp reset for patient ${patientId} to ${patient.phone}`);
 
       const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
 
@@ -252,6 +253,7 @@ _SECMI - Sindicato dos Comerciários_`;
       });
 
       const whatsappResult = await whatsappResponse.json().catch(() => null);
+      console.log(`[admin-reset-patient-access${traceId ? `:${traceId}` : ""}] WhatsApp provider response`, whatsappResult);
 
       if (!whatsappResponse.ok || whatsappResult?.success === false) {
         const whatsappErrorMessage = whatsappResult?.error || "Erro ao enviar WhatsApp";
@@ -282,13 +284,14 @@ _SECMI - Sindicato dos Comerciários_`;
       entity_id: patientId,
       details: {
         channel,
+        trace_id: traceId ?? null,
         patient_name: patient.name,
         sent_by: currentUser.email,
       },
     });
 
     return new Response(
-      JSON.stringify({ success: true, channel }),
+      JSON.stringify({ success: true, channel, traceId: traceId ?? null }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
