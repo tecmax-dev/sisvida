@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SUCCESS_WHATSAPP_STATUSES = new Set(["PENDING", "SERVER_ACK", "DELIVERY_ACK", "READ"]);
+const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
 
 async function waitForWhatsAppFinalStatus(
   adminClient: any,
