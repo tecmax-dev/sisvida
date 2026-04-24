@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check } from "lucide-react";
+import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check, Terminal } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { extractFunctionsError } from "@/lib/functionsError";
 
@@ -35,6 +35,32 @@ export function SendPatientResetDialog({
   const [loading, setLoading] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<"email" | "whatsapp" | null>(null);
   const [copied, setCopied] = useState(false);
+  type LogEntry = { ts: string; level: "info" | "success" | "error" | "warn"; message: string; data?: unknown };
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [traceId, setTraceId] = useState<string | null>(null);
+
+  const appendLog = (entry: Omit<LogEntry, "ts">) => {
+    const ts = new Date().toISOString();
+    setLogs((prev) => [...prev, { ...entry, ts }]);
+    const tag = `[reset-password${traceId ? `:${traceId}` : ""}]`;
+    const fn = entry.level === "error" ? console.error : entry.level === "warn" ? console.warn : console.log;
+    if (entry.data !== undefined) fn(tag, entry.message, entry.data);
+    else fn(tag, entry.message);
+  };
+
+  const copyLogs = async () => {
+    const text = [
+      `Trace ID: ${traceId ?? "-"}`,
+      `Sócio: ${patient?.name} (${patient?.id})`,
+      ...logs.map((l) => `[${l.ts}] [${l.level.toUpperCase()}] ${l.message}${l.data !== undefined ? ` :: ${JSON.stringify(l.data)}` : ""}`),
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Logs copiados!");
+    } catch {
+      toast.error("Não foi possível copiar os logs");
+    }
+  };
 
   const resetLink = patient?.email
     ? `${window.location.origin}/sindicato/recuperar-senha?email=${encodeURIComponent(patient.email)}`
@@ -63,6 +89,8 @@ export function SendPatientResetDialog({
   const handleClose = () => {
     setSelectedChannel(null);
     setCopied(false);
+    setLogs([]);
+    setTraceId(null);
     onOpenChange(false);
   };
 
@@ -71,17 +99,36 @@ export function SendPatientResetDialog({
 
     setSelectedChannel(channel);
     setLoading(true);
+    const newTraceId = `rst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    setTraceId(newTraceId);
+    setLogs([]);
+
+    const t0 = performance.now();
+    appendLog({ level: "info", message: `Iniciando envio (${channel})`, data: { patientId: patient.id, name: patient.name, email: patient.email, phone: patient.phone, traceId: newTraceId } });
 
     try {
+      appendLog({ level: "info", message: "Chamando edge function admin-reset-patient-access" });
       const { data, error } = await supabase.functions.invoke("admin-reset-patient-access", {
         body: {
           patientId: patient.id,
           channel,
+          traceId: newTraceId,
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw data;
+      const elapsed = Math.round(performance.now() - t0);
+      appendLog({ level: "info", message: `Resposta recebida em ${elapsed}ms`, data: { error, data } });
+
+      if (error) {
+        appendLog({ level: "error", message: "Erro retornado pela edge function (transport)", data: error });
+        throw error;
+      }
+      if (data?.error) {
+        appendLog({ level: "error", message: "Erro retornado pela edge function (payload)", data: data });
+        throw data;
+      }
+
+      appendLog({ level: "success", message: `Envio concluído com sucesso via ${channel}`, data });
 
       toast.success(
         channel === "email"
@@ -94,10 +141,11 @@ export function SendPatientResetDialog({
         }
       );
 
-      handleClose();
+      // Mantém o dialog aberto para o usuário poder copiar/inspecionar os logs
     } catch (err: unknown) {
       const parsedError = extractFunctionsError(err);
       console.error("Error sending patient reset:", err);
+      appendLog({ level: "error", message: parsedError.message || "Erro desconhecido", data: { raw: err, parsed: parsedError } });
       toast.error(parsedError.message || "Erro ao enviar código de recuperação");
     } finally {
       setLoading(false);
