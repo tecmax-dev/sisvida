@@ -242,7 +242,7 @@ _SECMI - Sindicato dos Comerciários_`;
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader,
+          Authorization: `Bearer ${supabaseServiceRoleKey}`,
         },
         body: JSON.stringify({
           phone: patient.phone,
