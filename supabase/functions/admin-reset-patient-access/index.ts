@@ -15,28 +15,20 @@ function buildWhatsAppResetMessage(params: {
   code: string;
 }) {
   const emailLine = params.email
-    ? `• E-mail da conta: ${params.email}`
-    : "• E-mail da conta: use o e-mail cadastrado no aplicativo";
+    ? `seu e-mail (${params.email})`
+    : "o e-mail cadastrado no aplicativo";
 
-  return `🔐 *Redefinição de Senha - SECMI*
+  return `Olá, ${params.firstName}, tudo bem?
 
-Olá, ${params.firstName}!
+Aqui é do SECMI. Você pediu para entrar novamente no aplicativo e seu código de confirmação é:
 
-Recebemos uma solicitação para redefinir sua senha de acesso.
+${params.code}
 
-Seu código de recuperação:
+É só abrir o app, informar ${emailLine} e digitar o código acima para continuar.
 
-*${params.code}*
+O código vale por 30 minutos. Se não foi você quem pediu, pode ignorar esta mensagem.
 
-Como usar:
-• Abra o app SECMI e toque em *Esqueci minha senha*
-${emailLine}
-• Informe o código acima
-• Cadastre sua nova senha
-
-Este código é válido por 30 minutos.
-
-_SECMI - Sindicato dos Comerciários_`;
+Equipe SECMI`;
 }
 
 async function waitForWhatsAppFinalStatus(
