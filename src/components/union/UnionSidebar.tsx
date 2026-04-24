@@ -372,7 +372,6 @@ export function UnionSidebar() {
               <div className={cn("space-y-0.5 ml-4 pl-3 border-l", colors?.border || "border-sidebar-border")}>
                 {category.items.map((item) => {
                   const badgeCount = item.badgeKey === "pendingFiliacoes" ? pendingFiliacoesCount
-                    : item.badgeKey === "pendingTickets" ? (pendingTicketsCount ?? 0)
                     : item.badgeKey === "pendingPayslipReviews" ? pendingPayslipReviewsCount
                     : 0;
                   const isUrgentBadge = item.badgeKey === "pendingPayslipReviews";
