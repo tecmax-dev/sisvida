@@ -7016,7 +7016,7 @@ serve(async (req) => {
     const isSendMessage = payload.event === 'send.message' || payload.event === 'SEND_MESSAGE';
     const isMessagesUpsert = payload.event === 'MESSAGES_UPSERT' || payload.event === 'messages.upsert';
     const isMessagesUpdate = payload.event === 'MESSAGES_UPDATE' || payload.event === 'messages.update';
-    const isFromMe = payload.data?.key?.fromMe === true;
+    const isFromMe = payload.data?.key?.fromMe === true || (payload.data as any)?.fromMe === true;
 
     if (isMessagesUpdate && isFromMe) {
       try {
