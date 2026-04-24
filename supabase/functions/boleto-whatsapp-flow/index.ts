@@ -1753,7 +1753,7 @@ async function handleBoletoFlow(
 
           // If more than 3 contributions, group by year and show year selection first
           if (contributions.length > 3) {
-            const years = [...new Set(contributions.map((c: any) => c.competence_year))].sort((a, b) => b - a);
+            const years = [...new Set(contributions.map((c: any) => c.competence_year as number))].sort((a: number, b: number) => b - a);
             
             await updateSession(supabase, session.id, {
               state: 'SELECT_CONTRIBUTION_YEAR' as BoletoState,
