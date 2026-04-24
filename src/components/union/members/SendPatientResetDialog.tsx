@@ -162,16 +162,25 @@ export function SendPatientResetDialog({
 
       appendLog({ level: "success", message: `Envio concluído com sucesso via ${channel}`, data });
 
-      toast.success(
-        channel === "email"
-          ? "Código de recuperação enviado por e-mail!"
-          : "Código de recuperação enviado por WhatsApp!",
-        {
-          description: channel === "email"
-            ? `Enviado para ${patient.email}`
-            : `Enviado para ${patient.phone || "telefone cadastrado"}`,
-        }
-      );
+      const usedFallback = data && typeof data === "object" && data.fallback === true && data.channel === "email";
+
+      if (usedFallback) {
+        toast.success("Código enviado por e-mail (fallback automático)", {
+          description: `WhatsApp indisponível para este número. Código enviado para ${patient.email}.`,
+          duration: 8000,
+        });
+      } else {
+        toast.success(
+          channel === "email"
+            ? "Código de recuperação enviado por e-mail!"
+            : "Código de recuperação enviado por WhatsApp!",
+          {
+            description: channel === "email"
+              ? `Enviado para ${patient.email}`
+              : `Enviado para ${patient.phone || "telefone cadastrado"}`,
+          }
+        );
+      }
 
       // Mantém o dialog aberto para o usuário poder copiar/inspecionar os logs
     } catch (err: unknown) {
