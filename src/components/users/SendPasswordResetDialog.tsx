@@ -75,15 +75,40 @@ export function SendPasswordResetDialog({
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("admin-send-password-reset", {
-        body: {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error("Sessão expirada — faça login novamente");
+
+      const supabaseUrl = (supabase as any).supabaseUrl as string;
+      const anonKey = (supabase as any).supabaseKey as string;
+      const url = `${supabaseUrl}/functions/v1/admin-send-password-reset`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          apikey: anonKey,
+        },
+        body: JSON.stringify({
           targetUserId: user.user_id,
           channel,
           appBaseUrl: window.location.origin,
-        },
+        }),
       });
 
-      if (error) throw new Error(error.message);
+      const rawText = await response.text();
+      let data: any = null;
+      try { data = rawText ? JSON.parse(rawText) : null; } catch { data = rawText; }
+
+      if (!response.ok) {
+        const serverMessage =
+          (data && typeof data === "object" && (data.error || data.message)) ||
+          (typeof data === "string" && data) ||
+          `Erro HTTP ${response.status}`;
+        throw new Error(serverMessage);
+      }
+
       if (data?.error) throw new Error(data.error);
 
       const channelLabel = channel === "email" ? "e-mail" : "WhatsApp";
@@ -96,8 +121,9 @@ export function SendPasswordResetDialog({
       handleClose();
     } catch (err: any) {
       console.error("Error sending password reset:", err);
+      const directMsg = err?.message;
       const parsed = await extractFunctionsErrorAsync(err);
-      toast.error(parsed.message || "Erro ao enviar link de redefinição");
+      toast.error(directMsg || parsed.message || "Erro ao enviar link de redefinição");
     } finally {
       setLoading(false);
       setSelectedChannel(null);
