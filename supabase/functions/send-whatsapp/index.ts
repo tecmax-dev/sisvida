@@ -18,6 +18,7 @@ interface WhatsAppRequest {
   type?: 'reminder' | 'confirmation' | 'custom' | 'document' | 'reminder_direct_reply';
   imageUrl?: string; // URL da imagem para enviar como cabeçalho
   appointmentId?: string;
+  sendAsTextOnly?: boolean;
 }
 
 interface EvolutionConfig {
@@ -232,7 +233,7 @@ serve(async (req) => {
 
     // 3. Parse request body
     const body = await req.json();
-    const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId } = body as WhatsAppRequest;
+    const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId, sendAsTextOnly = false } = body as WhatsAppRequest;
     
     console.log(`[send-whatsapp] Received imageUrl: ${imageUrl || 'NOT PROVIDED'}, body keys: ${Object.keys(body).join(', ')}`);
 
@@ -570,7 +571,7 @@ serve(async (req) => {
       console.warn(`[Clinic ${clinicId}] WhatsApp number lookup error:`, lookupErr);
     }
 
-    const shouldUseTextOnly = type === 'custom';
+    const shouldUseTextOnly = sendAsTextOnly === true;
     const evolutionEndpoint = shouldUseTextOnly
       ? `${api_url}/message/sendText/${instance_name}`
       : `${api_url}/message/sendMedia/${instance_name}`;
