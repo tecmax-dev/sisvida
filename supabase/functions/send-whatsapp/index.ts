@@ -29,6 +29,51 @@ interface EvolutionConfig {
   direct_reply_enabled?: boolean | null;
 }
 
+async function sendViaWhazingTextFallback(phone: string, message: string): Promise<{ success: boolean; error?: string; data?: unknown }> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) {
+    return { success: false, error: 'Whazing not configured' };
+  }
+
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+    const response = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: {
+          type: 'text',
+          body: { text: message },
+        },
+      }),
+    });
+
+    const responseText = await response.text();
+    let parsed: unknown = responseText;
+    try {
+      parsed = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      parsed = responseText;
+    }
+
+    if (!response.ok) {
+      return { success: false, error: `Whazing fallback returned ${response.status}`, data: parsed };
+    }
+
+    return { success: true, data: parsed };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
 function responseIndicatesDeliveryFailure(payload: any): string | null {
   const status = String(payload?.status || payload?.data?.status || payload?.message?.status || '').toUpperCase();
   const errorText = String(
@@ -356,10 +401,13 @@ serve(async (req) => {
     }
 
     const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
+    const shouldUseTextOnly = sendAsTextOnly === true;
     // Priority: explicit imageUrl > whatsapp_header_image_url > union_entity logo > clinic logo > default
-    const logoUrl = imageUrl || clinicProviderData?.whatsapp_header_image_url || unionLogo || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
+    const logoUrl = shouldUseTextOnly
+      ? null
+      : imageUrl || clinicProviderData?.whatsapp_header_image_url || unionLogo || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
 
-    console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}, logo: ${logoUrl}`);
+    console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}, textOnly: ${shouldUseTextOnly}, logo: ${logoUrl || 'NONE'}`);
 
     // ========== TWILIO PROVIDER ==========
     if (whatsappProvider === 'twilio') {
@@ -545,7 +593,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[Clinic ${clinicId}] User ${userId} sending WhatsApp message to ${formattedPhone} via instance ${instance_name} with logo`);
+    console.log(`[Clinic ${clinicId}] User ${userId} sending WhatsApp message to ${formattedPhone} via instance ${instance_name}${shouldUseTextOnly ? ' as text-only' : ' with logo'}`);
 
     // Resolve canonical WhatsApp JID via Evolution to handle BR mobiles
     // where the real account is registered without the extra "9" (or vice-versa).
@@ -594,7 +642,6 @@ serve(async (req) => {
       );
     }
 
-    const shouldUseTextOnly = sendAsTextOnly === true;
     const evolutionEndpoint = shouldUseTextOnly
       ? `${api_url}/message/sendText/${instance_name}`
       : `${api_url}/message/sendMedia/${instance_name}`;
@@ -667,10 +714,29 @@ serve(async (req) => {
     const deliveryFailure = responseIndicatesDeliveryFailure(result);
     if (deliveryFailure) {
       console.error('[send-whatsapp] Delivery failure reported by Evolution:', result);
-      return new Response(
-        JSON.stringify({ success: false, error: deliveryFailure, details: result }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+      if (shouldUseTextOnly) {
+        const fallback = await sendViaWhazingTextFallback(formattedPhone, message);
+        if (fallback.success) {
+          console.log('[send-whatsapp] Text fallback via Whazing succeeded after Evolution delivery failure');
+          result = {
+            ...result,
+            fallback: 'whazing_apioficial',
+            fallbackResult: fallback.data,
+          };
+        } else {
+          console.error('[send-whatsapp] Text fallback via Whazing failed:', fallback.error, fallback.data);
+          return new Response(
+            JSON.stringify({ success: false, error: deliveryFailure, details: result, fallbackError: fallback.error, fallbackDetails: fallback.data }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        return new Response(
+          JSON.stringify({ success: false, error: deliveryFailure, details: result }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     let buttonsResult: { attempted: boolean; success: boolean; error?: string } | null = null;
