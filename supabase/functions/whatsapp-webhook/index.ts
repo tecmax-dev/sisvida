@@ -7020,10 +7020,11 @@ serve(async (req) => {
 
     if (isMessagesUpdate && isFromMe) {
       try {
-        const statusMessageId = payload.data?.keyId || payload.data?.key?.id || '';
-        const statusRemoteJid = payload.data?.remoteJid || payload.data?.key?.remoteJid || '';
+        const statusData = payload.data as any;
+        const statusMessageId = statusData?.keyId || statusData?.key?.id || '';
+        const statusRemoteJid = statusData?.remoteJid || statusData?.key?.remoteJid || '';
         const statusPhone = normalizePhone(String(statusRemoteJid).replace('@s.whatsapp.net', ''));
-        const deliveryStatus = String(payload.data?.status || '').toUpperCase();
+        const deliveryStatus = String(statusData?.status || '').toUpperCase();
 
         if (statusMessageId && deliveryStatus) {
           const updatePayload: Record<string, unknown> = {
