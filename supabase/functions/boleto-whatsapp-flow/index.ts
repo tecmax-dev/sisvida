@@ -773,12 +773,61 @@ async function sendWhatsAppMessage(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[boleto-flow] WhatsApp API error:', errorText);
+      // Fallback: try Whazing apioficial (text type) when Evolution fails
+      const fallbackOk = await sendWhazingText(phone, message);
+      if (fallbackOk) {
+        console.log('[boleto-flow] Fallback via Whazing succeeded');
+        return true;
+      }
       return false;
     }
 
     return true;
   } catch (error) {
     console.error('[boleto-flow] Error sending WhatsApp:', error);
+    const fallbackOk = await sendWhazingText(phone, message);
+    if (fallbackOk) {
+      console.log('[boleto-flow] Fallback via Whazing succeeded after exception');
+      return true;
+    }
+    return false;
+  }
+}
+
+// Send plain text via Whazing apioficial as fallback (handles cases where
+// Evolution can't reach the contact - e.g. outside 24h window).
+async function sendWhazingText(phone: string, message: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+  if (!whazingUrl || !whazingToken) {
+    console.log('[boleto-flow] Whazing not configured, no text fallback available');
+    return false;
+  }
+  try {
+    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    console.log(`[boleto-flow] [whazing-text] Sending fallback text to ${cleanPhone}`);
+    const response = await fetch(apiOficialUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: { type: 'text', body: { text: message } },
+      }),
+    });
+    const respText = await response.text();
+    if (!response.ok) {
+      console.error('[boleto-flow] [whazing-text] Error:', response.status, respText);
+      return false;
+    }
+    console.log('[boleto-flow] [whazing-text] Sent successfully');
+    return true;
+  } catch (err) {
+    console.error('[boleto-flow] [whazing-text] Exception:', err);
     return false;
   }
 }
