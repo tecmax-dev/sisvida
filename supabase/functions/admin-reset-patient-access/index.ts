@@ -340,7 +340,7 @@ serve(async (req) => {
           message: whatsappMessage,
           clinicId,
           type: "custom",
-          sendAsTextOnly: false,
+          sendAsTextOnly: true,
         }),
       });
 
