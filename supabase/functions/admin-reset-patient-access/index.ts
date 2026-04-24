@@ -10,7 +10,7 @@ const corsHeaders = {
 const SUCCESS_WHATSAPP_STATUSES = new Set(["PENDING", "SERVER_ACK", "DELIVERY_ACK", "READ"]);
 
 async function waitForWhatsAppFinalStatus(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   messageId: string,
   timeoutMs = 20000,
   pollMs = 1500,
@@ -29,7 +29,8 @@ async function waitForWhatsAppFinalStatus(
       return { status: null, error: "Erro ao validar o status final do WhatsApp" };
     }
 
-    const status = typeof data?.status === "string" ? data.status.toUpperCase() : null;
+    const typedData = data as { status?: string } | null;
+    const status = typeof typedData?.status === "string" ? typedData.status.toUpperCase() : null;
 
     if (status === "ERROR" || status === "FAILED") {
       return { status, error: "WhatsApp recusou a entrega da mensagem" };
