@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, MessageSquare, Send, AlertCircle, Copy, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 interface SendPasswordResetDialogProps {
   open: boolean;
@@ -95,7 +96,8 @@ export function SendPasswordResetDialog({
       handleClose();
     } catch (err: any) {
       console.error("Error sending password reset:", err);
-      toast.error(err.message || "Erro ao enviar link de redefinição");
+      const parsed = await extractFunctionsErrorAsync(err);
+      toast.error(parsed.message || "Erro ao enviar link de redefinição");
     } finally {
       setLoading(false);
       setSelectedChannel(null);

@@ -94,3 +94,29 @@ export function extractFunctionsError(err: unknown): FunctionsErrorExtract {
 
   return { message: "Erro ao processar solicitação.", status, raw: err };
 }
+
+export async function extractFunctionsErrorAsync(err: unknown): Promise<FunctionsErrorExtract> {
+  const anyErr: any = err;
+  const context = anyErr?.context;
+
+  if (context && typeof context.clone === "function" && typeof context.text === "function") {
+    try {
+      const cloned = context.clone();
+      const text = await cloned.text();
+      const parsed = tryParseJson(text);
+      const message = extractMessageFromUnknown(parsed ?? text);
+
+      if (message) {
+        const status =
+          (typeof context?.status === "number" ? context.status : undefined) ||
+          (typeof anyErr?.status === "number" ? anyErr.status : undefined);
+
+        return { message, status, raw: err };
+      }
+    } catch {
+      // ignore and fall back to the sync extractor
+    }
+  }
+
+  return extractFunctionsError(err);
+}

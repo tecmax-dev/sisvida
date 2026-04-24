@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, ShieldCheck } from "lucide-react";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 type Step = "email" | "link_sent" | "verify_identity" | "password" | "success";
 
@@ -73,10 +74,11 @@ export default function MobilePasswordResetPage() {
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
+      const parsed = await extractFunctionsErrorAsync(err);
       toast({
         title: "Erro ao enviar link",
         description:
-          err?.message || "Não foi possível enviar o link de recuperação. Tente novamente.",
+          parsed.message || "Não foi possível enviar o link de recuperação. Tente novamente.",
         variant: "destructive",
       });
     } finally {

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check, Terminal } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { extractFunctionsError } from "@/lib/functionsError";
+import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
 interface SendPatientResetDialogProps {
   open: boolean;
@@ -143,7 +143,7 @@ export function SendPatientResetDialog({
 
       // Mantém o dialog aberto para o usuário poder copiar/inspecionar os logs
     } catch (err: unknown) {
-      const parsedError = extractFunctionsError(err);
+      const parsedError = await extractFunctionsErrorAsync(err);
       console.error("Error sending patient reset:", err);
       const msg = String(parsedError.message || "");
       const isAuth =
