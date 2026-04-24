@@ -7932,11 +7932,14 @@ serve(async (req) => {
           'boleto_year_2': '2',
           'boleto_year_3': '3',
         };
-        const boletoButtonText = boletoButtonMap[messageText?.trim()];
-        if (boletoButtonText) {
-          console.log(`[webhook] Boleto button "${messageText}" → translated to "${boletoButtonText}"`);
-          messageText = boletoButtonText;
-        }
+         const rawBtnId = messageText?.trim();
+         const boletoButtonText = boletoButtonMap[rawBtnId];
+         if (boletoButtonText) {
+           console.log(`[webhook] Boleto button "${rawBtnId}" → translated to "${boletoButtonText}"`);
+           messageText = boletoButtonText;
+         } else if (rawBtnId?.startsWith('boleto_')) {
+           console.log(`[webhook] Untranslated boleto button "${rawBtnId}" - keeping as is for flow logic`);
+         }
         // ===== END BOLETO BUTTON ID TRANSLATION =====
 
         // Check if there's an active boleto session or user is requesting boleto (option 7)
