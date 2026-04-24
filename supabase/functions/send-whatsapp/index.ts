@@ -18,6 +18,7 @@ interface WhatsAppRequest {
   type?: 'reminder' | 'confirmation' | 'custom' | 'document' | 'reminder_direct_reply';
   imageUrl?: string; // URL da imagem para enviar como cabeçalho
   appointmentId?: string;
+  sendAsTextOnly?: boolean;
 }
 
 interface EvolutionConfig {
@@ -26,6 +27,19 @@ interface EvolutionConfig {
   instance_name: string;
   is_connected: boolean;
   direct_reply_enabled?: boolean | null;
+}
+
+function responseIndicatesDeliveryFailure(payload: any): string | null {
+  const status = String(payload?.status || payload?.data?.status || payload?.message?.status || '').toUpperCase();
+  const errorText = String(
+    payload?.error || payload?.message || payload?.response?.message || payload?.data?.message || ''
+  );
+
+  if (status === 'ERROR' || status === 'FAILED') {
+    return errorText || 'Falha reportada pela API do WhatsApp';
+  }
+
+  return null;
 }
 
 function normalizePhoneDigits(value: string): string {
@@ -219,7 +233,7 @@ serve(async (req) => {
 
     // 3. Parse request body
     const body = await req.json();
-    const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId } = body as WhatsAppRequest;
+    const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId, sendAsTextOnly = false } = body as WhatsAppRequest;
     
     console.log(`[send-whatsapp] Received imageUrl: ${imageUrl || 'NOT PROVIDED'}, body keys: ${Object.keys(body).join(', ')}`);
 
@@ -557,22 +571,40 @@ serve(async (req) => {
       console.warn(`[Clinic ${clinicId}] WhatsApp number lookup error:`, lookupErr);
     }
 
-    // Envia mensagem com imagem (logo) no cabeçalho
-    const response = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
+    const shouldUseTextOnly = sendAsTextOnly === true;
+    const evolutionEndpoint = shouldUseTextOnly
+      ? `${api_url}/message/sendText/${instance_name}`
+      : `${api_url}/message/sendMedia/${instance_name}`;
+
+    const evolutionPayload = shouldUseTextOnly
+      ? {
+          number: formattedPhone,
+          text: message,
+        }
+      : {
+          number: formattedPhone,
+          mediatype: 'image',
+          media: logoUrl,
+          caption: message,
+        };
+
+    const response = await fetch(evolutionEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': api_key,
       },
-      body: JSON.stringify({
-        number: formattedPhone,
-        mediatype: 'image',
-        media: logoUrl,
-        caption: message,
-      }),
+      body: JSON.stringify(evolutionPayload),
     });
 
-    const result = await response.json();
+    const responseText = await response.text();
+    let result: any = null;
+
+    try {
+      result = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      result = { raw: responseText };
+    }
 
     if (!response.ok) {
       console.error('Evolution API error:', result);
@@ -606,6 +638,15 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: result.message || 'Erro ao enviar mensagem' }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const deliveryFailure = responseIndicatesDeliveryFailure(result);
+    if (deliveryFailure) {
+      console.error('[send-whatsapp] Delivery failure reported by Evolution:', result);
+      return new Response(
+        JSON.stringify({ success: false, error: deliveryFailure, details: result }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
