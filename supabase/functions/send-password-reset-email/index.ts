@@ -27,11 +27,6 @@ O código vale por 30 minutos. Se não foi você quem pediu, pode ignorar esta m
 Equipe SECMI`;
 }
 
-function buildResetEmailHtml(firstName: string, token: string): string {
-  const appUrl = `https://prosindweb.com.br/sindicato/recuperar-senha?email=${encodeURIComponent("")}`;
-  return buildResetEmailHtmlWithLink(firstName, token, "");
-}
-
 function buildResetEmailHtmlWithLink(firstName: string, token: string, email: string): string {
   const appUrl = `https://prosindweb.com.br/sindicato/recuperar-senha?email=${encodeURIComponent(email)}`;
   return `
