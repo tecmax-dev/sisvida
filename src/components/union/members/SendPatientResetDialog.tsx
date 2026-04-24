@@ -264,6 +264,54 @@ export function SendPatientResetDialog({
               WhatsApp indisponível: associado sem telefone cadastrado
             </p>
           )}
+
+          {(logs.length > 0 || traceId) && (
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold">Log de envio</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {traceId && (
+                    <code className="text-[10px] bg-background px-2 py-1 rounded border">
+                      {traceId}
+                    </code>
+                  )}
+                  <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={copyLogs}>
+                    <Copy className="h-3 w-3 mr-1" /> Copiar
+                  </Button>
+                </div>
+              </div>
+              <div className="max-h-48 overflow-auto rounded bg-background border p-2 font-mono text-[11px] leading-relaxed space-y-1">
+                {logs.map((l, i) => (
+                  <div
+                    key={i}
+                    className={
+                      l.level === "error"
+                        ? "text-destructive"
+                        : l.level === "success"
+                        ? "text-emerald-600"
+                        : l.level === "warn"
+                        ? "text-amber-600"
+                        : "text-foreground"
+                    }
+                  >
+                    <span className="text-muted-foreground">[{l.ts.slice(11, 19)}]</span>{" "}
+                    <span className="uppercase">[{l.level}]</span> {l.message}
+                    {l.data !== undefined && (
+                      <pre className="mt-0.5 text-[10px] text-muted-foreground whitespace-pre-wrap break-all">
+                        {(() => { try { return JSON.stringify(l.data, null, 2); } catch { return String(l.data); } })()}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Use o Trace ID acima para localizar este envio nos logs do servidor.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
