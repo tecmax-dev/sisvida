@@ -165,7 +165,7 @@ export function SendPatientResetDialog({
       toast.success(
         channel === "email"
           ? "Código de recuperação enviado por e-mail!"
-          : "Link de recuperação enviado por WhatsApp!",
+          : "Código de recuperação enviado por WhatsApp!",
         {
           description: channel === "email"
             ? `Enviado para ${patient.email}`
