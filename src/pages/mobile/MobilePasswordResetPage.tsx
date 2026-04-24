@@ -77,21 +77,21 @@ export default function MobilePasswordResetPage() {
       const result = (data ?? {}) as { error?: string; message?: string };
       if (result.error) throw new Error(result.error);
 
-      setStep("link_sent");
+      setStep("verify_identity");
       toast({
-        title: "Link enviado",
+        title: "Instruções enviadas",
         description:
           result.message ||
-          "Se o email estiver cadastrado, você receberá um link de recuperação no WhatsApp.",
+          "Se o email estiver cadastrado, você receberá instruções de recuperação no WhatsApp.",
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
       const directMsg = err?.message;
       const parsed = await extractFunctionsErrorAsync(err);
       toast({
-        title: "Erro ao enviar link",
+        title: "Erro ao enviar instruções",
         description:
-          directMsg || parsed.message || "Não foi possível enviar o link de recuperação. Tente novamente.",
+          directMsg || parsed.message || "Não foi possível enviar as instruções de recuperação. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -262,38 +262,6 @@ export default function MobilePasswordResetPage() {
               🔒 Seus dados são protegidos e não serão compartilhados.
             </p>
           </form>
-        );
-
-      case "link_sent":
-        return (
-          <div className="text-center space-y-6">
-            <div className="flex justify-center mb-4">
-              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-emerald-600" />
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Confira seu WhatsApp</h2>
-              <p className="text-sm text-muted-foreground mt-2">
-                Se o email estiver cadastrado, enviaremos um link de recuperação para o número de telefone do associado.
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-muted p-4 text-sm text-muted-foreground text-left space-y-2">
-              <p>1. Abra a mensagem recebida no WhatsApp.</p>
-              <p>2. Toque no link enviado.</p>
-              <p>3. Só então será solicitada a validação do ano de nascimento.</p>
-            </div>
-
-            <Button
-              type="button"
-              onClick={() => navigate("/app/login")}
-              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-            >
-              Voltar para login
-            </Button>
-          </div>
         );
 
       case "password":
