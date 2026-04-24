@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
 import { usePendingFiliacoes } from "@/hooks/usePendingFiliacoes";
 import { usePendingPayslipReviews } from "@/hooks/usePendingPayslipReviews";
-import { useWhazingPendingCount } from "@/hooks/useWhazingTickets";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -267,7 +266,6 @@ export function UnionSidebar() {
   const { hasUnionPermission } = useUnionPermissions();
   const { count: pendingFiliacoesCount } = usePendingFiliacoes();
   const { count: pendingPayslipReviewsCount } = usePendingPayslipReviews();
-  const { data: pendingTicketsCount } = useWhazingPendingCount();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
   const filteredCategories = unionNavTree
