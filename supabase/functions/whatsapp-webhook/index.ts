@@ -585,7 +585,7 @@ function parseWhazingCategory(messages: unknown): WhazingCategory | null {
 }
 
 async function storeWhazingCategory(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
   phone: string,
   category: WhazingCategory
@@ -603,7 +603,7 @@ async function storeWhazingCategory(
 }
 
 async function getWhazingCategory(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
   phoneCandidates: string[],
   fallback: WhazingCategory = 'associado'
@@ -694,7 +694,7 @@ function getBrazilSupportContext(): {
 }
 
 async function getHumanSupportAvailability(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
 ): Promise<{ isHumanAvailable: boolean; reason: string; formatted: string }> {
   const brazilContext = getBrazilSupportContext();
@@ -733,7 +733,7 @@ async function getHumanSupportAvailability(
 }
 
 async function freezeBotForHumanHandoff(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   phone: string,
   contactName: string | null,
   lastMessage: string,
@@ -786,7 +786,7 @@ Pode descrever em poucas palavras (ex: dúvida sobre boleto, questão jurídica,
  * if classification fails.
  */
 async function classifySubjectToQueue(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   subjectText: string,
 ): Promise<{ id: string; name: string } | null> {
   try {
