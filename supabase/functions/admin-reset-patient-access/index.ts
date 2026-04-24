@@ -249,6 +249,7 @@ _SECMI - Sindicato dos Comerciários_`;
           message: whatsappMessage,
           clinicId,
           type: "custom",
+          sendAsTextOnly: true,
         }),
       });
 
