@@ -42,19 +42,20 @@ export interface AttachmentAccessLog {
   user_name?: string;
 }
 
-export function usePatientAttachments(patientId: string) {
+export function usePatientAttachments(patientId: string, clinicIdOverride?: string | null) {
   const { user, currentClinic } = useAuth();
   const [folders, setFolders] = useState<PatientFolder[]>([]);
   const [attachments, setAttachments] = useState<PatientAttachment[]>([]);
   const [loading, setLoading] = useState(false);
+  const effectiveClinicId = clinicIdOverride || currentClinic?.id;
 
   const fetchFolders = useCallback(async () => {
-    if (!currentClinic?.id || !patientId) return;
+    if (!effectiveClinicId || !patientId) return;
 
     const { data, error } = await supabase
       .from("patient_folders")
       .select("*")
-      .eq("clinic_id", currentClinic.id)
+      .eq("clinic_id", effectiveClinicId)
       .eq("patient_id", patientId)
       .order("name");
 
@@ -64,17 +65,17 @@ export function usePatientAttachments(patientId: string) {
     }
 
     setFolders(data || []);
-  }, [currentClinic?.id, patientId]);
+  }, [effectiveClinicId, patientId]);
 
   const fetchAttachments = useCallback(async (folderId?: string | null) => {
-    if (!currentClinic?.id || !patientId) return;
+    if (!effectiveClinicId || !patientId) return;
 
     setLoading(true);
     try {
       let query = supabase
         .from("patient_attachments")
         .select("*")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", effectiveClinicId)
         .eq("patient_id", patientId)
         .order("uploaded_at", { ascending: false });
 
@@ -114,15 +115,15 @@ export function usePatientAttachments(patientId: string) {
     } finally {
       setLoading(false);
     }
-  }, [currentClinic?.id, patientId]);
+  }, [effectiveClinicId, patientId]);
 
   const createFolder = async (name: string, parentFolderId?: string | null) => {
-    if (!currentClinic?.id || !patientId || !user?.id) return null;
+    if (!effectiveClinicId || !patientId || !user?.id) return null;
 
     const { data, error } = await supabase
       .from("patient_folders")
       .insert({
-        clinic_id: currentClinic.id,
+        clinic_id: effectiveClinicId,
         patient_id: patientId,
         name,
         parent_folder_id: parentFolderId || null,
@@ -188,14 +189,14 @@ export function usePatientAttachments(patientId: string) {
   };
 
   const uploadFiles = async (files: File[], folderId?: string | null, description?: string) => {
-    if (!currentClinic?.id || !patientId || !user?.id) return [];
+    if (!effectiveClinicId || !patientId || !user?.id) return [];
 
     const uploadedFiles: PatientAttachment[] = [];
 
     for (const file of files) {
       const timestamp = Date.now();
       const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const filePath = `${currentClinic.id}/${patientId}/${timestamp}_${safeName}`;
+      const filePath = `${effectiveClinicId}/${patientId}/${timestamp}_${safeName}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
@@ -212,7 +213,7 @@ export function usePatientAttachments(patientId: string) {
       const { data, error } = await supabase
         .from("patient_attachments")
         .insert({
-          clinic_id: currentClinic.id,
+          clinic_id: effectiveClinicId,
           patient_id: patientId,
           folder_id: folderId || null,
           file_name: file.name,
@@ -248,7 +249,7 @@ export function usePatientAttachments(patientId: string) {
           // Send WhatsApp notification to the patient (fire and forget)
           supabase.functions.invoke('send-payslip-upload-notification', {
             body: {
-              clinic_id: currentClinic.id,
+              clinic_id: effectiveClinicId,
               patient_id: patientId,
               file_name: uploadedFiles[0]?.file_name,
             }
