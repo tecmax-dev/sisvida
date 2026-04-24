@@ -1209,7 +1209,7 @@ export default function UnionMemberDetailPage() {
       {/* Aba Anexos */}
       {activeTab === 'anexos' && id && (
         <div className="bg-card rounded-lg border">
-          <UnionMemberAttachmentsTab patientId={id} />
+          <UnionMemberAttachmentsTab patientId={id} clinicId={resolvedClinic?.id} />
         </div>
       )}
 
