@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check, Terminal } from "lucide-react";
+import { Loader2, Mail, MessageSquare, KeyRound, AlertCircle, Copy, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
@@ -35,32 +35,6 @@ export function SendPatientResetDialog({
   const [loading, setLoading] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<"email" | "whatsapp" | null>(null);
   const [copied, setCopied] = useState(false);
-  type LogEntry = { ts: string; level: "info" | "success" | "error" | "warn"; message: string; data?: unknown };
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [traceId, setTraceId] = useState<string | null>(null);
-
-  const appendLog = (entry: Omit<LogEntry, "ts">) => {
-    const ts = new Date().toISOString();
-    setLogs((prev) => [...prev, { ...entry, ts }]);
-    const tag = `[reset-password${traceId ? `:${traceId}` : ""}]`;
-    const fn = entry.level === "error" ? console.error : entry.level === "warn" ? console.warn : console.log;
-    if (entry.data !== undefined) fn(tag, entry.message, entry.data);
-    else fn(tag, entry.message);
-  };
-
-  const copyLogs = async () => {
-    const text = [
-      `Trace ID: ${traceId ?? "-"}`,
-      `Sócio: ${patient?.name} (${patient?.id})`,
-      ...logs.map((l) => `[${l.ts}] [${l.level.toUpperCase()}] ${l.message}${l.data !== undefined ? ` :: ${JSON.stringify(l.data)}` : ""}`),
-    ].join("\n");
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Logs copiados!");
-    } catch {
-      toast.error("Não foi possível copiar os logs");
-    }
-  };
 
   const resetLink = patient?.email
     ? `${window.location.origin}/sindicato/recuperar-senha?email=${encodeURIComponent(patient.email)}`
@@ -89,8 +63,6 @@ export function SendPatientResetDialog({
   const handleClose = () => {
     setSelectedChannel(null);
     setCopied(false);
-    setLogs([]);
-    setTraceId(null);
     onOpenChange(false);
   };
 
@@ -100,15 +72,8 @@ export function SendPatientResetDialog({
     setSelectedChannel(channel);
     setLoading(true);
     const newTraceId = `rst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    setTraceId(newTraceId);
-    setLogs([]);
-
-    const t0 = performance.now();
-    appendLog({ level: "info", message: `Iniciando envio (${channel})`, data: { patientId: patient.id, name: patient.name, email: patient.email, phone: patient.phone, traceId: newTraceId } });
 
     try {
-      appendLog({ level: "info", message: "Chamando edge function admin-reset-patient-access (fetch direto)" });
-
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
@@ -133,19 +98,15 @@ export function SendPatientResetDialog({
         }),
       });
 
-      const elapsed = Math.round(performance.now() - t0);
       const rawText = await response.text();
       let data: any = null;
       try { data = rawText ? JSON.parse(rawText) : null; } catch { data = rawText; }
-
-      appendLog({ level: "info", message: `Resposta recebida em ${elapsed}ms (status ${response.status})`, data });
 
       if (!response.ok) {
         const serverMessage =
           (data && typeof data === "object" && (data.error || data.message)) ||
           (typeof data === "string" && data) ||
           `Erro HTTP ${response.status}`;
-        appendLog({ level: "error", message: "Erro retornado pela edge function", data: { status: response.status, body: data } });
         const err: any = new Error(serverMessage);
         err.status = response.status;
         err.body = data;
@@ -153,14 +114,11 @@ export function SendPatientResetDialog({
       }
 
       if (data && typeof data === "object" && data.error) {
-        appendLog({ level: "error", message: "Erro no payload de sucesso", data });
         const err: any = new Error(data.error);
         err.status = response.status;
         err.body = data;
         throw err;
       }
-
-      appendLog({ level: "success", message: `Envio concluído com sucesso via ${channel}`, data });
 
       const usedFallback = data && typeof data === "object" && data.fallback === true && data.channel === "email";
 
@@ -180,9 +138,8 @@ export function SendPatientResetDialog({
               : `Enviado para ${patient.phone || "telefone cadastrado"}`,
           }
         );
+        handleClose();
       }
-
-      // Mantém o dialog aberto para o usuário poder copiar/inspecionar os logs
     } catch (err: unknown) {
       const parsedError = await extractFunctionsErrorAsync(err);
       console.error("Error sending patient reset:", err);
@@ -193,13 +150,6 @@ export function SendPatientResetDialog({
         msg.toLowerCase().includes("não autenticado") ||
         msg.includes("401") ||
         (typeof (err as { status?: number })?.status === "number" && (err as { status?: number }).status === 401);
-      appendLog({
-        level: "error",
-        message: isAuth
-          ? "401 Unauthorized — sua sessão de admin expirou. Faça logout e login novamente e tente outra vez."
-          : (msg || "Erro desconhecido"),
-        data: { raw: err, parsed: parsedError },
-      });
       toast.error(
         isAuth
           ? "Sessão expirada — faça login novamente para reenviar o reset"
@@ -321,54 +271,6 @@ export function SendPatientResetDialog({
             <p className="text-xs text-muted-foreground text-center">
               WhatsApp indisponível: associado sem telefone cadastrado
             </p>
-          )}
-
-          {(logs.length > 0 || traceId) && (
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Terminal className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold">Log de envio</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {traceId && (
-                    <code className="text-[10px] bg-background px-2 py-1 rounded border">
-                      {traceId}
-                    </code>
-                  )}
-                  <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={copyLogs}>
-                    <Copy className="h-3 w-3 mr-1" /> Copiar
-                  </Button>
-                </div>
-              </div>
-              <div className="max-h-48 overflow-auto rounded bg-background border p-2 font-mono text-[11px] leading-relaxed space-y-1">
-                {logs.map((l, i) => (
-                  <div
-                    key={i}
-                    className={
-                      l.level === "error"
-                        ? "text-destructive"
-                        : l.level === "success"
-                        ? "text-emerald-600"
-                        : l.level === "warn"
-                        ? "text-amber-600"
-                        : "text-foreground"
-                    }
-                  >
-                    <span className="text-muted-foreground">[{l.ts.slice(11, 19)}]</span>{" "}
-                    <span className="uppercase">[{l.level}]</span> {l.message}
-                    {l.data !== undefined && (
-                      <pre className="mt-0.5 text-[10px] text-muted-foreground whitespace-pre-wrap break-all">
-                        {(() => { try { return JSON.stringify(l.data, null, 2); } catch { return String(l.data); } })()}
-                      </pre>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Use o Trace ID acima para localizar este envio nos logs do servidor.
-              </p>
-            </div>
           )}
         </div>
 
