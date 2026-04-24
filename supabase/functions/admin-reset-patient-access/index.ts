@@ -9,6 +9,32 @@ const corsHeaders = {
 
 const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
 
+function buildWhatsAppResetMessage(params: {
+  firstName: string;
+  email?: string | null;
+  protocolCode: string;
+}) {
+  const emailLine = params.email
+    ? `• E-mail da conta: ${params.email}`
+    : "• E-mail da conta: use o e-mail cadastrado no aplicativo";
+
+  return `🔐 *Redefinição de Senha - SECMI*
+
+Olá, ${params.firstName}!
+
+Recebemos uma solicitação para redefinir sua senha de acesso.
+
+Para continuar:
+• Abra o app SECMI e toque em *Esqueci minha senha*
+${emailLine}
+• Confirme seu ano de nascimento
+• Cadastre sua nova senha
+
+Protocolo: ${params.protocolCode}
+
+_SECMI - Sindicato dos Comerciários_`;
+}
+
 async function waitForWhatsAppFinalStatus(
   adminClient: any,
   messageId: string,
@@ -265,27 +291,13 @@ serve(async (req) => {
         );
       }
 
-      const query = new URLSearchParams();
-      if (patient.email) {
-        query.set("email", patient.email);
-      }
-
-      const resetLink = `https://prosindweb.com.br/sindicato/recuperar-senha${query.toString() ? `?${query.toString()}` : ""}`;
       console.log(`[admin-reset-patient-access${traceId ? `:${traceId}` : ""}] Sending WhatsApp reset for patient ${patientId} to ${patient.phone}`);
-
-      const whatsappMessage = `🔐 *Redefinição de Senha - SECMI*
-
-Olá, ${firstName}!
-
-Recebemos uma solicitação para redefinir sua senha de acesso ao aplicativo.
-
-Clique no link abaixo para criar uma nova senha:
-
-${resetLink}
-
-Ao abrir o link, confirme seu ano de nascimento e cadastre sua nova senha.
-
-_SECMI - Sindicato dos Comerciários_`;
+      const protocolCode = (traceId?.split("-").pop() || crypto.randomUUID().slice(0, 6)).toUpperCase();
+      const whatsappMessage = buildWhatsAppResetMessage({
+        firstName,
+        email: patient.email,
+        protocolCode,
+      });
 
       const clinicId = patient.clinic_id;
       if (!clinicId) {
