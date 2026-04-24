@@ -356,6 +356,22 @@ export function usePatientAttachments(patientId: string, clinicIdOverride?: stri
   };
 
   const getFileUrl = async (attachment: PatientAttachment): Promise<string | null> => {
+    // Support legacy attachments where file_path is a full public URL
+    // (e.g. uploaded via the affiliation flow into the "sindical-documentos" bucket)
+    if (/^https?:\/\//i.test(attachment.file_path)) {
+      // Try to extract bucket + object path to generate a signed URL (works for both public and private buckets)
+      const match = attachment.file_path.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+?)(?:\?.*)?$/);
+      if (match) {
+        const [, bucket, objectPath] = match;
+        const { data } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(decodeURIComponent(objectPath), 60 * 60);
+        if (data?.signedUrl) return data.signedUrl;
+      }
+      // Fallback: return the URL as-is (works if the bucket is public)
+      return attachment.file_path;
+    }
+
     // Support files from contra-cheques bucket (prefixed with "contra-cheques:")
     if (attachment.file_path.startsWith("contra-cheques:")) {
       const path = attachment.file_path.replace("contra-cheques:", "");
