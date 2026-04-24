@@ -145,8 +145,24 @@ export function SendPatientResetDialog({
     } catch (err: unknown) {
       const parsedError = extractFunctionsError(err);
       console.error("Error sending patient reset:", err);
-      appendLog({ level: "error", message: parsedError.message || "Erro desconhecido", data: { raw: err, parsed: parsedError } });
-      toast.error(parsedError.message || "Erro ao enviar código de recuperação");
+      const msg = String(parsedError.message || "");
+      const isAuth =
+        msg.toLowerCase().includes("unauthorized") ||
+        msg.toLowerCase().includes("não autenticado") ||
+        msg.includes("401") ||
+        (typeof (err as { status?: number })?.status === "number" && (err as { status?: number }).status === 401);
+      appendLog({
+        level: "error",
+        message: isAuth
+          ? "401 Unauthorized — sua sessão de admin expirou. Faça logout e login novamente e tente outra vez."
+          : (msg || "Erro desconhecido"),
+        data: { raw: err, parsed: parsedError },
+      });
+      toast.error(
+        isAuth
+          ? "Sessão expirada — faça login novamente para reenviar o reset"
+          : (msg || "Erro ao enviar código de recuperação")
+      );
     } finally {
       setLoading(false);
       setSelectedChannel(null);
