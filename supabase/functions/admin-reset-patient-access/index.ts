@@ -359,8 +359,9 @@ serve(async (req) => {
         );
       }
 
+      const usedFallbackChannel = whatsappResult?.data?.fallback === "whazing_apioficial";
       const messageId = whatsappResult?.data?.key?.id;
-      if (!messageId) {
+      if (!messageId && !usedFallbackChannel) {
         console.error("WhatsApp send did not return message id:", whatsappResult);
         return new Response(
           JSON.stringify({ error: "Envio aceito, mas sem protocolo de rastreamento do WhatsApp" }),
@@ -368,15 +369,19 @@ serve(async (req) => {
         );
       }
 
-      const finalStatus = await waitForWhatsAppFinalStatus(adminClient, messageId);
-      if (finalStatus.error) {
-        return new Response(
-          JSON.stringify({ error: finalStatus.error, status: finalStatus.status, messageId }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!usedFallbackChannel) {
+        const finalStatus = await waitForWhatsAppFinalStatus(adminClient, messageId);
+        if (finalStatus.error) {
+          return new Response(
+            JSON.stringify({ error: finalStatus.error, status: finalStatus.status, messageId }),
+            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
-      console.log(`Patient reset link sent via WhatsApp to ${patient.phone} by admin ${currentUser.id} with final status ${finalStatus.status}`);
+        console.log(`Patient reset code sent via WhatsApp to ${patient.phone} by admin ${currentUser.id} with final status ${finalStatus.status}`);
+      } else {
+        console.log(`Patient reset code sent via WhatsApp fallback channel to ${patient.phone} by admin ${currentUser.id}`);
+      }
 
     } else {
       return new Response(
