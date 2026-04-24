@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowLeft, Check, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { SINDICATO_CLINIC_ID } from "@/constants/sindicato";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
