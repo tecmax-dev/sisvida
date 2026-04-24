@@ -9,6 +9,82 @@ const corsHeaders = {
 
 const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
 
+function buildResetEmailHtml(firstName: string, token: string): string {
+  return `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+          <div style="background-color: #059669; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">SECMI</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Sindicato dos Comerciarios</p>
+          </div>
+          <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="color: #333; margin-top: 0;">Ola, ${firstName}!</h2>
+            <p style="color: #666; line-height: 1.6;">
+              Um administrador solicitou a redefinicao da sua senha de acesso ao aplicativo.
+            </p>
+            <div style="background-color: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
+              <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu codigo de recuperacao:</p>
+              <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${token}</p>
+            </div>
+            <p style="color: #666; line-height: 1.6; font-size: 14px;">
+              <strong>Este codigo e valido por 30 minutos.</strong>
+            </p>
+            <p style="color: #666; line-height: 1.6; font-size: 14px;">
+              Abra o aplicativo e utilize a opcao "Esqueci minha senha" para inserir este codigo e criar uma nova senha.
+            </p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+            <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+              Este e um email automatico, por favor nao responda.<br>
+              SECMI - Todos os direitos reservados.
+            </p>
+          </div>
+        </body>
+        </html>
+      `.replace(/\s+/g, " ").trim();
+}
+
+async function sendResetCodeByEmail(params: {
+  toEmail: string;
+  firstName: string;
+  token: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const smtpHost = Deno.env.get("SMTP_HOST");
+  const smtpPort = Deno.env.get("SMTP_PORT");
+  const smtpUser = Deno.env.get("SMTP_USER");
+  const smtpPass = Deno.env.get("SMTP_PASSWORD");
+  const smtpFrom = Deno.env.get("SMTP_FROM");
+
+  if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
+    return { success: false, error: "Servico de email nao configurado" };
+  }
+
+  try {
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: parseInt(smtpPort || "465"),
+        tls: true,
+        auth: { username: smtpUser, password: smtpPass },
+      },
+    });
+
+    await client.send({
+      from: smtpFrom,
+      to: params.toEmail,
+      subject: "Codigo de Recuperacao de Senha - SECMI",
+      html: buildResetEmailHtml(params.firstName, params.token),
+    });
+
+    await client.close();
+    return { success: true };
+  } catch (err: any) {
+    console.error("SMTP send error:", err);
+    return { success: false, error: err?.message || "Falha ao enviar e-mail" };
+  }
+}
+
 function buildWhatsAppResetMessage(params: {
   firstName: string;
   email?: string | null;
