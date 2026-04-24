@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
 
-function buildResetEmailHtml(firstName: string, token: string): string {
+function buildResetEmailHtml(firstName: string, token: string, email = ""): string {
+  const appUrl = `https://prosindweb.com.br/sindicato/recuperar-senha?email=${encodeURIComponent(email)}`;
   return `
         <!DOCTYPE html>
         <html>
@@ -28,11 +29,17 @@ function buildResetEmailHtml(firstName: string, token: string): string {
               <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu codigo de recuperacao:</p>
               <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${token}</p>
             </div>
-            <p style="color: #666; line-height: 1.6; font-size: 14px;">
-              <strong>Este codigo e valido por 30 minutos.</strong>
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${appUrl}" style="display: inline-block; background-color: #059669; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Abrir app e redefinir senha
+              </a>
+            </div>
+            <p style="color: #666; line-height: 1.6; font-size: 14px; text-align: center;">
+              Ou acesse manualmente: <a href="${appUrl}" style="color: #059669;">${appUrl}</a><br>
+              e informe o codigo acima na tela de recuperacao.
             </p>
             <p style="color: #666; line-height: 1.6; font-size: 14px;">
-              Abra o aplicativo e utilize a opcao "Esqueci minha senha" para inserir este codigo e criar uma nova senha.
+              <strong>Este codigo e valido por 30 minutos.</strong>
             </p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
             <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
@@ -74,7 +81,7 @@ async function sendResetCodeByEmail(params: {
       from: smtpFrom,
       to: params.toEmail,
       subject: "Codigo de Recuperacao de Senha - SECMI",
-      html: buildResetEmailHtml(params.firstName, params.token),
+      html: buildResetEmailHtml(params.firstName, params.token, params.toEmail),
     });
 
     await client.close();
