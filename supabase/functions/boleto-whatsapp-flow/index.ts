@@ -1729,8 +1729,8 @@ async function handleBoletoFlow(
       };
     }
 
-    // Natural language for boleto types (without competence provided)
-    if (intent.intent === 'new_boleto' || text === '1' || /a\s*vencer/i.test(text)) {
+     // Handle boleto types (with explicit check for button IDs or natural language)
+     if (intent.intent === 'new_boleto' || text === '1' || /a\s*vencer/i.test(text) || messageText === 'boleto_a_vencer') {
       await updateSession(supabase, session.id, { 
         state: 'WAITING_CNPJ', 
         boleto_type: 'a_vencer' 
@@ -1738,7 +1738,7 @@ async function handleBoletoFlow(
       return { response: HUMANIZED_MESSAGES.askCnpjFriendly, newState: 'WAITING_CNPJ' };
     }
     
-    if (intent.intent === 'overdue_boleto' || text === '2' || /vencid[oa]/i.test(text)) {
+     if (intent.intent === 'overdue_boleto' || text === '2' || /vencid[oa]/i.test(text) || messageText === 'boleto_vencido') {
       await updateSession(supabase, session.id, { 
         state: 'WAITING_CNPJ', 
         boleto_type: 'vencido' 
