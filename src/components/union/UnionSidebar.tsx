@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
 import { usePendingFiliacoes } from "@/hooks/usePendingFiliacoes";
 import { usePendingPayslipReviews } from "@/hooks/usePendingPayslipReviews";
-import { useWhazingPendingCount } from "@/hooks/useWhazingTickets";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -242,11 +241,10 @@ const unionNavTree: NavCategory[] = [
   },
   {
     id: "atendimento",
-    label: "Atendimento",
-    icon: MessageSquare,
+    label: "Contatos",
+    icon: Users,
     color: "atendimento",
     items: [
-      { href: "/union/atendimento", icon: MessageSquare, label: "Tickets WhatsApp", permission: "union_module_access", badgeKey: "pendingTickets" },
       { href: "/union/contatos", icon: Users, label: "Contatos", permission: "union_module_access" },
     ]
   },
@@ -268,7 +266,6 @@ export function UnionSidebar() {
   const { hasUnionPermission } = useUnionPermissions();
   const { count: pendingFiliacoesCount } = usePendingFiliacoes();
   const { count: pendingPayslipReviewsCount } = usePendingPayslipReviews();
-  const { data: pendingTicketsCount } = useWhazingPendingCount();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
 
   const filteredCategories = unionNavTree
@@ -375,7 +372,6 @@ export function UnionSidebar() {
               <div className={cn("space-y-0.5 ml-4 pl-3 border-l", colors?.border || "border-sidebar-border")}>
                 {category.items.map((item) => {
                   const badgeCount = item.badgeKey === "pendingFiliacoes" ? pendingFiliacoesCount
-                    : item.badgeKey === "pendingTickets" ? (pendingTicketsCount ?? 0)
                     : item.badgeKey === "pendingPayslipReviews" ? pendingPayslipReviewsCount
                     : 0;
                   const isUrgentBadge = item.badgeKey === "pendingPayslipReviews";
