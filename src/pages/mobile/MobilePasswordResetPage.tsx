@@ -48,37 +48,50 @@ export default function MobilePasswordResetPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-password-reset-email", {
-        body: {
-          email,
-          channel: "whatsapp",
+      const supabaseUrl = (supabase as any).supabaseUrl as string;
+      const anonKey = (supabase as any).supabaseKey as string;
+      const url = `${supabaseUrl}/functions/v1/send-password-reset-email`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
         },
+        body: JSON.stringify({ email, channel: "whatsapp" }),
       });
 
-      if (error) {
-        throw error;
+      const rawText = await response.text();
+      let data: any = null;
+      try { data = rawText ? JSON.parse(rawText) : null; } catch { data = rawText; }
+
+      if (!response.ok) {
+        const serverMessage =
+          (data && typeof data === "object" && (data.error || data.message)) ||
+          (typeof data === "string" && data) ||
+          `Erro HTTP ${response.status}`;
+        throw new Error(serverMessage);
       }
 
-      const result = data as { error?: string; message?: string } | null;
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
+      const result = (data ?? {}) as { error?: string; message?: string };
+      if (result.error) throw new Error(result.error);
 
       setStep("link_sent");
       toast({
         title: "Link enviado",
         description:
-          result?.message ||
+          result.message ||
           "Se o email estiver cadastrado, você receberá um link de recuperação no WhatsApp.",
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
+      const directMsg = err?.message;
       const parsed = await extractFunctionsErrorAsync(err);
       toast({
         title: "Erro ao enviar link",
         description:
-          parsed.message || "Não foi possível enviar o link de recuperação. Tente novamente.",
+          directMsg || parsed.message || "Não foi possível enviar o link de recuperação. Tente novamente.",
         variant: "destructive",
       });
     } finally {
