@@ -121,7 +121,7 @@ async function resolveReminderAppointmentId(
 
   if (upcomingError) {
     console.error('[send-whatsapp] Error resolving appointment by phone:', upcomingError);
-    return null;
+    return undefined;
   }
 
   const typedUpcomingAppointments = (upcomingAppointments || []) as Array<{
