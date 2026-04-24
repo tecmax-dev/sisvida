@@ -585,7 +585,7 @@ function parseWhazingCategory(messages: unknown): WhazingCategory | null {
 }
 
 async function storeWhazingCategory(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
   phone: string,
   category: WhazingCategory
@@ -603,7 +603,7 @@ async function storeWhazingCategory(
 }
 
 async function getWhazingCategory(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
   phoneCandidates: string[],
   fallback: WhazingCategory = 'associado'
@@ -694,7 +694,7 @@ function getBrazilSupportContext(): {
 }
 
 async function getHumanSupportAvailability(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   clinicId: string,
 ): Promise<{ isHumanAvailable: boolean; reason: string; formatted: string }> {
   const brazilContext = getBrazilSupportContext();
@@ -733,7 +733,7 @@ async function getHumanSupportAvailability(
 }
 
 async function freezeBotForHumanHandoff(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   phone: string,
   contactName: string | null,
   lastMessage: string,
@@ -786,7 +786,7 @@ Pode descrever em poucas palavras (ex: dúvida sobre boleto, questão jurídica,
  * if classification fails.
  */
 async function classifySubjectToQueue(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   subjectText: string,
 ): Promise<{ id: string; name: string } | null> {
   try {
@@ -7016,14 +7016,15 @@ serve(async (req) => {
     const isSendMessage = payload.event === 'send.message' || payload.event === 'SEND_MESSAGE';
     const isMessagesUpsert = payload.event === 'MESSAGES_UPSERT' || payload.event === 'messages.upsert';
     const isMessagesUpdate = payload.event === 'MESSAGES_UPDATE' || payload.event === 'messages.update';
-    const isFromMe = payload.data?.key?.fromMe === true;
+    const isFromMe = payload.data?.key?.fromMe === true || (payload.data as any)?.fromMe === true;
 
     if (isMessagesUpdate && isFromMe) {
       try {
-        const statusMessageId = payload.data?.keyId || payload.data?.key?.id || '';
-        const statusRemoteJid = payload.data?.remoteJid || payload.data?.key?.remoteJid || '';
+        const statusData = payload.data as any;
+        const statusMessageId = statusData?.keyId || statusData?.key?.id || '';
+        const statusRemoteJid = statusData?.remoteJid || statusData?.key?.remoteJid || '';
         const statusPhone = normalizePhone(String(statusRemoteJid).replace('@s.whatsapp.net', ''));
-        const deliveryStatus = String(payload.data?.status || '').toUpperCase();
+        const deliveryStatus = String(statusData?.status || '').toUpperCase();
 
         if (statusMessageId && deliveryStatus) {
           const updatePayload: Record<string, unknown> = {
