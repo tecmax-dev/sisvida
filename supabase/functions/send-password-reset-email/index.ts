@@ -27,6 +27,82 @@ O código vale por 30 minutos. Se não foi você quem pediu, pode ignorar esta m
 Equipe SECMI`;
 }
 
+function buildResetEmailHtml(firstName: string, token: string): string {
+  return `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background-color: #059669; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">SECMI</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Sindicato dos Comerciarios</p>
+        </div>
+        <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color: #333; margin-top: 0;">Ola, ${firstName}!</h2>
+          <p style="color: #666; line-height: 1.6;">
+            Recebemos uma solicitacao para redefinir a senha do seu acesso ao aplicativo SECMI.
+          </p>
+          <div style="background-color: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
+            <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu codigo de recuperacao:</p>
+            <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${token}</p>
+          </div>
+          <p style="color: #666; line-height: 1.6; font-size: 14px;">
+            <strong>Este codigo e valido por 30 minutos.</strong>
+          </p>
+          <p style="color: #666; line-height: 1.6; font-size: 14px;">
+            Se voce nao solicitou a redefinicao de senha, ignore este email. Sua conta permanece segura.
+          </p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+          <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+            Este e um email automatico, por favor nao responda.<br>
+            SECMI - Todos os direitos reservados.
+          </p>
+        </div>
+      </body>
+      </html>
+    `.replace(/\s+/g, " ").trim();
+}
+
+async function sendResetCodeByEmail(params: {
+  toEmail: string;
+  firstName: string;
+  token: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const smtpHost = Deno.env.get("SMTP_HOST");
+  const smtpPort = Deno.env.get("SMTP_PORT");
+  const smtpUser = Deno.env.get("SMTP_USER");
+  const smtpPass = Deno.env.get("SMTP_PASSWORD");
+  const smtpFrom = Deno.env.get("SMTP_FROM");
+
+  if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
+    return { success: false, error: "Servico de email nao configurado" };
+  }
+
+  try {
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: parseInt(smtpPort || "465"),
+        tls: true,
+        auth: { username: smtpUser, password: smtpPass },
+      },
+    });
+
+    await client.send({
+      from: smtpFrom,
+      to: params.toEmail,
+      subject: "Codigo de Recuperacao de Senha - SECMI",
+      html: buildResetEmailHtml(params.firstName, params.token),
+    });
+
+    await client.close();
+    return { success: true };
+  } catch (err: any) {
+    console.error("SMTP send error:", err);
+    return { success: false, error: err?.message || "Falha ao enviar e-mail" };
+  }
+}
+
 async function waitForWhatsAppFinalStatus(
   supabase: any,
   messageId: string,
@@ -224,120 +300,101 @@ serve(async (req: Request): Promise<Response> => {
 
       const whatsappResult = await whatsappResponse.json().catch(() => null);
 
+      // Detecta falha de WhatsApp para acionar fallback de e-mail.
+      let whatsappFailed = false;
+      let whatsappFailureReason: string | null = null;
+
       if (!whatsappResponse.ok || whatsappResult?.success === false) {
-        const errorMsg = whatsappResult?.error || "Erro ao enviar WhatsApp";
+        whatsappFailed = true;
+        whatsappFailureReason = whatsappResult?.error || "Erro ao enviar WhatsApp";
         console.error("WhatsApp send error:", { status: whatsappResponse.status, whatsappResult });
+      } else {
+        const usedFallbackChannel = whatsappResult?.data?.fallback === "whazing_apioficial";
+        const messageId = whatsappResult?.data?.key?.id;
+
+        if (!messageId && !usedFallbackChannel) {
+          whatsappFailed = true;
+          whatsappFailureReason = "WhatsApp não retornou protocolo de rastreamento";
+          console.error("WhatsApp send did not return message id:", whatsappResult);
+        } else if (!usedFallbackChannel) {
+          const finalStatus = await waitForWhatsAppFinalStatus(supabase, messageId);
+          if (finalStatus.error) {
+            whatsappFailed = true;
+            whatsappFailureReason = finalStatus.error;
+          } else {
+            console.log(`Reset code sent via WhatsApp to ${patient.phone} with final status ${finalStatus.status}`);
+          }
+        } else {
+          console.log(`Reset code sent via WhatsApp fallback channel to ${patient.phone}`);
+        }
+      }
+
+      // Sucesso WhatsApp → resposta direta
+      if (!whatsappFailed) {
         return new Response(
-          JSON.stringify({ error: errorMsg }),
-          { status: whatsappResponse.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            success: true,
+            channel: "whatsapp",
+            message: "Instruções enviadas por WhatsApp.",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const usedFallbackChannel = whatsappResult?.data?.fallback === "whazing_apioficial";
-      const messageId = whatsappResult?.data?.key?.id;
-      if (!messageId && !usedFallbackChannel) {
-        console.error("WhatsApp send did not return message id:", whatsappResult);
+      // Falha do WhatsApp → fallback automático para e-mail
+      console.warn(`WhatsApp falhou (${whatsappFailureReason}). Acionando fallback de e-mail para ${email}`);
+
+      if (!email) {
         return new Response(
-          JSON.stringify({ error: "Envio aceito, mas sem protocolo de rastreamento do WhatsApp" }),
+          JSON.stringify({
+            error: "WhatsApp indisponível e o associado não possui e-mail cadastrado para fallback",
+            whatsappError: whatsappFailureReason,
+          }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      if (!usedFallbackChannel) {
-        const finalStatus = await waitForWhatsAppFinalStatus(supabase, messageId);
-        if (finalStatus.error) {
-          return new Response(
-            JSON.stringify({ error: finalStatus.error, status: finalStatus.status, messageId }),
-            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      const emailFallback = await sendResetCodeByEmail({ toEmail: email, firstName, token });
 
-        console.log(`Self-service reset code sent via WhatsApp to ${patient.phone} with final status ${finalStatus.status}`);
-      } else {
-        console.log(`Self-service reset code sent via WhatsApp fallback channel to ${patient.phone}`);
+      if (!emailFallback.success) {
+        return new Response(
+          JSON.stringify({
+            error: `WhatsApp indisponível e fallback por e-mail também falhou: ${emailFallback.error}`,
+            whatsappError: whatsappFailureReason,
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+
+      console.log(`Reset code sent via EMAIL fallback to ${email}`);
 
       return new Response(
         JSON.stringify({
           success: true,
-            message: "Instruções enviadas por WhatsApp.",
+          channel: "email",
+          fallback: true,
+          whatsappError: whatsappFailureReason,
+          message: `WhatsApp indisponível para este número. Código enviado por e-mail para ${email}.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // ─── SEND VIA EMAIL (default) ───
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = Deno.env.get("SMTP_PORT");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASSWORD");
-    const smtpFrom = Deno.env.get("SMTP_FROM");
-
-    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
-      console.error("SMTP not configured");
+    const emailSend = await sendResetCodeByEmail({ toEmail: email, firstName, token });
+    if (!emailSend.success) {
       return new Response(
-        JSON.stringify({ error: "Servico de email nao configurado" }),
+        JSON.stringify({ error: emailSend.error || "Falha ao enviar e-mail" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <div style="background-color: #059669; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">SECMI</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Sindicato dos Comerciarios</p>
-        </div>
-        <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <h2 style="color: #333; margin-top: 0;">Ola, ${firstName}!</h2>
-          <p style="color: #666; line-height: 1.6;">
-            Recebemos uma solicitacao para redefinir a senha do seu acesso ao aplicativo SECMI.
-          </p>
-          <div style="background-color: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
-            <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu codigo de recuperacao:</p>
-            <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${token}</p>
-          </div>
-          <p style="color: #666; line-height: 1.6; font-size: 14px;">
-            <strong>Este codigo e valido por 30 minutos.</strong>
-          </p>
-          <p style="color: #666; line-height: 1.6; font-size: 14px;">
-            Se voce nao solicitou a redefinicao de senha, ignore este email. Sua conta permanece segura.
-          </p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
-          <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
-            Este e um email automatico, por favor nao responda.<br>
-            SECMI - Todos os direitos reservados.
-          </p>
-        </div>
-      </body>
-      </html>
-    `.replace(/\s+/g, " ").trim();
-
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpHost,
-        port: parseInt(smtpPort || "465"),
-        tls: true,
-        auth: { username: smtpUser, password: smtpPass },
-      },
-    });
-
-    await client.send({
-      from: smtpFrom,
-      to: email,
-      subject: "Codigo de Recuperacao de Senha - SECMI",
-      html: htmlContent,
-    });
-
-    await client.close();
 
     console.log(`Self-service reset code sent via email to ${email}`);
 
     return new Response(
       JSON.stringify({
         success: true,
+        channel: "email",
         message: "Se o email estiver cadastrado, voce recebera um codigo de recuperacao.",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
