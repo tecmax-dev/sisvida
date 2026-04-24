@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, ShieldCheck } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
-type Step = "email" | "link_sent" | "verify_identity" | "password" | "success";
+type Step = "email" | "verify_identity" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [step, setStep] = useState<Step>("email");
@@ -362,8 +362,6 @@ export default function MobilePasswordResetPage() {
               onClick={() => {
                 if (step === "email") {
                   navigate("/app");
-                } else if (step === "link_sent") {
-                  setStep("email");
                 } else if (step === "verify_identity") {
                   setStep("email");
                 } else if (step === "password") {
