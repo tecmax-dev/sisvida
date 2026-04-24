@@ -12,7 +12,7 @@ const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]
 function buildWhatsAppResetMessage(params: {
   firstName: string;
   email: string;
-  protocolCode: string;
+  code: string;
 }) {
   return `🔐 *Redefinição de Senha - SECMI*
 
@@ -20,13 +20,17 @@ Olá, ${params.firstName}!
 
 Recebemos uma solicitação para redefinir sua senha de acesso.
 
-Para continuar:
+Seu código de recuperação:
+
+*${params.code}*
+
+Como usar:
 • Abra o app SECMI e toque em *Esqueci minha senha*
 • Informe o e-mail: ${params.email}
-• Confirme seu ano de nascimento
+• Informe o código acima
 • Cadastre sua nova senha
 
-Protocolo: ${params.protocolCode}
+Este código é válido por 30 minutos.
 
 _SECMI - Sindicato dos Comerciários_`;
 }
@@ -203,11 +207,10 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
 
-      const protocolCode = crypto.randomUUID().slice(0, 6).toUpperCase();
       const whatsappMessage = buildWhatsAppResetMessage({
         firstName,
         email,
-        protocolCode,
+        code: token,
       });
 
       const authHeader = `Bearer ${supabaseServiceKey}`;

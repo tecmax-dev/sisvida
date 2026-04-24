@@ -6,15 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, ShieldCheck } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
-type Step = "email" | "verify_identity" | "password" | "success";
+type Step = "email" | "verify_code" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [birthYear, setBirthYear] = useState("");
+  const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ export default function MobilePasswordResetPage() {
     }
 
     setEmail((currentEmail) => currentEmail || emailFromQuery);
-    setStep((currentStep) => currentStep === "email" ? "verify_identity" : currentStep);
+    setStep((currentStep) => currentStep === "email" ? "verify_code" : currentStep);
   }, [searchParams]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -77,12 +77,12 @@ export default function MobilePasswordResetPage() {
       const result = (data ?? {}) as { error?: string; message?: string };
       if (result.error) throw new Error(result.error);
 
-      setStep("verify_identity");
+      setStep("verify_code");
       toast({
         title: "Instruções enviadas",
         description:
           result.message ||
-          "Se o email estiver cadastrado, você receberá instruções de recuperação no WhatsApp.",
+          "Se o email estiver cadastrado, você receberá um código de recuperação no WhatsApp.",
       });
     } catch (err: any) {
       console.error("Error sending reset link:", err);
@@ -99,13 +99,13 @@ export default function MobilePasswordResetPage() {
     }
   };
 
-  const handleVerifyIdentity = async (e: React.FormEvent) => {
+  const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!birthYear || birthYear.length !== 4) {
+    if (!code || code.length !== 6) {
       toast({
-        title: "Ano inválido",
-        description: "Digite o ano de nascimento com 4 dígitos.",
+        title: "Código inválido",
+        description: "Digite o código de 6 dígitos recebido no WhatsApp.",
         variant: "destructive",
       });
       return;
@@ -138,9 +138,9 @@ export default function MobilePasswordResetPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc("reset_patient_password_by_birth_year", {
+      const { data, error } = await supabase.rpc("reset_patient_password_by_code", {
         p_email: email,
-        p_birth_year: parseInt(birthYear, 10),
+        p_code: code,
         p_new_password: newPassword,
       } as any);
 
@@ -192,7 +192,7 @@ export default function MobilePasswordResetPage() {
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-foreground">Recuperar Senha</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Digite seu email cadastrado para iniciar a recuperação de senha.
+                Digite seu email cadastrado para receber um código de recuperação no WhatsApp.
               </p>
             </div>
 
@@ -214,38 +214,46 @@ export default function MobilePasswordResetPage() {
               className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
               disabled={loading || !email}
             >
-              Continuar
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Enviar código por WhatsApp"
+              )}
             </Button>
           </form>
         );
 
-      case "verify_identity":
+      case "verify_code":
         return (
-          <form onSubmit={handleVerifyIdentity} className="space-y-6">
+          <form onSubmit={handleVerifyCode} className="space-y-6">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                <ShieldCheck className="h-8 w-8 text-emerald-600" />
+                <KeyRound className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
 
             <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-foreground">Verificação de Identidade</h2>
+              <h2 className="text-xl font-semibold text-foreground">Código de Recuperação</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Para sua segurança, informe seu <strong>ano de nascimento</strong> para continuar.
+                Digite o <strong>código de 6 dígitos</strong> que enviamos para o seu WhatsApp.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="birthYear">Ano de Nascimento</Label>
+              <Label htmlFor="code">Código de Recuperação</Label>
               <Input
-                id="birthYear"
-                type="number"
-                placeholder="Ex: 1985"
-                value={birthYear}
-                onChange={(e) => setBirthYear(e.target.value.slice(0, 4))}
-                className="h-12 text-center text-lg tracking-widest"
-                min="1900"
-                max={new Date().getFullYear()}
+                id="code"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="h-14 text-center text-2xl tracking-[0.5em] font-mono"
+                maxLength={6}
                 disabled={loading}
               />
             </div>
@@ -253,13 +261,13 @@ export default function MobilePasswordResetPage() {
             <Button
               type="submit"
               className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-              disabled={!birthYear || birthYear.length !== 4}
+              disabled={!code || code.length !== 6}
             >
-              Verificar e Continuar
+              Continuar
             </Button>
 
             <p className="text-xs text-muted-foreground text-center">
-              🔒 Seus dados são protegidos e não serão compartilhados.
+              ⏱️ O código expira em 30 minutos. Não recebeu? Volte e tente novamente.
             </p>
           </form>
         );
@@ -362,10 +370,10 @@ export default function MobilePasswordResetPage() {
               onClick={() => {
                 if (step === "email") {
                   navigate("/app");
-                } else if (step === "verify_identity") {
+                } else if (step === "verify_code") {
                   setStep("email");
                 } else if (step === "password") {
-                  setStep("verify_identity");
+                  setStep("verify_code");
                 }
               }}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
