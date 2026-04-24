@@ -12,11 +12,12 @@ import { FilePreviewModal } from "@/components/attachments/FilePreviewModal";
 
 interface UnionMemberAttachmentsTabProps {
   patientId: string;
+  clinicId?: string | null;
 }
 
 const CONTRA_CHEQUES_FOLDER_NAME = "Contra cheques";
 
-export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsTabProps) {
+export function UnionMemberAttachmentsTab({ patientId, clinicId }: UnionMemberAttachmentsTabProps) {
   const { currentClinic } = useAuth();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -40,7 +41,7 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
     logAccess,
     getAccessLogs,
     getFileUrl
-  } = usePatientAttachments(patientId);
+  } = usePatientAttachments(patientId, clinicId);
 
   // Reset state when patientId changes
   useEffect(() => {
@@ -49,11 +50,11 @@ export function UnionMemberAttachmentsTab({ patientId }: UnionMemberAttachmentsT
   }, [patientId]);
 
   useEffect(() => {
-    if (patientId && currentClinic?.id) {
+    if (patientId && (clinicId || currentClinic?.id)) {
       fetchFolders().finally(() => setInitialFetchComplete(true));
       fetchAttachments(selectedFolderId);
     }
-  }, [patientId, currentClinic?.id, selectedFolderId, fetchFolders, fetchAttachments]);
+  }, [patientId, clinicId, currentClinic?.id, selectedFolderId, fetchFolders, fetchAttachments]);
 
   // Garantir que a pasta "Contra cheques" exista automaticamente
   // Só executa APÓS a busca inicial das pastas ter completado
