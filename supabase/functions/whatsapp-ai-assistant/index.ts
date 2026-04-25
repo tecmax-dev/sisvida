@@ -918,7 +918,11 @@ serve(async (req) => {
         const whazingUrl = Deno.env.get('WHAZING_API_URL');
         const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
         if (whazingUrl && whazingToken) {
-          const whazingResponse = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+          const cleanWhazingUrl = whazingUrl.replace(/\/$/, '');
+          const whazingSendUrl = cleanWhazingUrl.includes('/api/external/') || cleanWhazingUrl.endsWith('/apioficial')
+            ? cleanWhazingUrl
+            : `${cleanWhazingUrl}/apioficial`;
+          const whazingResponse = await fetch(whazingSendUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` },
             body: JSON.stringify({ number: dest, contents: { type: 'text', body: { text } } }),
