@@ -7938,6 +7938,9 @@ serve(async (req) => {
 
           // Greetings should always restart the menu, even with an active AI session
           const isGreeting = /^(oi|olá|ola|hey|hi|hello|bom\s*dia|boa\s*tarde|boa\s*noite|eai|e\s*ai|opa|fala)/i.test(msgClean);
+          // A greeting should re-open the main menu even if a previous Whazing ticket
+          // is still open or an AI conversation exists — only active booking/boleto
+          // flows should block the menu reset.
           const shouldShowMenu = isGreeting && !anyBookingSession && !anyBoletoSession;
 
           // If it's a greeting with an active AI session, expire the old session first
@@ -7949,6 +7952,16 @@ serve(async (req) => {
               .eq('clinic_id', clinicId)
               .in('phone', phoneCandidates)
               .gt('expires_at', new Date().toISOString());
+          }
+
+          // If it's a greeting with a stale open Whazing ticket, close it so the
+          // initial menu is shown again on next interactions.
+          if (shouldShowMenu && openWhazingTicket) {
+            console.log(`[webhook] Greeting detected with open Whazing ticket - closing stale ticket to reset menu`);
+            await supabase
+              .from('whazing_tickets')
+              .update({ status: 'closed', closed_at: new Date().toISOString() })
+              .eq('id', (openWhazingTicket as { id: string }).id);
           }
 
           if ((isFreshConversation || shouldShowMenu) && isNotSpecificAction) {
