@@ -416,6 +416,9 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
+    const whazingSent = await sendWhazingTextMessage(phone, message);
+    if (whazingSent) return true;
+
     const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
 
@@ -439,14 +442,6 @@ async function sendWhatsAppMessage(
     }
 
     console.log(`[booking] WhatsApp API ok (${response.status}):`, responseText);
-
-    // Evolution can return PENDING and later emit messages.update=ERROR. Send a
-    // fallback copy through the chatgoo/Whazing external endpoint when configured.
-    const whazingSent = await sendWhazingTextMessage(phone, message);
-    if (whazingSent) {
-      console.log(`[booking] Fallback copy sent via Whazing/chatgoo to ${destination}`);
-    }
-
     return true;
   } catch (error) {
     console.error('[booking] Error sending WhatsApp:', error);
