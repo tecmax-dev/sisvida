@@ -667,7 +667,7 @@ export default function PresentationPage() {
                 </div>
                 <div>
                   <p className="text-blue-300 text-[10px]">Telefone</p>
-                  <p className="text-base font-semibold">(73) 3231-1784</p>
+                  <p className="text-base font-semibold">(73) 3198-2161</p>
                 </div>
               </div>
 
