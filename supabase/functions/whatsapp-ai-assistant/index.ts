@@ -9,6 +9,25 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+function getWhazingSendUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
+    return cleanBase;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
+function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
+  if (baseUrl.includes('/api/external/')) {
+    return { number: phone, body: message };
+  }
+
+  return {
+    number: phone,
+    contents: { type: 'text', body: { text: message } },
+  };
+}
+
 // Tool definitions for the AI
 const tools = [
   {
@@ -918,15 +937,12 @@ serve(async (req) => {
         const whazingUrl = Deno.env.get('WHAZING_API_URL');
         const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
         if (whazingUrl && whazingToken) {
-          const cleanWhazingUrl = whazingUrl.replace(/\/$/, '');
-          const whazingSendUrl = cleanWhazingUrl.includes('/api/external/') || cleanWhazingUrl.endsWith('/apioficial')
-            ? cleanWhazingUrl
-            : `${cleanWhazingUrl}/apioficial`;
+          const whazingSendUrl = getWhazingSendUrl(whazingUrl);
           console.log(`[ai-assistant] sending via Whazing/chatgoo endpoint ${whazingSendUrl} to ${dest}`);
           const whazingResponse = await fetch(whazingSendUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` },
-            body: JSON.stringify({ number: dest, contents: { type: 'text', body: { text } } }),
+            body: JSON.stringify(buildWhazingTextPayload(whazingUrl, dest, text)),
           });
           const whazingText = await whazingResponse.text();
           if (whazingResponse.ok) {
