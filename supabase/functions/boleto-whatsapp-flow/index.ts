@@ -850,7 +850,7 @@ async function sendWhazingText(phone: string, message: string): Promise<boolean>
   try {
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[boleto-flow] [whazing-text] Sending fallback text to ${cleanPhone}`);
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -858,9 +858,7 @@ async function sendWhazingText(phone: string, message: string): Promise<boolean>
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        ...buildWhazingTextPayload(whazingUrl, cleanPhone, message),
-      }),
+      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, message)),
     });
     const respText = await response.text();
     if (!response.ok) {
@@ -896,7 +894,7 @@ async function sendBoletoButtons(
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
@@ -905,16 +903,7 @@ async function sendBoletoButtons(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: {
-          type: "button",
-          body: { text: bodyText },
-          action: {
-            buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
-          }
-        }
-      }),
+      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, bodyText, buttons)),
     });
 
     const responseText = await response.text();
