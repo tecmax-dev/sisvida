@@ -368,6 +368,14 @@ function formatPhoneForWhatsApp(phone: string): string {
   return formattedPhone;
 }
 
+function getWhazingSendUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
+    return cleanBase;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
 async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -376,7 +384,7 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
 
   try {
     const cleanPhone = formatPhoneForWhatsApp(phone);
-    const response = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+    const response = await fetch(getWhazingSendUrl(whazingUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -408,8 +416,6 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
-    // Prefer Whazing for SECMI replies because direct Evolution sends are being
-    // accepted as PENDING and then rejected by WhatsApp with status=ERROR.
     const whazingSent = await sendWhazingTextMessage(phone, message);
     if (whazingSent) return true;
 
@@ -540,7 +546,7 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
@@ -7709,7 +7715,7 @@ serve(async (req) => {
             if (whazingUrl && whazingToken) {
               let cleanPhoneImg = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
               if (!cleanPhoneImg.startsWith('55')) cleanPhoneImg = '55' + cleanPhoneImg;
-              const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+              const apiOficialUrl = getWhazingSendUrl(whazingUrl);
 
               const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
 

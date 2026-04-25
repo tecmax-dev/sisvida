@@ -918,17 +918,22 @@ serve(async (req) => {
         const whazingUrl = Deno.env.get('WHAZING_API_URL');
         const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
         if (whazingUrl && whazingToken) {
-          const whazingResponse = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+          const cleanWhazingUrl = whazingUrl.replace(/\/$/, '');
+          const whazingSendUrl = cleanWhazingUrl.includes('/api/external/') || cleanWhazingUrl.endsWith('/apioficial')
+            ? cleanWhazingUrl
+            : `${cleanWhazingUrl}/apioficial`;
+          console.log(`[ai-assistant] sending via Whazing/chatgoo endpoint ${whazingSendUrl} to ${dest}`);
+          const whazingResponse = await fetch(whazingSendUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` },
             body: JSON.stringify({ number: dest, contents: { type: 'text', body: { text } } }),
           });
           const whazingText = await whazingResponse.text();
           if (whazingResponse.ok) {
-            console.log(`[ai-assistant] sent via Whazing apioficial to ${dest}`);
+            console.log(`[ai-assistant] sent via Whazing/chatgoo to ${dest}`);
             return;
           }
-          console.error(`[ai-assistant] Whazing apioficial failed (${whazingResponse.status}):`, whazingText);
+          console.error(`[ai-assistant] Whazing/chatgoo failed (${whazingResponse.status}):`, whazingText);
         }
 
         const response = await fetch(`${evolution_config.api_url}/message/sendText/${evolution_config.instance_name}`, {
