@@ -1764,7 +1764,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     // CHECK FOR BOOKING HANDOFF
     if (aiData.handoff_to_booking === true) {
       // SAFETY CHECK: Never proceed with booking handoff if booking is disabled
-      if (config.booking_enabled === false) {
+      if (config.booking_enabled !== true) {
         console.log('[ai-booking] handoff_to_booking=true but booking_enabled=false - blocking handoff');
         await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
         return;
@@ -7015,7 +7015,7 @@ serve(async (req) => {
 
     // Handle chat close/archive/delete events from Whazing/Evolution
     const chatCloseEvents = ['CHATS_UPDATE', 'chats.update', 'CHATS_DELETE', 'chats.delete'];
-    if (chatCloseEvents.includes(payload.event)) {
+    if (payload.event && chatCloseEvents.includes(payload.event)) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
