@@ -368,12 +368,51 @@ function formatPhoneForWhatsApp(phone: string): string {
   return formattedPhone;
 }
 
+async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+
+  if (!whazingUrl || !whazingToken) return false;
+
+  try {
+    const cleanPhone = formatPhoneForWhatsApp(phone);
+    const response = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${whazingToken}`,
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        contents: { type: 'text', body: { text: message } },
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[whazing-text] API error:', response.status, responseText);
+      return false;
+    }
+
+    console.log(`[whazing-text] Message sent successfully to ${cleanPhone}`);
+    return true;
+  } catch (error) {
+    console.error('[whazing-text] Error sending message:', error);
+    return false;
+  }
+}
+
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
   message: string
 ): Promise<boolean> {
   try {
+    // Prefer Whazing for SECMI replies because direct Evolution sends are being
+    // accepted as PENDING and then rejected by WhatsApp with status=ERROR.
+    const whazingSent = await sendWhazingTextMessage(phone, message);
+    if (whazingSent) return true;
+
     const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
 
