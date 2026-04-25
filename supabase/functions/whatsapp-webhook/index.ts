@@ -362,9 +362,10 @@ function formatPhoneForWhatsApp(phone: string): string {
   if (!formattedPhone.startsWith('55')) {
     formattedPhone = '55' + formattedPhone;
   }
-  return formattedPhone.includes('@')
-    ? formattedPhone
-    : `${formattedPhone}@s.whatsapp.net`;
+  // Evolution API sendText expects the numeric WhatsApp number. Sending a JID
+  // (ex: 5573...@s.whatsapp.net) can be accepted as PENDING and then fail with
+  // messages.update status=ERROR, which made LIA look silent in Whazing.
+  return formattedPhone;
 }
 
 async function sendWhatsAppMessage(
