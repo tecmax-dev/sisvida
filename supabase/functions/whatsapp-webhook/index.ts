@@ -393,7 +393,8 @@ function buildWhazingTextPayload(baseUrl: string, phone: string, message: string
 
 function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
   if (isChatgooExternalUrl(baseUrl)) {
-    return { number: phone, body: bodyText };
+    const optionsText = buttons.map((b, index) => `${index + 1}. ${b.title}`).join('\n');
+    return { number: phone, body: `${bodyText}\n\n${optionsText}` };
   }
 
   return {
