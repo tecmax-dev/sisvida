@@ -376,6 +376,38 @@ function getWhazingSendUrl(baseUrl: string): string {
   return `${cleanBase}/apioficial`;
 }
 
+function isChatgooExternalUrl(baseUrl: string): boolean {
+  return baseUrl.includes('/api/external/');
+}
+
+function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
+  if (isChatgooExternalUrl(baseUrl)) {
+    return { number: phone, body: message };
+  }
+
+  return {
+    number: phone,
+    contents: { type: 'text', body: { text: message } },
+  };
+}
+
+function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  if (isChatgooExternalUrl(baseUrl)) {
+    return { number: phone, body: bodyText };
+  }
+
+  return {
+    number: phone,
+    contents: {
+      type: "button",
+      body: { text: bodyText },
+      action: {
+        buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
+      }
+    }
+  };
+}
+
 async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -390,10 +422,7 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: { type: 'text', body: { text: message } },
-      }),
+      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, message)),
     });
 
     const responseText = await response.text();
@@ -555,16 +584,7 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: {
-          type: "button",
-          body: { text: bodyText },
-          action: {
-            buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
-          }
-        }
-      }),
+      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, bodyText, buttons)),
     });
 
     const responseText = await response.text();
@@ -1744,7 +1764,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     // CHECK FOR BOOKING HANDOFF
     if (aiData.handoff_to_booking === true) {
       // SAFETY CHECK: Never proceed with booking handoff if booking is disabled
-      if (config.booking_enabled === false) {
+      if (config.booking_enabled !== true) {
         console.log('[ai-booking] handoff_to_booking=true but booking_enabled=false - blocking handoff');
         await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
         return;
@@ -6995,7 +7015,7 @@ serve(async (req) => {
 
     // Handle chat close/archive/delete events from Whazing/Evolution
     const chatCloseEvents = ['CHATS_UPDATE', 'chats.update', 'CHATS_DELETE', 'chats.delete'];
-    if (chatCloseEvents.includes(payload.event)) {
+    if (payload.event && chatCloseEvents.includes(payload.event)) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
