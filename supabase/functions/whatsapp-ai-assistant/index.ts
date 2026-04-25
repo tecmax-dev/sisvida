@@ -914,6 +914,23 @@ serve(async (req) => {
       try {
         let dest = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
         if (!dest.startsWith('55')) dest = '55' + dest;
+
+        const whazingUrl = Deno.env.get('WHAZING_API_URL');
+        const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+        if (whazingUrl && whazingToken) {
+          const whazingResponse = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` },
+            body: JSON.stringify({ number: dest, contents: { type: 'text', body: { text } } }),
+          });
+          const whazingText = await whazingResponse.text();
+          if (whazingResponse.ok) {
+            console.log(`[ai-assistant] sent via Whazing apioficial to ${dest}`);
+            return;
+          }
+          console.error(`[ai-assistant] Whazing apioficial failed (${whazingResponse.status}):`, whazingText);
+        }
+
         const response = await fetch(`${evolution_config.api_url}/message/sendText/${evolution_config.instance_name}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolution_config.api_key },
