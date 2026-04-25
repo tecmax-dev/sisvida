@@ -368,6 +368,14 @@ function formatPhoneForWhatsApp(phone: string): string {
   return formattedPhone;
 }
 
+function getWhazingSendUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
+    return cleanBase;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
 async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -376,7 +384,7 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
 
   try {
     const cleanPhone = formatPhoneForWhatsApp(phone);
-    const response = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+    const response = await fetch(getWhazingSendUrl(whazingUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -540,7 +548,7 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
