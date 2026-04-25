@@ -33,17 +33,52 @@ async function sendWhatsAppText(
       formattedPhone = '55' + formattedPhone;
     }
 
-    // Garantir o 9º dígito para celulares brasileiros (DDD + 8 dígitos -> DDD + 9 + 8 dígitos)
-    // Após o '55', formato esperado de celular: DDD (2) + 9 (1) + número (8) = 11 dígitos
-    // Se vier com 10 dígitos após o '55' (DDD + 8), inserir o '9'
+    // Descobrir o JID real consultando a Evolution API.
+    // Em alguns DDDs (especialmente Bahia/Nordeste), o número correto no WhatsApp
+    // pode ser SEM o 9 mesmo sendo celular. Forçar o 9 cegamente faz a entrega falhar.
+    // Geramos as duas variações (com e sem o 9) e perguntamos qual existe.
+    const candidates = new Set<string>();
+    candidates.add(formattedPhone);
     const national = formattedPhone.slice(2);
     if (national.length === 10) {
       const ddd = national.slice(0, 2);
       const rest = national.slice(2);
-      // só insere o 9 se o primeiro dígito do número não for já 9 (evita 559... duplicado)
       if (!rest.startsWith('9')) {
-        formattedPhone = '55' + ddd + '9' + rest;
+        candidates.add('55' + ddd + '9' + rest);
       }
+    } else if (national.length === 11) {
+      const ddd = national.slice(0, 2);
+      const rest = national.slice(2);
+      if (rest.startsWith('9')) {
+        candidates.add('55' + ddd + rest.slice(1));
+      }
+    }
+
+    try {
+      const checkResp = await fetch(`${config.api_url}/chat/whatsappNumbers/${config.instance_name}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.api_key,
+        },
+        body: JSON.stringify({ numbers: Array.from(candidates) }),
+      });
+      if (checkResp.ok) {
+        const checkData = await checkResp.json();
+        if (Array.isArray(checkData)) {
+          const valid = checkData.find((n: any) => n?.exists === true);
+          if (valid?.jid) {
+            // Usa o número exato que o WhatsApp reconhece (sem o sufixo @s.whatsapp.net)
+            formattedPhone = String(valid.jid).split('@')[0];
+            console.log(`[send-payslip-rejection] Resolved JID for ${phone}: ${formattedPhone}`);
+          } else {
+            console.warn(`[send-payslip-rejection] Number ${phone} not found on WhatsApp`);
+            return { success: false, error: 'Número não está registrado no WhatsApp' };
+          }
+        }
+      }
+    } catch (checkErr) {
+      console.warn('[send-payslip-rejection] JID check failed, proceeding with default:', checkErr);
     }
 
     console.log(`[send-payslip-rejection] Sending WhatsApp to ${formattedPhone}`);
