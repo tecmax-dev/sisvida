@@ -8297,7 +8297,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   instance_name: configData.instance_name,
                 },
                 booking_enabled: false,
-                suppress_internal_menu: true,
+                // Only suppress LIA's internal text menu when the user selected an
+                // external menu option (ex: "1-2"). If Whazing buttons fail (403),
+                // greetings like "oi" must still receive the normal text menu.
+                suppress_internal_menu: externalMenuMode,
                 external_menu_mode: externalMenuMode,
               }),
             });
