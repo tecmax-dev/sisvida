@@ -33,6 +33,19 @@ async function sendWhatsAppText(
       formattedPhone = '55' + formattedPhone;
     }
 
+    // Garantir o 9º dígito para celulares brasileiros (DDD + 8 dígitos -> DDD + 9 + 8 dígitos)
+    // Após o '55', formato esperado de celular: DDD (2) + 9 (1) + número (8) = 11 dígitos
+    // Se vier com 10 dígitos após o '55' (DDD + 8), inserir o '9'
+    const national = formattedPhone.slice(2);
+    if (national.length === 10) {
+      const ddd = national.slice(0, 2);
+      const rest = national.slice(2);
+      // só insere o 9 se o primeiro dígito do número não for já 9 (evita 559... duplicado)
+      if (!rest.startsWith('9')) {
+        formattedPhone = '55' + ddd + '9' + rest;
+      }
+    }
+
     console.log(`[send-payslip-rejection] Sending WhatsApp to ${formattedPhone}`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
