@@ -745,6 +745,47 @@ async function createLytexInvoice(params: {
 // WHATSAPP MESSAGE SENDER
 // ==========================================
 
+function getWhazingSendUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
+    return cleanBase;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
+function isChatgooExternalUrl(baseUrl: string): boolean {
+  return baseUrl.includes('/api/external/');
+}
+
+function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
+  if (isChatgooExternalUrl(baseUrl)) {
+    return { number: phone, body: message };
+  }
+
+  return {
+    number: phone,
+    contents: { type: 'text', body: { text: message } },
+  };
+}
+
+function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  if (isChatgooExternalUrl(baseUrl)) {
+    const optionsText = buttons.map((b, index) => `${index + 1}. ${b.title}`).join('\n');
+    return { number: phone, body: `${bodyText}\n\n${optionsText}` };
+  }
+
+  return {
+    number: phone,
+    contents: {
+      type: "button",
+      body: { text: bodyText },
+      action: {
+        buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
+      }
+    }
+  };
+}
+
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
@@ -757,6 +798,9 @@ async function sendWhatsAppMessage(
     }
 
     console.log(`[boleto-flow] Sending message to ${formattedPhone}`);
+
+    const whazingSent = await sendWhazingText(formattedPhone, message);
+    if (whazingSent) return true;
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
       method: 'POST',
@@ -815,8 +859,7 @@ async function sendWhazingText(phone: string, message: string): Promise<boolean>
         'Authorization': `Bearer ${whazingToken}`,
       },
       body: JSON.stringify({
-        number: cleanPhone,
-        contents: { type: 'text', body: { text: message } },
+        ...buildWhazingTextPayload(whazingUrl, cleanPhone, message),
       }),
     });
     const respText = await response.text();
