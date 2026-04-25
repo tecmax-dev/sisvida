@@ -912,7 +912,8 @@ serve(async (req) => {
     const sendDirectWhatsApp = async (text: string): Promise<void> => {
       if (!shouldSendDirectWhatsApp || !evolution_config || !phone) return;
       try {
-        const dest = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
+        let dest = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+        if (!dest.startsWith('55')) dest = '55' + dest;
         const response = await fetch(`${evolution_config.api_url}/message/sendText/${evolution_config.instance_name}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolution_config.api_key },
