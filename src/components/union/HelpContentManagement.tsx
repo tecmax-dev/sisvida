@@ -61,8 +61,8 @@ const defaultContent: HelpContent = {
   address: "Rua do Sindicato, 123 - Centro",
   city_state: "São Paulo - SP",
   cep: "01310-000",
-  phone: "(73) 3231-1784",
-  whatsapp: "(73) 3231-1784",
+  phone: "(73) 3198-2161",
+  whatsapp: "(73) 3198-2161",
   email: "contato@sindicato.org.br",
   weekday_hours: "08:00 - 17:00",
   saturday_hours: "08:00 - 12:00",
@@ -414,7 +414,7 @@ export function HelpContentManagement() {
                 <Input
                   value={content.phone}
                   onChange={(e) => setContent({ ...content, phone: e.target.value })}
-                  placeholder="Ex: (73) 3231-1784"
+                  placeholder="Ex: (73) 3198-2161"
                 />
               </div>
               <div className="space-y-2">
@@ -425,7 +425,7 @@ export function HelpContentManagement() {
                 <Input
                   value={content.whatsapp}
                   onChange={(e) => setContent({ ...content, whatsapp: e.target.value })}
-                  placeholder="Ex: (73) 3231-1784"
+                  placeholder="Ex: (73) 3198-2161"
                 />
               </div>
               <div className="space-y-2">

@@ -642,7 +642,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text("Contato: (73) 3231-1784", pageWidth / 2, pageHeight - 27, { align: "center" });
+      doc.text("Contato: (73) 3198-2161", pageWidth / 2, pageHeight - 27, { align: "center" });
       doc.text("www.prosindweb.com.br", pageWidth / 2, pageHeight - 19, { align: "center" });
 
       // =====================
@@ -951,7 +951,7 @@ const TutorialSindicatoPage = () => {
       doc.text("Precisa de ajuda? Entre em contato conosco:", margin + 10, yPos + 12);
       
       doc.setFont("helvetica", "bold");
-      doc.text("Telefone: (73) 3231-1784", margin + 10, yPos + 23);
+      doc.text("Telefone: (73) 3198-2161", margin + 10, yPos + 23);
       doc.text("E-mail: suporte@prosindweb.com.br", margin + 10, yPos + 32);
       doc.text("Chat: Disponivel no sistema (horario comercial)", margin + 10, yPos + 41);
 
@@ -1004,7 +1004,7 @@ const TutorialSindicatoPage = () => {
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("(73) 3231-1784", pageWidth / 2, 218, { align: "center" });
+      doc.text("(73) 3198-2161", pageWidth / 2, 218, { align: "center" });
       doc.text("www.prosindweb.com.br", pageWidth / 2, 230, { align: "center" });
 
       // Version footer
