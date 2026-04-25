@@ -1404,6 +1404,28 @@ async function handleBoletoFlow(
   
   console.log(`[boleto-flow] State: ${session.state}, Message: "${messageText}"`);
 
+  // ==========================================
+  // FAST-PATH: Interactive button IDs
+  // When user taps a button, messageText is the button id (e.g. "boleto_a_vencer").
+  // Bypass AI intent analysis to avoid misclassification (greeting/menu/help).
+  // ==========================================
+  if (session.state === 'INIT' || session.state === 'SELECT_BOLETO_TYPE') {
+    if (messageText === 'boleto_a_vencer') {
+      await updateSession(supabase, session.id, {
+        state: 'WAITING_CNPJ',
+        boleto_type: 'a_vencer'
+      });
+      return { response: HUMANIZED_MESSAGES.askCnpjFriendly, newState: 'WAITING_CNPJ' };
+    }
+    if (messageText === 'boleto_vencido') {
+      await updateSession(supabase, session.id, {
+        state: 'WAITING_CNPJ',
+        boleto_type: 'vencido'
+      });
+      return { response: HUMANIZED_MESSAGES.askCnpjFriendly, newState: 'WAITING_CNPJ' };
+    }
+  }
+
   // Use AI to analyze intent for better understanding
   const intent = await analyzeUserIntent(messageText, session.state, {
     employer_name: session.employer_name,
