@@ -29,6 +29,28 @@ interface EvolutionConfig {
   direct_reply_enabled?: boolean | null;
 }
 
+function getWhazingSendUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
+    return cleanBase;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
+function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
+  if (baseUrl.includes('/api/external/')) {
+    return { number: phone, body: message };
+  }
+
+  return {
+    number: phone,
+    contents: {
+      type: 'chat',
+      body: { text: message },
+    },
+  };
+}
+
 async function sendViaWhazingTextFallback(phone: string, message: string): Promise<{ success: boolean; error?: string; data?: unknown }> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -41,19 +63,13 @@ async function sendViaWhazingTextFallback(phone: string, message: string): Promi
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const response = await fetch(`${whazingUrl.replace(/\/$/, '')}/apioficial`, {
+    const response = await fetch(getWhazingSendUrl(whazingUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: {
-          type: 'text',
-          body: { text: message },
-        },
-      }),
+      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, message)),
     });
 
     const responseText = await response.text();
@@ -201,7 +217,7 @@ async function sendWhazingConfirmationButtons(
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} (appointment: ${appointmentId})`);
 
     const response = await fetch(apiOficialUrl, {
