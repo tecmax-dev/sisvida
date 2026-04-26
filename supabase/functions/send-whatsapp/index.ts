@@ -768,6 +768,17 @@ serve(async (req) => {
       buttonsResult = { attempted: false, success: false, error: 'appointmentId not provided or not resolved' };
       console.warn('[send-whatsapp] Reminder without appointmentId. Buttons not sent.');
     } else if (shouldSendReminderButtons && resolvedAppointmentId) {
+      // Reliability fix: when sending reminder buttons via Whazing, also send the
+      // reminder text via Whazing to guarantee delivery on the same channel.
+      // The Evolution media+caption path was silently failing (webhook status=ERROR)
+      // while the Whazing buttons still arrived — leaving users with buttons only.
+      const textViaWhazing = await sendViaWhazingTextFallback(formattedPhone, message);
+      if (textViaWhazing.success) {
+        console.log('[send-whatsapp] Reminder text sent via Whazing for guaranteed delivery');
+      } else {
+        console.warn('[send-whatsapp] Whazing text send for reminder failed:', textViaWhazing.error);
+      }
+
       await new Promise(resolve => setTimeout(resolve, 1500));
       const buttonsResponse = await sendWhazingConfirmationButtons(formattedPhone, resolvedAppointmentId);
 
