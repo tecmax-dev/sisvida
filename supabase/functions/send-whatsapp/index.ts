@@ -220,25 +220,37 @@ async function sendWhazingConfirmationButtons(
     const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} (appointment: ${appointmentId})`);
 
+    const isExternal = whazingUrl.includes('/api/external/');
+    const payload: Record<string, unknown> = isExternal
+      ? {
+          number: cleanPhone,
+          body: "Confirme ou cancele sua consulta:",
+          buttons: [
+            { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },
+            { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
+          ],
+        }
+      : {
+          number: cleanPhone,
+          contents: {
+            type: "button",
+            body: { text: "Confirme ou cancele sua consulta:" },
+            action: {
+              buttons: [
+                { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
+                { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
+              ],
+            },
+          },
+        };
+
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: {
-          type: "button",
-          body: { text: "Confirme ou cancele sua consulta:" },
-          action: {
-            buttons: [
-              { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
-              { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
-            ]
-          }
-        }
-      }),
+      body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
