@@ -169,7 +169,7 @@ async function sendWhatsAppViaWhazing(
     let cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[test-whazing-text] Sending text to ${cleanPhone}`);
 
     const response = await fetch(apiOficialUrl, {
@@ -178,13 +178,7 @@ async function sendWhatsAppViaWhazing(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: {
-          type: "text",
-          body: { text: message }
-        }
-      }),
+      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, message)),
     });
 
     const responseText = await response.text();
@@ -214,8 +208,13 @@ async function sendConfirmationButtons(
     let cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = whazingUrl.replace(/\/$/, '') + '/apioficial';
+    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
     console.log(`[test-buttons] Sending buttons to ${cleanPhone}`);
+
+    const buttons = [
+      { id: `confirm_apt_${testAppointmentId}`, title: "✅ Confirmar" },
+      { id: `cancel_apt_${testAppointmentId}`, title: "❌ Cancelar" },
+    ];
 
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -223,19 +222,7 @@ async function sendConfirmationButtons(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        contents: {
-          type: "button",
-          body: { text: "Confirme ou cancele sua consulta:" },
-          action: {
-            buttons: [
-              { type: "reply", reply: { id: `confirm_apt_${testAppointmentId}`, title: "✅ Confirmar" } },
-              { type: "reply", reply: { id: `cancel_apt_${testAppointmentId}`, title: "❌ Cancelar" } },
-            ]
-          }
-        }
-      }),
+      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
     });
 
     const responseText = await response.text();
