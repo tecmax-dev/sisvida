@@ -37,6 +37,15 @@ function getWhazingSendUrl(baseUrl: string): string {
   return `${cleanBase}/apioficial`;
 }
 
+function getWhazingApiPlusUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.endsWith('/apioficial')) return cleanBase;
+  if (cleanBase.includes('/api/external/')) {
+    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
 function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
   if (baseUrl.includes('/api/external/')) {
     return { number: phone, body: message };
@@ -217,32 +226,22 @@ async function sendWhazingConfirmationButtons(
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
-    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} (appointment: ${appointmentId})`);
+    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via API PLUS (appointment: ${appointmentId})`);
 
-    const isExternal = whazingUrl.includes('/api/external/');
-    const payload: Record<string, unknown> = isExternal
-      ? {
-          number: cleanPhone,
-          body: "Confirme ou cancele sua consulta:",
+    const payload: Record<string, unknown> = {
+      number: cleanPhone,
+      contents: {
+        type: "button",
+        body: { text: "Confirme ou cancele sua consulta:" },
+        action: {
           buttons: [
-            { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },
-            { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
+            { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
+            { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
           ],
-        }
-      : {
-          number: cleanPhone,
-          contents: {
-            type: "button",
-            body: { text: "Confirme ou cancele sua consulta:" },
-            action: {
-              buttons: [
-                { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
-                { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
-              ],
-            },
-          },
-        };
+        },
+      },
+    };
 
     const response = await fetch(apiOficialUrl, {
       method: 'POST',

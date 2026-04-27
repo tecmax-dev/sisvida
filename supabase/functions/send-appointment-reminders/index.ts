@@ -53,6 +53,15 @@ function isChatgooExternalUrl(baseUrl: string): boolean {
   return baseUrl.includes('/api/external/');
 }
 
+function getWhazingApiPlusUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.endsWith('/apioficial')) return cleanBase;
+  if (cleanBase.includes('/api/external/')) {
+    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
 function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
   if (isChatgooExternalUrl(baseUrl)) {
     return { number: phone, body: message };
@@ -65,14 +74,6 @@ function buildWhazingTextPayload(baseUrl: string, phone: string, message: string
 }
 
 function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
-  if (isChatgooExternalUrl(baseUrl)) {
-    return {
-      number: phone,
-      body: bodyText,
-      buttons: buttons.map(b => ({ id: b.id, title: b.title })),
-    };
-  }
-
   return {
     number: phone,
     contents: {
@@ -226,8 +227,8 @@ async function sendConfirmationButtons(
       cleanPhone = '55' + cleanPhone;
     }
 
-    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
-    console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone}`);
+    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone} via API PLUS`);
 
     const buttons = [
       { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },

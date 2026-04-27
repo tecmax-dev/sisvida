@@ -757,6 +757,15 @@ function isChatgooExternalUrl(baseUrl: string): boolean {
   return baseUrl.includes('/api/external/');
 }
 
+function getWhazingApiPlusUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.endsWith('/apioficial')) return cleanBase;
+  if (cleanBase.includes('/api/external/')) {
+    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
 function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
   if (isChatgooExternalUrl(baseUrl)) {
     return { number: phone, body: message };
@@ -769,14 +778,6 @@ function buildWhazingTextPayload(baseUrl: string, phone: string, message: string
 }
 
 function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
-  if (isChatgooExternalUrl(baseUrl)) {
-    return {
-      number: phone,
-      body: bodyText,
-      buttons: buttons.map(b => ({ id: b.id, title: b.title })),
-    };
-  }
-
   return {
     number: phone,
     contents: {
@@ -897,8 +898,8 @@ async function sendBoletoButtons(
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = getWhazingSendUrl(whazingUrl);
-    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone}`);
+    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via API PLUS`);
 
     const response = await fetch(apiOficialUrl, {
       method: 'POST',
