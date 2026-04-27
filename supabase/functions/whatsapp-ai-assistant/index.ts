@@ -28,6 +28,67 @@ function buildWhazingTextPayload(baseUrl: string, phone: string, message: string
   };
 }
 
+function isChatgooExternalUrl(baseUrl: string): boolean {
+  return baseUrl.includes('/api/external/');
+}
+
+function buildWhazingExternalButtonPayload(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  return {
+    number: phone,
+    body: bodyText,
+    buttons: buttons.map(b => ({ id: b.id, title: b.title })),
+  };
+}
+
+async function sendWhazingMainMenuButtons(phone: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+  if (!whazingUrl || !whazingToken || !phone) return false;
+
+  let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+  if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+  const buttons = [
+    { id: 'whazing_associado', title: 'Sou Associado' },
+    { id: 'whazing_empresa', title: 'Sou Empresa' },
+    { id: 'whazing_contabilidade', title: 'Sou Contabilidade' },
+  ];
+
+  const bodyText = 'Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?';
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` };
+
+  try {
+    const response = await fetch(getWhazingSendUrl(whazingUrl), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(
+        isChatgooExternalUrl(whazingUrl)
+          ? buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)
+          : {
+              number: cleanPhone,
+              contents: {
+                type: 'button',
+                body: { text: bodyText },
+                action: { buttons: buttons.map(b => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+              },
+            }
+      ),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error(`[ai-assistant] Main menu buttons failed (${response.status}):`, responseText.substring(0, 300));
+      return false;
+    }
+
+    console.log(`[ai-assistant] Main menu buttons sent to ${cleanPhone}`);
+    return true;
+  } catch (error) {
+    console.error('[ai-assistant] Main menu buttons error:', error);
+    return false;
+  }
+}
+
 // Tool definitions for the AI
 const tools = [
   {
@@ -1024,39 +1085,14 @@ serve(async (req) => {
         );
       }
 
-      const menuText = isBookingEnabledEarly
-        ? `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
-
-Como posso ajudar? Escolha uma opção:
-
-1️⃣ Sou associado(a)
-2️⃣ Sou empresa
-3️⃣ Sou contador/escritório contábil
-4️⃣ Dia do Comerciário (30/10)
-5️⃣ Falar com atendente
-6️⃣ Agendar consulta ou exame
-7️⃣ Segunda via de boleto (empresa)
-
-Digite o número da opção desejada.`
-        : `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
-
-Como posso ajudar? Escolha uma opção:
-
-1️⃣ Sou associado(a)
-2️⃣ Sou empresa
-3️⃣ Sou contador/escritório contábil
-4️⃣ Dia do Comerciário (30/10)
-5️⃣ Falar com atendente
-6️⃣ Segunda via de boleto (empresa)
-
-📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://prosindweb.com.br/app/instalar
-
-Digite o número da opção desejada.`;
-
-      await sendDirectWhatsApp(menuText);
+      const menuButtonsSent = shouldSendDirectWhatsApp
+        ? await sendWhazingMainMenuButtons(phone || '')
+        : false;
+      if (!menuButtonsSent) {
+        console.error('[ai-assistant] Interactive main menu failed; not sending text-list fallback');
+      }
       return new Response(
-        JSON.stringify({ response: menuText, handoff_to_booking: false, action: 'show_menu' }),
+        JSON.stringify({ response: null, handoff_to_booking: false, action: 'show_menu_buttons', buttons_sent: menuButtonsSent }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -1666,6 +1702,21 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       finalResponse = externalSelectionPrompt
         ? 'Perfeito, recebi sua escolha no menu externo e vou seguir direto com seu atendimento.'
         : 'Perfeito, vamos seguir sem menu. Me diga objetivamente o que você precisa e eu te ajudo.';
+    }
+
+    if (!shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+      console.warn('[ai-assistant] Internal text menu replaced by interactive WhatsApp buttons');
+      const menuButtonsSent = shouldSendDirectWhatsApp
+        ? await sendWhazingMainMenuButtons(phone || '')
+        : false;
+      return new Response(JSON.stringify({
+        response: null,
+        handoff_to_booking: false,
+        action: 'show_menu_buttons',
+        buttons_sent: menuButtonsSent,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[ai-assistant] Final response:', finalResponse.substring(0, 100));

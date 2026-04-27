@@ -65,6 +65,7 @@ interface EvolutionWebhookPayload {
   data?: {
     key?: {
       remoteJid?: string;
+      remoteJidAlt?: string;
       fromMe?: boolean;
       id?: string;
     };
@@ -604,13 +605,30 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone} via API PLUS`);
-
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${whazingToken}`,
     };
+
+    if (isChatgooExternalUrl(whazingUrl)) {
+      console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone} via Chatgoo external endpoint`);
+      let externalResponse = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
+      });
+
+      let externalText = await externalResponse.text();
+      if (externalResponse.ok) {
+        console.log('[whazing] External buttons sent successfully:', externalText.substring(0, 200));
+        return true;
+      }
+
+      console.warn(`[whazing] External button endpoint failed (${externalResponse.status}); retrying API PLUS`, externalText.substring(0, 300));
+    }
+
+    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone} via API PLUS`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -7292,7 +7310,11 @@ serve(async (req) => {
       );
     }
 
-    const remoteJid = payload.data?.key?.remoteJid || '';
+    const primaryRemoteJid = payload.data?.key?.remoteJid || '';
+    const alternateRemoteJid = (payload.data?.key as any)?.remoteJidAlt || '';
+    const remoteJid = primaryRemoteJid.includes('@lid') && alternateRemoteJid
+      ? alternateRemoteJid
+      : primaryRemoteJid;
 
     // Ignore group messages: interactive official templates/buttons are not reliable in groups
     // and can fall back to raw "templateoficial" command text.

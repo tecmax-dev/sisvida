@@ -952,13 +952,30 @@ async function sendBoletoButtons(
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via API PLUS`);
-
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${whazingToken}`,
     };
+
+    if (isChatgooExternalUrl(whazingUrl)) {
+      console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via Chatgoo external endpoint`);
+      let externalResponse = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
+      });
+
+      let externalText = await externalResponse.text();
+      if (externalResponse.ok) {
+        console.log('[boleto-flow] External buttons sent successfully');
+        return true;
+      }
+
+      console.warn(`[boleto-flow] External button endpoint failed (${externalResponse.status}); retrying API PLUS`, externalText.substring(0, 300));
+    }
+
+    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via API PLUS`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
