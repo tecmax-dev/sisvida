@@ -3029,7 +3029,7 @@ serve(async (req) => {
           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
         ]);
       } else if (nextState === 'CONFIRM_EMPLOYER') {
-        await sendBoletoButtons(phone, 'Confirma a empresa?', [
+        await sendBoletoButtons(phone, result.response, [
           { id: 'boleto_sim', title: '✅ Sim, continuar' },
           { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
         ]);
@@ -3056,7 +3056,7 @@ serve(async (req) => {
           { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
         ]);
       } else if (nextState === 'CONFIRM_BOLETO') {
-        await sendBoletoButtons(phone, 'Confirma a geração?', [
+        await sendBoletoButtons(phone, result.response, [
           { id: 'boleto_confirmar', title: '✅ Confirmar' },
           { id: 'boleto_cancelar', title: '❌ Cancelar' },
         ]);
