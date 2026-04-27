@@ -993,17 +993,32 @@ async function sendBoletoButtons(
 // SESSION MANAGEMENT
 // ==========================================
 
+function getBrazilPhoneVariants(phone: string): string[] {
+  const cleaned = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+  const withCountry = cleaned.startsWith('55') ? cleaned : `55${cleaned}`;
+  const variants = new Set<string>([withCountry]);
+  const ddd = withCountry.slice(2, 4);
+  const rest = withCountry.slice(4);
+
+  if (rest.length === 8) variants.add(`55${ddd}9${rest}`);
+  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`);
+
+  return Array.from(variants);
+}
+
 async function getOrCreateSession(
   supabase: any,
   clinicId: string,
   phone: string
 ): Promise<BoletoSession | null> {
+  const phoneVariants = getBrazilPhoneVariants(phone);
+
   // Check for existing active session
   const { data: existingSession } = await supabase
     .from('whatsapp_boleto_sessions')
     .select('*')
     .eq('clinic_id', clinicId)
-    .eq('phone', phone)
+    .in('phone', phoneVariants)
     .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(1)
