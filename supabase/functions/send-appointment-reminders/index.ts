@@ -57,7 +57,7 @@ function getWhazingApiPlusUrl(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
   if (cleanBase.endsWith('/apioficial')) return cleanBase;
   if (cleanBase.includes('/api/external/')) {
-    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+    return `${cleanBase}/apioficial`;
   }
   return `${cleanBase}/apioficial`;
 }
@@ -83,6 +83,14 @@ function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: str
         buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
       }
     }
+  };
+}
+
+function buildWhazingExternalButtonPayload(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  return {
+    number: phone,
+    body: bodyText,
+    buttons: buttons.map(b => ({ id: b.id, title: b.title })),
   };
 }
 
@@ -235,21 +243,32 @@ async function sendConfirmationButtons(
       { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
     ];
 
-    const response = await fetch(apiOficialUrl, {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${whazingToken}`,
+    };
+
+    let response = await fetch(apiOficialUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${whazingToken}`,
-      },
+      headers,
       body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
     });
 
+    let responseText = await response.text();
+    if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
+      console.warn(`[reminder-buttons] API PLUS failed (${response.status}); retrying external button endpoint`);
+      response = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
+      });
+      responseText = await response.text();
+    }
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[reminder-buttons] Error:', errorText);
+      console.error('[reminder-buttons] Error:', responseText);
       return false;
     }
-    const responseText = await response.text();
     console.log('[reminder-buttons] Buttons sent successfully:', responseText.substring(0, 200));
     return true;
   } catch (error) {

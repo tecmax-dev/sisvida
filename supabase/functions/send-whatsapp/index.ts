@@ -41,7 +41,7 @@ function getWhazingApiPlusUrl(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
   if (cleanBase.endsWith('/apioficial')) return cleanBase;
   if (cleanBase.includes('/api/external/')) {
-    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+    return `${cleanBase}/apioficial`;
   }
   return `${cleanBase}/apioficial`;
 }
@@ -57,6 +57,18 @@ function buildWhazingTextPayload(baseUrl: string, phone: string, message: string
       type: 'chat',
       body: { text: message },
     },
+  };
+}
+
+function isChatgooExternalUrl(baseUrl: string): boolean {
+  return baseUrl.includes('/api/external/');
+}
+
+function buildWhazingExternalButtonPayload(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  return {
+    number: phone,
+    body: bodyText,
+    buttons: buttons.map(b => ({ id: b.id, title: b.title })),
   };
 }
 
@@ -229,30 +241,43 @@ async function sendWhazingConfirmationButtons(
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
     console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via API PLUS (appointment: ${appointmentId})`);
 
+    const buttons = [
+      { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },
+      { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
+    ];
+
     const payload: Record<string, unknown> = {
       number: cleanPhone,
       contents: {
         type: "button",
         body: { text: "Confirme ou cancele sua consulta:" },
         action: {
-          buttons: [
-            { type: "reply", reply: { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" } },
-            { type: "reply", reply: { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" } },
-          ],
+          buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } })),
         },
       },
     };
 
-    const response = await fetch(apiOficialUrl, {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${whazingToken}`,
+    };
+
+    let response = await fetch(apiOficialUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${whazingToken}`,
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 
-    const responseText = await response.text();
+    let responseText = await response.text();
+    if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
+      response = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
+      });
+      responseText = await response.text();
+    }
+
     if (!response.ok) {
       return { success: false, error: `${response.status}: ${responseText}`, response: responseText };
     }

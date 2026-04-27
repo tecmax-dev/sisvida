@@ -761,7 +761,7 @@ function getWhazingApiPlusUrl(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
   if (cleanBase.endsWith('/apioficial')) return cleanBase;
   if (cleanBase.includes('/api/external/')) {
-    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+    return `${cleanBase}/apioficial`;
   }
   return `${cleanBase}/apioficial`;
 }
@@ -787,6 +787,14 @@ function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: str
         buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
       }
     }
+  };
+}
+
+function buildWhazingExternalButtonPayload(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  return {
+    number: phone,
+    body: bodyText,
+    buttons: buttons.map(b => ({ id: b.id, title: b.title })),
   };
 }
 
@@ -901,16 +909,28 @@ async function sendBoletoButtons(
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
     console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via API PLUS`);
 
-    const response = await fetch(apiOficialUrl, {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${whazingToken}`,
+    };
+
+    let response = await fetch(apiOficialUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${whazingToken}`,
-      },
+      headers,
       body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, bodyText, buttons)),
     });
 
-    const responseText = await response.text();
+    let responseText = await response.text();
+    if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
+      console.warn(`[boleto-flow] API PLUS failed (${response.status}); retrying external button endpoint`);
+      response = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
+      });
+      responseText = await response.text();
+    }
+
     if (!response.ok) {
       console.error('[boleto-flow] Whazing API error:', response.status, responseText);
       return false;
