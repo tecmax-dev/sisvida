@@ -8058,6 +8058,7 @@ serve(async (req) => {
         };
          const rawBtnId = messageText?.trim();
          const boletoButtonText = boletoButtonMap[rawBtnId];
+         const isBoletoButton = !!boletoButtonText || (rawBtnId?.startsWith('boleto_') ?? false);
          if (boletoButtonText) {
            console.log(`[webhook] Boleto button "${rawBtnId}" → translated to "${boletoButtonText}"`);
            messageText = boletoButtonText;
@@ -8078,13 +8079,41 @@ serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
+        // FALLBACK: If user clicked a boleto interactive button but the session expired,
+        // look at recent (last 90 min) non-finished sessions and revive them by extending expiry.
+        // This prevents the "back to initial menu" bug when the user takes longer than 15min
+        // to confirm via WhatsApp buttons.
+        let revivedBoletoSession = activeBoletoSession;
+        if (!activeBoletoSession && isBoletoButton) {
+          const ninetyMinAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+          const { data: recentSession } = await supabase
+            .from('whatsapp_boleto_sessions')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .gt('updated_at', ninetyMinAgo)
+            .neq('state', 'FINISHED')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (recentSession) {
+            console.log(`[webhook] Reviving expired boleto session ${recentSession.id} (state=${recentSession.state}) for boleto button "${rawBtnId}"`);
+            const newExpiry = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+            await supabase
+              .from('whatsapp_boleto_sessions')
+              .update({ expires_at: newExpiry })
+              .eq('id', recentSession.id);
+            revivedBoletoSession = { ...recentSession, expires_at: newExpiry };
+          }
+        }
+
         // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
         const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && configData.booking_enabled === false
           ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim())
           : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
 
-        if (activeBoletoSession || isBoletoRequest) {
-          console.log(`[webhook] Routing to boleto flow - active session: ${!!activeBoletoSession}, is request: ${isBoletoRequest}`);
+        if (revivedBoletoSession || isBoletoRequest || isBoletoButton) {
+          console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
           
           // Call boleto flow edge function
           const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
@@ -8100,8 +8129,8 @@ serve(async (req) => {
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone: phone,
-                message: activeBoletoSession ? messageText : undefined,
-                action: !activeBoletoSession ? 'start' : undefined,
+                message: (revivedBoletoSession || isBoletoButton) ? messageText : undefined,
+                action: (!revivedBoletoSession && !isBoletoButton) ? 'start' : undefined,
                 evolution_config: {
                   api_url: configData.api_url,
                   api_key: configData.api_key,
