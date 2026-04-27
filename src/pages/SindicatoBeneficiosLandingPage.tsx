@@ -42,7 +42,7 @@ const LOGO_URL =
 const OG_IMAGE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co/storage/v1/object/public/clinic-assets/sindicato%2Fog-hero-dashboard.png";
 
 const FILIACAO_URL = `/sindical/filiacao/${SINDICATO_UNION_ENTITY_ID}`;
-const WHATSAPP_URL = "https://wa.me/557332311784?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
+const WHATSAPP_URL = "https://wa.me/557330982161?text=Olá! Quero saber mais sobre os benefícios do sindicato.";
 
 interface Benefit {
   name: string;
