@@ -2982,10 +2982,25 @@ serve(async (req) => {
 
     // Send response via WhatsApp if config provided
     if (evolution_config && result.response) {
-      await sendWhatsAppMessage(evolution_config, phone, result.response);
+      const nextState = result.newState || session.state;
+      const interactiveStates: BoletoState[] = [
+        'SELECT_BOLETO_TYPE',
+        'CONFIRM_EMPLOYER',
+        'SELECT_CONTRIBUTION_TYPE',
+        'SELECT_TAXA_TYPE',
+        'SELECT_TAXA_TYPE_BATCH',
+        'CONFIRM_BOLETO',
+        'SELECT_CONTRIBUTION_YEAR',
+        'SELECT_CONTRIBUTION',
+      ];
+      const requiresButtons = interactiveStates.includes(nextState);
+
+      // Interactive states must never be sent as a plain numbered/text list.
+      if (!requiresButtons) {
+        await sendWhatsAppMessage(evolution_config, phone, result.response);
+      }
       
       // Send interactive buttons based on new state
-      const nextState = result.newState || session.state;
       
       if (nextState === 'SELECT_BOLETO_TYPE') {
         await sendBoletoButtons(phone, 'Selecione o tipo:', [
