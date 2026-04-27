@@ -68,6 +68,50 @@ function formatAppointmentReminder(
   return lines.join('\n');
 }
 
+function getWhazingSendUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
+    return cleanBase;
+  }
+  return `${cleanBase}/apioficial`;
+}
+
+function isChatgooExternalUrl(baseUrl: string): boolean {
+  return baseUrl.includes('/api/external/');
+}
+
+function buildWhazingTextPayload(baseUrl: string, phone: string, message: string): Record<string, unknown> {
+  if (isChatgooExternalUrl(baseUrl)) {
+    return { number: phone, body: message };
+  }
+
+  return {
+    number: phone,
+    contents: { type: 'text', body: { text: message } },
+  };
+}
+
+function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  if (isChatgooExternalUrl(baseUrl)) {
+    return {
+      number: phone,
+      body: bodyText,
+      buttons: buttons.map(b => ({ id: b.id, title: b.title })),
+    };
+  }
+
+  return {
+    number: phone,
+    contents: {
+      type: "button",
+      body: { text: bodyText },
+      action: {
+        buttons: buttons.map(b => ({ type: "reply", reply: { id: b.id, title: b.title } }))
+      }
+    }
+  };
+}
+
 async function sendWhatsAppWithImage(
   config: EvolutionConfig,
   phone: string,
