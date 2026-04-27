@@ -1511,12 +1511,28 @@ async function handleBoletoFlow(
     }
   }
 
-  // Use AI to analyze intent for better understanding
-  const intent = await analyzeUserIntent(messageText, session.state, {
-    employer_name: session.employer_name,
-    boleto_type: session.boleto_type,
-    available_contributions: session.available_contributions?.length || 0
-  });
+  // Use deterministic local parsing after the flow has started.
+  // Guided states must not depend on AI/network latency at every next step.
+  const guidedStates: BoletoState[] = [
+    'WAITING_CNPJ',
+    'CONFIRM_EMPLOYER',
+    'SELECT_CONTRIBUTION_TYPE',
+    'SELECT_TAXA_TYPE',
+    'SELECT_TAXA_TYPE_BATCH',
+    'WAITING_COMPETENCE',
+    'WAITING_VALUE',
+    'SELECT_CONTRIBUTION_YEAR',
+    'SELECT_CONTRIBUTION',
+    'WAITING_NEW_DUE_DATE',
+    'CONFIRM_BOLETO',
+  ];
+  const intent = guidedStates.includes(session.state)
+    ? fallbackIntentAnalysis(messageText, session.state)
+    : await analyzeUserIntent(messageText, session.state, {
+        employer_name: session.employer_name,
+        boleto_type: session.boleto_type,
+        available_contributions: session.available_contributions?.length || 0
+      });
   
   console.log(`[boleto-flow] AI Intent: ${intent.intent} (confidence: ${intent.confidence})`);
 
