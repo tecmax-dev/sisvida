@@ -7958,12 +7958,14 @@ serve(async (req) => {
           const isHumanSupportShortcut = /^(outro assunto|outro|outros assuntos?|atendente|falar com atendente|falar com humano|quero falar com atendente|preciso de atendente|suporte|ajuda)$/i.test(msgClean);
           const isNotSpecificAction = !isCpf && !isNumericOption && !isBoletoKeyword && !MENU_REGEX.test(msgClean) && !CANCEL_REGEX.test(msgClean) && !isHumanSupportShortcut;
 
-          // Greetings should always restart the menu, even with an active AI session
+          // Greetings/menu commands should always restart the Whazing button menu,
+          // even with an active AI session.
           const isGreeting = /^(oi|olá|ola|hey|hi|hello|bom\s*dia|boa\s*tarde|boa\s*noite|eai|e\s*ai|opa|fala)/i.test(msgClean);
-          // A greeting should re-open the main menu even if a previous Whazing ticket
+          const isMenuCommand = MENU_REGEX.test(msgClean);
+          // A greeting/menu command should re-open the main menu even if a previous Whazing ticket
           // is still open or an AI conversation exists — only active booking/boleto
           // flows should block the menu reset.
-          const shouldShowMenu = isGreeting && !anyBookingSession && !anyBoletoSession;
+          const shouldShowMenu = (isGreeting || isMenuCommand) && !anyBookingSession && !anyBoletoSession;
 
           // If it's a greeting with an active AI session, expire the old session first
           if (shouldShowMenu && anyAiConversation) {
@@ -7986,7 +7988,7 @@ serve(async (req) => {
               .eq('id', (openWhazingTicket as { id: string }).id);
           }
 
-          if ((isFreshConversation || shouldShowMenu) && isNotSpecificAction) {
+          if ((isFreshConversation && isNotSpecificAction) || shouldShowMenu) {
             console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
             const buttonsSent = await sendWhazingMenuButtons(phone);
             
