@@ -101,7 +101,7 @@ async function loadAllRecipients(supabase: any): Promise<Recipient[]> {
   while (true) {
     const { data, error } = await supabase
       .from("employers")
-      .select("email, trade_name, company_name, name")
+      .select("email, trade_name, name")
       .eq("clinic_id", SINDICATO_CLINIC_ID)
       .not("email", "is", null)
       .neq("email", "")
@@ -115,7 +115,7 @@ async function loadAllRecipients(supabase: any): Promise<Recipient[]> {
       if (!map.has(e)) {
         map.set(e, {
           email: e,
-          name: r.trade_name || r.company_name || r.name || null,
+          name: r.trade_name || r.name || null,
           source: "employer",
         });
       }
