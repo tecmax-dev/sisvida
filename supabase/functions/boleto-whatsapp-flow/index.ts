@@ -1495,14 +1495,14 @@ async function handleBoletoFlow(
   // Bypass AI intent analysis to avoid misclassification (greeting/menu/help).
   // ==========================================
   if (session.state === 'INIT' || session.state === 'SELECT_BOLETO_TYPE') {
-    if (messageText === 'boleto_a_vencer') {
+    if (messageText === 'boleto_a_vencer' || text === '1' || /a\s*vencer/i.test(normalizedText)) {
       await updateSession(supabase, session.id, {
         state: 'WAITING_CNPJ',
         boleto_type: 'a_vencer'
       });
       return { response: HUMANIZED_MESSAGES.askCnpjFriendly, newState: 'WAITING_CNPJ' };
     }
-    if (messageText === 'boleto_vencido') {
+    if (messageText === 'boleto_vencido' || text === '2' || /vencid[oa]/i.test(normalizedText)) {
       await updateSession(supabase, session.id, {
         state: 'WAITING_CNPJ',
         boleto_type: 'vencido'
