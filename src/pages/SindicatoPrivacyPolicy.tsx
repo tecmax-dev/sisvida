@@ -168,7 +168,7 @@ export default function SindicatoPrivacyPolicy() {
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                   <p><strong>Sindicato dos Comerciários de Ilhéus</strong></p>
                   <p>E-mail: <a href="mailto:secmiilheus@gmail.com" className="text-primary hover:underline">secmiilheus@gmail.com</a></p>
-                  <p>WhatsApp: <a href="https://wa.me/557331982161" className="text-primary hover:underline">(73) 3198-2161</a></p>
+                  <p>WhatsApp: <a href="https://wa.me/557332311784" className="text-primary hover:underline">(73) 3231-1784</a></p>
                 </div>
               </div>
             }

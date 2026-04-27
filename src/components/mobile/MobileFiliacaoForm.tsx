@@ -314,8 +314,8 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       toast({
         title: cpfExistsType === 'paciente' ? "Você já é associado(a)" : "CPF já cadastrado",
         description: cpfExistsType === 'paciente' 
-          ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3198-2161."
-          : "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3198-2161.",
+          ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784."
+          : "Este CPF já possui uma solicitação de filiação. Entre em contato com o sindicato pelo (73) 3231-1784.",
         variant: "destructive",
       });
       return;
@@ -594,7 +594,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                       className="inline-flex items-center gap-2 text-sm font-medium text-amber-800 hover:text-amber-900"
                     >
                       <Phone className="h-4 w-4" />
-                      (73) 3198-2161
+                      (73) 3231-1784
                     </a>
                   </div>
                 </div>

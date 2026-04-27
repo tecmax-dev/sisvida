@@ -233,7 +233,7 @@ const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://prosindweb.com.br';
     const serviceTypeName = serviceType?.name || 'Homologação';
     
     // Fixed homologation address - always use the default location
-    const defaultAddress = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3198-2161";
+    const defaultAddress = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3231-1784";
     const address = defaultAddress;
 
     // Use confirmation_token if available, fallback to appointment id

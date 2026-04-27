@@ -374,7 +374,7 @@ serve(async (req) => {
     const serviceTypeName = serviceType?.name || 'Homologação';
     const isJuridico = serviceTypeName.toLowerCase().includes('jurídic') || serviceTypeName.toLowerCase().includes('juridic') || serviceTypeName.toLowerCase().includes('assessoria');
     const serviceLabel = isJuridico ? 'Assessoria Jurídica' : 'Homologação';
-    const address = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3198-2161";
+    const address = "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3231-1784";
 
     let subject: string;
     let htmlBody: string;
