@@ -1085,39 +1085,13 @@ serve(async (req) => {
         );
       }
 
-      const menuText = isBookingEnabledEarly
-        ? `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
-
-Como posso ajudar? Escolha uma opção:
-
-1️⃣ Sou associado(a)
-2️⃣ Sou empresa
-3️⃣ Sou contador/escritório contábil
-4️⃣ Dia do Comerciário (30/10)
-5️⃣ Falar com atendente
-6️⃣ Agendar consulta ou exame
-7️⃣ Segunda via de boleto (empresa)
-
-Digite o número da opção desejada.`
-        : `Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
-
-Como posso ajudar? Escolha uma opção:
-
-1️⃣ Sou associado(a)
-2️⃣ Sou empresa
-3️⃣ Sou contador/escritório contábil
-4️⃣ Dia do Comerciário (30/10)
-5️⃣ Falar com atendente
-6️⃣ Segunda via de boleto (empresa)
-
-📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://prosindweb.com.br/app/instalar
-
-Digite o número da opção desejada.`;
-
-      await sendDirectWhatsApp(menuText);
+      const menuText = 'MENU_INTERATIVO_WHATSAPP';
+      const menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
+      if (!menuButtonsSent) {
+        console.error('[ai-assistant] Interactive main menu failed; not sending text-list fallback');
+      }
       return new Response(
-        JSON.stringify({ response: menuText, handoff_to_booking: false, action: 'show_menu' }),
+        JSON.stringify({ response: null, handoff_to_booking: false, action: 'show_menu_buttons', buttons_sent: menuButtonsSent }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
