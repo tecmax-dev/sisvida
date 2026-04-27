@@ -1085,7 +1085,6 @@ serve(async (req) => {
         );
       }
 
-      const menuText = 'MENU_INTERATIVO_WHATSAPP';
       const menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
       if (!menuButtonsSent) {
         console.error('[ai-assistant] Interactive main menu failed; not sending text-list fallback');
