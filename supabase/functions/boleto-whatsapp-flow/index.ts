@@ -1489,6 +1489,11 @@ async function handleBoletoFlow(
   
   console.log(`[boleto-flow] State: ${session.state}, Message: "${messageText}"`);
 
+  const buttonNumberMatch = messageText.match(/^boleto_(?:type|taxa|contrib|year)_(\d+)$/);
+  const optionText = buttonNumberMatch ? buttonNumberMatch[1] : text;
+  const isConfirmInput = /^(sim|s|yes|isso|confirmo|correto|certo|ok|pode|1)$/i.test(normalizedText);
+  const isDenyInput = /^(nao|não|n|no|errado|outro|2)$/i.test(normalizedText);
+
   // FAST-PATH: CNPJ input must not wait for AI intent analysis.
   // The boleto flow was stopping here when OpenAI was slow/unavailable.
   if (session.state === 'WAITING_CNPJ') {
