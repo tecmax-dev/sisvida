@@ -238,9 +238,6 @@ async function sendWhazingConfirmationButtons(
     let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via API PLUS (appointment: ${appointmentId})`);
-
     const buttons = [
       { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },
       { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
@@ -261,6 +258,25 @@ async function sendWhazingConfirmationButtons(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${whazingToken}`,
     };
+
+    if (isChatgooExternalUrl(whazingUrl)) {
+      console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via Chatgoo external endpoint (appointment: ${appointmentId})`);
+      let externalResponse = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
+      });
+
+      let externalText = await externalResponse.text();
+      if (externalResponse.ok) {
+        return { success: true, response: externalText };
+      }
+
+      console.warn(`[send-whatsapp] External button endpoint failed (${externalResponse.status}); retrying API PLUS: ${externalText.substring(0, 300)}`);
+    }
+
+    const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via API PLUS (appointment: ${appointmentId})`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
