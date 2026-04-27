@@ -1520,12 +1520,28 @@ async function handleBoletoFlow(
     }
   }
 
-  // Use AI to analyze intent for better understanding
-  const intent = await analyzeUserIntent(messageText, session.state, {
-    employer_name: session.employer_name,
-    boleto_type: session.boleto_type,
-    available_contributions: session.available_contributions?.length || 0
-  });
+  // Use deterministic local parsing after the flow has started.
+  // Guided states must not depend on AI/network latency at every next step.
+  const guidedStates: BoletoState[] = [
+    'WAITING_CNPJ',
+    'CONFIRM_EMPLOYER',
+    'SELECT_CONTRIBUTION_TYPE',
+    'SELECT_TAXA_TYPE',
+    'SELECT_TAXA_TYPE_BATCH',
+    'WAITING_COMPETENCE',
+    'WAITING_VALUE',
+    'SELECT_CONTRIBUTION_YEAR',
+    'SELECT_CONTRIBUTION',
+    'WAITING_NEW_DUE_DATE',
+    'CONFIRM_BOLETO',
+  ];
+  const intent = guidedStates.includes(session.state)
+    ? fallbackIntentAnalysis(messageText, session.state)
+    : await analyzeUserIntent(messageText, session.state, {
+        employer_name: session.employer_name,
+        boleto_type: session.boleto_type,
+        available_contributions: session.available_contributions?.length || 0
+      });
   
   console.log(`[boleto-flow] AI Intent: ${intent.intent} (confidence: ${intent.confidence})`);
 
@@ -1921,6 +1937,11 @@ async function handleBoletoFlow(
     }
 
     case 'CONFIRM_EMPLOYER': {
+      const repeatedCnpj = messageText.replace(/\D/g, '');
+      if (repeatedCnpj.length === 14) {
+        return handleCnpjInput(supabase, session, clinicId, phone, repeatedCnpj);
+      }
+
       // Use AI intent for natural confirmations
       const isConfirm = intent.intent === 'confirm' || text === '1' || /^sim/i.test(text);
       const isDeny = intent.intent === 'deny' || text === '2' || /^n[aã]o/i.test(text);
@@ -3017,7 +3038,7 @@ serve(async (req) => {
           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
         ]);
       } else if (nextState === 'CONFIRM_EMPLOYER') {
-        await sendBoletoButtons(phone, 'Confirma a empresa?', [
+        await sendBoletoButtons(phone, result.response, [
           { id: 'boleto_sim', title: '✅ Sim, continuar' },
           { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
         ]);
@@ -3044,7 +3065,7 @@ serve(async (req) => {
           { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
         ]);
       } else if (nextState === 'CONFIRM_BOLETO') {
-        await sendBoletoButtons(phone, 'Confirma a geração?', [
+        await sendBoletoButtons(phone, result.response, [
           { id: 'boleto_confirmar', title: '✅ Confirmar' },
           { id: 'boleto_cancelar', title: '❌ Cancelar' },
         ]);
