@@ -40,6 +40,12 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
   };
 }
 
+function getWhazingApiPlusUrl(baseUrl: string): string {
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  if (cleanBase.endsWith('/apioficial')) return cleanBase;
+  return `${cleanBase}/apioficial`;
+}
+
 async function sendWhazingMainMenuButtons(phone: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -58,24 +64,32 @@ async function sendWhazingMainMenuButtons(phone: string): Promise<boolean> {
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` };
 
   try {
-    const response = await fetch(getWhazingSendUrl(whazingUrl), {
+    const nativePayload = {
+      number: cleanPhone,
+      contents: {
+        type: 'button',
+        body: { text: bodyText },
+        action: { buttons: buttons.map(b => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+      },
+    };
+
+    let response = await fetch(getWhazingApiPlusUrl(whazingUrl), {
       method: 'POST',
       headers,
-      body: JSON.stringify(
-        isChatgooExternalUrl(whazingUrl)
-          ? buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)
-          : {
-              number: cleanPhone,
-              contents: {
-                type: 'button',
-                body: { text: bodyText },
-                action: { buttons: buttons.map(b => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
-              },
-            }
-      ),
+      body: JSON.stringify(nativePayload),
     });
 
-    const responseText = await response.text();
+    let responseText = await response.text();
+    if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
+      console.warn(`[ai-assistant] Main menu native buttons failed (${response.status}); retrying external endpoint:`, responseText.substring(0, 300));
+      response = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
+      });
+      responseText = await response.text();
+    }
+
     if (!response.ok) {
       console.error(`[ai-assistant] Main menu buttons failed (${response.status}):`, responseText.substring(0, 300));
       return false;
