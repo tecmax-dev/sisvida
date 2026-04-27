@@ -974,7 +974,7 @@ async function getOrCreateSession(
       clinic_id: clinicId,
       phone: phone,
       state: 'INIT',
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     .select()
     .single();
@@ -997,7 +997,7 @@ async function updateSession(
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     .eq('id', sessionId);
 }
