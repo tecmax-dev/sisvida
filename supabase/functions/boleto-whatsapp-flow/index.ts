@@ -119,6 +119,52 @@ Responda APENAS em JSON válido:
           { role: "user", content: `Analise esta mensagem: "${message}"` }
         ],
         temperature: 0.1,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "boleto_intent_analysis",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                intent: { type: "string", enum: ["new_boleto", "overdue_boleto", "check_status", "change_value", "resend_link", "help", "confirm", "deny", "cancel", "menu", "cnpj_input", "number_input", "date_input", "value_input", "competence_input", "batch_boleto", "unclear"] },
+                confidence: { type: "number" },
+                extracted_cnpj: { type: ["string", "null"] },
+                extracted_value: { type: ["number", "null"] },
+                extracted_date: { type: ["string", "null"] },
+                extracted_competence: {
+                  type: ["object", "null"],
+                  additionalProperties: false,
+                  properties: {
+                    month: { type: "number" },
+                    year: { type: "number" }
+                  },
+                  required: ["month", "year"]
+                },
+                extracted_number: { type: ["number", "null"] },
+                humanized_response: { type: ["string", "null"] },
+                batch_items: {
+                  type: ["array", "null"],
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      cnpj: { type: "string" },
+                      competence_month: { type: "number" },
+                      competence_year: { type: "number" },
+                      value_cents: { type: "number" },
+                      contribution_type: { type: ["string", "null"], enum: ["mensalidade", "taxa_mercados", "taxa_varejista", "taxa_indefinida", null] }
+                    },
+                    required: ["cnpj", "competence_month", "competence_year", "value_cents", "contribution_type"]
+                  }
+                },
+                detected_contribution_type: { type: ["string", "null"], enum: ["mensalidade", "taxa", null] }
+              },
+              required: ["intent", "confidence", "extracted_cnpj", "extracted_value", "extracted_date", "extracted_competence", "extracted_number", "humanized_response", "batch_items", "detected_contribution_type"]
+            }
+          }
+        },
       }),
     });
 
@@ -947,17 +993,32 @@ async function sendBoletoButtons(
 // SESSION MANAGEMENT
 // ==========================================
 
+function getBrazilPhoneVariants(phone: string): string[] {
+  const cleaned = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+  const withCountry = cleaned.startsWith('55') ? cleaned : `55${cleaned}`;
+  const variants = new Set<string>([withCountry]);
+  const ddd = withCountry.slice(2, 4);
+  const rest = withCountry.slice(4);
+
+  if (rest.length === 8) variants.add(`55${ddd}9${rest}`);
+  if (rest.length === 9 && rest.startsWith('9')) variants.add(`55${ddd}${rest.slice(1)}`);
+
+  return Array.from(variants);
+}
+
 async function getOrCreateSession(
   supabase: any,
   clinicId: string,
   phone: string
 ): Promise<BoletoSession | null> {
+  const phoneVariants = getBrazilPhoneVariants(phone);
+
   // Check for existing active session
   const { data: existingSession } = await supabase
     .from('whatsapp_boleto_sessions')
     .select('*')
     .eq('clinic_id', clinicId)
-    .eq('phone', phone)
+    .in('phone', phoneVariants)
     .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(1)
@@ -972,7 +1033,7 @@ async function getOrCreateSession(
     .from('whatsapp_boleto_sessions')
     .insert({
       clinic_id: clinicId,
-      phone: phone,
+      phone: phoneVariants[0],
       state: 'INIT',
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
@@ -2891,9 +2952,8 @@ serve(async (req) => {
       await updateSession(supabase, session.id, { state: 'SELECT_BOLETO_TYPE' });
       
       if (evolution_config) {
-        await sendWhatsAppMessage(evolution_config, phone, MESSAGES.welcome);
-        // Send interactive buttons for boleto type selection
-        await sendBoletoButtons(phone, 'Selecione o tipo de boleto:', [
+        // Interactive start must be a single button payload, never a text list + buttons.
+        await sendBoletoButtons(phone, MESSAGES.welcome, [
           { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
         ]);
@@ -2922,10 +2982,25 @@ serve(async (req) => {
 
     // Send response via WhatsApp if config provided
     if (evolution_config && result.response) {
-      await sendWhatsAppMessage(evolution_config, phone, result.response);
+      const nextState = result.newState || session.state;
+      const interactiveStates: BoletoState[] = [
+        'SELECT_BOLETO_TYPE',
+        'CONFIRM_EMPLOYER',
+        'SELECT_CONTRIBUTION_TYPE',
+        'SELECT_TAXA_TYPE',
+        'SELECT_TAXA_TYPE_BATCH',
+        'CONFIRM_BOLETO',
+        'SELECT_CONTRIBUTION_YEAR',
+        'SELECT_CONTRIBUTION',
+      ];
+      const requiresButtons = interactiveStates.includes(nextState);
+
+      // Interactive states must never be sent as a plain numbered/text list.
+      if (!requiresButtons) {
+        await sendWhatsAppMessage(evolution_config, phone, result.response);
+      }
       
       // Send interactive buttons based on new state
-      const nextState = result.newState || session.state;
       
       if (nextState === 'SELECT_BOLETO_TYPE') {
         await sendBoletoButtons(phone, 'Selecione o tipo:', [

@@ -507,8 +507,8 @@ async function sendWhatsAppMessage(
 }
 
 // ==========================================
-// TEXT-BASED OPTIONS SENDER (no interactive buttons)
-// Always uses numbered text format for maximum compatibility
+// INTERACTIVE OPTIONS SENDER
+// Interactive flows must send native WhatsApp buttons only — never numbered text lists.
 // ==========================================
 
 interface ButtonOption {
@@ -526,14 +526,15 @@ async function sendWhatsAppButtons(
 ): Promise<boolean> {
   // Limit to 3 options
   const limitedButtons = buttons.slice(0, 3);
-  
-  console.log(`[booking] Sending text options to ${phone}:`, limitedButtons.map(b => b.text));
+  console.log(`[booking] Sending interactive buttons to ${phone}:`, limitedButtons.map(b => b.text));
 
-  // Always use numbered text format (no native buttons)
-  const numberedOptions = limitedButtons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n');
-  const textMessage = `${title}\n\n${description}\n\n${numberedOptions}${footer ? `\n\n_${footer}_` : ''}`;
-  
-  return await sendWhatsAppMessage(config, phone, textMessage);
+  const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
+  const whazingButtons = limitedButtons.map((b, index) => ({
+    id: b.id || `option_${index + 1}`,
+    title: b.text.substring(0, 20),
+  }));
+
+  return await sendWhazingButtons(phone, bodyText, whazingButtons);
 }
 
 // ==========================================
@@ -8160,9 +8161,17 @@ serve(async (req) => {
             } else {
               const errorText = await boletoResponse.text();
               console.error('[webhook] Boleto flow error:', errorText);
+              return new Response(
+                JSON.stringify({ success: false, message: 'Boleto flow failed without AI fallback' }),
+                { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
             }
           } catch (boletoError) {
             console.error('[webhook] Error calling boleto flow:', boletoError);
+            return new Response(
+              JSON.stringify({ success: false, message: 'Boleto flow unavailable without AI fallback' }),
+              { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
         }
 
