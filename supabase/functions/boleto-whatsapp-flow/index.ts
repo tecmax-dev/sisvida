@@ -1928,6 +1928,11 @@ async function handleBoletoFlow(
     }
 
     case 'CONFIRM_EMPLOYER': {
+      const repeatedCnpj = messageText.replace(/\D/g, '');
+      if (repeatedCnpj.length === 14) {
+        return handleCnpjInput(supabase, session, clinicId, phone, repeatedCnpj);
+      }
+
       // Use AI intent for natural confirmations
       const isConfirm = intent.intent === 'confirm' || text === '1' || /^sim/i.test(text);
       const isDeny = intent.intent === 'deny' || text === '2' || /^n[aã]o/i.test(text);
