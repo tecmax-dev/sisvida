@@ -1702,6 +1702,19 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         : 'Perfeito, vamos seguir sem menu. Me diga objetivamente o que você precisa e eu te ajudo.';
     }
 
+    if (!shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+      console.warn('[ai-assistant] Internal text menu replaced by interactive WhatsApp buttons');
+      const menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
+      return new Response(JSON.stringify({
+        response: null,
+        handoff_to_booking: false,
+        action: 'show_menu_buttons',
+        buttons_sent: menuButtonsSent,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('[ai-assistant] Final response:', finalResponse.substring(0, 100));
 
     // Check HANDOFF_BOLETO FIRST - before any booking block filters
