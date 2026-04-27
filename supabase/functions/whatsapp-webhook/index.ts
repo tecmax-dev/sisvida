@@ -8161,9 +8161,17 @@ serve(async (req) => {
             } else {
               const errorText = await boletoResponse.text();
               console.error('[webhook] Boleto flow error:', errorText);
+              return new Response(
+                JSON.stringify({ success: false, message: 'Boleto flow failed without AI fallback' }),
+                { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
             }
           } catch (boletoError) {
             console.error('[webhook] Error calling boleto flow:', boletoError);
+            return new Response(
+              JSON.stringify({ success: false, message: 'Boleto flow unavailable without AI fallback' }),
+              { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
         }
 
