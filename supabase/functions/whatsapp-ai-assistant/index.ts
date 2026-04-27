@@ -1085,7 +1085,9 @@ serve(async (req) => {
         );
       }
 
-      const menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
+      const menuButtonsSent = shouldSendDirectWhatsApp
+        ? await sendWhazingMainMenuButtons(phone || '')
+        : false;
       if (!menuButtonsSent) {
         console.error('[ai-assistant] Interactive main menu failed; not sending text-list fallback');
       }
@@ -1704,7 +1706,9 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
     if (!shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
       console.warn('[ai-assistant] Internal text menu replaced by interactive WhatsApp buttons');
-      const menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
+      const menuButtonsSent = shouldSendDirectWhatsApp
+        ? await sendWhazingMainMenuButtons(phone || '')
+        : false;
       return new Response(JSON.stringify({
         response: null,
         handoff_to_booking: false,
