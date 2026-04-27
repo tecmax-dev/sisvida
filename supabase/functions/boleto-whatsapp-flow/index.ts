@@ -1033,7 +1033,7 @@ async function getOrCreateSession(
     .from('whatsapp_boleto_sessions')
     .insert({
       clinic_id: clinicId,
-      phone: phone,
+      phone: phoneVariants[0],
       state: 'INIT',
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
