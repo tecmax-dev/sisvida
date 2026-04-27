@@ -7750,13 +7750,7 @@ serve(async (req) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${whazingToken}`,
                   },
-                  body: JSON.stringify({
-                    number: cleanPhoneImg,
-                    contents: {
-                      type: "chat",
-                      body: { text: textMessage }
-                    }
-                  }),
+                  body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhoneImg, textMessage)),
                 });
               } catch (msgErr) {
                 console.error('[whazing] Error sending carteirinha text:', msgErr);
