@@ -264,6 +264,7 @@ function getBrazilPhoneVariants(phone55: string): string[] {
 
 function extractMessageText(data: EvolutionWebhookPayload['data']): string | null {
   if (!data) return null;
+  const messageAny = data.message as any;
   
   // Check for interactive button response (plural - Evolution API native)
   if (data.message?.buttonsResponseMessage?.selectedButtonId) {
@@ -286,8 +287,22 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
     try {
       const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      if (params.id) return params.id;
+      const buttonId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
+      if (buttonId) return String(buttonId);
     } catch { /* ignore parse errors */ }
+  }
+
+  const alternateButtonId =
+    messageAny?.buttonReplyMessage?.id ||
+    messageAny?.buttonReplyMessage?.selectedId ||
+    messageAny?.buttonReplyMessage?.selectedButtonId ||
+    messageAny?.interactiveResponseMessage?.id ||
+    messageAny?.interactiveResponseMessage?.button_id ||
+    messageAny?.templateButtonReplyMessage?.selectedId ||
+    messageAny?.listResponseMessage?.singleSelectReply?.selectedRowId;
+  if (alternateButtonId) {
+    console.log('[extractMessageText] Found alternate button id:', alternateButtonId);
+    return String(alternateButtonId);
   }
   
   // Check for button reply (alternative format)
@@ -974,6 +989,9 @@ async function sendWhatsAppList(
 // Helper to extract button/list response ID from message
 function extractInteractiveResponseId(messageData: any): string | null {
   // Check for button response
+  if (messageData?.buttonsResponseMessage?.selectedButtonId) {
+    return messageData.buttonsResponseMessage.selectedButtonId;
+  }
   if (messageData?.buttonResponseMessage?.selectedButtonId) {
     return messageData.buttonResponseMessage.selectedButtonId;
   }
@@ -985,10 +1003,16 @@ function extractInteractiveResponseId(messageData: any): string | null {
   if (messageData?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
     try {
       const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      return params.id || null;
+      return params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload || null;
     } catch { /* ignore */ }
   }
-  return null;
+  return messageData?.buttonReplyMessage?.id ||
+    messageData?.buttonReplyMessage?.selectedId ||
+    messageData?.buttonReplyMessage?.selectedButtonId ||
+    messageData?.interactiveResponseMessage?.id ||
+    messageData?.interactiveResponseMessage?.button_id ||
+    messageData?.templateButtonReplyMessage?.selectedId ||
+    null;
 }
 
 // ==========================================
