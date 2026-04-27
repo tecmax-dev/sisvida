@@ -2919,8 +2919,13 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_TAXA_TYPE': {
+      if (messageText.startsWith('boleto_') && !/^boleto_taxa_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       // Individual flow - user needs to choose between taxa mercados or taxa varejista
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
