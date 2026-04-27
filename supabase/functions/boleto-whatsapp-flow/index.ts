@@ -2382,9 +2382,14 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_CONTRIBUTION_YEAR': {
+      if (messageText.startsWith('boleto_') && !/^boleto_year_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const years = session.flow_context?.available_years || [];
       const allContributions = session.flow_context?.all_contributions || session.available_contributions || [];
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > years.length) {
         return { 
@@ -2428,6 +2433,11 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_CONTRIBUTION': {
+      if (messageText.startsWith('boleto_') && !/^boleto_contrib_(\d+|mais|voltar)$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const contributions = session.available_contributions || [];
       
       // Handle "next page" command
@@ -2459,7 +2469,7 @@ async function handleBoletoFlow(
       }
       
       // Handle "back to years" command
-      if (text === 'voltar' && session.flow_context?.available_years) {
+      if ((text === 'voltar' || messageText.trim() === 'boleto_contrib_voltar') && session.flow_context?.available_years) {
         const years = session.flow_context.available_years;
         const allContributions = session.flow_context.all_contributions || [];
         
@@ -2477,7 +2487,7 @@ async function handleBoletoFlow(
         return { response: msg, newState: 'SELECT_CONTRIBUTION_YEAR' as BoletoState };
       }
       
-      const optionNum = parseInt(text);
+      const optionNum = parseInt(optionText);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > contributions.length) {
         return { response: MESSAGES.invalidOption };
