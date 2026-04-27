@@ -428,6 +428,14 @@ function buildWhazingButtonPayload(baseUrl: string, phone: string, bodyText: str
   };
 }
 
+function buildWhazingExternalButtonPayload(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  return {
+    number: phone,
+    body: bodyText,
+    buttons: buttons.map(b => ({ id: b.id, title: b.title })),
+  };
+}
+
 async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -598,16 +606,28 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
     console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone} via API PLUS`);
 
-    const response = await fetch(apiOficialUrl, {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${whazingToken}`,
+    };
+
+    let response = await fetch(apiOficialUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${whazingToken}`,
-      },
+      headers,
       body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, bodyText, buttons)),
     });
 
-    const responseText = await response.text();
+    let responseText = await response.text();
+    if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
+      console.warn(`[whazing] API PLUS failed (${response.status}); retrying external button endpoint`);
+      response = await fetch(getWhazingSendUrl(whazingUrl), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
+      });
+      responseText = await response.text();
+    }
+
     if (!response.ok) {
       console.error('[whazing] API error:', response.status, responseText);
       return false;
