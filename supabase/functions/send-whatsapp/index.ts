@@ -41,7 +41,7 @@ function getWhazingApiPlusUrl(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
   if (cleanBase.endsWith('/apioficial')) return cleanBase;
   if (cleanBase.includes('/api/external/')) {
-    return `${cleanBase.split('/api/external/')[0]}/apioficial`;
+    return `${cleanBase}/apioficial`;
   }
   return `${cleanBase}/apioficial`;
 }
