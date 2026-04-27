@@ -1942,14 +1942,19 @@ async function handleBoletoFlow(
     }
 
     case 'CONFIRM_EMPLOYER': {
+      if (messageText.startsWith('boleto_') && messageText !== 'boleto_sim' && messageText !== 'boleto_nao') {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const repeatedCnpj = messageText.replace(/\D/g, '');
       if (repeatedCnpj.length === 14) {
         return handleCnpjInput(supabase, session, clinicId, phone, repeatedCnpj);
       }
 
       // Use AI intent for natural confirmations
-      const isConfirm = intent.intent === 'confirm' || text === '1' || /^sim/i.test(text);
-      const isDeny = intent.intent === 'deny' || text === '2' || /^n[aã]o/i.test(text);
+      const isConfirm = messageText === 'boleto_sim' || intent.intent === 'confirm' || isConfirmInput;
+      const isDeny = messageText === 'boleto_nao' || intent.intent === 'deny' || isDenyInput;
       
       if (isConfirm) {
         if (session.boleto_type === 'vencido') {
@@ -2118,9 +2123,14 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_CONTRIBUTION_TYPE': {
+      if (messageText.startsWith('boleto_') && !/^boleto_type_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const types = session.flow_context?.contribution_types || [];
       // Use AI-extracted number or parse from text
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > types.length) {
         return { 
