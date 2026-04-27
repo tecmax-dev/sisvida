@@ -119,6 +119,38 @@ Responda APENAS em JSON válido:
           { role: "user", content: `Analise esta mensagem: "${message}"` }
         ],
         temperature: 0.1,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "boleto_intent_analysis",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                intent: { type: "string", enum: ["new_boleto", "overdue_boleto", "check_status", "change_value", "resend_link", "help", "confirm", "deny", "cancel", "menu", "cnpj_input", "number_input", "date_input", "value_input", "competence_input", "batch_boleto", "unclear"] },
+                confidence: { type: "number" },
+                extracted_cnpj: { type: ["string", "null"] },
+                extracted_value: { type: ["number", "null"] },
+                extracted_date: { type: ["string", "null"] },
+                extracted_competence: {
+                  type: ["object", "null"],
+                  additionalProperties: false,
+                  properties: {
+                    month: { type: "number" },
+                    year: { type: "number" }
+                  },
+                  required: ["month", "year"]
+                },
+                extracted_number: { type: ["number", "null"] },
+                humanized_response: { type: ["string", "null"] },
+                batch_items: { type: ["array", "null"], items: { type: "object", additionalProperties: true } },
+                detected_contribution_type: { type: ["string", "null"], enum: ["mensalidade", "taxa", null] }
+              },
+              required: ["intent", "confidence", "extracted_cnpj", "extracted_value", "extracted_date", "extracted_competence", "extracted_number", "humanized_response", "batch_items", "detected_contribution_type"]
+            }
+          }
+        },
       }),
     });
 
