@@ -7085,6 +7085,42 @@ serve(async (req) => {
     console.log('[webhook] Received event:', payload.event);
     console.log('[webhook] Instance:', payload.instance);
 
+    // Keep Evolution connection status in sync even when the admin panel is not open.
+    // Without this, the webhook ignores inbound messages because evolution_configs.is_connected
+    // can remain false after reconnecting/scanning a new WhatsApp number.
+    const connectionUpdateEvents = ['CONNECTION_UPDATE', 'connection.update'];
+    if (payload.event && connectionUpdateEvents.includes(payload.event)) {
+      const connectionData = (payload.data ?? {}) as Record<string, any>;
+      const instanceName = payload.instance || connectionData.instance;
+      const state = String(connectionData.state || connectionData.status || '').toLowerCase();
+      const rawWuid = String(connectionData.wuid || connectionData.ownerJid || (payload as any).sender || '');
+      const phoneNumber = rawWuid.replace(/@.*$/, '').replace(/\D/g, '') || null;
+      const isConnected = state === 'open' || state === 'connected';
+      const isDisconnected = ['close', 'closed', 'disconnected', 'logout', 'logged_out'].includes(state);
+
+      if (instanceName && (isConnected || isDisconnected)) {
+        const { error: connectionSyncError } = await supabase
+          .from('evolution_configs')
+          .update({
+            is_connected: isConnected,
+            connected_at: isConnected ? new Date().toISOString() : null,
+            phone_number: isConnected ? phoneNumber : null,
+          })
+          .eq('instance_name', instanceName);
+
+        if (connectionSyncError) {
+          console.error('[webhook] Error syncing connection status:', connectionSyncError);
+        } else {
+          console.log(`[webhook] Synced connection status for ${instanceName}: ${state}${phoneNumber ? ` (${phoneNumber})` : ''}`);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Connection update processed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Handle chat close/archive/delete events from Whazing/Evolution
     const chatCloseEvents = ['CHATS_UPDATE', 'chats.update', 'CHATS_DELETE', 'chats.delete'];
     if (payload.event && chatCloseEvents.includes(payload.event)) {
