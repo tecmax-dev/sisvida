@@ -100,6 +100,15 @@ interface EvolutionWebhookPayload {
       templateButtonReplyMessage?: {
         selectedId?: string;
       };
+      // Reaction used by some WhatsApp clients as a fallback when buttons are not rendered
+      reactionMessage?: {
+        text?: string;
+        key?: {
+          remoteJid?: string;
+          fromMe?: boolean;
+          id?: string;
+        };
+      };
       // Image message
       imageMessage?: {
         url?: string;
@@ -304,6 +313,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   if (alternateButtonId) {
     console.log('[extractMessageText] Found alternate button id:', alternateButtonId);
     return String(alternateButtonId);
+  }
+
+  // Some clients/instances deliver the user's choice as a reaction to the button/message.
+  // Treat positive/negative reactions as confirmation/cancellation fallbacks.
+  const reactionText = messageAny?.reactionMessage?.text;
+  if (typeof reactionText === 'string' && reactionText.trim()) {
+    const normalizedReaction = reactionText.trim();
+    console.log('[extractMessageText] Found reactionMessage:', normalizedReaction);
+    if (/^(✅|👍|✔️|☑️|👌|sim|s)$/i.test(normalizedReaction)) return 'SIM';
+    if (/^(❌|👎|✖️|🚫|não|nao|n)$/i.test(normalizedReaction)) return 'NÃO';
+    return normalizedReaction;
   }
   
   // Check for button reply (alternative format)
@@ -1052,6 +1072,7 @@ function extractInteractiveResponseId(messageData: any): string | null {
     messageData?.interactiveResponseMessage?.id ||
     messageData?.interactiveResponseMessage?.button_id ||
     messageData?.templateButtonReplyMessage?.selectedId ||
+    messageData?.reactionMessage?.text ||
     null;
 }
 
