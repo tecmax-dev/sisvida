@@ -165,7 +165,30 @@ export default function UnionPayslipApprovalsPage() {
       notes: reviewNotes || undefined,
       newExpiresAt: newExpiresAt,
     }, {
-      onSuccess: () => setReviewDialogOpen(false),
+      onSuccess: async () => {
+        if (selectedRequest.patients?.phone) {
+          try {
+            await supabase.functions.invoke('send-payslip-approval', {
+              body: {
+                clinic_id: resolvedClinic.id,
+                patient_id: selectedRequest.patient_id,
+                patient_name: selectedRequest.patients.name,
+                patient_phone: selectedRequest.patients.phone,
+                card_id: selectedRequest.card_id,
+                new_expires_at: newExpiresAt,
+                notes: reviewNotes || undefined,
+              },
+            });
+            toast({
+              title: "Contracheque aprovado",
+              description: "O sócio foi notificado por WhatsApp.",
+            });
+          } catch (err) {
+            console.error('Error sending approval notification:', err);
+          }
+        }
+        setReviewDialogOpen(false);
+      },
     });
   };
 
