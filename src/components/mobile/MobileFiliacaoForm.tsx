@@ -590,7 +590,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                         : "Este CPF já possui uma solicitação de filiação em análise. Entre em contato com o sindicato para mais informações."}
                     </p>
                     <a 
-                      href="tel:7331982161"
+                      href="tel:7332311784"
                       className="inline-flex items-center gap-2 text-sm font-medium text-amber-800 hover:text-amber-900"
                     >
                       <Phone className="h-4 w-4" />
