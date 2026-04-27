@@ -77,7 +77,7 @@ async function loadAllRecipients(supabase: any): Promise<Recipient[]> {
   while (true) {
     const { data, error } = await supabase
       .from("patients")
-      .select("email, full_name, name")
+      .select("email, name")
       .eq("clinic_id", SINDICATO_CLINIC_ID)
       .not("email", "is", null)
       .neq("email", "")
@@ -89,7 +89,7 @@ async function loadAllRecipients(supabase: any): Promise<Recipient[]> {
       const e = (r.email || "").trim().toLowerCase();
       if (!e || !e.includes("@")) continue;
       if (!map.has(e)) {
-        map.set(e, { email: e, name: r.full_name || r.name || null, source: "patient" });
+        map.set(e, { email: e, name: r.name || null, source: "patient" });
       }
     }
     if (data.length < 1000) break;
