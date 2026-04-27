@@ -2557,7 +2557,12 @@ async function handleBoletoFlow(
     }
 
     case 'CONFIRM_BOLETO': {
-      if (text === '1' || /^confirm/i.test(text) || /^sim/i.test(text)) {
+      if (messageText.startsWith('boleto_') && messageText !== 'boleto_confirmar' && messageText !== 'boleto_cancelar') {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
+      if (messageText === 'boleto_confirmar' || text === '1' || /^confirm/i.test(text) || /^sim/i.test(text)) {
         await sendWhatsAppMessage(evolutionConfig, phone, MESSAGES.processing);
         
         try {
@@ -2682,7 +2687,7 @@ async function handleBoletoFlow(
 
           return { response: MESSAGES.boletoError(error.message) };
         }
-      } else if (text === '2' || /^cancel/i.test(text) || /^n[aã]o/i.test(text)) {
+      } else if (messageText === 'boleto_cancelar' || text === '2' || /^cancel/i.test(text) || /^n[aã]o/i.test(text)) {
         await updateSession(supabase, session.id, { state: 'FINISHED' });
         return { response: MESSAGES.cancelled, newState: 'FINISHED' };
       }
@@ -2690,8 +2695,13 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_TAXA_TYPE_BATCH': {
+      if (messageText.startsWith('boleto_') && !/^boleto_taxa_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       // User needs to choose between taxa mercados or taxa varejista for batch processing
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
