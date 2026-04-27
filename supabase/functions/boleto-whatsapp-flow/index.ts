@@ -144,7 +144,21 @@ Responda APENAS em JSON válido:
                 },
                 extracted_number: { type: ["number", "null"] },
                 humanized_response: { type: ["string", "null"] },
-                batch_items: { type: ["array", "null"], items: { type: "object", additionalProperties: true } },
+                batch_items: {
+                  type: ["array", "null"],
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      cnpj: { type: "string" },
+                      competence_month: { type: "number" },
+                      competence_year: { type: "number" },
+                      value_cents: { type: "number" },
+                      contribution_type: { type: ["string", "null"], enum: ["mensalidade", "taxa_mercados", "taxa_varejista", "taxa_indefinida", null] }
+                    },
+                    required: ["cnpj", "competence_month", "competence_year", "value_cents", "contribution_type"]
+                  }
+                },
                 detected_contribution_type: { type: ["string", "null"], enum: ["mensalidade", "taxa", null] }
               },
               required: ["intent", "confidence", "extracted_cnpj", "extracted_value", "extracted_date", "extracted_competence", "extracted_number", "humanized_response", "batch_items", "detected_contribution_type"]
