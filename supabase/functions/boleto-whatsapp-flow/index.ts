@@ -1489,6 +1489,15 @@ async function handleBoletoFlow(
   
   console.log(`[boleto-flow] State: ${session.state}, Message: "${messageText}"`);
 
+  // FAST-PATH: CNPJ input must not wait for AI intent analysis.
+  // The boleto flow was stopping here when OpenAI was slow/unavailable.
+  if (session.state === 'WAITING_CNPJ') {
+    const cleanCnpj = messageText.replace(/\D/g, '');
+    if (cleanCnpj.length === 14) {
+      return handleCnpjInput(supabase, session, clinicId, phone, cleanCnpj);
+    }
+  }
+
   // ==========================================
   // FAST-PATH: Interactive button IDs
   // When user taps a button, messageText is the button id (e.g. "boleto_a_vencer").
