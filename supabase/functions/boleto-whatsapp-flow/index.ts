@@ -2952,9 +2952,8 @@ serve(async (req) => {
       await updateSession(supabase, session.id, { state: 'SELECT_BOLETO_TYPE' });
       
       if (evolution_config) {
-        await sendWhatsAppMessage(evolution_config, phone, MESSAGES.welcome);
-        // Send interactive buttons for boleto type selection
-        await sendBoletoButtons(phone, 'Selecione o tipo de boleto:', [
+        // Interactive start must be a single button payload, never a text list + buttons.
+        await sendBoletoButtons(phone, MESSAGES.welcome, [
           { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
         ]);
