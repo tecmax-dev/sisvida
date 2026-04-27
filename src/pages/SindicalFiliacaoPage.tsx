@@ -501,7 +501,7 @@ export default function SindicalFiliacaoPage() {
           setCpfExistsType('paciente');
           toast({
             title: "Você já possui cadastro",
-            description: "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3198-2161.",
+            description: "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784.",
             variant: "destructive",
           });
           return;
@@ -521,7 +521,7 @@ export default function SindicalFiliacaoPage() {
         setCpfExistsType('associado');
         toast({
           title: "CPF já possui solicitação",
-          description: "Este CPF já possui uma solicitação de filiação pendente. Entre em contato com o sindicato pelo (73) 3198-2161.",
+          description: "Este CPF já possui uma solicitação de filiação pendente. Entre em contato com o sindicato pelo (73) 3231-1784.",
           variant: "destructive",
         });
         return;
@@ -628,8 +628,8 @@ export default function SindicalFiliacaoPage() {
         title: cpfExistsType === 'paciente' ? "Você já possui cadastro" : "CPF já possui solicitação",
         description:
           cpfExistsType === 'paciente'
-            ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3198-2161."
-            : "Este CPF já possui uma solicitação de filiação neste sindicato. Entre em contato pelo (73) 3198-2161.",
+            ? "Este CPF já possui cadastro ativo. Entre em contato com o sindicato pelo (73) 3231-1784."
+            : "Este CPF já possui uma solicitação de filiação neste sindicato. Entre em contato pelo (73) 3231-1784.",
         variant: "destructive",
       });
       return;

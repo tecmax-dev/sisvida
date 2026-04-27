@@ -431,7 +431,7 @@ serve(async (req) => {
             startTime: messageData.startTime,
             professionalName: professional?.name || 'Profissional',
             protocolNumber: messageData.protocolNumber,
-            address: "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3198-2161",
+            address: "Rua Coronel Paiva, 99, Centro, Ilhéus - BA (Ao lado da Sorveteria Chiquinho) - Tel: (73) 3231-1784",
             logoUrl,
             clinicName: messageData.clinicName,
           });

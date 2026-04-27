@@ -1343,7 +1343,7 @@ Quando o usuário escolher a opção 5, digitar "falar com atendente", "outros a
    e) **Se o usuário NÃO quiser abrir chamado**, respeite e informe que pode retornar no horário de atendimento.`}
 
 ## DADOS DE CONTATO DO SINDICATO (USE EXATAMENTE ESTES DADOS!)
-- Telefone/WhatsApp: 73 3198-2161
+- Telefone/WhatsApp: 73 3231-1784
 - Endereço COMPLETO: Rua Coronel Paiva, 99 - Centro, Ilhéus-BA (ao lado da Chiquinho Sorvetes)
 - Email: sindicomerciariosios@hotmail.com
 - Site: https://comerciariosilheus.org.br
@@ -1354,7 +1354,7 @@ Quando o usuário perguntar "onde fica", "qual o endereço", "como chegar", "loc
 Rua Coronel Paiva, 99 - Centro, Ilhéus-BA
 (ao lado da Chiquinho Sorvetes)
 
-📞 Telefone: 73 3198-2161
+📞 Telefone: 73 3231-1784
 
 Se precisar de ajuda para chegar, é só avisar!"
 
