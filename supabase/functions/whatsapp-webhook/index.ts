@@ -8060,39 +8060,15 @@ serve(async (req) => {
         }
         // ===== END WHAZING INITIAL MENU =====
 
-        // ===== BOLETO BUTTON ID TRANSLATION =====
-        // Convert Whazing interactive button IDs from boleto flow into text the flow understands
-        const boletoButtonMap: Record<string, string> = {
-          'boleto_a_vencer': '1',
-          'boleto_vencido': '2',
-          'boleto_sim': 'sim',
-          'boleto_nao': 'não',
-          'boleto_confirmar': 'confirmar',
-          'boleto_cancelar': 'cancelar',
-          'boleto_type_1': '1',
-          'boleto_type_2': '2',
-          'boleto_type_3': '3',
-          'boleto_taxa_1': '1',
-          'boleto_taxa_2': '2',
-          'boleto_contrib_1': '1',
-          'boleto_contrib_2': '2',
-          'boleto_contrib_3': '3',
-          'boleto_contrib_mais': 'mais',
-          'boleto_contrib_voltar': 'voltar',
-          'boleto_year_1': '1',
-          'boleto_year_2': '2',
-          'boleto_year_3': '3',
-        };
-         const rawBtnId = messageText?.trim();
-         const boletoButtonText = boletoButtonMap[rawBtnId];
-         const isBoletoButton = !!boletoButtonText || (rawBtnId?.startsWith('boleto_') ?? false);
-         if (boletoButtonText) {
-           console.log(`[webhook] Boleto button "${rawBtnId}" → translated to "${boletoButtonText}"`);
-           messageText = boletoButtonText;
-         } else if (rawBtnId?.startsWith('boleto_')) {
-           console.log(`[webhook] Untranslated boleto button "${rawBtnId}" - keeping as is for flow logic`);
-         }
-        // ===== END BOLETO BUTTON ID TRANSLATION =====
+        // ===== BOLETO BUTTON ROUTING =====
+        // Keep raw button IDs. The boleto function validates each ID against the current state,
+        // preventing duplicated/late button events from advancing the flow automatically.
+        const rawBtnId = messageText?.trim();
+        const isBoletoButton = rawBtnId?.startsWith('boleto_') ?? false;
+        if (isBoletoButton) {
+          console.log(`[webhook] Boleto button "${rawBtnId}" routed as raw id`);
+        }
+        // ===== END BOLETO BUTTON ROUTING =====
 
         // Check if there's an active boleto session or user is requesting boleto (option 7)
         const { data: activeBoletoSession } = await supabase

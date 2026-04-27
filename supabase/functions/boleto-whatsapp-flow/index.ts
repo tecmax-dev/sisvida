@@ -1489,6 +1489,11 @@ async function handleBoletoFlow(
   
   console.log(`[boleto-flow] State: ${session.state}, Message: "${messageText}"`);
 
+  const buttonNumberMatch = messageText.match(/^boleto_(?:type|taxa|contrib|year)_(\d+)$/);
+  const optionText = buttonNumberMatch ? buttonNumberMatch[1] : text;
+  const isConfirmInput = /^(sim|s|yes|isso|confirmo|correto|certo|ok|pode|1)$/i.test(normalizedText);
+  const isDenyInput = /^(nao|não|n|no|errado|outro|2)$/i.test(normalizedText);
+
   // FAST-PATH: CNPJ input must not wait for AI intent analysis.
   // The boleto flow was stopping here when OpenAI was slow/unavailable.
   if (session.state === 'WAITING_CNPJ') {
@@ -1937,14 +1942,19 @@ async function handleBoletoFlow(
     }
 
     case 'CONFIRM_EMPLOYER': {
+      if (messageText.startsWith('boleto_') && messageText !== 'boleto_sim' && messageText !== 'boleto_nao') {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const repeatedCnpj = messageText.replace(/\D/g, '');
       if (repeatedCnpj.length === 14) {
         return handleCnpjInput(supabase, session, clinicId, phone, repeatedCnpj);
       }
 
       // Use AI intent for natural confirmations
-      const isConfirm = intent.intent === 'confirm' || text === '1' || /^sim/i.test(text);
-      const isDeny = intent.intent === 'deny' || text === '2' || /^n[aã]o/i.test(text);
+      const isConfirm = messageText === 'boleto_sim' || intent.intent === 'confirm' || isConfirmInput;
+      const isDeny = messageText === 'boleto_nao' || intent.intent === 'deny' || isDenyInput;
       
       if (isConfirm) {
         if (session.boleto_type === 'vencido') {
@@ -2113,9 +2123,14 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_CONTRIBUTION_TYPE': {
+      if (messageText.startsWith('boleto_') && !/^boleto_type_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const types = session.flow_context?.contribution_types || [];
       // Use AI-extracted number or parse from text
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > types.length) {
         return { 
@@ -2367,9 +2382,14 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_CONTRIBUTION_YEAR': {
+      if (messageText.startsWith('boleto_') && !/^boleto_year_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const years = session.flow_context?.available_years || [];
       const allContributions = session.flow_context?.all_contributions || session.available_contributions || [];
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > years.length) {
         return { 
@@ -2413,6 +2433,11 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_CONTRIBUTION': {
+      if (messageText.startsWith('boleto_') && !/^boleto_contrib_(\d+|mais|voltar)$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       const contributions = session.available_contributions || [];
       
       // Handle "next page" command
@@ -2444,7 +2469,7 @@ async function handleBoletoFlow(
       }
       
       // Handle "back to years" command
-      if (text === 'voltar' && session.flow_context?.available_years) {
+      if ((text === 'voltar' || messageText.trim() === 'boleto_contrib_voltar') && session.flow_context?.available_years) {
         const years = session.flow_context.available_years;
         const allContributions = session.flow_context.all_contributions || [];
         
@@ -2462,7 +2487,7 @@ async function handleBoletoFlow(
         return { response: msg, newState: 'SELECT_CONTRIBUTION_YEAR' as BoletoState };
       }
       
-      const optionNum = parseInt(text);
+      const optionNum = parseInt(optionText);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > contributions.length) {
         return { response: MESSAGES.invalidOption };
@@ -2532,7 +2557,12 @@ async function handleBoletoFlow(
     }
 
     case 'CONFIRM_BOLETO': {
-      if (text === '1' || /^confirm/i.test(text) || /^sim/i.test(text)) {
+      if (messageText.startsWith('boleto_') && messageText !== 'boleto_confirmar' && messageText !== 'boleto_cancelar') {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
+      if (messageText === 'boleto_confirmar' || text === '1' || /^confirm/i.test(text) || /^sim/i.test(text)) {
         await sendWhatsAppMessage(evolutionConfig, phone, MESSAGES.processing);
         
         try {
@@ -2657,7 +2687,7 @@ async function handleBoletoFlow(
 
           return { response: MESSAGES.boletoError(error.message) };
         }
-      } else if (text === '2' || /^cancel/i.test(text) || /^n[aã]o/i.test(text)) {
+      } else if (messageText === 'boleto_cancelar' || text === '2' || /^cancel/i.test(text) || /^n[aã]o/i.test(text)) {
         await updateSession(supabase, session.id, { state: 'FINISHED' });
         return { response: MESSAGES.cancelled, newState: 'FINISHED' };
       }
@@ -2665,8 +2695,13 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_TAXA_TYPE_BATCH': {
+      if (messageText.startsWith('boleto_') && !/^boleto_taxa_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       // User needs to choose between taxa mercados or taxa varejista for batch processing
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
@@ -2884,8 +2919,13 @@ async function handleBoletoFlow(
     }
 
     case 'SELECT_TAXA_TYPE': {
+      if (messageText.startsWith('boleto_') && !/^boleto_taxa_\d+$/.test(messageText)) {
+        console.log(`[boleto-flow] Ignoring stale boleto button ${messageText} in state ${session.state}`);
+        return { response: '', newState: session.state };
+      }
+
       // Individual flow - user needs to choose between taxa mercados or taxa varejista
-      const optionNum = intent.extracted_number || parseInt(text);
+      const optionNum = parseInt(optionText) || intent.extracted_number || parseInt(text);
       
       if (optionNum !== 1 && optionNum !== 2) {
         return { 
