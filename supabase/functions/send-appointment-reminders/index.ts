@@ -245,25 +245,8 @@ async function sendConfirmationButtons(
       'Authorization': `Bearer ${whazingToken}`,
     };
 
-    if (isChatgooExternalUrl(whazingUrl)) {
-      console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone} via Chatgoo external endpoint`);
-      let externalResponse = await fetch(getWhazingSendUrl(whazingUrl), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
-      });
-
-      let externalText = await externalResponse.text();
-      if (externalResponse.ok) {
-        console.log('[reminder-buttons] External buttons sent successfully:', externalText.substring(0, 200));
-        return true;
-      }
-
-      console.warn(`[reminder-buttons] External endpoint failed (${externalResponse.status}); retrying API PLUS: ${externalText.substring(0, 300)}`);
-    }
-
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone} via API PLUS`);
+    console.log(`[reminder-buttons] Sending confirm/cancel buttons to ${cleanPhone} via API PLUS/native buttons`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -273,7 +256,7 @@ async function sendConfirmationButtons(
 
     let responseText = await response.text();
     if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
-      console.warn(`[reminder-buttons] API PLUS failed (${response.status}); retrying external button endpoint`);
+      console.warn(`[reminder-buttons] API PLUS failed (${response.status}); retrying external button endpoint: ${responseText.substring(0, 300)}`);
       response = await fetch(getWhazingSendUrl(whazingUrl), {
         method: 'POST',
         headers,

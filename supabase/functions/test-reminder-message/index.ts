@@ -227,25 +227,8 @@ async function sendConfirmationButtons(
       'Authorization': `Bearer ${whazingToken}`,
     };
 
-    if (isChatgooExternalUrl(whazingUrl)) {
-      console.log(`[test-buttons] Sending buttons to ${cleanPhone} via Chatgoo external endpoint`);
-      let externalResponse = await fetch(getWhazingSendUrl(whazingUrl), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
-      });
-
-      let externalText = await externalResponse.text();
-      if (externalResponse.ok) {
-        console.log(`[test-buttons] Status: ${externalResponse.status}, Body: ${externalText.substring(0, 300)}`);
-        return { success: true, response: externalText };
-      }
-
-      console.warn(`[test-buttons] External endpoint failed (${externalResponse.status}); retrying API PLUS: ${externalText.substring(0, 300)}`);
-    }
-
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[test-buttons] Sending buttons to ${cleanPhone} via API PLUS`);
+    console.log(`[test-buttons] Sending buttons to ${cleanPhone} via API PLUS/native buttons`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -255,6 +238,7 @@ async function sendConfirmationButtons(
 
     let responseText = await response.text();
     if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
+      console.warn(`[test-buttons] API PLUS failed (${response.status}); retrying external endpoint: ${responseText.substring(0, 300)}`);
       response = await fetch(getWhazingSendUrl(whazingUrl), {
         method: 'POST',
         headers,

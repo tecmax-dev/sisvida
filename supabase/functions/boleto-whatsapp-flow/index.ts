@@ -957,25 +957,8 @@ async function sendBoletoButtons(
       'Authorization': `Bearer ${whazingToken}`,
     };
 
-    if (isChatgooExternalUrl(whazingUrl)) {
-      console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via Chatgoo external endpoint`);
-      let externalResponse = await fetch(getWhazingSendUrl(whazingUrl), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
-      });
-
-      let externalText = await externalResponse.text();
-      if (externalResponse.ok) {
-        console.log('[boleto-flow] External buttons sent successfully');
-        return true;
-      }
-
-      console.warn(`[boleto-flow] External button endpoint failed (${externalResponse.status}); retrying API PLUS`, externalText.substring(0, 300));
-    }
-
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via API PLUS`);
+    console.log(`[boleto-flow] Sending ${buttons.length} buttons to ${cleanPhone} via API PLUS/native buttons`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -985,7 +968,7 @@ async function sendBoletoButtons(
 
     let responseText = await response.text();
     if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
-      console.warn(`[boleto-flow] API PLUS failed (${response.status}); retrying external button endpoint`);
+      console.warn(`[boleto-flow] API PLUS failed (${response.status}); retrying external button endpoint`, responseText.substring(0, 300));
       response = await fetch(getWhazingSendUrl(whazingUrl), {
         method: 'POST',
         headers,
