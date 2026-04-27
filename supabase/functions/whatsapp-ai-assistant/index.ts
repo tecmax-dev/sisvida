@@ -28,6 +28,67 @@ function buildWhazingTextPayload(baseUrl: string, phone: string, message: string
   };
 }
 
+function isChatgooExternalUrl(baseUrl: string): boolean {
+  return baseUrl.includes('/api/external/');
+}
+
+function buildWhazingExternalButtonPayload(phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Record<string, unknown> {
+  return {
+    number: phone,
+    body: bodyText,
+    buttons: buttons.map(b => ({ id: b.id, title: b.title })),
+  };
+}
+
+async function sendWhazingMainMenuButtons(phone: string): Promise<boolean> {
+  const whazingUrl = Deno.env.get('WHAZING_API_URL');
+  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+  if (!whazingUrl || !whazingToken || !phone) return false;
+
+  let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+  if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+
+  const buttons = [
+    { id: 'whazing_associado', title: 'Sou Associado' },
+    { id: 'whazing_empresa', title: 'Sou Empresa' },
+    { id: 'whazing_contabilidade', title: 'Sou Contabilidade' },
+  ];
+
+  const bodyText = 'Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?';
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` };
+
+  try {
+    const response = await fetch(getWhazingSendUrl(whazingUrl), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(
+        isChatgooExternalUrl(whazingUrl)
+          ? buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)
+          : {
+              number: cleanPhone,
+              contents: {
+                type: 'button',
+                body: { text: bodyText },
+                action: { buttons: buttons.map(b => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+              },
+            }
+      ),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error(`[ai-assistant] Main menu buttons failed (${response.status}):`, responseText.substring(0, 300));
+      return false;
+    }
+
+    console.log(`[ai-assistant] Main menu buttons sent to ${cleanPhone}`);
+    return true;
+  } catch (error) {
+    console.error('[ai-assistant] Main menu buttons error:', error);
+    return false;
+  }
+}
+
 // Tool definitions for the AI
 const tools = [
   {
