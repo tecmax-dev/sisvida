@@ -137,7 +137,7 @@ function formatProtocolMessage(data: {
     `📝 *Protocolo:* ${data.protocolNumber}`,
     ``,
     `📍 *Local:* ${data.address}`,
-    `📞 *Telefone:* (73) 3231-1784`,
+    `📞 *Telefone:* (73) 3098-2161`,
     ``,
     `Guarde este protocolo para seus registros.`,
     ``,
@@ -221,7 +221,7 @@ function formatProtocolEmailHtml(data: {
                 <p style="margin: 0; color: #1e40af; font-size: 14px;">
                   📍 <strong>Local:</strong><br>
                   ${data.address}<br>
-                  📞 Telefone: (73) 3231-1784
+                  📞 Telefone: (73) 3098-2161
                 </p>
               </div>
               
