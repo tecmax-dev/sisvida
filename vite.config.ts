@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => ({
         "favicon.ico",
       ],
       manifest: {
-        name: "SECMI - Sindicato dos Comerciários de Ilhéus e Região",
-        short_name: "SECMI",
+        name: "Comerciários - Sindicato dos Comerciários de Ilhéus e Região",
+        short_name: "Comerciários",
         description: "Aplicativo do associado para acesso a serviços, carteirinha digital, boletos e muito mais.",
         theme_color: "#16a394",
         background_color: "#16a394",
@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => ({
         orientation: "portrait",
         scope: "/",
         start_url: "/app?source=pwa",
-        id: "/app?v=20260428-package-final",
+        id: "/app?v=20260428-package-final-v2",
         icons: [
           {
             src: "/icon-72x72.png",
@@ -145,8 +145,10 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260428-icon-renewal', revision: null },
-          { url: '/manifest-sindicato.webmanifest', revision: '20260428-icon-renewal' },
+          { url: '/cache-bust-v20260428-package-final-v2', revision: null },
+          { url: '/manifest.json', revision: '20260428-package-final-v2' },
+          { url: '/site.webmanifest', revision: '20260428-package-final-v2' },
+          { url: '/manifest-sindicato.webmanifest', revision: '20260428-package-final-v2' },
         ],
         runtimeCaching: [
           // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
