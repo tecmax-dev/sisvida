@@ -20,14 +20,6 @@
     <link rel="manifest" href="/manifest.json" />
     
     <!--
-      CRÍTICO PARA INSTALABILIDADE NO CHROME ANDROID:
-      
-      O Chrome Android lê o <link rel="manifest"> no momento do parsing do HTML,
-      ANTES do JavaScript ser executado. Por isso usamos um script síncrono no <head>
-      para injetar o manifest correto via createElement (não document.write, pois
-      pode ser bloqueado por CSP). O createElement + appendChild funciona pois o
-      script é síncrono e o head ainda está sendo construído.
-      
       Critérios para o Chrome Android mostrar o prompt de instalação (qualquer versão):
       1. ✅ manifest.json válido com name, icons (192px any + 512px maskable), start_url, display
       2. ✅ Service Worker registrado com fetch handler
@@ -93,18 +85,14 @@
     </script>
     
     <!--
-      O vite-plugin-pwa injeta automaticamente um <link rel="manifest"> aqui.
-      Para rotas /app e /sindicato, o script acima já injetou o manifest SECMI PRIMEIRO.
-      Quando o browser encontra dois <link rel="manifest">, usa o PRIMEIRO encontrado
-      (no caso de Chrome Android, que é o que importa para instalação).
-      O script abaixo remove duplicatas ao carregar o DOM para evitar conflitos.
+      Mantém sempre um único manifest estático. Isso evita que PWABuilder leia
+      manifests antigos, gerados por blob ou injetados automaticamente.
     -->
     <script>
       (function() {
         var path = window.location.pathname;
         if (path.startsWith('/app') || path.startsWith('/sindicato')) {
-          // Remove quaisquer manifests extras adicionados pelo vite-plugin-pwa
-          // mantendo apenas o primeiro (manifest-sindicato.webmanifest)
+          // Remove quaisquer manifests extras adicionados pelo vite-plugin-pwa.
           document.addEventListener('DOMContentLoaded', function() {
             var links = document.querySelectorAll('link[rel="manifest"]');
             for (var i = 1; i < links.length; i++) {
