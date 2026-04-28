@@ -33,6 +33,36 @@ async function bootstrapApp() {
  * Registra Service Worker e renderiza React
  */
 async function renderApp() {
+  /**
+   * ONE-SHOT CACHE WIPE — disparado por mudança de ícone/branding.
+   *
+   * Bump deste valor força TODOS os dispositivos a apagarem caches do Workbox
+   * e os ícones cacheados pelo Chrome WebAPK na primeira carga após a atualização.
+   * Roda apenas uma vez por dispositivo (flag salva em localStorage).
+   */
+  const CACHE_WIPE_VERSION = "20260428-icon-renewal";
+  try {
+    const last = localStorage.getItem("__pwa_cache_wipe_version");
+    if (last !== CACHE_WIPE_VERSION) {
+      console.info(`[PWA] Cache wipe ${CACHE_WIPE_VERSION} — limpando caches antigos…`);
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
+      }
+      localStorage.setItem("__pwa_cache_wipe_version", CACHE_WIPE_VERSION);
+      // Recarrega para registrar o SW novo do zero (com os ícones atualizados).
+      // Marcamos a flag ANTES do reload para não entrar em loop.
+      window.location.reload();
+      return;
+    }
+  } catch (err) {
+    console.warn("[PWA] Cache wipe falhou (não é crítico):", err);
+  }
+
   // Registrar PWA e aplicar novas versões automaticamente para evitar shell desatualizado
   const updateSW = registerSW({
     immediate: true,
