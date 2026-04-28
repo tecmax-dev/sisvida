@@ -13,8 +13,8 @@ interface MobileSplashScreenProps {
   duration?: number;
 }
 
-// Logo padrão do sindicato
-const SINDICATO_LOGO_URL = `https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/${SINDICATO_CLINIC_ID}/logo.png`;
+// Logo padrão do sindicato (servida pelo storage do projeto atual + cache-buster)
+const SINDICATO_LOGO_URL = `/sindicato/logo.png?v=20260428`;
 
 export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplashScreenProps) {
   const [clinic, setClinic] = useState<ClinicData | null>(null);
