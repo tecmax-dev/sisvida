@@ -121,8 +121,8 @@ export default defineConfig(({ mode }) => ({
         related_applications: [
           {
             platform: "play",
-            url: "https://play.google.com/store/apps/details?id=br.org.secmi.app",
-            id: "br.org.secmi.app",
+            url: "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app",
+            id: "br.org.secmi.comerciariosilheus.app",
           },
         ],
         prefer_related_applications: false,
