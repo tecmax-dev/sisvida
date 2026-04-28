@@ -28,10 +28,11 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#16a394",
         background_color: "#16a394",
         display: "standalone",
+        display_override: ["standalone", "minimal-ui", "browser"],
         orientation: "portrait",
         scope: "/",
-        start_url: "/app",
-        id: "/app",
+        start_url: "/app?source=pwa",
+        id: "/app?v=20260428-package-final",
         icons: [
           {
             src: "/icon-72x72.png",
