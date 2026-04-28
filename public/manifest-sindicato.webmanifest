@@ -9,7 +9,7 @@
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/app?source=pwa",
-  "id": "/app",
+  "id": "/app?v=20260428-icon-renewal",
   "prefer_related_applications": false,
   "related_applications": [
     {
