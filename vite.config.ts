@@ -39,10 +39,10 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260428-package-final-v2', revision: null },
-          { url: '/manifest.json', revision: '20260428-package-final-v2' },
-          { url: '/site.webmanifest', revision: '20260428-package-final-v2' },
-          { url: '/manifest-sindicato.webmanifest', revision: '20260428-package-final-v2' },
+          { url: '/cache-bust-v20260428-package-final-v3', revision: null },
+          { url: '/manifest.json', revision: '20260428-package-final-v3' },
+          { url: '/site.webmanifest', revision: '20260428-package-final-v3' },
+          { url: '/manifest-sindicato.webmanifest', revision: '20260428-package-final-v3' },
         ],
         runtimeCaching: [
           // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.webmanifest$/i,
             handler: "NetworkFirst",
             options: {
-              cacheName: "manifest-cache",
+              cacheName: "manifest-cache-v3",
               networkTimeoutSeconds: 3,
               cacheableResponse: {
                 statuses: [0, 200],
