@@ -6,20 +6,6 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "br.com.prosindweb.twa",
-      "sha256_cert_fingerprints": [
-        "F9:79:51:FA:BB:4D:B9:82:5D:52:77:C5:61:5B:02:EC:D8:FE:23:F2:97:58:7E:60:C3:9F:8A:A8:A3:B4:6E:2C",
-        "1E:91:A7:BC:BA:F9:FA:C3:63:1C:9D:6C:18:17:1C:62:D7:85:0B:AF:65:AA:5C:E0:15:DD:1D:22:93:29:76:5F"
-      ]
-    }
-  },
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls",
-      "delegate_permission/common.get_login_creds"
-    ],
-    "target": {
-      "namespace": "android_app",
       "package_name": "br.org.secmi.comerciariosilheus.app",
       "sha256_cert_fingerprints": [
         "5A:08:AA:85:44:AF:A1:87:18:EA:D6:4A:2B:14:80:02:EC:42:A2:4B:63:68:C8:D0:BC:2A:A5:08:83:D7:48:65"
