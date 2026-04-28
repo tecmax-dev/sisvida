@@ -114,20 +114,24 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
         
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
-            {clinic?.logo_url ? (
-              <img 
-                src={clinic.logo_url} 
-                alt={clinic.name} 
-                className="w-full h-full object-cover" 
-                onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
-              />
-            ) : (
-              <img 
-                src="/placeholder.svg" 
-                alt="Logo" 
-                className="w-7 h-7 object-contain opacity-50" 
-              />
-            )}
+            {(() => {
+              const isSindicato = (clinicId || SINDICATO_CLINIC_ID) === SINDICATO_CLINIC_ID;
+              const remote = clinic?.logo_url || "";
+              const stale =
+                remote.includes("eahhszmbyxapxzilfdlo") ||
+                remote.toLowerCase().includes("secmi");
+              const src = isSindicato || stale || !remote
+                ? "/sindicato/logo.png?v=20260428"
+                : remote;
+              return (
+                <img
+                  src={src}
+                  alt={clinic?.name || "Logo"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.src = "/sindicato/logo.png?v=20260428"; }}
+                />
+              );
+            })()}
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">{clinic?.name || "Sindicato"}</h1>
