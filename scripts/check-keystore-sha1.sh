@@ -3,7 +3,7 @@
 # check-keystore-sha1.sh
 #
 # Verifica se uma keystore Android contém o certificado com o SHA1 esperado
-# pelo Google Play Console para o app br.com.prosindweb.twa.
+# pelo Google Play Console para o app br.org.secmi.comerciariosilheus.app.
 #
 # Uso:
 #   ./scripts/check-keystore-sha1.sh <caminho-da-keystore> [alias]
