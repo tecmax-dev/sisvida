@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
       ],
       // Manifest is served only from public/manifest.json.
       // This prevents PWABuilder from reading VitePWA's generated /manifest.webmanifest
-      // and falling back to the domain-derived package br.com.prosindweb.twa.
+      // and falling back to a domain-derived package instead of the official one.
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2,webmanifest}"],
