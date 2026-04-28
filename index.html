@@ -43,12 +43,6 @@
         
         if (isSindicato) {
           // --- SECMI / Sindicato branding ---
-          // Manifest: injeta ANTES do vite-plugin-pwa para o Chrome encontrar o correto
-          var manifestLink = document.createElement('link');
-          manifestLink.rel = 'manifest';
-          manifestLink.href = '/manifest-sindicato.webmanifest';
-          document.head.appendChild(manifestLink);
-          
           // Favicon sindicato
           var favicon = document.createElement('link');
           favicon.rel = 'icon';
