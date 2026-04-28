@@ -12,5 +12,18 @@
         "1E:91:A7:BC:BA:F9:FA:C3:63:1C:9D:6C:18:17:1C:62:D7:85:0B:AF:65:AA:5C:E0:15:DD:1D:22:93:29:76:5F"
       ]
     }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.org.secmi.comerciariosilheus.app",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_NEW_SHA256_FROM_PLAY_CONSOLE_APP_SIGNING"
+      ]
+    }
   }
 ]
