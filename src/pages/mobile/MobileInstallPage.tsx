@@ -42,7 +42,10 @@ export default function MobileInstallPage() {
 
   // CRITICAL: Apply iOS PWA icon immediately on mount
   useEffect(() => {
-    const sindicatoLogoUrl = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
+    // Local apple-touch-icon (novo logo Sindicato dos Comerciários — Ilhéus).
+    // Mantemos local para garantir consistência exata com o ícone publicado na Play Store
+    // e evitar futuras divergências entre listing e ícone instalado.
+    const sindicatoLogoUrl = "/apple-touch-icon-sindicato.png";
     
     const updateAppleTouchIcon = (href: string) => {
       const existingIcons = document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]');
