@@ -9,7 +9,7 @@
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/app?source=pwa",
-  "id": "/app?v=20260428-icon-renewal",
+  "id": "/app?v=20260428-icon-unified-v2",
   "prefer_related_applications": false,
   "related_applications": [
     {
@@ -69,7 +69,13 @@
       "purpose": "any"
     },
     {
-      "src": "/pwa-sindicato-512x512.png",
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
