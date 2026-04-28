@@ -88,10 +88,10 @@ describe("PWA Manifest Configuration", () => {
     expect(expectedManifest.theme_color).toBe("#16a394");
   });
 
-  it("should use Sindicato logo URL in manifest icons", () => {
-    const sindicatoLogoUrl = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/clinic-assets/89e7585e-7bce-4e58-91fa-c37080d1170d/logo.png";
-    
-    expect(sindicatoLogoUrl).toContain(TARGET_CLINIC_ID);
-    expect(sindicatoLogoUrl).toContain("logo.png");
+  it("should use local Sindicato icon for PWA branding", () => {
+    const sindicatoLogoUrl = "/apple-touch-icon-sindicato.png";
+
+    expect(sindicatoLogoUrl).toContain("apple-touch-icon-sindicato");
+    expect(sindicatoLogoUrl.endsWith(".png")).toBe(true);
   });
 });
