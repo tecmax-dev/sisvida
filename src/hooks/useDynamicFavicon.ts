@@ -76,53 +76,8 @@ export function useDynamicFavicon(
       }
     }
 
-    // Update PWA manifest icons dynamically
-    const updateManifest = async () => {
-      try {
-        const manifestLink =
-          document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-        if (!manifestLink) return;
-
-        // Fetch the current manifest
-        const response = await fetch(manifestLink.href);
-        const manifest = await response.json();
-
-        // Update the name if provided
-        if (clinicName) {
-          manifest.name = clinicName;
-          manifest.short_name = clinicName.substring(0, 12);
-        }
-
-        // Update all icon sources to use the clinic logo
-        if (manifest.icons) {
-          manifest.icons = manifest.icons.map(
-            (icon: { sizes: string; type: string; purpose?: string }) => ({
-              ...icon,
-              src: logoUrl,
-            })
-          );
-        }
-
-        // Create a new blob URL for the updated manifest
-        const blob = new Blob([JSON.stringify(manifest)], {
-          type: "application/json",
-        });
-        const newManifestUrl = URL.createObjectURL(blob);
-
-        // Create a new manifest link to replace the old one
-        const newManifestLink = document.createElement("link");
-        newManifestLink.rel = "manifest";
-        newManifestLink.href = newManifestUrl;
-
-        // Remove old and add new
-        manifestLink.remove();
-        document.head.appendChild(newManifestLink);
-      } catch (error) {
-        console.log("Could not update manifest dynamically:", error);
-      }
-    };
-
-    updateManifest();
+    // Do not rewrite the manifest at runtime. PWABuilder and Google Play must
+    // always see the static manifest with the official Android Package ID.
 
     // Cleanup function
     return () => {

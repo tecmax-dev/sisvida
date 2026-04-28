@@ -149,8 +149,8 @@ export function useDynamicPWA() {
       updateMetaProperty("twitter:image", logo_url);
     }
 
-    // Update PWA manifest
-    updateManifest(name, logo_url);
+    // Keep the static manifest URL stable so PWABuilder and Google Play always
+    // read the Package ID from /manifest.json instead of a runtime blob.
   };
 
   const updateLinkElement = (rel: string, href: string | null) => {
@@ -195,52 +195,6 @@ export function useDynamicPWA() {
       element.setAttribute("property", property);
       element.content = content;
       document.head.appendChild(element);
-    }
-  };
-
-  const updateManifest = async (name: string, logoUrl: string | null) => {
-    try {
-      // Use the isolated Sindicato manifest from public folder
-      const sindicatoManifestUrl = "/manifest-sindicato.webmanifest";
-      
-      // Fetch the Sindicato-specific manifest
-      const response = await fetch(sindicatoManifestUrl);
-      const manifest = await response.json();
-
-      // Update the name dynamically based on clinic
-      manifest.name = `${name} - App do Associado`;
-      manifest.short_name = name.length > 12 ? name.substring(0, 12) : name;
-      manifest.description = `Aplicativo do associado ${name}`;
-
-      // Update all icon sources if we have a logo
-      if (logoUrl && manifest.icons) {
-        manifest.icons = manifest.icons.map(
-          (icon: { sizes: string; type: string; purpose?: string }) => ({
-            ...icon,
-            src: logoUrl,
-          })
-        );
-      }
-
-      // Create a new blob URL for the updated manifest
-      const blob = new Blob([JSON.stringify(manifest)], {
-        type: "application/json",
-      });
-      const newManifestUrl = URL.createObjectURL(blob);
-
-      // Remove existing manifest link
-      const existingManifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-      if (existingManifest) {
-        existingManifest.remove();
-      }
-
-      // Create a new manifest link
-      const newManifestLink = document.createElement("link");
-      newManifestLink.rel = "manifest";
-      newManifestLink.href = newManifestUrl;
-      document.head.appendChild(newManifestLink);
-    } catch (error) {
-      console.log("Could not update manifest dynamically:", error);
     }
   };
 
