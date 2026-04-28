@@ -50,7 +50,19 @@ export function MobileSplashScreen({ onComplete, duration = 5000 }: MobileSplash
     };
   }, [duration, onComplete]);
 
-  const logoUrl = clinic?.logo_url || SINDICATO_LOGO_URL;
+  // Sempre usar a logo local para o sindicato (evita pisca da logo antiga
+  // que pode estar cacheada no banco/service worker apontando para o projeto Supabase antigo).
+  const clinicId = typeof window !== "undefined"
+    ? (localStorage.getItem("mobile_clinic_id") || SINDICATO_CLINIC_ID)
+    : SINDICATO_CLINIC_ID;
+  const isSindicato = clinicId === SINDICATO_CLINIC_ID;
+  const remoteLogo = clinic?.logo_url || "";
+  const isStaleLogo =
+    remoteLogo.includes("eahhszmbyxapxzilfdlo") || // projeto Supabase antigo
+    remoteLogo.toLowerCase().includes("secmi");
+  const logoUrl = isSindicato || isStaleLogo || !remoteLogo
+    ? SINDICATO_LOGO_URL
+    : remoteLogo;
 
   return (
     <AnimatePresence>
