@@ -52,10 +52,10 @@ const SindicatoExclusaoConta = () => {
                 <p className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-primary" />
                   <a
-                    href="mailto:contato@sindicato.org.br"
+                    href="mailto:comerciariosilheus@gmail.com"
                     className="hover:underline"
                   >
-                    contato@sindicato.org.br
+                    comerciariosilheus@gmail.com
                   </a>
                 </p>
               </div>
