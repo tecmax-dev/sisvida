@@ -454,7 +454,10 @@ serve(async (req) => {
     }
 
     const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
-    const shouldUseTextOnly = sendAsTextOnly === true;
+    // Force text-only for appointment reminders to reduce risk of WhatsApp ban
+    // (sending media via unofficial APIs increases ban risk)
+    const isReminder = type === 'reminder' || type === 'reminder_direct_reply';
+    const shouldUseTextOnly = sendAsTextOnly === true || isReminder;
     // Priority: explicit imageUrl > whatsapp_header_image_url > union_entity logo > clinic logo > default
     const logoUrl = shouldUseTextOnly
       ? null
