@@ -24,7 +24,7 @@ function isRodoviariosProfessional(professionalName: string): boolean {
 
 function getProfessionalLocation(professionalName: string): string | null {
   if (isRodoviariosProfessional(professionalName)) {
-    return `📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
+    return `*Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
   }
   return null;
 }
@@ -37,26 +37,26 @@ function formatAppointmentReminder(
   professionalName: string,
 ): string {
   const noShowWarning = [
-    `⚠️ *Atenção, Associado(a):*`,
+    `*Atenção, Associado(a):*`,
     `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
     ``,
-    `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
+    `Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
   ];
 
-  const arrivalInstruction = `⏳ *Compareça com 15 minutos de antecedência.*`;
+  const arrivalInstruction = `*Compareça com 15 minutos de antecedência.*`;
   const specificLocation = getProfessionalLocation(professionalName);
 
   const lines = [
-    `Olá ${patientName}! 👋`,
+    `Olá ${patientName}!`,
     ``,
     arrivalInstruction,
     ``,
     `Lembramos que você tem uma consulta agendada:`,
     ``,
-    `📅 *Data:* ${date}`,
-    `🕐 *Horário:* ${time}`,
-    `👨‍⚕️ *Profissional:* ${professionalName}`,
-    `🏥 *Clínica:* ${clinicName}`,
+    `*Data:* ${date}`,
+    `*Horário:* ${time}`,
+    `*Profissional:* ${professionalName}`,
+    `*Clínica:* ${clinicName}`,
     specificLocation ? `` : null,
     specificLocation,
     ``,
@@ -121,11 +121,10 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
   };
 }
 
-async function sendWhatsAppWithImage(
+async function sendWhatsAppTextOnly(
   config: EvolutionConfig,
   phone: string,
-  imageUrl: string,
-  caption: string
+  message: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     let formattedPhone = phone.replace(/\D/g, '');
@@ -133,9 +132,9 @@ async function sendWhatsAppWithImage(
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`[test] Sending via Evolution to ${formattedPhone}`);
+    console.log(`[test] Sending text via Evolution to ${formattedPhone}`);
 
-    const response = await fetch(`${config.api_url}/message/sendMedia/${config.instance_name}`, {
+    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -143,9 +142,7 @@ async function sendWhatsAppWithImage(
       },
       body: JSON.stringify({
         number: formattedPhone,
-        mediatype: 'image',
-        media: imageUrl,
-        caption: caption,
+        text: message,
       }),
     });
 
@@ -218,8 +215,8 @@ async function sendConfirmationButtons(
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
     const buttons = [
-      { id: `confirm_apt_${testAppointmentId}`, title: "✅ Confirmar" },
-      { id: `cancel_apt_${testAppointmentId}`, title: "❌ Cancelar" },
+      { id: `confirm_apt_${testAppointmentId}`, title: "Confirmar" },
+      { id: `cancel_apt_${testAppointmentId}`, title: "Cancelar" },
     ];
 
     const headers = {
@@ -314,9 +311,9 @@ serve(async (req) => {
 
     const message = formatAppointmentReminder(testPatient, clinicName, testDate, testTime, testProfessional);
 
-    // STEP 1: Try Evolution
-    console.log('[test] === STEP 1: Try Evolution ===');
-    const evolutionResult = await sendWhatsAppWithImage(evolutionConfig as EvolutionConfig, phone, logoUrl, message);
+    // STEP 1: Try Evolution as text-only
+    console.log('[test] === STEP 1: Try Evolution text-only ===');
+    const evolutionResult = await sendWhatsAppTextOnly(evolutionConfig as EvolutionConfig, phone, message);
 
     // STEP 2: If Evolution fails, fallback to Whazing text
     let whazingTextResult = null;
