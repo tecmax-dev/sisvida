@@ -239,8 +239,8 @@ async function sendWhazingConfirmationButtons(
     if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
     const buttons = [
-      { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },
-      { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
+      { id: `confirm_apt_${appointmentId}`, title: "Confirmar" },
+      { id: `cancel_apt_${appointmentId}`, title: "Cancelar" },
     ];
 
     // Vary the prompt text to avoid identical messages (anti-ban)
