@@ -564,10 +564,10 @@ async function sendWhatsAppButtons(
   const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
   const whazingButtons = limitedButtons.map((b, index) => ({
     id: b.id || `option_${index + 1}`,
-    title: b.text.substring(0, 20),
+    title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
   }));
 
-  return await sendWhazingButtons(phone, bodyText, whazingButtons);
+  return await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
 }
 
 // ==========================================
