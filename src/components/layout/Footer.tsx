@@ -96,7 +96,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-border/50">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-muted-foreground">
-              © 2026 ProsindWeb — Todos os direitos reservados
+               © 2025 ProsindWeb — Todos os direitos reservados
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Shield className="h-3.5 w-3.5" />
