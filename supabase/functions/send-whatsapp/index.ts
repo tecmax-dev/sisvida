@@ -156,6 +156,14 @@ function phonesEquivalent(a: string, b: string): boolean {
   return getComparableBrazilianPhones(b).some((variant) => aVariants.has(variant));
 }
 
+function stripWhatsAppRiskyEmojis(text: string): string {
+  return text
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0F\u200D\u20E3]/gu, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function resolveReminderAppointmentId(
   supabase: any,
   clinicId: string,
