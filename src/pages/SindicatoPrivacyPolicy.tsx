@@ -30,7 +30,7 @@ export default function SindicatoPrivacyPolicy() {
             <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10">
               <Shield className="h-6 w-6 text-primary flex-shrink-0" />
               <p className="text-sm text-muted-foreground">
-                Esta Política de Privacidade aplica-se ao aplicativo <strong>SECMI - Sindicato dos Comerciários de Ilhéus</strong> (Package ID: <code className="text-xs bg-muted px-1 py-0.5 rounded">br.org.secmi.comerciariosilheus.app</code>), publicado na Google Play Store pelo desenvolvedor <strong>Tecmax Tecnologia</strong> em nome da entidade <strong>Sindicato dos Comerciários de Ilhéus e Região</strong>. Este documento descreve como coletamos, usamos e protegemos suas informações pessoais, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)</strong>.
+                Esta Política de Privacidade aplica-se ao aplicativo <strong>SECMI - Sindicato dos Comerciários de Ilhéus</strong> (Package ID: <code className="text-xs bg-muted px-1 py-0.5 rounded">br.org.secmi.comerciariosilheus.app</code>), publicado na Google Play Store pela entidade <strong>Sindicato dos Comerciários de Ilhéus e Região</strong>. Este documento descreve como coletamos, usamos e protegemos suas informações pessoais, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)</strong>.
               </p>
             </div>
             <div className="bg-muted/30 rounded-lg p-4 space-y-3 text-sm border border-border">
@@ -41,16 +41,12 @@ export default function SindicatoPrivacyPolicy() {
                 <p className="text-muted-foreground"><strong>Plataforma:</strong> Google Play Store (Android)</p>
               </div>
               <div className="space-y-1.5 pt-2 border-t border-border">
-                <p className="font-semibold text-foreground">🏢 Desenvolvedor (Publicador na Google Play)</p>
-                <p className="text-muted-foreground"><strong>Nome:</strong> Tecmax Tecnologia</p>
-                <p className="text-muted-foreground"><strong>CNPJ:</strong> 03.025.212/0001-11</p>
-                <p className="text-muted-foreground"><strong>E-mail de Contato:</strong> contato@prosindweb.com.br</p>
-              </div>
-              <div className="space-y-1.5 pt-2 border-t border-border">
                 <p className="font-semibold text-foreground">⚖️ Entidade Legal (Controladora dos Dados)</p>
                 <p className="text-muted-foreground"><strong>Nome:</strong> Sindicato dos Comerciários de Ilhéus e Região</p>
                 <p className="text-muted-foreground"><strong>CNPJ:</strong> 14.173.298/0001-46</p>
                 <p className="text-muted-foreground"><strong>Endereço:</strong> Rua Coronel Paiva, nº 99, Centro, Ilhéus - BA, CEP 45653-310</p>
+                <p className="text-muted-foreground"><strong>E-mail:</strong> comerciariosilheus@gmail.com</p>
+                <p className="text-muted-foreground"><strong>Telefone:</strong> (73) 3231-1784</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -167,8 +163,8 @@ export default function SindicatoPrivacyPolicy() {
                 <p>Para exercer seus direitos ou esclarecer dúvidas sobre esta política, entre em contato:</p>
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                   <p><strong>Sindicato dos Comerciários de Ilhéus</strong></p>
-                  <p>E-mail: <a href="mailto:secmiilheus@gmail.com" className="text-primary hover:underline">secmiilheus@gmail.com</a></p>
-                  <p>WhatsApp: <a href="https://wa.me/557330982161" className="text-primary hover:underline">(73) 3098-2161</a></p>
+                  <p>E-mail: <a href="mailto:comerciariosilheus@gmail.com" className="text-primary hover:underline">comerciariosilheus@gmail.com</a></p>
+                  <p>Telefone: <a href="tel:+557332311784" className="text-primary hover:underline">(73) 3231-1784</a></p>
                 </div>
               </div>
             }
@@ -195,7 +191,7 @@ export default function SindicatoPrivacyPolicy() {
           {/* Footer */}
           <div className="pt-8 border-t border-border text-center space-y-2">
             <p className="text-xs text-muted-foreground">
-              © 2026 ProSindWeb - Todos os direitos reservados
+              © 2026 Sindicato dos Comerciários de Ilhéus e Região - Todos os direitos reservados
             </p>
             <p className="text-xs text-muted-foreground">
               Em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)
