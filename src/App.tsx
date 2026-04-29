@@ -82,6 +82,7 @@ const NegotiationPreviewPage = lazy(() => import("./pages/public/NegotiationPrev
 const ApresentacaoEcliniPage = lazy(() => import("./pages/ApresentacaoEcliniPage"));
 const TutorialSindicatoPage = lazy(() => import("./pages/TutorialSindicatoPage"));
 const SindicatoPrivacyPolicy = lazy(() => import("./pages/SindicatoPrivacyPolicy"));
+const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta"));
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
