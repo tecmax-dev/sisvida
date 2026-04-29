@@ -87,6 +87,47 @@ const SindicatoExclusaoConta = () => {
               </ul>
             </section>
 
+            <section className="border-t pt-6">
+              <h2 className="text-lg font-semibold mb-2">
+                Exclusão parcial de dados (sem excluir a conta)
+              </h2>
+              <p className="text-muted-foreground mb-2">
+                Você também pode solicitar a exclusão apenas de dados específicos,
+                mantendo sua conta ativa no app. Isso inclui, por exemplo:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-3">
+                <li>Foto pessoal ou foto da carteirinha digital</li>
+                <li>Documentos enviados (contracheques, comprovantes)</li>
+                <li>Histórico de agendamentos passados</li>
+                <li>Endereço, e-mail ou telefone de contato</li>
+                <li>Dados de dependentes específicos</li>
+              </ul>
+              <p className="text-muted-foreground">
+                Para solicitar a exclusão parcial dos seus dados, entre em contato
+                pelos canais abaixo informando quais informações deseja remover.
+                A solicitação é processada em até <strong>30 dias</strong>, conforme
+                a LGPD, e dados retidos por obrigação legal (ver seção acima) não
+                podem ser removidos.
+              </p>
+              <div className="space-y-2 mt-3">
+                <p className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <a
+                    href="mailto:comerciariosilheus@gmail.com?subject=Solicitação%20de%20exclusão%20parcial%20de%20dados"
+                    className="hover:underline"
+                  >
+                    comerciariosilheus@gmail.com
+                  </a>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <a href="tel:+557332311784" className="hover:underline">
+                    (73) 3231-1784
+                  </a>
+                </p>
+              </div>
+            </section>
+
             <section className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
               <h3 className="font-semibold flex items-center gap-2 mb-2">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
