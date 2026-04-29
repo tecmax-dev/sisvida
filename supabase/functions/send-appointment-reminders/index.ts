@@ -610,15 +610,10 @@ serve(async (req) => {
 
         let success = false;
         
-        // Prioridade: 1) Logo da union entity, 2) Header WhatsApp personalizado, 3) Logo da clínica, 4) Logo padrão
-        const unionEntity = (clinic as any).union_entities?.[0];
-        const logoUrl = unionEntity?.logo_url || clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
-        
-        // Try Evolution API first for image+text
-        success = await sendWhatsAppWithImage(
+        // Appointment reminders are text-only to reduce WhatsApp ban risk.
+        success = await sendWhatsAppViaEvolution(
           evolutionConfig as EvolutionConfig,
           phoneToUse,
-          logoUrl,
           message
         );
 
@@ -636,10 +631,10 @@ serve(async (req) => {
             .eq('id', appointment.id);
 
           sentCount++;
-          console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${appointment.appointment_date} at ${time}`);
+          console.log(`Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${appointment.appointment_date} at ${time}`);
         } else {
           errorCount++;
-          console.error(`✗ Failed to send reminder to ${displayName} via both Evolution and Whazing`);
+          console.error(`Failed to send reminder to ${displayName} via both Evolution and Whazing`);
         }
 
         // Always try to send interactive buttons via Whazing (even if main message used fallback)
@@ -648,9 +643,9 @@ serve(async (req) => {
           await new Promise(resolve => setTimeout(resolve, 1500));
           const buttonsSent = await sendConfirmationButtons(phoneToUse, appointment.id);
           if (buttonsSent) {
-            console.log(`✓ Confirmation buttons sent to ${displayName}`);
+            console.log(`Confirmation buttons sent to ${displayName}`);
           } else {
-            console.log(`⚠ Could not send buttons to ${displayName} (Whazing not configured or error)`);
+            console.log(`Could not send buttons to ${displayName} (Whazing not configured or error)`);
           }
         }
 
@@ -675,7 +670,7 @@ serve(async (req) => {
           if (pendingError) {
             console.error(`Error creating pending confirmation for appointment ${appointment.id}:`, pendingError);
           } else {
-            console.log(`✓ Pending confirmation registered for ${displayName} (phone: ${phoneWithCountry})`);
+            console.log(`Pending confirmation registered for ${displayName} (phone: ${phoneWithCountry})`);
           }
         }
 

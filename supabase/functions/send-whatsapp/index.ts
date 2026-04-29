@@ -156,6 +156,14 @@ function phonesEquivalent(a: string, b: string): boolean {
   return getComparableBrazilianPhones(b).some((variant) => aVariants.has(variant));
 }
 
+function stripWhatsAppRiskyEmojis(text: string): string {
+  return text
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0F\u200D\u20E3]/gu, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function resolveReminderAppointmentId(
   supabase: any,
   clinicId: string,
@@ -383,6 +391,9 @@ serve(async (req) => {
       );
     }
 
+    const isReminder = type === 'reminder' || type === 'reminder_direct_reply';
+    const safeMessage = isReminder ? stripWhatsAppRiskyEmojis(message) : message;
+
     // 6. Create service role client for RPC call
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -471,7 +482,6 @@ serve(async (req) => {
     const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
     // Force text-only for appointment reminders to reduce risk of WhatsApp ban
     // (sending media via unofficial APIs increases ban risk)
-    const isReminder = type === 'reminder' || type === 'reminder_direct_reply';
     const shouldUseTextOnly = sendAsTextOnly === true || isReminder;
     // Priority: explicit imageUrl > whatsapp_header_image_url > union_entity logo > clinic logo > default
     const logoUrl = shouldUseTextOnly
@@ -513,7 +523,7 @@ serve(async (req) => {
       const params = new URLSearchParams();
       params.append('To', toNumber);
       params.append('From', phone_number);
-      params.append('Body', message);
+      params.append('Body', safeMessage);
       
       // Add image if available
       if (logoUrl && logoUrl !== DEFAULT_SYSTEM_LOGO) {
@@ -720,13 +730,13 @@ serve(async (req) => {
     const evolutionPayload = shouldUseTextOnly
       ? {
           number: formattedPhone,
-          text: message,
+          text: safeMessage,
         }
       : {
           number: formattedPhone,
           mediatype: 'image',
           media: logoUrl,
-          caption: message,
+          caption: safeMessage,
         };
 
     const response = await fetch(evolutionEndpoint, {
@@ -787,7 +797,7 @@ serve(async (req) => {
       console.error('[send-whatsapp] Delivery failure reported by Evolution:', result);
 
       if (shouldUseTextOnly) {
-        const fallback = await sendViaWhazingTextFallback(formattedPhone, message);
+        const fallback = await sendViaWhazingTextFallback(formattedPhone, safeMessage);
         if (fallback.success) {
           console.log('[send-whatsapp] Text fallback via Whazing succeeded after Evolution delivery failure');
           result = {
@@ -820,7 +830,7 @@ serve(async (req) => {
         supabase,
         clinicId,
         formattedPhone,
-        message,
+        safeMessage,
       );
 
       if (resolvedAppointmentId) {
