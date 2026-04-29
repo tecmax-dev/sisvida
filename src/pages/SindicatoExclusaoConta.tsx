@@ -16,31 +16,67 @@ const SindicatoExclusaoConta = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Exclusão de Conta e Dados</CardTitle>
+            <CardTitle className="text-2xl">
+              Exclusão de Conta e Dados — App Comerciários de Ilhéus
+            </CardTitle>
             <p className="text-sm text-muted-foreground mt-2">
-              Solicitação de exclusão de conta e dados pessoais do app do sindicato
+              Esta página descreve como solicitar a exclusão da sua conta e dos
+              seus dados pessoais no aplicativo{" "}
+              <strong>Comerciários de Ilhéus</strong>, publicado pelo{" "}
+              <strong>Sindicato dos Comerciários de Ilhéus e Região</strong>.
             </p>
           </CardHeader>
           <CardContent className="space-y-6 text-sm leading-relaxed">
             <section>
-              <h2 className="text-lg font-semibold mb-2">Como solicitar a exclusão</h2>
-              <p className="text-muted-foreground">
-                A exclusão da conta no app está vinculada ao processo de{" "}
-                <strong>desfiliação do sindicato</strong>. Por se tratar de relação
-                sindical formal, a solicitação deve ser feita <strong>presencialmente</strong>{" "}
-                na sede da entidade, mediante apresentação de documento de identidade
-                com foto e assinatura do termo de desfiliação.
+              <h2 className="text-lg font-semibold mb-2">
+                Etapas para solicitar a exclusão da conta
+              </h2>
+              <p className="text-muted-foreground mb-3">
+                A conta no app <strong>Comerciários de Ilhéus</strong> está
+                vinculada à filiação sindical. Para excluí-la, siga os passos
+                abaixo:
               </p>
+              <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>
+                  Entre em contato com o sindicato pelo telefone{" "}
+                  <a href="tel:+557332311784" className="text-primary hover:underline">
+                    (73) 3231-1784
+                  </a>{" "}
+                  ou pelo e-mail{" "}
+                  <a
+                    href="mailto:comerciariosilheus@gmail.com?subject=Solicitação%20de%20exclusão%20de%20conta%20-%20App%20Comerciários%20de%20Ilhéus"
+                    className="text-primary hover:underline"
+                  >
+                    comerciariosilheus@gmail.com
+                  </a>{" "}
+                  informando seu nome completo, CPF e que deseja excluir sua
+                  conta no app.
+                </li>
+                <li>
+                  Compareça <strong>presencialmente</strong> à sede do Sindicato
+                  dos Comerciários de Ilhéus e Região, levando documento de
+                  identidade com foto.
+                </li>
+                <li>
+                  Assine o <strong>termo de desfiliação sindical</strong>, que
+                  também autoriza a exclusão da sua conta e dos seus dados
+                  pessoais do app.
+                </li>
+                <li>
+                  Após a confirmação, sua conta e os dados pessoais associados
+                  serão excluídos do app em até <strong>30 dias</strong>.
+                </li>
+              </ol>
             </section>
 
             <section className="bg-muted/50 rounded-lg p-4 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Atendimento presencial
+                Canais de contato do desenvolvedor
               </h3>
               <p className="text-muted-foreground">
-                Compareça à sede do seu sindicato em horário comercial. Os contatos
-                e endereços estão disponíveis abaixo:
+                Sindicato dos Comerciários de Ilhéus e Região — desenvolvedor
+                responsável pelo app <strong>Comerciários de Ilhéus</strong>:
               </p>
               <div className="space-y-2">
                 <p className="flex items-center gap-2">
@@ -62,28 +98,50 @@ const SindicatoExclusaoConta = () => {
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold mb-2">O que será excluído</h2>
+              <h2 className="text-lg font-semibold mb-2">
+                Tipos de dados que serão excluídos
+              </h2>
+              <p className="text-muted-foreground mb-2">
+                Após a confirmação da solicitação, os seguintes dados pessoais
+                serão excluídos permanentemente do app em até{" "}
+                <strong>30 dias</strong>:
+              </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                 <li>Dados cadastrais (nome, CPF, e-mail, telefone, endereço)</li>
                 <li>Foto pessoal e foto da carteirinha digital</li>
-                <li>Histórico de agendamentos médicos</li>
+                <li>Histórico de agendamentos de atendimentos</li>
                 <li>Documentos enviados (contracheques, comprovantes)</li>
                 <li>Credenciais de acesso ao app</li>
                 <li>Dados de dependentes vinculados</li>
+                <li>Histórico de mensagens e notificações no app</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold mb-2">O que é retido por obrigação legal</h2>
+              <h2 className="text-lg font-semibold mb-2">
+                Tipos de dados que são mantidos e por quanto tempo
+              </h2>
               <p className="text-muted-foreground mb-2">
-                Em conformidade com a LGPD (Lei nº 13.709/2018, art. 16) e legislações
-                fiscais e trabalhistas brasileiras, alguns dados são retidos mesmo após
-                a exclusão da conta:
+                Em conformidade com a LGPD (Lei nº 13.709/2018, art. 16) e
+                legislações fiscais e trabalhistas brasileiras, alguns dados
+                precisam ser retidos mesmo após a exclusão da conta, pelos
+                seguintes prazos adicionais de armazenamento:
               </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Registros financeiros e fiscais (contribuições, boletos pagos) — mantidos por até 5 anos</li>
-                <li>Histórico de filiação e desfiliação sindical — mantido conforme legislação trabalhista</li>
-                <li>Documentos de homologação rescisória (quando aplicável) — mantidos pelo prazo legal</li>
+                <li>
+                  <strong>Registros financeiros e fiscais</strong>{" "}
+                  (contribuições, boletos pagos): retidos por até{" "}
+                  <strong>5 anos</strong> (Código Tributário Nacional).
+                </li>
+                <li>
+                  <strong>Histórico de filiação e desfiliação sindical</strong>:
+                  retido por até <strong>5 anos</strong> após a desfiliação.
+                </li>
+                <li>
+                  <strong>Documentos de homologação rescisória</strong> (quando
+                  aplicável): retidos por até <strong>30 anos</strong>, conforme
+                  legislação trabalhista (CLT).
+                </li>
               </ul>
             </section>
 
@@ -92,8 +150,10 @@ const SindicatoExclusaoConta = () => {
                 Exclusão parcial de dados (sem excluir a conta)
               </h2>
               <p className="text-muted-foreground mb-2">
-                Você também pode solicitar a exclusão apenas de dados específicos,
-                mantendo sua conta ativa no app. Isso inclui, por exemplo:
+                Você também pode solicitar a exclusão apenas de dados
+                específicos, mantendo sua conta ativa no app{" "}
+                <strong>Comerciários de Ilhéus</strong>. Isso inclui, por
+                exemplo:
               </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground mb-3">
                 <li>Foto pessoal ou foto da carteirinha digital</li>
@@ -102,30 +162,33 @@ const SindicatoExclusaoConta = () => {
                 <li>Endereço, e-mail ou telefone de contato</li>
                 <li>Dados de dependentes específicos</li>
               </ul>
-              <p className="text-muted-foreground">
-                Para solicitar a exclusão parcial dos seus dados, entre em contato
-                pelos canais abaixo informando quais informações deseja remover.
-                A solicitação é processada em até <strong>30 dias</strong>, conforme
-                a LGPD, e dados retidos por obrigação legal (ver seção acima) não
-                podem ser removidos.
+              <p className="text-muted-foreground mb-2">
+                <strong>Etapas para exclusão parcial:</strong>
               </p>
-              <div className="space-y-2 mt-3">
-                <p className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-primary" />
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>
+                  Envie um e-mail para{" "}
                   <a
-                    href="mailto:comerciariosilheus@gmail.com?subject=Solicitação%20de%20exclusão%20parcial%20de%20dados"
-                    className="hover:underline"
+                    href="mailto:comerciariosilheus@gmail.com?subject=Solicitação%20de%20exclusão%20parcial%20de%20dados%20-%20App%20Comerciários%20de%20Ilhéus"
+                    className="text-primary hover:underline"
                   >
                     comerciariosilheus@gmail.com
-                  </a>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-primary" />
-                  <a href="tel:+557332311784" className="hover:underline">
+                  </a>{" "}
+                  ou ligue para{" "}
+                  <a href="tel:+557332311784" className="text-primary hover:underline">
                     (73) 3231-1784
                   </a>
-                </p>
-              </div>
+                  .
+                </li>
+                <li>
+                  Informe seu nome completo, CPF e quais dados deseja remover.
+                </li>
+                <li>
+                  A solicitação é processada em até <strong>30 dias</strong>,
+                  conforme a LGPD. Dados retidos por obrigação legal (ver seção
+                  acima) não podem ser removidos.
+                </li>
+              </ol>
             </section>
 
             <section className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
@@ -134,16 +197,17 @@ const SindicatoExclusaoConta = () => {
                 Prazo de processamento
               </h3>
               <p className="text-muted-foreground">
-                Após a confirmação da desfiliação presencial, a exclusão dos dados
-                pessoais do app é efetivada em <strong>até 30 dias</strong>, conforme
-                prazo previsto na LGPD.
+                Após a confirmação da desfiliação presencial, a exclusão dos
+                dados pessoais do app <strong>Comerciários de Ilhéus</strong> é
+                efetivada em <strong>até 30 dias</strong>, conforme prazo
+                previsto na LGPD.
               </p>
             </section>
 
             <section className="pt-4 border-t">
               <p className="text-xs text-muted-foreground">
-                Para mais informações sobre o tratamento dos seus dados, consulte
-                nossa{" "}
+                Para mais informações sobre o tratamento dos seus dados,
+                consulte nossa{" "}
                 <Link
                   to="/sindicato/politica-de-privacidade"
                   className="text-primary hover:underline"
