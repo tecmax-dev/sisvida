@@ -404,6 +404,16 @@ function formatPhoneForWhatsApp(phone: string): string {
   return formattedPhone;
 }
 
+const WHATSAPP_EMOJI_REGEX = /[\u{1F1E6}-\u{1F1FF}\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F\u200D\u20E3]/gu;
+
+function sanitizeOutgoingWhatsAppText(text: string): string {
+  return text
+    .replace(WHATSAPP_EMOJI_REGEX, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function getWhazingSendUrl(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
   if (cleanBase.includes('/api/external/') || cleanBase.endsWith('/apioficial')) {
@@ -465,13 +475,14 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
 
   try {
     const cleanPhone = formatPhoneForWhatsApp(phone);
+    const safeMessage = sanitizeOutgoingWhatsAppText(message);
     const response = await fetch(getWhazingSendUrl(whazingUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, message)),
+      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, safeMessage)),
     });
 
     const responseText = await response.text();
@@ -494,7 +505,8 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
-    const whazingSent = await sendWhazingTextMessage(phone, message);
+    const safeMessage = sanitizeOutgoingWhatsAppText(message);
+    const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
     const destination = formatPhoneForWhatsApp(phone);
@@ -508,7 +520,7 @@ async function sendWhatsAppMessage(
       },
       body: JSON.stringify({
         number: destination,
-        text: message,
+        text: safeMessage,
       }),
     });
 
