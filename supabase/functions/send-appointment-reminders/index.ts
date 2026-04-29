@@ -240,6 +240,21 @@ async function sendConfirmationButtons(
       { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
     ];
 
+    // Vary the prompt text to avoid identical messages (anti-ban)
+    const buttonPrompts = [
+      "Confirme ou cancele sua consulta:",
+      "Por favor, confirme ou cancele:",
+      "Toque abaixo para confirmar ou cancelar:",
+      "Você poderá confirmar ou cancelar abaixo:",
+      "Selecione uma opção abaixo:",
+      "Confirme sua presença ou cancele:",
+      "Escolha uma das opções:",
+      "Use os botões abaixo para responder:",
+      "Para responder, toque em uma opção:",
+      "Confirme já sua consulta:",
+    ];
+    const buttonPromptText = buttonPrompts[Math.floor(Math.random() * buttonPrompts.length)];
+
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${whazingToken}`,
@@ -251,7 +266,7 @@ async function sendConfirmationButtons(
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
       headers,
-      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
+      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, buttonPromptText, buttons)),
     });
 
     let responseText = await response.text();
@@ -260,7 +275,7 @@ async function sendConfirmationButtons(
       response = await fetch(getWhazingSendUrl(whazingUrl), {
         method: 'POST',
         headers,
-        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, "Confirme ou cancele sua consulta:", buttons)),
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, buttonPromptText, buttons)),
       });
       responseText = await response.text();
     }
