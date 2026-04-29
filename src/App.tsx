@@ -82,6 +82,7 @@ const NegotiationPreviewPage = lazy(() => import("./pages/public/NegotiationPrev
 const ApresentacaoEcliniPage = lazy(() => import("./pages/ApresentacaoEcliniPage"));
 const TutorialSindicatoPage = lazy(() => import("./pages/TutorialSindicatoPage"));
 const SindicatoPrivacyPolicy = lazy(() => import("./pages/SindicatoPrivacyPolicy"));
+const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta"));
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
@@ -389,6 +390,8 @@ function App() {
                 <Route path="/sindicato/beneficios" element={<SindicatoBeneficiosLandingPage />} />
                 <Route path="/sindicato/beneficios/imprimir" element={<SindicatoBeneficiosPrintPage />} />
                 <Route path="/sindicato/politica-de-privacidade" element={<SindicatoPrivacyPolicy />} />
+                <Route path="/sindicato/exclusao-de-conta" element={<SindicatoExclusaoConta />} />
+                <Route path="/excluir-conta" element={<SindicatoExclusaoConta />} />
                 <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
                 <Route path="/sindicato/recuperar-senha" element={<MobilePasswordResetPage />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
