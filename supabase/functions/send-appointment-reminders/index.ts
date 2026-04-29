@@ -236,8 +236,8 @@ async function sendConfirmationButtons(
     }
 
     const buttons = [
-      { id: `confirm_apt_${appointmentId}`, title: "✅ Confirmar" },
-      { id: `cancel_apt_${appointmentId}`, title: "❌ Cancelar" },
+      { id: `confirm_apt_${appointmentId}`, title: "Confirmar" },
+      { id: `cancel_apt_${appointmentId}`, title: "Cancelar" },
     ];
 
     // Vary the prompt text to avoid identical messages (anti-ban)
@@ -318,7 +318,7 @@ function isRodoviariosProfessional(professionalName: string): boolean {
 
 function getProfessionalLocation(professionalName: string): string | null {
   if (isRodoviariosProfessional(professionalName)) {
-    return `📍 *Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
+    return `*Local:* Av. Antonio Carlos Magalhães, 1062, Bairro Malhado\n   Sede do Sindicato dos Rodoviários\n   (ao lado da Igreja Testemunhas de Jeová)`;
   }
   return null;
 }
@@ -328,8 +328,6 @@ const GREETINGS = [
   'Olá', 'Oi', 'Bom dia', 'Boa tarde', 'Hey', 'Prezado(a)',
   'Saudações', 'Tudo bem', 'Tudo certo', 'E aí',
 ];
-
-const GREETING_EMOJIS = ['👋', '😊', '🙂', '💙', '✨', '🌟', '😃', '🤗', '💛', '🩺'];
 
 const REMINDER_INTROS = [
   'Lembramos que você tem uma consulta agendada:',
@@ -345,46 +343,46 @@ const REMINDER_INTROS = [
 ];
 
 const ARRIVAL_INSTRUCTIONS = [
-  '⏳ *Compareça com 15 minutos de antecedência.*',
-  '⏰ *Chegue 15 minutos antes do horário marcado.*',
-  '🕐 *Pedimos que chegue com 15 min de antecedência.*',
-  '⏳ *Por favor, apresente-se 15 minutos antes.*',
-  '⌚ *Recomendamos chegar 15 min antes do horário.*',
+  '*Compareça com 15 minutos de antecedência.*',
+  '*Chegue 15 minutos antes do horário marcado.*',
+  '*Pedimos que chegue com 15 min de antecedência.*',
+  '*Por favor, apresente-se 15 minutos antes.*',
+  '*Recomendamos chegar 15 min antes do horário.*',
 ];
 
 const NO_SHOW_WARNINGS = [
   [
-    `⚠️ *Atenção, Associado(a):*`,
+    `*Atenção, Associado(a):*`,
     `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
     ``,
-    `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
+    `Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
   ],
   [
-    `⚠️ *Importante:*`,
+    `*Importante:*`,
     `Se não puder comparecer, por favor *avise com antecedência*. Sua vaga será oferecida a outro associado na fila de espera.`,
     ``,
-    `❗ A *ausência sem aviso prévio* pode acarretar *restrição temporária* de novos agendamentos.`,
+    `A *ausência sem aviso prévio* pode acarretar *restrição temporária* de novos agendamentos.`,
   ],
   [
-    `⚠️ *Lembrete:*`,
+    `*Lembrete:*`,
     `Caso surja algum imprevisto, *cancele antes do horário* para liberar a vaga a outros associados que aguardam na fila.`,
     ``,
-    `❗ *Faltas sem justificativa* poderão gerar *suspensão temporária* de agendamentos com este profissional.`,
+    `*Faltas sem justificativa* poderão gerar *suspensão temporária* de agendamentos com este profissional.`,
   ],
   [
-    `⚠️ *Atenção:*`,
+    `*Atenção:*`,
     `Pedimos que, em caso de impossibilidade, *comunique o cancelamento com antecedência*. Outros associados na lista de espera poderão ser beneficiados.`,
     ``,
-    `❗ A *não comunicação de ausência* pode resultar em *bloqueio temporário* para futuros agendamentos.`,
+    `A *não comunicação de ausência* pode resultar em *bloqueio temporário* para futuros agendamentos.`,
   ],
 ];
 
 const CLOSINGS = [
   ['Atenciosamente,', 'Equipe {clinic}'],
   ['Com carinho,', 'Equipe {clinic}'],
-  ['Um abraço,', 'Equipe {clinic} 💙'],
+  ['Um abraço,', 'Equipe {clinic}'],
   ['Conte conosco!', '{clinic}'],
-  ['Estamos te esperando!', 'Equipe {clinic} ✨'],
+  ['Estamos te esperando!', 'Equipe {clinic}'],
   ['Até lá!', 'Equipe {clinic}'],
 ];
 
@@ -401,7 +399,6 @@ function formatAppointmentReminder(
 ): string {
   const firstName = patientName.split(' ')[0];
   const greeting = pickRandom(GREETINGS);
-  const emoji = pickRandom(GREETING_EMOJIS);
   const intro = pickRandom(REMINDER_INTROS);
   const arrival = pickRandom(ARRIVAL_INSTRUCTIONS);
   const noShow = pickRandom(NO_SHOW_WARNINGS);
@@ -409,16 +406,16 @@ function formatAppointmentReminder(
   const specificLocation = getProfessionalLocation(professionalName);
 
   const lines = [
-    `${greeting}, ${firstName}! ${emoji}`,
+    `${greeting}, ${firstName}!`,
     ``,
     arrival,
     ``,
     intro,
     ``,
-    `📅 *Data:* ${date}`,
-    `🕐 *Horário:* ${time}`,
-    `👨‍⚕️ *Profissional:* ${professionalName}`,
-    `🏥 *Clínica:* ${clinicName}`,
+    `*Data:* ${date}`,
+    `*Horário:* ${time}`,
+    `*Profissional:* ${professionalName}`,
+    `*Clínica:* ${clinicName}`,
     specificLocation ? `` : null,
     specificLocation,
     ``,
