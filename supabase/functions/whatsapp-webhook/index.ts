@@ -643,12 +643,17 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
     };
 
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
+    const safeBodyText = sanitizeOutgoingWhatsAppText(bodyText);
+    const safeButtons = buttons.map((button) => ({
+      ...button,
+      title: sanitizeOutgoingWhatsAppText(button.title),
+    }));
     console.log(`[whazing] Sending ${buttons.length}-button menu to ${cleanPhone} via API PLUS/native buttons`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
       headers,
-      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, bodyText, buttons)),
+      body: JSON.stringify(buildWhazingButtonPayload(whazingUrl, cleanPhone, safeBodyText, safeButtons)),
     });
 
     let responseText = await response.text();
@@ -657,7 +662,7 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
       response = await fetch(getWhazingSendUrl(whazingUrl), {
         method: 'POST',
         headers,
-        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, bodyText, buttons)),
+        body: JSON.stringify(buildWhazingExternalButtonPayload(cleanPhone, safeBodyText, safeButtons)),
       });
       responseText = await response.text();
     }
