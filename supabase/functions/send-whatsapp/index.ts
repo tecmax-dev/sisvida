@@ -260,8 +260,7 @@ async function sendWhazingConfirmationButtons(
     };
 
     const apiOficialUrl = getWhazingApiPlusUrl(whazingUrl);
-    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via API PLUS/native buttons (appointment: ${appointmentId}) - URL: ${apiOficialUrl}`);
-    console.log(`[send-whatsapp] Buttons payload:`, JSON.stringify(payload));
+    console.log(`[send-whatsapp] Sending reminder buttons to ${cleanPhone} via API PLUS/native buttons (appointment: ${appointmentId})`);
 
     let response = await fetch(apiOficialUrl, {
       method: 'POST',
@@ -270,7 +269,6 @@ async function sendWhazingConfirmationButtons(
     });
 
     let responseText = await response.text();
-    console.log(`[send-whatsapp] API PLUS response status=${response.status} body=${responseText.substring(0, 500)}`);
     if (!response.ok && isChatgooExternalUrl(whazingUrl)) {
       console.warn(`[send-whatsapp] API PLUS failed (${response.status}); retrying external endpoint: ${responseText.substring(0, 300)}`);
       response = await fetch(getWhazingSendUrl(whazingUrl), {
