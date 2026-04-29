@@ -18,14 +18,14 @@ const SindicatoExclusaoConta = () => {
           <CardHeader>
             <CardTitle className="text-2xl">Exclusão de Conta e Dados</CardTitle>
             <p className="text-sm text-muted-foreground mt-2">
-              ProsindWeb — Solicitação de exclusão de conta e dados pessoais
+              Solicitação de exclusão de conta e dados pessoais do app do sindicato
             </p>
           </CardHeader>
           <CardContent className="space-y-6 text-sm leading-relaxed">
             <section>
               <h2 className="text-lg font-semibold mb-2">Como solicitar a exclusão</h2>
               <p className="text-muted-foreground">
-                A exclusão da conta no ProsindWeb está vinculada ao processo de{" "}
+                A exclusão da conta no app está vinculada ao processo de{" "}
                 <strong>desfiliação do sindicato</strong>. Por se tratar de relação
                 sindical formal, a solicitação deve ser feita <strong>presencialmente</strong>{" "}
                 na sede da entidade, mediante apresentação de documento de identidade
@@ -52,10 +52,10 @@ const SindicatoExclusaoConta = () => {
                 <p className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-primary" />
                   <a
-                    href="mailto:noreply@prosindweb.com.br"
+                    href="mailto:contato@sindicato.org.br"
                     className="hover:underline"
                   >
-                    noreply@prosindweb.com.br
+                    contato@sindicato.org.br
                   </a>
                 </p>
               </div>
