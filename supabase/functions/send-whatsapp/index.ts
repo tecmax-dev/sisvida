@@ -523,7 +523,7 @@ serve(async (req) => {
       const params = new URLSearchParams();
       params.append('To', toNumber);
       params.append('From', phone_number);
-      params.append('Body', message);
+      params.append('Body', safeMessage);
       
       // Add image if available
       if (logoUrl && logoUrl !== DEFAULT_SYSTEM_LOGO) {
@@ -730,13 +730,13 @@ serve(async (req) => {
     const evolutionPayload = shouldUseTextOnly
       ? {
           number: formattedPhone,
-          text: message,
+          text: safeMessage,
         }
       : {
           number: formattedPhone,
           mediatype: 'image',
           media: logoUrl,
-          caption: message,
+          caption: safeMessage,
         };
 
     const response = await fetch(evolutionEndpoint, {
@@ -797,7 +797,7 @@ serve(async (req) => {
       console.error('[send-whatsapp] Delivery failure reported by Evolution:', result);
 
       if (shouldUseTextOnly) {
-        const fallback = await sendViaWhazingTextFallback(formattedPhone, message);
+        const fallback = await sendViaWhazingTextFallback(formattedPhone, safeMessage);
         if (fallback.success) {
           console.log('[send-whatsapp] Text fallback via Whazing succeeded after Evolution delivery failure');
           result = {
@@ -830,7 +830,7 @@ serve(async (req) => {
         supabase,
         clinicId,
         formattedPhone,
-        message,
+        safeMessage,
       );
 
       if (resolvedAppointmentId) {
