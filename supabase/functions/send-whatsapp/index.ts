@@ -490,6 +490,63 @@ serve(async (req) => {
 
     console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}, textOnly: ${shouldUseTextOnly}, logo: ${logoUrl || 'NONE'}`);
 
+    // ========== ZAP RESPONDER PROVIDER (META OFFICIAL API) ==========
+    if (whatsappProvider === 'zapresponder') {
+      console.log(`[Clinic ${clinicId}] Sending via Zap Responder to ${cleanPhone}`);
+      
+      // We call our internal send-whatsapp-zapresponder function
+      // passing the necessary credentials and data
+      try {
+        const zapResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-whatsapp-zapresponder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            phone: cleanPhone,
+            message: safeMessage,
+            clinicId: clinicId,
+            // Optionally pass template info if it was provided in the original request
+            templateName: body.templateName,
+            templateLanguage: body.templateLanguage,
+            templateComponents: body.templateComponents
+          }),
+        });
+
+        const zapResult = await zapResponse.json();
+
+        if (!zapResponse.ok) {
+          console.error('[Zap Responder] Send failed:', zapResult);
+          return new Response(
+            JSON.stringify({ success: false, error: zapResult.error || 'Erro ao enviar via Zap Responder' }),
+            { status: zapResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`[Zap Responder] Message sent successfully`);
+
+        // Log message
+        await supabase.from('message_logs').insert({
+          clinic_id: clinicId,
+          message_type: type,
+          phone: cleanPhone,
+          month_year: monthYear,
+        });
+
+        return new Response(
+          JSON.stringify({ success: true, data: zapResult.data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (zapError) {
+        console.error('[Zap Responder] Request error:', zapError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Erro de comunicação com Zap Responder' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // ========== TWILIO PROVIDER ==========
     if (whatsappProvider === 'twilio') {
       const { data: twilioConfig, error: twilioError } = await supabase

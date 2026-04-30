@@ -17328,6 +17328,36 @@ export type Database = {
           },
         ]
       }
+      zapresponder_configs: {
+        Row: {
+          api_token: string
+          created_at: string
+          id: string
+          instance_id: string | null
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          api_token: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          api_token?: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       annual_cash_flow: {
