@@ -21,6 +21,7 @@ import { SessionPolicySettings } from "@/components/settings/SessionPolicySettin
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
+import { ZapResponderConfigPanel } from "@/components/settings/ZapResponderConfigPanel";
 import { WhatsAppProviderSelector } from "@/components/settings/WhatsAppProviderSelector";
 import { WhatsAppDelayConfig } from "@/components/settings/WhatsAppDelayConfig";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
@@ -1223,6 +1224,16 @@ export default function SettingsPage() {
       feature: "whatsapp_twilio",
       isComponent: true,
       component: currentClinic ? <TwilioConfigPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "zapresponder-config",
+      title: "Zap Responder (API Oficial)",
+      description: "Configuração do Zap Responder",
+      icon: <ShieldCheck className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: currentClinic ? <ZapResponderConfigPanel clinicId={currentClinic.id} /> : null,
     },
     {
       id: "whatsapp-delay",
