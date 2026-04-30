@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Zap, Check } from "lucide-react";
+import { MessageSquare, Zap, Check, ShieldCheck } from "lucide-react";
 
 interface WhatsAppProviderSelectorProps {
   clinicId: string;
@@ -18,6 +18,7 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
   const [loading, setLoading] = useState(true);
   const [evolutionConnected, setEvolutionConnected] = useState(false);
   const [twilioConnected, setTwilioConnected] = useState(false);
+  const [zapResponderConnected, setZapResponderConnected] = useState(false);
 
   useEffect(() => {
     loadProviderConfig();
@@ -55,6 +56,14 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
         .maybeSingle();
 
       setTwilioConnected(twilioData?.is_connected || false);
+
+      // Check Zap Responder connection
+      const { data: zapData } = await supabase
+        .from("zapresponder_configs")
+        .select("is_active")
+        .maybeSingle();
+
+      setZapResponderConnected(zapData?.is_active || false);
     } catch (error) {
       console.error("Error loading provider config:", error);
     } finally {
@@ -76,7 +85,13 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
 
       toast({
         title: "Provedor alterado",
-        description: `WhatsApp agora usa ${newProvider === "evolution" ? "Evolution API" : "Twilio"}`,
+        description: `WhatsApp agora usa ${
+          newProvider === "evolution" 
+            ? "Evolution API" 
+            : newProvider === "twilio" 
+              ? "Twilio" 
+              : "Zap Responder (API Oficial)"
+        }`,
       });
     } catch (error: any) {
       console.error("Error changing provider:", error);
@@ -109,6 +124,39 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
           onValueChange={handleProviderChange}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
+          <div className="relative">
+            <RadioGroupItem
+              value="zapresponder"
+              id="zapresponder"
+              className="peer sr-only"
+            />
+            <Label
+              htmlFor="zapresponder"
+              className="flex flex-col items-start gap-2 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-blue-500" />
+                  <span className="font-semibold">Zap Responder</span>
+                </div>
+                {zapResponderConnected && (
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    <Check className="h-3 w-3 mr-1" />
+                    Conectado
+                  </Badge>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <ul className="space-y-1">
+                  <li>• API Oficial (Anti-Ban)</li>
+                  <li>• Atendimento Humano Integrado</li>
+                  <li>• Templates para automações</li>
+                  <li>• Alta confiabilidade</li>
+                </ul>
+              </div>
+            </Label>
+          </div>
+
           <div className="relative">
             <RadioGroupItem
               value="evolution"
