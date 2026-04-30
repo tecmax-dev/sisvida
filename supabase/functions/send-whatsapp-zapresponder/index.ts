@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { phone, message, clinicId, templateName, templateLanguage = 'pt_BR', templateComponents } = body;
+     const body = await req.json();
+     const { phone, message, clinicId, templateName, templateLanguage = 'pt_BR', templateComponents, test } = body;
 
-    if (!phone || !clinicId) {
+     if (!clinicId || (!phone && !test)) {
       return new Response(
         JSON.stringify({ success: false, error: "Phone and clinicId are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -34,13 +34,32 @@ serve(async (req) => {
       .eq("is_active", true)
       .maybeSingle();
 
-    if (configError || !config) {
-      console.error("Zap Responder config not found:", configError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Zap Responder not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+     // Prefer secret from environment over database (more secure)
+     const apiToken = Deno.env.get("ZAPRESPONDER_API_TOKEN") || config?.api_token;
+
+     if (!apiToken || apiToken === "managed-via-secrets") {
+       console.error("Zap Responder API token not found in secrets");
+       return new Response(
+         JSON.stringify({ success: false, error: "API token not configured in Secrets" }),
+         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+       );
+     }
+
+     if (test) {
+       // Validate token by fetching account info
+       const response = await fetch("https://api.zapresponder.com/v1/account", {
+         headers: { "Authorization": `Bearer ${apiToken}` }
+       });
+       
+       if (!response.ok) {
+         throw new Error("Invalid API token");
+       }
+
+       return new Response(
+         JSON.stringify({ success: true, message: "Token valid" }),
+         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+       );
+     }
 
     // Clean phone number (Meta requires format like 5511999999999)
     let cleanPhone = phone.replace(/\D/g, "");
@@ -71,7 +90,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.api_token}`
+         "Authorization": `Bearer ${apiToken}`
       },
       body: JSON.stringify(payload)
     });
