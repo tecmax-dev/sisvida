@@ -23,6 +23,8 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 | `homologacao_lembrete_profissional` | UTILITY | nenhum | 6: serviço, profissional, funcionário, empresa, data, hora | lembrete homologação/jurídico (profissional) |
 | `homologacao_confirmacao` | UTILITY | nenhum | 6: serviço, funcionário, empresa, data, hora, profissional | confirmação pós-agendamento |
 | `homologacao_protocolo` | UTILITY | nenhum | 5: serviço, funcionário, empresa, data, protocolo | conclusão/protocolo emitido |
+| `homologacao_lembrete_v2` | UTILITY | QUICK_REPLY: Confirmar, Cancelar; URL: Reagendar (slug profissional via {{1}}) | 7 body + 1 URL var | lembrete empresa com botões interativos |
+| `homologacao_lembrete_profissional_v2` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 6: serviço, profissional, funcionário, empresa, data, hora | lembrete profissional com botões |
 
 ## Templates pendentes de criação manual no painel Meta
 
@@ -34,6 +36,11 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 - Os 3 botões iniciais do atendimento (Sou Associado / Sou Empresa / Sou Contabilidade) NÃO precisam de template — disparam dentro da janela 24h após mensagem do cliente.
 - Fluxo do boleto (escolher mês/ano/tipo) também roda na janela 24h após resposta do cliente — não precisa de botão no template.
 - Edge function de gestão: `meta-register-templates` com actions `list`, `delete?name=X`, `register-with-buttons?name=X[&as=Y]`.
+- **Homologação v2 — botões:**
+  - `homologacao_lembrete_v2`: 2 Quick Reply (Confirmar/Cancelar) + 1 URL dinâmica (Reagendar) que abre `https://prosindweb.com.br/agendamento/profissional/{{slug}}` — slug do profissional do agendamento.
+  - `homologacao_lembrete_profissional_v2`: 2 Quick Reply (Confirmar/Cancelar). Profissional não recebe botão de reagendar (apenas empresas reagendam).
+  - Webhook `whatsapp-webhook` intercepta as respostas "Confirmar" e "Cancelar": busca `homologacao_appointments` por `company_phone`/`employee_phone` em janela de 48h, atualiza status (`confirmed`/`cancelled`) e responde via `sendMetaText` (Meta Cloud, dentro da janela 24h).
+  - Quando ativar v2 em `homologacaoUtils.ts`/`send-homologacao-reminders`, passar o slug do profissional como variável da URL (segundo array de parameters do componente button).
 
 ## Quando atualizar
 
