@@ -25,7 +25,8 @@ const DEFAULT_PLACEMENTS: WidgetPlacement[] = [
   { id: "whatsapp-provider", column: "left", order: 8 },
   { id: "evolution-api", column: "left", order: 9 },
   { id: "twilio-config", column: "left", order: 10 },
-  { id: "hide-pending-contributions", column: "left", order: 11 },
+  { id: "zap-responder-unified", column: "left", order: 11 },
+  { id: "hide-pending-contributions", column: "left", order: 12 },
   // Right column
   { id: "map-view", column: "right", order: 0 },
   { id: "online-booking", column: "right", order: 1 },
