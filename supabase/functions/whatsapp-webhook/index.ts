@@ -8999,8 +8999,19 @@ serve(async (req) => {
    // Only use sync collector if it's explicitly a test or internal request.
    // External Evolution API / Zap Responder payloads sometimes include "sync: true"
    // but they don't support receiving the reply in the HTTP response.
+   // Only use sync collector if it's explicitly a test or internal request.
+   // External Evolution API / Zap Responder payloads often include "sync: true"
+   // but they don't support receiving the reply in the HTTP response body.
+   const clonedReq = req.clone();
+   let isTestPayload = false;
+   try {
+     const body = await clonedReq.json();
+     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
+   } catch { /* ignore */ }
+ 
    const isTestRequest = req.headers.get('x-test-request') === 'true' || 
-                        req.url.includes('test=true');
+                        req.url.includes('test=true') ||
+                        isTestPayload;
    
    if (isTestRequest) {
      return await syncReplyStore.run(collector, () => handleWebhook(req));
