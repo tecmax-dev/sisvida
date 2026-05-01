@@ -60,7 +60,9 @@ serve(async (req) => {
       .eq("clinic_id", clinicId)
       .eq("is_active", true);
 
-    const zapsterCfg = configs?.find(c => c.instance_id.startsWith('fa')) || configs?.[0] || null;
+    // Resolve instance_id da clínica. 
+    // Priorizamos o ID que começa com '69' (UserId padrão no Zap Responder para envios neste caso)
+    const zapsterCfg = configs?.find(c => c.instance_id.startsWith('69')) || configs?.[0] || null;
 
     if (cfgErr || !zapsterCfg) {
       return new Response(
