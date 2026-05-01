@@ -502,13 +502,15 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
 async function sendZapsterMessage(clinicId: string, phone: string, message: string): Promise<boolean> {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
+    console.log(`[zapster-send] Calling send-whatsapp-zapresponder for clinic ${clinicId} phone ${phone}`);
+
     const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-zapresponder`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
         clinicId,
@@ -545,12 +547,13 @@ async function sendWhatsAppMessage(
 ): Promise<boolean> {
   try {
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
-    const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
-    if (whazingSent) return true;
-
+    
     if (config.api_url === 'zapster') {
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
+
+    const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
+    if (whazingSent) return true;
 
     const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
@@ -654,7 +657,8 @@ async function sendWhatsAppButtons(
     return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
   }
 
-  return await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
+  const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
+  if (whazingSent) return true;
 }
 
 // ==========================================
@@ -766,20 +770,21 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
   }
 }
 
-async function sendWhazingMenuButtons(phone: string): Promise<boolean> {
-  return sendWhazingButtons(phone, 
-    "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?",
+async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): Promise<boolean> {
+  return sendWhatsAppButtons(config, phone, 
+    "Olá! 👋 Bem-vindo(a) ao atendimento.",
+    "Como podemos ajudá-lo(a) hoje?",
     [
-      { id: "whazing_associado", title: "Sou Associado" },
-      { id: "whazing_empresa", title: "Sou Empresa" },
-      { id: "whazing_contabilidade", title: "Sou Contabilidade" },
+      { id: "whazing_associado", text: "Sou Associado" },
+      { id: "whazing_empresa", text: "Sou Empresa" },
+      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
     ]
   );
 }
 
 type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 
-async function sendWhazingSubMenu(phone: string, category: WhazingCategory): Promise<boolean> {
+async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
       text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:",
@@ -807,7 +812,8 @@ async function sendWhazingSubMenu(phone: string, category: WhazingCategory): Pro
     },
   };
 
-  return sendWhazingButtons(phone, subMenus[category].text, subMenus[category].buttons);
+  const sub = subMenus[category];
+  return sendWhatsAppButtons(config, phone, sub.text, "", sub.buttons.map(b => ({ id: b.id, text: b.title })));
 }
 
 function parseWhazingCategory(messages: unknown): WhazingCategory | null {
@@ -7847,7 +7853,7 @@ serve(async (req) => {
 
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
-            await sendWhazingMenuButtons(phone);
+            await sendWhazingMenuButtons(configData, phone);
             return new Response(
               JSON.stringify({ success: true, message: 'Main menu resent' }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -7857,7 +7863,7 @@ serve(async (req) => {
           if (followUpId === 'whazing_voltar_sub') {
             // Retrieve stored category and resend sub-menu
             const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-            await sendWhazingSubMenu(phone, storedCat);
+            await sendWhazingSubMenu(configData, phone, storedCat);
             return new Response(
               JSON.stringify({ success: true, message: `Sub-menu resent for ${storedCat}` }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -7978,7 +7984,7 @@ serve(async (req) => {
           // Store the selected category in a temporary session for context
           await storeWhazingCategory(supabase, clinicId, phone, category);
 
-          const subSent = await sendWhazingSubMenu(phone, category);
+          const subSent = await sendWhazingSubMenu(configData, phone, category);
           
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
@@ -8291,7 +8297,7 @@ serve(async (req) => {
 
           if ((isFreshConversation && isNotSpecificAction) || shouldShowMenu) {
             console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
-            const buttonsSent = await sendWhazingMenuButtons(phone);
+            const buttonsSent = await sendWhazingMenuButtons(configData, phone);
             
             if (buttonsSent) {
               await supabase.from('whatsapp_incoming_logs').insert({
