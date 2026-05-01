@@ -773,11 +773,11 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
 async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): Promise<boolean> {
   return sendWhatsAppButtons(config, phone, 
     "Olá! 👋 Bem-vindo(a) ao atendimento.",
-    "Como podemos ajudá-lo(a) hoje?",
+    "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
     [
-      { id: "whazing_associado", text: "Sou Associado" },
-      { id: "whazing_empresa", text: "Sou Empresa" },
-      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
+      { id: "1", text: "Sou Associado" },
+      { id: "2", text: "Sou Empresa" },
+      { id: "3", text: "Sou Contabilidade" },
     ]
   );
 }
@@ -787,27 +787,27 @@ type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
-      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:",
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
-        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
-        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+        { id: "1", title: "Atualizar Carteirinha" },
+        { id: "2", title: "Convenções Coletivas" },
+        { id: "3", title: "Outros Assuntos" },
       ],
     },
     empresa: {
-      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:",
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
-        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
-        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+        { id: "1", title: "2ª Via Boleto" },
+        { id: "2", title: "Convenções Coletivas" },
+        { id: "3", title: "Outros Assuntos" },
       ],
     },
     contabilidade: {
-      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:",
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
-        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
-        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+        { id: "1", title: "2ª Via Boleto" },
+        { id: "2", title: "Convenções Coletivas" },
+        { id: "3", title: "Outros Assuntos" },
       ],
     },
   };
