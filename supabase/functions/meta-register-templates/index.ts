@@ -8,8 +8,8 @@ const corsHeaders = {
 const META_GRAPH_VERSION = "v21.0";
 
 type Component =
-  | { type: "BODY"; text: string; example?: { body_text: string[][] } }
-  | { type: "FOOTER"; text: string }
+  | { type: "BODY"; text?: string; add_security_recommendation?: boolean; example?: { body_text: string[][] } }
+  | { type: "FOOTER"; text?: string; code_expiration_minutes?: number }
   | { type: "BUTTONS"; buttons: Array<{ type: "OTP"; otp_type: "COPY_CODE"; text: string }> };
 
 interface TemplatePayload {
@@ -125,12 +125,8 @@ const templates: TemplatePayload[] = [
     language: LANG,
     category: "AUTHENTICATION",
     components: [
-      {
-        type: "BODY",
-        text: "{{1}} é seu código de verificação. Por segurança, não compartilhe este código.",
-        example: { body_text: [["482915"]] },
-      },
-      { type: "FOOTER", text: "Este código expira em 10 minutos." },
+      { type: "BODY", add_security_recommendation: true },
+      { type: "FOOTER", code_expiration_minutes: 10 },
       { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copiar código" }] },
     ],
   },
@@ -139,13 +135,8 @@ const templates: TemplatePayload[] = [
     language: LANG,
     category: "AUTHENTICATION",
     components: [
-      {
-        type: "BODY",
-        text:
-          "{{1}} é seu código para redefinir a senha do app do Sindicato dos Comerciários. Não compartilhe este código.",
-        example: { body_text: [["739204"]] },
-      },
-      { type: "FOOTER", text: "Este código expira em 10 minutos." },
+      { type: "BODY", add_security_recommendation: true },
+      { type: "FOOTER", code_expiration_minutes: 10 },
       { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copiar código" }] },
     ],
   },
