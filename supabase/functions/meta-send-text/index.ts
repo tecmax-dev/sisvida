@@ -61,14 +61,21 @@ serve(async (req) => {
         .maybeSingle();
       lastInbound = data?.last_inbound_at ?? null;
     } else {
-      const { data } = await supabase
-        .from("whatsapp_tickets")
-        .select("last_inbound_at")
-        .eq("contact_phone", phone)
-        .order("last_inbound_at", { ascending: false, nullsFirst: false })
-        .limit(1)
+      const { data: contact } = await supabase
+        .from("whatsapp_contacts")
+        .select("id")
+        .eq("phone", phone)
         .maybeSingle();
-      lastInbound = data?.last_inbound_at ?? null;
+      if (contact?.id) {
+        const { data } = await supabase
+          .from("whatsapp_tickets")
+          .select("last_inbound_at")
+          .eq("contact_id", contact.id)
+          .order("last_inbound_at", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        lastInbound = data?.last_inbound_at ?? null;
+      }
     }
 
     const windowOpen = lastInbound
@@ -121,11 +128,15 @@ serve(async (req) => {
     if (ticket_id) {
       await supabase.from("whatsapp_ticket_messages").insert({
         ticket_id,
-        direction: "outbound",
+        sender_type: "operator",
         message_type: "text",
         content: text,
-        meta_message_id: messageId,
+        metadata: { meta_message_id: messageId },
       });
+      await supabase
+        .from("whatsapp_tickets")
+        .update({ last_message_at: new Date().toISOString(), last_message: text })
+        .eq("id", ticket_id);
     }
 
     return new Response(
