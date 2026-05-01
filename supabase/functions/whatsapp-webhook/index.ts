@@ -7794,13 +7794,17 @@ serve(async (req) => {
 
         if (!botSkipped) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
+        // ===== WHAZING BUTTON RESPONSE HANDLER =====
+        // Mapeamos números de digitados (1, 2, 3) para os IDs originais se for uma resposta via texto/Zapster
+        const messageTextTrim = messageText?.trim();
+        
         // Level 1 buttons: main categories → send sub-menu
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-        const isWhazingLevel1 = whazingLevel1Ids.includes(messageText?.trim());
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', '1', '2', '3'];
+        const isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
 
         // Level 2 buttons: sub-options → route to flow
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-        const isWhazingLevel2 = whazingLevel2Ids.includes(messageText?.trim());
+        const isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
 
         // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
@@ -7972,14 +7976,17 @@ serve(async (req) => {
         }
 
         if (isWhazingLevel1) {
-          console.log(`[webhook] Whazing Level 1 button: "${messageText}" → sending sub-menu`);
+          console.log(`[webhook] Whazing Level 1 choice: "${messageTextTrim}" → sending sub-menu`);
           
           const categoryMap: Record<string, WhazingCategory> = {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
             whazing_contabilidade: 'contabilidade',
+            '1': 'associado',
+            '2': 'empresa',
+            '3': 'contabilidade',
           };
-          const category = categoryMap[messageText.trim()] ?? 'associado';
+          const category = categoryMap[messageTextTrim] ?? 'associado';
 
           // Store the selected category in a temporary session for context
           await storeWhazingCategory(supabase, clinicId, phone, category);
