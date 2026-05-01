@@ -25,6 +25,8 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 | `homologacao_protocolo` | UTILITY | nenhum | 5: serviço, funcionário, empresa, data, protocolo | conclusão/protocolo emitido |
 | `homologacao_lembrete_v2` | UTILITY | QUICK_REPLY: Confirmar, Cancelar; URL: Reagendar (slug profissional via {{1}}) | 7 body + 1 URL var | lembrete empresa com botões interativos |
 | `homologacao_lembrete_profissional_v2` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 6: serviço, profissional, funcionário, empresa, data, hora | lembrete profissional com botões |
+| `homologacao_lembrete_v3` | UTILITY | QUICK_REPLY: Confirmar, Cancelar; URL: Reagendar (slug via {{1}}) | 6 body + 1 URL var | v3 corrigido: texto fixo no início, sem variável repetida, slug real (`andrea-matos`) no exemplo |
+| `homologacao_lembrete_profissional_v3` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 5: profissional, funcionário, empresa, data, hora | v3 corrigido para profissional |
 
 ## Templates pendentes de criação manual no painel Meta
 
@@ -41,6 +43,15 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
   - `homologacao_lembrete_profissional_v2`: 2 Quick Reply (Confirmar/Cancelar). Profissional não recebe botão de reagendar (apenas empresas reagendam).
   - Webhook `whatsapp-webhook` intercepta as respostas "Confirmar" e "Cancelar": busca `homologacao_appointments` por `company_phone`/`employee_phone` em janela de 48h, atualiza status (`confirmed`/`cancelled`) e responde via `sendMetaText` (Meta Cloud, dentro da janela 24h).
   - Quando ativar v2 em `homologacaoUtils.ts`/`send-homologacao-reminders`, passar o slug do profissional como variável da URL (segundo array de parameters do componente button).
+
+- **Homologação v3 — correções aplicadas para acelerar aprovação Meta:**
+  - Texto fixo no início do body (não começa mais com `{{1}}` logo após emoji).
+  - Variável de "tipo de serviço" removida (homologação fixa no texto) — assessoria jurídica precisará de template separado se for o caso.
+  - Sem variáveis repetidas no mesmo body.
+  - URL `Reagendar` usa slug real do banco (`andrea-matos`) como example, garantindo que a Meta consiga validar a URL.
+  - Body vars empresa: `{{1}}` destinatário, `{{2}}` funcionário, `{{3}}` empresa, `{{4}}` data, `{{5}}` hora, `{{6}}` profissional.
+  - Body vars profissional: `{{1}}` profissional, `{{2}}` funcionário, `{{3}}` empresa, `{{4}}` data, `{{5}}` hora.
+  - Quando v3 aprovar, atualizar `homologacaoUtils.ts`/`send-homologacao-reminders` para usar v3 (e parar de gerar variável de "tipo serviço"). v2 fica como fallback até deprecação.
 
 ## Quando atualizar
 

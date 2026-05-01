@@ -279,6 +279,76 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
+    // v3 EMPRESA: texto fixo no início, sem repetição de variável, slug real no exemplo da URL.
+    // Body vars: {{1}}=destinatário, {{2}}=funcionário, {{3}}=empresa, {{4}}=data, {{5}}=hora, {{6}}=profissional
+    // URL var: slug do profissional
+    name: "homologacao_lembrete_v3",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "Lembrete de Homologação do Sindicato dos Comerciários.\n\nOlá, {{1}}. Segue o resumo do agendamento:\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}} às {{5}}\nProfissional: {{6}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA (ao lado da Sorveteria Chiquinho).\n\nPor favor, confirme sua presença abaixo ou reagende caso necessário.",
+        example: {
+          body_text: [[
+            "Comércio ABC Ltda",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+            "Dra. Andrea Matos",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          { type: "QUICK_REPLY", text: "Confirmar" },
+          { type: "QUICK_REPLY", text: "Cancelar" },
+          {
+            type: "URL",
+            text: "Reagendar",
+            url: "https://prosindweb.com.br/agendamento/profissional/{{1}}",
+            example: ["andrea-matos"],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // v3 PROFISSIONAL: texto fixo no início, sem repetição de variável.
+    // Body vars: {{1}}=profissional, {{2}}=funcionário, {{3}}=empresa, {{4}}=data, {{5}}=hora
+    name: "homologacao_lembrete_profissional_v3",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "Lembrete de Homologação do Sindicato dos Comerciários.\n\nPrezado(a) {{1}}, você possui um atendimento agendado:\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}} às {{5}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA.\n\nConfirme sua presença ou cancele caso haja imprevisto.",
+        example: {
+          body_text: [[
+            "Dra. Andrea Matos",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          { type: "QUICK_REPLY", text: "Confirmar" },
+          { type: "QUICK_REPLY", text: "Cancelar" },
+        ],
+      },
+    ],
+  },
+  {
     name: "homologacao_confirmacao",
     language: LANG,
     category: "UTILITY",
