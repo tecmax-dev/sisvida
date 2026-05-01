@@ -7391,6 +7391,96 @@ serve(async (req) => {
 
     console.log(`[webhook] Phone: ${phone}, Message: "${messageText}", Type: ${messageType}`);
 
+    // ===== HOMOLOGAÇÃO: resposta de botão de lembrete (Confirmar/Cancelar) =====
+    // Intercepta ANTES de qualquer outro fluxo. Se o telefone tem agendamento
+    // de homologação ativo nas próximas 48h e a resposta é exatamente
+    // "Confirmar" ou "Cancelar", trata aqui e encerra. O botão "Reagendar" é
+    // do tipo URL e não chega como mensagem ao webhook.
+    if (phone && messageText) {
+      const trimmed = messageText.trim().toLowerCase();
+      const isConfirmReply = trimmed === 'confirmar' || trimmed === '✅ confirmar';
+      const isCancelReply = trimmed === 'cancelar' || trimmed === '❌ cancelar';
+
+      if (isConfirmReply || isCancelReply) {
+        try {
+          const phoneVariants = getBrazilPhoneVariants(phone);
+          const todayIso = new Date().toISOString().slice(0, 10);
+          const in48h = new Date(Date.now() + 48 * 3600 * 1000).toISOString().slice(0, 10);
+
+          // Busca por telefone da empresa OU do funcionário, agendamento futuro ativo
+          const { data: homAppts } = await supabase
+            .from('homologacao_appointments')
+            .select('id, clinic_id, employee_name, company_name, appointment_date, start_time, status, professional_id')
+            .or(
+              phoneVariants.map((p) => `company_phone.eq.${p},employee_phone.eq.${p}`).join(',')
+            )
+            .gte('appointment_date', todayIso)
+            .lte('appointment_date', in48h)
+            .in('status', ['scheduled', 'confirmed'])
+            .order('appointment_date', { ascending: true })
+            .order('start_time', { ascending: true })
+            .limit(1);
+
+          const appt = homAppts?.[0];
+
+          if (appt) {
+            console.log(`[webhook][homologacao] ${isConfirmReply ? 'Confirmar' : 'Cancelar'} para appt ${appt.id} (${phone})`);
+            const dateFmt = `${appt.appointment_date.split('-').reverse().join('/')}`;
+            const timeFmt = String(appt.start_time).slice(0, 5);
+
+            if (isConfirmReply) {
+              await supabase
+                .from('homologacao_appointments')
+                .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
+                .eq('id', appt.id);
+
+              const config = await getEvolutionConfigByPhone(supabase, phone).catch(() => null);
+              if (config) {
+                await sendWhatsAppMessage(
+                  config,
+                  phone,
+                  `✅ *Agendamento confirmado!*\n\n` +
+                    `Funcionário: ${appt.employee_name}\n` +
+                    `Empresa: ${appt.company_name}\n` +
+                    `Data: ${dateFmt} às ${timeFmt}\n\n` +
+                    `📍 Rua Coronel Paiva, 99 - Centro - Ilhéus/BA\n` +
+                    `Aguardamos no horário agendado com toda a documentação necessária.`
+                );
+              }
+            } else {
+              await supabase
+                .from('homologacao_appointments')
+                .update({
+                  status: 'cancelled',
+                  cancelled_at: new Date().toISOString(),
+                  cancellation_reason: 'Cancelado pela empresa via WhatsApp (lembrete)',
+                })
+                .eq('id', appt.id);
+
+              const config = await getEvolutionConfigByPhone(supabase, phone).catch(() => null);
+              if (config) {
+                await sendWhatsAppMessage(
+                  config,
+                  phone,
+                  `❌ *Agendamento cancelado.*\n\n` +
+                    `O agendamento de ${appt.employee_name} (${appt.company_name}) em ${dateFmt} às ${timeFmt} foi cancelado conforme solicitado.\n\n` +
+                    `Para reagendar, acesse: https://prosindweb.com.br/agendamento/profissional/ione-atos-1`
+                );
+              }
+            }
+
+            return new Response(
+              JSON.stringify({ success: true, message: `Homologacao ${isConfirmReply ? 'confirmed' : 'cancelled'}` }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } catch (err) {
+          console.error('[webhook][homologacao] Error handling reminder reply:', err);
+        }
+      }
+    }
+    // ===== /HOMOLOGAÇÃO =====
+
     // Handle image/document messages - check session state first
     if (phone && (imageMessage || documentMessage || messageType === 'imageMessage' || messageType === 'documentMessage')) {
       
