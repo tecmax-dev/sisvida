@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Zap Responder usa internamente a Zapster API
 // Documentação: https://developer.zapsterapi.com/pt-BR/v1/api-reference/messages/sending
-const ZAPSTER_BASE_URL = "https://api.zapsterapi.com/v1";
+const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -52,24 +52,6 @@ serve(async (req) => {
       );
     }
 
-    // Test mode: validate token by listing instances
-    if (test) {
-      const r = await fetch(`${ZAPSTER_BASE_URL}/wa/instances?per_page=1`, {
-        headers: { Authorization: `Bearer ${apiToken}` },
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        return new Response(
-          JSON.stringify({ success: false, error: `Token inválido (${r.status})`, data }),
-          { status: r.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(
-        JSON.stringify({ success: true, message: "Token válido", data }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Resolve instance_id da clínica
     const { data: zapsterCfg, error: cfgErr } = await supabase
       .from("zapster_configs")
@@ -96,37 +78,26 @@ serve(async (req) => {
       cleanPhone = "55" + cleanPhone;
     }
 
-    // Monta payload Zapster: POST /wa/messages
+    // Zap Responder Não Oficial (QRCode): POST /api/whatsapp/messages/send
+    // Endpoint inferido para envios não oficiais
     const payload: Record<string, unknown> = {
-      recipient: cleanPhone,
-      instance_id: zapsterCfg.instance_id,
+      phone: cleanPhone,
+      message: message,
+      departmentId: zapsterCfg.instance_id,
     };
 
-    if (message) payload.text = message;
-    if (replyTo) payload.reply_to = replyTo;
-    if (sendAt) payload.send_at = sendAt;
-
-    if (mediaUrl || mediaBase64) {
-      const media: Record<string, unknown> = {};
-      if (mediaUrl) media.url = mediaUrl;
-      if (mediaBase64) media.base64 = mediaBase64;
-      if (mediaCaption) media.caption = mediaCaption;
-      if (fileName) media.fileName = fileName;
-      payload.media = media;
+    if (mediaUrl) {
+      payload.mediaUrl = mediaUrl;
     }
 
-    if (Array.isArray(buttons) && buttons.length > 0) {
-      payload.buttons = buttons;
-      payload.buttons_mode = "auto";
-    }
+    console.log(`[zapresponder] Sending to ${cleanPhone} via department/instance ${zapsterCfg.instance_id}`);
 
-    console.log(`[zapster] Sending to ${cleanPhone} via instance ${zapsterCfg.instance_id}`);
-
-    const response = await fetch(`${ZAPSTER_BASE_URL}/wa/messages`, {
+    const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/messages/send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiToken}`,
+        "Authorization": `Bearer ${apiToken}`,
+        "Accept": "application/json"
       },
       body: JSON.stringify(payload),
     });
