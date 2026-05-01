@@ -1,0 +1,36 @@
+---
+name: Meta WhatsApp Templates
+description: Lista oficial de templates Meta Cloud API do sindicato com nomes, status e botões interativos
+type: feature
+---
+# Templates Meta Cloud API — Sindicato
+
+Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META_GRAPH_VERSION.
+
+## Templates ativos (PENDING/aprovados)
+
+| Nome | Categoria | Botões | Variáveis | Uso |
+|---|---|---|---|---|
+| `boleto_mensalidade` | UTILITY | nenhum | 5: nome, ref, valor, venc, link | send-whatsapp / boleto a vencer |
+| `boleto_vencido` | UTILITY | nenhum | 5: nome, ref, valor, venc, link | boleto vencido (2ª via) |
+| `confirmacao_agendamento` | UTILITY | nenhum | 6: nome, prof, esp, data, hora, local | pós-agendamento |
+| `lembrete_consulta_v2` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 6: nome, prof, esp, data, hora, local | send-appointment-reminders (24h antes) |
+| `carteira_vencendo` | MARKETING | nenhum | 2: nome, data | aviso pré-vencimento |
+| `carteira_vencida` | MARKETING | nenhum | 2: nome, data | aviso pós-vencimento |
+| `autorizacao_pronta` | UTILITY | nenhum | 4: nome, tipo, prof, validade | autorização emitida |
+| `filiacao_aprovada` | UTILITY | nenhum | 3: nome, matrícula, plano | nova filiação aprovada |
+
+## Templates pendentes de criação manual no painel Meta
+
+`codigo_acesso` e `recuperacao_senha` — são categoria AUTHENTICATION (OTP). Conta WABA precisa de permissão extra que não tem hoje. Cadastrar via Business Manager > Modelos de mensagem > Categoria Autenticação > One-time password.
+
+## Regras importantes
+
+- **lembrete_consulta antigo (sem botões) foi DELETADO**. Nome bloqueado pela Meta por ~30 dias. Por isso usamos `lembrete_consulta_v2`.
+- Os 3 botões iniciais do atendimento (Sou Associado / Sou Empresa / Sou Contabilidade) NÃO precisam de template — disparam dentro da janela 24h após mensagem do cliente.
+- Fluxo do boleto (escolher mês/ano/tipo) também roda na janela 24h após resposta do cliente — não precisa de botão no template.
+- Edge function de gestão: `meta-register-templates` com actions `list`, `delete?name=X`, `register-with-buttons?name=X[&as=Y]`.
+
+## Quando atualizar
+
+Ao alterar texto ou variáveis de qualquer template, sempre incrementar versão (`_v3`, `_v4`) — Meta bloqueia o nome por dias após delete.
