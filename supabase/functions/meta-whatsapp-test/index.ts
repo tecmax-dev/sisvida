@@ -9,14 +9,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { to, template = 'hello_world', language = 'en_US' } = await req.json();
-
-    if (!to || typeof to !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Campo "to" obrigatório (ex: 5573999999999)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const body = await req.json();
+    const { action = 'send', to, template = 'hello_world', language = 'en_US', pin } = body;
 
     const token = Deno.env.get('META_WHATSAPP_TOKEN');
     const phoneId = Deno.env.get('META_PHONE_NUMBER_ID');
@@ -28,18 +22,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    const cleanedTo = to.replace(/\D/g, '');
+    let url: string;
+    let payload: Record<string, unknown>;
 
-    const url = `https://graph.facebook.com/v21.0/${phoneId}/messages`;
-    const payload = {
-      messaging_product: 'whatsapp',
-      to: cleanedTo,
-      type: 'template',
-      template: {
-        name: template,
-        language: { code: language },
-      },
-    };
+    if (action === 'register') {
+      if (!pin || !/^\d{6}$/.test(String(pin))) {
+        return new Response(
+          JSON.stringify({ error: 'PIN de 6 dígitos obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      url = `https://graph.facebook.com/v21.0/${phoneId}/register`;
+      payload = { messaging_product: 'whatsapp', pin: String(pin) };
+    } else {
+      if (!to || typeof to !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'Campo "to" obrigatório (ex: 5573999999999)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const cleanedTo = to.replace(/\D/g, '');
+      url = `https://graph.facebook.com/v21.0/${phoneId}/messages`;
+      payload = {
+        messaging_product: 'whatsapp',
+        to: cleanedTo,
+        type: 'template',
+        template: { name: template, language: { code: language } },
+      };
+    }
 
     console.log('[meta-whatsapp-test] POST', url, JSON.stringify(payload));
 
