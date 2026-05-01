@@ -104,13 +104,16 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const event = (await req.json()) as ZapsterEvent;
-    console.log(`[zapster-webhook] event type=${event.type} id=${event.id}`);
+    const body = await req.json();
+    const event = body as ZapsterEvent;
+    const eventType = event.type || body.event_type;
+    console.log(`[zapster-webhook] event type=${eventType} id=${event.id}`);
 
     // Resolve instance_id (Zapster envia em event.instance.id ou em data.instance_id)
     const instanceId =
       event.instance?.id ||
-      (event.data as { instance_id?: string }).instance_id ||
+      (event.data as { instance_id?: string })?.instance_id ||
+      body.instance_id ||
       null;
 
     // Helper para logar evento
