@@ -224,10 +224,20 @@ serve(async (req) => {
     }
 
     // Mensagem recebida → traduz e encaminha
-    if (eventType === "message.received" || eventType === "message.upsert" || eventType === "message_received") {
-      // Controle de duplicidade por message ID no Redis/Cache seria ideal,
-      // mas como paliativo rápido, vamos ignorar se o status for 'send_message'
-      // (Zapster às vezes envia o eco da mensagem enviada pelo próprio sistema)
+    const isMessageEvent = eventType === "message.received" || eventType === "message.upsert" || eventType === "message_received";
+    const isConversationEvent = eventType === "conversation_created" || eventType === "conversation_updated";
+
+    if (isMessageEvent || isConversationEvent) {
+      // Se for apenas a criação da conversa sem mensagem, reconhecemos mas não encaminhamos ao LIA
+      if (isConversationEvent && !body.message?.mensagem && !body.data?.content?.text) {
+        console.log(`[zapster-webhook] conversation event acknowledged for clinic ${cfg.clinic_id}`);
+        return new Response(JSON.stringify({ ok: true, clinic_id: cfg.clinic_id }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Ignora ecos de mensagens enviadas pelo sistema
       if (body.raw_message?.type === 'send_message') {
         console.log(`[zapster-webhook] ignoring self-message echo to prevent loops`);
         return new Response(JSON.stringify({ ok: true, ignored: "echo" }), {
