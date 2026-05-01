@@ -7898,12 +7898,26 @@ async function handleWebhook(req: Request) {
         const messageTextTrim = messageText?.trim();
         
         // Level 1 buttons: main categories → send sub-menu
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', '1', '2', '3'];
-        const isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+         // Pre-check for stored Whazing category to disambiguate numeric choices (1, 2, 3)
+         const storedCategoryForDisambiguation = await getWhazingCategory(supabase, clinicId, phoneCandidates, null as any);
+ 
+         // Level 1 buttons: main categories → send sub-menu
+         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
+         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+         
+         // Numeric choices (1, 2, 3) are Level 1 ONLY if no sub-menu is active
+         if (!storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
+           isWhazingLevel1 = true;
+         }
 
         // Level 2 buttons: sub-options → route to flow
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-        const isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+         let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+ 
+         // Numeric choices (1, 2, 3) are Level 2 if a sub-menu IS active
+         if (storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
+           isWhazingLevel2 = true;
+         }
 
         // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
