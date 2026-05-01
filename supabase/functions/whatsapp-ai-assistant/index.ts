@@ -1099,14 +1099,23 @@ serve(async (req) => {
         );
       }
 
-      const menuButtonsSent = shouldSendDirectWhatsApp
-        ? await sendWhazingMainMenuButtons(phone || '')
-        : false;
-      if (!menuButtonsSent) {
-        console.error('[ai-assistant] Interactive main menu failed; not sending text-list fallback');
+      const menuText = 'Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?\n\n1️⃣ Sou Associado\n2️⃣ Sou Empresa\n3️⃣ Sou Contabilidade';
+      
+      let menuButtonsSent = false;
+      if (shouldSendDirectWhatsApp) {
+        menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
+        if (!menuButtonsSent) {
+          console.error('[ai-assistant] Interactive main menu failed; not sending text-list fallback');
+        }
       }
+
       return new Response(
-        JSON.stringify({ response: null, handoff_to_booking: false, action: 'show_menu_buttons', buttons_sent: menuButtonsSent }),
+        JSON.stringify({ 
+          response: shouldSendDirectWhatsApp ? null : menuText, 
+          handoff_to_booking: false, 
+          action: 'show_menu_buttons', 
+          buttons_sent: menuButtonsSent 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -1718,13 +1727,17 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         : 'Perfeito, vamos seguir sem menu. Me diga objetivamente o que você precisa e eu te ajudo.';
     }
 
-    if (!shouldBlockInternalMenu && looksLikeInternalMenu(finalResponse)) {
+    if (!shouldBlockInternalMenu && (looksLikeInternalMenu(finalResponse) || finalResponse?.includes('como posso te ajudar hoje?'))) {
       console.warn('[ai-assistant] Internal text menu replaced by interactive WhatsApp buttons');
-      const menuButtonsSent = shouldSendDirectWhatsApp
-        ? await sendWhazingMainMenuButtons(phone || '')
-        : false;
+      const menuText = 'Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?\n\n1️⃣ Sou Associado\n2️⃣ Sou Empresa\n3️⃣ Sou Contabilidade';
+      
+      let menuButtonsSent = false;
+      if (shouldSendDirectWhatsApp) {
+        menuButtonsSent = await sendWhazingMainMenuButtons(phone || '');
+      }
+
       return new Response(JSON.stringify({
-        response: null,
+        response: shouldSendDirectWhatsApp ? null : menuText,
         handoff_to_booking: false,
         action: 'show_menu_buttons',
         buttons_sent: menuButtonsSent,
