@@ -7194,7 +7194,7 @@ async function handleWebhook(req: Request) {
     console.log('[webhook] Raw body received:', rawBody.substring(0, 500));
     
     // Parse the body
-    let payload: EvolutionWebhookPayload;
+    let payload: any;
     try {
       payload = JSON.parse(rawBody);
     } catch (parseError) {
@@ -7203,6 +7203,27 @@ async function handleWebhook(req: Request) {
         JSON.stringify({ success: false, error: 'Invalid JSON' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Support for simple payload format (e.g. from Zap Responder)
+    if (!payload.event && payload.phone && payload.message) {
+      console.log('[webhook] Simple payload detected, mapping to Evolution format');
+      payload = {
+        event: 'messages.upsert',
+        instance: payload.instanceId || payload.instance || payload.instanceName,
+        data: {
+          key: {
+            remoteJid: String(payload.phone).includes('@') ? payload.phone : `${payload.phone}@s.whatsapp.net`,
+            fromMe: false,
+            id: `simple_${Date.now()}`
+          },
+          message: {
+            conversation: payload.message
+          },
+          pushName: payload.pushName || payload.name || 'User',
+          messageTimestamp: Math.floor(Date.now() / 1000)
+        }
+      };
     }
     
     console.log('[webhook] Received event:', payload.event);
@@ -8724,7 +8745,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           } catch (_e) { /* session may already exist */ }
 
           try {
-            await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
+            const collector = syncReplyStore.getStore();
+            const isSync = !!collector;
+
+            const aiResponse = await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -8740,6 +8764,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   instance_name: configData.instance_name,
                 },
                 booking_enabled: false,
+                deliver_response_via_caller: isSync,
                 // Only suppress LIA's internal text menu when the user selected an
                 // external menu option (ex: "1-2"). If Whazing buttons fail (403),
                 // greetings like "oi" must still receive the normal text menu.
@@ -8747,6 +8772,13 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 external_menu_mode: externalMenuMode,
               }),
             });
+
+            if (isSync && aiResponse.ok && collector) {
+              const aiData = await aiResponse.json();
+              if (aiData.response) {
+                collector.push(aiData.response);
+              }
+            }
           } catch (aiErr) {
             console.error('[webhook] Error calling AI assistant (non-booking path):', aiErr);
           }
