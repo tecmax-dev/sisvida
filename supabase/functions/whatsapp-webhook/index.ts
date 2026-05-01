@@ -69,10 +69,30 @@ type BookingState =
    instanceId: string;
    phone: string;
    fromMe: boolean;
+   isStatusReply?: boolean;
+   connectedPhone?: string;
+   waitingMessage?: boolean;
+   isEdit?: boolean;
+   isGroup?: boolean;
+   isNewsletter?: boolean;
+   messageId: string;
+   momment: number;
+   status: string;
+   chatName?: string;
+   senderName?: string;
+   type: "ReceivedCallback" | "MessageStatusCallback" | "DeliveryCallback" | string;
    text?: {
      message: string;
    };
-   type: string;
+   buttonsResponseMessage?: {
+     buttonId: string;
+     message: string;
+   };
+   listResponseMessage?: {
+     message: string;
+     title: string;
+     selectedRowId: string;
+   };
  }
 
 interface EvolutionWebhookPayload {
@@ -7303,29 +7323,85 @@ async function handleWebhook(req: Request) {
         mappedMessage = 'oi';
       }
 
-      // Z-API specific mapping for instanceId and phone
+      // Z-API mapping
       if (isZApi) {
-        // Ensure phone is just numbers for the JID
         mappedPhone = String(mappedPhone).replace(/\D/g, '');
-        console.log(`[webhook] Z-API mapped phone: ${mappedPhone}, instance: ${mappedInstance}`);
-      }
-
-      payload = {
-        event: 'messages.upsert',
-        instance: mappedInstance,
-        data: {
+        console.log(`[webhook] Z-API payload from ${mappedPhone} (${payload.type})`);
+        
+        const mappedData: any = {
           key: {
-            remoteJid: String(mappedPhone).includes('@') ? String(mappedPhone) : `${mappedPhone}@s.whatsapp.net`,
+            remoteJid: `${mappedPhone}@s.whatsapp.net`,
             fromMe: payload.fromMe || false,
-            id: payload.messageId || `mapped_${Date.now()}`
+            id: payload.messageId || `zapi_${Date.now()}`
           },
-          message: {
-            conversation: String(mappedMessage || '')
-          },
-          pushName: payload.senderName || payload.pushName || payload.name || 'Contato',
-          messageTimestamp: Math.floor(Date.now() / 1000)
+          pushName: payload.senderName || payload.chatName || 'Contato',
+          messageTimestamp: Math.floor((payload.momment || Date.now()) / 1000)
+        };
+
+        // Handle different Z-API message types
+        if (payload.text?.message) {
+          mappedData.message = { conversation: String(payload.text.message) };
+        } else if (payload.buttonsResponseMessage) {
+          mappedData.message = {
+            buttonsResponseMessage: {
+              selectedButtonId: payload.buttonsResponseMessage.buttonId,
+              selectedDisplayText: payload.buttonsResponseMessage.message
+            }
+          };
+        } else if (payload.listResponseMessage) {
+          mappedData.message = {
+            listResponseMessage: {
+              singleSelectReply: {
+                selectedRowId: payload.listResponseMessage.selectedRowId
+              },
+              title: payload.listResponseMessage.title,
+              description: payload.listResponseMessage.message
+            }
+          };
+        } else if (payload.image) {
+          mappedData.message = {
+            imageMessage: {
+              caption: payload.image.caption,
+              mimetype: payload.image.mimeType,
+              url: payload.image.imageUrl
+            }
+          };
+        } else if (payload.audio) {
+          mappedData.message = {
+            audioMessage: {
+              mimetype: payload.audio.mimeType,
+              url: payload.audio.audioUrl
+            }
+          };
+        } else {
+          // Default fallback
+          mappedData.message = { conversation: String(mappedMessage || '') };
         }
-      };
+
+        payload = {
+          event: 'messages.upsert',
+          instance: mappedInstance,
+          data: mappedData
+        };
+      } else {
+        // Simple/Zap Responder mapping
+        payload = {
+          event: 'messages.upsert',
+          instance: mappedInstance,
+          data: {
+            key: {
+              remoteJid: String(mappedPhone).includes('@') ? String(mappedPhone) : `${mappedPhone}@s.whatsapp.net`,
+              fromMe: payload.fromMe || false,
+              id: payload.messageId || `mapped_${Date.now()}`
+            },
+            message: {
+              conversation: String(mappedMessage || '')
+            },
+            pushName: payload.senderName || payload.pushName || payload.name || 'Contato',
+            messageTimestamp: Math.floor(Date.now() / 1000)
+          }
+        };
+      }
     }
 
     console.log('[webhook] Received event:', payload.event);
