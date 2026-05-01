@@ -7907,10 +7907,14 @@ async function handleWebhook(req: Request) {
         // Force main menu on Zap Responder test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
           await sendWhazingMenuButtons(configData, phone);
-          return new Response(
-            JSON.stringify({ success: true, message: 'Main menu triggered' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          const collector = syncReplyStore.getStore();
+          const resp: any = { success: true, message: 'Main menu triggered' };
+          if (collector && collector.length > 0) {
+            resp.reply = collector.join('\n\n');
+          }
+          return new Response(JSON.stringify(resp), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
         
         // Level 1 buttons: main categories → send sub-menu
