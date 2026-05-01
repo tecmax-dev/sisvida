@@ -39,7 +39,9 @@ serve(async (req) => {
       });
     }
 
-    const apiToken = Deno.env.get("ZAPSTER_API_TOKEN");
+    // Tenta pegar o token de ZAPSTER_API_TOKEN ou ZAPRESPONDER_API_TOKEN
+    const apiToken = Deno.env.get("ZAPSTER_API_TOKEN") || Deno.env.get("ZAPRESPONDER_API_TOKEN");
+    
     if (!apiToken) {
       return new Response(
         JSON.stringify({ error: "ZAPSTER_API_TOKEN não configurado" }),
@@ -77,8 +79,8 @@ serve(async (req) => {
       }));
     }
 
-    // Se a lista ainda estiver vazia, tentamos o endpoint de instâncias multidevice
-    if (instances.length === 0) {
+    // Se a lista ainda estiver vazia ou com erro, tentamos o endpoint de instâncias multidevice
+    if (instances.length === 0 || !r.ok) {
       console.log("Lista vazia ou erro. Tentando endpoint de instâncias multidevice...");
       const r2 = await fetch(`${ZAP_RESPONDER_BASE_URL}/instances`, {
         headers: { 
@@ -87,7 +89,7 @@ serve(async (req) => {
         },
       });
       const data2 = await r2.json().catch(() => ({}));
-      console.log("Resposta API Multidevice (instances):", JSON.stringify(data2));
+      console.log("Resposta API Multidevice (instances) Status:", r2.status);
       
       if (Array.isArray(data2)) {
         instances = data2.map((i: any) => ({
