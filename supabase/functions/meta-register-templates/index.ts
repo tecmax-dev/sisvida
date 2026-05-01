@@ -10,7 +10,14 @@ const META_GRAPH_VERSION = "v21.0";
 type Component =
   | { type: "BODY"; text?: string; add_security_recommendation?: boolean; example?: { body_text: string[][] } }
   | { type: "FOOTER"; text?: string; code_expiration_minutes?: number }
-  | { type: "BUTTONS"; buttons: Array<{ type: "OTP"; otp_type: "COPY_CODE"; text: string }> };
+  | {
+      type: "BUTTONS";
+      buttons: Array<
+        | { type: "OTP"; otp_type: "COPY_CODE"; text: string }
+        | { type: "QUICK_REPLY"; text: string }
+        | { type: "URL"; text: string; url: string; example?: string[] }
+      >;
+    };
 
 interface TemplatePayload {
   name: string;
@@ -199,6 +206,76 @@ const templates: TemplatePayload[] = [
         },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
+    ],
+  },
+  {
+    // v2 com botões: Confirmar (QR), Cancelar (QR), Reagendar (URL dinâmica)
+    // Body var {{8}} reservada para o slug do profissional usado no botão URL
+    name: "homologacao_lembrete_v2",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "🔔 Lembrete de {{1}}\n\nOlá, {{2}}. Você tem um agendamento de {{1}}.\n\nFuncionário: {{3}}\nEmpresa: {{4}}\nData: {{5}} às {{6}}\nProfissional: {{7}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA (ao lado da Sorveteria Chiquinho)\n\nPor favor, confirme sua presença abaixo ou reagende se necessário.",
+        example: {
+          body_text: [[
+            "Homologação",
+            "Empresa ABC",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+            "Dr. Carlos Mendes",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          { type: "QUICK_REPLY", text: "Confirmar" },
+          { type: "QUICK_REPLY", text: "Cancelar" },
+          {
+            type: "URL",
+            text: "Reagendar",
+            url: "https://prosindweb.com.br/agendamento/profissional/{{1}}",
+            example: ["ione-atos-1"],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // v2 com botões para o profissional
+    name: "homologacao_lembrete_profissional_v2",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "🔔 Lembrete de {{1}}\n\nPrezado(a) {{2}}, você possui um atendimento de {{1}} agendado.\n\nFuncionário: {{3}}\nEmpresa: {{4}}\nData: {{5}} às {{6}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA\n\nConfirme sua presença ou cancele caso haja imprevisto.",
+        example: {
+          body_text: [[
+            "Homologação",
+            "Dr. Carlos Mendes",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          { type: "QUICK_REPLY", text: "Confirmar" },
+          { type: "QUICK_REPLY", text: "Cancelar" },
+        ],
+      },
     ],
   },
   {
