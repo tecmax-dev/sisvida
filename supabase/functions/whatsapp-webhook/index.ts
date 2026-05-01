@@ -8996,15 +8996,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 serve(async (req) => {
   const collector: string[] = [];
   // Check if payload has sync: true
-  const clonedReq = req.clone();
-  let isSync = false;
-  try {
-    const body = await clonedReq.json();
-    isSync = body.sync === true;
-  } catch { /* ignore */ }
-
-  if (isSync) {
-    return await syncReplyStore.run(collector, () => handleWebhook(req));
-  }
+   // Only use sync collector if it's explicitly a test or internal request.
+   // External Evolution API / Zap Responder payloads sometimes include "sync: true"
+   // but they don't support receiving the reply in the HTTP response.
+   const isTestRequest = req.headers.get('x-test-request') === 'true' || 
+                        req.url.includes('test=true');
+   
+   if (isTestRequest) {
+     return await syncReplyStore.run(collector, () => handleWebhook(req));
+   }
   return await handleWebhook(req);
 });
