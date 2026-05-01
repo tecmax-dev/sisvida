@@ -499,6 +499,45 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
   }
 }
 
+async function sendZapsterMessage(clinicId: string, phone: string, message: string): Promise<boolean> {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-zapresponder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        clinicId,
+        phone,
+        message: sanitizeOutgoingWhatsAppText(message),
+      }),
+    });
+    
+    if (!response.ok) {
+      console.error('[zapster-send] Error calling send function:', await response.text());
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[zapster-send] Exception:', error);
+    return false;
+  }
+}
+
+async function sendZapsterButtons(clinicId: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Promise<boolean> {
+  // Zap Responder "Não Oficial" pode ter limitações com botões reais via API.
+  // Como fallback, enviamos como texto com opções numeradas se os botões falharem.
+  // Mas tentaremos enviar via send-whatsapp-zapresponder se suportado.
+  // Por enquanto, enviamos apenas o texto consolidado para garantir entrega.
+  const buttonText = buttons.map((b, i) => `\n${i + 1}️⃣ ${b.title}`).join('');
+  const fullText = `${bodyText}${buttonText}`;
+  return await sendZapsterMessage(clinicId, phone, fullText);
+}
+
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
@@ -508,6 +547,10 @@ async function sendWhatsAppMessage(
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
+
+    if (config.api_url === 'zapster') {
+      return await sendZapsterMessage(config.clinic_id, phone, message);
+    }
 
     const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
@@ -606,6 +649,10 @@ async function sendWhatsAppButtons(
     id: b.id || `option_${index + 1}`,
     title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
   }));
+
+  if (config.api_url === 'zapster') {
+    return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
+  }
 
   return await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
 }
@@ -7619,6 +7666,9 @@ serve(async (req) => {
 
       let configData: EvolutionConfig | null = null;
 
+      // Check if clinic_id was explicitly provided (e.g. from zapster-webhook)
+      const explicitClinicId = (payload as any).clinic_id;
+
       if (activeSession?.clinic_id) {
         const { data: configByClinic, error: configByClinicError } = await supabase
           .from('evolution_configs')
@@ -7663,6 +7713,27 @@ serve(async (req) => {
 
         configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
+      }
+
+      // Final fallback: Check zapster_configs if still no configData
+      if (!configData && (payload.instance || explicitClinicId)) {
+        const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
+        if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
+        else query.eq('instance_id', payload.instance);
+
+        const { data: zapsterCfg } = await query.maybeSingle();
+
+        if (zapsterCfg) {
+          console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
+          configData = {
+            clinic_id: zapsterCfg.clinic_id,
+            instance_name: zapsterCfg.instance_id,
+            api_url: 'zapster', // Special marker
+            api_key: 'zapster',
+            booking_enabled: true,
+            direct_reply_enabled: true
+          } as EvolutionConfig;
+        }
       }
 
       if (configData) {
