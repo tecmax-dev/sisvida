@@ -8807,10 +8807,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           } catch (aiErr) {
             console.error('[webhook] Error calling AI assistant (non-booking path):', aiErr);
           }
-          return new Response(
-            JSON.stringify({ success: true, message: 'Non-booking message routed to AI' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           return createSuccessResponse({ message: 'Non-booking message routed to AI' });
         }
 
 
