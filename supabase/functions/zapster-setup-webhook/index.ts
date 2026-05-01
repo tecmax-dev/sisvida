@@ -99,21 +99,54 @@ serve(async (req) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/zapster-webhook`;
 
-    // Zap Responder: configura webhook do departamento.
-    // Testando endpoint /webhook pois /departamento/:id/webhook retornou 404
-    const endpoint = `${ZAP_RESPONDER_BASE_URL}/webhook`;
+    // Zap Responder: tenta primeiro o endpoint de departamento, depois o global /webhook
+    const deptEndpoint = `${ZAP_RESPONDER_BASE_URL}/departamento/${cfg.instance_id}/webhook`;
+    const globalEndpoint = `${ZAP_RESPONDER_BASE_URL}/webhook`;
+    
+    console.log(`[zapster-setup-webhook] Tentando configurar webhook para instância ${cfg.instance_id}`);
 
-    const r = await fetch(endpoint, {
-      method: "POST",
+    let r = await fetch(deptEndpoint, {
+      method: "PUT", // Algumas APIs usam PUT para atualizar webhook
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify({ 
         webhook: webhookUrl,
-        departamento_id: cfg.instance_id
+        events: DEFAULT_EVENTS
       }),
     });
+
+    if (!r.ok) {
+      console.log(`[zapster-setup-webhook] PUT ${deptEndpoint} falhou com ${r.status}. Tentando POST...`);
+      r = await fetch(deptEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({ 
+          webhook: webhookUrl,
+          events: DEFAULT_EVENTS
+        }),
+      });
+    }
+
+    if (!r.ok) {
+      console.log(`[zapster-setup-webhook] Departamento endpoint falhou. Tentando global endpoint /webhook...`);
+      r = await fetch(globalEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({ 
+          webhook: webhookUrl,
+          departamento_id: cfg.instance_id,
+          events: DEFAULT_EVENTS
+        }),
+      });
+    }
 
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
