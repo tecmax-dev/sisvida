@@ -23,6 +23,7 @@ import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
 import { ZapResponderConfigPanel } from "@/components/settings/ZapResponderConfigPanel";
 import { WhatsAppProviderSelector } from "@/components/settings/WhatsAppProviderSelector";
+import { ZapsterConfigPanel } from "@/components/settings/ZapsterConfigPanel";
 import { WhatsAppDelayConfig } from "@/components/settings/WhatsAppDelayConfig";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
@@ -1214,6 +1215,16 @@ export default function SettingsPage() {
       feature: "whatsapp_evolution_api",
       isComponent: true,
       component: currentClinic ? <EvolutionConfigPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "zapster-config",
+      title: "Zap Responder",
+      description: "Configuração da instância Zap Responder (Zapster API)",
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_evolution_api",
+      isComponent: true,
+      component: currentClinic ? <ZapsterConfigPanel clinicId={currentClinic.id} /> : null,
     },
     {
       id: "twilio-config",
