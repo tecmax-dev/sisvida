@@ -7320,8 +7320,7 @@ async function handleWebhook(req: Request) {
          }
        };
      }
-    }
-    
+
     console.log('[webhook] Received event:', payload.event);
     console.log('[webhook] Instance:', payload.instance);
 
