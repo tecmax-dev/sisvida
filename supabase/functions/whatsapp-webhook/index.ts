@@ -8073,10 +8073,7 @@ async function handleWebhook(req: Request) {
             processed_action: 'whazing_submenu_sent',
           });
 
-          return new Response(
-            JSON.stringify({ success: true, message: `Whazing sub-menu sent for ${category}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           return createSuccessResponse({ message: `Whazing sub-menu sent for ${category}` });
         }
 
         if (isWhazingLevel2 || isWhazingLegacy) {
@@ -8217,10 +8214,7 @@ async function handleWebhook(req: Request) {
               processed_action: 'whazing_outros_submenu',
             });
 
-            return new Response(
-              JSON.stringify({ success: true, message: `Outros Assuntos sub-menu sent for ${storedCategory}` }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+           return createSuccessResponse({ message: `Outros Assuntos sub-menu sent for ${storedCategory}` });
           }
 
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
@@ -8278,10 +8272,7 @@ async function handleWebhook(req: Request) {
             processed_action: 'whazing_button_response',
           });
 
-          return new Response(
-            JSON.stringify({ success: true, message: 'Whazing button response processed' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           return createSuccessResponse({ message: 'Whazing button response processed' });
         }
         // ===== END WHAZING BUTTON RESPONSE HANDLER =====
 
@@ -8387,10 +8378,7 @@ async function handleWebhook(req: Request) {
                 processed_action: 'whazing_menu_sent',
               });
 
-              return new Response(
-                JSON.stringify({ success: true, message: 'Whazing menu buttons sent' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
+               return createSuccessResponse({ message: 'Whazing menu buttons sent' });
             }
             console.log('[webhook] Whazing buttons failed, falling through to normal flow');
           }
