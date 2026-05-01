@@ -114,7 +114,7 @@ serve(async (req) => {
     
     if (isApiCall) {
       const instId = body.instanceId || body.instance_id;
-      console.log(`[zapster-webhook] detected direct API call for instance ${instId}`);
+      console.log(`[zapster-webhook] detected direct API call for instance ${instId}:`, JSON.stringify(body));
       const senderId = digitsOnly(body.phone);
       const evolutionLike = {
         event: "messages.upsert",
