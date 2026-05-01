@@ -7228,7 +7228,20 @@ async function handleWebhook(req: Request) {
       );
     }
 
-    // Support for simple payload format (e.g. from Zap Responder)
+     // Helper for sync responses
+     const createSuccessResponse = (extraData: any = {}) => {
+       const collector = syncReplyStore.getStore();
+       const responseData: any = { success: true, ...extraData };
+       if (collector && collector.length > 0) {
+         responseData.reply = collector.join('\n\n');
+       }
+       return new Response(
+         JSON.stringify(responseData),
+         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+       );
+     };
+ 
+     // Support for simple payload format (e.g. from Zap Responder)
     // If it's the internal test ("phone": "0") or a real message without 'event'
     if (!payload.event && payload.phone !== undefined && payload.message !== undefined) {
       console.log('[webhook] Simple payload detected, mapping to Evolution format');
@@ -8060,10 +8073,7 @@ async function handleWebhook(req: Request) {
             processed_action: 'whazing_submenu_sent',
           });
 
-          return new Response(
-            JSON.stringify({ success: true, message: `Whazing sub-menu sent for ${category}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           return createSuccessResponse({ message: `Whazing sub-menu sent for ${category}` });
         }
 
         if (isWhazingLevel2 || isWhazingLegacy) {
@@ -8204,10 +8214,7 @@ async function handleWebhook(req: Request) {
               processed_action: 'whazing_outros_submenu',
             });
 
-            return new Response(
-              JSON.stringify({ success: true, message: `Outros Assuntos sub-menu sent for ${storedCategory}` }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+           return createSuccessResponse({ message: `Outros Assuntos sub-menu sent for ${storedCategory}` });
           }
 
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
@@ -8265,10 +8272,7 @@ async function handleWebhook(req: Request) {
             processed_action: 'whazing_button_response',
           });
 
-          return new Response(
-            JSON.stringify({ success: true, message: 'Whazing button response processed' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           return createSuccessResponse({ message: 'Whazing button response processed' });
         }
         // ===== END WHAZING BUTTON RESPONSE HANDLER =====
 
@@ -8374,10 +8378,7 @@ async function handleWebhook(req: Request) {
                 processed_action: 'whazing_menu_sent',
               });
 
-              return new Response(
-                JSON.stringify({ success: true, message: 'Whazing menu buttons sent' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
+               return createSuccessResponse({ message: 'Whazing menu buttons sent' });
             }
             console.log('[webhook] Whazing buttons failed, falling through to normal flow');
           }
@@ -8624,10 +8625,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               phone,
               `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
             );
-            return new Response(
-              JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+             return createSuccessResponse({ message: 'Feature not available for clinic' });
           }
 
           console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
@@ -8716,10 +8714,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
                 await sendWhatsAppMessage(configData, phone, handoffMessage);
 
-                return new Response(
-                  JSON.stringify({ success: true, message: 'Subject captured and routed to queue' }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
+                 return createSuccessResponse({ message: 'Subject captured and routed to queue' });
               }
 
               if (isGenericSupportReply) {
@@ -8743,10 +8738,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
                 await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage());
 
-                return new Response(
-                  JSON.stringify({ success: true, message: 'Asked user for subject' }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
+                 return createSuccessResponse({ message: 'Asked user for subject' });
               }
 
               aiMessage = `[Contexto: o usuário já escolheu falar com atendente no menu externo e a mensagem abaixo é a resposta sobre o assunto para encaminhamento humano.] ${messageText}`;
@@ -8806,10 +8798,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           } catch (aiErr) {
             console.error('[webhook] Error calling AI assistant (non-booking path):', aiErr);
           }
-          return new Response(
-            JSON.stringify({ success: true, message: 'Non-booking message routed to AI' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+           return createSuccessResponse({ message: 'Non-booking message routed to AI' });
         }
 
 
