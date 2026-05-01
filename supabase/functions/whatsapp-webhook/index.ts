@@ -548,6 +548,10 @@ async function sendWhatsAppMessage(
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
+    if (config.api_url === 'zapster') {
+      return await sendZapsterMessage(config.clinic_id, phone, message);
+    }
+
     const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
 
@@ -645,6 +649,10 @@ async function sendWhatsAppButtons(
     id: b.id || `option_${index + 1}`,
     title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
   }));
+
+  if (config.api_url === 'zapster') {
+    return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
+  }
 
   return await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
 }
