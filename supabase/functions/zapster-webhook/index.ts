@@ -224,10 +224,14 @@ serve(async (req) => {
       const evolutionLike: any = zapsterMessageToEvolution(body, instanceId);
       // Passa clinic_id explicitamente para facilitar o roteamento no whatsapp-webhook
       evolutionLike.clinic_id = cfg.clinic_id;
-      console.log(`[zapster-webhook] forwarding message to whatsapp-webhook for clinic ${cfg.clinic_id}`);
-      const senderId = digitsOnly(event.data.sender?.id);
-      const senderName = event.data.sender?.name || "";
-      const preview = (event.data.content?.text || `[${event.data.type || "media"}]`).substring(0, 200);
+      console.log(`[zapster-webhook] mapping and forwarding message for clinic ${cfg.clinic_id}`);
+      
+      // Extração segura de dados do remetente
+      const rawMsg = body.raw_message || {};
+      const msgData = body.data || {};
+      const senderId = digitsOnly(rawMsg.from || msgData.sender?.id || body.chatId);
+      const senderName = rawMsg.pushName || msgData.sender?.name || "";
+      const preview = (body.message?.mensagem || msgData.content?.text || `[${msgData.type || "media"}]`).substring(0, 200);
 
       try {
         const r = await fetch(`${supabaseUrl}/functions/v1/whatsapp-webhook`, {
