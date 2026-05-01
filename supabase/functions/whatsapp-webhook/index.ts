@@ -256,10 +256,10 @@ interface AIExtractedIntent {
     const cleaned = base.replace(/\D/g, '');
     
     // Map specific Zap Responder / Evolution test numbers to a fixed session phone
-    if (cleaned === "0" || cleaned === "550" || cleaned === "" || cleaned === "55" || cleaned === "5500") {
+    if (/^(0|550|55|5500|)$/.test(cleaned)) {
       return "550000000000";
     }
-
+    
     return cleaned.startsWith('55') ? cleaned : '55' + cleaned;
   }
 
@@ -9045,5 +9045,4 @@ serve(async (req) => {
   // This ensures the "reply" field is populated in the JSON response
   // regardless of where the request comes from (Zap Responder, Evolution, Internal Tests).
   return await syncReplyStore.run(collector, () => handleWebhook(req));
-  return await handleWebhook(req);
 });
