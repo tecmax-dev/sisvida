@@ -781,16 +781,33 @@ async function sendWhatsAppButtons(
       return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
     }
 
+    // Try Z-API if configured (Z-API uses simple text fallback for buttons if needed)
+    if (config.api_url && config.api_url.includes('z-api.io')) {
+      const instanceId = config.instance_name;
+      const token = config.api_key;
+      if (instanceId && token) {
+        // Z-API buttons require specific formatting, for now we send text with options
+        const zApiSent = await sendZApiMessage(instanceId, token, phone, fullText);
+        if (zApiSent) return true;
+      }
+    }
+
     const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
     if (whazingSent) return true;
     
     console.warn(`[booking] Failed to send buttons to ${phone} via Whazing. Falling back to text-only.`);
     const destination = formatPhoneForWhatsApp(phone);
-    return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: config.api_key },
-      body: JSON.stringify({ number: destination, text: fullText }),
-    }).then(r => r.ok);
+    
+    // Evolution fallback
+    if (config.api_url && !config.api_url.includes('z-api.io') && config.api_url !== 'zapster') {
+      return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+        body: JSON.stringify({ number: destination, text: fullText }),
+      }).then(r => r.ok);
+    }
+    
+    return false;
   } catch (error) {
     console.error('[booking] Error in sendWhatsAppButtons:', error);
     return false;
