@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.notify-april-agenda]
 verify_jwt = false
+
+[functions.meta-webhook]
+verify_jwt = false
