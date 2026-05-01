@@ -545,12 +545,13 @@ async function sendWhatsAppMessage(
 ): Promise<boolean> {
   try {
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
-    const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
-    if (whazingSent) return true;
-
+    
     if (config.api_url === 'zapster') {
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
+
+    const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
+    if (whazingSent) return true;
 
     const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
@@ -654,7 +655,8 @@ async function sendWhatsAppButtons(
     return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
   }
 
-  return await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
+  const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
+  if (whazingSent) return true;
 }
 
 // ==========================================
