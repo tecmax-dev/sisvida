@@ -107,6 +107,48 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
+
+    // 1. Detect Simplified API Call (from Bot Builder "Chamada API")
+    // Format: { phone: "...", message: "...", pushName: "...", instanceId: "..." }
+    const isApiCall = !!(body.phone && body.message && (body.instanceId || body.instance_id));
+    
+    if (isApiCall) {
+      const instId = body.instanceId || body.instance_id;
+      console.log(`[zapster-webhook] detected direct API call for instance ${instId}`);
+      const senderId = digitsOnly(body.phone);
+      const evolutionLike = {
+        event: "messages.upsert",
+        instance: instId,
+        sync: true, // IMPORTANT: Request synchronous reply
+        data: {
+          key: {
+            remoteJid: `${senderId}@s.whatsapp.net`,
+            fromMe: false,
+            id: `apicall_${Date.now()}`,
+          },
+          message: { conversation: body.message },
+          messageTimestamp: Math.floor(Date.now() / 1000),
+          pushName: body.pushName || "Usuário",
+        },
+      };
+
+      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(evolutionLike),
+      });
+      
+      const result = await r.json();
+      console.log(`[zapster-webhook] sync reply result:`, JSON.stringify(result));
+      
+      return new Response(JSON.stringify({ 
+        ok: true, 
+        reply: result.reply || "Desculpe, não consegui processar sua mensagem agora." 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const event = body as ZapsterEvent;
     const eventType = event.type || body.event_type;
     console.log(`[zapster-webhook] event type=${eventType} id=${event.id}`);

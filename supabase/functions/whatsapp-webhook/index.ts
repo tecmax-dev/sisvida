@@ -1,11 +1,17 @@
 // whatsapp-webhook v2.1 - 2026-02-18
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { AsyncLocalStorage } from "node:async_hooks";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// ==========================================
+// SYNCHRONOUS REPLY STORAGE
+// ==========================================
+const syncReplyStore = new AsyncLocalStorage<string[]>();
 
 // ==========================================
 // REGEX PATTERNS
@@ -546,6 +552,13 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
+    const collector = syncReplyStore.getStore();
+    if (collector) {
+      console.log(`[booking] Collecting sync message for phone ${phone}`);
+      collector.push(message);
+      return true;
+    }
+
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     
     if (config.api_url === 'zapster') {
@@ -7166,7 +7179,7 @@ async function handlePayslipImageUpload(
 // MAIN HANDLER
 // ==========================================
 
-serve(async (req) => {
+async function handleWebhook(req: Request) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -8886,8 +8899,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       });
     }
 
+    const collector = syncReplyStore.getStore();
+    const responseData: any = { success: true };
+    if (collector && collector.length > 0) {
+      responseData.reply = collector.join('\n\n');
+    }
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify(responseData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -8899,4 +8918,20 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+}
+
+serve(async (req) => {
+  const collector: string[] = [];
+  // Check if payload has sync: true
+  const clonedReq = req.clone();
+  let isSync = false;
+  try {
+    const body = await clonedReq.json();
+    isSync = body.sync === true;
+  } catch { /* ignore */ }
+
+  if (isSync) {
+    return await syncReplyStore.run(collector, () => handleWebhook(req));
+  }
+  return await handleWebhook(req);
 });
