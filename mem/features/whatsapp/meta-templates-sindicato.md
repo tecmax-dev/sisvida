@@ -19,6 +19,10 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 | `carteira_vencida` | MARKETING | nenhum | 2: nome, data | aviso pós-vencimento |
 | `autorizacao_pronta` | UTILITY | nenhum | 4: nome, tipo, prof, validade | autorização emitida |
 | `filiacao_aprovada` | UTILITY | nenhum | 3: nome, matrícula, plano | nova filiação aprovada |
+| `homologacao_lembrete` | UTILITY | nenhum | 7: serviço, destinatário, funcionário, empresa, data, hora, profissional | lembrete homologação/jurídico (titular/empresa) |
+| `homologacao_lembrete_profissional` | UTILITY | nenhum | 6: serviço, profissional, funcionário, empresa, data, hora | lembrete homologação/jurídico (profissional) |
+| `homologacao_confirmacao` | UTILITY | nenhum | 6: serviço, funcionário, empresa, data, hora, profissional | confirmação pós-agendamento |
+| `homologacao_protocolo` | UTILITY | nenhum | 5: serviço, funcionário, empresa, data, protocolo | conclusão/protocolo emitido |
 
 ## Templates pendentes de criação manual no painel Meta
 
