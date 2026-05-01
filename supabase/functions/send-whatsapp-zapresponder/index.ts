@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Zap Responder usa internamente a Zapster API
-// Documentação: https://developer.zapsterapi.com/pt-BR/v1/api-reference/messages/sending
 const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
 
 serve(async (req) => {
@@ -22,12 +20,6 @@ serve(async (req) => {
        message,
        clinicId,
        mediaUrl,
-       mediaBase64,
-       mediaCaption,
-       fileName,
-       buttons,
-       replyTo,
-       sendAt,
        test,
      } = body;
 
@@ -52,74 +44,74 @@ serve(async (req) => {
       );
     }
 
-    // Resolve instance_id da clínica. 
-    // Priorizamos o ID que começa com 'fa' (DepartmentID padrão no Zap Responder para envios)
-    const { data: configs, error: cfgErr } = await supabase
+    const { data: configs } = await supabase
       .from("zapster_configs")
       .select("instance_id, is_active")
       .eq("clinic_id", clinicId)
       .eq("is_active", true);
 
-    // Resolve instance_id da clínica. 
-    // Priorizamos o ID que começa com '69' (UserId padrão no Zap Responder para envios neste caso)
-    const zapsterCfg = configs?.find(c => c.instance_id.startsWith('69')) || configs?.[0] || null;
-
-    if (cfgErr || !zapsterCfg) {
+    if (!configs || configs.length === 0) {
       return new Response(
         JSON.stringify({ success: false, error: "Zap Responder não configurado para esta clínica" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    if (!zapsterCfg.is_active) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Zap Responder desativado para esta clínica" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
-    // Normaliza recipient: dígitos com 55
+    let lastResult = { status: 404, data: {} };
+    let success = false;
+
     let cleanPhone = phone.replace(/\D/g, "");
     if (!cleanPhone.startsWith("55") && cleanPhone.length >= 10 && cleanPhone.length <= 11) {
       cleanPhone = "55" + cleanPhone;
     }
 
-    // Zap Responder Não Oficial (QRCode): POST /api/whatsapp/messages/send
-    // Endpoint inferido para envios não oficiais
-    const payload: Record<string, unknown> = {
-      phone: cleanPhone,
-      message: message,
-      departmentId: zapsterCfg.instance_id,
-    };
+    for (const cfg of configs) {
+      console.log(`[zapresponder] Attempting send via instance ${cfg.instance_id} to ${cleanPhone}`);
+      
+      const payload = {
+        phone: cleanPhone,
+        message: message,
+        departmentId: cfg.instance_id,
+      };
 
-    if (mediaUrl) {
-      payload.mediaUrl = mediaUrl;
+      if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
+
+      try {
+        const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/messages/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiToken}`,
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json().catch(() => ({}));
+        lastResult = { status: response.status, data: result };
+
+        if (response.ok) {
+          console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
+          success = true;
+          break;
+        } else {
+          console.warn(`[zapresponder] Failed via ${cfg.instance_id}: ${response.status}`, result);
+        }
+      } catch (err) {
+        console.error(`[zapresponder] Exception via ${cfg.instance_id}:`, err);
+      }
     }
 
-    console.log(`[zapresponder] Sending to ${cleanPhone} via department/instance ${zapsterCfg.instance_id}`);
-
-    const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/messages/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiToken}`,
-        "Accept": "application/json"
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      console.error("[zapster] API error:", response.status, result);
+    if (success) {
       return new Response(
-        JSON.stringify({ success: false, error: `Zapster ${response.status}`, details: result }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, data: lastResult.data }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: result }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: `Zapster ${lastResult.status}`, details: lastResult.data }),
+      { status: lastResult.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[zapster] Error in send-whatsapp-zapresponder:", error);
