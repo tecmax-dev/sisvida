@@ -1,0 +1,150 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const META_GRAPH_VERSION = "v21.0";
+
+interface SendBody {
+  to: string; // E.164 sem +, ex: 5573999999999
+  template_name: string;
+  language?: string;
+  variables?: string[]; // valores para {{1}}, {{2}}, ...
+  ticket_id?: string;
+}
+
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID");
+    const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    if (!PHONE_ID || !TOKEN) {
+      return new Response(
+        JSON.stringify({ error: "META_PHONE_NUMBER_ID e META_WHATSAPP_TOKEN são obrigatórios" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const body: SendBody = await req.json();
+    const { to, template_name, language = "pt_BR", variables = [], ticket_id } = body;
+
+    if (!to || !template_name) {
+      return new Response(
+        JSON.stringify({ error: "to e template_name são obrigatórios" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // Validar template aprovado
+    const { data: tpl } = await supabase
+      .from("whatsapp_meta_templates")
+      .select("status, variables_count, components")
+      .eq("name", template_name)
+      .eq("language", language)
+      .maybeSingle();
+
+    if (!tpl) {
+      return new Response(
+        JSON.stringify({ error: `Template ${template_name} (${language}) não encontrado no cache. Sincronize antes.` }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (tpl.status !== "APPROVED") {
+      return new Response(
+        JSON.stringify({ error: `Template não aprovado (status atual: ${tpl.status})` }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if ((tpl.variables_count ?? 0) !== variables.length) {
+      return new Response(
+        JSON.stringify({
+          error: `Quantidade de variáveis inválida. Template requer ${tpl.variables_count}, recebido ${variables.length}.`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Montar payload Meta
+    const components: any[] = [];
+    if (variables.length > 0) {
+      components.push({
+        type: "body",
+        parameters: variables.map((v) => ({ type: "text", text: String(v) })),
+      });
+    }
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to: normalizePhone(to),
+      type: "template",
+      template: {
+        name: template_name,
+        language: { code: language },
+        ...(components.length > 0 ? { components } : {}),
+      },
+    };
+
+    const res = await fetch(
+      `https://graph.facebook.com/${META_GRAPH_VERSION}/${PHONE_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      console.error("[meta-send-template] Meta error:", json);
+      return new Response(
+        JSON.stringify({ error: "Falha no envio Meta", meta: json }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const messageId = json.messages?.[0]?.id ?? null;
+
+    // Registrar no ticket se fornecido
+    if (ticket_id) {
+      await supabase.from("whatsapp_ticket_messages").insert({
+        ticket_id,
+        direction: "outbound",
+        message_type: "template",
+        content: `[Template: ${template_name}]`,
+        meta_message_id: messageId,
+        metadata: { template_name, language, variables },
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, message_id: messageId, meta: json }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (e) {
+    console.error("[meta-send-template] Error:", e);
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+});
