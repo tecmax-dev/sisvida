@@ -255,9 +255,8 @@ interface AIExtractedIntent {
  
     const cleaned = base.replace(/\D/g, '');
     
-    // Zap Responder internal test "0@s.whatsapp.net" or "550" (normalized to "0" or "550").
-    // Also handle short test numbers like "55".
-    if (cleaned === "0" || cleaned === "550" || cleaned === "" || cleaned === "55") {
+    // Map specific Zap Responder / Evolution test numbers to a fixed session phone
+    if (cleaned === "0" || cleaned === "550" || cleaned === "" || cleaned === "55" || cleaned === "5500") {
       return "550000000000";
     }
 
@@ -9042,12 +9041,9 @@ serve(async (req) => {
      isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
    } catch { /* ignore */ }
  
-   const isTestRequest = req.headers.get('x-test-request') === 'true' || 
-                        req.url.includes('test=true') ||
-                        isTestPayload;
-   
-   if (isTestRequest) {
-     return await syncReplyStore.run(collector, () => handleWebhook(req));
-   }
+  // CRITICAL: Always use the sync collector for ALL requests.
+  // This ensures the "reply" field is populated in the JSON response
+  // regardless of where the request comes from (Zap Responder, Evolution, Internal Tests).
+  return await syncReplyStore.run(collector, () => handleWebhook(req));
   return await handleWebhook(req);
 });
