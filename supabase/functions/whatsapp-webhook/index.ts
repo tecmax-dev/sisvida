@@ -7718,10 +7718,17 @@ serve(async (req) => {
       // Final fallback: Check zapster_configs if still no configData
       if (!configData && (payload.instance || explicitClinicId)) {
         const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
-        if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
-        else query.eq('instance_id', payload.instance);
+        
+        // Se temos o clinic_id explícito, ele é a melhor forma de encontrar a config
+        if (explicitClinicId) {
+          query.eq('clinic_id', explicitClinicId);
+        } else {
+          query.eq('instance_id', payload.instance);
+        }
 
-        const { data: zapsterCfg } = await query.maybeSingle();
+        // Usamos .limit(1) para evitar erro se houver múltiplos mapeamentos para a mesma clínica
+        const { data: zapsterConfigs } = await query.limit(1);
+        const zapsterCfg = zapsterConfigs && zapsterConfigs.length > 0 ? zapsterConfigs[0] : null;
 
         if (zapsterCfg) {
           console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
