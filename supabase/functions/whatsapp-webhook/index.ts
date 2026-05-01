@@ -520,6 +520,38 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
   };
 }
 
+async function sendZApiMessage(instanceId: string, token: string, phone: string, message: string): Promise<boolean> {
+  try {
+    const cleanPhone = formatPhoneForWhatsApp(phone);
+    const safeMessage = sanitizeOutgoingWhatsAppText(message);
+    
+    console.log(`[z-api-text] Sending to ${cleanPhone} via instance ${instanceId}`);
+
+    const response = await fetch(`https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        message: safeMessage,
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[z-api-text] API error:', response.status, responseText);
+      return false;
+    }
+
+    console.log(`[z-api-text] Message sent successfully to ${cleanPhone}`);
+    return true;
+  } catch (error) {
+    console.error('[z-api-text] Error sending message:', error);
+    return false;
+  }
+}
+
 async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
@@ -622,10 +654,20 @@ async function sendWhatsAppMessage(
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
 
+    // Try Z-API if configured
+    if (config.api_url && config.api_url.includes('z-api.io')) {
+      const instanceId = config.instance_name;
+      const token = config.api_key;
+      if (instanceId && token) {
+        const zApiSent = await sendZApiMessage(instanceId, token, phone, message);
+        if (zApiSent) return true;
+      }
+    }
+
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
-    console.log(`[booking] Sending message to ${destination}`);
+    console.log(`[booking] Sending message to ${destination} via Evolution`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
       method: 'POST',
@@ -739,16 +781,33 @@ async function sendWhatsAppButtons(
       return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
     }
 
+    // Try Z-API if configured (Z-API uses simple text fallback for buttons if needed)
+    if (config.api_url && config.api_url.includes('z-api.io')) {
+      const instanceId = config.instance_name;
+      const token = config.api_key;
+      if (instanceId && token) {
+        // Z-API buttons require specific formatting, for now we send text with options
+        const zApiSent = await sendZApiMessage(instanceId, token, phone, fullText);
+        if (zApiSent) return true;
+      }
+    }
+
     const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
     if (whazingSent) return true;
     
     console.warn(`[booking] Failed to send buttons to ${phone} via Whazing. Falling back to text-only.`);
     const destination = formatPhoneForWhatsApp(phone);
-    return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: config.api_key },
-      body: JSON.stringify({ number: destination, text: fullText }),
-    }).then(r => r.ok);
+    
+    // Evolution fallback
+    if (config.api_url && !config.api_url.includes('z-api.io') && config.api_url !== 'zapster') {
+      return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+        body: JSON.stringify({ number: destination, text: fullText }),
+      }).then(r => r.ok);
+    }
+    
+    return false;
   } catch (error) {
     console.error('[booking] Error in sendWhatsAppButtons:', error);
     return false;
