@@ -8190,10 +8190,7 @@ async function handleWebhook(req: Request) {
               processed_action: 'whazing_boleto_direct',
             });
 
-            return new Response(
-              JSON.stringify({ success: true, message: 'Whazing boleto flow started directly' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            return createSuccessResponse({ message: 'Whazing boleto flow started directly' });
           }
 
           // ── CARTEIRINHA: redirect to app (not available via WhatsApp) ──
@@ -8241,10 +8238,7 @@ async function handleWebhook(req: Request) {
               processed_action: 'whazing_carteirinha_redirect',
             });
 
-            return new Response(
-              JSON.stringify({ success: true, message: 'Carteirinha redirect sent' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            return createSuccessResponse({ message: 'Carteirinha redirect sent' });
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
