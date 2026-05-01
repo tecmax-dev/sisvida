@@ -111,14 +111,23 @@ serve(async (req) => {
     const eventType = event.type || body.event_type;
     console.log(`[zapster-webhook] event type=${eventType} id=${event.id}`);
 
-    // Resolve instance_id
-    // Zapster pode enviar em múltiplos lugares: event.instance.id, data.instance_id, body.instance_id ou raw_message.device
-    const instanceId =
-      event.instance?.id ||
-      (event.data as { instance_id?: string })?.instance_id ||
-      body.instance_id ||
-      body.raw_message?.device ||
-      null;
+    // Resolve identifiers
+    const eventInstanceId = event.instance?.id;
+    const dataInstanceId = (event.data as { instance_id?: string })?.instance_id;
+    const bodyInstanceId = body.instance_id;
+    const sessionId = body.sessionId;
+    const deviceId = body.raw_message?.device;
+
+    // Coleta todos os possíveis IDs para busca
+    const possibleIds = [
+      eventInstanceId,
+      dataInstanceId,
+      bodyInstanceId,
+      sessionId,
+      deviceId
+    ].filter(id => !!id && typeof id === 'string');
+
+    const instanceId = possibleIds[0] || null;
 
     // Helper para logar evento
     const logEvent = async (entry: Record<string, unknown>) => {
@@ -151,12 +160,17 @@ serve(async (req) => {
       });
     }
 
-    // Localiza clínica pelo instance_id
-    const { data: cfg } = await supabase
-      .from("zapster_configs")
-      .select("clinic_id")
-      .eq("instance_id", instanceId)
-      .maybeSingle();
+    // Localiza clínica tentando todos os IDs possíveis (instance_id ou phone_number)
+    let cfg = null;
+    if (possibleIds.length > 0) {
+      const { data } = await supabase
+        .from("zapster_configs")
+        .select("clinic_id, instance_id")
+        .or(`instance_id.in.(${possibleIds.join(',')}),phone_number.in.(${possibleIds.join(',')})`)
+        .limit(1)
+        .maybeSingle();
+      cfg = data;
+    }
 
     if (!cfg) {
       console.warn(`[zapster-webhook] no clinic mapped to instance ${instanceId}`);
