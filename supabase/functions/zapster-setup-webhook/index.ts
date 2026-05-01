@@ -99,8 +99,9 @@ serve(async (req) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/zapster-webhook`;
 
-    // Zap Responder: configura webhook do departamento
-    const endpoint = `${ZAP_RESPONDER_BASE_URL}/departamento/${cfg.instance_id}/webhook`;
+    // Zap Responder: configura webhook do departamento.
+    // Testando endpoint /webhook pois /departamento/:id/webhook retornou 404
+    const endpoint = `${ZAP_RESPONDER_BASE_URL}/webhook`;
 
     const r = await fetch(endpoint, {
       method: "POST",
@@ -108,7 +109,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiToken}`,
       },
-      body: JSON.stringify({ webhook: webhookUrl }),
+      body: JSON.stringify({ 
+        webhook: webhookUrl,
+        departamento_id: cfg.instance_id
+      }),
     });
 
     const data = await r.json().catch(() => ({}));
