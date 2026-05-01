@@ -160,13 +160,16 @@ serve(async (req) => {
       });
     }
 
-    // Localiza clínica tentando todos os IDs possíveis
+    // Localiza clínica tentando todos os IDs possíveis. 
+    // Como o Zap Responder alterna entre DepartmentID, SessionID e Phone,
+    // buscamos em qualquer campo que contenha um dos IDs detectados.
     let cfg: { clinic_id: string; instance_id: string } | null = null;
     if (possibleIds.length > 0) {
+      const idList = possibleIds.join(',');
       const { data: configs } = await supabase
         .from("zapster_configs")
         .select("clinic_id, instance_id, phone_number")
-        .or(`instance_id.in.(${possibleIds.join(',')}),phone_number.in.(${possibleIds.join(',')})`);
+        .or(`instance_id.in.(${idList}),phone_number.in.(${idList})`);
       
       if (configs && configs.length > 0) {
         cfg = configs[0];
