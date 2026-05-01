@@ -128,12 +128,15 @@ serve(async (req) => {
     if (ticket_id) {
       await supabase.from("whatsapp_ticket_messages").insert({
         ticket_id,
-        direction: "outbound",
+        sender_type: "operator",
         message_type: "template",
         content: `[Template: ${template_name}]`,
-        meta_message_id: messageId,
-        metadata: { template_name, language, variables },
+        metadata: { template_name, language, variables, meta_message_id: messageId },
       });
+      await supabase
+        .from("whatsapp_tickets")
+        .update({ last_message_at: new Date().toISOString(), last_message: `[Template: ${template_name}]` })
+        .eq("id", ticket_id);
     }
 
     return new Response(
