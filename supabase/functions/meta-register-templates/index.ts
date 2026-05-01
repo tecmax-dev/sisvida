@@ -189,6 +189,83 @@ serve(async (req) => {
     });
   }
 
+  // GET ?action=delete&name=lembrete_consulta -> delete template by name
+  if (action === "delete") {
+    const name = url.searchParams.get("name");
+    if (!name) {
+      return new Response(JSON.stringify({ error: "name param required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const delUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${WABA_ID}/message_templates?name=${encodeURIComponent(name)}`;
+    const r = await fetch(delUrl, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${TOKEN}` },
+    });
+    const data = await r.json();
+    return new Response(JSON.stringify({ name, status: r.status, ok: r.ok, response: data }, null, 2), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // GET ?action=register-with-buttons&name=lembrete_consulta
+  // Recreates a template with QUICK_REPLY buttons matching the active flow
+  if (action === "register-with-buttons") {
+    const name = url.searchParams.get("name");
+    const templatesWithButtons: Record<string, Record<string, unknown>> = {
+      lembrete_consulta: {
+        name: "lembrete_consulta",
+        language: "pt_BR",
+        category: "UTILITY",
+        components: [
+          {
+            type: "BODY",
+            text: "Olá, {{1}}. Lembrete da sua consulta no Sindicato dos Comerciários.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPor favor, confirme sua presença abaixo.",
+            example: {
+              body_text: [[
+                "Maria Santos",
+                "Dr. Carlos Mendes",
+                "Cardiologia",
+                "15/03/2026",
+                "14:30",
+                "Sede Central - Rua Principal, 100",
+              ]],
+            },
+          },
+          { type: "FOOTER", text: "Sindicato dos Comerciários" },
+          {
+            type: "BUTTONS",
+            buttons: [
+              { type: "QUICK_REPLY", text: "Confirmar" },
+              { type: "QUICK_REPLY", text: "Cancelar" },
+            ],
+          },
+        ],
+      },
+    };
+    // Allow alternate name via ?as=lembrete_consulta_v2 (when Meta still locks original name)
+    const overrideName = url.searchParams.get("as");
+    if (overrideName && name && templatesWithButtons[name]) {
+      templatesWithButtons[name] = { ...templatesWithButtons[name], name: overrideName };
+    }
+    if (!name || !templatesWithButtons[name]) {
+      return new Response(JSON.stringify({ error: "valid name param required", available: Object.keys(templatesWithButtons) }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const r = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${WABA_ID}/message_templates`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify(templatesWithButtons[name]),
+    });
+    const data = await r.json();
+    return new Response(JSON.stringify({ name, status: r.status, ok: r.ok, response: data }, null, 2), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const targets = onlySet ? templates.filter((t) => onlySet.has(t.name)) : templates;
   const endpoint = `https://graph.facebook.com/${META_GRAPH_VERSION}/${WABA_ID}/message_templates`;
 
