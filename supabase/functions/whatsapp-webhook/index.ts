@@ -502,13 +502,15 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
 async function sendZapsterMessage(clinicId: string, phone: string, message: string): Promise<boolean> {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
+    console.log(`[zapster-send] Calling send-whatsapp-zapresponder for clinic ${clinicId} phone ${phone}`);
+
     const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-zapresponder`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
         clinicId,
