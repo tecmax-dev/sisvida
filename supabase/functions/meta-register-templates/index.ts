@@ -154,6 +154,98 @@ const templates: TemplatePayload[] = [
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
     ],
   },
+  {
+    name: "homologacao_lembrete",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "🔔 Lembrete de {{1}}\n\nOlá, {{2}}. Você tem um agendamento de {{1}}.\n\nFuncionário: {{3}}\nEmpresa: {{4}}\nData: {{5}} às {{6}}\nProfissional: {{7}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA (ao lado da Sorveteria Chiquinho)\n\nPor favor, compareça no horário agendado com toda a documentação necessária.",
+        example: {
+          body_text: [[
+            "Homologação",
+            "Empresa ABC",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+            "Dr. Carlos Mendes",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+    ],
+  },
+  {
+    name: "homologacao_lembrete_profissional",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "🔔 Lembrete de {{1}}\n\nPrezado(a) {{2}}, você possui um atendimento de {{1}} agendado.\n\nFuncionário: {{3}}\nEmpresa: {{4}}\nData: {{5}} às {{6}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA",
+        example: {
+          body_text: [[
+            "Homologação",
+            "Dr. Carlos Mendes",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+    ],
+  },
+  {
+    name: "homologacao_confirmacao",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "✅ Confirmação de {{1}}\n\nSeu agendamento de {{1}} foi confirmado com sucesso.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}} às {{5}}\nProfissional: {{6}}\nLocal: Rua Coronel Paiva, 99, Centro - Ilhéus/BA (ao lado da Sorveteria Chiquinho)\n\nPor favor, compareça no horário agendado com toda a documentação necessária.",
+        example: {
+          body_text: [[
+            "Homologação",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "14:30",
+            "Dr. Carlos Mendes",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+    ],
+  },
+  {
+    name: "homologacao_protocolo",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "✅ Protocolo de {{1}}\n\nO processo de {{1}} foi concluído com sucesso.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nProtocolo: {{5}}\n\nGuarde este protocolo para seus registros. Este é um comprovante oficial.",
+        example: {
+          body_text: [[
+            "Homologação",
+            "João da Silva",
+            "Comércio ABC Ltda",
+            "15/03/2026",
+            "HOM-20260315-0001",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+    ],
+  },
 ];
 
 serve(async (req) => {
