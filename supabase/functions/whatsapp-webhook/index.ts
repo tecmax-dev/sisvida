@@ -69,10 +69,30 @@ type BookingState =
    instanceId: string;
    phone: string;
    fromMe: boolean;
+   isStatusReply?: boolean;
+   connectedPhone?: string;
+   waitingMessage?: boolean;
+   isEdit?: boolean;
+   isGroup?: boolean;
+   isNewsletter?: boolean;
+   messageId: string;
+   momment: number;
+   status: string;
+   chatName?: string;
+   senderName?: string;
+   type: "ReceivedCallback" | "MessageStatusCallback" | "DeliveryCallback" | string;
    text?: {
      message: string;
    };
-   type: string;
+   buttonsResponseMessage?: {
+     buttonId: string;
+     message: string;
+   };
+   listResponseMessage?: {
+     message: string;
+     title: string;
+     selectedRowId: string;
+   };
  }
 
 interface EvolutionWebhookPayload {
