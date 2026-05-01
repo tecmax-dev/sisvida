@@ -7991,20 +7991,24 @@ async function handleWebhook(req: Request) {
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
             await sendWhazingMenuButtons(configData, phone);
-            return new Response(
-              JSON.stringify({ success: true, message: 'Main menu resent' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            const collector = syncReplyStore.getStore();
+            const resp: any = { success: true, message: 'Main menu resent' };
+            if (collector && collector.length > 0) resp.reply = collector.join('\n\n');
+            return new Response(JSON.stringify(resp), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
 
           if (followUpId === 'whazing_voltar_sub') {
             // Retrieve stored category and resend sub-menu
             const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
             await sendWhazingSubMenu(configData, phone, storedCat);
-            return new Response(
-              JSON.stringify({ success: true, message: `Sub-menu resent for ${storedCat}` }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            const collector = syncReplyStore.getStore();
+            const resp: any = { success: true, message: `Sub-menu resent for ${storedCat}` };
+            if (collector && collector.length > 0) resp.reply = collector.join('\n\n');
+            return new Response(JSON.stringify(resp), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
