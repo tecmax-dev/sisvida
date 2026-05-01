@@ -7898,12 +7898,26 @@ async function handleWebhook(req: Request) {
         const messageTextTrim = messageText?.trim();
         
         // Level 1 buttons: main categories → send sub-menu
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', '1', '2', '3'];
-        const isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+         // Pre-check for stored Whazing category to disambiguate numeric choices (1, 2, 3)
+         const storedCategoryForDisambiguation = await getWhazingCategory(supabase, clinicId, phoneCandidates, null as any);
+ 
+         // Level 1 buttons: main categories → send sub-menu
+         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
+         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+         
+         // Numeric choices (1, 2, 3) are Level 1 ONLY if no sub-menu is active
+         if (!storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
+           isWhazingLevel1 = true;
+         }
 
         // Level 2 buttons: sub-options → route to flow
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-        const isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+         let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+ 
+         // Numeric choices (1, 2, 3) are Level 2 if a sub-menu IS active
+         if (storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
+           isWhazingLevel2 = true;
+         }
 
         // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
@@ -8110,7 +8124,16 @@ async function handleWebhook(req: Request) {
           // Retrieve stored category context
           const storedCategory = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
 
-          const btnId = messageText.trim();
+           let btnId = messageText.trim();
+ 
+           // Map numeric choices (1, 2, 3) to button IDs based on category
+           if (btnId === '1') {
+             btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+           } else if (btnId === '2') {
+             btnId = 'whazing_sub_convencoes';
+           } else if (btnId === '3') {
+             btnId = 'whazing_sub_outros';
+           }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
@@ -8996,15 +9019,25 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 serve(async (req) => {
   const collector: string[] = [];
   // Check if payload has sync: true
-  const clonedReq = req.clone();
-  let isSync = false;
-  try {
-    const body = await clonedReq.json();
-    isSync = body.sync === true;
-  } catch { /* ignore */ }
-
-  if (isSync) {
-    return await syncReplyStore.run(collector, () => handleWebhook(req));
-  }
+   // Only use sync collector if it's explicitly a test or internal request.
+   // External Evolution API / Zap Responder payloads sometimes include "sync: true"
+   // but they don't support receiving the reply in the HTTP response.
+   // Only use sync collector if it's explicitly a test or internal request.
+   // External Evolution API / Zap Responder payloads often include "sync: true"
+   // but they don't support receiving the reply in the HTTP response body.
+   const clonedReq = req.clone();
+   let isTestPayload = false;
+   try {
+     const body = await clonedReq.json();
+     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
+   } catch { /* ignore */ }
+ 
+   const isTestRequest = req.headers.get('x-test-request') === 'true' || 
+                        req.url.includes('test=true') ||
+                        isTestPayload;
+   
+   if (isTestRequest) {
+     return await syncReplyStore.run(collector, () => handleWebhook(req));
+   }
   return await handleWebhook(req);
 });
