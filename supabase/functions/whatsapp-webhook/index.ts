@@ -8717,10 +8717,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
                 await sendWhatsAppMessage(configData, phone, handoffMessage);
 
-                return new Response(
-                  JSON.stringify({ success: true, message: 'Subject captured and routed to queue' }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
+                 return createSuccessResponse({ message: 'Subject captured and routed to queue' });
               }
 
               if (isGenericSupportReply) {
@@ -8744,10 +8741,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
                 await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage());
 
-                return new Response(
-                  JSON.stringify({ success: true, message: 'Asked user for subject' }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
+                 return createSuccessResponse({ message: 'Asked user for subject' });
               }
 
               aiMessage = `[Contexto: o usuário já escolheu falar com atendente no menu externo e a mensagem abaixo é a resposta sobre o assunto para encaminhamento humano.] ${messageText}`;
