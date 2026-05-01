@@ -15,7 +15,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff, Monitor } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff, Monitor, MessageSquare } from "lucide-react";
 import { HidePendingContributionsConfig } from "@/components/settings/HidePendingContributionsConfig";
 import { SessionPolicySettings } from "@/components/settings/SessionPolicySettings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -1217,16 +1217,6 @@ export default function SettingsPage() {
       component: currentClinic ? <EvolutionConfigPanel clinicId={currentClinic.id} /> : null,
     },
     {
-      id: "zapster-config",
-      title: "Zap Responder",
-      description: "Configuração da instância Zap Responder (Zapster API)",
-      icon: <Bell className="h-5 w-5 text-primary" />,
-      permission: "manage_settings",
-      feature: "whatsapp_evolution_api",
-      isComponent: true,
-      component: currentClinic ? <ZapsterConfigPanel clinicId={currentClinic.id} /> : null,
-    },
-    {
       id: "twilio-config",
       title: "Twilio WhatsApp",
       description: "Configuração do Twilio",
@@ -1237,14 +1227,14 @@ export default function SettingsPage() {
       component: currentClinic ? <TwilioConfigPanel clinicId={currentClinic.id} /> : null,
     },
     {
-      id: "zapresponder-config",
-      title: "Zap Responder (API Oficial)",
-      description: "Configuração do Zap Responder",
-      icon: <ShieldCheck className="h-5 w-5 text-primary" />,
+      id: "zap-responder-unified",
+      title: "Zap Responder",
+      description: "Configuração da API (Oficial ou Não Oficial)",
+      icon: <MessageSquare className="h-5 w-5 text-primary" />,
       permission: "manage_settings",
       feature: null,
       isComponent: true,
-      component: currentClinic ? <ZapResponderConfigPanel clinicId={currentClinic.id} /> : null,
+      component: currentClinic ? <ZapsterConfigPanel clinicId={currentClinic.id} /> : null,
     },
     {
       id: "whatsapp-delay",
