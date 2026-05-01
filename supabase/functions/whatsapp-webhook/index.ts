@@ -253,14 +253,15 @@ interface AIExtractedIntent {
    let base = phone.replace(/@s\.whatsapp\.net$/, '');
    base = base.replace(/:\d+$/, '');
  
-   let cleaned = base.replace(/\D/g, '');
-   // Special case for Zap Responder internal tests where phone can be "0" or "550"
-   if (cleaned === "0" || cleaned === "550") {
-     console.log(`[normalizePhone] Normalizing test phone "${cleaned}" to "550000000000"`);
-     return "550000000000";
-   }
-   if (cleaned && !cleaned.startsWith('55')) cleaned = '55' + cleaned;
-   return cleaned;
+    const cleaned = base.replace(/\D/g, '');
+    
+    // Zap Responder internal test "0@s.whatsapp.net" or "550" (normalized to "0" or "550")
+    if (cleaned === "0" || cleaned === "550" || cleaned === "") {
+      return "550000000000";
+    }
+    
+    return cleaned.startsWith('55') ? cleaned : '55' + cleaned;
+  }
  }
 
 function getBrazilPhoneVariants(phone55: string): string[] {
