@@ -262,7 +262,6 @@ interface AIExtractedIntent {
     
     return cleaned.startsWith('55') ? cleaned : '55' + cleaned;
   }
- }
 
 function getBrazilPhoneVariants(phone55: string): string[] {
   const cleaned = phone55.replace(/\D/g, '');
