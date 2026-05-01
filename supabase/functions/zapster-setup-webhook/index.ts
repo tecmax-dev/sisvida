@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ZAPSTER_BASE_URL = "https://api.zapsterapi.com/v1";
+const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
 
 const DEFAULT_EVENTS = [
   "message.received",
@@ -99,23 +99,16 @@ serve(async (req) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/zapster-webhook`;
 
-    // Se já existe webhook_id, faz UPDATE; caso contrário, CREATE
-    const isUpdate = !!cfg.webhook_id;
-    const endpoint = isUpdate
-      ? `${ZAPSTER_BASE_URL}/wa/instances/${cfg.instance_id}/webhooks/${cfg.webhook_id}`
-      : `${ZAPSTER_BASE_URL}/wa/instances/${cfg.instance_id}/webhooks`;
+    // Zap Responder: POST /api/whatsapp/webhook/{departmentId}
+    const endpoint = `${ZAP_RESPONDER_BASE_URL}/webhook/${cfg.instance_id}`;
 
     const r = await fetch(endpoint, {
-      method: isUpdate ? "PATCH" : "POST",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiToken}`,
       },
-      body: JSON.stringify({
-        url: webhookUrl,
-        events: DEFAULT_EVENTS,
-        enabled: true,
-      }),
+      body: JSON.stringify({ webhook: webhookUrl }),
     });
 
     const data = await r.json().catch(() => ({}));
@@ -127,16 +120,14 @@ serve(async (req) => {
       );
     }
 
-    const newWebhookId = data?.id || data?.webhook?.id || cfg.webhook_id || null;
-    if (newWebhookId) {
-      await supabase
-        .from("zapster_configs")
-        .update({ webhook_id: newWebhookId })
-        .eq("clinic_id", clinicId);
-    }
+    // Zap Responder geralmente retorna 200 OK sem corpo complexo para esta rota
+    await supabase
+      .from("zapster_configs")
+      .update({ webhook_id: "active" }) // Marcamos como ativo
+      .eq("clinic_id", clinicId);
 
     return new Response(
-      JSON.stringify({ success: true, webhook_id: newWebhookId, webhook_url: webhookUrl, data }),
+      JSON.stringify({ success: true, webhook_id: "active", webhook_url: webhookUrl, data }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
