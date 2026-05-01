@@ -8745,6 +8745,9 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           } catch (_e) { /* session may already exist */ }
 
           try {
+            const collector = syncReplyStore.getStore();
+            const isSync = !!collector;
+
             const aiResponse = await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
               method: 'POST',
               headers: {
@@ -8770,7 +8773,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               }),
             });
 
-            if (isSync && aiResponse.ok) {
+            if (isSync && aiResponse.ok && collector) {
               const aiData = await aiResponse.json();
               if (aiData.response) {
                 collector.push(aiData.response);
