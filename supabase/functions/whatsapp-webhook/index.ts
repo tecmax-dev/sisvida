@@ -539,6 +539,46 @@ async function sendWhatsAppMessage(
   }
 }
 
+/**
+ * Envia texto livre via Meta Cloud API (somente válido dentro da janela de 24h).
+ * Usado especificamente pelo fluxo de homologação do sindicato, que opera no
+ * número oficial Meta. Não substitui sendWhatsAppMessage (Evolution) — é uma
+ * via paralela isolada.
+ */
+async function sendMetaText(phone: string, text: string): Promise<boolean> {
+  try {
+    const PHONE_ID = Deno.env.get('META_PHONE_NUMBER_ID');
+    const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+    if (!PHONE_ID || !TOKEN) {
+      console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+      return false;
+    }
+    const digits = phone.replace(/\D/g, '');
+    const to = digits.startsWith('55') ? digits : `55${digits}`;
+    const r = await fetch(
+      `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: text },
+        }),
+      }
+    );
+    if (!r.ok) {
+      console.error('[meta-text] Meta error:', await r.text());
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[meta-text] Exception:', e);
+    return false;
+  }
+}
+
 // ==========================================
 // INTERACTIVE OPTIONS SENDER
 // Interactive flows must send native WhatsApp buttons only — never numbered text lists.
