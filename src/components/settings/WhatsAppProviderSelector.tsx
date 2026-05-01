@@ -57,13 +57,14 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
 
       setTwilioConnected(twilioData?.is_connected || false);
 
-      // Check Zap Responder connection
+      // Check Zap Responder connection (via Zapster API)
       const { data: zapData } = await supabase
-        .from("zapresponder_configs")
-        .select("is_active")
+        .from("zapster_configs")
+        .select("is_connected, is_active")
+        .eq("clinic_id", clinicId)
         .maybeSingle();
 
-      setZapResponderConnected(zapData?.is_active || false);
+      setZapResponderConnected(!!zapData?.is_active && !!zapData?.is_connected);
     } catch (error) {
       console.error("Error loading provider config:", error);
     } finally {
