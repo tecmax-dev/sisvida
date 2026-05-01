@@ -8625,10 +8625,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               phone,
               `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
             );
-            return new Response(
-              JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+             return createSuccessResponse({ message: 'Feature not available for clinic' });
           }
 
           console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
