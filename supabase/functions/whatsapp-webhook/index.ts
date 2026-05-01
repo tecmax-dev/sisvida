@@ -7666,6 +7666,9 @@ serve(async (req) => {
 
       let configData: EvolutionConfig | null = null;
 
+      // Check if clinic_id was explicitly provided (e.g. from zapster-webhook)
+      const explicitClinicId = (payload as any).clinic_id;
+
       if (activeSession?.clinic_id) {
         const { data: configByClinic, error: configByClinicError } = await supabase
           .from('evolution_configs')
@@ -7710,6 +7713,27 @@ serve(async (req) => {
 
         configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
+      }
+
+      // Final fallback: Check zapster_configs if still no configData
+      if (!configData && (payload.instance || explicitClinicId)) {
+        const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
+        if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
+        else query.eq('instance_id', payload.instance);
+
+        const { data: zapsterCfg } = await query.maybeSingle();
+
+        if (zapsterCfg) {
+          console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
+          configData = {
+            clinic_id: zapsterCfg.clinic_id,
+            instance_name: zapsterCfg.instance_id,
+            api_url: 'zapster', // Special marker
+            api_key: 'zapster',
+            booking_enabled: true,
+            direct_reply_enabled: true
+          } as EvolutionConfig;
+        }
       }
 
       if (configData) {
