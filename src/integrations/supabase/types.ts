@@ -16637,6 +16637,54 @@ export type Database = {
           },
         ]
       }
+      whatsapp_meta_templates: {
+        Row: {
+          category: string
+          components: Json
+          created_at: string
+          id: string
+          language: string
+          last_synced_at: string
+          meta_template_id: string | null
+          name: string
+          quality_score: string | null
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+          variables_count: number
+        }
+        Insert: {
+          category: string
+          components?: Json
+          created_at?: string
+          id?: string
+          language?: string
+          last_synced_at?: string
+          meta_template_id?: string | null
+          name: string
+          quality_score?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          variables_count?: number
+        }
+        Update: {
+          category?: string
+          components?: Json
+          created_at?: string
+          id?: string
+          language?: string
+          last_synced_at?: string
+          meta_template_id?: string | null
+          name?: string
+          quality_score?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          variables_count?: number
+        }
+        Relationships: []
+      }
       whatsapp_module_settings: {
         Row: {
           auto_assign: boolean | null
@@ -16960,6 +17008,7 @@ export type Database = {
           first_response_at: string | null
           id: string
           is_bot_active: boolean | null
+          last_inbound_at: string | null
           last_message: string | null
           last_message_at: string | null
           operator_id: string | null
@@ -16981,6 +17030,7 @@ export type Database = {
           first_response_at?: string | null
           id?: string
           is_bot_active?: boolean | null
+          last_inbound_at?: string | null
           last_message?: string | null
           last_message_at?: string | null
           operator_id?: string | null
@@ -17002,6 +17052,7 @@ export type Database = {
           first_response_at?: string | null
           id?: string
           is_bot_active?: boolean | null
+          last_inbound_at?: string | null
           last_message?: string | null
           last_message_at?: string | null
           operator_id?: string | null
