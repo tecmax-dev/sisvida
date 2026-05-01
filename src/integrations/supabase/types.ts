@@ -17456,14 +17456,14 @@ export type Database = {
           {
             foreignKeyName: "zapster_configs_clinic_id_fkey"
             columns: ["clinic_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "zapster_configs_clinic_id_fkey"
             columns: ["clinic_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "public_clinic_info"
             referencedColumns: ["id"]
           },
