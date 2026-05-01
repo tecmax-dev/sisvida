@@ -7917,14 +7917,7 @@ async function handleWebhook(req: Request) {
         // Force main menu on Zap Responder test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
           await sendWhazingMenuButtons(configData, phone);
-          const collector = syncReplyStore.getStore();
-          const resp: any = { success: true, message: 'Main menu triggered' };
-          if (collector && collector.length > 0) {
-            resp.reply = collector.join('\n\n');
-          }
-          return new Response(JSON.stringify(resp), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
+          return createSuccessResponse({ message: 'Main menu triggered' });
         }
         
         // Level 1 buttons: main categories → send sub-menu
@@ -8001,24 +7994,14 @@ async function handleWebhook(req: Request) {
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
             await sendWhazingMenuButtons(configData, phone);
-            const collector = syncReplyStore.getStore();
-            const resp: any = { success: true, message: 'Main menu resent' };
-            if (collector && collector.length > 0) resp.reply = collector.join('\n\n');
-            return new Response(JSON.stringify(resp), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            return createSuccessResponse({ message: 'Main menu resent' });
           }
 
           if (followUpId === 'whazing_voltar_sub') {
             // Retrieve stored category and resend sub-menu
             const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
             await sendWhazingSubMenu(configData, phone, storedCat);
-            const collector = syncReplyStore.getStore();
-            const resp: any = { success: true, message: `Sub-menu resent for ${storedCat}` };
-            if (collector && collector.length > 0) resp.reply = collector.join('\n\n');
-            return new Response(JSON.stringify(resp), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            return createSuccessResponse({ message: `Sub-menu resent for ${storedCat}` });
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
