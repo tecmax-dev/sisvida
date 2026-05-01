@@ -17409,6 +17409,66 @@ export type Database = {
         }
         Relationships: []
       }
+      zapster_configs: {
+        Row: {
+          clinic_id: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          instance_id: string
+          is_active: boolean
+          is_connected: boolean
+          last_status_check: string | null
+          notes: string | null
+          phone_number: string | null
+          updated_at: string
+          webhook_id: string | null
+        }
+        Insert: {
+          clinic_id: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_id: string
+          is_active?: boolean
+          is_connected?: boolean
+          last_status_check?: string | null
+          notes?: string | null
+          phone_number?: string | null
+          updated_at?: string
+          webhook_id?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string
+          is_active?: boolean
+          is_connected?: boolean
+          last_status_check?: string | null
+          notes?: string | null
+          phone_number?: string | null
+          updated_at?: string
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapster_configs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapster_configs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       annual_cash_flow: {
