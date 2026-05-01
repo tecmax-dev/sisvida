@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ZAPSTER_BASE_URL = "https://api.zapsterapi.com/v1";
+const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -47,8 +47,14 @@ serve(async (req) => {
       );
     }
 
-    const r = await fetch(`${ZAPSTER_BASE_URL}/wa/instances?per_page=100`, {
-      headers: { Authorization: `Bearer ${apiToken}` },
+    // Zap Responder API Oficial Meta - Listar Departamentos
+    // Endpoint inferido da documentação que usa departmentId
+    // Tentamos listar os departamentos para pegar o ID que o usuário não vê no painel
+    const r = await fetch(`${ZAP_RESPONDER_BASE_URL}/departments`, {
+      headers: { 
+        "Authorization": `Bearer ${apiToken}`,
+        "Accept": "application/json"
+      },
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
@@ -58,7 +64,19 @@ serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ success: true, ...data }), {
+    // Zap Responder retorna os departamentos onde cada um é uma "instância" de WhatsApp
+    const instances = Array.isArray(data) ? data.map((d: any) => ({
+      id: d.id?.toString() || d.departmentId?.toString(),
+      name: d.name || d.label || "Departamento",
+      status: "active",
+      phone_number: d.phone || d.whatsapp || null
+    })) : (data?.departments || []).map((d: any) => ({
+      id: d.id?.toString() || d.departmentId?.toString(),
+      name: d.name,
+      status: "active"
+    }));
+
+    return new Response(JSON.stringify({ success: true, instances }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
