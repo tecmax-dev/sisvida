@@ -202,7 +202,7 @@ serve(async (req) => {
     }
 
     // Mensagem recebida → traduz e encaminha para whatsapp-webhook
-    if (event.type === "message.received" || event.type === "message.upsert") {
+    if (eventType === "message.received" || eventType === "message.upsert" || eventType === "message_received") {
       const evolutionLike: any = zapsterMessageToEvolution(event, instanceId);
       // Passa clinic_id explicitamente para facilitar o roteamento no whatsapp-webhook
       evolutionLike.clinic_id = cfg.clinic_id;
