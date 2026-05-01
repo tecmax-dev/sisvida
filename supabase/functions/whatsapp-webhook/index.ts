@@ -654,10 +654,20 @@ async function sendWhatsAppMessage(
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
 
+    // Try Z-API if configured
+    if (config.api_url && config.api_url.includes('z-api.io')) {
+      const instanceId = config.instance_name;
+      const token = config.api_key;
+      if (instanceId && token) {
+        const zApiSent = await sendZApiMessage(instanceId, token, phone, message);
+        if (zApiSent) return true;
+      }
+    }
+
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
-    console.log(`[booking] Sending message to ${destination}`);
+    console.log(`[booking] Sending message to ${destination} via Evolution`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
       method: 'POST',
