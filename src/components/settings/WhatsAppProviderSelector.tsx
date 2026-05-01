@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Zap, Check, ShieldCheck } from "lucide-react";
+import { MessageSquare, Zap, Check, ShieldCheck, BadgeCheck } from "lucide-react";
 
 interface WhatsAppProviderSelectorProps {
   clinicId: string;
@@ -83,15 +83,15 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
       setProvider(newProvider);
       onProviderChange?.(newProvider);
 
+      const providerLabels: Record<string, string> = {
+        evolution: "Evolution API",
+        twilio: "Twilio",
+        zapresponder: "Zap Responder (API Oficial)",
+        meta_official: "Meta Cloud API (Oficial)",
+      };
       toast({
         title: "Provedor alterado",
-        description: `WhatsApp agora usa ${
-          newProvider === "evolution" 
-            ? "Evolution API" 
-            : newProvider === "twilio" 
-              ? "Twilio" 
-              : "Zap Responder (API Oficial)"
-        }`,
+        description: `WhatsApp agora usa ${providerLabels[newProvider] ?? newProvider}`,
       });
     } catch (error: any) {
       console.error("Error changing provider:", error);
@@ -124,6 +124,36 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
           onValueChange={handleProviderChange}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
+          <div className="relative">
+            <RadioGroupItem
+              value="meta_official"
+              id="meta_official"
+              className="peer sr-only"
+            />
+            <Label
+              htmlFor="meta_official"
+              className="flex flex-col items-start gap-2 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <BadgeCheck className="h-5 w-5 text-emerald-600" />
+                  <span className="font-semibold">Meta Cloud (Oficial)</span>
+                </div>
+                <Badge variant="outline" className="text-emerald-600 border-emerald-600">
+                  Recomendado
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <ul className="space-y-1">
+                  <li>• API oficial direta com a Meta</li>
+                  <li>• Número verificado (selo verde)</li>
+                  <li>• Templates aprovados pela Meta</li>
+                  <li>• Botões interativos sempre funcionam</li>
+                </ul>
+              </div>
+            </Label>
+          </div>
+
           <div className="relative">
             <RadioGroupItem
               value="zapresponder"
