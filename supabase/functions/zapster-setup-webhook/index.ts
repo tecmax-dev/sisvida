@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
+const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api";
 
 const DEFAULT_EVENTS = [
   "message.received",
@@ -99,8 +99,8 @@ serve(async (req) => {
 
     const webhookUrl = `${supabaseUrl}/functions/v1/zapster-webhook`;
 
-    // Zap Responder: POST /api/whatsapp/webhook/{departmentId}
-    const endpoint = `${ZAP_RESPONDER_BASE_URL}/webhook/${cfg.instance_id}`;
+    // Zap Responder: configura webhook do departamento
+    const endpoint = `${ZAP_RESPONDER_BASE_URL}/departamento/${cfg.instance_id}/webhook`;
 
     const r = await fetch(endpoint, {
       method: "POST",
