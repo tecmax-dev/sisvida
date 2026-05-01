@@ -773,11 +773,11 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
 async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): Promise<boolean> {
   return sendWhatsAppButtons(config, phone, 
     "Olá! 👋 Bem-vindo(a) ao atendimento.",
-    "Como podemos ajudá-lo(a) hoje?",
+    "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
     [
-      { id: "whazing_associado", text: "Sou Associado" },
-      { id: "whazing_empresa", text: "Sou Empresa" },
-      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
+      { id: "1", text: "Sou Associado" },
+      { id: "2", text: "Sou Empresa" },
+      { id: "3", text: "Sou Contabilidade" },
     ]
   );
 }
@@ -787,27 +787,27 @@ type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
-      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:",
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
-        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
-        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+        { id: "1", title: "Atualizar Carteirinha" },
+        { id: "2", title: "Convenções Coletivas" },
+        { id: "3", title: "Outros Assuntos" },
       ],
     },
     empresa: {
-      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:",
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
-        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
-        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+        { id: "1", title: "2ª Via Boleto" },
+        { id: "2", title: "Convenções Coletivas" },
+        { id: "3", title: "Outros Assuntos" },
       ],
     },
     contabilidade: {
-      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:",
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
-        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
-        { id: "whazing_sub_outros", title: "Outros Assuntos" },
+        { id: "1", title: "2ª Via Boleto" },
+        { id: "2", title: "Convenções Coletivas" },
+        { id: "3", title: "Outros Assuntos" },
       ],
     },
   };
@@ -7794,13 +7794,17 @@ serve(async (req) => {
 
         if (!botSkipped) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
+        // ===== WHAZING BUTTON RESPONSE HANDLER =====
+        // Mapeamos números de digitados (1, 2, 3) para os IDs originais se for uma resposta via texto/Zapster
+        const messageTextTrim = messageText?.trim();
+        
         // Level 1 buttons: main categories → send sub-menu
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-        const isWhazingLevel1 = whazingLevel1Ids.includes(messageText?.trim());
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', '1', '2', '3'];
+        const isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
 
         // Level 2 buttons: sub-options → route to flow
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-        const isWhazingLevel2 = whazingLevel2Ids.includes(messageText?.trim());
+        const isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
 
         // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
@@ -7972,14 +7976,17 @@ serve(async (req) => {
         }
 
         if (isWhazingLevel1) {
-          console.log(`[webhook] Whazing Level 1 button: "${messageText}" → sending sub-menu`);
+          console.log(`[webhook] Whazing Level 1 choice: "${messageTextTrim}" → sending sub-menu`);
           
           const categoryMap: Record<string, WhazingCategory> = {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
             whazing_contabilidade: 'contabilidade',
+            '1': 'associado',
+            '2': 'empresa',
+            '3': 'contabilidade',
           };
-          const category = categoryMap[messageText.trim()] ?? 'associado';
+          const category = categoryMap[messageTextTrim] ?? 'associado';
 
           // Store the selected category in a temporary session for context
           await storeWhazingCategory(supabase, clinicId, phone, category);
