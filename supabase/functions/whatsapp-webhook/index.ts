@@ -656,22 +656,40 @@ async function sendWhatsAppButtons(
   buttons: ButtonOption[],
   footer?: string
 ): Promise<boolean> {
-  // Limit to 3 options
-  const limitedButtons = buttons.slice(0, 3);
-  console.log(`[booking] Sending interactive buttons to ${phone}:`, limitedButtons.map(b => b.text));
+  try {
+    // Limit to 3 options
+    const limitedButtons = buttons.slice(0, 3);
+    console.log(`[booking] Sending interactive buttons to ${phone}:`, limitedButtons.map(b => b.text));
 
-  const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
-  const whazingButtons = limitedButtons.map((b, index) => ({
-    id: b.id || `option_${index + 1}`,
-    title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
-  }));
+    const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
+    const buttonText = limitedButtons.map((b, i) => `\n${i + 1}️⃣ ${b.text}`).join('');
+    const fullText = `${bodyText}${buttonText}`;
 
-  if (config.api_url === 'zapster') {
-    return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
+    // If we are in a synchronous call (collector exists), push to it and return
+    const collector = syncReplyStore.getStore();
+    if (collector) {
+      console.log(`[booking] Collecting sync buttons for phone ${phone}`);
+      collector.push(fullText);
+      return true;
+    }
+
+    const whazingButtons = limitedButtons.map((b, index) => ({
+      id: b.id || `option_${index + 1}`,
+      title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
+    }));
+
+    if (config.api_url === 'zapster') {
+      return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
+    }
+
+    const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
+    if (whazingSent) return true;
+    
+    return false;
+  } catch (error) {
+    console.error('[booking] Error in sendWhatsAppButtons:', error);
+    return false;
   }
-
-  const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
-  if (whazingSent) return true;
 }
 
 // ==========================================
@@ -1933,6 +1951,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+    // Detect if we are in a synchronous call to collect responses
+    const collector = syncReplyStore.getStore();
+    const isSync = !!collector;
+
     const aiResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-ai-assistant`, {
       method: 'POST',
       headers: {
@@ -1943,7 +1965,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         message: messageText,
         clinic_id: clinicId,
         phone: phone,
-        conversation_history: conversationHistory
+        conversation_history: conversationHistory,
+        deliver_response_via_caller: isSync,
       }),
     });
 
