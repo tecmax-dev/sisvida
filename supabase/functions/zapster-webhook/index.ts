@@ -47,15 +47,23 @@ function digitsOnly(v?: string): string {
  * `whatsapp-webhook` (formato Evolution API) consome.
  */
 function zapsterMessageToEvolution(
-  ev: ZapsterEvent,
+  body: any,
   instanceName: string
 ): Record<string, unknown> {
-  const msg = ev.data;
-  const senderId = digitsOnly(msg.sender?.id);
+  // Tenta extrair dados tanto do formato estruturado v1 quanto do novo formato detectado
+  const rawMsg = body.raw_message || {};
+  const msgData = body.data || {};
+  
+  // Mapeamento de campos (Zap Responder usa raw_message.from para o telefone do remetente)
+  const senderId = digitsOnly(rawMsg.from || msgData.sender?.id || body.chatId);
   const remoteJid = `${senderId}@s.whatsapp.net`;
-  const text = msg.content?.text || "";
-  const mediaUrl = msg.content?.media?.url;
-  const msgType = msg.type || "text";
+  const pushName = rawMsg.pushName || msgData.sender?.name || "";
+  const messageId = rawMsg.id || msgData.id || body.id;
+  
+  // Conteúdo da mensagem
+  const text = body.message?.mensagem || msgData.content?.text || "";
+  const msgType = body.message?.type || msgData.type || "text";
+  const mediaUrl = msgData.content?.media?.url;
 
   // Constrói message Evolution-like
   const message: Record<string, unknown> = {};
@@ -69,10 +77,6 @@ function zapsterMessageToEvolution(
     message.videoMessage = { caption: text, url: mediaUrl };
   } else if (msgType === "document") {
     message.documentMessage = { caption: text, url: mediaUrl };
-  } else if (msgType === "sticker") {
-    message.stickerMessage = { url: mediaUrl };
-  } else if (msgType === "location") {
-    message.locationMessage = msg.content?.location;
   } else {
     // fallback
     message.conversation = text || `[${msgType}]`;
@@ -85,13 +89,11 @@ function zapsterMessageToEvolution(
       key: {
         remoteJid,
         fromMe: false,
-        id: msg.id,
+        id: messageId,
       },
       message,
-      messageTimestamp: msg.sent_at
-        ? Math.floor(new Date(msg.sent_at).getTime() / 1000)
-        : Math.floor(Date.now() / 1000),
-      pushName: msg.sender?.name || "",
+      messageTimestamp: rawMsg.timestamp || Math.floor(Date.now() / 1000),
+      pushName,
     },
   };
 }
