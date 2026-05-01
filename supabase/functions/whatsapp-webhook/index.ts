@@ -8745,7 +8745,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           } catch (_e) { /* session may already exist */ }
 
           try {
-            await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
+            const aiResponse = await fetch(`${supabaseUrlEnv}/functions/v1/whatsapp-ai-assistant`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -8761,6 +8761,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   instance_name: configData.instance_name,
                 },
                 booking_enabled: false,
+                deliver_response_via_caller: isSync,
                 // Only suppress LIA's internal text menu when the user selected an
                 // external menu option (ex: "1-2"). If Whazing buttons fail (403),
                 // greetings like "oi" must still receive the normal text menu.
@@ -8768,6 +8769,13 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 external_menu_mode: externalMenuMode,
               }),
             });
+
+            if (isSync && aiResponse.ok) {
+              const aiData = await aiResponse.json();
+              if (aiData.response) {
+                collector.push(aiData.response);
+              }
+            }
           } catch (aiErr) {
             console.error('[webhook] Error calling AI assistant (non-booking path):', aiErr);
           }
