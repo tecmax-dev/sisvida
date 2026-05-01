@@ -8124,7 +8124,16 @@ async function handleWebhook(req: Request) {
           // Retrieve stored category context
           const storedCategory = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
 
-          const btnId = messageText.trim();
+           let btnId = messageText.trim();
+ 
+           // Map numeric choices (1, 2, 3) to button IDs based on category
+           if (btnId === '1') {
+             btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+           } else if (btnId === '2') {
+             btnId = 'whazing_sub_convencoes';
+           } else if (btnId === '3') {
+             btnId = 'whazing_sub_outros';
+           }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
