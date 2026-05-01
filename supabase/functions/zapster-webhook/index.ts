@@ -113,8 +113,31 @@ serve(async (req) => {
       (event.data as { instance_id?: string }).instance_id ||
       null;
 
+    // Helper para logar evento
+    const logEvent = async (entry: Record<string, unknown>) => {
+      try {
+        await supabase.from("zapster_webhook_logs").insert({
+          clinic_id: entry.clinic_id ?? null,
+          instance_id: instanceId,
+          event_type: event.type,
+          event_id: event.id,
+          status: entry.status,
+          summary: entry.summary,
+          sender: entry.sender ?? null,
+          message_preview: entry.message_preview ?? null,
+          payload: event,
+          forwarded_status: entry.forwarded_status ?? null,
+          forwarded_response: entry.forwarded_response ?? null,
+          error_message: entry.error_message ?? null,
+        });
+      } catch (err) {
+        console.error("[zapster-webhook] failed to insert log", err);
+      }
+    };
+
     if (!instanceId) {
       console.warn("[zapster-webhook] no instance_id in payload, ignoring");
+      await logEvent({ status: "ignored", summary: "Sem instance_id no payload" });
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -130,6 +153,7 @@ serve(async (req) => {
 
     if (!cfg) {
       console.warn(`[zapster-webhook] no clinic mapped to instance ${instanceId}`);
+      await logEvent({ status: "ignored", summary: `Instância ${instanceId} não mapeada a nenhuma clínica` });
       return new Response(JSON.stringify({ ok: true, mapped: false }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -147,6 +171,7 @@ serve(async (req) => {
           last_status_check: new Date().toISOString(),
         })
         .eq("instance_id", instanceId);
+      await logEvent({ clinic_id: cfg.clinic_id, status: "received", summary: "Instância conectada" });
       return new Response(JSON.stringify({ ok: true, status: "connected" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -162,6 +187,11 @@ serve(async (req) => {
           notes: event.data?.reason?.message || null,
         })
         .eq("instance_id", instanceId);
+      await logEvent({
+        clinic_id: cfg.clinic_id,
+        status: "received",
+        summary: `Instância desconectada${event.data?.reason?.message ? ` — ${event.data.reason.message}` : ""}`,
+      });
       return new Response(JSON.stringify({ ok: true, status: "disconnected" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -172,23 +202,53 @@ serve(async (req) => {
     if (event.type === "message.received") {
       const evolutionLike = zapsterMessageToEvolution(event, instanceId);
       console.log(`[zapster-webhook] forwarding message to whatsapp-webhook for clinic ${cfg.clinic_id}`);
+      const senderId = digitsOnly(event.data.sender?.id);
+      const senderName = event.data.sender?.name || "";
+      const preview = (event.data.content?.text || `[${event.data.type || "media"}]`).substring(0, 200);
 
-      const r = await fetch(`${supabaseUrl}/functions/v1/whatsapp-webhook`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(evolutionLike),
-      });
-      const txt = await r.text();
-      console.log(`[zapster-webhook] whatsapp-webhook responded ${r.status}: ${txt.substring(0, 200)}`);
+      try {
+        const r = await fetch(`${supabaseUrl}/functions/v1/whatsapp-webhook`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(evolutionLike),
+        });
+        const txt = await r.text();
+        console.log(`[zapster-webhook] whatsapp-webhook responded ${r.status}: ${txt.substring(0, 200)}`);
 
-      return new Response(JSON.stringify({ ok: true, forwarded: r.status }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        await logEvent({
+          clinic_id: cfg.clinic_id,
+          status: r.ok ? "forwarded" : "error",
+          summary: r.ok ? "Mensagem encaminhada ao pipeline" : `Falha ao encaminhar (HTTP ${r.status})`,
+          sender: senderName ? `${senderName} (${senderId})` : senderId,
+          message_preview: preview,
+          forwarded_status: r.status,
+          forwarded_response: txt.substring(0, 500),
+        });
+
+        return new Response(JSON.stringify({ ok: true, forwarded: r.status }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        await logEvent({
+          clinic_id: cfg.clinic_id,
+          status: "error",
+          summary: "Exceção ao encaminhar para whatsapp-webhook",
+          sender: senderName ? `${senderName} (${senderId})` : senderId,
+          message_preview: preview,
+          error_message: err instanceof Error ? err.message : String(err),
+        });
+        throw err;
+      }
     }
 
     // Outros tipos: apenas log
     console.log(`[zapster-webhook] event ${event.type} not handled, acknowledged`);
+    await logEvent({
+      clinic_id: cfg.clinic_id,
+      status: "ignored",
+      summary: `Evento '${event.type}' não tratado`,
+    });
     return new Response(JSON.stringify({ ok: true, handled: false }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

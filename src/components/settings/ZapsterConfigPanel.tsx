@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ShieldCheck, RefreshCw, Webhook, Check, AlertCircle, Loader2 } from "lucide-react";
+import { ZapsterWebhookLogsPanel } from "./ZapsterWebhookLogsPanel";
 
 interface ZapsterInstance {
   id: string;
@@ -118,6 +119,7 @@ export function ZapsterConfigPanel({ clinicId }: Props) {
   }
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -206,5 +208,7 @@ export function ZapsterConfigPanel({ clinicId }: Props) {
         )}
       </CardContent>
     </Card>
+    {config?.instance_id && <ZapsterWebhookLogsPanel clinicId={clinicId} />}
+    </div>
   );
 }
