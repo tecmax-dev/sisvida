@@ -52,12 +52,15 @@ serve(async (req) => {
       );
     }
 
-    // Resolve instance_id da clínica
-    const { data: zapsterCfg, error: cfgErr } = await supabase
+    // Resolve instance_id da clínica. Como pode haver múltiplos IDs, pegamos o primeiro ativo.
+    const { data: configs, error: cfgErr } = await supabase
       .from("zapster_configs")
       .select("instance_id, is_active")
       .eq("clinic_id", clinicId)
-      .maybeSingle();
+      .eq("is_active", true)
+      .limit(1);
+
+    const zapsterCfg = configs && configs.length > 0 ? configs[0] : null;
 
     if (cfgErr || !zapsterCfg) {
       return new Response(
