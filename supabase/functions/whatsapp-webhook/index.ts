@@ -477,18 +477,25 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
-  if (!whazingUrl || !whazingToken) return false;
+  if (!whazingUrl || !whazingToken) {
+    console.warn('[whazing-text] WHAZING_API_URL or WHAZING_API_TOKEN not set');
+    return false;
+  }
 
   try {
     const cleanPhone = formatPhoneForWhatsApp(phone);
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
+    const payload = buildWhazingTextPayload(whazingUrl, cleanPhone, safeMessage);
+    
+    console.log(`[whazing-text] Sending to ${cleanPhone}. URL: ${getWhazingSendUrl(whazingUrl)}`);
+
     const response = await fetch(getWhazingSendUrl(whazingUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, safeMessage)),
+      body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
@@ -561,14 +568,16 @@ async function sendWhatsAppMessage(
 
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     
+    const destination = formatPhoneForWhatsApp(phone);
+
     if (config.api_url === 'zapster') {
+      console.log(`[booking] Routing to Zapster for ${destination}`);
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
 
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
-    const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
@@ -679,13 +688,20 @@ async function sendWhatsAppButtons(
     }));
 
     if (config.api_url === 'zapster') {
+      console.log(`[booking] Routing buttons to Zapster for ${phone}`);
       return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
     }
 
     const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
     if (whazingSent) return true;
     
-    return false;
+    console.warn(`[booking] Failed to send buttons to ${phone} via Whazing. Falling back to text-only.`);
+    const destination = formatPhoneForWhatsApp(phone);
+    return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+      body: JSON.stringify({ number: destination, text: fullText }),
+    }).then(r => r.ok);
   } catch (error) {
     console.error('[booking] Error in sendWhatsAppButtons:', error);
     return false;
