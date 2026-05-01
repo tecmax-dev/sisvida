@@ -244,6 +244,11 @@ serve(async (req) => {
         ],
       },
     };
+    // Allow alternate name via ?as=lembrete_consulta_v2 (when Meta still locks original name)
+    const overrideName = url.searchParams.get("as");
+    if (overrideName && name && templatesWithButtons[name]) {
+      templatesWithButtons[name] = { ...templatesWithButtons[name], name: overrideName };
+    }
     if (!name || !templatesWithButtons[name]) {
       return new Response(JSON.stringify({ error: "valid name param required", available: Object.keys(templatesWithButtons) }), {
         status: 400,
