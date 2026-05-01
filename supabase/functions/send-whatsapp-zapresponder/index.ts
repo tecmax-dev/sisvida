@@ -60,9 +60,73 @@ serve(async (req) => {
       .eq("clinic_id", clinicId)
       .eq("is_active", true);
 
-    // Resolve instance_id da clínica. 
-    // Priorizamos o ID que começa com 'fa' (DepartmentID padrão no Zap Responder para envios)
-    const zapsterCfg = configs?.find(c => c.instance_id.startsWith('fa')) || configs?.[0] || null;
+    // Resolve instance_id da clínica.
+    // Tentamos todos os IDs disponíveis um por um até o Zap Responder aceitar (200 OK)
+    if (!configs || configs.length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Zap Responder não configurado para esta clínica" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let lastResult = { status: 404, data: {} };
+    let success = false;
+
+    // Normaliza recipient: dígitos com 55
+    let cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone.startsWith("55") && cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+      cleanPhone = "55" + cleanPhone;
+    }
+
+    for (const cfg of configs) {
+      console.log(`[zapresponder] Attempting send via instance ${cfg.instance_id}`);
+      
+      const payload = {
+        phone: cleanPhone,
+        message: message,
+        departmentId: cfg.instance_id,
+      };
+
+      if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
+
+      try {
+        const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/messages/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiToken}`,
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json().catch(() => ({}));
+        lastResult = { status: response.status, data: result };
+
+        if (response.ok) {
+          console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
+          success = true;
+          break;
+        } else {
+          console.warn(`[zapresponder] Failed via ${cfg.instance_id}: ${response.status}`, result);
+        }
+      } catch (err) {
+        console.error(`[zapresponder] Exception via ${cfg.instance_id}:`, err);
+      }
+    }
+
+    if (success) {
+      return new Response(
+        JSON.stringify({ success: true, data: lastResult.data }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: false, error: `Zapster ${lastResult.status}`, details: lastResult.data }),
+      { status: lastResult.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
 
     if (cfgErr || !zapsterCfg) {
       return new Response(
