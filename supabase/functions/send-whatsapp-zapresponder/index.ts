@@ -52,12 +52,17 @@ serve(async (req) => {
       );
     }
 
-    // Resolve instance_id da clínica
-    const { data: zapsterCfg, error: cfgErr } = await supabase
+    // Resolve instance_id da clínica. 
+    // Priorizamos o ID que começa com 'fa' (DepartmentID padrão no Zap Responder para envios)
+    const { data: configs, error: cfgErr } = await supabase
       .from("zapster_configs")
       .select("instance_id, is_active")
       .eq("clinic_id", clinicId)
-      .maybeSingle();
+      .eq("is_active", true);
+
+    // Resolve instance_id da clínica. 
+    // Priorizamos o ID que começa com '69' (UserId padrão no Zap Responder para envios neste caso)
+    const zapsterCfg = configs?.find(c => c.instance_id.startsWith('69')) || configs?.[0] || null;
 
     if (cfgErr || !zapsterCfg) {
       return new Response(
