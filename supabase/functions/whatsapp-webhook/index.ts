@@ -7206,7 +7206,8 @@ async function handleWebhook(req: Request) {
     }
 
     // Support for simple payload format (e.g. from Zap Responder)
-    if (!payload.event && payload.phone && payload.message) {
+    // If it's the internal test ("phone": "0") or a real message without 'event'
+    if (!payload.event && payload.phone !== undefined && payload.message !== undefined) {
       console.log('[webhook] Simple payload detected, mapping to Evolution format');
       payload = {
         event: 'messages.upsert',
