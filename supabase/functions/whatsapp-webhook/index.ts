@@ -7241,23 +7241,35 @@ async function handleWebhook(req: Request) {
        );
      };
  
-     // Support for simple payload format (e.g. from Zap Responder)
+    // Support for simple payload format (e.g. from Zap Responder)
     // If it's the internal test ("phone": "0") or a real message without 'event'
     if (!payload.event && payload.phone !== undefined && payload.message !== undefined) {
       console.log('[webhook] Simple payload detected, mapping to Evolution format');
+      
+      // If the message is "0" or "0@s.whatsapp.net", the user is likely doing an internal test in Zap Responder.
+      // We need to force a real phone and a greeting message so Lia processes it and returns a 'reply'.
+      let testPhone = payload.phone;
+      let testMessage = payload.message;
+      
+      if (String(testPhone) === '0' || String(testPhone).startsWith('0@')) {
+        console.log('[webhook] Internal test with "0" detected, forcing real values for Lia to respond');
+        testPhone = '5573999999999';
+        testMessage = 'oi';
+      }
+
       payload = {
         event: 'messages.upsert',
         instance: payload.instanceId || payload.instance || payload.instanceName,
         data: {
           key: {
-            remoteJid: String(payload.phone).includes('@') ? payload.phone : `${payload.phone}@s.whatsapp.net`,
+            remoteJid: String(testPhone).includes('@') ? String(testPhone) : `${testPhone}@s.whatsapp.net`,
             fromMe: false,
             id: `simple_${Date.now()}`
           },
           message: {
-            conversation: payload.message
+            conversation: String(testMessage)
           },
-          pushName: payload.pushName || payload.name || 'User',
+          pushName: payload.pushName || payload.name || 'Teste',
           messageTimestamp: Math.floor(Date.now() / 1000)
         }
       };
