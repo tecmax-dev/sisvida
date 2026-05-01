@@ -7179,7 +7179,7 @@ async function handlePayslipImageUpload(
 // MAIN HANDLER
 // ==========================================
 
-serve(async (req) => {
+async function handleWebhook(req: Request) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
