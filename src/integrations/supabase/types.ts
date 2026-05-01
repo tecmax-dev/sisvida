@@ -17469,6 +17469,57 @@ export type Database = {
           },
         ]
       }
+      zapster_webhook_logs: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          error_message: string | null
+          event_id: string | null
+          event_type: string
+          forwarded_response: string | null
+          forwarded_status: number | null
+          id: string
+          instance_id: string | null
+          message_preview: string | null
+          payload: Json | null
+          sender: string | null
+          status: string
+          summary: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          event_type: string
+          forwarded_response?: string | null
+          forwarded_status?: number | null
+          id?: string
+          instance_id?: string | null
+          message_preview?: string | null
+          payload?: Json | null
+          sender?: string | null
+          status?: string
+          summary?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          event_type?: string
+          forwarded_response?: string | null
+          forwarded_status?: number | null
+          id?: string
+          instance_id?: string | null
+          message_preview?: string | null
+          payload?: Json | null
+          sender?: string | null
+          status?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       annual_cash_flow: {
