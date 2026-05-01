@@ -237,6 +237,16 @@ serve(async (req) => {
         });
       }
 
+      // FILTRO ANTI-DUPLICIDADE: Ignora ecos de mensagens enviadas pelo próprio robô/atendente
+      // No Zap Responder, essas mensagens chegam com raw_message.type = 'send_message' ou raw_message.fromMe = true
+      if (body.raw_message?.type === 'send_message' || body.raw_message?.fromMe === true) {
+        console.log(`[zapster-webhook] ignoring self-message echo to prevent loops`);
+        return new Response(JSON.stringify({ ok: true, ignored: "echo" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const evolutionLike: any = zapsterMessageToEvolution(body, instanceId);
       // Passa clinic_id explicitamente para facilitar o roteamento no whatsapp-webhook
       evolutionLike.clinic_id = cfg.clinic_id;
