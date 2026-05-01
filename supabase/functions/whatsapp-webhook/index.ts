@@ -256,7 +256,8 @@ interface AIExtractedIntent {
     const cleaned = base.replace(/\D/g, '');
     
     // Map specific Zap Responder / Evolution test numbers to a fixed session phone
-    if (/^(0|550|55|5500|)$/.test(cleaned)) {
+    // Common test numbers from Zap Responder / Evolution: "0", "550", "55", etc.
+    if (cleaned === "0" || cleaned === "550" || cleaned === "55" || cleaned === "5500" || cleaned === "") {
       return "550000000000";
     }
     
@@ -7727,7 +7728,7 @@ async function handleWebhook(req: Request) {
      // Validate phone number - must have at least 12 digits (DDI + DDD + number)
      // EXCEPTION: Allow the test number 550000000000
      const MIN_PHONE_LENGTH = 12;
-     if (phone && phone.length < MIN_PHONE_LENGTH && phone !== "550000000000") {
+     if (phone && phone.length < MIN_PHONE_LENGTH && !phone.startsWith("550000")) {
       console.error(`[webhook] Invalid phone number: "${phone}" (original remoteJid: "${remoteJid}"). Expected DDI+DDD+number (min ${MIN_PHONE_LENGTH} digits).`);
       return new Response(
         JSON.stringify({ 
@@ -7903,6 +7904,15 @@ async function handleWebhook(req: Request) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
         // Mapeamos números de digitados (1, 2, 3) para os IDs originais se for uma resposta via texto/Zapster
         const messageTextTrim = messageText?.trim();
+
+        // Force main menu on Zap Responder test command "0" or reset keywords
+        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
+          await sendWhazingMenuButtons(configData, phone);
+          return new Response(
+            JSON.stringify({ success: true, message: 'Main menu triggered' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         
         // Level 1 buttons: main categories → send sub-menu
          // Pre-check for stored Whazing category to disambiguate numeric choices (1, 2, 3)
