@@ -7901,7 +7901,6 @@ async function handleWebhook(req: Request) {
 
         if (!botSkipped) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
-        // ===== WHAZING BUTTON RESPONSE HANDLER =====
         // Mapeamos números de digitados (1, 2, 3) para os IDs originais se for uma resposta via texto/Zapster
         const messageTextTrim = messageText?.trim();
 
