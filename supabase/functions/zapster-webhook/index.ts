@@ -160,16 +160,17 @@ serve(async (req) => {
       });
     }
 
-    // Localiza clínica tentando todos os IDs possíveis (instance_id ou phone_number)
-    let cfg = null;
+    // Localiza clínica tentando todos os IDs possíveis
+    let cfg: { clinic_id: string; instance_id: string } | null = null;
     if (possibleIds.length > 0) {
-      const { data } = await supabase
+      const { data: configs } = await supabase
         .from("zapster_configs")
-        .select("clinic_id, instance_id")
-        .or(`instance_id.in.(${possibleIds.join(',')}),phone_number.in.(${possibleIds.join(',')})`)
-        .limit(1)
-        .maybeSingle();
-      cfg = data;
+        .select("clinic_id, instance_id, phone_number")
+        .or(`instance_id.in.(${possibleIds.join(',')}),phone_number.in.(${possibleIds.join(',')})`);
+      
+      if (configs && configs.length > 0) {
+        cfg = configs[0];
+      }
     }
 
     if (!cfg) {
@@ -219,8 +220,19 @@ serve(async (req) => {
       });
     }
 
-    // Mensagem recebida → traduz e encaminha para whatsapp-webhook
+    // Mensagem recebida → traduz e encaminha
     if (eventType === "message.received" || eventType === "message.upsert" || eventType === "message_received") {
+      // Controle de duplicidade por message ID no Redis/Cache seria ideal,
+      // mas como paliativo rápido, vamos ignorar se o status for 'send_message'
+      // (Zapster às vezes envia o eco da mensagem enviada pelo próprio sistema)
+      if (body.raw_message?.type === 'send_message') {
+        console.log(`[zapster-webhook] ignoring self-message echo to prevent loops`);
+        return new Response(JSON.stringify({ ok: true, ignored: "echo" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const evolutionLike: any = zapsterMessageToEvolution(body, instanceId);
       // Passa clinic_id explicitamente para facilitar o roteamento no whatsapp-webhook
       evolutionLike.clinic_id = cfg.clinic_id;
