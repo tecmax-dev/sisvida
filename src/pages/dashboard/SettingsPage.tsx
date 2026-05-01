@@ -15,7 +15,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff, Monitor } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff, Monitor, MessageSquare } from "lucide-react";
 import { HidePendingContributionsConfig } from "@/components/settings/HidePendingContributionsConfig";
 import { SessionPolicySettings } from "@/components/settings/SessionPolicySettings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
