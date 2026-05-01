@@ -239,12 +239,21 @@ serve(async (req) => {
 
       // FILTRO ANTI-DUPLICIDADE: Ignora ecos de mensagens enviadas pelo próprio robô/atendente
       // No Zap Responder, essas mensagens chegam com raw_message.type = 'send_message' ou raw_message.fromMe = true
+      // FILTRO ANTI-DUPLICIDADE: Ignora ecos de mensagens enviadas pelo próprio robô/atendente
+      // No Zap Responder, essas mensagens chegam com raw_message.type = 'send_message'
+      // No entanto, se o tipo for 'message_received' mas o autor for 'usuario' (o dono do número),
+      // precisamos garantir que não estamos bloqueando mensagens de teste.
       const isEcho = body.raw_message?.type === 'send_message' || 
-                    body.raw_message?.fromMe === true || 
                     body.author?.type === 'atendente';
 
       if (isEcho) {
-        console.log(`[zapster-webhook] ignoring self-message echo to prevent loops`);
+        console.log(`[zapster-webhook] ignoring self-message echo to prevent loops (type=${body.raw_message?.type}, author=${body.author?.type})`);
+        await logEvent({ 
+          clinic_id: cfg.clinic_id, 
+          status: "ignored", 
+          summary: `Eco ignorado (tipo: ${body.raw_message?.type}, autor: ${body.author?.type})`,
+          payload: body
+        });
         return new Response(JSON.stringify({ ok: true, ignored: "echo" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
