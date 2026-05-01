@@ -552,6 +552,13 @@ async function sendWhatsAppMessage(
   message: string
 ): Promise<boolean> {
   try {
+    const collector = syncReplyStore.getStore();
+    if (collector) {
+      console.log(`[booking] Collecting sync message for phone ${phone}`);
+      collector.push(message);
+      return true;
+    }
+
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     
     if (config.api_url === 'zapster') {
