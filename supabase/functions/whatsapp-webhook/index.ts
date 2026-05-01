@@ -499,6 +499,45 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
   }
 }
 
+async function sendZapsterMessage(clinicId: string, phone: string, message: string): Promise<boolean> {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-zapresponder`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        clinicId,
+        phone,
+        message: sanitizeOutgoingWhatsAppText(message),
+      }),
+    });
+    
+    if (!response.ok) {
+      console.error('[zapster-send] Error calling send function:', await response.text());
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[zapster-send] Exception:', error);
+    return false;
+  }
+}
+
+async function sendZapsterButtons(clinicId: string, phone: string, bodyText: string, buttons: Array<{ id: string; title: string }>): Promise<boolean> {
+  // Zap Responder "Não Oficial" pode ter limitações com botões reais via API.
+  // Como fallback, enviamos como texto com opções numeradas se os botões falharem.
+  // Mas tentaremos enviar via send-whatsapp-zapresponder se suportado.
+  // Por enquanto, enviamos apenas o texto consolidado para garantir entrega.
+  const buttonText = buttons.map((b, i) => `\n${i + 1}️⃣ ${b.title}`).join('');
+  const fullText = `${bodyText}${buttonText}`;
+  return await sendZapsterMessage(clinicId, phone, fullText);
+}
+
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
