@@ -52,15 +52,15 @@ serve(async (req) => {
       );
     }
 
-    // Resolve instance_id da clínica. Como pode haver múltiplos IDs, pegamos o primeiro ativo.
+    // Resolve instance_id da clínica. 
+    // Priorizamos o ID que começa com 'fa' (DepartmentID padrão no Zap Responder para envios)
     const { data: configs, error: cfgErr } = await supabase
       .from("zapster_configs")
       .select("instance_id, is_active")
       .eq("clinic_id", clinicId)
-      .eq("is_active", true)
-      .limit(1);
+      .eq("is_active", true);
 
-    const zapsterCfg = configs && configs.length > 0 ? configs[0] : null;
+    const zapsterCfg = configs?.find(c => c.instance_id.startsWith('fa')) || configs?.[0] || null;
 
     if (cfgErr || !zapsterCfg) {
       return new Response(
