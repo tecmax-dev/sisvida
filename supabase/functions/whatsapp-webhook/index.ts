@@ -568,14 +568,16 @@ async function sendWhatsAppMessage(
 
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     
+    const destination = formatPhoneForWhatsApp(phone);
+
     if (config.api_url === 'zapster') {
+      console.log(`[booking] Routing to Zapster for ${destination}`);
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
 
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
-    const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
