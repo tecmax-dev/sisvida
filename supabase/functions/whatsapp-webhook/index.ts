@@ -255,11 +255,12 @@ interface AIExtractedIntent {
  
     const cleaned = base.replace(/\D/g, '');
     
-    // Zap Responder internal test "0@s.whatsapp.net" or "550" (normalized to "0" or "550")
-    if (cleaned === "0" || cleaned === "550" || cleaned === "") {
+    // Zap Responder internal test "0@s.whatsapp.net" or "550" (normalized to "0" or "550").
+    // Also handle short test numbers like "55".
+    if (cleaned === "0" || cleaned === "550" || cleaned === "" || cleaned === "55") {
       return "550000000000";
     }
-    
+
     return cleaned.startsWith('55') ? cleaned : '55' + cleaned;
   }
 
@@ -8095,7 +8096,8 @@ async function handleWebhook(req: Request) {
           }
         }
 
-        if (isWhazingLevel1) {
+        // LEVEL 1: Main menu choices (1, 2, 3)
+        if (isWhazingLevel1 || (['1', '2', '3'].includes(messageTextTrim) && !storedCategoryForDisambiguation)) {
           console.log(`[webhook] Whazing Level 1 choice: "${messageTextTrim}" → sending sub-menu`);
           
           const categoryMap: Record<string, WhazingCategory> = {
@@ -8125,7 +8127,8 @@ async function handleWebhook(req: Request) {
            return createSuccessResponse({ message: `Whazing sub-menu sent for ${category}` });
         }
 
-        if (isWhazingLevel2 || isWhazingLegacy) {
+        // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
+        if (isWhazingLevel2 || isWhazingLegacy || (['1', '2', '3'].includes(messageTextTrim) && storedCategoryForDisambiguation)) {
           console.log(`[webhook] Whazing Level 2 button: "${messageText}" → routing to flow`);
 
           // Retrieve stored category context
