@@ -8899,8 +8899,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       });
     }
 
+    const collector = syncReplyStore.getStore();
+    const responseData: any = { success: true };
+    if (collector && collector.length > 0) {
+      responseData.reply = collector.join('\n\n');
+    }
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify(responseData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -8912,4 +8918,20 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+}
+
+serve(async (req) => {
+  const collector: string[] = [];
+  // Check if payload has sync: true
+  const clonedReq = req.clone();
+  let isSync = false;
+  try {
+    const body = await clonedReq.json();
+    isSync = body.sync === true;
+  } catch { /* ignore */ }
+
+  if (isSync) {
+    return await syncReplyStore.run(collector, () => handleWebhook(req));
+  }
+  return await handleWebhook(req);
 });
