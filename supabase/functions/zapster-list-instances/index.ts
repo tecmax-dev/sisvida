@@ -39,17 +39,16 @@ serve(async (req) => {
       });
     }
 
-    // Tenta pegar o token de ZAPSTER_API_TOKEN ou ZAPRESPONDER_API_TOKEN
-    const apiToken = Deno.env.get("ZAPSTER_API_TOKEN") || Deno.env.get("ZAPRESPONDER_API_TOKEN");
+    const apiToken = Deno.env.get("ZAPRESPONDER_API_TOKEN") || Deno.env.get("ZAPSTER_API_TOKEN");
     
     if (!apiToken) {
       return new Response(
-        JSON.stringify({ error: "ZAPSTER_API_TOKEN não configurado" }),
+        JSON.stringify({ error: "ZAPRESPONDER_API_TOKEN não configurado" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Chamando Zap Responder API...");
+    console.log("Chamando API do Zap Responder...");
     
     // Tentativa 1: API Oficial Meta - Listar Departamentos
     let r = await fetch(`${ZAP_RESPONDER_BASE_URL}/departments`, {

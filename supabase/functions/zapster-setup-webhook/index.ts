@@ -76,9 +76,9 @@ serve(async (req) => {
       });
     }
 
-    const apiToken = Deno.env.get("ZAPSTER_API_TOKEN");
+    const apiToken = Deno.env.get("ZAPRESPONDER_API_TOKEN") || Deno.env.get("ZAPSTER_API_TOKEN");
     if (!apiToken) {
-      return new Response(JSON.stringify({ error: "ZAPSTER_API_TOKEN não configurado" }), {
+      return new Response(JSON.stringify({ error: "ZAPRESPONDER_API_TOKEN não configurado" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
