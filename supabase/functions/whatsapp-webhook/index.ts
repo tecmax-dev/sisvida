@@ -7434,19 +7434,15 @@ serve(async (req) => {
                 .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
                 .eq('id', appt.id);
 
-              const config = await getEvolutionConfigByPhone(supabase, phone).catch(() => null);
-              if (config) {
-                await sendWhatsAppMessage(
-                  config,
-                  phone,
-                  `✅ *Agendamento confirmado!*\n\n` +
-                    `Funcionário: ${appt.employee_name}\n` +
-                    `Empresa: ${appt.company_name}\n` +
-                    `Data: ${dateFmt} às ${timeFmt}\n\n` +
-                    `📍 Rua Coronel Paiva, 99 - Centro - Ilhéus/BA\n` +
-                    `Aguardamos no horário agendado com toda a documentação necessária.`
-                );
-              }
+              await sendMetaText(
+                phone,
+                `✅ *Agendamento confirmado!*\n\n` +
+                  `Funcionário: ${appt.employee_name}\n` +
+                  `Empresa: ${appt.company_name}\n` +
+                  `Data: ${dateFmt} às ${timeFmt}\n\n` +
+                  `📍 Rua Coronel Paiva, 99 - Centro - Ilhéus/BA\n` +
+                  `Aguardamos no horário agendado com toda a documentação necessária.`
+              );
             } else {
               await supabase
                 .from('homologacao_appointments')
@@ -7457,16 +7453,12 @@ serve(async (req) => {
                 })
                 .eq('id', appt.id);
 
-              const config = await getEvolutionConfigByPhone(supabase, phone).catch(() => null);
-              if (config) {
-                await sendWhatsAppMessage(
-                  config,
-                  phone,
-                  `❌ *Agendamento cancelado.*\n\n` +
-                    `O agendamento de ${appt.employee_name} (${appt.company_name}) em ${dateFmt} às ${timeFmt} foi cancelado conforme solicitado.\n\n` +
-                    `Para reagendar, acesse: https://prosindweb.com.br/agendamento/profissional/ione-atos-1`
-                );
-              }
+              await sendMetaText(
+                phone,
+                `❌ *Agendamento cancelado.*\n\n` +
+                  `O agendamento de ${appt.employee_name} (${appt.company_name}) em ${dateFmt} às ${timeFmt} foi cancelado conforme solicitado.\n\n` +
+                  `Para reagendar, acesse: https://prosindweb.com.br/agendamento/profissional/ione-atos-1`
+              );
             }
 
             return new Response(
