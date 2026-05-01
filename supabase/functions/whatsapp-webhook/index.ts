@@ -477,18 +477,25 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
-  if (!whazingUrl || !whazingToken) return false;
+  if (!whazingUrl || !whazingToken) {
+    console.warn('[whazing-text] WHAZING_API_URL or WHAZING_API_TOKEN not set');
+    return false;
+  }
 
   try {
     const cleanPhone = formatPhoneForWhatsApp(phone);
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
+    const payload = buildWhazingTextPayload(whazingUrl, cleanPhone, safeMessage);
+    
+    console.log(`[whazing-text] Sending to ${cleanPhone}. URL: ${getWhazingSendUrl(whazingUrl)}`);
+
     const response = await fetch(getWhazingSendUrl(whazingUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${whazingToken}`,
       },
-      body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhone, safeMessage)),
+      body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
