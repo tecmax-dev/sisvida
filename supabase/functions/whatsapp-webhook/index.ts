@@ -246,16 +246,22 @@ interface AIExtractedIntent {
 // UTILITY FUNCTIONS
 // ==========================================
 
-function normalizePhone(phone: string): string {
-  // Evolution can send remoteJid like "55DDDNÚMERO:device@s.whatsapp.net".
-  // For session consistency, strip the ":device" suffix and keep only the real phone digits.
-  let base = phone.replace(/@s\.whatsapp\.net$/, '');
-  base = base.replace(/:\d+$/, '');
-
-  let cleaned = base.replace(/\D/g, '');
-  if (!cleaned.startsWith('55')) cleaned = '55' + cleaned;
-  return cleaned;
-}
+ function normalizePhone(phone: string): string {
+   if (!phone) return "";
+   // Evolution can send remoteJid like "55DDDNÚMERO:device@s.whatsapp.net".
+   // For session consistency, strip the ":device" suffix and keep only the real phone digits.
+   let base = phone.replace(/@s\.whatsapp\.net$/, '');
+   base = base.replace(/:\d+$/, '');
+ 
+   let cleaned = base.replace(/\D/g, '');
+   // Special case for Zap Responder internal tests where phone can be "0" or "550"
+   if (cleaned === "0" || cleaned === "550") {
+     console.log(`[normalizePhone] Normalizing test phone "${cleaned}" to "550000000000"`);
+     return "550000000000";
+   }
+   if (cleaned && !cleaned.startsWith('55')) cleaned = '55' + cleaned;
+   return cleaned;
+ }
 
 function getBrazilPhoneVariants(phone55: string): string[] {
   const cleaned = phone55.replace(/\D/g, '');
@@ -7718,9 +7724,10 @@ async function handleWebhook(req: Request) {
       }
     }
 
-    // Validate phone number - must have at least 12 digits (DDI + DDD + number)
-    const MIN_PHONE_LENGTH = 12;
-    if (phone && phone.length < MIN_PHONE_LENGTH) {
+     // Validate phone number - must have at least 12 digits (DDI + DDD + number)
+     // EXCEPTION: Allow the test number 550000000000
+     const MIN_PHONE_LENGTH = 12;
+     if (phone && phone.length < MIN_PHONE_LENGTH && phone !== "550000000000") {
       console.error(`[webhook] Invalid phone number: "${phone}" (original remoteJid: "${remoteJid}"). Expected DDI+DDD+number (min ${MIN_PHONE_LENGTH} digits).`);
       return new Response(
         JSON.stringify({ 
