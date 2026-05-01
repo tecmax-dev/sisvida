@@ -237,15 +237,6 @@ serve(async (req) => {
         });
       }
 
-      // Ignora ecos de mensagens enviadas pelo sistema
-      if (body.raw_message?.type === 'send_message') {
-        console.log(`[zapster-webhook] ignoring self-message echo to prevent loops`);
-        return new Response(JSON.stringify({ ok: true, ignored: "echo" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       const evolutionLike: any = zapsterMessageToEvolution(body, instanceId);
       // Passa clinic_id explicitamente para facilitar o roteamento no whatsapp-webhook
       evolutionLike.clinic_id = cfg.clinic_id;
