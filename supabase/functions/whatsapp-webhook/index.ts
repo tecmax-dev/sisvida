@@ -7286,40 +7286,47 @@ async function handleWebhook(req: Request) {
  
     // Support for simple payload format (e.g. from Zap Responder)
     // If it's the internal test ("phone": "0") or a real message without 'event'
-     // Support for Z-API or simple payload format (e.g. from Zap Responder)
-     const isZApi = payload.instanceId && payload.phone && (payload.type === 'ReceivedCallback' || payload.text);
-     const isSimple = !payload.event && payload.phone !== undefined && payload.message !== undefined;
+    // Support for Z-API or simple payload format (e.g. from Zap Responder)
+    const isZApi = payload.instanceId && payload.phone && (payload.type === 'ReceivedCallback' || payload.text);
+    const isSimple = !payload.event && payload.phone !== undefined && payload.message !== undefined;
 
-     if (isZApi || isSimple) {
-       console.log(`[webhook] ${isZApi ? 'Z-API' : 'Simple'} payload detected, mapping to Evolution format`);
+    if (isZApi || isSimple) {
+      console.log(`[webhook] ${isZApi ? 'Z-API' : 'Simple'} payload detected, mapping to Evolution format`);
 
-       let mappedPhone = payload.phone;
-       let mappedMessage = payload.message || payload.text?.message;
-       let mappedInstance = payload.instanceId || payload.instance || payload.instanceName;
+      let mappedPhone = payload.phone;
+      let mappedMessage = payload.message || payload.text?.message;
+      let mappedInstance = payload.instanceId || payload.instance || payload.instanceName;
 
-       // Zap Responder test mapping
-       if (String(mappedPhone) === '0' || String(mappedPhone).startsWith('0@')) {
-         mappedPhone = '5573999999999';
-         mappedMessage = 'oi';
-       }
+      // Zap Responder test mapping
+      if (String(mappedPhone) === '0' || String(mappedPhone).startsWith('0@')) {
+        mappedPhone = '5573999999999';
+        mappedMessage = 'oi';
+      }
 
-       payload = {
-         event: 'messages.upsert',
-         instance: mappedInstance,
-         data: {
-           key: {
-             remoteJid: String(mappedPhone).includes('@') ? String(mappedPhone) : `${mappedPhone}@s.whatsapp.net`,
-             fromMe: payload.fromMe || false,
-             id: payload.messageId || `mapped_${Date.now()}`
-           },
-           message: {
-             conversation: String(mappedMessage || '')
-           },
-           pushName: payload.senderName || payload.pushName || payload.name || 'Contato',
-           messageTimestamp: Math.floor(Date.now() / 1000)
-         }
-       };
-     }
+      // Z-API specific mapping for instanceId and phone
+      if (isZApi) {
+        // Ensure phone is just numbers for the JID
+        mappedPhone = String(mappedPhone).replace(/\D/g, '');
+        console.log(`[webhook] Z-API mapped phone: ${mappedPhone}, instance: ${mappedInstance}`);
+      }
+
+      payload = {
+        event: 'messages.upsert',
+        instance: mappedInstance,
+        data: {
+          key: {
+            remoteJid: String(mappedPhone).includes('@') ? String(mappedPhone) : `${mappedPhone}@s.whatsapp.net`,
+            fromMe: payload.fromMe || false,
+            id: payload.messageId || `mapped_${Date.now()}`
+          },
+          message: {
+            conversation: String(mappedMessage || '')
+          },
+          pushName: payload.senderName || payload.pushName || payload.name || 'Contato',
+          messageTimestamp: Math.floor(Date.now() / 1000)
+        }
+      };
+    }
 
     console.log('[webhook] Received event:', payload.event);
     console.log('[webhook] Instance:', payload.instance);
