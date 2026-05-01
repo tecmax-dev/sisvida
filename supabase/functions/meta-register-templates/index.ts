@@ -176,6 +176,19 @@ serve(async (req) => {
   const only = url.searchParams.get("only");
   const onlySet = only ? new Set(only.split(",").map((s) => s.trim())) : null;
 
+  // GET ?action=list -> list templates from Meta
+  const action = url.searchParams.get("action");
+  if (action === "list") {
+    const names = url.searchParams.get("names");
+    const filter = names ? `&name=${encodeURIComponent(names)}` : "";
+    const listUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${WABA_ID}/message_templates?fields=name,status,category,language,components&limit=200${filter}`;
+    const r = await fetch(listUrl, { headers: { Authorization: `Bearer ${TOKEN}` } });
+    const data = await r.json();
+    return new Response(JSON.stringify(data, null, 2), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const targets = onlySet ? templates.filter((t) => onlySet.has(t.name)) : templates;
   const endpoint = `https://graph.facebook.com/${META_GRAPH_VERSION}/${WABA_ID}/message_templates`;
 
