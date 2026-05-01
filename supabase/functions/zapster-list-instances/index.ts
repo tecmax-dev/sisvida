@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
+const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -50,61 +50,30 @@ serve(async (req) => {
 
     console.log("Chamando API do Zap Responder...");
     
-    // Tentativa 1: API Oficial Meta - Listar Departamentos
-    let r = await fetch(`${ZAP_RESPONDER_BASE_URL}/departments`, {
+    // Endpoint correto: /api/departamento/all (em português, conforme documentação Zap Responder)
+    let r = await fetch(`${ZAP_RESPONDER_BASE_URL}/departamento/all`, {
       headers: { 
         "Authorization": `Bearer ${apiToken}`,
         "Accept": "application/json"
       },
     });
     let data = await r.json().catch(() => ({}));
-    console.log("Resposta API Oficial (departments):", JSON.stringify(data));
+    console.log("Resposta /departamento/all status:", r.status, "body:", JSON.stringify(data).substring(0, 500));
 
     // Se falhar ou vier vazio, tentamos listar conexões (API não oficial/multidevice)
     let instances = [];
     
-    if (Array.isArray(data)) {
-      instances = data.map((d: any) => ({
-        id: (d.id || d.departmentId)?.toString(),
-        name: d.name || d.label || "Instância",
-        status: d.status || "active",
-        phone_number: d.phone || d.whatsapp || null
-      }));
-    } else if (data?.departments) {
-      instances = data.departments.map((d: any) => ({
-        id: (d.id || d.departmentId)?.toString(),
-        name: d.name,
-        status: d.status || "active"
-      }));
-    }
-
-    // Se a lista ainda estiver vazia ou com erro, tentamos o endpoint de instâncias multidevice
-    if (instances.length === 0 || !r.ok) {
-      console.log("Lista vazia ou erro. Tentando endpoint de instâncias multidevice...");
-      const r2 = await fetch(`${ZAP_RESPONDER_BASE_URL}/instances`, {
-        headers: { 
-          "Authorization": `Bearer ${apiToken}`,
-          "Accept": "application/json"
-        },
-      });
-      const data2 = await r2.json().catch(() => ({}));
-      console.log("Resposta API Multidevice (instances) Status:", r2.status);
-      
-      if (Array.isArray(data2)) {
-        instances = data2.map((i: any) => ({
-          id: (i.id || i.key || i.instanceId)?.toString(),
-          name: i.name || i.instanceName || "WhatsApp",
-          status: i.status || "connected",
-          phone_number: i.number || i.phone || null
-        }));
-      } else if (data2?.instances) {
-        instances = data2.instances.map((i: any) => ({
-          id: (i.id || i.key || i.instanceId)?.toString(),
-          name: i.name,
-          status: i.status
-        }));
-      }
-    }
+    // Normaliza resposta - pode vir como array direto ou dentro de "data"/"departamentos"
+    const list = Array.isArray(data) 
+      ? data 
+      : (data?.data || data?.departamentos || data?.departments || []);
+    
+    instances = list.map((d: any) => ({
+      id: (d.id || d.departmentId || d._id)?.toString(),
+      name: d.nome || d.name || d.label || "Departamento",
+      status: d.status || "active",
+      phone_number: d.telefone || d.phone || d.whatsapp || d.numero || null
+    })).filter((i: any) => i.id);
 
     console.log(`Retornando ${instances.length} instâncias encontradas.`);
 
