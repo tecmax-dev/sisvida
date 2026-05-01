@@ -246,6 +246,16 @@ interface AIExtractedIntent {
 // UTILITY FUNCTIONS
 // ==========================================
 
+function createSuccessResponse(data: any) {
+  const collector = syncReplyStore.getStore();
+  if (collector && collector.length > 0) {
+    data.reply = collector.join('\n\n');
+  }
+  return new Response(JSON.stringify({ success: true, ...data }), {
+    headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }
+  });
+}
+
  function normalizePhone(phone: string): string {
    if (!phone) return "";
    // Evolution can send remoteJid like "55DDDNÚMERO:device@s.whatsapp.net".
