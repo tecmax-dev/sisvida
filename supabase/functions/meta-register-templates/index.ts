@@ -8,8 +8,8 @@ const corsHeaders = {
 const META_GRAPH_VERSION = "v21.0";
 
 type Component =
-  | { type: "BODY"; text: string; example?: { body_text: string[][] } }
-  | { type: "FOOTER"; text: string }
+  | { type: "BODY"; text?: string; add_security_recommendation?: boolean; example?: { body_text: string[][] } }
+  | { type: "FOOTER"; text?: string; code_expiration_minutes?: number }
   | { type: "BUTTONS"; buttons: Array<{ type: "OTP"; otp_type: "COPY_CODE"; text: string }> };
 
 interface TemplatePayload {
@@ -30,7 +30,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua mensalidade do Sindicato dos Comerciários referente a {{2}} está disponível.\n\nValor: R$ {{3}}\nVencimento: {{4}}\n\nAcesse o boleto e o código PIX em: {{5}}",
+          "Olá, {{1}}. Sua mensalidade do Sindicato dos Comerciários referente a {{2}} está disponível.\n\nValor: R$ {{3}}\nVencimento: {{4}}\n\nAcesse o boleto e o código PIX em: {{5}} (link individual).",
         example: { body_text: [["João da Silva", "03/2026", "45,00", "10/03/2026", "https://app.sindicato.com.br/b/abc123"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -100,7 +100,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Identificamos que sua mensalidade referente a {{2}} está em aberto.\n\nValor original: R$ {{3}}\nVencimento original: {{4}}\n\nPara regularizar com a 2ª via atualizada, acesse: {{5}}",
+          "Olá, {{1}}. Identificamos que sua mensalidade referente a {{2}} está em aberto.\n\nValor original: R$ {{3}}\nVencimento original: {{4}}\n\nPara regularizar com a 2ª via atualizada, acesse: {{5}} (link individual).",
         example: { body_text: [["João da Silva", "02/2026", "45,00", "10/02/2026", "https://app.sindicato.com.br/b/abc123"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -125,12 +125,8 @@ const templates: TemplatePayload[] = [
     language: LANG,
     category: "AUTHENTICATION",
     components: [
-      {
-        type: "BODY",
-        text: "{{1}} é seu código de verificação. Por segurança, não compartilhe este código.",
-        example: { body_text: [["482915"]] },
-      },
-      { type: "FOOTER", text: "Este código expira em 10 minutos." },
+      { type: "BODY", add_security_recommendation: true },
+      { type: "FOOTER", code_expiration_minutes: 10 },
       { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copiar código" }] },
     ],
   },
@@ -139,13 +135,8 @@ const templates: TemplatePayload[] = [
     language: LANG,
     category: "AUTHENTICATION",
     components: [
-      {
-        type: "BODY",
-        text:
-          "{{1}} é seu código para redefinir a senha do app do Sindicato dos Comerciários. Não compartilhe este código.",
-        example: { body_text: [["739204"]] },
-      },
-      { type: "FOOTER", text: "Este código expira em 10 minutos." },
+      { type: "BODY", add_security_recommendation: true },
+      { type: "FOOTER", code_expiration_minutes: 10 },
       { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: "Copiar código" }] },
     ],
   },
