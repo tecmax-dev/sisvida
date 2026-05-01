@@ -7850,7 +7850,7 @@ serve(async (req) => {
 
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
-            await sendWhazingMenuButtons(phone);
+            await sendWhazingMenuButtons(configData, phone);
             return new Response(
               JSON.stringify({ success: true, message: 'Main menu resent' }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -7860,7 +7860,7 @@ serve(async (req) => {
           if (followUpId === 'whazing_voltar_sub') {
             // Retrieve stored category and resend sub-menu
             const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-            await sendWhazingSubMenu(phone, storedCat);
+            await sendWhazingSubMenu(configData, phone, storedCat);
             return new Response(
               JSON.stringify({ success: true, message: `Sub-menu resent for ${storedCat}` }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -7981,7 +7981,7 @@ serve(async (req) => {
           // Store the selected category in a temporary session for context
           await storeWhazingCategory(supabase, clinicId, phone, category);
 
-          const subSent = await sendWhazingSubMenu(phone, category);
+          const subSent = await sendWhazingSubMenu(configData, phone, category);
           
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
@@ -8294,7 +8294,7 @@ serve(async (req) => {
 
           if ((isFreshConversation && isNotSpecificAction) || shouldShowMenu) {
             console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
-            const buttonsSent = await sendWhazingMenuButtons(phone);
+            const buttonsSent = await sendWhazingMenuButtons(configData, phone);
             
             if (buttonsSent) {
               await supabase.from('whatsapp_incoming_logs').insert({
