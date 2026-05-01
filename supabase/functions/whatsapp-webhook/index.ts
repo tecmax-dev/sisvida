@@ -520,6 +520,38 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
   };
 }
 
+async function sendZApiMessage(instanceId: string, token: string, phone: string, message: string): Promise<boolean> {
+  try {
+    const cleanPhone = formatPhoneForWhatsApp(phone);
+    const safeMessage = sanitizeOutgoingWhatsAppText(message);
+    
+    console.log(`[z-api-text] Sending to ${cleanPhone} via instance ${instanceId}`);
+
+    const response = await fetch(`https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        message: safeMessage,
+      }),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error('[z-api-text] API error:', response.status, responseText);
+      return false;
+    }
+
+    console.log(`[z-api-text] Message sent successfully to ${cleanPhone}`);
+    return true;
+  } catch (error) {
+    console.error('[z-api-text] Error sending message:', error);
+    return false;
+  }
+}
+
 async function sendWhazingTextMessage(phone: string, message: string): Promise<boolean> {
   const whazingUrl = Deno.env.get('WHAZING_API_URL');
   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
