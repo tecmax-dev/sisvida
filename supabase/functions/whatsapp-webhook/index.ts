@@ -7228,7 +7228,20 @@ async function handleWebhook(req: Request) {
       );
     }
 
-    // Support for simple payload format (e.g. from Zap Responder)
+     // Helper for sync responses
+     const createSuccessResponse = (extraData: any = {}) => {
+       const collector = syncReplyStore.getStore();
+       const responseData: any = { success: true, ...extraData };
+       if (collector && collector.length > 0) {
+         responseData.reply = collector.join('\n\n');
+       }
+       return new Response(
+         JSON.stringify(responseData),
+         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+       );
+     };
+ 
+     // Support for simple payload format (e.g. from Zap Responder)
     // If it's the internal test ("phone": "0") or a real message without 'event'
     if (!payload.event && payload.phone !== undefined && payload.message !== undefined) {
       console.log('[webhook] Simple payload detected, mapping to Evolution format');
