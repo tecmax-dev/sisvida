@@ -8026,10 +8026,7 @@ async function handleWebhook(req: Request) {
                 }),
               });
             } catch (_e) { /* ignore */ }
-            return new Response(
-              JSON.stringify({ success: true, message: 'Routed to atendente' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            return createSuccessResponse({ message: 'Routed to atendente' });
           }
 
           // "Outros Assuntos" sub-option: Jurídico
@@ -8065,10 +8062,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
-            return new Response(
-              JSON.stringify({ success: true, message: 'Routed to juridico' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            return createSuccessResponse({ message: 'Routed to juridico' });
           }
 
           // "Outros Assuntos" sub-option: Homologações
@@ -8098,10 +8092,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
-            return new Response(
-              JSON.stringify({ success: true, message: 'Routed to homologacao' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            return createSuccessResponse({ message: 'Routed to homologacao' });
           }
         }
 
