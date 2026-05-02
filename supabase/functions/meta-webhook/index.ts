@@ -145,7 +145,7 @@ serve(async (req) => {
             created_at: timestamp,
           });
 
-          // Atualizar last_inbound_at e last_message
+          // Atualizar ticket
           await supabase
             .from("whatsapp_tickets")
             .update({
@@ -155,6 +155,41 @@ serve(async (req) => {
               unread_count: 1,
             })
             .eq("id", ticketId);
+
+          // Encaminhar para o fluxo principal (whatsapp-webhook) para processar lógica de bot
+          try {
+            const webhookPayload = {
+              event: "messages.upsert",
+              instance: "meta_official",
+              data: {
+                key: {
+                  remoteJid: `${fromPhone}@s.whatsapp.net`,
+                  fromMe: false,
+                  id: wamid
+                },
+                message: {
+                  conversation: content
+                },
+                pushName: profileName,
+                messageTimestamp: Math.floor(new Date(timestamp).getTime() / 1000)
+              }
+            };
+
+            console.log(`[meta-webhook] Forwarding message from ${fromPhone} to main bot...`);
+            
+            // Chama a função principal de bot passando o clinic_id
+            fetch(`${SUPABASE_URL}/functions/v1/whatsapp-webhook?clinic_id=${SINDICATO_CLINIC_ID}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SERVICE_ROLE}`
+              },
+              body: JSON.stringify(webhookPayload)
+            }).catch(err => console.error("[meta-webhook] Bot forward fetch error:", err));
+
+          } catch (forwardErr) {
+            console.error("[meta-webhook] Error forwarding to bot:", forwardErr);
+          }
         }
 
         // Status updates (sent/delivered/read) - apenas log por enquanto
