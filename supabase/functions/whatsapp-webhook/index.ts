@@ -9071,8 +9071,7 @@ serve(async (req) => {
      isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
    } catch { /* ignore */ }
  
-  // CRITICAL: Always use the sync collector for ALL requests.
-  // This ensures the "reply" field is populated in the JSON response
-  // regardless of where the request comes from (Zap Responder, Evolution, Internal Tests).
+  // Evolution API sends webhooks to /whatsapp-webhook
+  // Internal calls (tests) use the same path
   return await syncReplyStore.run(collector, () => handleWebhook(req));
 });
