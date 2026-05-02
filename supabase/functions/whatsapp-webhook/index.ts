@@ -638,11 +638,6 @@ async function sendWhatsAppMessage(
     
     const destination = formatPhoneForWhatsApp(phone);
 
-    if (config.api_url === 'meta' || config.instance_name === 'meta_official') {
-      console.log(`[booking] Routing to Meta for ${destination}`);
-      return await sendMetaText(phone, message);
-    }
-
     if (config.api_url === 'zapster') {
       console.log(`[booking] Routing to Zapster for ${destination}`);
       return await sendZapsterMessage(config.clinic_id, phone, message);
@@ -773,11 +768,6 @@ async function sendWhatsAppButtons(
       id: b.id || `option_${index + 1}`,
       title: b.text,
     }));
-
-    if (config.api_url === 'meta' || config.instance_name === 'meta_official') {
-      console.log(`[booking] Routing buttons to Meta for ${phone}`);
-      return await sendMetaButtons(phone, title, description, limitedButtons);
-    }
 
     if (config.api_url === 'zapster') {
       console.log(`[booking] Routing buttons to Zapster for ${phone}`);
@@ -8057,7 +8047,7 @@ async function handleWebhook(req: Request) {
         const messageTextTrim = messageText?.trim();
 
         // Force main menu on test command "0" or reset keywords
-        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu' || messageTextTrim === '/sindicato') {
+        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
           await supabase
             .from('whatsapp_ai_conversations')
             .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
