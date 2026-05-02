@@ -177,26 +177,18 @@ serve(async (req) => {
 
             console.log(`[meta-webhook] Forwarding message from ${fromPhone} to main bot...`);
             
-            // Encaminha para o Zap Responder conforme solicitado pelo usuário
-            console.log(`[meta-webhook] Forwarding message from ${fromPhone} to Zap Responder...`);
-            fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook?clinic_id=${SINDICATO_CLINIC_ID}`, {
+            // Fluxo API Oficial Meta (73 3231 1784) -> Zap Responder
+            console.log(`[meta-webhook] Routing 73 3231 1784 message to Zap Responder...`);
+            
+            // Chama o Zap Responder com o payload original da Meta
+            await fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${SERVICE_ROLE}`
               },
               body: JSON.stringify(body)
-            }).catch(err => console.error("[meta-webhook] Zap Responder forward error:", err));
-
-            // Mantém encaminhamento para o fluxo principal (opcional, mas mantido para logs e auditoria interna)
-            fetch(`${SUPABASE_URL}/functions/v1/whatsapp-webhook?clinic_id=${SINDICATO_CLINIC_ID}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SERVICE_ROLE}`
-              },
-              body: JSON.stringify(webhookPayload)
-            }).catch(err => console.error("[meta-webhook] Bot forward fetch error:", err));
+            }).catch(err => console.error("[meta-webhook] Zap Responder error:", err));
 
           } catch (forwardErr) {
             console.error("[meta-webhook] Error forwarding to bot:", forwardErr);
