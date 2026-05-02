@@ -8068,11 +8068,13 @@ async function handleWebhook(req: Request) {
 
         if (zapsterCfg) {
           console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
+          const isSindicato = zapsterCfg.clinic_id === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+          
           configData = {
             clinic_id: zapsterCfg.clinic_id,
             instance_name: zapsterCfg.instance_id,
-            api_url: 'zapster', // Special marker
-            api_key: 'zapster',
+            api_url: isSindicato ? 'meta' : 'zapster', // Sindicato uses direct Meta logic
+            api_key: isSindicato ? 'meta' : 'zapster',
             booking_enabled: true,
             direct_reply_enabled: true
           } as EvolutionConfig;
