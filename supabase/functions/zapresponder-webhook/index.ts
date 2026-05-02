@@ -26,8 +26,20 @@
          const profileName = value?.contacts?.[0]?.profile?.name || "Cliente";
  
          for (const msg of messages) {
-           const fromPhone = msg.from;
-           const content = msg.text?.body?.trim() || "";
+            const fromPhone = String(msg.from);
+            
+            // Extrai conteúdo de diferentes tipos de mensagens Meta
+            let content = "";
+            if (msg.type === "text") {
+              content = msg.text?.body?.trim() || "";
+            } else if (msg.type === "interactive") {
+              content = msg.interactive?.button_reply?.id || 
+                        msg.interactive?.button_reply?.title || 
+                        msg.interactive?.list_reply?.id || 
+                        "";
+            } else if (msg.type === "button") {
+              content = msg.button?.payload || msg.button?.text || "";
+            }
  
            console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
  
