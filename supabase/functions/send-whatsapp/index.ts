@@ -528,7 +528,28 @@ serve(async (req) => {
 
     // ========== ZAP RESPONDER PROVIDER (META OFFICIAL API) ==========
     if (whatsappProvider === 'zapresponder') {
-      console.log(`[Clinic ${clinicId}] Sending via Zap Responder to ${cleanPhone}`);
+      const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
+      if (isSindicato && !body.templateName) {
+        console.log(`[Clinic ${clinicId}] Sindicato: Sending direct text via Meta Graph API to ${cleanPhone}`);
+        const success = await sendMetaText(cleanPhone, safeMessage);
+        if (success) {
+           // Log message
+           await supabase.from('message_logs').insert({
+             clinic_id: clinicId,
+             message_type: type,
+             phone: cleanPhone,
+             month_year: monthYear,
+           });
+           return new Response(
+             JSON.stringify({ success: true, method: 'meta_direct' }),
+             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+           );
+        }
+        // If direct fails or it's a template, proceed to normal flow
+      }
+
+      console.log(`[Clinic ${clinicId}] Sending via Zap Responder wrapper to ${cleanPhone}`);
       
       // We call our internal send-whatsapp-zapresponder function
       // passing the necessary credentials and data
