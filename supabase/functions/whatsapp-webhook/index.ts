@@ -7994,6 +7994,12 @@ async function handleWebhook(req: Request) {
 
         // Force main menu on Zap Responder test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
+          await supabase
+            .from('whatsapp_ai_conversations')
+            .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .contains('messages', { source: 'whazing_menu' });
           await sendWhazingMenuButtons(configData, phone);
           return createSuccessResponse({ message: 'Main menu triggered' });
         }
