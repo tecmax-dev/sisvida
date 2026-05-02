@@ -570,10 +570,10 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
   return await sendZapsterMessage(clinicId, phone, fullText);
 }
 
- async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string): Promise<boolean> {
+async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
    try {
      // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-     const PHONE_ID = "937233212814035";
+    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
      if (!PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
@@ -634,7 +634,8 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
-  message: string
+  message: string,
+  explicitPhoneId?: string
 ): Promise<boolean> {
   try {
     const collector = syncReplyStore.getStore();
@@ -650,7 +651,7 @@ async function sendWhatsAppMessage(
 
     if (config.api_url === 'meta') {
       console.log(`[booking] Routing text to Meta Cloud API for ${destination}`);
-      return await sendMetaText(phone, message);
+      return await sendMetaText(phone, message, explicitPhoneId);
     }
 
     if (config.api_url === 'zapster') {
@@ -701,10 +702,10 @@ async function sendWhatsAppMessage(
  * número oficial Meta. Não substitui sendWhatsAppMessage (Evolution) — é uma
  * via paralela isolada.
  */
-async function sendMetaText(phone: string, text: string): Promise<boolean> {
+async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
   try {
     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-    const PHONE_ID = "937233212814035";
+    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
     if (!PHONE_ID || !TOKEN) {
       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
@@ -753,7 +754,8 @@ async function sendWhatsAppButtons(
   title: string,
   description: string,
   buttons: ButtonOption[],
-  footer?: string
+  footer?: string,
+  explicitPhoneId?: string
 ): Promise<boolean> {
   try {
     // Limit to 3 options
@@ -775,7 +777,7 @@ async function sendWhatsAppButtons(
     // Special Routing: If API URL is 'meta', use Meta Cloud API
     if (config.api_url === 'meta') {
       console.log(`[booking] Routing buttons to Meta Cloud API for ${phone}`);
-      return await sendMetaButtons(phone, title, description, limitedButtons, footer);
+      return await sendMetaButtons(phone, title, description, limitedButtons, footer, explicitPhoneId);
     }
 
     // If we are in a synchronous call (collector exists), push to it and return
@@ -956,7 +958,7 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
   }
 }
 
-async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): Promise<boolean> {
+async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string, explicitPhoneId?: string): Promise<boolean> {
   return sendWhatsAppButtons(config, phone, 
     "Olá! 👋 Bem-vindo(a) ao atendimento.",
     "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
@@ -964,13 +966,15 @@ async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): P
       { id: "whazing_associado", text: "Sou Associado" },
       { id: "whazing_empresa", text: "Sou Empresa" },
       { id: "whazing_contabilidade", text: "Sou Contabilidade" },
-    ]
+    ],
+    "",
+    explicitPhoneId
   );
 }
 
 type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 
-async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory): Promise<boolean> {
+async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory, explicitPhoneId?: string): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
       text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
@@ -999,7 +1003,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
   };
 
   const sub = subMenus[category];
-  return sendWhatsAppButtons(config, phone, sub.text, "", sub.buttons.map(b => ({ id: b.id, text: b.title })));
+  return sendWhatsAppButtons(config, phone, sub.text, "", sub.buttons.map(b => ({ id: b.id, text: b.title })), "", explicitPhoneId);
 }
 
 function parseWhazingCategory(messages: unknown): WhazingCategory | null {
@@ -1008,30 +1012,35 @@ function parseWhazingCategory(messages: unknown): WhazingCategory | null {
   return category === 'associado' || category === 'empresa' || category === 'contabilidade' ? category : null;
 }
 
-async function storeWhazingCategory(
+async function storeWhazingContext(
   supabase: any,
   clinicId: string,
   phone: string,
-  category: WhazingCategory
+  category: WhazingCategory,
+  lastMenuType: 'main' | 'sub' | 'followup' = 'main'
 ): Promise<void> {
   const { error } = await supabase.from('whatsapp_ai_conversations').insert({
     clinic_id: clinicId,
     phone,
-    messages: { whazing_category: category, source: 'whazing_menu' },
+    messages: { 
+      whazing_category: category, 
+      last_menu_type: lastMenuType,
+      source: 'whazing_menu' 
+    },
     expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
   });
 
   if (error) {
-    console.log('[webhook] Could not store whazing category session:', error.message);
+    console.log('[webhook] Could not store whazing context:', error.message);
   }
 }
 
-async function getWhazingCategory(
+async function getWhazingContext(
   supabase: any,
   clinicId: string,
   phoneCandidates: string[],
   fallback: WhazingCategory = 'associado'
-): Promise<WhazingCategory> {
+): Promise<{ category: WhazingCategory; lastMenuType: string | null }> {
   const { data, error } = await supabase
     .from('whatsapp_ai_conversations')
     .select('messages, created_at')
@@ -1043,15 +1052,16 @@ async function getWhazingCategory(
 
   if (error) {
     console.log('[webhook] Could not retrieve whazing category:', error.message);
-    return fallback;
+    return { category: fallback, lastMenuType: null };
   }
 
   for (const row of data ?? []) {
     const parsed = parseWhazingCategory(row.messages);
-    if (parsed) return parsed;
+    const lastMenuType = (row.messages as any)?.last_menu_type || null;
+    if (parsed) return { category: parsed, lastMenuType };
   }
 
-  return fallback;
+  return { category: fallback, lastMenuType: null };
 }
 
 function normalizeSupportText(text: string): string {
@@ -7982,7 +7992,8 @@ async function handleWebhook(req: Request) {
       let configData: EvolutionConfig | null = null;
 
       // Check if clinic_id was explicitly provided (e.g. from zapster-webhook or meta routing)
-      let explicitClinicId = (payload as any).clinic_id;
+     let explicitClinicId = (payload as any).clinic_id;
+     const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
       // Special routing for Meta Official (Sindicato)
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
@@ -8094,43 +8105,44 @@ async function handleWebhook(req: Request) {
             .eq('clinic_id', clinicId)
             .in('phone', phoneCandidates)
             .contains('messages', { source: 'whazing_menu' });
-          await sendWhazingMenuButtons(configData, phone);
+          await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
           return createSuccessResponse({ message: 'Main menu triggered' });
         }
         
-        // Level 1 buttons: main categories → send sub-menu
-         // Pre-check for stored Whazing category to disambiguate numeric choices (1, 2, 3)
-         const storedCategoryForDisambiguation = await getWhazingCategory(supabase, clinicId, phoneCandidates, null as any);
- 
-         // Level 1 buttons: main categories → send sub-menu
-         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
-         
-         // Numeric choices (1, 2, 3) are Level 1 ONLY if no sub-menu is active
-         if (!storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
-           isWhazingLevel1 = true;
-         }
-
-        // Level 2 buttons: sub-options → route to flow
+        // ===== WHAZING / META CONTEXT RETRIEVAL =====
+        const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
+        
+        // Level IDs for mapping
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-         let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
- 
-         // Numeric choices (1, 2, 3) are Level 2 if a sub-menu IS active
-         if (storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
-           isWhazingLevel2 = true;
-         }
-
-        // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
-        const isWhazingFollowUp = whazingFollowUpIds.includes(messageText?.trim());
 
-        // Also handle legacy button IDs (whazing_outros)
-        const isWhazingLegacy = messageText?.trim() === 'whazing_outros';
+        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+        let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
+        const isWhazingLegacy = messageTextTrim === 'whazing_outros';
+
+        // Numeric Disambiguation (1, 2, 3) based on lastMenuType
+        if (['1', '2', '3'].includes(messageTextTrim)) {
+          if (!lastMenuType || lastMenuType === 'main') {
+            isWhazingLevel1 = true;
+          } else if (lastMenuType === 'sub') {
+            isWhazingLevel2 = true;
+          } else if (lastMenuType === 'followup') {
+            isWhazingFollowUp = true;
+          }
+        }
 
         // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
         if (isWhazingFollowUp) {
-          const followUpId = messageText.trim();
-          console.log(`[webhook] Whazing follow-up button: "${followUpId}"`);
+          let followUpId = messageTextTrim;
+          
+          // Numeric choice mapping for follow-up
+          if (followUpId === '1') followUpId = 'whazing_falar_atendente';
+          else if (followUpId === '2') followUpId = 'whazing_voltar_sub';
+          else if (followUpId === '3') followUpId = 'whazing_voltar_menu';
+
+          console.log(`[webhook] Whazing follow-up action: "${followUpId}"`);
 
           // Mirror/reopen local ticket immediately so dashboard reflects the active chat
           try {
@@ -8171,21 +8183,16 @@ async function handleWebhook(req: Request) {
 
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
-            await sendWhazingMenuButtons(configData, phone);
+            await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
             return createSuccessResponse({ message: 'Main menu resent' });
           }
 
           if (followUpId === 'whazing_voltar_sub') {
-            // Retrieve stored category and resend sub-menu
-            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-            await sendWhazingSubMenu(configData, phone, storedCat);
-            return createSuccessResponse({ message: `Sub-menu resent for ${storedCat}` });
+            await sendWhazingSubMenu(configData, phone, (storedCategory as any) || 'associado', explicitPhoneId);
+            return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
-            // Route to atendente via external-integration
-            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-
             const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
             try {
@@ -8198,7 +8205,7 @@ async function handleWebhook(req: Request) {
                 body: JSON.stringify({
                   phone,
                   action: 'atendente',
-                  context: `Perfil: ${storedCat}`,
+                  context: `Perfil: ${storedCategory || 'associado'}`,
                   clinic_id: clinicId,
                   instance_name: configData.instance_name,
                 }),
@@ -8238,7 +8245,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ]);
+            ], "", explicitPhoneId);
 
             return createSuccessResponse({ message: 'Routed to juridico' });
           }
@@ -8274,10 +8281,8 @@ async function handleWebhook(req: Request) {
           }
         }
 
-        // LEVEL 1: Main menu choices (1, 2, 3)
-        if (isWhazingLevel1 || (['1', '2', '3'].includes(messageTextTrim) && !storedCategoryForDisambiguation)) {
-          console.log(`[webhook] Whazing Level 1 choice: "${messageTextTrim}" → sending sub-menu`);
-          
+        // LEVEL 1: Main menu choices
+        if (isWhazingLevel1) {
           const categoryMap: Record<string, WhazingCategory> = {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
@@ -8286,12 +8291,11 @@ async function handleWebhook(req: Request) {
             '2': 'empresa',
             '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim] ?? 'associado';
+          const category = categoryMap[messageTextTrim] || 'associado';
+          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
 
-          // Store the selected category in a temporary session for context
-          await storeWhazingCategory(supabase, clinicId, phone, category);
-
-          const subSent = await sendWhazingSubMenu(configData, phone, category);
+          await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
+          await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
           
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
@@ -8306,12 +8310,10 @@ async function handleWebhook(req: Request) {
         }
 
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
-        if (isWhazingLevel2 || isWhazingLegacy || (['1', '2', '3'].includes(messageTextTrim) && storedCategoryForDisambiguation)) {
-          console.log(`[webhook] Whazing Level 2 button: "${messageText}" → routing to flow`);
-
-          // Retrieve stored category context
-          const storedCategory = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-
+        if (isWhazingLevel2 || isWhazingLegacy) {
+          const currentCategory = storedCategory || 'associado';
+          console.log(`[webhook] Whazing L2 button: "${messageTextTrim}" (category: ${currentCategory})`);
+          
            let btnId = messageText.trim();
  
            // Map numeric choices (1, 2, 3) to button IDs based on category
@@ -8325,7 +8327,7 @@ async function handleWebhook(req: Request) {
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
-            console.log(`[webhook] Whazing boleto button → direct boleto flow (category: ${storedCategory})`);
+            console.log(`[webhook] Whazing boleto button → direct boleto flow (category: ${currentCategory})`);
             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
@@ -8374,80 +8376,41 @@ async function handleWebhook(req: Request) {
           // ── CARTEIRINHA: redirect to app (not available via WhatsApp) ──
           if (btnId === 'whazing_sub_carteirinha') {
             console.log(`[webhook] Whazing carteirinha button → redirect to app`);
+            const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
+            
+            await sendWhatsAppMessage(configData, phone, textMessage);
 
-            // Send text guide (plain text to avoid template errors)
-            const whazingUrl = Deno.env.get('WHAZING_API_URL');
-            const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
-            if (whazingUrl && whazingToken) {
-              let cleanPhoneImg = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
-              if (!cleanPhoneImg.startsWith('55')) cleanPhoneImg = '55' + cleanPhoneImg;
-              const apiOficialUrl = getWhazingSendUrl(whazingUrl);
-
-              const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
-
-              try {
-                await fetch(apiOficialUrl, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${whazingToken}`,
-                  },
-                  body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhoneImg, textMessage)),
-                });
-              } catch (msgErr) {
-                console.error('[whazing] Error sending carteirinha text:', msgErr);
-              }
-            }
-
-            // Send follow-up buttons after image
+            // Send follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
+            await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
             await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
-            await supabase.from('whatsapp_incoming_logs').insert({
-              clinic_id: clinicId,
-              phone,
-              message_text: `[whazing-L2] ${storedCategory}/carteirinha → redirect to app`,
-              raw_payload: payload,
-              processed: true,
-              processed_action: 'whazing_carteirinha_redirect',
-            });
-
             return createSuccessResponse({ message: 'Carteirinha redirect sent' });
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
           if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
-            console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
+            console.log(`[webhook] Whazing "Outros Assuntos" → sub-menu (${currentCategory})`);
+            await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
 
-            if (storedCategory === 'associado') {
+            if (currentCategory === 'associado') {
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
               ]);
             } else {
-              // empresa / contabilidade
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
               ]);
             }
-
-            await supabase.from('whatsapp_incoming_logs').insert({
-              clinic_id: clinicId,
-              phone,
-              message_text: `[whazing-L2] ${storedCategory}/outros → sub-menu`,
-              raw_payload: payload,
-              processed: true,
-              processed_action: 'whazing_outros_submenu',
-            });
-
-           return createSuccessResponse({ message: `Outros Assuntos sub-menu sent for ${storedCategory}` });
+            return createSuccessResponse({ message: `Outros Assuntos sub-menu sent` });
           }
 
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
