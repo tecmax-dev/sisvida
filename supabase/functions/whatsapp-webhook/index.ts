@@ -8352,8 +8352,8 @@ async function handleWebhook(req: Request) {
                      api_url: configData.api_url,
                      api_key: configData.api_key,
                      instance_name: configData.instance_name,
-                     explicit_phone_id: explicitPhoneId
-                   }
+                   },
+                   explicit_phone_id: explicitPhoneId
                  }),
               });
 
@@ -8682,12 +8682,13 @@ async function handleWebhook(req: Request) {
                 phone: phone,
                 message: (revivedBoletoSession || isBoletoButton) ? messageText : undefined,
                 action: (!revivedBoletoSession && !isBoletoButton) ? 'start' : undefined,
-                evolution_config: {
-                  api_url: configData.api_url,
-                  api_key: configData.api_key,
-                  instance_name: configData.instance_name,
-                }
-              }),
+                 evolution_config: {
+                   api_url: configData.api_url,
+                   api_key: configData.api_key,
+                   instance_name: configData.instance_name,
+                 },
+                 explicit_phone_id: explicitPhoneId
+               }),
             });
 
             if (boletoResponse.ok) {
