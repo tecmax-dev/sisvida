@@ -592,32 +592,37 @@ async function sendWhatsAppMessage(
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
 
+    // Priority 1: Evolution API if configured
+    if (config.api_url && config.api_url !== 'zapster') {
+      console.log(`[booking] Sending message to ${destination} via Evolution`);
+      try {
+        const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: config.api_key,
+          },
+          body: JSON.stringify({
+            number: destination,
+            text: safeMessage,
+          }),
+        });
+
+        if (response.ok) {
+          console.log(`[booking] Evolution API ok (${response.status})`);
+          return true;
+        }
+        console.error('[booking] Evolution API error:', await response.text());
+      } catch (err) {
+        console.error('[booking] Error calling Evolution API:', err);
+      }
+    }
+
+    // Priority 2: Whazing fallback
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
-    console.log(`[booking] Sending message to ${destination} via Evolution`);
-
-    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify({
-        number: destination,
-        text: safeMessage,
-      }),
-    });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error('[booking] WhatsApp API error:', responseText);
-      return false;
-    }
-
-    console.log(`[booking] WhatsApp API ok (${response.status}):`, responseText);
-    return true;
+    return false;
   } catch (error) {
     console.error('[booking] Error sending WhatsApp:', error);
     return false;
