@@ -1587,14 +1587,15 @@ async function handleCnpjInput(
 // FLOW STATE HANDLERS
 // ==========================================
 
-async function handleBoletoFlow(
-  supabase: any,
-  evolutionConfig: EvolutionConfig,
-  clinicId: string,
-  phone: string,
-  messageText: string,
-  session: BoletoSession
-): Promise<{ response: string; newState?: BoletoState }> {
+ async function handleBoletoFlow(
+   supabase: any,
+   evolutionConfig: EvolutionConfig,
+   clinicId: string,
+   phone: string,
+   messageText: string,
+   session: BoletoSession,
+   explicitPhoneId?: string
+ ): Promise<{ response: string; newState?: BoletoState }> {
   const text = messageText.trim().toLowerCase();
   const normalizedText = text
     .normalize('NFD')
