@@ -8211,7 +8211,8 @@ async function handleWebhook(req: Request) {
                   action: 'atendente',
                   context: `Perfil: ${storedCategory || 'associado'}`,
                   clinic_id: clinicId,
-                  instance_name: configData.instance_name,
+                 instance_name: configData.instance_name,
+                 explicit_phone_id: explicitPhoneId
                 }),
               });
             } catch (_e) { /* ignore */ }
