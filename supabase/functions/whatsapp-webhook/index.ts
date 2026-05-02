@@ -7941,44 +7941,8 @@ async function handleWebhook(req: Request) {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
-        // ===== WHAZING AGENT TAKEOVER CHECK =====
-        // 1. Check local bot_active flag (set when agent assumes from dashboard)
-        let botSkipped = false;
-        {
-          const { data: localTicket } = await supabase
-            .from('whazing_tickets')
-            .select('bot_active')
-            .eq('ticket_id', phone)
-            .maybeSingle();
-
-          if (localTicket && localTicket.bot_active === false) {
-            console.log(`[webhook] bot_active=false for ${phone} - bot will NOT process`);
-            botSkipped = true;
-          }
-        }
-
-        // 2. Also check external Whazing API
-        if (!botSkipped) {
-          const agentHandling = await isWhazingAgentHandling(phone);
-          if (agentHandling) {
-            console.log(`[webhook] Agent takeover detected for ${phone} - bot will NOT process`);
-            botSkipped = true;
-          }
-        }
-
-        if (botSkipped) {
-          await supabase.from('whatsapp_incoming_logs').insert({
-            clinic_id: clinicId,
-            phone,
-            message_text: messageText,
-            raw_payload: payload,
-            processed: true,
-            processed_action: 'skipped_agent_takeover',
-          });
-
-          // Don't return - let it fall through to mirror section
-        }
-        // ===== END WHAZING AGENT TAKEOVER CHECK =====
+        // Reativando processamento automático do bot
+        const botSkipped = false;
 
         if (!botSkipped) {
         // ===== WHAZING BUTTON RESPONSE HANDLER =====
