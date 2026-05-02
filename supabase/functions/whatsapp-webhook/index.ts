@@ -1008,30 +1008,35 @@ function parseWhazingCategory(messages: unknown): WhazingCategory | null {
   return category === 'associado' || category === 'empresa' || category === 'contabilidade' ? category : null;
 }
 
-async function storeWhazingCategory(
+async function storeWhazingContext(
   supabase: any,
   clinicId: string,
   phone: string,
-  category: WhazingCategory
+  category: WhazingCategory,
+  lastMenuType: 'main' | 'sub' | 'followup' = 'main'
 ): Promise<void> {
   const { error } = await supabase.from('whatsapp_ai_conversations').insert({
     clinic_id: clinicId,
     phone,
-    messages: { whazing_category: category, source: 'whazing_menu' },
+    messages: { 
+      whazing_category: category, 
+      last_menu_type: lastMenuType,
+      source: 'whazing_menu' 
+    },
     expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
   });
 
   if (error) {
-    console.log('[webhook] Could not store whazing category session:', error.message);
+    console.log('[webhook] Could not store whazing context:', error.message);
   }
 }
 
-async function getWhazingCategory(
+async function getWhazingContext(
   supabase: any,
   clinicId: string,
   phoneCandidates: string[],
   fallback: WhazingCategory = 'associado'
-): Promise<WhazingCategory> {
+): Promise<{ category: WhazingCategory; lastMenuType: string | null }> {
   const { data, error } = await supabase
     .from('whatsapp_ai_conversations')
     .select('messages, created_at')
@@ -1043,15 +1048,16 @@ async function getWhazingCategory(
 
   if (error) {
     console.log('[webhook] Could not retrieve whazing category:', error.message);
-    return fallback;
+    return { category: fallback, lastMenuType: null };
   }
 
   for (const row of data ?? []) {
     const parsed = parseWhazingCategory(row.messages);
-    if (parsed) return parsed;
+    const lastMenuType = (row.messages as any)?.last_menu_type || null;
+    if (parsed) return { category: parsed, lastMenuType };
   }
 
-  return fallback;
+  return { category: fallback, lastMenuType: null };
 }
 
 function normalizeSupportText(text: string): string {
