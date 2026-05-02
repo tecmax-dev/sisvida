@@ -530,23 +530,56 @@ serve(async (req) => {
     if (whatsappProvider === 'zapresponder') {
       const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-      if (isSindicato && !body.templateName) {
-        console.log(`[Clinic ${clinicId}] Sindicato: Sending direct text via Meta Graph API to ${cleanPhone}`);
-        const success = await sendMetaText(cleanPhone, safeMessage);
-        if (success) {
-           // Log message
-           await supabase.from('message_logs').insert({
-             clinic_id: clinicId,
-             message_type: type,
-             phone: cleanPhone,
-             month_year: monthYear,
-           });
-           return new Response(
-             JSON.stringify({ success: true, method: 'meta_direct' }),
-             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-           );
+      if (isSindicato) {
+        if (body.templateName) {
+           console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${body.templateName} to meta-send-template`);
+           try {
+             const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${supabaseServiceKey}`,
+               },
+               body: JSON.stringify({
+                 to: cleanPhone,
+                 template_name: body.templateName,
+                 language: body.templateLanguage || 'pt_BR',
+                 variables: body.templateComponents || []
+               }),
+             });
+             const templateResult = await templateResp.json();
+             if (templateResp.ok) {
+                await supabase.from('message_logs').insert({
+                  clinic_id: clinicId,
+                  message_type: type,
+                  phone: cleanPhone,
+                  month_year: monthYear,
+                });
+                return new Response(
+                  JSON.stringify({ success: true, method: 'meta_template_direct', data: templateResult }),
+                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+             }
+             console.error('[Meta Template Direct] Error:', templateResult);
+           } catch (tplErr) {
+             console.error('[Meta Template Direct] Exception:', tplErr);
+           }
+        } else {
+          console.log(`[Clinic ${clinicId}] Sindicato: Sending direct text via Meta Graph API to ${cleanPhone}`);
+          const success = await sendMetaText(cleanPhone, safeMessage);
+          if (success) {
+             await supabase.from('message_logs').insert({
+               clinic_id: clinicId,
+               message_type: type,
+               phone: cleanPhone,
+               month_year: monthYear,
+             });
+             return new Response(
+               JSON.stringify({ success: true, method: 'meta_direct' }),
+               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+             );
+          }
         }
-        // If direct fails or it's a template, proceed to normal flow
       }
 
       console.log(`[Clinic ${clinicId}] Sending via Zap Responder wrapper to ${cleanPhone}`);
