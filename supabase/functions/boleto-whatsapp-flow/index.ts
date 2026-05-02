@@ -42,10 +42,111 @@ interface BatchBoletoItem {
 const CONTRIBUTION_TYPE_MAP = {
   mensalidade: '124 - MENSALIDADE SINDICAL',
   taxa_mercados: '125 - TAXA NEGOCIAL (MERCADOS)',
-  taxa_varejista: '126 - TAXA NEGOCIAL (COM VEREJ)'
-} as const;
-
-async function analyzeUserIntent(
+   taxa_varejista: '126 - TAXA NEGOCIAL (COM VEREJ)'
+ } as const;
+ 
+ interface ButtonOption {
+   id: string;
+   text?: string;
+   title?: string;
+ }
+ 
+ /**
+  * Envia texto livre via Meta Cloud API.
+  */
+ async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
+   try {
+     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+     if (!PHONE_ID || !TOKEN) {
+       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+       return false;
+     }
+     const digits = phone.replace(/\D/g, '');
+     const to = digits.startsWith('55') ? digits : `55${digits}`;
+     const r = await fetch(
+       `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
+       {
+         method: 'POST',
+         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           messaging_product: 'whatsapp',
+           to,
+           type: 'text',
+           text: { body: text },
+         }),
+       }
+     );
+     if (!r.ok) {
+       console.error('[meta-text] Meta error:', await r.text());
+       return false;
+     }
+     return true;
+   } catch (e) {
+     console.error('[meta-text] Exception:', e);
+     return false;
+   }
+ }
+ 
+ /**
+  * Envia botões interativos via Meta Cloud API.
+  */
+ async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
+    try {
+     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      if (!PHONE_ID || !TOKEN) {
+        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+        return false;
+      }
+  
+      const digits = phone.replace(/\D/g, '');
+      const to = digits.startsWith('55') ? digits : `55${digits}`;
+  
+       const cleanTitle = title.replace(/[\*_~`#]/g, '').trim().substring(0, 60);
+       const cleanDescription = description.substring(0, 1024) || "Selecione uma opção abaixo:";
+ 
+       const payload = {
+         messaging_product: "whatsapp",
+         recipient_type: "individual",
+         to,
+         type: "interactive",
+         interactive: {
+           type: "button",
+           header: { type: "text", text: cleanTitle },
+           body: { text: cleanDescription },
+           ...(footer ? { footer: { text: footer.substring(0, 72) } } : {}),
+           action: {
+             buttons: buttons.slice(0, 3).map(b => ({
+               type: "reply",
+               reply: {
+                 id: b.id,
+                 title: (b.text || b.title || "").substring(0, 20)
+               }
+             }))
+           }
+         }
+       };
+  
+      const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+  
+       if (!r.ok) {
+         const errorText = await r.text();
+         console.error('[meta-buttons] Meta error:', errorText);
+         return false;
+       }
+       return true;
+     } catch (error) {
+       console.error('[meta-buttons] Error in sendMetaButtons:', error);
+       return false;
+     }
+ }
+ 
+ async function analyzeUserIntent(
   message: string, 
   currentState: BoletoState,
   sessionContext: any
@@ -844,12 +945,18 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
   };
 }
 
-async function sendWhatsAppMessage(
-  config: EvolutionConfig,
-  phone: string,
-  message: string
-): Promise<boolean> {
-  try {
+ async function sendWhatsAppMessage(
+   config: EvolutionConfig,
+   phone: string,
+   message: string,
+   explicitPhoneId?: string
+ ): Promise<boolean> {
+   try {
+     if (config.api_url === 'meta') {
+       console.log(`[boleto-flow] Routing text to Meta Cloud API for ${phone}`);
+       return await sendMetaText(phone, message, explicitPhoneId);
+     }
+ 
     let formattedPhone = phone.replace(/\D/g, '');
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone;
@@ -935,13 +1042,20 @@ async function sendWhazingText(phone: string, message: string): Promise<boolean>
 // WHAZING INTERACTIVE BUTTONS FOR BOLETO FLOW
 // ==========================================
 
-async function sendBoletoButtons(
-  phone: string,
-  bodyText: string,
-  buttons: Array<{ id: string; title: string }>
-): Promise<boolean> {
-  const whazingUrl = Deno.env.get('WHAZING_API_URL');
-  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+ async function sendBoletoButtons(
+   phone: string,
+   bodyText: string,
+   buttons: Array<{ id: string; title: string }>,
+   config?: EvolutionConfig,
+   explicitPhoneId?: string
+ ): Promise<boolean> {
+   if (config?.api_url === 'meta') {
+     console.log(`[boleto-flow] Routing buttons to Meta Cloud API for ${phone}`);
+     return await sendMetaButtons(phone, "Boleto", bodyText, buttons, "", explicitPhoneId);
+   }
+ 
+   const whazingUrl = Deno.env.get('WHAZING_API_URL');
+   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
   if (!whazingUrl || !whazingToken) {
     console.log('[boleto-flow] Whazing not configured, skipping buttons');
@@ -1473,14 +1587,15 @@ async function handleCnpjInput(
 // FLOW STATE HANDLERS
 // ==========================================
 
-async function handleBoletoFlow(
-  supabase: any,
-  evolutionConfig: EvolutionConfig,
-  clinicId: string,
-  phone: string,
-  messageText: string,
-  session: BoletoSession
-): Promise<{ response: string; newState?: BoletoState }> {
+ async function handleBoletoFlow(
+   supabase: any,
+   evolutionConfig: EvolutionConfig,
+   clinicId: string,
+   phone: string,
+   messageText: string,
+   session: BoletoSession,
+   explicitPhoneId?: string
+ ): Promise<{ response: string; newState?: BoletoState }> {
   const text = messageText.trim().toLowerCase();
   const normalizedText = text
     .normalize('NFD')
@@ -1605,7 +1720,7 @@ async function handleBoletoFlow(
       };
     }
     
-    await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${intent.batch_items.length} boleto(s)...*\n\nAguarde um momento.`);
+    await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${intent.batch_items.length} boleto(s)...*\n\nAguarde um momento.`, explicitPhoneId);
     
     const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
     
@@ -2563,7 +2678,7 @@ async function handleBoletoFlow(
       }
 
       if (messageText === 'boleto_confirmar' || text === '1' || /^confirm/i.test(text) || /^sim/i.test(text)) {
-        await sendWhatsAppMessage(evolutionConfig, phone, MESSAGES.processing);
+        await sendWhatsAppMessage(evolutionConfig, phone, MESSAGES.processing, explicitPhoneId);
         
         try {
           const employer = session.flow_context?.employer;
@@ -2720,7 +2835,7 @@ async function handleBoletoFlow(
       
       console.log(`[boleto-flow] Processing ${updatedItems.length} batch items with taxa type: ${selectedTaxaType}`);
       
-      await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${updatedItems.length} boleto(s)...*\n\nTipo: ${optionNum === 1 ? 'TAXA NEGOCIAL (MERCADOS)' : 'TAXA NEGOCIAL (COM VEREJ)'}\n\nAguarde um momento.`);
+      await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${updatedItems.length} boleto(s)...*\n\nTipo: ${optionNum === 1 ? 'TAXA NEGOCIAL (MERCADOS)' : 'TAXA NEGOCIAL (COM VEREJ)'}\n\nAguarde um momento.`, explicitPhoneId);
       
       const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
       
@@ -2998,7 +3113,7 @@ serve(async (req) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { clinic_id, phone, message, evolution_config, action } = await req.json();
+     const { clinic_id, phone, message, evolution_config, action, explicit_phone_id } = await req.json();
 
     if (!clinic_id || !phone) {
       return new Response(
@@ -3023,10 +3138,10 @@ serve(async (req) => {
       
       if (evolution_config) {
         // Interactive start must be a single button payload, never a text list + buttons.
-        await sendBoletoButtons(phone, MESSAGES.welcome, [
-          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
-        ]);
+         await sendBoletoButtons(phone, MESSAGES.welcome, [
+           { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         ], evolution_config, explicit_phone_id);
       }
       
       return new Response(
@@ -3041,14 +3156,15 @@ serve(async (req) => {
     }
 
     // Process message through flow
-    const result = await handleBoletoFlow(
-      supabase,
-      evolution_config,
-      clinic_id,
-      phone,
-      message || '',
-      session
-    );
+     const result = await handleBoletoFlow(
+       supabase,
+       evolution_config,
+       clinic_id,
+       phone,
+       message || '',
+       session,
+       explicit_phone_id
+     );
 
     // Send response via WhatsApp if config provided
     if (evolution_config && result.response) {
@@ -3066,23 +3182,23 @@ serve(async (req) => {
       const requiresButtons = interactiveStates.includes(nextState);
 
       // Interactive states must never be sent as a plain numbered/text list.
-      if (!requiresButtons) {
-        await sendWhatsAppMessage(evolution_config, phone, result.response);
-      }
+       if (!requiresButtons) {
+         await sendWhatsAppMessage(evolution_config, phone, result.response, explicit_phone_id);
+       }
       
       // Send interactive buttons based on new state
       
-      if (nextState === 'SELECT_BOLETO_TYPE') {
-        await sendBoletoButtons(phone, 'Selecione o tipo:', [
-          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
-        ]);
-      } else if (nextState === 'CONFIRM_EMPLOYER') {
-        await sendBoletoButtons(phone, result.response, [
-          { id: 'boleto_sim', title: '✅ Sim, continuar' },
-          { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
-        ]);
-      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
+       if (nextState === 'SELECT_BOLETO_TYPE') {
+         await sendBoletoButtons(phone, 'Selecione o tipo:', [
+           { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'CONFIRM_EMPLOYER') {
+         await sendBoletoButtons(phone, result.response, [
+           { id: 'boleto_sim', title: '✅ Sim, continuar' },
+           { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
         const types = session.flow_context?.contribution_types || result.response.match(/• .+/g) || [];
         // Fetch contribution types for button labels
         const ctTypes = await supabase
@@ -3097,19 +3213,19 @@ serve(async (req) => {
             id: `boleto_type_${i + 1}`,
             title: t.name.replace(/^\d+\s*-\s*/, '').substring(0, 20),
           }));
-          await sendBoletoButtons(phone, 'Escolha o tipo:', btns);
-        }
-      } else if (nextState === 'SELECT_TAXA_TYPE' || nextState === 'SELECT_TAXA_TYPE_BATCH') {
-        await sendBoletoButtons(phone, 'Qual tipo de taxa?', [
-          { id: 'boleto_taxa_1', title: 'TAXA (MERCADOS)' },
-          { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
-        ]);
-      } else if (nextState === 'CONFIRM_BOLETO') {
-        await sendBoletoButtons(phone, result.response, [
-          { id: 'boleto_confirmar', title: '✅ Confirmar' },
-          { id: 'boleto_cancelar', title: '❌ Cancelar' },
-        ]);
-      } else if (nextState === 'SELECT_CONTRIBUTION_YEAR') {
+           await sendBoletoButtons(phone, 'Escolha o tipo:', btns, evolution_config, explicit_phone_id);
+         }
+       } else if (nextState === 'SELECT_TAXA_TYPE' || nextState === 'SELECT_TAXA_TYPE_BATCH') {
+         await sendBoletoButtons(phone, 'Qual tipo de taxa?', [
+           { id: 'boleto_taxa_1', title: 'TAXA (MERCADOS)' },
+           { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'CONFIRM_BOLETO') {
+         await sendBoletoButtons(phone, result.response, [
+           { id: 'boleto_confirmar', title: '✅ Confirmar' },
+           { id: 'boleto_cancelar', title: '❌ Cancelar' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'SELECT_CONTRIBUTION_YEAR') {
         // Send year selection buttons (max 3 years)
         const years = session.flow_context?.available_years || 
           result.response.match(/\*(\d{4})\*/g)?.map((y: string) => parseInt(y.replace(/\*/g, ''))) || [];
@@ -3127,9 +3243,9 @@ serve(async (req) => {
             id: `boleto_year_${i + 1}`,
             title: `${y}`,
           }));
-          await sendBoletoButtons(phone, 'Selecione o ano:', btns);
-        }
-      } else if (nextState === 'SELECT_CONTRIBUTION') {
+           await sendBoletoButtons(phone, 'Selecione o ano:', btns, evolution_config, explicit_phone_id);
+         }
+       } else if (nextState === 'SELECT_CONTRIBUTION') {
         // Re-read session to get the latest available_contributions after state update
         const { data: updatedSession2 } = await supabase
           .from('whatsapp_boleto_sessions')
@@ -3167,9 +3283,9 @@ serve(async (req) => {
             btns.push({ id: 'boleto_contrib_voltar', title: '⬅️ Voltar (anos)' });
           }
           
-          await sendBoletoButtons(phone, 'Selecione a contribuicao:', btns);
-        }
-      }
+           await sendBoletoButtons(phone, 'Selecione a contribuicao:', btns, evolution_config, explicit_phone_id);
+         }
+       }
     }
 
     return new Response(
