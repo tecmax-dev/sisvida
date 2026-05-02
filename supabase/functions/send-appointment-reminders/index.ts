@@ -507,20 +507,38 @@ serve(async (req) => {
       
       console.log(`Clinic ${clinic.name}: checking appointments from ${todayStr} ${currentTime} until ${maxAheadDate} ${maxAheadTimeStr} (within ${reminderHours}h) [Horário Brasil/Bahia]`);
 
-      // Fetch clinic's Evolution API config
-      const { data: evolutionConfig } = await supabase
-        .from('evolution_configs')
-        .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled')
-        .eq('clinic_id', clinic.id)
-        .maybeSingle();
+      const whatsappProvider = clinic.whatsapp_provider || 'evolution';
+      let evolutionConfig = null;
+      let directReplyEnabled = false;
 
-      if (!evolutionConfig || !evolutionConfig.is_connected) {
-        console.log(`Clinic ${clinic.name} has no connected WhatsApp, skipping`);
-        skippedCount++;
-        continue;
+      if (whatsappProvider === 'zapresponder') {
+        const { data: zapConfig } = await supabase
+          .from('zapster_configs')
+          .select('is_connected, is_active')
+          .eq('clinic_id', clinic.id)
+          .maybeSingle();
+
+        if (!zapConfig || !zapConfig.is_active) {
+          console.log(`Clinic ${clinic.name} has no active Meta connection, skipping`);
+          skippedCount++;
+          continue;
+        }
+        directReplyEnabled = true; // Meta reminders always allow direct reply via buttons
+      } else {
+        const { data: evoConfig } = await supabase
+          .from('evolution_configs')
+          .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled')
+          .eq('clinic_id', clinic.id)
+          .maybeSingle();
+
+        if (!evoConfig || !evoConfig.is_connected) {
+          console.log(`Clinic ${clinic.name} has no connected Evolution WhatsApp, skipping`);
+          skippedCount++;
+          continue;
+        }
+        evolutionConfig = evoConfig;
+        directReplyEnabled = evoConfig.direct_reply_enabled || false;
       }
-
-      const directReplyEnabled = evolutionConfig.direct_reply_enabled || false;
       console.log(`[Clinic ${clinic.name}] Direct reply enabled: ${directReplyEnabled}`);
 
       // Get ALL appointments within the reminder window that haven't been reminded yet
