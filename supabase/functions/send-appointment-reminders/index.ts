@@ -642,22 +642,23 @@ serve(async (req) => {
        const whatsappProvider = clinic.whatsapp_provider || 'evolution';
 
        if (whatsappProvider === 'zapresponder') {
-         console.log(`[${clinic.name}] Sending reminder via Meta (ZapResponder) to ${phoneToUse}`);
+         console.log(`[${clinic.name}] Sending reminder via Meta (send-whatsapp) to ${phoneToUse}`);
          try {
-           const metaResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-whatsapp-zapresponder`, {
+           const metaResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-whatsapp`, {
              method: 'POST',
              headers: {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
              },
-            body: JSON.stringify({
-              phone: phoneToUse,
-              message: message,
-              clinicId: clinic.id,
-              type: 'reminder',
-              templateName: 'lembrete_consulta_v2',
-              templateComponents: templateComponents
-            }),
+             body: JSON.stringify({
+               phone: phoneToUse,
+               message: message,
+               clinicId: clinic.id,
+               type: 'reminder',
+               appointmentId: appointment.id,
+               templateName: 'lembrete_consulta_v2',
+               templateComponents: templateComponents
+             }),
            });
            const metaData = await metaResp.json();
            success = metaResp.ok && metaData.success;
