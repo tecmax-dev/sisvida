@@ -3213,19 +3213,19 @@ serve(async (req) => {
             id: `boleto_type_${i + 1}`,
             title: t.name.replace(/^\d+\s*-\s*/, '').substring(0, 20),
           }));
-          await sendBoletoButtons(phone, 'Escolha o tipo:', btns);
-        }
-      } else if (nextState === 'SELECT_TAXA_TYPE' || nextState === 'SELECT_TAXA_TYPE_BATCH') {
-        await sendBoletoButtons(phone, 'Qual tipo de taxa?', [
-          { id: 'boleto_taxa_1', title: 'TAXA (MERCADOS)' },
-          { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
-        ]);
-      } else if (nextState === 'CONFIRM_BOLETO') {
-        await sendBoletoButtons(phone, result.response, [
-          { id: 'boleto_confirmar', title: '✅ Confirmar' },
-          { id: 'boleto_cancelar', title: '❌ Cancelar' },
-        ]);
-      } else if (nextState === 'SELECT_CONTRIBUTION_YEAR') {
+           await sendBoletoButtons(phone, 'Escolha o tipo:', btns, evolution_config, explicit_phone_id);
+         }
+       } else if (nextState === 'SELECT_TAXA_TYPE' || nextState === 'SELECT_TAXA_TYPE_BATCH') {
+         await sendBoletoButtons(phone, 'Qual tipo de taxa?', [
+           { id: 'boleto_taxa_1', title: 'TAXA (MERCADOS)' },
+           { id: 'boleto_taxa_2', title: 'TAXA (COM VEREJ)' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'CONFIRM_BOLETO') {
+         await sendBoletoButtons(phone, result.response, [
+           { id: 'boleto_confirmar', title: '✅ Confirmar' },
+           { id: 'boleto_cancelar', title: '❌ Cancelar' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'SELECT_CONTRIBUTION_YEAR') {
         // Send year selection buttons (max 3 years)
         const years = session.flow_context?.available_years || 
           result.response.match(/\*(\d{4})\*/g)?.map((y: string) => parseInt(y.replace(/\*/g, ''))) || [];
