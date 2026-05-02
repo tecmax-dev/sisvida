@@ -7869,11 +7869,15 @@ async function handleWebhook(req: Request) {
 
     if (!phone || !messageText) {
       const messageObj = payload.data?.message ?? {};
-      console.warn('[webhook] No phone or messageText extracted', {
-        phone,
-        messageText,
-        messageKeys: Object.keys(messageObj as Record<string, unknown>),
-      });
+      // If we have a phone but no message text, it might be an unhandled media type or a new Evolution format.
+      // Log more detail to help debug if the flow "stops" for a user.
+      if (phone) {
+        console.warn(`[webhook] No messageText extracted for phone ${phone}. Payload snippet:`, 
+          JSON.stringify(payload).slice(0, 1000)
+        );
+      } else {
+        console.warn('[webhook] No phone or messageText extracted');
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: 'No action needed' }),
