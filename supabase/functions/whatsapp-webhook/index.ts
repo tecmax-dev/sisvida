@@ -610,11 +610,20 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
        body: JSON.stringify(payload),
      });
  
-     if (!r.ok) {
-       console.error('[meta-buttons] Meta error:', await r.text());
-       return false;
-     }
-     return true;
+      if (!r.ok) {
+        const errorText = await r.text();
+        console.error('[meta-buttons] Meta error:', errorText);
+        
+        // Fallback: If interactive buttons are not supported/authorized, send as TEXT
+        if (errorText.includes('GraphMethodException') || errorText.includes('permissions')) {
+          console.log(`[meta-buttons] Falling back to TEXT for ${to} due to Meta permission error`);
+          const buttonText = buttons.map((b, i) => `\n${i + 1}️⃣ ${b.text || b.title}`).join('');
+          const fullText = `${title}\n\n${description}\n${buttonText}${footer ? `\n\n_${footer}_` : ''}`;
+          return await sendMetaText(phone, fullText);
+        }
+        return false;
+      }
+      return true;
    } catch (e) {
      console.error('[meta-buttons] Exception:', e);
      return false;
@@ -637,6 +646,11 @@ async function sendWhatsAppMessage(
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     
     const destination = formatPhoneForWhatsApp(phone);
+
+    if (config.api_url === 'meta') {
+      console.log(`[booking] Routing text to Meta Cloud API for ${destination}`);
+      return await sendMetaText(phone, message);
+    }
 
     if (config.api_url === 'zapster') {
       console.log(`[booking] Routing to Zapster for ${destination}`);
@@ -755,6 +769,12 @@ async function sendWhatsAppButtons(
     const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
     const buttonText = limitedButtons.map((b, i) => `\n${i + 1}️⃣ ${b.text}`).join('');
     const fullText = `${bodyText}${buttonText}`;
+
+    // Special Routing: If API URL is 'meta', use Meta Cloud API
+    if (config.api_url === 'meta') {
+      console.log(`[booking] Routing buttons to Meta Cloud API for ${phone}`);
+      return await sendMetaButtons(phone, title, description, limitedButtons, footer);
+    }
 
     // If we are in a synchronous call (collector exists), push to it and return
     const collector = syncReplyStore.getStore();
@@ -7959,8 +7979,14 @@ async function handleWebhook(req: Request) {
 
       let configData: EvolutionConfig | null = null;
 
-      // Check if clinic_id was explicitly provided (e.g. from zapster-webhook)
-      const explicitClinicId = (payload as any).clinic_id;
+      // Check if clinic_id was explicitly provided (e.g. from zapster-webhook or meta routing)
+      let explicitClinicId = (payload as any).clinic_id;
+
+      // Special routing for Meta Official (Sindicato)
+      if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
+        explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}`);
+      }
 
       if (activeSession?.clinic_id) {
         const { data: configByClinic, error: configByClinicError } = await supabase
@@ -8035,6 +8061,18 @@ async function handleWebhook(req: Request) {
         }
       }
 
+      // Emergency fallback for Meta if still no configData (ensure Sindicato flow runs)
+      if (!configData && explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
+        console.log(`[webhook] Applying emergency Meta config for Sindicato clinic`);
+        configData = {
+          clinic_id: explicitClinicId,
+          instance_name: 'meta_official',
+          api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
+          api_key: 'meta',
+          booking_enabled: true,
+          direct_reply_enabled: true
+        } as EvolutionConfig;
+      }
       if (configData) {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
