@@ -7964,14 +7964,13 @@ async function handleWebhook(req: Request) {
         console.log(`[webhook] Routing by active session -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
 
-      // Fallback: Find config by instance name - each clinic should have unique instance name
-      if (!configData) {
-        const { data: configByInstance, error: configError } = await supabase
-          .from('evolution_configs')
-          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
-          .eq('instance_name', payload.instance)
-          .eq('is_connected', true)
-          .eq('direct_reply_enabled', true);
+       // Fallback: Find config by instance name or instance id (for Z-API)
+       if (!configData) {
+         const { data: configByInstance, error: configError } = await supabase
+           .from('evolution_configs')
+           .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled, instance_id, zapi_token')
+           .or(`instance_name.eq."${payload.instance}",instance_id.eq."${payload.instance}"`)
+           .eq('is_connected', true);
 
         if (configError) {
           console.error('[webhook] Error fetching config:', configError);
