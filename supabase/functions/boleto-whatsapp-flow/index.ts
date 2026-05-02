@@ -945,12 +945,18 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
   };
 }
 
-async function sendWhatsAppMessage(
-  config: EvolutionConfig,
-  phone: string,
-  message: string
-): Promise<boolean> {
-  try {
+ async function sendWhatsAppMessage(
+   config: EvolutionConfig,
+   phone: string,
+   message: string,
+   explicitPhoneId?: string
+ ): Promise<boolean> {
+   try {
+     if (config.api_url === 'meta') {
+       console.log(`[boleto-flow] Routing text to Meta Cloud API for ${phone}`);
+       return await sendMetaText(phone, message, explicitPhoneId);
+     }
+ 
     let formattedPhone = phone.replace(/\D/g, '');
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone;
