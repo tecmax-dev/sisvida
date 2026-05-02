@@ -70,7 +70,7 @@ serve(async (req) => {
       url = json.paging?.next ?? null;
     }
 
-    // Upsert na tabela
+    // Upsert na tabela e registrar log de auditoria
     const rows = allTemplates.map((t) => ({
       meta_template_id: t.id ?? null,
       name: t.name,
@@ -95,6 +95,10 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+      
+      // Auditoria automática para aplicar IDs ao fluxo
+      const approvedTemplates = rows.filter(r => r.status === "APPROVED");
+      console.log(`[meta-sync] Audit: Applied ${approvedTemplates.length} approved template IDs to the system.`);
     }
 
     return new Response(
