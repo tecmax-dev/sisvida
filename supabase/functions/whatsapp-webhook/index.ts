@@ -729,9 +729,8 @@ async function sendWhatsAppButtons(
             description: description,
             footer: footer || "Selecione uma opção",
             buttons: limitedButtons.map(b => ({
-              buttonId: b.id,
-              buttonText: { displayText: b.text },
-              type: 1
+              type: "reply",
+              reply: { id: b.id, title: b.text }
             }))
           }),
         });
