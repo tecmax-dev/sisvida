@@ -3243,9 +3243,9 @@ serve(async (req) => {
             id: `boleto_year_${i + 1}`,
             title: `${y}`,
           }));
-          await sendBoletoButtons(phone, 'Selecione o ano:', btns);
-        }
-      } else if (nextState === 'SELECT_CONTRIBUTION') {
+           await sendBoletoButtons(phone, 'Selecione o ano:', btns, evolution_config, explicit_phone_id);
+         }
+       } else if (nextState === 'SELECT_CONTRIBUTION') {
         // Re-read session to get the latest available_contributions after state update
         const { data: updatedSession2 } = await supabase
           .from('whatsapp_boleto_sessions')
@@ -3283,9 +3283,9 @@ serve(async (req) => {
             btns.push({ id: 'boleto_contrib_voltar', title: '⬅️ Voltar (anos)' });
           }
           
-          await sendBoletoButtons(phone, 'Selecione a contribuicao:', btns);
-        }
-      }
+           await sendBoletoButtons(phone, 'Selecione a contribuicao:', btns, evolution_config, explicit_phone_id);
+         }
+       }
     }
 
     return new Response(
