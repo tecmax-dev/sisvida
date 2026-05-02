@@ -1,0 +1,124 @@
+ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+ import { createClient } from "npm:@supabase/supabase-js@2";
+ 
+ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+ 
+ serve(async (req) => {
+   try {
+     const payload = await req.json();
+     console.log("[zapresponder] Webhook received");
+ 
+     const supabase = createClient(
+       Deno.env.get("SUPABASE_URL")!,
+       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+     );
+ 
+     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+ 
+     const entries = payload.entry ?? [];
+     for (const entry of entries) {
+       const changes = entry.changes ?? [];
+       for (const change of changes) {
+         if (change.field !== "messages") continue;
+         const value = change.value ?? {};
+         const messages = value.messages ?? [];
+         const profileName = value?.contacts?.[0]?.profile?.name || "Cliente";
+ 
+         for (const msg of messages) {
+           const fromPhone = msg.from;
+           const content = msg.text?.body?.trim() || "";
+ 
+           console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
+ 
+           if (!content) continue;
+ 
+           // Verifica se já enviamos protocolo recentemente para evitar spam
+           // Considera "nova conversa" se o último protocolo foi há mais de 4h
+           const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+ 
+           const { data: recentProtocol } = await supabase
+             .from("whatsapp_ticket_messages")
+             .select("id, created_at, metadata")
+             .gte("created_at", cutoff)
+             .eq("sender_type", "operator")
+             .eq("message_type", "template")
+             .ilike("content", "%homologacao_protocolo%")
+             .order("created_at", { ascending: false })
+             .limit(20);
+ 
+           // Procura por protocolo enviado para este telefone
+           const alreadySent = recentProtocol?.some((m: any) => {
+             const phoneInMeta = m.metadata?.to || "";
+             return String(phoneInMeta).replace(/\D/g, "").endsWith(fromPhone.replace(/\D/g, "").slice(-9));
+           });
+ 
+           const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi)$/i.test(content);
+ 
+           // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
+           if (isGreeting && !alreadySent) {
+             console.log(`[zapresponder] Nova conversa - enviando protocolo`);
+             
+             await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${SERVICE_ROLE}`
+               },
+               body: JSON.stringify({
+                 to: fromPhone,
+                 template_name: "homologacao_protocolo",
+                 variables: [
+                   "Atendimento Digital",
+                   profileName,
+                   "Sindicato dos Comerciários",
+                   new Date().toLocaleDateString('pt-BR'),
+                   `META-${Date.now().toString().slice(-6)}`
+                 ]
+               })
+             }).catch(err => console.error("[zapresponder] Erro template:", err));
+           } else if (alreadySent) {
+             console.log(`[zapresponder] Protocolo já enviado nas últimas 4h - pulando`);
+           }
+ 
+           // SEMPRE encaminha para o bot principal processar a lógica de menu/atendimento
+           const messageToBot = isGreeting ? "menu" : content;
+           console.log(`[zapresponder] Encaminhando para bot principal como: "${messageToBot}"`);
+ 
+           const botPayload = {
+             event: "messages.upsert",
+             instance: "meta",
+             clinic_id: SINDICATO_CLINIC_ID,
+             data: {
+               key: {
+                 remoteJid: `${fromPhone}@s.whatsapp.net`,
+                 fromMe: false,
+                 id: msg.id
+               },
+               message: { conversation: messageToBot },
+               pushName: profileName,
+               messageTimestamp: msg.timestamp
+             }
+           };
+ 
+           await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-webhook`, {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${SERVICE_ROLE}`
+             },
+             body: JSON.stringify(botPayload)
+           }).catch(err => console.error("[zapresponder] Erro bot:", err));
+         }
+       }
+     }
+ 
+     return new Response(JSON.stringify({ received: true }), {
+       headers: { "Content-Type": "application/json" },
+       status: 200,
+     });
+   } catch (error) {
+     console.error("[zapresponder] Webhook error:", error);
+     return new Response(JSON.stringify({ error: String(error) }), { status: 500 });
+   }
+ });
