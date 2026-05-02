@@ -3188,17 +3188,17 @@ serve(async (req) => {
       
       // Send interactive buttons based on new state
       
-      if (nextState === 'SELECT_BOLETO_TYPE') {
-        await sendBoletoButtons(phone, 'Selecione o tipo:', [
-          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
-        ]);
-      } else if (nextState === 'CONFIRM_EMPLOYER') {
-        await sendBoletoButtons(phone, result.response, [
-          { id: 'boleto_sim', title: '✅ Sim, continuar' },
-          { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
-        ]);
-      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
+       if (nextState === 'SELECT_BOLETO_TYPE') {
+         await sendBoletoButtons(phone, 'Selecione o tipo:', [
+           { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'CONFIRM_EMPLOYER') {
+         await sendBoletoButtons(phone, result.response, [
+           { id: 'boleto_sim', title: '✅ Sim, continuar' },
+           { id: 'boleto_nao', title: '❌ Não, outro CNPJ' },
+         ], evolution_config, explicit_phone_id);
+       } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
         const types = session.flow_context?.contribution_types || result.response.match(/• .+/g) || [];
         // Fetch contribution types for button labels
         const ctTypes = await supabase
