@@ -103,11 +103,18 @@ Deno.test("sindicato flow: associado button opens submenu", async () => {
   assertEquals(status, 200, `unexpected status ${status}: ${JSON.stringify(body)}`);
   assertEquals(body.success, true);
   const reply = String(body.reply ?? "");
-  // Associado submenu should expose Carteirinha + Convenções + Outros.
-  // (Source uses "Carteirinh" via emoji concatenation — match liberally.)
-  assert(/carteirinh/i.test(reply), `missing "Carteirinha" in submenu: ${reply}`);
-  assert(/conven/i.test(reply), `missing "Convenções" in submenu: ${reply}`);
-  assert(/outros/i.test(reply), `missing "Outros" in submenu: ${reply}`);
+  // Submenu real do webhook (index.ts ~L903):
+  //   "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):"
+  //   + botões: "Atualizar Carteirinha", "Convenções Coletivas", "Outros Assuntos"
+  // Os títulos dos botões são truncados em 20 chars por sendWhatsAppButtons,
+  // então "Convenções Coletivas" pode aparecer como "Convenções Coletiva".
+  assert(
+    /você selecionou.*sou associado/i.test(reply),
+    `missing confirmation "Você selecionou Sou Associado": ${reply}`,
+  );
+  assert(/atualizar carteirinha/i.test(reply), `missing "Atualizar Carteirinha" button: ${reply}`);
+  assert(/conven\w*\s+coletiv/i.test(reply), `missing "Convenções Coletivas" button: ${reply}`);
+  assert(/outros assuntos/i.test(reply), `missing "Outros Assuntos" button: ${reply}`);
 });
 
 Deno.test("sindicato flow: carteirinha submenu shows follow-up options", async () => {
@@ -119,12 +126,18 @@ Deno.test("sindicato flow: carteirinha submenu shows follow-up options", async (
   assertEquals(status, 200);
   assertEquals(body.success, true);
   const reply = String(body.reply ?? "");
-  // The carteirinha guidance text is dispatched directly via the Whazing API
-  // (outside the synchronous collector). What we can validate here is that the
-  // follow-up button prompt was emitted with the three expected options.
-  assert(/atendente/i.test(reply), `missing "Atendente" follow-up: ${reply}`);
-  assert(/voltar/i.test(reply), `missing "Voltar" follow-up: ${reply}`);
-  assert(/menu principal/i.test(reply), `missing "Menu Principal" follow-up: ${reply}`);
+  // O texto longo de orientação ("Atualização de Carteirinha…") é despachado
+  // direto pela Whazing API, fora do coletor síncrono. Já o prompt de
+  // follow-up usa sendWhatsAppButtons → cai no coletor.
+  // Esperado (index.ts ~L8310): "Posso ajudar com mais alguma coisa?"
+  // + botões "Falar c/ Atendente", "Voltar", "Menu Principal".
+  assert(
+    /posso ajudar com mais alguma coisa/i.test(reply),
+    `missing follow-up prompt "Posso ajudar com mais alguma coisa?": ${reply}`,
+  );
+  assert(/falar c\/?\s*atendente/i.test(reply), `missing "Falar c/ Atendente" button: ${reply}`);
+  assert(/\bvoltar\b/i.test(reply), `missing "Voltar" button: ${reply}`);
+  assert(/menu principal/i.test(reply), `missing "Menu Principal" button: ${reply}`);
 });
 
 Deno.test("sindicato flow: empresa → 2ª via boleto routes to boleto handler", async () => {
@@ -135,11 +148,16 @@ Deno.test("sindicato flow: empresa → 2ª via boleto routes to boleto handler",
   );
   assertEquals(status, 200);
   assertEquals(body.success, true);
-  // The boleto flow sends its prompt via the Whazing API directly (bypassing
-  // the sync collector), so the body may not include `reply`. The contract
-  // we validate here is that the route was processed without HTTP errors
-  // and the success flag is set — i.e. the boleto submenu didn't break.
-  // (`processed_action` = whazing_boleto_direct in production logs.)
+  // O fluxo de boleto é delegado à edge function `boleto-whatsapp-flow`, que
+  // envia mensagens diretamente via Evolution (fora do coletor síncrono).
+  // Em modo teste, o webhook responde com sucesso assim que o roteamento
+  // ocorre. Validamos apenas: (1) status 200, (2) success=true,
+  // (3) ausência de erro no payload — i.e. o roteador reconheceu o botão e
+  // não caiu no fallback de IA/menu.
+  assert(
+    !("error" in body) || !body.error,
+    `boleto routing returned an error: ${JSON.stringify(body)}`,
+  );
 });
 
 Deno.test("sindicato flow: numeric fallback '1' behaves like first menu button", async () => {
@@ -148,9 +166,12 @@ Deno.test("sindicato flow: numeric fallback '1' behaves like first menu button",
   assertEquals(status, 200);
   assertEquals(body.success, true);
   const reply = String(body.reply ?? "");
-  // "1" should map to the Associado submenu (carteirinha/convenções/outros)
+  // "1" no MAIN_MENU é remapeado para `whazing_associado`, então deve
+  // produzir a mesma resposta do botão Associado: confirmação
+  // "Você selecionou Sou Associado" + submenu com Atualizar Carteirinha.
   assert(
-    /carteirinha|conven|outros/i.test(reply),
-    `numeric fallback did not open associado submenu: ${reply}`,
+    /você selecionou.*sou associado/i.test(reply) ||
+      /atualizar carteirinha/i.test(reply),
+    `numeric fallback "1" did not open associado submenu: ${reply}`,
   );
 });
