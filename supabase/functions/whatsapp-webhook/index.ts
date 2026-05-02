@@ -8371,80 +8371,41 @@ async function handleWebhook(req: Request) {
           // ── CARTEIRINHA: redirect to app (not available via WhatsApp) ──
           if (btnId === 'whazing_sub_carteirinha') {
             console.log(`[webhook] Whazing carteirinha button → redirect to app`);
+            const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
+            
+            await sendWhatsAppMessage(configData, phone, textMessage);
 
-            // Send text guide (plain text to avoid template errors)
-            const whazingUrl = Deno.env.get('WHAZING_API_URL');
-            const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
-            if (whazingUrl && whazingToken) {
-              let cleanPhoneImg = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
-              if (!cleanPhoneImg.startsWith('55')) cleanPhoneImg = '55' + cleanPhoneImg;
-              const apiOficialUrl = getWhazingSendUrl(whazingUrl);
-
-              const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
-
-              try {
-                await fetch(apiOficialUrl, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${whazingToken}`,
-                  },
-                  body: JSON.stringify(buildWhazingTextPayload(whazingUrl, cleanPhoneImg, textMessage)),
-                });
-              } catch (msgErr) {
-                console.error('[whazing] Error sending carteirinha text:', msgErr);
-              }
-            }
-
-            // Send follow-up buttons after image
+            // Send follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
+            await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
             await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
             ]);
 
-            await supabase.from('whatsapp_incoming_logs').insert({
-              clinic_id: clinicId,
-              phone,
-              message_text: `[whazing-L2] ${storedCategory}/carteirinha → redirect to app`,
-              raw_payload: payload,
-              processed: true,
-              processed_action: 'whazing_carteirinha_redirect',
-            });
-
             return createSuccessResponse({ message: 'Carteirinha redirect sent' });
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
           if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
-            console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
+            console.log(`[webhook] Whazing "Outros Assuntos" → sub-menu (${currentCategory})`);
+            await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
 
-            if (storedCategory === 'associado') {
+            if (currentCategory === 'associado') {
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
               ]);
             } else {
-              // empresa / contabilidade
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
               ]);
             }
-
-            await supabase.from('whatsapp_incoming_logs').insert({
-              clinic_id: clinicId,
-              phone,
-              message_text: `[whazing-L2] ${storedCategory}/outros → sub-menu`,
-              raw_payload: payload,
-              processed: true,
-              processed_action: 'whazing_outros_submenu',
-            });
-
-           return createSuccessResponse({ message: `Outros Assuntos sub-menu sent for ${storedCategory}` });
+            return createSuccessResponse({ message: `Outros Assuntos sub-menu sent` });
           }
 
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
