@@ -21,31 +21,35 @@ serve(async (req) => {
         
         for (const msg of messages) {
           const fromPhone = msg.from;
-          const content = msg.text?.body?.trim().toLowerCase();
+          const content = msg.text?.body?.trim();
+          const profileName = payload.entry?.[0]?.changes?.[0]?.value?.contacts?.[0]?.profile?.name || "Cliente";
 
-          if (content === "menu" || content === "olá" || content === "oi") {
-            console.log(`[zapresponder] Sending protocol template to ${fromPhone}`);
-            
-            // Dispara o template de protocolo como saudação oficial
-            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/meta-send-template`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-              },
-              body: JSON.stringify({
-                to: fromPhone,
-                template_name: "homologacao_protocolo",
-                variables: [
-                  "Atendimento Digital",
-                  "Cliente",
-                  "Sindicato",
-                  new Date().toLocaleDateString('pt-BR'),
-                  `META-${Date.now().toString().slice(-6)}`
-                ]
-              })
-            }).catch(err => console.error("[zapresponder] Error sending template:", err));
-          }
+          console.log(`[zapresponder] Processando mensagem de ${fromPhone}: ${content}`);
+          
+          // Qualquer mensagem inicial ou saudação dispara o protocolo oficial
+          console.log(`[zapresponder] Enviando template de protocolo para ${fromPhone}`);
+          
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/meta-send-template`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+            },
+            body: JSON.stringify({
+              to: fromPhone,
+              template_name: "homologacao_protocolo",
+              variables: [
+                "Atendimento Digital",
+                profileName,
+                "Sindicato dos Comerciários",
+                new Date().toLocaleDateString('pt-BR'),
+                `META-${Date.now().toString().slice(-6)}`
+              ]
+            })
+          }).then(async res => {
+            const resJson = await res.json();
+            console.log(`[zapresponder] Resultado do envio:`, resJson);
+          }).catch(err => console.error("[zapresponder] Erro ao enviar template:", err));
         }
       }
     }
