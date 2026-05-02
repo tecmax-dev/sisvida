@@ -22,6 +22,7 @@
        for (const change of changes) {
          if (change.field !== "messages") continue;
          const value = change.value ?? {};
+              const metadata = value.metadata ?? {};
          const messages = value.messages ?? [];
          const profileName = value?.contacts?.[0]?.profile?.name || "Cliente";
  
@@ -101,6 +102,7 @@
              event: "messages.upsert",
              instance: "meta",
              clinic_id: SINDICATO_CLINIC_ID,
+                metadata: metadata, // Passa metadados (incluindo phone_number_id)
              data: {
                key: {
                  remoteJid: `${fromPhone}@s.whatsapp.net`,
