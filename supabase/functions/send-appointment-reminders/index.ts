@@ -443,13 +443,14 @@ serve(async (req) => {
     console.log(`[UTC: ${nowUTC.toISOString()}] [Brasil/Bahia: ${formatDateBrazil(now)}] Starting automatic reminder check`);
 
     // Get clinics with reminders enabled (including union entity logo for priority)
-    const { data: clinics, error: clinicsError } = await supabase
-      .from('clinics')
-      .select(`
-        id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url,
-        union_entities!union_entities_clinic_id_fkey(logo_url)
-      `)
-      .eq('reminder_enabled', true);
+     const { data: clinics, error: clinicsError } = await supabase
+       .from('clinics')
+       .select(`
+         id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url,
+         whatsapp_provider,
+         union_entities!union_entities_clinic_id_fkey(logo_url)
+       `)
+       .eq('reminder_enabled', true);
 
     if (clinicsError) {
       console.error('Error fetching clinics:', clinicsError);
