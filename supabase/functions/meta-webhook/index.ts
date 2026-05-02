@@ -177,7 +177,17 @@ serve(async (req) => {
 
             console.log(`[meta-webhook] Forwarding message from ${fromPhone} to main bot...`);
             
-            // Chama a função principal de bot passando o clinic_id
+            // Encaminha para o Zap Responder conforme solicitado pelo usuário
+            fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook?clinic_id=${SINDICATO_CLINIC_ID}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SERVICE_ROLE}`
+              },
+              body: JSON.stringify(body)
+            }).catch(err => console.error("[meta-webhook] Zap Responder forward error:", err));
+
+            // Mantém encaminhamento para o fluxo principal (opcional, mas mantido para logs e auditoria interna)
             fetch(`${SUPABASE_URL}/functions/v1/whatsapp-webhook?clinic_id=${SINDICATO_CLINIC_ID}`, {
               method: 'POST',
               headers: {
