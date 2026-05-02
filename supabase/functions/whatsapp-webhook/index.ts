@@ -7992,7 +7992,8 @@ async function handleWebhook(req: Request) {
       let configData: EvolutionConfig | null = null;
 
       // Check if clinic_id was explicitly provided (e.g. from zapster-webhook or meta routing)
-      let explicitClinicId = (payload as any).clinic_id;
+     let explicitClinicId = (payload as any).clinic_id;
+     const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
       // Special routing for Meta Official (Sindicato)
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
