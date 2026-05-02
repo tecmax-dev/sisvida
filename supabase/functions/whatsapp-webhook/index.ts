@@ -8487,6 +8487,17 @@ async function handleWebhook(req: Request) {
               .gt('expires_at', new Date().toISOString());
           }
 
+          // Reset temporary Whazing category sessions on greeting/menu so the
+          // next numeric answer is interpreted as a fresh level-1 choice.
+          if (shouldShowMenu) {
+            await supabase
+              .from('whatsapp_ai_conversations')
+              .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .contains('messages', { source: 'whazing_menu' });
+          }
+
           // If it's a greeting with a stale open Whazing ticket, close it so the
           // initial menu is shown again on next interactions.
           if (shouldShowMenu && openWhazingTicket) {
