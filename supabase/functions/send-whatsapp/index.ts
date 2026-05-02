@@ -633,52 +633,6 @@ serve(async (req) => {
        .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled, zapi_token, instance_id')
        .eq('clinic_id', clinicId)
        .maybeSingle();
-     // ========== Z-API PROVIDER ==========
-     if (whatsappProvider === 'zapi') {
-       if (!evolutionConfig?.instance_id || !evolutionConfig?.zapi_token) {
-         return new Response(
-           JSON.stringify({ success: false, error: 'Z-API não configurada corretamente (Instance ID ou Token ausentes).' }),
-           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
-       }
- 
-       const zapiInstanceId = evolutionConfig.instance_id;
-       const zapiToken = evolutionConfig.zapi_token;
-       const zapiUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`;
- 
-       console.log(`[Clinic ${clinicId}] Sending via Z-API to ${cleanPhone}`);
- 
-       const zapiResponse = await fetch(zapiUrl, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ phone: cleanPhone, message: safeMessage }),
-       });
- 
-       const zapiResult = await zapiResponse.json();
- 
-       if (!zapiResponse.ok) {
-         console.error('[Z-API] Send failed:', zapiResult);
-         return new Response(
-           JSON.stringify({ success: false, error: zapiResult.message || 'Erro ao enviar via Z-API' }),
-           { status: zapiResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-         );
-       }
- 
-       // Log message
-       await supabase.from('message_logs').insert({
-         clinic_id: clinicId,
-         message_type: type,
-         phone: cleanPhone,
-         month_year: monthYear,
-       });
- 
-       return new Response(
-         JSON.stringify({ success: true, data: zapiResult }),
-         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-       );
-     }
- 
-
     if (configError) {
       console.error('Error fetching evolution config:', configError);
       return new Response(
