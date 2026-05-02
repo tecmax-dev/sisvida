@@ -8053,12 +8053,11 @@ async function handleWebhook(req: Request) {
         const botSkipped = false;
 
         if (!botSkipped) {
-        // ===== WHAZING BUTTON RESPONSE HANDLER =====
-        // Mapeamos números de digitados (1, 2, 3) para os IDs originais se for uma resposta via texto/Zapster
+        // ===== WHAZING / META BUTTON RESPONSE HANDLER =====
         const messageTextTrim = messageText?.trim();
 
-        // Force main menu on Zap Responder test command "0" or reset keywords
-        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
+        // Force main menu on test command "0" or reset keywords
+        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu' || messageTextTrim === '/sindicato') {
           await supabase
             .from('whatsapp_ai_conversations')
             .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
