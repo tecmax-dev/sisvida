@@ -632,12 +632,14 @@ serve(async (req) => {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
              },
-             body: JSON.stringify({
-               phone: phoneToUse,
-               message: message,
-               clinicId: clinic.id,
-               type: 'reminder'
-             }),
+            body: JSON.stringify({
+              phone: phoneToUse,
+              message: message,
+              clinicId: clinic.id,
+              type: 'reminder',
+              templateName: 'lembrete_consulta_v2',
+              templateComponents: templateComponents
+            }),
            });
            const metaData = await metaResp.json();
            success = metaResp.ok && metaData.success;
