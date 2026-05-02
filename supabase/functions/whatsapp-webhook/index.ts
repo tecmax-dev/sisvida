@@ -8183,7 +8183,7 @@ async function handleWebhook(req: Request) {
 
           if (followUpId === 'whazing_voltar_menu') {
             // Send main menu again
-            await sendWhazingMenuButtons(configData, phone);
+            await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
             return createSuccessResponse({ message: 'Main menu resent' });
           }
 
