@@ -570,10 +570,10 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
   return await sendZapsterMessage(clinicId, phone, fullText);
 }
 
- async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string): Promise<boolean> {
+async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
    try {
      // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-     const PHONE_ID = "937233212814035";
+    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
      if (!PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
@@ -701,10 +701,10 @@ async function sendWhatsAppMessage(
  * número oficial Meta. Não substitui sendWhatsAppMessage (Evolution) — é uma
  * via paralela isolada.
  */
-async function sendMetaText(phone: string, text: string): Promise<boolean> {
+async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
   try {
     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-    const PHONE_ID = "937233212814035";
+    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
     if (!PHONE_ID || !TOKEN) {
       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
