@@ -638,6 +638,11 @@ async function sendWhatsAppMessage(
     
     const destination = formatPhoneForWhatsApp(phone);
 
+    if (config.api_url === 'meta') {
+      console.log(`[booking] Routing text to Meta Cloud API for ${destination}`);
+      return await sendMetaText(phone, message);
+    }
+
     if (config.api_url === 'zapster') {
       console.log(`[booking] Routing to Zapster for ${destination}`);
       return await sendZapsterMessage(config.clinic_id, phone, message);
