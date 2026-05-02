@@ -69,7 +69,11 @@ serve(async (req) => {
           else if (msg.type === "document") content = msg.document?.filename ?? "[documento]";
           else content = `[${msg.type}]`;
 
-          console.log(`[meta-webhook] Nova mensagem de ${fromPhone}: ${content}`);
+          console.log(`[meta-webhook] DEBUG: Nova mensagem recebida da Meta`);
+          console.log(`[meta-webhook] DE: ${fromPhone}`);
+          console.log(`[meta-webhook] MSG: ${content}`);
+          console.log(`[meta-webhook] ID: ${wamid}`);
+          
           
           // Sincroniza no banco ANTES de enviar para o webhook
           try {
