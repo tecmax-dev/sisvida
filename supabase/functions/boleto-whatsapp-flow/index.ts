@@ -42,10 +42,111 @@ interface BatchBoletoItem {
 const CONTRIBUTION_TYPE_MAP = {
   mensalidade: '124 - MENSALIDADE SINDICAL',
   taxa_mercados: '125 - TAXA NEGOCIAL (MERCADOS)',
-  taxa_varejista: '126 - TAXA NEGOCIAL (COM VEREJ)'
-} as const;
-
-async function analyzeUserIntent(
+   taxa_varejista: '126 - TAXA NEGOCIAL (COM VEREJ)'
+ } as const;
+ 
+ interface ButtonOption {
+   id: string;
+   text?: string;
+   title?: string;
+ }
+ 
+ /**
+  * Envia texto livre via Meta Cloud API.
+  */
+ async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
+   try {
+     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+     if (!PHONE_ID || !TOKEN) {
+       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+       return false;
+     }
+     const digits = phone.replace(/\D/g, '');
+     const to = digits.startsWith('55') ? digits : `55${digits}`;
+     const r = await fetch(
+       `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
+       {
+         method: 'POST',
+         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           messaging_product: 'whatsapp',
+           to,
+           type: 'text',
+           text: { body: text },
+         }),
+       }
+     );
+     if (!r.ok) {
+       console.error('[meta-text] Meta error:', await r.text());
+       return false;
+     }
+     return true;
+   } catch (e) {
+     console.error('[meta-text] Exception:', e);
+     return false;
+   }
+ }
+ 
+ /**
+  * Envia botões interativos via Meta Cloud API.
+  */
+ async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
+    try {
+     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      if (!PHONE_ID || !TOKEN) {
+        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+        return false;
+      }
+  
+      const digits = phone.replace(/\D/g, '');
+      const to = digits.startsWith('55') ? digits : `55${digits}`;
+  
+       const cleanTitle = title.replace(/[\*_~`#]/g, '').trim().substring(0, 60);
+       const cleanDescription = description.substring(0, 1024) || "Selecione uma opção abaixo:";
+ 
+       const payload = {
+         messaging_product: "whatsapp",
+         recipient_type: "individual",
+         to,
+         type: "interactive",
+         interactive: {
+           type: "button",
+           header: { type: "text", text: cleanTitle },
+           body: { text: cleanDescription },
+           ...(footer ? { footer: { text: footer.substring(0, 72) } } : {}),
+           action: {
+             buttons: buttons.slice(0, 3).map(b => ({
+               type: "reply",
+               reply: {
+                 id: b.id,
+                 title: (b.text || b.title || "").substring(0, 20)
+               }
+             }))
+           }
+         }
+       };
+  
+      const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+  
+       if (!r.ok) {
+         const errorText = await r.text();
+         console.error('[meta-buttons] Meta error:', errorText);
+         return false;
+       }
+       return true;
+     } catch (error) {
+       console.error('[meta-buttons] Error in sendMetaButtons:', error);
+       return false;
+     }
+ }
+ 
+ async function analyzeUserIntent(
   message: string, 
   currentState: BoletoState,
   sessionContext: any
