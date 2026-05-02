@@ -570,6 +570,57 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
   return await sendZapsterMessage(clinicId, phone, fullText);
 }
 
+ async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string): Promise<boolean> {
+   try {
+     const PHONE_ID = Deno.env.get('META_PHONE_NUMBER_ID');
+     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+     if (!PHONE_ID || !TOKEN) {
+       console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+       return false;
+     }
+ 
+     const digits = phone.replace(/\D/g, '');
+     const to = digits.startsWith('55') ? digits : `55${digits}`;
+ 
+     const payload = {
+       messaging_product: "whatsapp",
+       recipient_type: "individual",
+       to,
+       type: "interactive",
+       interactive: {
+         type: "button",
+         header: { type: "text", text: title.substring(0, 60) },
+         body: { text: description.substring(0, 1024) || "Selecione uma opção abaixo:" },
+         ...(footer ? { footer: { text: footer.substring(0, 72) } } : {}),
+         action: {
+           buttons: buttons.slice(0, 3).map(b => ({
+             type: "reply",
+             reply: {
+               id: b.id,
+               title: (b.text || b.title || "").substring(0, 20)
+             }
+           }))
+         }
+       }
+     };
+ 
+     const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+       method: 'POST',
+       headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+       body: JSON.stringify(payload),
+     });
+ 
+     if (!r.ok) {
+       console.error('[meta-buttons] Meta error:', await r.text());
+       return false;
+     }
+     return true;
+   } catch (e) {
+     console.error('[meta-buttons] Exception:', e);
+     return false;
+   }
+ }
+ 
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
@@ -586,6 +637,11 @@ async function sendWhatsAppMessage(
     const safeMessage = sanitizeOutgoingWhatsAppText(message);
     
     const destination = formatPhoneForWhatsApp(phone);
+
+    if (config.api_url === 'meta' || config.instance_name === 'meta_official') {
+      console.log(`[booking] Routing to Meta for ${destination}`);
+      return await sendMetaText(phone, message);
+    }
 
     if (config.api_url === 'zapster') {
       console.log(`[booking] Routing to Zapster for ${destination}`);
@@ -717,6 +773,11 @@ async function sendWhatsAppButtons(
       id: b.id || `option_${index + 1}`,
       title: b.text,
     }));
+
+    if (config.api_url === 'meta' || config.instance_name === 'meta_official') {
+      console.log(`[booking] Routing buttons to Meta for ${phone}`);
+      return await sendMetaButtons(phone, title, description, limitedButtons);
+    }
 
     if (config.api_url === 'zapster') {
       console.log(`[booking] Routing buttons to Zapster for ${phone}`);
@@ -7992,12 +8053,11 @@ async function handleWebhook(req: Request) {
         const botSkipped = false;
 
         if (!botSkipped) {
-        // ===== WHAZING BUTTON RESPONSE HANDLER =====
-        // Mapeamos números de digitados (1, 2, 3) para os IDs originais se for uma resposta via texto/Zapster
+        // ===== WHAZING / META BUTTON RESPONSE HANDLER =====
         const messageTextTrim = messageText?.trim();
 
-        // Force main menu on Zap Responder test command "0" or reset keywords
-        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
+        // Force main menu on test command "0" or reset keywords
+        if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu' || messageTextTrim === '/sindicato') {
           await supabase
             .from('whatsapp_ai_conversations')
             .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
