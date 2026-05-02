@@ -68,31 +68,81 @@
  
            const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi)$/i.test(content);
  
-           // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
-           if (isGreeting && !alreadySent) {
-             console.log(`[zapresponder] Nova conversa - enviando protocolo`);
-             
-             await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${SERVICE_ROLE}`
-               },
-               body: JSON.stringify({
-                 to: fromPhone,
-                 template_name: "homologacao_protocolo",
-                 variables: [
-                   "Atendimento Digital",
-                   profileName,
-                   "Sindicato dos Comerciários",
-                   new Date().toLocaleDateString('pt-BR'),
-                   `META-${Date.now().toString().slice(-6)}`
-                 ]
-               })
-             }).catch(err => console.error("[zapresponder] Erro template:", err));
-           } else if (alreadySent) {
-             console.log(`[zapresponder] Protocolo já enviado nas últimas 4h - pulando`);
-           }
+            // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
+            if (isGreeting && !alreadySent) {
+              console.log(`[zapresponder] Nova conversa - enviando protocolo`);
+              const protocolId = `META-${Date.now().toString().slice(-6)}`;
+              const employeeName = "Assistente Digital"; // Nome fixo do atendente virtual
+              
+              const response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${SERVICE_ROLE}`
+                },
+                body: JSON.stringify({
+                  to: fromPhone,
+                  template_name: "homologacao_protocolo",
+                  variables: [
+                    "Atendimento Digital",
+                    employeeName, // Agora fixo como Assistente Digital
+                    "Sindicato dos Comerciários",
+                    new Date().toLocaleDateString('pt-BR'),
+                    protocolId
+                  ]
+                })
+              }).catch(err => console.error("[zapresponder] Erro template:", err));
+
+              // Registra o envio no banco para auditoria e controle de duplicidade
+              if (response && response.ok) {
+                try {
+                  // Tenta encontrar um contato para este telefone
+                  const { data: contact } = await supabase
+                    .from('whatsapp_contacts')
+                    .select('id')
+                    .eq('phone', fromPhone)
+                    .maybeSingle();
+
+                  if (contact) {
+                    // Procura ou cria ticket
+                    let { data: ticket } = await supabase
+                      .from('whatsapp_tickets')
+                      .select('id')
+                      .eq('contact_id', contact.id)
+                      .eq('status', 'open')
+                      .maybeSingle();
+
+                    if (!ticket) {
+                      const { data: newTicket } = await supabase
+                        .from('whatsapp_tickets')
+                        .insert({
+                          contact_id: contact.id,
+                          clinic_id: SINDICATO_CLINIC_ID,
+                          status: 'open',
+                          protocol: protocolId
+                        })
+                        .select()
+                        .single();
+                      ticket = newTicket;
+                    }
+
+                    if (ticket) {
+                      await supabase.from('whatsapp_ticket_messages').insert({
+                        ticket_id: ticket.id,
+                        sender_type: 'operator',
+                        message_type: 'template',
+                        content: `Template: homologacao_protocolo | Protocolo: ${protocolId}`,
+                        metadata: { to: fromPhone, template: 'homologacao_protocolo' }
+                      });
+                    }
+                  }
+                } catch (dbErr) {
+                  console.error("[zapresponder] Erro ao registrar log:", dbErr);
+                }
+              }
+            } else if (alreadySent) {
+              console.log(`[zapresponder] Protocolo já enviado nas últimas 4h - pulando`);
+            }
  
            // SEMPRE encaminha para o bot principal processar a lógica de menu/atendimento
            const messageToBot = isGreeting ? "menu" : content;
