@@ -8295,7 +8295,7 @@ async function handleWebhook(req: Request) {
           console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
-          await sendWhazingSubMenu(configData, phone, category);
+          await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
           
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
