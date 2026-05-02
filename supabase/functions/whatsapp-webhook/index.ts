@@ -8348,12 +8348,13 @@ async function handleWebhook(req: Request) {
                   clinic_id: clinicId,
                   phone: phone,
                   action: 'start',
-                  evolution_config: {
-                    api_url: configData.api_url,
-                    api_key: configData.api_key,
-                    instance_name: configData.instance_name,
-                  }
-                }),
+                   evolution_config: {
+                     api_url: configData.api_url,
+                     api_key: configData.api_key,
+                     instance_name: configData.instance_name,
+                     explicit_phone_id: explicitPhoneId
+                   }
+                 }),
               });
 
               if (boletoResponse.ok) {
