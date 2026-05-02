@@ -27,14 +27,8 @@ serve(async (req) => {
   }
 
   try {
-    let PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID");
+    const PHONE_ID = "937233212814035"; // ID real do número 73 3231 1784
     
-    // Fallback para o ID real do número 73 3231 1784 caso esteja usando o ID de teste
-    if (!PHONE_ID || PHONE_ID === "1077266392140414") {
-      console.log("[meta-send-template] Utilizando ID real do número 73 3231 1784 (937233212814035)");
-      PHONE_ID = "937233212814035";
-    }
-
     const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
