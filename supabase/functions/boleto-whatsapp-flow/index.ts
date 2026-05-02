@@ -1720,7 +1720,7 @@ async function handleCnpjInput(
       };
     }
     
-    await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${intent.batch_items.length} boleto(s)...*\n\nAguarde um momento.`);
+    await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${intent.batch_items.length} boleto(s)...*\n\nAguarde um momento.`, explicitPhoneId);
     
     const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
     
@@ -2678,7 +2678,7 @@ async function handleCnpjInput(
       }
 
       if (messageText === 'boleto_confirmar' || text === '1' || /^confirm/i.test(text) || /^sim/i.test(text)) {
-        await sendWhatsAppMessage(evolutionConfig, phone, MESSAGES.processing);
+        await sendWhatsAppMessage(evolutionConfig, phone, MESSAGES.processing, explicitPhoneId);
         
         try {
           const employer = session.flow_context?.employer;
@@ -2835,7 +2835,7 @@ async function handleCnpjInput(
       
       console.log(`[boleto-flow] Processing ${updatedItems.length} batch items with taxa type: ${selectedTaxaType}`);
       
-      await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${updatedItems.length} boleto(s)...*\n\nTipo: ${optionNum === 1 ? 'TAXA NEGOCIAL (MERCADOS)' : 'TAXA NEGOCIAL (COM VEREJ)'}\n\nAguarde um momento.`);
+      await sendWhatsAppMessage(evolutionConfig, phone, `⏳ *Processando ${updatedItems.length} boleto(s)...*\n\nTipo: ${optionNum === 1 ? 'TAXA NEGOCIAL (MERCADOS)' : 'TAXA NEGOCIAL (COM VEREJ)'}\n\nAguarde um momento.`, explicitPhoneId);
       
       const results: Array<{ success: boolean; cnpj: string; employer_name?: string; url?: string; error?: string }> = [];
       
