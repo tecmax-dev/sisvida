@@ -676,7 +676,8 @@ async function sendMetaText(phone: string, text: string): Promise<boolean> {
 
 interface ButtonOption {
   id: string;
-  text: string;
+  text?: string;
+  title?: string;
 }
 
 async function sendWhatsAppButtons(
@@ -689,8 +690,16 @@ async function sendWhatsAppButtons(
 ): Promise<boolean> {
   try {
     // Limit to 3 options
-    const limitedButtons = buttons.slice(0, 3);
+    const limitedButtons = buttons.slice(0, 3).map((button) => ({
+      id: button.id,
+      text: sanitizeOutgoingWhatsAppText(button.text || button.title || '').substring(0, 20),
+    })).filter((button) => button.id && button.text);
     console.log(`[booking] Sending interactive buttons to ${phone}:`, limitedButtons.map(b => b.text));
+
+    if (limitedButtons.length === 0) {
+      console.warn(`[booking] No valid buttons to send to ${phone}`);
+      return false;
+    }
 
     const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
     const buttonText = limitedButtons.map((b, i) => `\n${i + 1}️⃣ ${b.text}`).join('');
@@ -706,7 +715,7 @@ async function sendWhatsAppButtons(
 
     const whazingButtons = limitedButtons.map((b, index) => ({
       id: b.id || `option_${index + 1}`,
-      title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
+      title: b.text,
     }));
 
     if (config.api_url === 'zapster') {
@@ -729,9 +738,8 @@ async function sendWhatsAppButtons(
             description: description,
             footer: footer || "Selecione uma opção",
             buttons: limitedButtons.map(b => ({
-              buttonId: b.id,
-              buttonText: { displayText: b.text },
-              type: 1
+              type: "reply",
+              reply: { id: b.id, title: b.text }
             }))
           }),
         });
@@ -880,9 +888,9 @@ async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): P
     "Olá! 👋 Bem-vindo(a) ao atendimento.",
     "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
     [
-      { id: "1", text: "Sou Associado" },
-      { id: "2", text: "Sou Empresa" },
-      { id: "3", text: "Sou Contabilidade" },
+      { id: "whazing_associado", text: "Sou Associado" },
+      { id: "whazing_empresa", text: "Sou Empresa" },
+      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
     ]
   );
 }
@@ -894,25 +902,25 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
     associado: {
       text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "1", title: "Atualizar Carteirinha" },
-        { id: "2", title: "Convenções Coletivas" },
-        { id: "3", title: "Outros Assuntos" },
+        { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
       ],
     },
     empresa: {
       text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "1", title: "2ª Via Boleto" },
-        { id: "2", title: "Convenções Coletivas" },
-        { id: "3", title: "Outros Assuntos" },
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
       ],
     },
     contabilidade: {
       text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "1", title: "2ª Via Boleto" },
-        { id: "2", title: "Convenções Coletivas" },
-        { id: "3", title: "Outros Assuntos" },
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
       ],
     },
   };
@@ -7986,6 +7994,12 @@ async function handleWebhook(req: Request) {
 
         // Force main menu on Zap Responder test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
+          await supabase
+            .from('whatsapp_ai_conversations')
+            .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+            .eq('clinic_id', clinicId)
+            .in('phone', phoneCandidates)
+            .contains('messages', { source: 'whazing_menu' });
           await sendWhazingMenuButtons(configData, phone);
           return createSuccessResponse({ message: 'Main menu triggered' });
         }
@@ -8477,6 +8491,17 @@ async function handleWebhook(req: Request) {
               .eq('clinic_id', clinicId)
               .in('phone', phoneCandidates)
               .gt('expires_at', new Date().toISOString());
+          }
+
+          // Reset temporary Whazing category sessions on greeting/menu so the
+          // next numeric answer is interpreted as a fresh level-1 choice.
+          if (shouldShowMenu) {
+            await supabase
+              .from('whatsapp_ai_conversations')
+              .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
+              .eq('clinic_id', clinicId)
+              .in('phone', phoneCandidates)
+              .contains('messages', { source: 'whazing_menu' });
           }
 
           // If it's a greeting with a stale open Whazing ticket, close it so the
@@ -9092,21 +9117,20 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
 serve(async (req) => {
   const collector: string[] = [];
-  // Check if payload has sync: true
-   // Only use sync collector if it's explicitly a test or internal request.
-   // External Evolution API / Zap Responder payloads sometimes include "sync: true"
-   // but they don't support receiving the reply in the HTTP response.
-   // Only use sync collector if it's explicitly a test or internal request.
-   // External Evolution API / Zap Responder payloads often include "sync: true"
-   // but they don't support receiving the reply in the HTTP response body.
-   const clonedReq = req.clone();
-   let isTestPayload = false;
-   try {
-     const body = await clonedReq.json();
-     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
-   } catch { /* ignore */ }
- 
-  // Evolution API sends webhooks to /whatsapp-webhook
-  // Internal calls (tests) use the same path
-  return await syncReplyStore.run(collector, () => handleWebhook(req));
+  // Only use the synchronous reply collector for explicit internal tests.
+  // Real Evolution API webhooks must send messages through the provider; if
+  // they run inside AsyncLocalStorage, sendWhatsAppButtons/sendWhatsAppMessage
+  // only append to the HTTP response and nothing is delivered to WhatsApp.
+  const clonedReq = req.clone();
+  let isTestPayload = false;
+  try {
+    const body = await clonedReq.json();
+    isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
+  } catch { /* ignore */ }
+
+  if (isTestPayload) {
+    return await syncReplyStore.run(collector, () => handleWebhook(req));
+  }
+
+  return await handleWebhook(req);
 });
