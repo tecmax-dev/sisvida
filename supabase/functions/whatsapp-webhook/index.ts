@@ -592,32 +592,37 @@ async function sendWhatsAppMessage(
       return await sendZapsterMessage(config.clinic_id, phone, message);
     }
 
+    // Priority 1: Evolution API if configured
+    if (config.api_url && config.api_url !== 'zapster') {
+      console.log(`[booking] Sending message to ${destination} via Evolution`);
+      try {
+        const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: config.api_key,
+          },
+          body: JSON.stringify({
+            number: destination,
+            text: safeMessage,
+          }),
+        });
+
+        if (response.ok) {
+          console.log(`[booking] Evolution API ok (${response.status})`);
+          return true;
+        }
+        console.error('[booking] Evolution API error:', await response.text());
+      } catch (err) {
+        console.error('[booking] Error calling Evolution API:', err);
+      }
+    }
+
+    // Priority 2: Whazing fallback
     const whazingSent = await sendWhazingTextMessage(phone, safeMessage);
     if (whazingSent) return true;
 
-    console.log(`[booking] Sending message to ${destination} via Evolution`);
-
-    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify({
-        number: destination,
-        text: safeMessage,
-      }),
-    });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error('[booking] WhatsApp API error:', responseText);
-      return false;
-    }
-
-    console.log(`[booking] WhatsApp API ok (${response.status}):`, responseText);
-    return true;
+    return false;
   } catch (error) {
     console.error('[booking] Error sending WhatsApp:', error);
     return false;
@@ -709,21 +714,51 @@ async function sendWhatsAppButtons(
       return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
     }
 
+    const destination = formatPhoneForWhatsApp(phone);
+
+    // Priority 1: Evolution API
+    if (config.api_url && !config.api_url.includes('z-api.io') && config.api_url !== 'zapster') {
+      console.log(`[booking] Sending buttons to ${destination} via Evolution`);
+      try {
+        const response = await fetch(`${config.api_url}/message/sendButtons/${config.instance_name}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+          body: JSON.stringify({
+            number: destination,
+            title: title,
+            description: description,
+            footer: footer || "Selecione uma opção",
+            buttons: limitedButtons.map(b => ({
+              buttonId: b.id,
+              buttonText: { displayText: b.text },
+              type: 1
+            }))
+          }),
+        });
+
+        if (response.ok) {
+          console.log(`[booking] Evolution buttons sent successfully`);
+          return true;
+        }
+        
+        console.warn(`[booking] Evolution buttons failed (${response.status}), falling back to text:`, await response.text());
+        // Fallback to text within Evolution
+        const textResponse = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+          body: JSON.stringify({ number: destination, text: fullText }),
+        });
+        if (textResponse.ok) return true;
+      } catch (err) {
+        console.error('[booking] Error calling Evolution buttons API:', err);
+      }
+    }
+
+    // Priority 2: Whazing
     const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
     if (whazingSent) return true;
-    
-    console.warn(`[booking] Failed to send buttons to ${phone} via Whazing. Falling back to text-only.`);
-    const destination = formatPhoneForWhatsApp(phone);
-    
-    // Evolution fallback
-    if (config.api_url && !config.api_url.includes('z-api.io') && config.api_url !== 'zapster') {
-      return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: config.api_key },
-        body: JSON.stringify({ number: destination, text: fullText }),
-      }).then(r => r.ok);
-    }
-    
+
+    console.warn(`[booking] Failed to send buttons to ${phone} via all providers.`);
     return false;
   } catch (error) {
     console.error('[booking] Error in sendWhatsAppButtons:', error);
@@ -8091,7 +8126,7 @@ async function handleWebhook(req: Request) {
 
             // Follow-up buttons after AI response
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+            await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
@@ -8121,7 +8156,7 @@ async function handleWebhook(req: Request) {
 
             // Follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+            await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
@@ -8258,7 +8293,7 @@ async function handleWebhook(req: Request) {
 
             // Send follow-up buttons after image
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+            await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
@@ -8281,14 +8316,14 @@ async function handleWebhook(req: Request) {
             console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
 
             if (storedCategory === 'associado') {
-              await sendWhazingButtons(phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
+              await sendWhatsAppButtons(configData, phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
               ]);
             } else {
               // empresa / contabilidade
-              await sendWhazingButtons(phone, "*Outros Assuntos*\n\nComo podemos ajudar?", [
+              await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
@@ -8341,7 +8376,7 @@ async function handleWebhook(req: Request) {
               // Send follow-up buttons only for informational flows.
               // For human-support handoff, avoid re-opening submenus/buttons and causing loop/re-entry.
               await new Promise(resolve => setTimeout(resolve, 2000));
-              await sendWhazingButtons(phone, "O que deseja fazer agora?", [
+              await sendWhatsAppButtons(configData, phone, "O que deseja fazer agora?", "", [
                 { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
                 { id: "whazing_voltar_menu", title: "Menu Principal" },
