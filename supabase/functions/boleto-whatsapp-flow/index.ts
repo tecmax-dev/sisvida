@@ -3138,10 +3138,10 @@ serve(async (req) => {
       
       if (evolution_config) {
         // Interactive start must be a single button payload, never a text list + buttons.
-        await sendBoletoButtons(phone, MESSAGES.welcome, [
-          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
-        ]);
+         await sendBoletoButtons(phone, MESSAGES.welcome, [
+           { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+           { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         ], evolution_config, explicit_phone_id);
       }
       
       return new Response(
