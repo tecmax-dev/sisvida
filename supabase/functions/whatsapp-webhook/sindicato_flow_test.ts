@@ -26,19 +26,29 @@ interface WebhookResult {
 }
 
 async function callWebhook(payload: Record<string, unknown>): Promise<WebhookResult> {
-  const res = await fetch(WEBHOOK_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify({ ...payload, test: true }),
-  });
-  const text = await res.text();
+  // Retry once on cold-start / idle-timeout (504) — the first invocation of
+  // whatsapp-webhook can take >2 min to boot if it has been cold for a while.
+  let lastStatus = 0;
+  let lastBodyText = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ ...payload, test: true }),
+    });
+    lastStatus = res.status;
+    lastBodyText = await res.text();
+    if (res.status !== 504 && res.status !== 502) break;
+    // brief backoff before retry so the function has a chance to warm up
+    await new Promise((r) => setTimeout(r, 1500));
+  }
   let body: WebhookResult["body"] = {};
-  try { body = JSON.parse(text); } catch { body = { raw: text } as never; }
-  return { status: res.status, body };
+  try { body = JSON.parse(lastBodyText); } catch { body = { raw: lastBodyText } as never; }
+  return { status: lastStatus, body };
 }
 
 function textMessage(text: string, idSuffix: string) {
