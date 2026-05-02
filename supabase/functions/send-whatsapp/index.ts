@@ -19,6 +19,9 @@ interface WhatsAppRequest {
   imageUrl?: string; // URL da imagem para enviar como cabeçalho
   appointmentId?: string;
   sendAsTextOnly?: boolean;
+  templateName?: string;
+  templateLanguage?: string;
+  templateComponents?: string[];
 }
 
  interface EvolutionConfig {
