@@ -610,11 +610,20 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
        body: JSON.stringify(payload),
      });
  
-     if (!r.ok) {
-       console.error('[meta-buttons] Meta error:', await r.text());
-       return false;
-     }
-     return true;
+      if (!r.ok) {
+        const errorText = await r.text();
+        console.error('[meta-buttons] Meta error:', errorText);
+        
+        // Fallback: If interactive buttons are not supported/authorized, send as TEXT
+        if (errorText.includes('GraphMethodException') || errorText.includes('permissions')) {
+          console.log(`[meta-buttons] Falling back to TEXT for ${to} due to Meta permission error`);
+          const buttonText = buttons.map((b, i) => `\n${i + 1}️⃣ ${b.text || b.title}`).join('');
+          const fullText = `${title}\n\n${description}\n${buttonText}${footer ? `\n\n_${footer}_` : ''}`;
+          return await sendMetaText(phone, fullText);
+        }
+        return false;
+      }
+      return true;
    } catch (e) {
      console.error('[meta-buttons] Exception:', e);
      return false;
