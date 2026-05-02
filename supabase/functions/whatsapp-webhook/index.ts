@@ -888,9 +888,9 @@ async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): P
     "Olá! 👋 Bem-vindo(a) ao atendimento.",
     "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
     [
-      { id: "1", text: "Sou Associado" },
-      { id: "2", text: "Sou Empresa" },
-      { id: "3", text: "Sou Contabilidade" },
+      { id: "whazing_associado", text: "Sou Associado" },
+      { id: "whazing_empresa", text: "Sou Empresa" },
+      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
     ]
   );
 }
@@ -902,25 +902,25 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
     associado: {
       text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "1", title: "Atualizar Carteirinha" },
-        { id: "2", title: "Convenções Coletivas" },
-        { id: "3", title: "Outros Assuntos" },
+        { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
       ],
     },
     empresa: {
       text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "1", title: "2ª Via Boleto" },
-        { id: "2", title: "Convenções Coletivas" },
-        { id: "3", title: "Outros Assuntos" },
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
       ],
     },
     contabilidade: {
       text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
-        { id: "1", title: "2ª Via Boleto" },
-        { id: "2", title: "Convenções Coletivas" },
-        { id: "3", title: "Outros Assuntos" },
+        { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
+        { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
+        { id: "whazing_sub_outros", title: "Outros Assuntos" },
       ],
     },
   };
