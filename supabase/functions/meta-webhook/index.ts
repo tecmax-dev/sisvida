@@ -178,6 +178,7 @@ serve(async (req) => {
             console.log(`[meta-webhook] Forwarding message from ${fromPhone} to main bot...`);
             
             // Encaminha para o Zap Responder conforme solicitado pelo usuário
+            console.log(`[meta-webhook] Forwarding message from ${fromPhone} to Zap Responder...`);
             fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook?clinic_id=${SINDICATO_CLINIC_ID}`, {
               method: 'POST',
               headers: {
