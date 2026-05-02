@@ -714,21 +714,51 @@ async function sendWhatsAppButtons(
       return await sendZapsterButtons(config.clinic_id, phone, bodyText, whazingButtons);
     }
 
+    const destination = formatPhoneForWhatsApp(phone);
+
+    // Priority 1: Evolution API
+    if (config.api_url && !config.api_url.includes('z-api.io') && config.api_url !== 'zapster') {
+      console.log(`[booking] Sending buttons to ${destination} via Evolution`);
+      try {
+        const response = await fetch(`${config.api_url}/message/sendButtons/${config.instance_name}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+          body: JSON.stringify({
+            number: destination,
+            title: title,
+            description: description,
+            footer: footer || "Selecione uma opção",
+            buttons: limitedButtons.map(b => ({
+              buttonId: b.id,
+              buttonText: { displayText: b.text },
+              type: 1
+            }))
+          }),
+        });
+
+        if (response.ok) {
+          console.log(`[booking] Evolution buttons sent successfully`);
+          return true;
+        }
+        
+        console.warn(`[booking] Evolution buttons failed (${response.status}), falling back to text:`, await response.text());
+        // Fallback to text within Evolution
+        const textResponse = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: config.api_key },
+          body: JSON.stringify({ number: destination, text: fullText }),
+        });
+        if (textResponse.ok) return true;
+      } catch (err) {
+        console.error('[booking] Error calling Evolution buttons API:', err);
+      }
+    }
+
+    // Priority 2: Whazing
     const whazingSent = await sendWhazingButtons(phone, sanitizeOutgoingWhatsAppText(bodyText), whazingButtons);
     if (whazingSent) return true;
-    
-    console.warn(`[booking] Failed to send buttons to ${phone} via Whazing. Falling back to text-only.`);
-    const destination = formatPhoneForWhatsApp(phone);
-    
-    // Evolution fallback
-    if (config.api_url && !config.api_url.includes('z-api.io') && config.api_url !== 'zapster') {
-      return await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: config.api_key },
-        body: JSON.stringify({ number: destination, text: fullText }),
-      }).then(r => r.ok);
-    }
-    
+
+    console.warn(`[booking] Failed to send buttons to ${phone} via all providers.`);
     return false;
   } catch (error) {
     console.error('[booking] Error in sendWhatsAppButtons:', error);
