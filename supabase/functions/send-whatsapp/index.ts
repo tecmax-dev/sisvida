@@ -657,60 +657,6 @@ serve(async (req) => {
 
     const { api_url, api_key, instance_name, direct_reply_enabled } = evolutionConfig as EvolutionConfig;
 
-    // 10. CHECK REAL CONNECTION STATUS with Evolution API
-    console.log(`[Clinic ${clinicId}] Checking real connection status for instance ${instance_name}`);
-    
-    let reallyConnected = false;
-    try {
-      const stateUrl = `${api_url}/instance/connectionState/${instance_name}`;
-      const stateResponse = await fetch(stateUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': api_key,
-        },
-      });
-
-      if (stateResponse.ok) {
-        const stateData = await stateResponse.json();
-        console.log(`[Clinic ${clinicId}] Evolution state response:`, JSON.stringify(stateData));
-        
-        // Check various possible response formats from Evolution API
-        reallyConnected = 
-          stateData?.instance?.state === "open" ||
-          stateData?.state === "open" ||
-          stateData?.status === "CONNECTED" ||
-          stateData?.instance?.status === "CONNECTED";
-      } else {
-        console.error(`[Clinic ${clinicId}] Failed to check Evolution state: ${stateResponse.status}`);
-      }
-    } catch (stateError) {
-      console.error(`[Clinic ${clinicId}] Error checking Evolution connection state:`, stateError);
-    }
-
-    // 11. Update database if status differs
-    if (reallyConnected !== evolutionConfig.is_connected) {
-      console.log(`[Clinic ${clinicId}] Updating connection status: ${evolutionConfig.is_connected} -> ${reallyConnected}`);
-      await supabase
-        .from('evolution_configs')
-        .update({ 
-          is_connected: reallyConnected,
-          connected_at: reallyConnected ? new Date().toISOString() : null,
-          phone_number: reallyConnected ? evolutionConfig.is_connected : null,
-        })
-        .eq('clinic_id', clinicId);
-    }
-
-    // 12. If not really connected, return specific error
-    if (!reallyConnected) {
-      console.log(`[Clinic ${clinicId}] WhatsApp not really connected`);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'WhatsApp desconectado. Escaneie o QR Code novamente em Configurações > Integrações > WhatsApp.' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Format phone number (remove non-digits and add country code if needed)
     let formattedPhone = cleanPhone;
