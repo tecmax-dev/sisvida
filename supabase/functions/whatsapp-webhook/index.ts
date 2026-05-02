@@ -676,7 +676,8 @@ async function sendMetaText(phone: string, text: string): Promise<boolean> {
 
 interface ButtonOption {
   id: string;
-  text: string;
+  text?: string;
+  title?: string;
 }
 
 async function sendWhatsAppButtons(
@@ -689,8 +690,16 @@ async function sendWhatsAppButtons(
 ): Promise<boolean> {
   try {
     // Limit to 3 options
-    const limitedButtons = buttons.slice(0, 3);
+    const limitedButtons = buttons.slice(0, 3).map((button) => ({
+      id: button.id,
+      text: sanitizeOutgoingWhatsAppText(button.text || button.title || '').substring(0, 20),
+    })).filter((button) => button.id && button.text);
     console.log(`[booking] Sending interactive buttons to ${phone}:`, limitedButtons.map(b => b.text));
+
+    if (limitedButtons.length === 0) {
+      console.warn(`[booking] No valid buttons to send to ${phone}`);
+      return false;
+    }
 
     const bodyText = `${title}\n\n${description}${footer ? `\n\n_${footer}_` : ''}`;
     const buttonText = limitedButtons.map((b, i) => `\n${i + 1}️⃣ ${b.text}`).join('');
@@ -706,7 +715,7 @@ async function sendWhatsAppButtons(
 
     const whazingButtons = limitedButtons.map((b, index) => ({
       id: b.id || `option_${index + 1}`,
-      title: sanitizeOutgoingWhatsAppText(b.text).substring(0, 20),
+      title: b.text,
     }));
 
     if (config.api_url === 'zapster') {
