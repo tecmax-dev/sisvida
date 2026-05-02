@@ -1042,13 +1042,20 @@ async function sendWhazingText(phone: string, message: string): Promise<boolean>
 // WHAZING INTERACTIVE BUTTONS FOR BOLETO FLOW
 // ==========================================
 
-async function sendBoletoButtons(
-  phone: string,
-  bodyText: string,
-  buttons: Array<{ id: string; title: string }>
-): Promise<boolean> {
-  const whazingUrl = Deno.env.get('WHAZING_API_URL');
-  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+ async function sendBoletoButtons(
+   phone: string,
+   bodyText: string,
+   buttons: Array<{ id: string; title: string }>,
+   config?: EvolutionConfig,
+   explicitPhoneId?: string
+ ): Promise<boolean> {
+   if (config?.api_url === 'meta') {
+     console.log(`[boleto-flow] Routing buttons to Meta Cloud API for ${phone}`);
+     return await sendMetaButtons(phone, "Boleto", bodyText, buttons, "", explicitPhoneId);
+   }
+ 
+   const whazingUrl = Deno.env.get('WHAZING_API_URL');
+   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
 
   if (!whazingUrl || !whazingToken) {
     console.log('[boleto-flow] Whazing not configured, skipping buttons');
