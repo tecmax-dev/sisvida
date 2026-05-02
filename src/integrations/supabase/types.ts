@@ -3070,12 +3070,14 @@ export type Database = {
           direct_reply_enabled: boolean | null
           external_webhook_url: string | null
           id: string
+          instance_id: string | null
           instance_name: string
           is_connected: boolean | null
           phone_number: string | null
           qr_code: string | null
           updated_at: string
           webhook_url: string | null
+          zapi_token: string | null
         }
         Insert: {
           api_key: string
@@ -3087,12 +3089,14 @@ export type Database = {
           direct_reply_enabled?: boolean | null
           external_webhook_url?: string | null
           id?: string
+          instance_id?: string | null
           instance_name: string
           is_connected?: boolean | null
           phone_number?: string | null
           qr_code?: string | null
           updated_at?: string
           webhook_url?: string | null
+          zapi_token?: string | null
         }
         Update: {
           api_key?: string
@@ -3104,12 +3108,14 @@ export type Database = {
           direct_reply_enabled?: boolean | null
           external_webhook_url?: string | null
           id?: string
+          instance_id?: string | null
           instance_name?: string
           is_connected?: boolean | null
           phone_number?: string | null
           qr_code?: string | null
           updated_at?: string
           webhook_url?: string | null
+          zapi_token?: string | null
         }
         Relationships: [
           {
