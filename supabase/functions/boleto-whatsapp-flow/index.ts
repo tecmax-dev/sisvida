@@ -3156,14 +3156,15 @@ serve(async (req) => {
     }
 
     // Process message through flow
-    const result = await handleBoletoFlow(
-      supabase,
-      evolution_config,
-      clinic_id,
-      phone,
-      message || '',
-      session
-    );
+     const result = await handleBoletoFlow(
+       supabase,
+       evolution_config,
+       clinic_id,
+       phone,
+       message || '',
+       session,
+       explicit_phone_id
+     );
 
     // Send response via WhatsApp if config provided
     if (evolution_config && result.response) {
