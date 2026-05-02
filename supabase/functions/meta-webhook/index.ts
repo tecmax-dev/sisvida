@@ -160,7 +160,7 @@ serve(async (req) => {
           try {
             const webhookPayload = {
               event: "messages.upsert",
-              instance: "meta_official",
+              instance: "meta",
               data: {
                 key: {
                   remoteJid: `${fromPhone}@s.whatsapp.net`,
