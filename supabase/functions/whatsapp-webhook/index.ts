@@ -583,27 +583,31 @@ async function sendMetaButtons(phone: string, title: string, description: string
      const digits = phone.replace(/\D/g, '');
      const to = digits.startsWith('55') ? digits : `55${digits}`;
  
-     const payload = {
-       messaging_product: "whatsapp",
-       recipient_type: "individual",
-       to,
-       type: "interactive",
-       interactive: {
-         type: "button",
-         header: { type: "text", text: title.substring(0, 60) },
-         body: { text: description.substring(0, 1024) || "Selecione uma opção abaixo:" },
-         ...(footer ? { footer: { text: footer.substring(0, 72) } } : {}),
-         action: {
-           buttons: buttons.slice(0, 3).map(b => ({
-             type: "reply",
-             reply: {
-               id: b.id,
-               title: (b.text || b.title || "").substring(0, 20)
-             }
-           }))
-         }
-       }
-     };
+      // Strip markdown from header text as Meta doesn't allow it
+      const cleanTitle = title.replace(/[\*_~`#]/g, '').trim().substring(0, 60);
+      const cleanDescription = description.substring(0, 1024) || "Selecione uma opção abaixo:";
+
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          header: { type: "text", text: cleanTitle },
+          body: { text: cleanDescription },
+          ...(footer ? { footer: { text: footer.substring(0, 72) } } : {}),
+          action: {
+            buttons: buttons.slice(0, 3).map(b => ({
+              type: "reply",
+              reply: {
+                id: b.id,
+                title: (b.text || b.title || "").substring(0, 20)
+              }
+            }))
+          }
+        }
+      };
  
      const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
        method: 'POST',
