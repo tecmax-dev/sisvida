@@ -51,33 +51,36 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Validar template aprovado
-    const { data: tpl } = await supabase
-      .from("whatsapp_meta_templates")
-      .select("status, variables_count, components")
-      .eq("name", template_name)
-      .eq("language", language)
-      .maybeSingle();
+    // Pular validação para o template padrão de teste hello_world
+    if (template_name !== "hello_world") {
+      // Validar template aprovado
+      const { data: tpl } = await supabase
+        .from("whatsapp_meta_templates")
+        .select("status, variables_count, components")
+        .eq("name", template_name)
+        .eq("language", language)
+        .maybeSingle();
 
-    if (!tpl) {
-      return new Response(
-        JSON.stringify({ error: `Template ${template_name} (${language}) não encontrado no cache. Sincronize antes.` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    if (tpl.status !== "APPROVED") {
-      return new Response(
-        JSON.stringify({ error: `Template não aprovado (status atual: ${tpl.status})` }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    if ((tpl.variables_count ?? 0) !== variables.length) {
-      return new Response(
-        JSON.stringify({
-          error: `Quantidade de variáveis inválida. Template requer ${tpl.variables_count}, recebido ${variables.length}.`,
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      if (!tpl) {
+        return new Response(
+          JSON.stringify({ error: `Template ${template_name} (${language}) não encontrado no cache. Sincronize antes.` }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (tpl.status !== "APPROVED") {
+        return new Response(
+          JSON.stringify({ error: `Template não aprovado (status atual: ${tpl.status})` }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if ((tpl.variables_count ?? 0) !== variables.length) {
+        return new Response(
+          JSON.stringify({
+            error: `Quantidade de variáveis inválida. Template requer ${tpl.variables_count}, recebido ${variables.length}.`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Montar payload Meta
