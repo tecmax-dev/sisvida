@@ -11,9 +11,45 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // TODO: Process incoming messages and status updates
-    // For now, just log and return 200
-    
+    const entries = payload.entry ?? [];
+    for (const entry of entries) {
+      const changes = entry.changes ?? [];
+      for (const change of changes) {
+        if (change.field !== "messages") continue;
+        const value = change.value ?? {};
+        const messages = value.messages ?? [];
+        
+        for (const msg of messages) {
+          const fromPhone = msg.from;
+          const content = msg.text?.body?.trim().toLowerCase();
+
+          if (content === "menu" || content === "olá" || content === "oi") {
+            console.log(`[zapresponder] Sending protocol template to ${fromPhone}`);
+            
+            // Dispara o template de protocolo como saudação oficial
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/meta-send-template`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+              },
+              body: JSON.stringify({
+                to: fromPhone,
+                template_name: "homologacao_protocolo",
+                variables: [
+                  "Atendimento Digital",
+                  "Cliente",
+                  "Sindicato",
+                  new Date().toLocaleDateString('pt-BR'),
+                  `META-${Date.now().toString().slice(-6)}`
+                ]
+              })
+            }).catch(err => console.error("[zapresponder] Error sending template:", err));
+          }
+        }
+      }
+    }
+
     return new Response(JSON.stringify({ received: true }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
