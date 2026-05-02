@@ -3113,7 +3113,7 @@ serve(async (req) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { clinic_id, phone, message, evolution_config, action } = await req.json();
+     const { clinic_id, phone, message, evolution_config, action, explicit_phone_id } = await req.json();
 
     if (!clinic_id || !phone) {
       return new Response(
