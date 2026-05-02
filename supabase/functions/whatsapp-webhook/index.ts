@@ -572,7 +572,8 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
 
  async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string): Promise<boolean> {
    try {
-     const PHONE_ID = Deno.env.get('META_PHONE_NUMBER_ID');
+     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
+     const PHONE_ID = "937233212814035";
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
      if (!PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
@@ -702,7 +703,8 @@ async function sendWhatsAppMessage(
  */
 async function sendMetaText(phone: string, text: string): Promise<boolean> {
   try {
-    const PHONE_ID = Deno.env.get('META_PHONE_NUMBER_ID');
+    // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
+    const PHONE_ID = "937233212814035";
     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
     if (!PHONE_ID || !TOKEN) {
       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
