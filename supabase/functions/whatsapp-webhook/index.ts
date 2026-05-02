@@ -756,6 +756,12 @@ async function sendWhatsAppButtons(
     const buttonText = limitedButtons.map((b, i) => `\n${i + 1}️⃣ ${b.text}`).join('');
     const fullText = `${bodyText}${buttonText}`;
 
+    // Special Routing: If API URL is 'meta', use Meta Cloud API
+    if (config.api_url === 'meta') {
+      console.log(`[booking] Routing buttons to Meta Cloud API for ${phone}`);
+      return await sendMetaButtons(phone, title, description, limitedButtons, footer);
+    }
+
     // If we are in a synchronous call (collector exists), push to it and return
     const collector = syncReplyStore.getStore();
     if (collector) {
