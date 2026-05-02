@@ -8104,39 +8104,40 @@ async function handleWebhook(req: Request) {
           return createSuccessResponse({ message: 'Main menu triggered' });
         }
         
-        // Level 1 buttons: main categories → send sub-menu
-         // Pre-check for stored Whazing category to disambiguate numeric choices (1, 2, 3)
-         const storedCategoryForDisambiguation = await getWhazingCategory(supabase, clinicId, phoneCandidates, null as any);
- 
-         // Level 1 buttons: main categories → send sub-menu
-         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
-         
-         // Numeric choices (1, 2, 3) are Level 1 ONLY if no sub-menu is active
-         if (!storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
-           isWhazingLevel1 = true;
-         }
-
-        // Level 2 buttons: sub-options → route to flow
+        // ===== WHAZING / META CONTEXT RETRIEVAL =====
+        const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
+        
+        // Level IDs for mapping
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-         let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
- 
-         // Numeric choices (1, 2, 3) are Level 2 if a sub-menu IS active
-         if (storedCategoryForDisambiguation && ['1', '2', '3'].includes(messageTextTrim)) {
-           isWhazingLevel2 = true;
-         }
-
-        // Level 3 buttons: follow-up actions after AI response + "Outros Assuntos" sub-options
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
-        const isWhazingFollowUp = whazingFollowUpIds.includes(messageText?.trim());
 
-        // Also handle legacy button IDs (whazing_outros)
-        const isWhazingLegacy = messageText?.trim() === 'whazing_outros';
+        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+        let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
+        const isWhazingLegacy = messageTextTrim === 'whazing_outros';
+
+        // Numeric Disambiguation (1, 2, 3) based on lastMenuType
+        if (['1', '2', '3'].includes(messageTextTrim)) {
+          if (!lastMenuType || lastMenuType === 'main') {
+            isWhazingLevel1 = true;
+          } else if (lastMenuType === 'sub') {
+            isWhazingLevel2 = true;
+          } else if (lastMenuType === 'followup') {
+            isWhazingFollowUp = true;
+          }
+        }
 
         // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
         if (isWhazingFollowUp) {
-          const followUpId = messageText.trim();
-          console.log(`[webhook] Whazing follow-up button: "${followUpId}"`);
+          let followUpId = messageTextTrim;
+          
+          // Numeric choice mapping for follow-up
+          if (followUpId === '1') followUpId = 'whazing_falar_atendente';
+          else if (followUpId === '2') followUpId = 'whazing_voltar_sub';
+          else if (followUpId === '3') followUpId = 'whazing_voltar_menu';
+
+          console.log(`[webhook] Whazing follow-up action: "${followUpId}"`);
 
           // Mirror/reopen local ticket immediately so dashboard reflects the active chat
           try {
@@ -8182,16 +8183,11 @@ async function handleWebhook(req: Request) {
           }
 
           if (followUpId === 'whazing_voltar_sub') {
-            // Retrieve stored category and resend sub-menu
-            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-            await sendWhazingSubMenu(configData, phone, storedCat);
-            return createSuccessResponse({ message: `Sub-menu resent for ${storedCat}` });
+            await sendWhazingSubMenu(configData, phone, storedCategory || 'associado');
+            return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
-            // Route to atendente via external-integration
-            const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-
             const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
             try {
@@ -8204,7 +8200,7 @@ async function handleWebhook(req: Request) {
                 body: JSON.stringify({
                   phone,
                   action: 'atendente',
-                  context: `Perfil: ${storedCat}`,
+                  context: `Perfil: ${storedCategory || 'associado'}`,
                   clinic_id: clinicId,
                   instance_name: configData.instance_name,
                 }),
