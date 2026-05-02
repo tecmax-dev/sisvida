@@ -8126,7 +8126,7 @@ async function handleWebhook(req: Request) {
 
             // Follow-up buttons after AI response
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+            await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
@@ -8156,7 +8156,7 @@ async function handleWebhook(req: Request) {
 
             // Follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+            await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
@@ -8293,7 +8293,7 @@ async function handleWebhook(req: Request) {
 
             // Send follow-up buttons after image
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhazingButtons(phone, "Posso ajudar com mais alguma coisa?", [
+            await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
@@ -8316,14 +8316,14 @@ async function handleWebhook(req: Request) {
             console.log(`[webhook] Whazing "Outros Assuntos" → category-specific sub-menu (${storedCategory})`);
 
             if (storedCategory === 'associado') {
-              await sendWhazingButtons(phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", [
+              await sendWhatsAppButtons(configData, phone, "*Outros Assuntos - Associado*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
               ]);
             } else {
               // empresa / contabilidade
-              await sendWhazingButtons(phone, "*Outros Assuntos*\n\nComo podemos ajudar?", [
+              await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
@@ -8376,7 +8376,7 @@ async function handleWebhook(req: Request) {
               // Send follow-up buttons only for informational flows.
               // For human-support handoff, avoid re-opening submenus/buttons and causing loop/re-entry.
               await new Promise(resolve => setTimeout(resolve, 2000));
-              await sendWhazingButtons(phone, "O que deseja fazer agora?", [
+              await sendWhatsAppButtons(configData, phone, "O que deseja fazer agora?", "", [
                 { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
                 { id: "whazing_voltar_menu", title: "Menu Principal" },
