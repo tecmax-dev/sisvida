@@ -1,157 +1,124 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
-
-serve(async (req) => {
-  try {
-    const payload = await req.json();
-    console.log("Zap Responder Webhook received:", JSON.stringify(payload));
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const entries = payload.entry ?? [];
-    for (const entry of entries) {
-      const changes = entry.changes ?? [];
-      for (const change of changes) {
-        if (change.field !== "messages") continue;
-        const value = change.value ?? {};
-        const messages = value.messages ?? [];
-        
-        for (const msg of messages) {
-          const fromPhone = msg.from;
-          const content = msg.text?.body?.trim() || "";
-          const profileName = payload.entry?.[0]?.changes?.[0]?.value?.contacts?.[0]?.profile?.name || "Cliente";
-
-          console.log(`[zapresponder] Processando mensagem de ${fromPhone}: ${content}`);
-
-          // Bloqueia loop infinito se o bot receber sua própria mensagem ou se for um status update
-          if (!content && !msg.type) continue;
-
-          // Lógica: Se for a PRIMEIRA mensagem (saudação), envia o Protocolo e o Menu.
-          // Se for uma resposta a uma opção, o whatsapp-webhook processará a lógica de bot.
-          
-          const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar)$/i.test(content);
-
-          if (isGreeting || !content) {
-            console.log(`[zapresponder] Saudação detectada. Enviando protocolo e acionando bot principal.`);
-            
-            // 1. Envia o template de protocolo
-            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/meta-send-template`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-              },
-              body: JSON.stringify({
-                to: fromPhone,
-                template_name: "homologacao_protocolo",
-                variables: [
-                  "Atendimento Digital",
-                  profileName,
-                  "Sindicato dos Comerciários",
-                  new Date().toLocaleDateString('pt-BR'),
-                  `META-${Date.now().toString().slice(-6)}`
-                ]
-              })
-            }).catch(err => console.error("[zapresponder] Erro ao enviar template:", err));
-
-            // 2. Encaminha para o bot principal (whatsapp-webhook) para mostrar o MENU inicial
-            // Criamos um payload compatível com o que o bot principal espera (formato Evolution)
-            const botPayload = {
-              event: "messages.upsert",
-              instance: "meta",
-              data: {
-                key: {
-                  remoteJid: `${fromPhone}@s.whatsapp.net`,
-                  fromMe: false,
-                  id: msg.id
-                },
-                message: {
-                  conversation: "menu" // Forçamos o comando 'menu' para garantir que o bot inicie o fluxo
-                },
-                pushName: profileName,
-                messageTimestamp: msg.timestamp
-              }
-            };
-
-            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-webhook`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-              },
-              body: JSON.stringify(botPayload)
-            }).catch(err => console.error("[zapresponder] Erro ao encaminhar para bot principal:", err));
-
-          } else {
-            // Se não for saudação, apenas encaminha o que o usuário digitou para o bot processar (ex: CPF ou opção do menu)
-            console.log(`[zapresponder] Encaminhando resposta do usuário para o bot principal.`);
-            
-            const botPayload = {
-              event: "messages.upsert",
-              instance: "meta",
-              data: {
-                key: {
-                  remoteJid: `${fromPhone}@s.whatsapp.net`,
-                  fromMe: false,
-                  id: msg.id
-                },
-                message: {
-                  conversation: content
-                },
-                pushName: profileName,
-                messageTimestamp: msg.timestamp
-              }
-            };
-
-            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-webhook`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-              },
-              body: JSON.stringify(botPayload)
-            }).catch(err => console.error("[zapresponder] Erro ao encaminhar resposta:", err));
-          }
-
-          console.log(`[zapresponder] Processando mensagem de ${fromPhone}: ${content}`);
-          
-          // Qualquer mensagem inicial ou saudação dispara o protocolo oficial
-          console.log(`[zapresponder] Enviando template de protocolo para ${fromPhone}`);
-          
-          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/meta-send-template`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-            },
-            body: JSON.stringify({
-              to: fromPhone,
-              template_name: "homologacao_protocolo",
-              variables: [
-                "Atendimento Digital",
-                profileName,
-                "Sindicato dos Comerciários",
-                new Date().toLocaleDateString('pt-BR'),
-                `META-${Date.now().toString().slice(-6)}`
-              ]
-            })
-          }).then(async res => {
-            const resJson = await res.json();
-            console.log(`[zapresponder] Resultado do envio:`, resJson);
-          }).catch(err => console.error("[zapresponder] Erro ao enviar template:", err));
-        }
-      }
-    }
-
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    console.error("Webhook error:", error);
-    return new Response(error.message, { status: 500 });
-  }
-});
+ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+ import { createClient } from "npm:@supabase/supabase-js@2";
+ 
+ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+ 
+ serve(async (req) => {
+   try {
+     const payload = await req.json();
+     console.log("[zapresponder] Webhook received");
+ 
+     const supabase = createClient(
+       Deno.env.get("SUPABASE_URL")!,
+       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+     );
+ 
+     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+ 
+     const entries = payload.entry ?? [];
+     for (const entry of entries) {
+       const changes = entry.changes ?? [];
+       for (const change of changes) {
+         if (change.field !== "messages") continue;
+         const value = change.value ?? {};
+         const messages = value.messages ?? [];
+         const profileName = value?.contacts?.[0]?.profile?.name || "Cliente";
+ 
+         for (const msg of messages) {
+           const fromPhone = msg.from;
+           const content = msg.text?.body?.trim() || "";
+ 
+           console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
+ 
+           if (!content) continue;
+ 
+           // Verifica se já enviamos protocolo recentemente para evitar spam
+           // Considera "nova conversa" se o último protocolo foi há mais de 4h
+           const cutoff = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+ 
+           const { data: recentProtocol } = await supabase
+             .from("whatsapp_ticket_messages")
+             .select("id, created_at, metadata")
+             .gte("created_at", cutoff)
+             .eq("sender_type", "operator")
+             .eq("message_type", "template")
+             .ilike("content", "%homologacao_protocolo%")
+             .order("created_at", { ascending: false })
+             .limit(20);
+ 
+           // Procura por protocolo enviado para este telefone
+           const alreadySent = recentProtocol?.some((m: any) => {
+             const phoneInMeta = m.metadata?.to || "";
+             return String(phoneInMeta).replace(/\D/g, "").endsWith(fromPhone.replace(/\D/g, "").slice(-9));
+           });
+ 
+           const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi)$/i.test(content);
+ 
+           // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
+           if (isGreeting && !alreadySent) {
+             console.log(`[zapresponder] Nova conversa - enviando protocolo`);
+             
+             await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${SERVICE_ROLE}`
+               },
+               body: JSON.stringify({
+                 to: fromPhone,
+                 template_name: "homologacao_protocolo",
+                 variables: [
+                   "Atendimento Digital",
+                   profileName,
+                   "Sindicato dos Comerciários",
+                   new Date().toLocaleDateString('pt-BR'),
+                   `META-${Date.now().toString().slice(-6)}`
+                 ]
+               })
+             }).catch(err => console.error("[zapresponder] Erro template:", err));
+           } else if (alreadySent) {
+             console.log(`[zapresponder] Protocolo já enviado nas últimas 4h - pulando`);
+           }
+ 
+           // SEMPRE encaminha para o bot principal processar a lógica de menu/atendimento
+           const messageToBot = isGreeting ? "menu" : content;
+           console.log(`[zapresponder] Encaminhando para bot principal como: "${messageToBot}"`);
+ 
+           const botPayload = {
+             event: "messages.upsert",
+             instance: "meta",
+             clinic_id: SINDICATO_CLINIC_ID,
+             data: {
+               key: {
+                 remoteJid: `${fromPhone}@s.whatsapp.net`,
+                 fromMe: false,
+                 id: msg.id
+               },
+               message: { conversation: messageToBot },
+               pushName: profileName,
+               messageTimestamp: msg.timestamp
+             }
+           };
+ 
+           await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-webhook`, {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${SERVICE_ROLE}`
+             },
+             body: JSON.stringify(botPayload)
+           }).catch(err => console.error("[zapresponder] Erro bot:", err));
+         }
+       }
+     }
+ 
+     return new Response(JSON.stringify({ received: true }), {
+       headers: { "Content-Type": "application/json" },
+       status: 200,
+     });
+   } catch (error) {
+     console.error("[zapresponder] Webhook error:", error);
+     return new Response(JSON.stringify({ error: String(error) }), { status: 500 });
+   }
+ });
