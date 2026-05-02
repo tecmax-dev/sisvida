@@ -634,7 +634,8 @@ async function sendMetaButtons(phone: string, title: string, description: string
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
-  message: string
+  message: string,
+  explicitPhoneId?: string
 ): Promise<boolean> {
   try {
     const collector = syncReplyStore.getStore();
@@ -650,7 +651,7 @@ async function sendWhatsAppMessage(
 
     if (config.api_url === 'meta') {
       console.log(`[booking] Routing text to Meta Cloud API for ${destination}`);
-      return await sendMetaText(phone, message);
+      return await sendMetaText(phone, message, explicitPhoneId);
     }
 
     if (config.api_url === 'zapster') {
@@ -753,7 +754,8 @@ async function sendWhatsAppButtons(
   title: string,
   description: string,
   buttons: ButtonOption[],
-  footer?: string
+  footer?: string,
+  explicitPhoneId?: string
 ): Promise<boolean> {
   try {
     // Limit to 3 options
@@ -775,7 +777,7 @@ async function sendWhatsAppButtons(
     // Special Routing: If API URL is 'meta', use Meta Cloud API
     if (config.api_url === 'meta') {
       console.log(`[booking] Routing buttons to Meta Cloud API for ${phone}`);
-      return await sendMetaButtons(phone, title, description, limitedButtons, footer);
+      return await sendMetaButtons(phone, title, description, limitedButtons, footer, explicitPhoneId);
     }
 
     // If we are in a synchronous call (collector exists), push to it and return
