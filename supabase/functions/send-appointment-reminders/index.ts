@@ -443,13 +443,14 @@ serve(async (req) => {
     console.log(`[UTC: ${nowUTC.toISOString()}] [Brasil/Bahia: ${formatDateBrazil(now)}] Starting automatic reminder check`);
 
     // Get clinics with reminders enabled (including union entity logo for priority)
-    const { data: clinics, error: clinicsError } = await supabase
-      .from('clinics')
-      .select(`
-        id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url,
-        union_entities!union_entities_clinic_id_fkey(logo_url)
-      `)
-      .eq('reminder_enabled', true);
+     const { data: clinics, error: clinicsError } = await supabase
+       .from('clinics')
+       .select(`
+         id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url,
+         whatsapp_provider,
+         union_entities!union_entities_clinic_id_fkey(logo_url)
+       `)
+       .eq('reminder_enabled', true);
 
     if (clinicsError) {
       console.error('Error fetching clinics:', clinicsError);
@@ -608,14 +609,39 @@ serve(async (req) => {
           profName
         );
 
-        let success = false;
-        
-        // Appointment reminders are text-only to reduce WhatsApp ban risk.
-        success = await sendWhatsAppViaEvolution(
-          evolutionConfig as EvolutionConfig,
-          phoneToUse,
-          message
-        );
+       let success = false;
+       const whatsappProvider = clinic.whatsapp_provider || 'evolution';
+
+       if (whatsappProvider === 'zapresponder') {
+         console.log(`[${clinic.name}] Sending reminder via Meta (ZapResponder) to ${phoneToUse}`);
+         try {
+           const metaResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-whatsapp-zapresponder`, {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+             },
+             body: JSON.stringify({
+               phone: phoneToUse,
+               message: message,
+               clinicId: clinic.id,
+               type: 'reminder'
+             }),
+           });
+           const metaData = await metaResp.json();
+           success = metaResp.ok && metaData.success;
+         } catch (err) {
+           console.error(`[${clinic.name}] Error sending via Meta:`, err);
+           success = false;
+         }
+       } else {
+         // Appointment reminders are text-only to reduce WhatsApp ban risk.
+         success = await sendWhatsAppViaEvolution(
+           evolutionConfig as EvolutionConfig,
+           phoneToUse,
+           message
+         );
+       }
 
         // Fallback: if Evolution fails, send text via Whazing
         if (!success) {
