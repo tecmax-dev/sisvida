@@ -8276,10 +8276,8 @@ async function handleWebhook(req: Request) {
           }
         }
 
-        // LEVEL 1: Main menu choices (1, 2, 3)
-        if (isWhazingLevel1 || (['1', '2', '3'].includes(messageTextTrim) && !storedCategoryForDisambiguation)) {
-          console.log(`[webhook] Whazing Level 1 choice: "${messageTextTrim}" → sending sub-menu`);
-          
+        // LEVEL 1: Main menu choices
+        if (isWhazingLevel1) {
           const categoryMap: Record<string, WhazingCategory> = {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
@@ -8288,12 +8286,11 @@ async function handleWebhook(req: Request) {
             '2': 'empresa',
             '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim] ?? 'associado';
+          const category = categoryMap[messageTextTrim] || 'associado';
+          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
 
-          // Store the selected category in a temporary session for context
-          await storeWhazingCategory(supabase, clinicId, phone, category);
-
-          const subSent = await sendWhazingSubMenu(configData, phone, category);
+          await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
+          await sendWhazingSubMenu(configData, phone, category);
           
           await supabase.from('whatsapp_incoming_logs').insert({
             clinic_id: clinicId,
@@ -8308,12 +8305,10 @@ async function handleWebhook(req: Request) {
         }
 
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
-        if (isWhazingLevel2 || isWhazingLegacy || (['1', '2', '3'].includes(messageTextTrim) && storedCategoryForDisambiguation)) {
-          console.log(`[webhook] Whazing Level 2 button: "${messageText}" → routing to flow`);
-
-          // Retrieve stored category context
-          const storedCategory = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
-
+        if (isWhazingLevel2 || isWhazingLegacy) {
+          const currentCategory = storedCategory || 'associado';
+          console.log(`[webhook] Whazing L2 button: "${messageTextTrim}" (category: ${currentCategory})`);
+          
            let btnId = messageText.trim();
  
            // Map numeric choices (1, 2, 3) to button IDs based on category
@@ -8327,7 +8322,7 @@ async function handleWebhook(req: Request) {
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
-            console.log(`[webhook] Whazing boleto button → direct boleto flow (category: ${storedCategory})`);
+            console.log(`[webhook] Whazing boleto button → direct boleto flow (category: ${currentCategory})`);
             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
