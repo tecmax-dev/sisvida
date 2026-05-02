@@ -12,7 +12,8 @@ interface SendBody {
   to: string; // E.164 sem +, ex: 5573999999999
   template_name: string;
   language?: string;
-  variables?: string[]; // valores para {{1}}, {{2}}, ...
+   variables?: string[]; // valores para {{1}}, {{2}}, ... (Body)
+   button_variables?: string[]; // valores para {{1}}, {{2}}, ... (Buttons)
   ticket_id?: string;
 }
 
@@ -84,23 +85,36 @@ serve(async (req) => {
       }
     }
 
-    // Montar payload Meta
-    const components: any[] = [];
-    if (variables.length > 0) {
-      components.push({
-        type: "body",
-        parameters: variables.map((v) => ({ type: "text", text: String(v) })),
-      });
-    }
-
-    const payload = {
+     const metaComponents: any[] = [];
+     
+     // 1. Body variables
+     if (variables.length > 0) {
+       metaComponents.push({
+         type: "body",
+         parameters: variables.map((v) => ({ type: "text", text: String(v) })),
+       });
+     }
+ 
+     // 2. Button variables (URL parameters)
+     if (body.button_variables && body.button_variables.length > 0) {
+       // Meta requires parameters for each button index if it has variables
+       // In this specific template, button index 2 is the URL button with {{1}}
+       metaComponents.push({
+         type: "button",
+         sub_type: "url",
+         index: "2", // 0-indexed index of the button in the template
+         parameters: body.button_variables.map(v => ({ type: "text", text: String(v) }))
+       });
+     }
+ 
+     const payload = {
       messaging_product: "whatsapp",
       to: normalizePhone(to),
       type: "template",
       template: {
         name: template_name,
         language: { code: language },
-        ...(components.length > 0 ? { components } : {}),
+         ...(metaComponents.length > 0 ? { components: metaComponents } : {}),
       },
     };
 
