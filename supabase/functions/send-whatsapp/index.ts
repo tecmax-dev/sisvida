@@ -21,13 +21,15 @@ interface WhatsAppRequest {
   sendAsTextOnly?: boolean;
 }
 
-interface EvolutionConfig {
-  api_url: string;
-  api_key: string;
-  instance_name: string;
-  is_connected: boolean;
-  direct_reply_enabled?: boolean | null;
-}
+ interface EvolutionConfig {
+   api_url: string;
+   api_key: string;
+   instance_name: string;
+   is_connected: boolean;
+   direct_reply_enabled?: boolean | null;
+   zapi_token?: string;
+   instance_id?: string;
+ }
 
 function getWhazingSendUrl(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/$/, '');
@@ -459,11 +461,11 @@ serve(async (req) => {
     }
 
     // 9. Check which WhatsApp provider to use
-    const { data: clinicProviderData } = await supabase
-      .from('clinics')
-      .select('whatsapp_provider, logo_url, whatsapp_header_image_url')
-      .eq('id', clinicId)
-      .single();
+     const { data: clinicProviderData } = await supabase
+       .from('clinics')
+       .select('whatsapp_provider, logo_url, whatsapp_header_image_url, phone')
+       .eq('id', clinicId)
+       .single();
 
     // 9.1 Check for union entity logo (takes priority for sindicatos)
     let unionLogo: string | null = null;
@@ -625,12 +627,57 @@ serve(async (req) => {
       );
     }
 
-    // ========== EVOLUTION API PROVIDER (default) ==========
-    const { data: evolutionConfig, error: configError } = await supabase
-      .from('evolution_configs')
-      .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled')
-      .eq('clinic_id', clinicId)
-      .maybeSingle();
+     // ========== EVOLUTION / Z-API PROVIDER ==========
+     const { data: evolutionConfig, error: configError } = await supabase
+       .from('evolution_configs')
+       .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled, zapi_token, instance_id')
+       .eq('clinic_id', clinicId)
+       .maybeSingle();
+     // ========== Z-API PROVIDER ==========
+     if (whatsappProvider === 'zapi') {
+       if (!evolutionConfig?.instance_id || !evolutionConfig?.zapi_token) {
+         return new Response(
+           JSON.stringify({ success: false, error: 'Z-API não configurada corretamente (Instance ID ou Token ausentes).' }),
+           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+         );
+       }
+ 
+       const zapiInstanceId = evolutionConfig.instance_id;
+       const zapiToken = evolutionConfig.zapi_token;
+       const zapiUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`;
+ 
+       console.log(`[Clinic ${clinicId}] Sending via Z-API to ${cleanPhone}`);
+ 
+       const zapiResponse = await fetch(zapiUrl, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ phone: cleanPhone, message: safeMessage }),
+       });
+ 
+       const zapiResult = await zapiResponse.json();
+ 
+       if (!zapiResponse.ok) {
+         console.error('[Z-API] Send failed:', zapiResult);
+         return new Response(
+           JSON.stringify({ success: false, error: zapiResult.message || 'Erro ao enviar via Z-API' }),
+           { status: zapiResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+         );
+       }
+ 
+       // Log message
+       await supabase.from('message_logs').insert({
+         clinic_id: clinicId,
+         message_type: type,
+         phone: cleanPhone,
+         month_year: monthYear,
+       });
+ 
+       return new Response(
+         JSON.stringify({ success: true, data: zapiResult }),
+         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+       );
+     }
+ 
 
     if (configError) {
       console.error('Error fetching evolution config:', configError);
