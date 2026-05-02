@@ -8047,13 +8047,12 @@ async function handleWebhook(req: Request) {
         configData = {
           clinic_id: explicitClinicId,
           instance_name: 'meta_official',
-          api_url: 'meta', 
+          api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
           api_key: 'meta',
           booking_enabled: true,
           direct_reply_enabled: true
         } as EvolutionConfig;
       }
-
       if (configData) {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
