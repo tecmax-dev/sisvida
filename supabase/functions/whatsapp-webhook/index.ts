@@ -958,7 +958,7 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
   }
 }
 
-async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): Promise<boolean> {
+async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string, explicitPhoneId?: string): Promise<boolean> {
   return sendWhatsAppButtons(config, phone, 
     "Olá! 👋 Bem-vindo(a) ao atendimento.",
     "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
@@ -966,7 +966,9 @@ async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string): P
       { id: "whazing_associado", text: "Sou Associado" },
       { id: "whazing_empresa", text: "Sou Empresa" },
       { id: "whazing_contabilidade", text: "Sou Contabilidade" },
-    ]
+    ],
+    "",
+    explicitPhoneId
   );
 }
 
