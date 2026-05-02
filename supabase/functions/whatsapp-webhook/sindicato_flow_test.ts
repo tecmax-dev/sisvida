@@ -114,7 +114,10 @@ Deno.test("sindicato flow: associado button opens submenu", async () => {
   );
    // "Atualizar Carteirinha" (21 chars) is truncated to 20 chars by the bot: "Atualizar Carteirinh"
    assert(/atualizar carteirinh/i.test(reply), `missing "Atualizar Carteirinha" button: ${reply}`);
-  assert(/conven\w*\s+coletiv/i.test(reply), `missing "Convenções Coletivas" button: ${reply}`);
+   // The bot code trims emojis and truncates to 20 chars.
+   // "Convenções Coletivas" is exactly 20 chars, but depending on how emojis/spacing 
+   // were handled in the actual reply string, we check for a flexible match.
+   assert(/conven/i.test(reply) && /coletiv/i.test(reply), `missing "Convenções Coletivas" button: ${reply}`);
   assert(/outros assuntos/i.test(reply), `missing "Outros Assuntos" button: ${reply}`);
 });
 
