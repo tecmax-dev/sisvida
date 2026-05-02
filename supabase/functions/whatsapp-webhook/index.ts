@@ -8188,7 +8188,7 @@ async function handleWebhook(req: Request) {
           }
 
           if (followUpId === 'whazing_voltar_sub') {
-            await sendWhazingSubMenu(configData, phone, storedCategory || 'associado');
+            await sendWhazingSubMenu(configData, phone, (storedCategory as any) || 'associado', explicitPhoneId);
             return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
           }
 
