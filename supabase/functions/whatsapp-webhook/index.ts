@@ -8105,7 +8105,7 @@ async function handleWebhook(req: Request) {
             .eq('clinic_id', clinicId)
             .in('phone', phoneCandidates)
             .contains('messages', { source: 'whazing_menu' });
-          await sendWhazingMenuButtons(configData, phone);
+          await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
           return createSuccessResponse({ message: 'Main menu triggered' });
         }
         
