@@ -9092,21 +9092,20 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
 serve(async (req) => {
   const collector: string[] = [];
-  // Check if payload has sync: true
-   // Only use sync collector if it's explicitly a test or internal request.
-   // External Evolution API / Zap Responder payloads sometimes include "sync: true"
-   // but they don't support receiving the reply in the HTTP response.
-   // Only use sync collector if it's explicitly a test or internal request.
-   // External Evolution API / Zap Responder payloads often include "sync: true"
-   // but they don't support receiving the reply in the HTTP response body.
-   const clonedReq = req.clone();
-   let isTestPayload = false;
-   try {
-     const body = await clonedReq.json();
-     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
-   } catch { /* ignore */ }
- 
-  // Evolution API sends webhooks to /whatsapp-webhook
-  // Internal calls (tests) use the same path
-  return await syncReplyStore.run(collector, () => handleWebhook(req));
+  // Only use the synchronous reply collector for explicit internal tests.
+  // Real Evolution API webhooks must send messages through the provider; if
+  // they run inside AsyncLocalStorage, sendWhatsAppButtons/sendWhatsAppMessage
+  // only append to the HTTP response and nothing is delivered to WhatsApp.
+  const clonedReq = req.clone();
+  let isTestPayload = false;
+  try {
+    const body = await clonedReq.json();
+    isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
+  } catch { /* ignore */ }
+
+  if (isTestPayload) {
+    return await syncReplyStore.run(collector, () => handleWebhook(req));
+  }
+
+  return await handleWebhook(req);
 });
