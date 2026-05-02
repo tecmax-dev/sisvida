@@ -974,7 +974,7 @@ async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string, ex
 
 type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 
-async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory): Promise<boolean> {
+async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory, explicitPhoneId?: string): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
       text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
@@ -1003,7 +1003,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
   };
 
   const sub = subMenus[category];
-  return sendWhatsAppButtons(config, phone, sub.text, "", sub.buttons.map(b => ({ id: b.id, text: b.title })));
+  return sendWhatsAppButtons(config, phone, sub.text, "", sub.buttons.map(b => ({ id: b.id, text: b.title })), "", explicitPhoneId);
 }
 
 function parseWhazingCategory(messages: unknown): WhazingCategory | null {
