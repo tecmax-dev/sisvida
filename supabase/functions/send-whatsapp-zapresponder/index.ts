@@ -15,13 +15,16 @@ serve(async (req) => {
 
   try {
      const body = await req.json();
-     const {
-       phone,
-       message,
-       clinicId,
-       mediaUrl,
-       test,
-     } = body;
+      const {
+        phone,
+        message,
+        clinicId,
+        mediaUrl,
+        test,
+        templateName,
+        templateLanguage,
+        templateComponents
+      } = body;
 
      if (!clinicId || (!phone && !test)) {
       return new Response(
@@ -68,11 +71,19 @@ serve(async (req) => {
     for (const cfg of configs) {
       console.log(`[zapresponder] Attempting send via instance ${cfg.instance_id} to ${cleanPhone}`);
       
-      const payload = {
+      const payload: any = {
         phone: cleanPhone,
         message: message,
         departmentId: cfg.instance_id,
       };
+
+      if (templateName) {
+        payload.template = {
+          name: templateName,
+          language: templateLanguage || 'pt_BR',
+          components: templateComponents || []
+        };
+      }
 
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 

@@ -609,6 +609,17 @@ serve(async (req) => {
           profName
         );
 
+        // Determine template variables if using Meta
+        const specialty = professional?.specialty || 'Consulta Médica';
+        const templateComponents = [
+          displayName,        // {{1}} Nome
+          profName,           // {{2}} Profissional
+          specialty,          // {{3}} Especialidade
+          dateFormatted,      // {{4}} Data
+          time,               // {{5}} Hora
+          effectiveClinicName // {{6}} Local
+        ];
+
        let success = false;
        const whatsappProvider = clinic.whatsapp_provider || 'evolution';
 
@@ -621,12 +632,14 @@ serve(async (req) => {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
              },
-             body: JSON.stringify({
-               phone: phoneToUse,
-               message: message,
-               clinicId: clinic.id,
-               type: 'reminder'
-             }),
+            body: JSON.stringify({
+              phone: phoneToUse,
+              message: message,
+              clinicId: clinic.id,
+              type: 'reminder',
+              templateName: 'lembrete_consulta_v2',
+              templateComponents: templateComponents
+            }),
            });
            const metaData = await metaResp.json();
            success = metaResp.ok && metaData.success;
