@@ -3182,9 +3182,9 @@ serve(async (req) => {
       const requiresButtons = interactiveStates.includes(nextState);
 
       // Interactive states must never be sent as a plain numbered/text list.
-      if (!requiresButtons) {
-        await sendWhatsAppMessage(evolution_config, phone, result.response);
-      }
+       if (!requiresButtons) {
+         await sendWhatsAppMessage(evolution_config, phone, result.response, explicit_phone_id);
+       }
       
       // Send interactive buttons based on new state
       
