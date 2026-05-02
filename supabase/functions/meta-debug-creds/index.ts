@@ -6,22 +6,20 @@
    const WABA_ID = Deno.env.get("META_WABA_ID");
  
    try {
-     const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}?fields=display_phone_number,verified_name,code_verification_status`, {
+     const phonesRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}/phone_numbers`, {
        headers: { Authorization: `Bearer ${TOKEN}` }
      });
-     const phoneInfo = await res.json();
+     const phonesInfo = await phonesRes.json();
  
-     const wabaRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}`, {
+     const wabaRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}?fields=id,name,message_template_namespace`, {
        headers: { Authorization: `Bearer ${TOKEN}` }
      });
      const wabaInfo = await wabaRes.json();
  
      return new Response(JSON.stringify({ 
-       phone: phoneInfo, 
+       phones: phonesInfo, 
        waba: wabaInfo,
-       phone_id_set: !!PHONE_ID,
-       token_set: !!TOKEN,
-       waba_id_set: !!WABA_ID
+       current_phone_id: PHONE_ID
      }), { headers: { "Content-Type": "application/json" } });
    } catch (e) {
      return new Response(JSON.stringify({ error: e.message }), { status: 500 });
