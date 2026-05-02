@@ -19,6 +19,9 @@ interface WhatsAppRequest {
   imageUrl?: string; // URL da imagem para enviar como cabeçalho
   appointmentId?: string;
   sendAsTextOnly?: boolean;
+  templateName?: string;
+  templateLanguage?: string;
+  templateComponents?: string[];
 }
 
  interface EvolutionConfig {
@@ -314,6 +317,40 @@ async function sendWhazingConfirmationButtons(
   }
 }
 
+async function sendMetaText(phone: string, text: string): Promise<boolean> {
+  try {
+    const PHONE_ID = Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+    const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+    if (!PHONE_ID || !TOKEN) {
+      console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
+      return false;
+    }
+    const digits = phone.replace(/\D/g, '');
+    const to = digits.startsWith('55') ? digits : `55${digits}`;
+    const r = await fetch(
+      `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: text },
+        }),
+      }
+    );
+    if (!r.ok) {
+      console.error('[meta-text] Meta error:', await r.text());
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[meta-text] Exception:', e);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -494,7 +531,61 @@ serve(async (req) => {
 
     // ========== ZAP RESPONDER PROVIDER (META OFFICIAL API) ==========
     if (whatsappProvider === 'zapresponder') {
-      console.log(`[Clinic ${clinicId}] Sending via Zap Responder to ${cleanPhone}`);
+      const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
+      if (isSindicato) {
+        if (body.templateName) {
+           console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${body.templateName} to meta-send-template`);
+           try {
+             const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${supabaseServiceKey}`,
+               },
+               body: JSON.stringify({
+                 to: cleanPhone,
+                 template_name: body.templateName,
+                 language: body.templateLanguage || 'pt_BR',
+                 variables: body.templateComponents || []
+               }),
+             });
+             const templateResult = await templateResp.json();
+             if (templateResp.ok) {
+                await supabase.from('message_logs').insert({
+                  clinic_id: clinicId,
+                  message_type: type,
+                  phone: cleanPhone,
+                  month_year: monthYear,
+                });
+                return new Response(
+                  JSON.stringify({ success: true, method: 'meta_template_direct', data: templateResult }),
+                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+             }
+             console.error('[Meta Template Direct] Error:', templateResult);
+           } catch (tplErr) {
+             console.error('[Meta Template Direct] Exception:', tplErr);
+           }
+        } else {
+          console.log(`[Clinic ${clinicId}] Sindicato: Sending direct text via Meta Graph API to ${cleanPhone}`);
+          const success = await sendMetaText(cleanPhone, safeMessage);
+          if (success) {
+             await supabase.from('message_logs').insert({
+               clinic_id: clinicId,
+               message_type: type,
+               phone: cleanPhone,
+               month_year: monthYear,
+             });
+             return new Response(
+               JSON.stringify({ success: true, method: 'meta_direct' }),
+               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+             );
+          }
+        }
+      }
+
+      console.log(`[Clinic ${clinicId}] Sending via Zap Responder wrapper to ${cleanPhone}`);
       
       // We call our internal send-whatsapp-zapresponder function
       // passing the necessary credentials and data
