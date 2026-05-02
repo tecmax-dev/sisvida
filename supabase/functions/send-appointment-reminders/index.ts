@@ -609,6 +609,17 @@ serve(async (req) => {
           profName
         );
 
+        // Determine template variables if using Meta
+        const specialty = professional?.specialty || 'Consulta Médica';
+        const templateComponents = [
+          displayName,        // {{1}} Nome
+          profName,           // {{2}} Profissional
+          specialty,          // {{3}} Especialidade
+          dateFormatted,      // {{4}} Data
+          time,               // {{5}} Hora
+          effectiveClinicName // {{6}} Local
+        ];
+
        let success = false;
        const whatsappProvider = clinic.whatsapp_provider || 'evolution';
 
