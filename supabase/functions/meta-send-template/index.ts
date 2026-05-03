@@ -55,15 +55,16 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Pular validação para o template padrão de teste hello_world
+    // Buscar template (necessário fora do if para usar components depois)
+    let tpl: any = null;
     if (template_name !== "hello_world") {
-      // Validar template aprovado
-      const { data: tpl } = await supabase
+      const { data } = await supabase
         .from("whatsapp_meta_templates")
         .select("status, variables_count, components")
         .eq("name", template_name)
         .eq("language", language)
         .maybeSingle();
+      tpl = data;
 
       if (!tpl) {
         return new Response(
