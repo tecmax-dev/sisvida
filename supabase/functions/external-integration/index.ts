@@ -146,7 +146,13 @@ serve(async (req) => {
     };
 
     // Build the message to send to AI assistant
-    let aiMessage = message || actionMap[action.toLowerCase()] || action;
+    const normalizedAction = action.toLowerCase().trim();
+    let aiMessage = message || actionMap[normalizedAction] || action;
+
+    // Force CCT message if action is "cct" regardless of original input
+    if (normalizedAction === 'cct') {
+      aiMessage = actionMap['cct'];
+    }
 
     // If context is provided, prepend it
     if (context) {
