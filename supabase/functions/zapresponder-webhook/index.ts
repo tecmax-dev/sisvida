@@ -31,6 +31,7 @@
             
             // Extrai conteúdo de diferentes tipos de mensagens Meta
             let content = "";
+             let buttonPayload = "";
             if (msg.type === "text") {
               content = msg.text?.body?.trim() || "";
             } else if (msg.type === "interactive") {
@@ -38,13 +39,82 @@
                         msg.interactive?.button_reply?.title || 
                         msg.interactive?.list_reply?.id || 
                         "";
+               buttonPayload = (msg.interactive?.button_reply?.title || msg.interactive?.button_reply?.id || "").toString();
             } else if (msg.type === "button") {
               content = msg.button?.payload || msg.button?.text || "";
+               buttonPayload = (msg.button?.text || msg.button?.payload || "").toString();
             }
  
            console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
  
            if (!content) continue;
+
+            // ===== Tratamento de botões do template lembrete_consulta_v2 (Confirmar / Cancelar) =====
+            const normalized = (buttonPayload || content).toString().trim().toLowerCase();
+            if (normalized === "confirmar" || normalized === "cancelar") {
+              console.log(`[zapresponder] Botão de lembrete detectado: ${normalized}`);
+              try {
+                const phoneDigits = fromPhone.replace(/\D/g, "");
+                const phoneNoBR = phoneDigits.startsWith("55") ? phoneDigits.slice(2) : phoneDigits;
+                const todayIso = new Date().toISOString().slice(0, 10);
+
+                // Busca appointment futuro do paciente (titular OU dependente cujo titular tem este telefone)
+                const { data: patients } = await supabase
+                  .from("patients")
+                  .select("id")
+                  .eq("clinic_id", SINDICATO_CLINIC_ID)
+                  .or(`phone.eq.${phoneNoBR},phone.eq.${phoneDigits}`);
+                const patientIds = (patients || []).map((p: any) => p.id);
+
+                let aptToUpdate: any = null;
+                if (patientIds.length > 0) {
+                  const { data: apts } = await supabase
+                    .from("appointments")
+                    .select("id, appointment_date, start_time, status, patient_id, dependent_id")
+                    .in("patient_id", patientIds)
+                    .gte("appointment_date", todayIso)
+                    .not("status", "in", "(cancelled,completed,no_show)")
+                    .order("appointment_date", { ascending: true })
+                    .order("start_time", { ascending: true })
+                    .limit(1);
+                  aptToUpdate = apts?.[0] || null;
+                }
+
+                if (aptToUpdate) {
+                  if (normalized === "confirmar") {
+                    await supabase
+                      .from("appointments")
+                      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+                      .eq("id", aptToUpdate.id);
+                  } else {
+                    await supabase
+                      .from("appointments")
+                      .update({
+                        status: "cancelled",
+                        cancelled_at: new Date().toISOString(),
+                        cancellation_reason: "Cancelado pelo paciente via WhatsApp (botão)"
+                      })
+                      .eq("id", aptToUpdate.id);
+                  }
+                  console.log(`[zapresponder] Appointment ${aptToUpdate.id} → ${normalized}`);
+
+                  // Envia confirmação textual ao paciente
+                  const replyText = normalized === "confirmar"
+                    ? "✅ Sua consulta foi confirmada com sucesso! Obrigado."
+                    : "❌ Sua consulta foi cancelada. Caso queira, agende novamente pelo nosso aplicativo.";
+                  await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
+                    body: JSON.stringify({ to: fromPhone, message: replyText })
+                  }).catch(err => console.error("[zapresponder] Erro reply:", err));
+                } else {
+                  console.warn(`[zapresponder] Nenhum appointment futuro encontrado para ${fromPhone}`);
+                }
+              } catch (err) {
+                console.error("[zapresponder] Erro ao processar botão lembrete:", err);
+              }
+              continue; // não encaminhar para o bot principal
+            }
  
            // Verifica se já enviamos protocolo recentemente para evitar spam
            // Considera "nova conversa" se o último protocolo foi há mais de 4h
