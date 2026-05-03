@@ -345,20 +345,56 @@ async function isTodayHoliday(supabase: any, clinicId: string, dateStr: string):
 // WHAZING TICKET CREATION
 // ==========================================
 
-async function createWhazingTicket(phone: string, subject: string, details?: string): Promise<{ success: boolean; ticketId?: string; error?: string }> {
-  const whazingUrl = Deno.env.get('WHAZING_API_URL');
-  const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+ async function transferToHuman(phone: string, subject: string, details?: string): Promise<{ success: boolean; error?: string }> {
+   const whazingUrl = Deno.env.get('WHAZING_API_URL');
+   const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
+   const zapResponderUrl = Deno.env.get('ZAPRESPONDER_API_URL');
+   const zapResponderToken = Deno.env.get('ZAPRESPONDER_API_TOKEN');
+ 
+   let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+   if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+ 
+   // Try ZapResponder Webhook Transfer (Priority)
+   if (zapResponderUrl && zapResponderToken) {
+     try {
+       console.log(`[handoff] Attempting ZapResponder transfer for ${cleanPhone}`);
+       const response = await fetch(zapResponderUrl, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${zapResponderToken}`,
+         },
+         body: JSON.stringify({
+           event: 'transfer_to_human',
+           phone: cleanPhone,
+           subject,
+           details,
+           timestamp: new Date().toISOString()
+         }),
+       });
+ 
+       if (response.ok) {
+         console.log(`[handoff] ZapResponder transfer successful for ${cleanPhone}`);
+         return { success: true };
+       }
+       console.warn(`[handoff] ZapResponder transfer failed (${response.status})`);
+     } catch (err) {
+       console.error('[handoff] ZapResponder error:', err);
+     }
+   }
+ 
+   // Fallback to Whazing Ticket/Note
+   if (!whazingUrl || !whazingToken) {
+     return { success: false, error: 'No handoff service configured' };
+   }
 
   if (!whazingUrl || !whazingToken) {
     console.log('[whazing-ticket] Whazing not configured');
     return { success: false, error: 'Whazing not configured' };
   }
 
-  try {
-    let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
-    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
-
-    const apiUrl = whazingUrl.replace(/\/$/, '');
+   try {
+     const apiUrl = whazingUrl.replace(/\/$/, '');
     
     // First, check if there's already an open ticket for this phone
     const showResponse = await fetch(`${apiUrl}/showticket`, {
@@ -381,44 +417,29 @@ async function createWhazingTicket(phone: string, subject: string, details?: str
     }
 
     // If there's an existing ticket, update it with a note about the off-hours request
-    if (existingTicketId) {
-      // Send an internal message/note to the ticket via the API
-      const noteText = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_O usuário solicitou atendimento humano fora do horário. Responder quando disponível._`;
-      
-      // Send the note as a message in the ticket
-      const noteResponse = await fetch(`${apiUrl}/apioficial`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${whazingToken}`,
-        },
-        body: JSON.stringify({
-          number: cleanPhone,
-          contents: {
-            type: "text",
-            body: { text: noteText }
-          }
-        }),
-      });
-
-      if (noteResponse.ok) {
-        console.log(`[whazing-ticket] Note added to existing ticket #${existingTicketId}`);
-        return { success: true, ticketId: existingTicketId };
-      }
-    }
-
-    // If no existing ticket, create a new conversation/ticket by sending a message
-    // The Whazing system automatically creates a ticket when a message is received
-    const ticketMessage = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n📱 *Telefone:* ${cleanPhone}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_Atendimento solicitado fora do horário comercial. Responder quando disponível._`;
-
-    console.log(`[whazing-ticket] Creating ticket for ${cleanPhone}: ${subject}`);
-
-    return { success: true, ticketId: existingTicketId || 'pending' };
-  } catch (error) {
-    console.error('[whazing-ticket] Error creating ticket:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
+     if (existingTicketId) {
+       const noteText = `📋 *Solicitação de Atendimento*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n⏰ *Horário:* ${getBrazilianDateTime().formatted}\n\n_Usuário solicitou transferência para humano._`;
+       await fetch(`${apiUrl}/apioficial`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${whazingToken}`,
+         },
+         body: JSON.stringify({
+           number: cleanPhone,
+           contents: { type: "text", body: { text: noteText } }
+         }),
+       });
+       return { success: true };
+     }
+ 
+     console.log(`[handoff] Creating fallback ticket for ${cleanPhone}`);
+     return { success: true };
+   } catch (error) {
+     console.error('[handoff] Fallback error:', error);
+     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+   }
+ }
 
 // Execute tool functions
 async function executeTool(
@@ -942,10 +963,10 @@ async function executeTool(
           });
         }
 
-        const result = await createWhazingTicket(ticketPhone, assunto, detalhes);
-        
-        if (result.success) {
-          console.log(`[ai-assistant] Ticket created/updated for ${ticketPhone}: ${assunto}`);
+         const result = await transferToHuman(ticketPhone, assunto, detalhes);
+         
+         if (result.success) {
+           console.log(`[ai-assistant] Transfer/Ticket triggered for ${ticketPhone}: ${assunto}`);
           return JSON.stringify({
             success: true,
             message: `Chamado registrado com sucesso! Assunto: "${assunto}". Um atendente responderá assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h).`
