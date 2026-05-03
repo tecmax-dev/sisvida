@@ -8100,15 +8100,53 @@ async function handleWebhook(req: Request) {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
-        // Reativando processamento automático do bot
-        const botSkipped = false;
+        const messageTextTrim = messageText?.trim();
+
+        // If the user has already been transferred to a human attendant, keep the
+        // bot silent until the user explicitly requests MENU/reiniciar.
+        let botSkipped = false;
+        if (messageTextTrim && !/^(0|menu|reiniciar)$/i.test(messageTextTrim)) {
+          const { data: pausedTicket } = await supabase
+            .from('whazing_tickets')
+            .select('bot_active, status')
+            .eq('ticket_id', phone)
+            .maybeSingle();
+
+          if (pausedTicket?.bot_active === false && pausedTicket?.status === 'open') {
+            console.log(`[webhook] Bot paused for human handoff on ${phone}; message mirrored only.`);
+            const nowIso = new Date().toISOString();
+            await supabase.from('whazing_tickets').upsert({
+              ticket_id: phone,
+              contact_number: phone,
+              ...(payload.data?.pushName ? { contact_name: payload.data.pushName } : {}),
+              last_message: messageTextTrim.slice(0, 500),
+              status: 'open',
+              updated_at: nowIso,
+              closed_at: null,
+              bot_active: false,
+            }, { onConflict: 'ticket_id' });
+            await supabase.from('whazing_messages').upsert({
+              ticket_id: phone,
+              message_id: payload.data?.key?.id || `handoff-in-${Date.now()}`,
+              body: messageTextTrim.slice(0, 2000),
+              from_me: false,
+              sender_name: payload.data?.pushName || 'Contato',
+              sender_phone: phone,
+              timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : Math.floor(Date.now() / 1000),
+            }, { onConflict: 'message_id' });
+            botSkipped = true;
+            return createSuccessResponse({ message: 'Human handoff active; bot paused' });
+          }
+        }
 
         if (!botSkipped) {
         // ===== WHAZING / META BUTTON RESPONSE HANDLER =====
-        const messageTextTrim = messageText?.trim();
-
         // Force main menu on test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
+          await supabase
+            .from('whazing_tickets')
+            .update({ bot_active: true, updated_at: new Date().toISOString() })
+            .eq('ticket_id', phone);
           await supabase
             .from('whatsapp_ai_conversations')
             .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
