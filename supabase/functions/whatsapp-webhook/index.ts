@@ -8526,7 +8526,7 @@ async function handleWebhook(req: Request) {
             'whazing_sub_convencoes': 'cct',
             'Convenções Coletivas': 'cct',
           };
-          const action = subActionMap[btnId] || (messageTextTrim.includes('Convenções') ? 'cct' : 'atendente');
+          const action = subActionMap[btnId] || (messageTextTrim.includes('Convenções') || btnId === 'whazing_sub_convencoes' ? 'cct' : 'atendente');
           const contextStr = `Perfil: ${storedCategory}`;
 
           // Route to external-integration function
