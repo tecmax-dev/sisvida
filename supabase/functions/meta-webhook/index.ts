@@ -161,16 +161,16 @@ serve(async (req) => {
             console.error("[meta-webhook] Erro ao sincronizar mensagem:", syncErr);
           }
 
-          // Chama o Zap Responder (fluxo oficial)
-          console.log(`[meta-webhook] Encaminhando para Zap Responder...`);
-          fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${SERVICE_ROLE}`
-            },
-            body: JSON.stringify(body)
-          }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder:", err));
+           // Chama o Zap Responder (fluxo oficial) passando o ticket_id se houver
+           console.log(`[meta-webhook] Encaminhando para Zap Responder... TicketID: ${ticketId}`);
+           fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${SERVICE_ROLE}`
+             },
+             body: JSON.stringify({ ...body, ticket_id: ticketId })
+           }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder:", err));
         }
 
         // Status updates (sent/delivered/read) - apenas log por enquanto
