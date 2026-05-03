@@ -8289,7 +8289,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ]);
+            ], "", explicitPhoneId);
 
             return createSuccessResponse({ message: 'Routed to homologacao' });
           }
@@ -8393,7 +8393,7 @@ async function handleWebhook(req: Request) {
             console.log(`[webhook] Whazing carteirinha button → redirect to app`);
             const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
             
-            await sendWhatsAppMessage(configData, phone, textMessage);
+            await sendWhatsAppMessage(configData, phone, textMessage, explicitPhoneId);
 
             // Send follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -8402,7 +8402,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ]);
+            ], "", explicitPhoneId);
 
             return createSuccessResponse({ message: 'Carteirinha redirect sent' });
           }
@@ -8417,13 +8417,13 @@ async function handleWebhook(req: Request) {
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
-              ]);
+              ], "", explicitPhoneId);
             } else {
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
-              ]);
+              ], "", explicitPhoneId);
             }
             return createSuccessResponse({ message: `Outros Assuntos sub-menu sent` });
           }
@@ -8466,7 +8466,7 @@ async function handleWebhook(req: Request) {
                 { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
                 { id: "whazing_voltar_menu", title: "Menu Principal" },
-              ]);
+              ], "", explicitPhoneId);
             } else {
               console.log('[webhook] Skipping follow-up buttons after atendente handoff to avoid loop');
             }
@@ -8802,7 +8802,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-              await sendWhatsAppMessage(configData, phone, appOnlyMsg);
+              await sendWhatsAppMessage(configData, phone, appOnlyMsg, explicitPhoneId);
 
               await supabase.from('whatsapp_incoming_logs').insert({
                 clinic_id: clinicId,
@@ -8855,7 +8855,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             await sendWhatsAppMessage(
               configData,
               phone,
-              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
+              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`,
+              explicitPhoneId
             );
              return createSuccessResponse({ message: 'Feature not available for clinic' });
           }
@@ -8944,7 +8945,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   ? `\n\n📌 Encaminhei para a equipe de *${chosenQueue.name}*.`
                   : '';
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
-                await sendWhatsAppMessage(configData, phone, handoffMessage);
+                await sendWhatsAppMessage(configData, phone, handoffMessage, explicitPhoneId);
                 
                 // Notify Zap Responder of completion of handoff (with subject)
                 await sendZapsterMessage(clinicId, phone, `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`);
@@ -8971,7 +8972,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
                 });
 
-                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage());
+                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage(), explicitPhoneId);
 
                  return createSuccessResponse({ message: 'Asked user for subject' });
               }
