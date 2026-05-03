@@ -8289,14 +8289,59 @@ async function handleWebhook(req: Request) {
              const targetZapsterDeptId = (storedCategory && zapsterDeptMap[storedCategory as string]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
              const deptName = storedCategory === 'associado' ? 'Associados' : 'Empresas/Escritórios';
  
-             // Notify Zap Responder / External Integration for Handoff using the reliable sendZapsterMessage helper
-             await sendZapsterMessage(
-               clinicId, 
-               phone, 
-               `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente pelo menu WhatsApp.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}\n*Fila:* ${deptName}\n*Mensagem:* Solicitação via menu de botões.`,
-               targetZapsterDeptId
-             );
-            console.log(`[webhook] Zap Responder handoff notification triggered via sendZapsterMessage for ${phone}`);
+             // Notify Zap Responder / External Integration for Handoff using a direct synthetic webhook to ensure ticket creation
+             // Zap Responder often needs a "incoming message" event to actually open a ticket in the panel.
+             try {
+               const zapToken = Deno.env.get('ZAPSTER_API_TOKEN') || Deno.env.get('ZAPRESPONDER_API_TOKEN');
+               const zapWebhookUrl = "https://api.zapresponder.com.br/api/webhook";
+               
+               if (zapToken) {
+                 const cleanPhone = phone.replace(/\D/g, '');
+                 const syntheticPayload = {
+                   event: "messages.upsert",
+                   instance: "meta",
+                   departamento_id: targetZapsterDeptId,
+                   data: {
+                     key: { 
+                       remoteJid: `${cleanPhone}@s.whatsapp.net`, 
+                       fromMe: false,
+                       id: `handoff-${Date.now()}`
+                     },
+                     message: { 
+                       conversation: `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente pelo menu WhatsApp.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}\n*Fila:* ${deptName}\n*Mensagem:* Solicitação via menu de botões.` 
+                     },
+                     pushName: payload.data?.pushName || "Usuário WhatsApp",
+                     messageTimestamp: Math.floor(Date.now() / 1000)
+                   },
+                   is_official_api: true
+                 };
+
+                 console.log(`[webhook] Sending synthetic handoff webhook to Zap Responder for dept: ${deptName} (${targetZapsterDeptId})`);
+                 
+                 const zapResp = await fetch(zapWebhookUrl, {
+                   method: 'POST',
+                   headers: {
+                     'Content-Type': 'application/json',
+                     'Authorization': `Bearer ${zapToken}`
+                   },
+                   body: JSON.stringify(syntheticPayload)
+                 });
+                 
+                 if (!zapResp.ok) {
+                   const errorText = await zapResp.text();
+                   console.error(`[webhook] Zap Responder webhook failed (${zapResp.status}):`, errorText);
+                   // Fallback to standard message if webhook fails
+                   await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\nFila: ${deptName}`, targetZapsterDeptId);
+                 } else {
+                   console.log(`[webhook] Zap Responder synthetic handoff successful`);
+                 }
+               } else {
+                 await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\nFila: ${deptName}`, targetZapsterDeptId);
+               }
+             } catch (zapErr) {
+               console.error('[webhook] Error notifying Zap Responder:', zapErr);
+               await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\nFila: ${deptName}`, targetZapsterDeptId);
+             }
 
             await freezeBotForHumanHandoff(
               supabase,
