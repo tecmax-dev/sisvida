@@ -8393,7 +8393,7 @@ async function handleWebhook(req: Request) {
             console.log(`[webhook] Whazing carteirinha button → redirect to app`);
             const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
             
-            await sendWhatsAppMessage(configData, phone, textMessage);
+            await sendWhatsAppMessage(configData, phone, textMessage, explicitPhoneId);
 
             // Send follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -8802,7 +8802,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-              await sendWhatsAppMessage(configData, phone, appOnlyMsg);
+              await sendWhatsAppMessage(configData, phone, appOnlyMsg, explicitPhoneId);
 
               await supabase.from('whatsapp_incoming_logs').insert({
                 clinic_id: clinicId,
@@ -8855,7 +8855,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             await sendWhatsAppMessage(
               configData,
               phone,
-              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
+              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`,
+              explicitPhoneId
             );
              return createSuccessResponse({ message: 'Feature not available for clinic' });
           }
