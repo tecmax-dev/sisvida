@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
- const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api";
+ const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
