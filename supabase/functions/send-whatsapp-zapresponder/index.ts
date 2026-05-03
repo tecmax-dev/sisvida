@@ -87,79 +87,41 @@ serve(async (req) => {
 
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 
-       try {
-         // Try multiple possible endpoints for Zap Responder API
+        try {
           const endpoints = [
-            `https://api.zapthinker.com/message/sendText/${cfg.instance_id}`,
-            `https://api.zapthinker.com/message/sendText/meta_official`,
-            `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`,
-            `${ZAP_RESPONDER_BASE_URL}/messages/send`,
-            `${ZAP_RESPONDER_BASE_URL}/mensagem/enviar`,
-            `${ZAP_RESPONDER_BASE_URL}/webhook`
+            { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { phone: cleanPhone, body: message, department_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/message/sendText/meta_official", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } }
           ];
- 
-         let response;
-         let currentResult = {};
- 
-         for (const endpoint of endpoints) {
-           console.log(`[zapresponder] Trying endpoint: ${endpoint}`);
-           
-            let fetchPayload = payload;
-            if (endpoint.includes('sendText')) {
-              // zapthinker/evolution-like format
-              fetchPayload = {
-                number: cleanPhone,
-                text: message,
-                departmentId: payload.departmentId
-              };
-            } else if (endpoint.endsWith('/webhook')) {
-              fetchPayload = {
-                event: "messages.upsert",
-                instance: "meta",
-                departamento_id: payload.departmentId,
-                data: {
-                  key: { remoteJid: `${cleanPhone}@s.whatsapp.net`, fromMe: true },
-                  message: { conversation: message },
-                  pushName: "Sistema",
-                  messageTimestamp: Math.floor(Date.now() / 1000)
-                },
-                is_official_api: true
-              };
+
+          let response;
+          let currentResult = {};
+
+          for (const endpoint of endpoints) {
+            console.log(`[zapresponder] Trying transfer endpoint: ${endpoint.url}`);
+            response = await fetch(endpoint.url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiToken}`,
+              },
+              body: JSON.stringify(endpoint.payload),
+            });
+
+            currentResult = await response.json().catch(() => ({}));
+            if (response.ok) {
+              console.log(`[zapresponder] Success via ${endpoint.url}`);
+              break;
             }
- 
-           response = await fetch(endpoint, {
-             method: "POST",
-             headers: {
-               "Content-Type": "application/json",
-               "Authorization": `Bearer ${apiToken}`,
-               "Accept": "application/json"
-             },
-             body: JSON.stringify(fetchPayload),
-           });
- 
-           currentResult = await response.json().catch(() => ({}));
-           if (response.ok) break;
-           console.warn(`[zapresponder] Endpoint ${endpoint} failed with ${response.status}`);
-         }
- 
-         lastResult = { status: response?.status || 500, data: currentResult };
- 
-         if (response?.ok) {
-           console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
-           success = true;
-           break;
-         }
+            console.warn(`[zapresponder] ${endpoint.url} failed with ${response.status}`);
+          }
 
-        const result = await response.json().catch(() => ({}));
-        lastResult = { status: response.status, data: result };
-
-        if (response.ok) {
-          console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
-          success = true;
-          break;
-        } else {
-          console.warn(`[zapresponder] Failed via ${cfg.instance_id}: ${response.status}`, result);
-        }
+          lastResult = { status: response?.status || 500, data: currentResult };
+          if (response?.ok) {
+            success = true;
+            break;
+          }
       } catch (err) {
         console.error(`[zapresponder] Exception via ${cfg.instance_id}:`, err);
       }
