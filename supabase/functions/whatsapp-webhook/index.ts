@@ -1,3 +1,13 @@
+ function getZapsterDeptIdFromQueue(queueId: string | null): string {
+   const map: Record<string, string> = {
+     '2c1ef611-09d4-4866-b0db-19164e8f8611': 'fa193a46-e119-4994-852b-29e551ab37f1', // Associdos
+     'f6f0911b-8bb5-49c1-8d86-e519dc7515d4': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Empresas
+     'c7efdda1-d773-40ea-84e5-4c8b46e0ef8e': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Contabilidade
+     '6644c29c-95b9-414f-ba8c-62a2402ede34': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Administrativo
+   };
+   return (queueId && map[queueId]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
+ }
+ 
 // whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -529,7 +539,7 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
   }
 }
 
-async function sendZapsterMessage(clinicId: string, phone: string, message: string): Promise<boolean> {
+ async function sendZapsterMessage(clinicId: string, phone: string, message: string, departmentId?: string): Promise<boolean> {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -543,10 +553,11 @@ async function sendZapsterMessage(clinicId: string, phone: string, message: stri
         'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-        clinicId,
-        phone,
-        message: sanitizeOutgoingWhatsAppText(message),
-      }),
+         clinicId,
+         phone,
+         message: sanitizeOutgoingWhatsAppText(message),
+         departmentId,
+       }),
     });
     
     if (!response.ok) {
@@ -8269,8 +8280,22 @@ async function handleWebhook(req: Request) {
             // Default queue: Administrativo (6644c29c-95b9-414f-ba8c-62a2402ede34)
             const queueId = "6644c29c-95b9-414f-ba8c-62a2402ede34";
 
-            // Notify Zap Responder / External Integration for Handoff using the reliable sendZapsterMessage helper
-            await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente pelo menu WhatsApp.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}\n*Fila:* Administrativo\n*Mensagem:* Solicitação via menu de botões.`);
+             // Map Whazing category to Zap Responder Department ID
+             const zapsterDeptMap: Record<string, string> = {
+               'associado': 'fa193a46-e119-4994-852b-29e551ab37f1',
+               'empresa': '3259b59a-8f9d-4027-8520-2b78167d59ab',
+               'contabilidade': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Mapping to Empresas as fallback
+             };
+             const targetZapsterDeptId = (storedCategory && zapsterDeptMap[storedCategory as string]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
+             const deptName = storedCategory === 'associado' ? 'Associados' : 'Empresas/Escritórios';
+ 
+             // Notify Zap Responder / External Integration for Handoff using the reliable sendZapsterMessage helper
+             await sendZapsterMessage(
+               clinicId, 
+               phone, 
+               `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente pelo menu WhatsApp.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}\n*Fila:* ${deptName}\n*Mensagem:* Solicitação via menu de botões.`,
+               targetZapsterDeptId
+             );
             console.log(`[webhook] Zap Responder handoff notification triggered via sendZapsterMessage for ${phone}`);
 
             await freezeBotForHumanHandoff(
@@ -9027,8 +9052,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
                 await sendWhatsAppMessage(configData, phone, handoffMessage, explicitPhoneId);
                 
-                // Notify Zap Responder of completion of handoff (with subject)
-                await sendZapsterMessage(clinicId, phone, `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`);
+                 // Notify Zap Responder of completion of handoff (with subject)
+                 const zapDeptId = getZapsterDeptIdFromQueue(chosenQueue?.id || null);
+                 await sendZapsterMessage(
+                   clinicId, 
+                   phone, 
+                   `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`,
+                   zapDeptId
+                 );
 
                  return createSuccessResponse({ message: 'Subject captured and routed to queue' });
               }
