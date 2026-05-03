@@ -21,7 +21,7 @@ interface WhatsAppRequest {
   sendAsTextOnly?: boolean;
   templateName?: string;
   templateLanguage?: string;
-  templateComponents?: string[];
+  templateComponents?: any[];
 }
 
  interface EvolutionConfig {
