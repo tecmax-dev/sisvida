@@ -89,12 +89,14 @@ serve(async (req) => {
 
        try {
          // Try multiple possible endpoints for Zap Responder API
-         const endpoints = [
-           `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`,
-           `${ZAP_RESPONDER_BASE_URL}/messages/send`,
-           `${ZAP_RESPONDER_BASE_URL}/mensagem/enviar`,
-           `${ZAP_RESPONDER_BASE_URL}/webhook` // Fallback: send as a webhook event
-         ];
+          const endpoints = [
+            `https://api.zapthinker.com/message/sendText/${cfg.instance_id}`,
+            `https://api.zapthinker.com/message/sendText/meta_official`,
+            `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`,
+            `${ZAP_RESPONDER_BASE_URL}/messages/send`,
+            `${ZAP_RESPONDER_BASE_URL}/mensagem/enviar`,
+            `${ZAP_RESPONDER_BASE_URL}/webhook`
+          ];
  
          let response;
          let currentResult = {};
@@ -102,22 +104,28 @@ serve(async (req) => {
          for (const endpoint of endpoints) {
            console.log(`[zapresponder] Trying endpoint: ${endpoint}`);
            
-           let fetchPayload = payload;
-           if (endpoint.endsWith('/webhook')) {
-             // Format as a synthetic webhook payload if using the fallback
-             fetchPayload = {
-               event: "messages.upsert",
-               instance: "meta",
-               departamento_id: payload.departmentId,
-               data: {
-                 key: { remoteJid: `${cleanPhone}@s.whatsapp.net`, fromMe: true },
-                 message: { conversation: message },
-                 pushName: "Sistema",
-                 messageTimestamp: Math.floor(Date.now() / 1000)
-               },
-               is_official_api: true
-             };
-           }
+            let fetchPayload = payload;
+            if (endpoint.includes('sendText')) {
+              // zapthinker/evolution-like format
+              fetchPayload = {
+                number: cleanPhone,
+                text: message,
+                departmentId: payload.departmentId
+              };
+            } else if (endpoint.endsWith('/webhook')) {
+              fetchPayload = {
+                event: "messages.upsert",
+                instance: "meta",
+                departamento_id: payload.departmentId,
+                data: {
+                  key: { remoteJid: `${cleanPhone}@s.whatsapp.net`, fromMe: true },
+                  message: { conversation: message },
+                  pushName: "Sistema",
+                  messageTimestamp: Math.floor(Date.now() / 1000)
+                },
+                is_official_api: true
+              };
+            }
  
            response = await fetch(endpoint, {
              method: "POST",
