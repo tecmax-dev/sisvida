@@ -417,44 +417,29 @@ async function isTodayHoliday(supabase: any, clinicId: string, dateStr: string):
     }
 
     // If there's an existing ticket, update it with a note about the off-hours request
-    if (existingTicketId) {
-      // Send an internal message/note to the ticket via the API
-      const noteText = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_O usuário solicitou atendimento humano fora do horário. Responder quando disponível._`;
-      
-      // Send the note as a message in the ticket
-      const noteResponse = await fetch(`${apiUrl}/apioficial`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${whazingToken}`,
-        },
-        body: JSON.stringify({
-          number: cleanPhone,
-          contents: {
-            type: "text",
-            body: { text: noteText }
-          }
-        }),
-      });
-
-      if (noteResponse.ok) {
-        console.log(`[whazing-ticket] Note added to existing ticket #${existingTicketId}`);
-        return { success: true, ticketId: existingTicketId };
-      }
-    }
-
-    // If no existing ticket, create a new conversation/ticket by sending a message
-    // The Whazing system automatically creates a ticket when a message is received
-    const ticketMessage = `📋 *Chamado aberto fora do horário*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n📱 *Telefone:* ${cleanPhone}\n⏰ *Registrado em:* ${getBrazilianDateTime().formatted}\n\n_Atendimento solicitado fora do horário comercial. Responder quando disponível._`;
-
-    console.log(`[whazing-ticket] Creating ticket for ${cleanPhone}: ${subject}`);
-
-    return { success: true, ticketId: existingTicketId || 'pending' };
-  } catch (error) {
-    console.error('[whazing-ticket] Error creating ticket:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
+     if (existingTicketId) {
+       const noteText = `📋 *Solicitação de Atendimento*\n\n📌 *Assunto:* ${subject}${details ? `\n📝 *Detalhes:* ${details}` : ''}\n⏰ *Horário:* ${getBrazilianDateTime().formatted}\n\n_Usuário solicitou transferência para humano._`;
+       await fetch(`${apiUrl}/apioficial`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${whazingToken}`,
+         },
+         body: JSON.stringify({
+           number: cleanPhone,
+           contents: { type: "text", body: { text: noteText } }
+         }),
+       });
+       return { success: true };
+     }
+ 
+     console.log(`[handoff] Creating fallback ticket for ${cleanPhone}`);
+     return { success: true };
+   } catch (error) {
+     console.error('[handoff] Fallback error:', error);
+     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+   }
+ }
 
 // Execute tool functions
 async function executeTool(
