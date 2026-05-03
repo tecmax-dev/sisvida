@@ -107,14 +107,23 @@
                   console.log(`[zapresponder] Appointment ${aptToUpdate.id} → ${normalized}`);
 
                   // Envia confirmação textual ao paciente
-                  const replyText = normalized === "confirmar"
-                    ? "✅ Sua consulta foi confirmada com sucesso! Obrigado."
-                    : "❌ Sua consulta foi cancelada. Caso queira, agende novamente pelo nosso aplicativo.";
-                  await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
-                    body: JSON.stringify({ to: fromPhone, message: replyText })
-                  }).catch(err => console.error("[zapresponder] Erro reply:", err));
+                   const replyText = normalized === "confirmar"
+                     ? "✅ Sua consulta foi confirmada com sucesso! Obrigado."
+                     : "❌ Sua consulta foi cancelada. Caso queira, agende novamente pelo nosso aplicativo.";
+                   
+                   // Chamada direta para meta-send-text corrigindo o nome do parâmetro (message -> text)
+                   const replyRes = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+                     method: "POST",
+                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
+                     body: JSON.stringify({ to: fromPhone, text: replyText })
+                   });
+                   
+                   if (!replyRes.ok) {
+                     const errData = await replyRes.json().catch(() => ({}));
+                     console.error("[zapresponder] Erro ao enviar resposta textual:", errData);
+                   } else {
+                     console.log("[zapresponder] Resposta textual enviada com sucesso");
+                   }
                 } else {
                   console.warn(`[zapresponder] Nenhum appointment futuro encontrado para ${fromPhone}`);
                 }
