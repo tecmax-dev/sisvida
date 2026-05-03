@@ -87,79 +87,33 @@ serve(async (req) => {
 
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 
-       try {
-         // Try multiple possible endpoints for Zap Responder API
-          const endpoints = [
-            `https://api.zapthinker.com/message/sendText/${cfg.instance_id}`,
-            `https://api.zapthinker.com/message/sendText/meta_official`,
-            `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`,
-            `${ZAP_RESPONDER_BASE_URL}/messages/send`,
-            `${ZAP_RESPONDER_BASE_URL}/mensagem/enviar`,
-            `${ZAP_RESPONDER_BASE_URL}/webhook`
-          ];
- 
-         let response;
-         let currentResult = {};
- 
-         for (const endpoint of endpoints) {
-           console.log(`[zapresponder] Trying endpoint: ${endpoint}`);
-           
-            let fetchPayload = payload;
-            if (endpoint.includes('sendText')) {
-              // zapthinker/evolution-like format
-              fetchPayload = {
-                number: cleanPhone,
-                text: message,
-                departmentId: payload.departmentId
-              };
-            } else if (endpoint.endsWith('/webhook')) {
-              fetchPayload = {
-                event: "messages.upsert",
-                instance: "meta",
-                departamento_id: payload.departmentId,
-                data: {
-                  key: { remoteJid: `${cleanPhone}@s.whatsapp.net`, fromMe: true },
-                  message: { conversation: message },
-                  pushName: "Sistema",
-                  messageTimestamp: Math.floor(Date.now() / 1000)
-                },
-                is_official_api: true
-              };
-            }
- 
-           response = await fetch(endpoint, {
-             method: "POST",
-             headers: {
-               "Content-Type": "application/json",
-               "Authorization": `Bearer ${apiToken}`,
-               "Accept": "application/json"
-             },
-             body: JSON.stringify(fetchPayload),
-           });
- 
-           currentResult = await response.json().catch(() => ({}));
-           if (response.ok) break;
-           console.warn(`[zapresponder] Endpoint ${endpoint} failed with ${response.status}`);
-         }
- 
-         lastResult = { status: response?.status || 500, data: currentResult };
- 
-         if (response?.ok) {
-           console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
-           success = true;
-           break;
-         }
+        try {
+          const endpoint = `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`;
+          console.log(`[zapresponder] Requesting human transfer via: ${endpoint}`);
+          
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiToken}`,
+            },
+            body: JSON.stringify({
+              phone: cleanPhone,
+              message: message,
+              departamento_id: payload.departmentId
+            }),
+          });
 
-        const result = await response.json().catch(() => ({}));
-        lastResult = { status: response.status, data: result };
+          const result = await response.json().catch(() => ({}));
+          lastResult = { status: response.status, data: result };
 
-        if (response.ok) {
-          console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
-          success = true;
-          break;
-        } else {
-          console.warn(`[zapresponder] Failed via ${cfg.instance_id}: ${response.status}`, result);
-        }
+          if (response.ok) {
+            console.log(`[zapresponder] Transfer successful to department ${payload.departmentId}`);
+            success = true;
+            break;
+          } else {
+            console.warn(`[zapresponder] Transfer failed with status ${response.status}`, result);
+          }
       } catch (err) {
         console.error(`[zapresponder] Exception via ${cfg.instance_id}:`, err);
       }
