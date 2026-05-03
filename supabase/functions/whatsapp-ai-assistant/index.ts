@@ -1444,9 +1444,9 @@ Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione
 
 As negociações seguem em andamento entre as partes envolvidas, não havendo, até o presente momento, definição ou fechamento dos termos da nova convenção.
 
-No que se refere ao comércio varejista, está agendada uma nova reunião para o dia 24 de abril de 2026, ocasião em que as partes darão continuidade às tratativas, com o objetivo de avançar nas negociações e buscar a formalização da CCT.
-
-O Sindicato reforça seu compromisso em manter a categoria informada sobre quaisquer atualizações.
+ No que se refere ao comércio varejista, as negociações seguem em andamento, ocasião em que as partes darão continuidade às tratativas, com o objetivo de avançar e buscar a formalização da CCT.
+ 
+ O Sindicato reforça seu compromisso em manter a categoria informada sobre quaisquer atualizações.
 
 Atenciosamente,
 Sindicato dos Comerciários de Ilhéus e Região"
