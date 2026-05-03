@@ -1,3 +1,13 @@
+ function getZapsterDeptIdFromQueue(queueId: string | null): string {
+   const map: Record<string, string> = {
+     '2c1ef611-09d4-4866-b0db-19164e8f8611': 'fa193a46-e119-4994-852b-29e551ab37f1', // Associdos
+     'f6f0911b-8bb5-4994-852b-29e551ab37f1': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Empresas
+     'c7efdda1-d773-40ea-84e5-4c8b46e0ef8e': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Contabilidade
+     '6644c29c-95b9-414f-ba8c-62a2402ede34': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Administrativo
+   };
+   return (queueId && map[queueId]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
+ }
+ 
 // whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -9042,8 +9052,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
                 await sendWhatsAppMessage(configData, phone, handoffMessage, explicitPhoneId);
                 
-                // Notify Zap Responder of completion of handoff (with subject)
-                await sendZapsterMessage(clinicId, phone, `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`);
+                 // Notify Zap Responder of completion of handoff (with subject)
+                 const zapDeptId = getZapsterDeptIdFromQueue(chosenQueue?.id || null);
+                 await sendZapsterMessage(
+                   clinicId, 
+                   phone, 
+                   `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`,
+                   zapDeptId
+                 );
 
                  return createSuccessResponse({ message: 'Subject captured and routed to queue' });
               }
