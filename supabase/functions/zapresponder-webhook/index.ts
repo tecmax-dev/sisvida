@@ -6,7 +6,8 @@
  serve(async (req) => {
    try {
      const payload = await req.json();
-     console.log("[zapresponder] Webhook received");
+     const ticketIdFromMeta = payload.ticket_id;
+     console.log(`[zapresponder] Webhook received. Ticket ID: ${ticketIdFromMeta}`);
  
      const supabase = createClient(
        Deno.env.get("SUPABASE_URL")!,
@@ -111,12 +112,13 @@
                      ? "✅ Sua consulta foi confirmada com sucesso! Obrigado."
                      : "❌ Sua consulta foi cancelada. Caso queira, agende novamente pelo nosso aplicativo.";
                    
-                   // Chamada direta para meta-send-text corrigindo o nome do parâmetro (message -> text)
-                   const replyRes = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
-                     method: "POST",
-                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
-                     body: JSON.stringify({ to: fromPhone, text: replyText })
-                   });
+                    // Chamada direta para meta-send-text passando o ticket_id
+                    console.log(`[zapresponder] Enviando resposta textual para ${fromPhone}`);
+                    const replyRes = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
+                      body: JSON.stringify({ to: fromPhone, text: replyText, ticket_id: ticketIdFromMeta })
+                    });
                    
                    if (!replyRes.ok) {
                      const errData = await replyRes.json().catch(() => ({}));
