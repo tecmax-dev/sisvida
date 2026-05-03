@@ -2742,6 +2742,22 @@ const updateData: Record<string, any> = {
         directReplyEnabled
       );
 
+      // Sindicato (Meta Cloud API) requires approved template outside 24h session window.
+      const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      const isSindicato = currentClinic?.id === SINDICATO_CLINIC_ID;
+      const templatePayload = isSindicato ? {
+        templateName: 'lembrete_consulta_v2',
+        templateLanguage: 'pt_BR',
+        templateComponents: [
+          displayName,
+          appointment.professional?.name || 'Profissional',
+          appointment.professional?.specialty || 'Consulta',
+          formattedDate,
+          appointment.start_time.slice(0, 5),
+          currentClinic?.name || 'Sindicato',
+        ],
+      } : {};
+
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
         body: { 
           phone: phoneToUse, 
@@ -2749,6 +2765,7 @@ const updateData: Record<string, any> = {
           clinicId: currentClinic?.id,
           type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
           appointmentId: appointment.id,
+          ...templatePayload,
         },
       });
 
