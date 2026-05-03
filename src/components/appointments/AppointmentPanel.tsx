@@ -792,27 +792,11 @@ export function AppointmentPanel({
         telemedicineLink
       );
 
-      const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-      const isSindicato = clinicId === SINDICATO_CLINIC_ID;
-      const templatePayload = isSindicato ? {
-        templateName: 'lembrete_consulta_v2',
-        templateLanguage: 'pt_BR',
-        templateComponents: [
-          displayName,
-          professional?.name || 'Profissional',
-          professional?.specialty || 'Consulta',
-          format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR }),
-          appointment.start_time.substring(0, 5),
-          clinic?.name || 'Sindicato',
-        ],
-      } : {};
-
       const result = await sendWhatsAppMessage({
         phone: appointment.patient.phone,
         message,
         clinicId,
         type: "custom",
-        ...templatePayload,
       });
 
       if (result.success) {

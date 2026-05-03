@@ -399,14 +399,22 @@ serve(async (req) => {
       userId = user.id;
     }
 
-    // 3. Parse request body
-    const body = await req.json();
+    // 3. Parse and log request body
+    const bodyText = await req.text();
+    console.log(`[send-whatsapp] Request Body: ${bodyText}`);
+    
+    let body: any;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (e) {
+      console.error('[send-whatsapp] Failed to parse body:', e);
+      return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: corsHeaders });
+    }
+
     const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId, sendAsTextOnly = false } = body as WhatsAppRequest;
     
-    console.log(`[send-whatsapp] Received body keys: ${Object.keys(body).join(', ')}`);
-    if (body.templateName) {
-      console.log(`[send-whatsapp] Template requested: ${body.templateName} with ${body.templateComponents?.length || 0} variables`);
-    }
+    // Extract template info (destructuring explicitly to be safe)
+    let { templateName, templateLanguage, templateComponents } = body;
 
     if (!phone || !message || !clinicId) {
       return new Response(
@@ -539,8 +547,22 @@ serve(async (req) => {
       const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
       if (isSindicato) {
-        if (body.templateName) {
-           console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${body.templateName} to meta-send-template`);
+        // Robust fallback: if it's a reminder for Sindicato, force use of the template
+        const isReminderRequest = type === 'reminder' || type === 'reminder_direct_reply';
+        if (isReminderRequest && !templateName) {
+          console.log(`[Clinic ${clinicId}] Sindicato: Reminder detected without templateName. Forcing lembrete_consulta_v2.`);
+          templateName = 'lembrete_consulta_v2';
+          templateLanguage = 'pt_BR';
+          
+          // Try to extract components from the message if possible, but better to have them from frontend
+          // If we don't have components, meta-send-template might fail validation, so we provide default placeholders
+          if (!templateComponents || templateComponents.length === 0) {
+            templateComponents = ["Paciente", "Profissional", "Consulta", "Data", "Horário", "Sindicato"];
+          }
+        }
+
+        if (templateName) {
+           console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${templateName} to meta-send-template`);
            try {
              const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
                method: 'POST',
@@ -550,9 +572,9 @@ serve(async (req) => {
                },
                body: JSON.stringify({
                  to: cleanPhone,
-                 template_name: body.templateName,
-                 language: body.templateLanguage || 'pt_BR',
-                 variables: body.templateComponents || []
+                 template_name: templateName,
+                 language: templateLanguage || 'pt_BR',
+                 variables: templateComponents || []
                }),
              });
              const templateResult = await templateResp.json();
