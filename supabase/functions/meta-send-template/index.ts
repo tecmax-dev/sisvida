@@ -159,6 +159,8 @@ serve(async (req) => {
       },
     };
 
+    console.log(`[meta-send-template] Payload sent to Meta: ${JSON.stringify(payload)}`);
+
     const res = await fetch(
       `https://graph.facebook.com/${META_GRAPH_VERSION}/${PHONE_ID}/messages`,
       {
@@ -167,8 +169,6 @@ serve(async (req) => {
           Authorization: `Bearer ${TOKEN}`,
           "Content-Type": "application/json; charset=UTF-8",
         },
-    console.log(`[meta-send-template] Payload sent to Meta: ${JSON.stringify(payload)}`);
-
         body: JSON.stringify(payload),
       },
     );
