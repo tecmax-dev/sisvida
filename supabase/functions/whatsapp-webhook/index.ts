@@ -1175,8 +1175,12 @@ async function freezeBotForHumanHandoff(
   phone: string,
   contactName: string | null,
   lastMessage: string,
+  options: { queueId?: string, messageId?: string, timestamp?: number } = {}
 ): Promise<void> {
   const now = new Date().toISOString();
+  const timestamp = options.timestamp || Math.floor(Date.now() / 1000);
+  const messageId = options.messageId || `handoff-${phone}-${Date.now()}`;
+
   const { error } = await supabase
     .from('whazing_tickets')
     .upsert({
@@ -1189,10 +1193,27 @@ async function freezeBotForHumanHandoff(
       updated_at: now,
       closed_at: null,
       bot_active: false,
+      ...(options.queueId ? { assigned_queue_id: options.queueId } : {}),
     }, { onConflict: 'ticket_id' });
 
   if (error) {
     console.error('[webhook] Failed to freeze bot for human handoff:', error);
+    return;
+  }
+
+  // Also insert the message into whazing_messages so it appears in the dashboard
+  const { error: msgError } = await supabase.from('whazing_messages').upsert({
+    ticket_id: phone,
+    message_id: messageId,
+    body: lastMessage.slice(0, 2000),
+    from_me: false,
+    sender_name: contactName || 'Contato',
+    sender_phone: phone,
+    timestamp: timestamp,
+  }, { onConflict: 'message_id' });
+
+  if (msgError) {
+    console.error('[webhook] Failed to mirror handoff message to whazing_messages:', msgError);
   }
 }
 
@@ -8243,12 +8264,20 @@ async function handleWebhook(req: Request) {
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
             const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
             const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
+            
+            // Default queue for "Outros Assuntos" / Generic handoff: Administrativo
+            const defaultQueueId = "6644c29c-95b9-414f-ba8c-62a2402ede34"; 
 
             await freezeBotForHumanHandoff(
               supabase,
               phone,
               payload.data?.pushName || null,
-              'Solicitou falar com atendente pelo menu Outros Assuntos'
+              'Solicitou falar com atendente pelo menu Outros Assuntos',
+              { 
+                queueId: defaultQueueId,
+                messageId: payload.data?.key?.id,
+                timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : undefined
+              }
             );
 
             await supabase.from('whatsapp_ai_conversations').insert({
@@ -8947,21 +8976,24 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   supabase,
                   phone,
                   payload.data?.pushName || null,
-                  messageText
+                  messageText,
+                  {
+                    queueId: chosenQueue?.id,
+                    messageId: payload.data?.key?.id,
+                    timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : undefined
+                  }
                 );
 
-                // Update the ticket with the chosen queue and the subject text
                 if (chosenQueue) {
-                  const cleanedPhone = phone.replace(/\D/g, '');
-                  await supabase
-                    .from('whazing_tickets')
-                    .update({
-                      assigned_queue_id: chosenQueue.id,
-                      subject: messageText.slice(0, 250),
-                      updated_at: new Date().toISOString(),
-                    })
-                    .eq('contact_number', cleanedPhone);
-                  console.log(`[webhook] Ticket routed to queue "${chosenQueue.name}" (${chosenQueue.id})`);
+                   const cleanedPhone = phone.replace(/\D/g, '');
+                   await supabase
+                     .from('whazing_tickets')
+                     .update({
+                       subject: messageText.slice(0, 250),
+                       updated_at: new Date().toISOString(),
+                     })
+                     .eq('contact_number', cleanedPhone);
+                   console.log(`[webhook] Ticket subject updated for queue "${chosenQueue.name}"`);
                 }
 
                 // Expire the awaiting_subject session
