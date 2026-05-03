@@ -8402,7 +8402,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ]);
+            ], "", explicitPhoneId);
 
             return createSuccessResponse({ message: 'Carteirinha redirect sent' });
           }
@@ -8417,13 +8417,13 @@ async function handleWebhook(req: Request) {
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
-              ]);
+              ], "", explicitPhoneId);
             } else {
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
-              ]);
+              ], "", explicitPhoneId);
             }
             return createSuccessResponse({ message: `Outros Assuntos sub-menu sent` });
           }
