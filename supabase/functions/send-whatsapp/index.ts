@@ -553,12 +553,44 @@ serve(async (req) => {
           console.log(`[Clinic ${clinicId}] Sindicato: Reminder detected without templateName. Forcing lembrete_consulta_v2.`);
           templateName = 'lembrete_consulta_v2';
           templateLanguage = 'pt_BR';
-          
-          // Try to extract components from the message if possible, but better to have them from frontend
-          // If we don't have components, meta-send-template might fail validation, so we provide default placeholders
-          if (!templateComponents || templateComponents.length === 0) {
-            templateComponents = ["Paciente", "Profissional", "Consulta", "Data", "Horário", "Sindicato"];
+        }
+
+        // If still missing components and we have appointmentId, fetch real data from DB
+        if (templateName === 'lembrete_consulta_v2' &&
+            (!templateComponents || templateComponents.length !== 6) &&
+            appointmentId) {
+          try {
+            const { data: apt } = await supabase
+              .from('appointments')
+              .select(`
+                appointment_date, start_time, dependent_id,
+                patient:patients!appointments_patient_id_fkey(name),
+                dependent:patient_dependents!appointments_dependent_id_fkey(name),
+                professional:professionals!appointments_professional_id_fkey(name, specialty)
+              `)
+              .eq('id', appointmentId)
+              .single();
+            if (apt) {
+              const displayName = (apt.dependent_id && (apt as any).dependent?.name)
+                ? (apt as any).dependent.name
+                : ((apt as any).patient?.name || 'Associado');
+              const profName = (apt as any).professional?.name || 'Profissional';
+              const specialty = (apt as any).professional?.specialty || 'Consulta';
+              const dateObj = new Date(apt.appointment_date + 'T12:00:00');
+              const dateFormatted = dateObj.toLocaleDateString('pt-BR', {
+                weekday: 'long', day: 'numeric', month: 'long'
+              });
+              const time = String(apt.start_time).slice(0, 5);
+              templateComponents = [displayName, profName, specialty, dateFormatted, time, 'Sindicato dos Comerciários'];
+              console.log(`[Clinic ${clinicId}] Sindicato: Built template components from DB:`, templateComponents);
+            }
+          } catch (e) {
+            console.error('[Clinic Sindicato] Error fetching appointment for template:', e);
           }
+        }
+        if (templateName === 'lembrete_consulta_v2' &&
+            (!templateComponents || templateComponents.length !== 6)) {
+          templateComponents = ["Paciente", "Profissional", "Consulta", "Data", "Horário", "Sindicato dos Comerciários"];
         }
 
         if (templateName) {
