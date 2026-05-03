@@ -154,8 +154,9 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
       { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
       { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates Anamnese", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
-      { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
-      { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
+       { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
+       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
+       { href: "/dashboard/whatsapp-atendimento", icon: MessageSquare, label: "Atendimento WhatsApp", permission: "view_dashboard" },
     ],
   },
   // ADMINISTRATIVO - Rose/Pink
