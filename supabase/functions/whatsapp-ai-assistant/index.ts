@@ -963,10 +963,10 @@ async function executeTool(
           });
         }
 
-        const result = await createWhazingTicket(ticketPhone, assunto, detalhes);
-        
-        if (result.success) {
-          console.log(`[ai-assistant] Ticket created/updated for ${ticketPhone}: ${assunto}`);
+         const result = await transferToHuman(ticketPhone, assunto, detalhes);
+         
+         if (result.success) {
+           console.log(`[ai-assistant] Transfer/Ticket triggered for ${ticketPhone}: ${assunto}`);
           return JSON.stringify({
             success: true,
             message: `Chamado registrado com sucesso! Assunto: "${assunto}". Um atendente responderá assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h).`
