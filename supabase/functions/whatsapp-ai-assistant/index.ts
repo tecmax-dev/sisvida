@@ -1140,7 +1140,7 @@ serve(async (req) => {
     }
 
     // Any other booking intent: either handoff to booking (enabled) or redirect to app (disabled)
-    if (/\b(agendar|agendamento|marcar\s+consulta|marcar\s+exame|consulta|horário|horario|vaga|dispon(í|i)vel|disponivel)\b/i.test(cleanMessage)) {
+    if (/\b(agendar|agendamento|marcar\s+consulta|marcar\s+exame|consulta|horário|horario|vaga|dispon(í|i)vel|disponivel)\b/i.test(cleanMessage) && !cleanMessage.includes('conve') && !cleanMessage.includes('cct')) {
       if (isBookingEnabledEarly) {
         console.log('[ai-assistant] Booking intent detected and booking enabled - handing off to booking flow');
         return new Response(
