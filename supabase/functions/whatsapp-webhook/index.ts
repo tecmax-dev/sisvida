@@ -8241,28 +8241,29 @@ async function handleWebhook(req: Request) {
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
-            // Notify Zap Responder immediately that human support was requested
-            await sendZapsterMessage(clinicId, phone, "🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário clicou no botão para falar com um atendente.");
-            
-            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
-            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
-            try {
-              await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseAnonKey2}`,
-                },
-                body: JSON.stringify({
-                  phone,
-                  action: 'atendente',
-                  context: `Perfil: ${storedCategory || 'associado'}`,
-                  clinic_id: clinicId,
-                 instance_name: configData.instance_name,
-                 explicit_phone_id: explicitPhoneId
-                }),
-              });
-            } catch (_e) { /* ignore */ }
+            const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
+            const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
+
+            await freezeBotForHumanHandoff(
+              supabase,
+              phone,
+              payload.data?.pushName || null,
+              'Solicitou falar com atendente pelo menu Outros Assuntos'
+            );
+
+            await supabase.from('whatsapp_ai_conversations').insert({
+              clinic_id: clinicId,
+              phone,
+              messages: {
+                source: 'whazing_menu',
+                action: 'handoff_completed',
+                support_stage: 'human_handoff_active',
+                context: `Perfil: ${storedCategory || 'associado'} | Menu: Outros Assuntos`,
+              },
+              expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            });
+
+            await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
             return createSuccessResponse({ message: 'Routed to atendente' });
           }
 
