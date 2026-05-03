@@ -75,93 +75,88 @@ serve(async (req) => {
           console.log(`[meta-webhook] ID: ${wamid}`);
           
           
-          // Sincroniza no banco ANTES de enviar para o webhook
-          try {
-            // Upsert contato
-            let contactId: string | null = null;
-            const { data: existingContact } = await supabase
-              .from("whatsapp_contacts")
-              .select("id, name")
-              .eq("phone", fromPhone)
-              .eq("clinic_id", SINDICATO_CLINIC_ID)
-              .maybeSingle();
+           let ticketId: string | null = null;
+           try {
+             let contactId: string | null = null;
+             const { data: existingContact } = await supabase
+               .from("whatsapp_contacts")
+               .select("id, name")
+               .eq("phone", fromPhone)
+               .eq("clinic_id", SINDICATO_CLINIC_ID)
+               .maybeSingle();
 
-            if (existingContact) {
-              contactId = existingContact.id;
-              if (!existingContact.name && profileName) {
-                await supabase.from("whatsapp_contacts").update({ name: profileName }).eq("id", contactId);
-              }
-            } else {
-              const { data: newContact, error: cErr } = await supabase
-                .from("whatsapp_contacts")
-                .insert({
-                  clinic_id: SINDICATO_CLINIC_ID,
-                  phone: fromPhone,
-                  name: profileName,
-                })
-                .select("id")
-                .single();
-              if (!cErr) contactId = newContact!.id;
-            }
+             if (existingContact) {
+               contactId = existingContact.id;
+               if (!existingContact.name && profileName) {
+                 await supabase.from("whatsapp_contacts").update({ name: profileName }).eq("id", contactId);
+               }
+             } else {
+               const { data: newContact, error: cErr } = await supabase
+                 .from("whatsapp_contacts")
+                 .insert({
+                   clinic_id: SINDICATO_CLINIC_ID,
+                   phone: fromPhone,
+                   name: profileName,
+                 })
+                 .select("id")
+                 .single();
+               if (!cErr) contactId = newContact!.id;
+             }
 
-            if (contactId) {
-              // Buscar/criar ticket aberto
-              let ticketId: string | null = null;
-              const { data: openTicket } = await supabase
-                .from("whatsapp_tickets")
-                .select("id")
-                .eq("contact_id", contactId)
-                .eq("clinic_id", SINDICATO_CLINIC_ID)
-                .in("status", ["open", "pending", "in_progress"])
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
+             if (contactId) {
+               const { data: openTicket } = await supabase
+                 .from("whatsapp_tickets")
+                 .select("id")
+                 .eq("contact_id", contactId)
+                 .eq("clinic_id", SINDICATO_CLINIC_ID)
+                 .in("status", ["open", "pending", "in_progress"])
+                 .order("created_at", { ascending: false })
+                 .limit(1)
+                 .maybeSingle();
 
-              if (openTicket) {
-                ticketId = openTicket.id;
-              } else {
-                const { data: newTicket, error: tErr } = await supabase
-                  .from("whatsapp_tickets")
-                  .insert({
-                    clinic_id: SINDICATO_CLINIC_ID,
-                    contact_id: contactId,
-                    status: "open",
-                    priority: "normal",
-                    subject: content.slice(0, 80) || "Nova conversa",
-                  })
-                  .select("id")
-                  .single();
-                if (!tErr) ticketId = newTicket!.id;
-              }
+               if (openTicket) {
+                 ticketId = openTicket.id;
+               } else {
+                 const { data: newTicket, error: tErr } = await supabase
+                   .from("whatsapp_tickets")
+                   .insert({
+                     clinic_id: SINDICATO_CLINIC_ID,
+                     contact_id: contactId,
+                     status: "open",
+                     priority: "normal",
+                     subject: content.slice(0, 80) || "Nova conversa",
+                   })
+                   .select("id")
+                   .single();
+                 if (!tErr) ticketId = newTicket!.id;
+               }
 
-              if (ticketId) {
-                // Inserir mensagem e atualizar ticket
-                await supabase.from("whatsapp_ticket_messages").insert({
-                  ticket_id: ticketId,
-                  sender_type: "contact",
-                  sender_name: profileName,
-                  message_type: messageType,
-                  content,
-                  metadata: { meta_message_id: wamid, raw: msg },
-                  created_at: timestamp,
-                });
+               if (ticketId) {
+                 await supabase.from("whatsapp_ticket_messages").insert({
+                   ticket_id: ticketId,
+                   sender_type: "contact",
+                   sender_name: profileName,
+                   message_type: messageType,
+                   content,
+                   metadata: { meta_message_id: wamid, raw: msg },
+                   created_at: timestamp,
+                 });
 
-                await supabase
-                  .from("whatsapp_tickets")
-                  .update({
-                    last_inbound_at: timestamp,
-                    last_message_at: timestamp,
-                    last_message: content,
-                    unread_count: 1,
-                  })
-                  .eq("id", ticketId);
-              }
-            }
-          } catch (syncErr) {
-            console.error("[meta-webhook] Erro ao sincronizar mensagem:", syncErr);
-          }
+                 await supabase
+                   .from("whatsapp_tickets")
+                   .update({
+                     last_inbound_at: timestamp,
+                     last_message_at: timestamp,
+                     last_message: content,
+                     unread_count: 1,
+                   })
+                   .eq("id", ticketId);
+               }
+             }
+           } catch (syncErr) {
+             console.error("[meta-webhook] Erro ao sincronizar mensagem:", syncErr);
+           }
 
-           // Chama o Zap Responder (fluxo oficial) passando o ticket_id se houver
            console.log(`[meta-webhook] Encaminhando para Zap Responder... TicketID: ${ticketId}`);
            fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
              method: 'POST',
