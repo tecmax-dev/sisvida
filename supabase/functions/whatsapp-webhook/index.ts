@@ -8351,6 +8351,7 @@ async function handleWebhook(req: Request) {
             } catch (_e) { /* ignore */ }
 
             // Follow-up buttons after AI response
+            await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
@@ -8553,6 +8554,7 @@ async function handleWebhook(req: Request) {
             if (action !== 'atendente') {
               // Send follow-up buttons only for informational flows.
               // For human-support handoff, avoid re-opening submenus/buttons and causing loop/re-entry.
+              await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
               await new Promise(resolve => setTimeout(resolve, 2000));
               await sendWhatsAppButtons(configData, phone, "O que deseja fazer agora?", "", [
                 { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
