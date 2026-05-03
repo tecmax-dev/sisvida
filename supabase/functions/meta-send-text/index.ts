@@ -79,9 +79,12 @@ serve(async (req) => {
       }
     }
 
-    const windowOpen = lastInbound
-      ? Date.now() - new Date(lastInbound).getTime() < WINDOW_HOURS * 3600 * 1000
-      : false;
+     const now = Date.now();
+     const lastInboundTime = lastInbound ? new Date(lastInbound).getTime() : 0;
+     const diffMs = now - lastInboundTime;
+     const windowOpen = lastInboundTime > 0 && diffMs < WINDOW_HOURS * 3600 * 1000;
+ 
+     console.log(`[meta-send-text] Phone: ${phone}, Last Inbound: ${lastInbound}, Diff: ${Math.round(diffMs/1000/60)}min, Window Open: ${windowOpen}`);
 
     if (!windowOpen) {
       return new Response(
