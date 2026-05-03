@@ -119,12 +119,13 @@ serve(async (req) => {
           parameters: compVars.map(v => ({ type: "text", text: String(v) }))
         });
       } else if (comp.type === "BUTTONS") {
-        // Botões podem ter variáveis (especialmente botões de URL)
         const buttons = comp.buttons || [];
+        console.log(`[meta-send-template] Template has ${buttons.length} buttons.`);
+        
         for (let bIdx = 0; bIdx < buttons.length; bIdx++) {
           const button = buttons[bIdx];
+          
           if (button.type === "URL" && button.url && button.url.includes("{{1}}")) {
-            // Botões de URL geralmente têm apenas uma variável {{1}}
             const compVars = variables.slice(varIndex, varIndex + 1);
             varIndex += 1;
             
@@ -133,6 +134,16 @@ serve(async (req) => {
               sub_type: "url",
               index: String(bIdx),
               parameters: compVars.map(v => ({ type: "text", text: String(v) }))
+            });
+          } else if (button.type === "QUICK_REPLY") {
+            // Quick reply buttons with no variables must still be acknowledged 
+            // in the components array if they exist in the template, 
+            // according to some Meta API versions/edge cases.
+            metaComponents.push({
+              type: "button",
+              sub_type: "quick_reply",
+              index: String(bIdx),
+              parameters: [] // No parameters for static quick replies
             });
           }
         }
