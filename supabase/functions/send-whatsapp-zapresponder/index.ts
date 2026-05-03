@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
+ const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -72,10 +72,10 @@ serve(async (req) => {
       console.log(`[zapresponder] Attempting send via instance ${cfg.instance_id} to ${cleanPhone}`);
       
       const payload: any = {
-        phone: cleanPhone,
-        message: message,
-        departmentId: cfg.instance_id,
-      };
+         phone: cleanPhone,
+         message: message,
+         departmentId: body.departmentId || cfg.instance_id,
+       };
 
       if (templateName) {
         payload.template = {
@@ -87,16 +87,60 @@ serve(async (req) => {
 
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 
-      try {
-        const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/messages/send`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiToken}`,
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(payload),
-        });
+       try {
+         // Try multiple possible endpoints for Zap Responder API
+         const endpoints = [
+           `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`,
+           `${ZAP_RESPONDER_BASE_URL}/messages/send`,
+           `${ZAP_RESPONDER_BASE_URL}/mensagem/enviar`,
+           `${ZAP_RESPONDER_BASE_URL}/webhook` // Fallback: send as a webhook event
+         ];
+ 
+         let response;
+         let currentResult = {};
+ 
+         for (const endpoint of endpoints) {
+           console.log(`[zapresponder] Trying endpoint: ${endpoint}`);
+           
+           let fetchPayload = payload;
+           if (endpoint.endsWith('/webhook')) {
+             // Format as a synthetic webhook payload if using the fallback
+             fetchPayload = {
+               event: "messages.upsert",
+               instance: "meta",
+               departamento_id: payload.departmentId,
+               data: {
+                 key: { remoteJid: `${cleanPhone}@s.whatsapp.net`, fromMe: true },
+                 message: { conversation: message },
+                 pushName: "Sistema",
+                 messageTimestamp: Math.floor(Date.now() / 1000)
+               },
+               is_official_api: true
+             };
+           }
+ 
+           response = await fetch(endpoint, {
+             method: "POST",
+             headers: {
+               "Content-Type": "application/json",
+               "Authorization": `Bearer ${apiToken}`,
+               "Accept": "application/json"
+             },
+             body: JSON.stringify(fetchPayload),
+           });
+ 
+           currentResult = await response.json().catch(() => ({}));
+           if (response.ok) break;
+           console.warn(`[zapresponder] Endpoint ${endpoint} failed with ${response.status}`);
+         }
+ 
+         lastResult = { status: response?.status || 500, data: currentResult };
+ 
+         if (response?.ok) {
+           console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
+           success = true;
+           break;
+         }
 
         const result = await response.json().catch(() => ({}));
         lastResult = { status: response.status, data: result };
