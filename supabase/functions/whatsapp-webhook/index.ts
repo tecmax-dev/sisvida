@@ -8363,22 +8363,10 @@ async function handleWebhook(req: Request) {
 
           // "Outros Assuntos" sub-option: Homologações
           if (followUpId === 'whazing_outros_homologacao' || followUpId === 'Homologacoes' || followUpId === 'homologacao') {
-            // Send informational message with scheduling link
+            // Send informational message with scheduling link using general helper
             const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://prosindweb.com.br/agendamento/profissional/ione-atos-1`;
             
-            try {
-              await fetch(`${configData.api_url}/message/sendText/${configData.instance_name}`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'apikey': configData.api_key,
-                },
-                body: JSON.stringify({
-                  number: phone,
-                  text: homologacaoMsg,
-                }),
-              });
-            } catch (_e) { /* ignore */ }
+            await sendWhatsAppMessage(configData, phone, homologacaoMsg, explicitPhoneId);
 
             // Set context for follow-up buttons
             await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
