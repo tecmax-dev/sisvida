@@ -88,31 +88,38 @@ serve(async (req) => {
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 
         try {
-          const endpoint = `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`;
-          console.log(`[zapresponder] Requesting human transfer via: ${endpoint}`);
-          
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiToken}`,
-            },
-            body: JSON.stringify({
-              phone: cleanPhone,
-              message: message,
-              departamento_id: payload.departmentId
-            }),
-          });
+          const endpoints = [
+            { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/message/sendText/meta_official", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } }
+          ];
 
-          const result = await response.json().catch(() => ({}));
-          lastResult = { status: response.status, data: result };
+          let response;
+          let currentResult = {};
 
-          if (response.ok) {
-            console.log(`[zapresponder] Transfer successful to department ${payload.departmentId}`);
+          for (const endpoint of endpoints) {
+            console.log(`[zapresponder] Trying transfer endpoint: ${endpoint.url}`);
+            response = await fetch(endpoint.url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiToken}`,
+              },
+              body: JSON.stringify(endpoint.payload),
+            });
+
+            currentResult = await response.json().catch(() => ({}));
+            if (response.ok) {
+              console.log(`[zapresponder] Success via ${endpoint.url}`);
+              break;
+            }
+            console.warn(`[zapresponder] ${endpoint.url} failed with ${response.status}`);
+          }
+
+          lastResult = { status: response?.status || 500, data: currentResult };
+          if (response?.ok) {
             success = true;
             break;
-          } else {
-            console.warn(`[zapresponder] Transfer failed with status ${response.status}`, result);
           }
       } catch (err) {
         console.error(`[zapresponder] Exception via ${cfg.instance_id}:`, err);
