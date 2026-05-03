@@ -3,7 +3,7 @@
      '2c1ef611-09d4-4866-b0db-19164e8f8611': 'fa193a46-e119-4994-852b-29e551ab37f1', // Associdos
      'f6f0911b-8bb5-49c1-8d86-e519dc7515d4': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Empresas
      'c7efdda1-d773-40ea-84e5-4c8b46e0ef8e': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Contabilidade
-     '6644c29c-95b9-414f-ba8c-62a2402ede34': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Administrativo
+      '6644c29c-95b9-414f-ba8c-62a2402ede34': '972827ca-657d-4c37-a164-944e6e6113b3', // Administrativo -> Outros assuntos
    };
    return (queueId && map[queueId]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
  }
@@ -8286,8 +8286,8 @@ async function handleWebhook(req: Request) {
                'empresa': '3259b59a-8f9d-4027-8520-2b78167d59ab',
                'contabilidade': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Mapping to Empresas as fallback
              };
-             const targetZapsterDeptId = (storedCategory && zapsterDeptMap[storedCategory as string]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
-             const deptName = storedCategory === 'associado' ? 'Associados' : 'Empresas/Escritórios';
+              const targetZapsterDeptId = (storedCategory && zapsterDeptMap[storedCategory as string]) || '972827ca-657d-4c37-a164-944e6e6113b3';
+              const deptName = storedCategory === 'associado' ? 'Associados' : (storedCategory === 'empresa' || storedCategory === 'contabilidade' ? 'Empresas/Escritórios' : 'Outros assuntos');
  
              // Notify Zap Responder / External Integration for Handoff using a direct synthetic webhook to ensure ticket creation
              // Zap Responder often needs a "incoming message" event to actually open a ticket in the panel.
@@ -8569,7 +8569,7 @@ async function handleWebhook(req: Request) {
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
-                { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
+                { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               ], "", explicitPhoneId);
             }
             return createSuccessResponse({ message: `Outros Assuntos sub-menu sent` });
