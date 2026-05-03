@@ -8262,11 +8262,36 @@ async function handleWebhook(req: Request) {
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
+            console.log(`[webhook] Human handoff requested via Whazing button for ${phone}`);
             const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
             const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
             
-            // Default queue for "Outros Assuntos" / Generic handoff: Administrativo
-            const defaultQueueId = "6644c29c-95b9-414f-ba8c-62a2402ede34"; 
+            // Default queue: Administrativo (6644c29c-95b9-414f-ba8c-62a2402ede34)
+            const queueId = "6644c29c-95b9-414f-ba8c-62a2402ede34";
+
+            // Notify Zap Responder / External Integration for Handoff
+            const zapToken = Deno.env.get('ZAPRESPONDER_API_TOKEN');
+            if (zapToken) {
+              try {
+                await fetch(`https://zapresponder.com.br/api/handoff`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${zapToken}`
+                  },
+                  body: JSON.stringify({
+                    phone,
+                    queueId,
+                    clinicId,
+                    name: payload.data?.pushName || 'Usuário',
+                    message: 'Solicitou falar com atendente pelo menu WhatsApp'
+                  })
+                });
+                console.log(`[webhook] Zap Responder handoff notified for ${phone}`);
+              } catch (zapErr) {
+                console.error('[webhook] Failed to notify Zap Responder for handoff:', zapErr);
+              }
+            }
 
             await freezeBotForHumanHandoff(
               supabase,
@@ -8274,7 +8299,7 @@ async function handleWebhook(req: Request) {
               payload.data?.pushName || null,
               'Solicitou falar com atendente pelo menu Outros Assuntos',
               { 
-                queueId: defaultQueueId,
+                queueId,
                 messageId: payload.data?.key?.id,
                 timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : undefined
               }
