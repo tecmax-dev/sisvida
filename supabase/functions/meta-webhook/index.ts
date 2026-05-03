@@ -157,6 +157,32 @@ serve(async (req) => {
              console.error("[meta-webhook] Erro ao sincronizar mensagem:", syncErr);
            }
 
+           // Encaminha para o Zap Responder externo (se configurado)
+           const zapToken = Deno.env.get("ZAPRESPONDER_API_TOKEN") || Deno.env.get("ZAPSTER_API_TOKEN");
+           const { data: zapCfg } = await supabase
+             .from("zapster_configs")
+             .select("instance_id")
+             .eq("clinic_id", SINDICATO_CLINIC_ID)
+             .eq("is_active", true)
+             .maybeSingle();
+
+           if (zapToken && zapCfg?.instance_id) {
+             console.log(`[meta-webhook] Encaminhando para Zap Responder EXTERNO... Instância: ${zapCfg.instance_id}`);
+             fetch(`https://api.zapresponder.com.br/api/webhook`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${zapToken}`
+               },
+               body: JSON.stringify({ 
+                 ...body, 
+                 departamento_id: zapCfg.instance_id,
+                 instance_id: zapCfg.instance_id,
+                 is_official_api: true 
+               })
+             }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder Externo:", err));
+           }
+
            console.log(`[meta-webhook] Encaminhando para Zap Responder... TicketID: ${ticketId}`);
            fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
              method: 'POST',
