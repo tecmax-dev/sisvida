@@ -556,9 +556,9 @@ serve(async (req) => {
         `)
         .eq('clinic_id', clinic.id)
         .gte('appointment_date', todayStr)
-        .lte('appointment_date', maxAheadDate)
-        .in('status', ['scheduled'])
-        .eq('reminder_sent', false);
+         .lte('appointment_date', maxAheadDate)
+         .in('status', ['scheduled', 'confirmed'])
+         .eq('reminder_sent', false);
       
       // Filter appointments that are actually within the time window
       const filteredAppointments = (appointments || []).filter((apt: any) => {
