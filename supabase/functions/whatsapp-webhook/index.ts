@@ -1947,12 +1947,13 @@ type SupabaseClient = any;
 // AI BOOKING FLOW HANDLER
 // ==========================================
 
-async function handleAIBookingFlow(
-  supabase: SupabaseClient,
-  config: EvolutionConfig,
-  phone: string,
-  messageText: string
-): Promise<void> {
+ async function handleAIBookingFlow(
+   supabase: SupabaseClient,
+   config: EvolutionConfig,
+   phone: string,
+   messageText: string,
+   explicitPhoneId?: string | null
+ ): Promise<void> {
   const clinicId = config.clinic_id;
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
 
@@ -1985,11 +1986,11 @@ async function handleAIBookingFlow(
         } else {
           const errorText = await boletoResponse.text();
           console.error('[ai-booking] Boleto flow error:', errorText);
-          await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.');
+           await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.', explicitPhoneId);
         }
       } catch (boletoError) {
         console.error('[ai-booking] Exception calling boleto flow:', boletoError);
-        await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.');
+         await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.', explicitPhoneId);
       }
       return;
     }
@@ -2026,7 +2027,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-    await sendWhatsAppMessage(config, phone, appBlockMsg);
+     await sendWhatsAppMessage(config, phone, appBlockMsg, explicitPhoneId);
     return;
   }
   // =========================================================================
@@ -2047,14 +2048,15 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     if (existingBookingSession) {
       console.log(`[ai-booking] Found active booking session in state: ${existingBookingSession.state}, switching to traditional flow`);
       // Use traditional booking flow for active sessions
-      await handleBookingFlow(
-        supabase,
-        config,
-        phone,
-        messageText,
-        existingBookingSession as BookingSession,
-        false
-      );
+       await handleBookingFlow(
+         supabase,
+         config,
+         phone,
+         messageText,
+         existingBookingSession as BookingSession,
+         false,
+         explicitPhoneId
+       );
       return;
     }
 
@@ -2070,14 +2072,15 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         console.log(`[ai-booking] Detected valid CPF, creating booking session and processing`);
         // Create session and process CPF directly through traditional flow
         const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
-        await handleBookingFlow(supabase, config, phone, messageText, newSession, false);
+         await handleBookingFlow(supabase, config, phone, messageText, newSession, false, explicitPhoneId);
         return;
       } else {
         // CPF has 11 digits but failed validation - send clear error message
         console.log(`[ai-booking] CPF has 11 digits but failed checksum validation`);
-        await sendWhatsAppMessage(config, phone, 
-          `❌ *CPF inválido*\n\nO CPF informado não passou na validação. Por favor, verifique se digitou corretamente.\n\n💡 Digite apenas os 11 números do seu CPF.`
-        );
+         await sendWhatsAppMessage(config, phone, 
+           `❌ *CPF inválido*\n\nO CPF informado não passou na validação. Por favor, verifique se digitou corretamente.\n\n💡 Digite apenas os 11 números do seu CPF.`,
+           explicitPhoneId
+         );
         return;
       }
     }
@@ -2136,14 +2139,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
          phone: phone,
          conversation_history: conversationHistory,
          deliver_response_via_caller: isSync,
-         explicit_phone_id: explicitPhoneId
+         explicit_phone_id: explicitPhoneId || null
        }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('[ai-booking] AI assistant error:', aiResponse.status, errorText);
-      await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente em instantes.');
+       await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente em instantes.', explicitPhoneId);
       return;
     }
 
@@ -2154,7 +2157,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       // SAFETY CHECK: Never proceed with booking handoff if booking is disabled
       if (config.booking_enabled !== true) {
         console.log('[ai-booking] handoff_to_booking=true but booking_enabled=false - blocking handoff');
-        await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
+         await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance, explicitPhoneId);
         return;
       }
 
@@ -2178,7 +2181,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         `• CPF: 12345678901 (11 dígitos)\n` +
         `• Carteirinha: 000001 (5 a 10 dígitos)`;
       
-      await sendWhatsAppMessage(config, phone, bookingWelcome);
+       await sendWhatsAppMessage(config, phone, bookingWelcome, explicitPhoneId);
       return;
     }
     
@@ -9041,7 +9044,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         if (clinicSettings?.use_ai_booking) {
           // Use AI-powered booking flow
           console.log(`[webhook] Using AI booking for clinic ${clinicId}`);
-          await handleAIBookingFlow(supabase, configData, phone, messageText);
+          await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
         } else {
           // Use traditional menu-based flow
           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
