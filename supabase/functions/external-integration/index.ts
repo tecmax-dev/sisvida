@@ -162,6 +162,24 @@ serve(async (req) => {
     // the bot for human handoff. This guarantees the subject capture step
     // works even when the AI assistant has its own handoff tool.
     if (action.toLowerCase() === 'atendente') {
+      // Notify Zap Responder via internal helper function if possible
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-zapresponder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            clinicId: resolvedClinicId,
+            phone: normalizedPhone,
+            message: "🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário escolheu falar com um atendente pelo menu externo.",
+          }),
+        });
+      } catch (err) {
+        console.error('[external-integration] Failed to notify Zap Responder:', err);
+      }
+
       const askSubjectText = `Claro! Para que eu possa te encaminhar para a equipe certa, *qual é o assunto* que você gostaria de tratar com nosso atendimento? 📝\n\nPode descrever em poucas palavras (ex: dúvida sobre boleto, questão jurídica, contribuição da empresa, etc.).`;
 
       try {

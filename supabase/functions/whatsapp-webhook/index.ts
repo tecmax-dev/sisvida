@@ -8203,6 +8203,9 @@ async function handleWebhook(req: Request) {
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
+            // Notify Zap Responder immediately that human support was requested
+            await sendZapsterMessage(clinicId, phone, "🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário clicou no botão para falar com um atendente.");
+            
             const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
             try {
@@ -8942,6 +8945,9 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   : '';
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
                 await sendWhatsAppMessage(configData, phone, handoffMessage);
+                
+                // Notify Zap Responder of completion of handoff (with subject)
+                await sendZapsterMessage(clinicId, phone, `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`);
 
                  return createSuccessResponse({ message: 'Subject captured and routed to queue' });
               }
