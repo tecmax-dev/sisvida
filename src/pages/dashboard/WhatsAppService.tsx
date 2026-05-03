@@ -45,7 +45,7 @@
  interface Message {
    id: string;
    ticket_id: string;
-   sender_type: 'contact' | 'operator' | 'bot' | 'system';
+   sender_type: string;
    sender_name: string | null;
    message_type: string;
    content: string | null;
