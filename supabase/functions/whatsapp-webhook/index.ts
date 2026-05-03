@@ -8362,7 +8362,7 @@ async function handleWebhook(req: Request) {
           }
 
           // "Outros Assuntos" sub-option: Homologações
-          if (followUpId === 'whazing_outros_homologacao' || followUpId === 'Homologacoes') {
+          if (followUpId === 'whazing_outros_homologacao' || followUpId === 'Homologacoes' || followUpId === 'homologacao') {
             // Send informational message with scheduling link
             const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://prosindweb.com.br/agendamento/profissional/ione-atos-1`;
             
@@ -8380,6 +8380,9 @@ async function handleWebhook(req: Request) {
               });
             } catch (_e) { /* ignore */ }
 
+            // Set context for follow-up buttons
+            await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
+            
             // Follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
