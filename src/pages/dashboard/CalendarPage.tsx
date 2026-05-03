@@ -2758,6 +2758,8 @@ const updateData: Record<string, any> = {
         ],
       } : {};
 
+      console.log(`[CalendarPage] Sending reminder for clinic ${currentClinic?.id}, isSindicato: ${isSindicato}, templateName: ${templatePayload.templateName}`);
+
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
         body: { 
           phone: phoneToUse, 
