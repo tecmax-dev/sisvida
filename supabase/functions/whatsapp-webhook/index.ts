@@ -8269,29 +8269,9 @@ async function handleWebhook(req: Request) {
             // Default queue: Administrativo (6644c29c-95b9-414f-ba8c-62a2402ede34)
             const queueId = "6644c29c-95b9-414f-ba8c-62a2402ede34";
 
-            // Notify Zap Responder / External Integration for Handoff
-            const zapToken = Deno.env.get('ZAPRESPONDER_API_TOKEN');
-            if (zapToken) {
-              try {
-                await fetch(`https://zapresponder.com.br/api/handoff`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${zapToken}`
-                  },
-                  body: JSON.stringify({
-                    phone,
-                    queueId,
-                    clinicId,
-                    name: payload.data?.pushName || 'Usuário',
-                    message: 'Solicitou falar com atendente pelo menu WhatsApp'
-                  })
-                });
-                console.log(`[webhook] Zap Responder handoff notified for ${phone}`);
-              } catch (zapErr) {
-                console.error('[webhook] Failed to notify Zap Responder for handoff:', zapErr);
-              }
-            }
+            // Notify Zap Responder / External Integration for Handoff using the reliable sendZapsterMessage helper
+            await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente pelo menu WhatsApp.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}\n*Fila:* Administrativo\n*Mensagem:* Solicitação via menu de botões.`);
+            console.log(`[webhook] Zap Responder handoff notification triggered via sendZapsterMessage for ${phone}`);
 
             await freezeBotForHumanHandoff(
               supabase,
