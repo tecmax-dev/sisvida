@@ -8293,7 +8293,7 @@ async function handleWebhook(req: Request) {
              // Zap Responder often needs a "incoming message" event to actually open a ticket in the panel.
              try {
                const zapToken = Deno.env.get('ZAPSTER_API_TOKEN') || Deno.env.get('ZAPRESPONDER_API_TOKEN');
-               const zapWebhookUrl = "https://api.zapresponder.com.br/api/webhook";
+               const zapWebhookUrl = "https://api.zapresponder.com.br/webhook";
                
                if (zapToken) {
                  const cleanPhone = phone.replace(/\D/g, '');
