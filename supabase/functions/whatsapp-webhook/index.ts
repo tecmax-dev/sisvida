@@ -8524,8 +8524,9 @@ async function handleWebhook(req: Request) {
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
           const subActionMap: Record<string, string> = {
             'whazing_sub_convencoes': 'cct',
+            'Convenções Coletivas': 'cct',
           };
-          const action = subActionMap[btnId] || 'atendente';
+          const action = subActionMap[btnId] || (messageTextTrim.includes('Convenções') ? 'cct' : 'atendente');
           const contextStr = `Perfil: ${storedCategory}`;
 
           // Route to external-integration function
