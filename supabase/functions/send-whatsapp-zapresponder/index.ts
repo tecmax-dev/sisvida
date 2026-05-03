@@ -91,6 +91,7 @@ serve(async (req) => {
          // Try multiple possible endpoints for Zap Responder API
           const endpoints = [
             `https://api.zapthinker.com/message/sendText/${cfg.instance_id}`,
+            `https://api.zapthinker.com/message/sendText/meta_official`,
             `${ZAP_RESPONDER_BASE_URL}/whatsapp/messages/send`,
             `${ZAP_RESPONDER_BASE_URL}/messages/send`,
             `${ZAP_RESPONDER_BASE_URL}/mensagem/enviar`,
