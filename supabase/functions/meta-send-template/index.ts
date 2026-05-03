@@ -14,9 +14,7 @@ interface SendBody {
   language?: string;
     variables?: string[]; // valores para {{1}}, {{2}}, ... (distribuídos automaticamente)
     button_variables?: string[]; // valores legados
-    console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
-
-  ticket_id?: string;
+    ticket_id?: string;
 }
 
 function normalizePhone(raw: string): string {
@@ -30,6 +28,11 @@ serve(async (req) => {
   }
 
   try {
+    const body: SendBody = await req.json();
+    const { to, template_name, language = "pt_BR", variables = [], ticket_id } = body;
+    
+    console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
+
     const PHONE_ID = "937233212814035"; // ID real do número 73 3231 1784
     
     const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
@@ -42,9 +45,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const body: SendBody = await req.json();
-    const { to, template_name, language = "pt_BR", variables = [], ticket_id } = body;
 
     if (!to || !template_name) {
       return new Response(
@@ -166,9 +166,9 @@ serve(async (req) => {
         headers: {
           Authorization: `Bearer ${TOKEN}`,
           "Content-Type": "application/json; charset=UTF-8",
+        },
     console.log(`[meta-send-template] Payload sent to Meta: ${JSON.stringify(payload)}`);
 
-        },
         body: JSON.stringify(payload),
       },
     );
