@@ -8202,7 +8202,7 @@ async function handleWebhook(req: Request) {
             return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
           }
 
-          if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
+          if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
             // Notify Zap Responder immediately that human support was requested
             await sendZapsterMessage(clinicId, phone, "🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário clicou no botão para falar com um atendente.");
             
@@ -8229,7 +8229,7 @@ async function handleWebhook(req: Request) {
           }
 
           // "Outros Assuntos" sub-option: Jurídico
-          if (followUpId === 'whazing_outros_juridico') {
+          if (followUpId === 'whazing_outros_juridico' || followUpId === 'Juridico') {
             const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
 
             const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
@@ -8265,7 +8265,7 @@ async function handleWebhook(req: Request) {
           }
 
           // "Outros Assuntos" sub-option: Homologações
-          if (followUpId === 'whazing_outros_homologacao') {
+          if (followUpId === 'whazing_outros_homologacao' || followUpId === 'Homologacoes') {
             // Send informational message with scheduling link
             const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://prosindweb.com.br/agendamento/profissional/ione-atos-1`;
             
@@ -8324,7 +8324,7 @@ async function handleWebhook(req: Request) {
         }
 
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
-        if (isWhazingLevel2 || isWhazingLegacy) {
+          if (isWhazingLevel2 || isWhazingLegacy || ['Convenções Coletivas', 'Outros Assuntos', 'Homologacoes', 'Juridico'].includes(messageTextTrim)) {
           const currentCategory = storedCategory || 'associado';
           console.log(`[webhook] Whazing L2 button: "${messageTextTrim}" (category: ${currentCategory})`);
           
@@ -8333,10 +8333,14 @@ async function handleWebhook(req: Request) {
            // Map numeric choices (1, 2, 3) to button IDs based on category
            if (btnId === '1') {
              btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-           } else if (btnId === '2') {
+           } else if (btnId === '2' || btnId === 'Convenções Coletivas') {
              btnId = 'whazing_sub_convencoes';
-           } else if (btnId === '3') {
+           } else if (btnId === '3' || btnId === 'Outros Assuntos') {
              btnId = 'whazing_sub_outros';
+           } else if (btnId === 'Homologacoes') {
+             btnId = 'whazing_outros_homologacao';
+           } else if (btnId === 'Juridico') {
+             btnId = 'whazing_outros_juridico';
            }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
@@ -8408,7 +8412,7 @@ async function handleWebhook(req: Request) {
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
-          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
+          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros' || btnId === 'Outros Assuntos') {
             console.log(`[webhook] Whazing "Outros Assuntos" → sub-menu (${currentCategory})`);
             await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
 
