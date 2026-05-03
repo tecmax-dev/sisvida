@@ -153,7 +153,8 @@ import TissPage from "./pages/dashboard/TissPage";
 import HolidaysPage from "./pages/dashboard/HolidaysPage";
 import PanelBannersPage from "./pages/dashboard/PanelBannersPage";
 import DependentsPage from "./pages/dashboard/DependentsPage";
-import AttendancePage from "./pages/dashboard/AttendancePageRedesign";
+ import AttendancePage from "./pages/dashboard/AttendancePageRedesign";
+ const WhatsAppServicePage = lazy(() => import("./pages/dashboard/WhatsAppService"));
 import PatientOdontogramPage from "./pages/dashboard/PatientOdontogramPage";
 import ExamsPage from "./pages/dashboard/ExamsPage";
 import ExamResultsPage from "./pages/dashboard/ExamResultsPage";
@@ -565,7 +566,8 @@ function App() {
                   <Route path="catalog" element={<CatalogPage />} />
                   <Route path="quotes" element={<QuotesPage />} />
                   <Route path="repass" element={<RepassPage />} />
-                  <Route path="queue" element={<QueueManagementPage />} />
+                   <Route path="queue" element={<QueueManagementPage />} />
+                   <Route path="whatsapp-atendimento" element={<WhatsAppServicePage />} />
                   <Route path="panel-banners" element={<PanelBannersPage />} />
                   <Route path="marketing" element={<MarketingPage />} />
                   <Route path="tiss" element={<TissPage />} />
