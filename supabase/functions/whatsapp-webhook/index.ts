@@ -1986,11 +1986,11 @@ type SupabaseClient = any;
         } else {
           const errorText = await boletoResponse.text();
           console.error('[ai-booking] Boleto flow error:', errorText);
-          await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.');
+           await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.', explicitPhoneId);
         }
       } catch (boletoError) {
         console.error('[ai-booking] Exception calling boleto flow:', boletoError);
-        await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.');
+         await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.', explicitPhoneId);
       }
       return;
     }
@@ -2027,7 +2027,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-    await sendWhatsAppMessage(config, phone, appBlockMsg);
+     await sendWhatsAppMessage(config, phone, appBlockMsg, explicitPhoneId);
     return;
   }
   // =========================================================================
