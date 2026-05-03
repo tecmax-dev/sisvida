@@ -8945,7 +8945,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   ? `\n\n📌 Encaminhei para a equipe de *${chosenQueue.name}*.`
                   : '';
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
-                await sendWhatsAppMessage(configData, phone, handoffMessage);
+                await sendWhatsAppMessage(configData, phone, handoffMessage, explicitPhoneId);
                 
                 // Notify Zap Responder of completion of handoff (with subject)
                 await sendZapsterMessage(clinicId, phone, `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`);
@@ -8972,7 +8972,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
                 });
 
-                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage());
+                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage(), explicitPhoneId);
 
                  return createSuccessResponse({ message: 'Asked user for subject' });
               }
