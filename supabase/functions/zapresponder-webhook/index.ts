@@ -54,16 +54,24 @@
             if (normalized === "confirmar" || normalized === "cancelar") {
               console.log(`[zapresponder] Botão de lembrete detectado: ${normalized}`);
               try {
-                const phoneDigits = fromPhone.replace(/\D/g, "");
-                const phoneNoBR = phoneDigits.startsWith("55") ? phoneDigits.slice(2) : phoneDigits;
-                const todayIso = new Date().toISOString().slice(0, 10);
-
-                // Busca appointment futuro do paciente (titular OU dependente cujo titular tem este telefone)
-                const { data: patients } = await supabase
-                  .from("patients")
-                  .select("id")
-                  .eq("clinic_id", SINDICATO_CLINIC_ID)
-                  .or(`phone.eq.${phoneNoBR},phone.eq.${phoneDigits}`);
+                 const phoneDigits = fromPhone.replace(/\D/g, ""); // 557388633535
+                 const phoneNoBR = phoneDigits.startsWith("55") ? phoneDigits.slice(2) : phoneDigits; // 7388633535
+                 
+                 // Lógica para lidar com o nono dígito no Brasil (7388633535 vs 73988633535)
+                 const phoneWith9 = (phoneNoBR.length === 10) ? (phoneNoBR.slice(0, 2) + "9" + phoneNoBR.slice(2)) : null;
+                 const phoneWithout9 = (phoneNoBR.length === 11 && phoneNoBR[2] === "9") ? (phoneNoBR.slice(0, 2) + phoneNoBR.slice(3)) : null;
+                 
+                 const possiblePhones = [phoneNoBR, phoneDigits, phoneWith9, phoneWithout9].filter(Boolean);
+                 const phoneOrClause = possiblePhones.map(p => `phone.eq.${p}`).join(",");
+                 
+                 const todayIso = new Date().toISOString().slice(0, 10);
+ 
+                 // Busca appointment futuro do paciente
+                 const { data: patients } = await supabase
+                   .from("patients")
+                   .select("id")
+                   .eq("clinic_id", SINDICATO_CLINIC_ID)
+                   .or(phoneOrClause);
                 const patientIds = (patients || []).map((p: any) => p.id);
 
                 let aptToUpdate: any = null;
