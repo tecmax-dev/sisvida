@@ -8526,7 +8526,8 @@ async function handleWebhook(req: Request) {
             'whazing_sub_convencoes': 'cct',
             'Convenções Coletivas': 'cct',
           };
-          const action = subActionMap[btnId] || (messageTextTrim.includes('Convenções') || btnId === 'whazing_sub_convencoes' ? 'cct' : 'atendente');
+          const isCct = messageTextTrim.includes('Convenções') || btnId === 'whazing_sub_convencoes' || btnId === 'Convenções Coletivas';
+          const action = subActionMap[btnId] || (isCct ? 'cct' : 'atendente');
           const contextStr = `Perfil: ${storedCategory}`;
 
           // Route to external-integration function
@@ -8552,7 +8553,7 @@ async function handleWebhook(req: Request) {
             const extResult = await extResponse.json();
             console.log(`[webhook] External-integration result:`, JSON.stringify(extResult).substring(0, 300));
 
-            if (action !== 'atendente') {
+            if (action !== 'atendente' && action !== 'cct') {
               // Send follow-up buttons only for informational flows.
               // For human-support handoff, avoid re-opening submenus/buttons and causing loop/re-entry.
               await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
