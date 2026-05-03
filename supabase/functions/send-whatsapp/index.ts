@@ -403,7 +403,10 @@ serve(async (req) => {
     const body = await req.json();
     const { phone, message, clinicId, type = 'custom', imageUrl, appointmentId, sendAsTextOnly = false } = body as WhatsAppRequest;
     
-    console.log(`[send-whatsapp] Received imageUrl: ${imageUrl || 'NOT PROVIDED'}, body keys: ${Object.keys(body).join(', ')}`);
+    console.log(`[send-whatsapp] Received body keys: ${Object.keys(body).join(', ')}`);
+    if (body.templateName) {
+      console.log(`[send-whatsapp] Template requested: ${body.templateName} with ${body.templateComponents?.length || 0} variables`);
+    }
 
     if (!phone || !message || !clinicId) {
       return new Response(

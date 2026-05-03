@@ -12,9 +12,9 @@ interface SendBody {
   to: string; // E.164 sem +, ex: 5573999999999
   template_name: string;
   language?: string;
-   variables?: string[]; // valores para {{1}}, {{2}}, ... (Body)
-   button_variables?: string[]; // valores para {{1}}, {{2}}, ... (Buttons)
-  ticket_id?: string;
+    variables?: string[]; // valores para {{1}}, {{2}}, ... (distribuídos automaticamente)
+    button_variables?: string[]; // valores legados
+    ticket_id?: string;
 }
 
 function normalizePhone(raw: string): string {
@@ -28,6 +28,11 @@ serve(async (req) => {
   }
 
   try {
+    const body: SendBody = await req.json();
+    const { to, template_name, language = "pt_BR", variables = [], ticket_id } = body;
+    
+    console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
+
     const PHONE_ID = "937233212814035"; // ID real do número 73 3231 1784
     
     const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
@@ -40,9 +45,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const body: SendBody = await req.json();
-    const { to, template_name, language = "pt_BR", variables = [], ticket_id } = body;
 
     if (!to || !template_name) {
       return new Response(
@@ -85,29 +87,68 @@ serve(async (req) => {
       }
     }
 
-     const metaComponents: any[] = [];
-     
-     // 1. Body variables
-     if (variables.length > 0) {
-       metaComponents.push({
-         type: "body",
-         parameters: variables.map((v) => ({ type: "text", text: String(v) })),
-       });
-     }
- 
-     // 2. Button variables (URL parameters)
-     if (body.button_variables && body.button_variables.length > 0) {
-       // Meta requires parameters for each button index if it has variables
-       // In this specific template, button index 2 is the URL button with {{1}}
-       metaComponents.push({
-         type: "button",
-         sub_type: "url",
-         index: "2", // 0-indexed index of the button in the template
-         parameters: body.button_variables.map(v => ({ type: "text", text: String(v) }))
-       });
-     }
- 
-     const payload = {
+    // Distribuir variáveis entre os componentes do template
+    const metaComponents: any[] = [];
+    const components = (tpl?.components as any[]) || [];
+    
+    // Variáveis são fornecidas em uma lista plana. Precisamos saber quantas variáveis cada componente espera.
+    let varIndex = 0;
+    
+    for (let i = 0; i < components.length; i++) {
+      const comp = components[i];
+      const text = comp.text || "";
+      
+      // Contar quantas variáveis {{n}} existem neste componente
+      const matches = text.match(/\{\{\d+\}\}/g);
+      const numVars = matches ? matches.length : 0;
+      
+      if (comp.type === "BODY" && numVars > 0) {
+        const compVars = variables.slice(varIndex, varIndex + numVars);
+        varIndex += numVars;
+        
+        metaComponents.push({
+          type: "body",
+          parameters: compVars.map(v => ({ type: "text", text: String(v) }))
+        });
+      } else if (comp.type === "HEADER" && numVars > 0) {
+        const compVars = variables.slice(varIndex, varIndex + numVars);
+        varIndex += numVars;
+        
+        metaComponents.push({
+          type: "header",
+          parameters: compVars.map(v => ({ type: "text", text: String(v) }))
+        });
+      } else if (comp.type === "BUTTONS") {
+        // Botões podem ter variáveis (especialmente botões de URL)
+        const buttons = comp.buttons || [];
+        for (let bIdx = 0; bIdx < buttons.length; bIdx++) {
+          const button = buttons[bIdx];
+          if (button.type === "URL" && button.url && button.url.includes("{{1}}")) {
+            // Botões de URL geralmente têm apenas uma variável {{1}}
+            const compVars = variables.slice(varIndex, varIndex + 1);
+            varIndex += 1;
+            
+            metaComponents.push({
+              type: "button",
+              sub_type: "url",
+              index: String(bIdx),
+              parameters: compVars.map(v => ({ type: "text", text: String(v) }))
+            });
+          }
+        }
+      }
+    }
+
+    // Fallback: se não conseguimos distribuir variáveis mas temos variáveis e nenhum componente adicionado
+    if (metaComponents.length === 0 && variables.length > 0) {
+      console.log("[meta-send-template] Fallback distribution to body");
+      metaComponents.push({
+        type: "body",
+        parameters: variables.map(v => ({ type: "text", text: String(v) }))
+      });
+    }
+
+    const payload = {
       messaging_product: "whatsapp",
       to: normalizePhone(to),
       type: "template",
@@ -118,13 +159,15 @@ serve(async (req) => {
       },
     };
 
+    console.log(`[meta-send-template] Payload sent to Meta: ${JSON.stringify(payload)}`);
+
     const res = await fetch(
       `https://graph.facebook.com/${META_GRAPH_VERSION}/${PHONE_ID}/messages`,
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${TOKEN}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json; charset=UTF-8",
         },
         body: JSON.stringify(payload),
       },
