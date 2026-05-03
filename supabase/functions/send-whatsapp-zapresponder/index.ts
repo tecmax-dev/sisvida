@@ -6,7 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
- const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br";
+  // Updated domains based on latest platform changes
+  const ZAP_RESPONDER_BASE_URL = "https://app.zapresponder.com.br";
+  const ZAP_THINKER_BASE_URL = "https://api.zapthinker.com.br";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -89,10 +91,13 @@ serve(async (req) => {
 
         try {
           const endpoints = [
-            { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
-            { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { phone: cleanPhone, body: message, department_id: payload.departmentId } },
-            { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } },
-            { url: "https://api.zapresponder.com.br/message/sendText/meta_official", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } }
+            // Official Meta API Endpoints (Zap Responder uses app. prefix for many webhooks/APIs)
+            { url: "https://app.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/api/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
+            // Legacy or Alternative Endpoints
+            { url: "https://api.zapthinker.com.br/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } }
           ];
 
           let response;
