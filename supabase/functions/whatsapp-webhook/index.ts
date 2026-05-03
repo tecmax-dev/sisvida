@@ -8289,7 +8289,7 @@ async function handleWebhook(req: Request) {
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ]);
+            ], "", explicitPhoneId);
 
             return createSuccessResponse({ message: 'Routed to homologacao' });
           }
@@ -8466,7 +8466,7 @@ async function handleWebhook(req: Request) {
                 { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
                 { id: "whazing_voltar_menu", title: "Menu Principal" },
-              ]);
+              ], "", explicitPhoneId);
             } else {
               console.log('[webhook] Skipping follow-up buttons after atendente handoff to avoid loop');
             }
