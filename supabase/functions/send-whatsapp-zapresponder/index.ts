@@ -90,6 +90,7 @@ serve(async (req) => {
         try {
           const endpoints = [
             { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            { url: "https://api.zapresponder.com.br/api/external/messages/send", payload: { phone: cleanPhone, body: message, department_id: payload.departmentId } },
             { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } },
             { url: "https://api.zapresponder.com.br/message/sendText/meta_official", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } }
           ];
