@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MessageSquare, AlertTriangle, CheckCircle2, Info, BookOpen, Smartphone, ShieldCheck, FileText, UserPlus, HelpCircle } from "lucide-react";
+import { Clock, MessageSquare, AlertTriangle, CheckCircle2, Info, BookOpen, Smartphone, ShieldCheck, FileText, UserPlus, HelpCircle, DollarSign } from "lucide-react";
 
 const TrainingMaterial = () => {
   return (
@@ -14,34 +14,45 @@ const TrainingMaterial = () => {
         <p className="text-xl text-slate-600">Guia Prático para Atendimento Humano - Sindicato dos Comerciários</p>
       </header>
 
-      {/* Key Concept: 24h Window */}
-      <section className="mb-10">
-        <div className="bg-amber-50 border-l-8 border-amber-500 p-6 rounded-r-lg shadow-sm">
+      {/* Key Concept: 24h Window & Costs */}
+      <section className="mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 bg-amber-50 border-l-8 border-amber-500 p-6 rounded-r-lg shadow-sm">
           <div className="flex items-center mb-4">
             <Clock className="w-10 h-10 text-amber-600 mr-4" />
-            <h2 className="text-2xl font-bold text-amber-900">A Regra de Ouro: A Janela de 24 Horas</h2>
+            <h2 className="text-2xl font-bold text-amber-900">A Janela de 24 Horas</h2>
           </div>
           <p className="text-lg mb-4 leading-relaxed">
-            O WhatsApp Business API funciona com uma <strong>"Janela de Atendimento"</strong>. 
-            Sempre que um associado envia uma mensagem, abre-se um cronômetro de 24 horas.
+            Sempre que um associado envia uma mensagem, abre-se uma <strong>"Janela de Atendimento"</strong> de 24 horas.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div className="bg-white p-4 rounded-lg shadow-inner border border-amber-200">
-              <h3 className="font-bold text-green-700 flex items-center mb-2">
-                <CheckCircle2 className="mr-2" /> Janela Aberta
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="bg-white p-3 rounded-lg shadow-inner border border-amber-200">
+              <h3 className="font-bold text-green-700 text-sm flex items-center mb-1">
+                <CheckCircle2 className="mr-2 w-4 h-4" /> Janela Aberta
               </h3>
-              <p>Você pode conversar livremente, enviar fotos, áudios e documentos sem custos adicionais.</p>
+              <p className="text-xs">Conversa livre e envio de arquivos sem travas.</p>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-inner border border-amber-200">
-              <h3 className="font-bold text-red-700 flex items-center mb-2">
-                <AlertTriangle className="mr-2" /> Janela Fechada
+            <div className="bg-white p-3 rounded-lg shadow-inner border border-amber-200">
+              <h3 className="font-bold text-red-700 text-sm flex items-center mb-1">
+                <AlertTriangle className="mr-2 w-4 h-4" /> Janela Fechada
               </h3>
-              <p>Após 24h da última mensagem do cliente, você <strong>não pode</strong> mais enviar mensagens livres. O sistema trava.</p>
+              <p className="text-xs">O sistema trava. Só modelos aprovados funcionam.</p>
             </div>
           </div>
-          <p className="mt-4 text-sm italic font-medium text-amber-800 underline">
-            Dica: Sempre responda o associado o mais rápido possível para não perder o prazo!
+        </div>
+
+        <div className="bg-emerald-50 border-2 border-emerald-200 p-6 rounded-lg shadow-sm">
+          <div className="flex items-center mb-4">
+            <DollarSign className="w-8 h-8 text-emerald-600 mr-2" />
+            <h2 className="text-xl font-bold text-emerald-900">Custos da Meta</h2>
+          </div>
+          <p className="text-sm text-emerald-800 mb-2">
+            A Meta cobra por <strong>Sessão de 24h</strong>, não por mensagem individual.
           </p>
+          <ul className="text-xs space-y-2 text-emerald-900 list-disc ml-4">
+            <li><strong>Se o associado chamar:</strong> Inicia uma conversa de "Serviço".</li>
+            <li>Dentro das 24h, você pode enviar 100 mensagens e o custo será o mesmo de 1 mensagem.</li>
+            <li>Temos uma cota gratuita de 1.000 conversas por mês.</li>
+          </ul>
         </div>
       </section>
 
@@ -147,19 +158,26 @@ const TrainingMaterial = () => {
 
       {/* Financial Support and FAQ */}
       <section className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-green-50 border-green-200 border-2">
           <CardHeader>
             <CardTitle className="text-green-800 flex items-center">
               <FileText className="mr-2" /> Boletos e Financeiro
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm mb-3">O associado pode pedir boletos diretamente. Se ele não conseguir:</p>
-            <ul className="text-xs space-y-2 list-disc ml-4 text-green-900">
-              <li>Confirme o CPF dele no sistema.</li>
-              <li>Envie o boleto (PDF) ou a linha digitável.</li>
-              <li>Lembre-o que ele pode tirar a 2ª via pelo Portal do Sócio no site.</li>
-            </ul>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm font-bold text-green-900 mb-2 underline">Procedimento Interno:</p>
+              <ul className="text-xs space-y-2 list-disc ml-4 text-green-900">
+                <li>Confirme o CPF dele no sistema antes de enviar.</li>
+                <li>Envie o boleto (PDF) ou a linha digitável diretamente no chat.</li>
+                <li><strong>Importante:</strong> Se ele já iniciou a conversa, não há custo extra em atendê-lo por aqui dentro das 24h.</li>
+              </ul>
+            </div>
+            <div className="bg-white p-3 rounded border border-green-100 italic">
+              <p className="text-xs text-green-800">
+                <strong>Dica de Economia:</strong> Incentive o uso do <strong>Portal do Sócio</strong>. Se o associado aprender a tirar o boleto sozinho no site/app sem mandar mensagem no WhatsApp, o Sindicato economiza créditos de conversas da Meta!
+              </p>
+            </div>
           </CardContent>
         </Card>
 
