@@ -120,7 +120,7 @@ export default function MobileAboutPage() {
               <Phone className="h-5 w-5 text-emerald-600 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">Telefone</p>
-                <p className="text-sm text-muted-foreground">(73) 3098-2161</p>
+                <p className="text-sm text-muted-foreground">(73) 3231-1784</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
