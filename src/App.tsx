@@ -242,6 +242,7 @@ import DataImportPage from "./pages/admin/DataImportPage";
 import SmtpSettingsPage from "./pages/admin/SmtpSettingsPage";
 import NotificationsPage from "./pages/admin/NotificationsPage";
 import ChatSupportPage from "./pages/admin/ChatSupportPage";
+import TrainingMaterial from "./components/TrainingMaterial";
 import HeroSettingsPage from "./pages/admin/HeroSettingsPage";
 import CarouselBannersPage from "./pages/admin/CarouselBannersPage";
 import GlobalConfigPage from "./pages/admin/GlobalConfigPage";
@@ -416,6 +417,7 @@ function App() {
                 <Route path="/assinar/:token" element={<SignatureAuthorizationPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
+                <Route path="/sindicato/treinamento" element={<TrainingMaterial />} />
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
