@@ -82,6 +82,8 @@ interface Message {
     const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
     const [showTemplateDialog, setShowTemplateDialog] = useState(false);
     const [loadingTemplates, setLoadingTemplates] = useState(false);
+    const [selectedTemplateForVars, setSelectedTemplateForVars] = useState<WhatsAppTemplate | null>(null);
+    const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
     // Load templates
     useEffect(() => {
       if (showTemplateDialog) {
@@ -107,9 +109,37 @@ interface Message {
       }
     };
 
-    const handleSendTemplate = async (template: WhatsAppTemplate) => {
+    const handleOpenVariableDialog = (template: WhatsAppTemplate) => {
+      const varMatches = template.content.match(/\{\{\d+\}\}/g);
+      if (varMatches) {
+        setSelectedTemplateForVars(template);
+        const initialVars: Record<string, string> = {};
+        varMatches.forEach(v => {
+          const num = v.replace(/\{\{|\}\}/g, '');
+          initialVars[num] = "";
+        });
+        setTemplateVariables(initialVars);
+      } else {
+        handleSendTemplate(template);
+      }
+    };
+
+    const handleSendTemplate = async (template: WhatsAppTemplate, variables?: Record<string, string>) => {
       if (!selectedTicket || sending) return;
       
+      // Validation: Check if all variables are filled
+      if (variables) {
+        const missing = Object.values(variables).some(v => !v.trim());
+        if (missing) {
+          toast({
+            title: "Variáveis pendentes",
+            description: "Por favor, preencha todas as variáveis do modelo.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
       setSending(true);
       try {
         const { error } = await supabase.functions.invoke('meta-send-template', {
@@ -117,13 +147,26 @@ interface Message {
             to: selectedTicket.contact.phone,
             template_name: template.name,
             language_code: 'pt_BR',
-            ticket_id: selectedTicket.id
+            ticket_id: selectedTicket.id,
+            components: variables ? [
+              {
+                type: "body",
+                parameters: Object.keys(variables)
+                  .sort((a, b) => Number(a) - Number(b))
+                  .map(key => ({
+                    type: "text",
+                    text: variables[key]
+                  }))
+              }
+            ] : []
           }
         });
 
         if (error) throw error;
         
         setShowTemplateDialog(false);
+        setSelectedTemplateForVars(null);
+        setTemplateVariables({});
         toast({
           title: "Template enviado",
           description: "O modelo de reativação foi enviado com sucesso."
@@ -500,7 +543,7 @@ interface Message {
                           <Card 
                             key={template.id} 
                             className="p-3 cursor-pointer hover:bg-accent transition-colors"
-                            onClick={() => handleSendTemplate(template)}
+                            onClick={() => handleOpenVariableDialog(template)}
                           >
                             <div className="flex justify-between items-start mb-1">
                               <span className="font-bold text-xs uppercase text-primary">{template.name.replace(/_/g, ' ')}</span>
@@ -509,6 +552,45 @@ interface Message {
                             <p className="text-sm text-muted-foreground">{template.content}</p>
                           </Card>
                         ))}
+              {/* Template Variables Dialog */}
+              <Dialog open={!!selectedTemplateForVars} onOpenChange={(open) => !open && setSelectedTemplateForVars(null)}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Preencher Variáveis</DialogTitle>
+                    <DialogDescription>
+                      O modelo selecionado possui variáveis. Preencha os campos abaixo para continuar.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 py-4">
+                    <div className="bg-muted p-3 rounded text-xs text-muted-foreground italic mb-4">
+                      {selectedTemplateForVars?.content}
+                    </div>
+                    {Object.keys(templateVariables).sort((a, b) => Number(a) - Number(b)).map((key) => (
+                      <div key={key} className="space-y-2">
+                        <label className="text-xs font-bold uppercase text-muted-foreground">Campo {"{{" + key + "}}"}</label>
+                        <Input 
+                          placeholder={`Valor para variável ${key}...`}
+                          value={templateVariables[key]}
+                          onChange={(e) => setTemplateVariables(prev => ({ ...prev, [key]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setSelectedTemplateForVars(null)}>Cancelar</Button>
+                    <Button 
+                      disabled={sending || Object.values(templateVariables).some(v => !v.trim())}
+                      onClick={() => selectedTemplateForVars && handleSendTemplate(selectedTemplateForVars, templateVariables)}
+                    >
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                      Enviar Template
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
                       </div>
                     ) : (
                       <p className="text-center text-muted-foreground py-8">Nenhum template aprovado encontrado.</p>
