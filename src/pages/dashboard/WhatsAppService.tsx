@@ -7,21 +7,28 @@
  import { ScrollArea } from "@/components/ui/scroll-area";
  import { Badge } from "@/components/ui/badge";
  import { Card } from "@/components/ui/card";
- import { 
-   MessageSquare, 
-   Send, 
-   User, 
-   Clock, 
-   CheckCircle2, 
-   Bot, 
-   Search,
-   Loader2,
-   MoreVertical,
-   Phone,
-   Check,
-    CheckCheck,
-    FileText
- } from "lucide-react";
+import { 
+  MessageSquare, 
+  Send, 
+  User, 
+  Clock, 
+  CheckCircle2, 
+  Bot, 
+  Search,
+  Loader2,
+  MoreVertical,
+  Phone,
+  Check,
+  CheckCheck,
+  FileText
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
  import { format } from "date-fns";
  import { ptBR } from "date-fns/locale";
  import { cn } from "@/lib/utils";
@@ -43,23 +50,23 @@
    unread_count: number;
  }
  
-  interface Message {
-  interface WhatsAppTemplate {
-    id: string;
-    name: string;
-    content: string;
-    category: string;
-  }
+interface WhatsAppTemplate {
+  id: string;
+  name: string;
+  content: string;
+  category: string;
+}
 
-   id: string;
-   ticket_id: string;
-   sender_type: string;
-   sender_name: string | null;
-   message_type: string;
-   content: string | null;
-   created_at: string;
-   is_read: boolean;
- }
+interface Message {
+  id: string;
+  ticket_id: string;
+  sender_type: string;
+  sender_name: string | null;
+  message_type: string;
+  content: string | null;
+  created_at: string;
+  is_read: boolean;
+}
  
  export default function WhatsAppService() {
    const { currentClinic, user } = useAuth();
