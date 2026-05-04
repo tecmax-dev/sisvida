@@ -19,7 +19,8 @@
    MoreVertical,
    Phone,
    Check,
-   CheckCheck
+    CheckCheck,
+    FileText
  } from "lucide-react";
  import { format } from "date-fns";
  import { ptBR } from "date-fns/locale";
@@ -42,7 +43,14 @@
    unread_count: number;
  }
  
- interface Message {
+  interface Message {
+  interface WhatsAppTemplate {
+    id: string;
+    name: string;
+    content: string;
+    category: string;
+  }
+
    id: string;
    ticket_id: string;
    sender_type: string;
@@ -63,7 +71,68 @@
    const [loading, setLoading] = useState(true);
    const [loadingMessages, setLoadingMessages] = useState(false);
    const [sending, setSending] = useState(false);
-   const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+    const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+    const [loadingTemplates, setLoadingTemplates] = useState(false);
+    // Load templates
+    useEffect(() => {
+      if (showTemplateDialog) {
+        loadTemplates();
+      }
+    }, [showTemplateDialog]);
+
+    const loadTemplates = async () => {
+      setLoadingTemplates(true);
+      try {
+        const { data, error } = await supabase
+          .from('whatsapp_templates')
+          .select('*')
+          .eq('status', 'approved')
+          .order('name');
+        
+        if (error) throw error;
+        setTemplates(data || []);
+      } catch (err) {
+        console.error("Error loading templates:", err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+
+    const handleSendTemplate = async (template: WhatsAppTemplate) => {
+      if (!selectedTicket || sending) return;
+      
+      setSending(true);
+      try {
+        const { error } = await supabase.functions.invoke('meta-send-template', {
+          body: {
+            to: selectedTicket.contact.phone,
+            template_name: template.name,
+            language_code: 'pt_BR',
+            ticket_id: selectedTicket.id
+          }
+        });
+
+        if (error) throw error;
+        
+        setShowTemplateDialog(false);
+        toast({
+          title: "Template enviado",
+          description: "O modelo de reativação foi enviado com sucesso."
+        });
+      } catch (err: any) {
+        console.error("Error sending template:", err);
+        toast({
+          title: "Erro ao enviar template",
+          description: err.message || "Tente novamente mais tarde.",
+          variant: "destructive"
+        });
+      } finally {
+        setSending(false);
+      }
+    };
+
    const scrollRef = useRef<HTMLDivElement>(null);
  
    const selectedTicket = tickets.find(t => t.id === selectedTicketId);
@@ -403,20 +472,74 @@
                </div>
              </ScrollArea>
  
-             {/* Message Input */}
-             <div className="p-4 border-t bg-card">
-               <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto">
-                 <Input 
-                   placeholder="Digite uma mensagem..." 
-                   value={newMessage}
-                   onChange={(e) => setNewMessage(e.target.value)}
-                   disabled={sending}
-                   className="flex-1"
-                 />
-                 <Button type="submit" disabled={sending || !newMessage.trim()}>
-                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                 </Button>
-               </form>
+              {/* Template Selection Dialog */}
+              <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Reativar Conversa (Templates)</DialogTitle>
+                    <DialogDescription>
+                      A janela de 24h está fechada. Selecione um modelo aprovado para reativar o atendimento.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <ScrollArea className="max-h-[400px] mt-4">
+                    {loadingTemplates ? (
+                      <div className="flex justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : templates.length > 0 ? (
+                      <div className="space-y-3">
+                        {templates.map((template) => (
+                          <Card 
+                            key={template.id} 
+                            className="p-3 cursor-pointer hover:bg-accent transition-colors"
+                            onClick={() => handleSendTemplate(template)}
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-bold text-xs uppercase text-primary">{template.name.replace(/_/g, ' ')}</span>
+                              <Badge variant="outline" className="text-[9px]">{template.category}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{template.content}</p>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-8">Nenhum template aprovado encontrado.</p>
+                    )}
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
+
+              {/* Message Input */}
+              <div className="p-4 border-t bg-card">
+                <div className="flex gap-2 max-w-4xl mx-auto items-center mb-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 text-xs h-8"
+                    onClick={() => setShowTemplateDialog(true)}
+                  >
+                    <FileText className="h-3 w-3" />
+                    Reativar (Template)
+                  </Button>
+                  <div className="h-4 w-[1px] bg-border mx-1" />
+                  <span className="text-[10px] text-muted-foreground italic">
+                    Use templates se a janela de 24h estiver fechada.
+                  </span>
+                </div>
+                <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto">
+                  <Input 
+                    placeholder="Digite uma mensagem..." 
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    disabled={sending}
+                    className="flex-1"
+                  />
+                  <Button type="submit" disabled={sending || !newMessage.trim()}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </form>
                {selectedTicket.is_bot_active && (
                  <p className="text-[10px] text-center text-muted-foreground mt-2">
                    O robô está ativo. Suas mensagens serão enviadas, mas a Lia pode responder em seguida.
