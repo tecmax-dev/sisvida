@@ -79,7 +79,8 @@ interface Message {
    const [loadingMessages, setLoadingMessages] = useState(false);
    const [sending, setSending] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+   const [suggestedTemplateId, setSuggestedTemplateId] = useState<string | null>(null);
     const [showTemplateDialog, setShowTemplateDialog] = useState(false);
     const [loadingTemplates, setLoadingTemplates] = useState(false);
     const [selectedTemplateForVars, setSelectedTemplateForVars] = useState<WhatsAppTemplate | null>(null);
@@ -308,13 +309,24 @@ interface Message {
        setNewMessage("");
      } catch (err: any) {
        console.error("Error sending message:", err);
-       toast({
-         title: "Erro ao enviar mensagem",
-         description: err.message === "WINDOW_CLOSED" 
-           ? "A janela de 24h está fechada. Envie um template para reabrir."
-           : "Tente novamente mais tarde.",
-         variant: "destructive"
-       });
+         if (err.message === "WINDOW_CLOSED") {
+           toast({
+             title: "Janela de 24h fechada",
+             description: "A última mensagem do associado foi há mais de 24 horas. Use um modelo aprovado para reativar o contato.",
+             variant: "destructive",
+             action: (
+               <Button size="sm" variant="outline" onClick={() => setShowTemplateDialog(true)}>
+                 Ver Modelos
+               </Button>
+             )
+           });
+         } else {
+           toast({
+             title: "Erro ao enviar mensagem",
+             description: "Tente novamente mais tarde.",
+             variant: "destructive"
+           });
+         }
      } finally {
        setSending(false);
      }
@@ -539,19 +551,30 @@ interface Message {
                       </div>
                     ) : templates.length > 0 ? (
                       <div className="space-y-3">
-                        {templates.map((template) => (
-                          <Card 
-                            key={template.id} 
-                            className="p-3 cursor-pointer hover:bg-accent transition-colors"
-                            onClick={() => handleOpenVariableDialog(template)}
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="font-bold text-xs uppercase text-primary">{template.name.replace(/_/g, ' ')}</span>
-                              <Badge variant="outline" className="text-[9px]">{template.category}</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{template.content}</p>
-                          </Card>
-                        ))}
+                         {templates.map((template) => {
+                           const isScheduling = template.name.includes('agendamento');
+                           return (
+                             <Card 
+                               key={template.id} 
+                               className={cn(
+                                 "p-3 cursor-pointer hover:bg-accent transition-colors border-l-4",
+                                 isScheduling ? "border-l-blue-500 bg-blue-50/30" : "border-l-transparent"
+                               )}
+                               onClick={() => handleOpenVariableDialog(template)}
+                             >
+                               <div className="flex justify-between items-start mb-1">
+                                 <div className="flex items-center gap-2">
+                                   <span className="font-bold text-xs uppercase text-primary">
+                                     {template.name.replace(/_/g, ' ')}
+                                   </span>
+                                   {isScheduling && <Badge className="text-[9px] bg-blue-500">Sugestão</Badge>}
+                                 </div>
+                                 <Badge variant="outline" className="text-[9px]">{template.category}</Badge>
+                               </div>
+                               <p className="text-sm text-muted-foreground">{template.content}</p>
+                             </Card>
+                           );
+                         })}
               {/* Template Variables Dialog */}
               <Dialog open={!!selectedTemplateForVars} onOpenChange={(open) => !open && setSelectedTemplateForVars(null)}>
                 <DialogContent className="max-w-md">
