@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MessageSquare, AlertTriangle, CheckCircle2, Info, BookOpen, Smartphone, ShieldCheck, FileText, UserPlus, HelpCircle, DollarSign } from "lucide-react";
+import { Clock, MessageSquare, AlertTriangle, CheckCircle2, Info, BookOpen, Smartphone, ShieldCheck, FileText, UserPlus, HelpCircle, DollarSign, Send } from "lucide-react";
 
 const TrainingMaterial = () => {
   return (
@@ -58,26 +58,35 @@ const TrainingMaterial = () => {
 
       {/* New Section: Templates and After 24h */}
       <section className="mb-10">
-        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-lg">
+        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-lg shadow-sm">
           <div className="flex items-center mb-4">
             <FileText className="w-8 h-8 text-blue-700 mr-3" />
             <h2 className="text-2xl font-bold text-blue-900">Modelos de Mensagem (Templates)</h2>
           </div>
-          <p className="mb-4">
-            Quando a janela de 24h fecha, você só pode falar com o associado usando os <strong>Modelos Aprovados</strong> pela Meta.
+          <p className="mb-4 text-slate-700">
+            Quando a janela de 24h fecha, o WhatsApp "trava". Para falar com o associado de novo, você deve usar um <strong>Modelo Aprovado</strong>. Isso serve para <strong>"reativar"</strong> a conversa.
           </p>
+          
+          <div className="bg-white p-4 rounded-lg border border-blue-100 mb-6">
+            <h3 className="font-bold text-blue-800 flex items-center mb-3 text-sm">
+              <Send className="w-4 h-4 mr-2" /> Exemplo de Modelo para Reativar:
+            </h3>
+            <div className="bg-slate-50 p-3 rounded border-l-4 border-blue-500 italic text-sm text-slate-600">
+              "Olá, aqui é do Sindicato dos Comerciários. Notamos que sua solicitação ainda não foi concluída. Você ainda precisa de ajuda com este assunto?"
+            </div>
+            <p className="mt-3 text-xs text-slate-500">
+              <strong>Como funciona:</strong> Após você enviar esse modelo, a Meta cobra uma pequena taxa e a janela de 24h <strong>só reabre</strong> quando o associado responder (mesmo que seja um "Sim").
+            </p>
+          </div>
+
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <li className="bg-white p-3 rounded border border-blue-100 flex items-start">
-              <div className="bg-blue-100 p-1 rounded mr-3 mt-1">
-                <CheckCircle2 className="w-4 h-4 text-blue-600" />
-              </div>
-              <span className="text-sm">Os modelos não podem ser alterados manualmente na hora do envio.</span>
+            <li className="bg-blue-100/50 p-3 rounded flex items-start">
+              <CheckCircle2 className="w-4 h-4 text-blue-600 mr-2 mt-1 shrink-0" />
+              <span className="text-xs font-medium">Os modelos são fixos: você não consegue mudar o texto na hora de enviar.</span>
             </li>
-            <li className="bg-white p-3 rounded border border-blue-100 flex items-start">
-              <div className="bg-blue-100 p-1 rounded mr-3 mt-1">
-                <CheckCircle2 className="w-4 h-4 text-blue-600" />
-              </div>
-              <span className="text-sm">Use-os para "reativar" o contato e esperar que o associado responda.</span>
+            <li className="bg-blue-100/50 p-3 rounded flex items-start">
+              <CheckCircle2 className="w-4 h-4 text-blue-600 mr-2 mt-1 shrink-0" />
+              <span className="text-xs font-medium">Sempre escolha o modelo que mais se encaixa no assunto pendente.</span>
             </li>
           </ul>
         </div>
