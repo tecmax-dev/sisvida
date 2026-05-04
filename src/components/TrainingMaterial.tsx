@@ -135,32 +135,3 @@ const TrainingMaterial = () => {
 };
 
 export default TrainingMaterial;
-*** Update File: src/App.tsx
-@@
- import Index from "./pages/Index";
- import NotFound from "./pages/NotFound";
- import Dashboard from "./pages/Dashboard";
- import SindicatoHome from "./pages/SindicatoHome";
- import SindicatoLogin from "./pages/SindicatoLogin";
- import SindicatoRegister from "./pages/SindicatoRegister";
- import SindicatoProfile from "./pages/SindicatoProfile";
- import SindicatoServices from "./pages/SindicatoServices";
- import SindicatoBenefitDetails from "./pages/SindicatoBenefitDetails";
- import SindicatoConsultas from "./pages/SindicatoConsultas";
- import SindicatoExtrato from "./pages/SindicatoExtrato";
- import SindicatoNoticias from "./pages/SindicatoNoticias";
- import SindicatoNoticiaDetail from "./pages/SindicatoNoticiaDetail";
- import SindicatoDependents from "./pages/SindicatoDependents";
- import SindicatoDigitalCard from "./pages/SindicatoDigitalCard";
- import SindicatoChat from "./pages/SindicatoChat";
-+import TrainingMaterial from "./components/TrainingMaterial";
- 
- const queryClient = new QueryClient();
-@@
-             <Route path="/sindicato/digital-card" element={<SindicatoDigitalCard />} />
-             <Route path="/sindicato/chat" element={<SindicatoChat />} />
-+            <Route path="/sindicato/treinamento" element={<TrainingMaterial />} />
-             
-             {/* Catch-all */}
-             <Route path="*" element={<NotFound />} />
-*** End Patch
