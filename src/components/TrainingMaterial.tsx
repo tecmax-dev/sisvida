@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MessageSquare, AlertTriangle, CheckCircle2, Info, BookOpen, Smartphone, ShieldCheck } from "lucide-react";
+import { Clock, MessageSquare, AlertTriangle, CheckCircle2, Info, BookOpen, Smartphone, ShieldCheck, FileText, UserPlus, HelpCircle } from "lucide-react";
 
 const TrainingMaterial = () => {
   return (
@@ -42,6 +42,33 @@ const TrainingMaterial = () => {
           <p className="mt-4 text-sm italic font-medium text-amber-800 underline">
             Dica: Sempre responda o associado o mais rápido possível para não perder o prazo!
           </p>
+        </div>
+      </section>
+
+      {/* New Section: Templates and After 24h */}
+      <section className="mb-10">
+        <div className="bg-blue-50 border-2 border-blue-200 p-6 rounded-lg">
+          <div className="flex items-center mb-4">
+            <FileText className="w-8 h-8 text-blue-700 mr-3" />
+            <h2 className="text-2xl font-bold text-blue-900">Modelos de Mensagem (Templates)</h2>
+          </div>
+          <p className="mb-4">
+            Quando a janela de 24h fecha, você só pode falar com o associado usando os <strong>Modelos Aprovados</strong> pela Meta.
+          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <li className="bg-white p-3 rounded border border-blue-100 flex items-start">
+              <div className="bg-blue-100 p-1 rounded mr-3 mt-1">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+              </div>
+              <span className="text-sm">Os modelos não podem ser alterados manualmente na hora do envio.</span>
+            </li>
+            <li className="bg-white p-3 rounded border border-blue-100 flex items-start">
+              <div className="bg-blue-100 p-1 rounded mr-3 mt-1">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+              </div>
+              <span className="text-sm">Use-os para "reativar" o contato e esperar que o associado responda.</span>
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -87,6 +114,68 @@ const TrainingMaterial = () => {
               <li>Oriente a baixar na Play Store (Android) ou Apple Store (iOS).</li>
               <li>Não tente agendar manualmente pelo chat.</li>
             </ol>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Dashboard Support */}
+      <section className="mb-10">
+        <div className="border-2 border-slate-200 rounded-lg overflow-hidden">
+          <div className="bg-slate-800 text-white p-4 flex items-center">
+            <UserPlus className="mr-3" />
+            <h2 className="text-xl font-bold">Assumindo o Atendimento no Dashboard</h2>
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-slate-800">1</div>
+              <h3 className="font-bold text-sm mb-1">Aba "Aguardando"</h3>
+              <p className="text-xs text-slate-500">Veja quem solicitou ajuda humana e ainda não foi atendido.</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-slate-800">2</div>
+              <h3 className="font-bold text-sm mb-1">Botão "Assumir"</h3>
+              <p className="text-xs text-slate-500">Ao clicar, o robô para de responder e você assume o controle total.</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-slate-800">3</div>
+              <h3 className="font-bold text-sm mb-1">Finalizar Chat</h3>
+              <p className="text-xs text-slate-500">Sempre clique em "Finalizar" ao terminar para liberar o associado para o robô novamente.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Financial Support and FAQ */}
+      <section className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card className="bg-green-50 border-green-200">
+          <CardHeader>
+            <CardTitle className="text-green-800 flex items-center">
+              <FileText className="mr-2" /> Boletos e Financeiro
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-3">O associado pode pedir boletos diretamente. Se ele não conseguir:</p>
+            <ul className="text-xs space-y-2 list-disc ml-4 text-green-900">
+              <li>Confirme o CPF dele no sistema.</li>
+              <li>Envie o boleto (PDF) ou a linha digitável.</li>
+              <li>Lembre-o que ele pode tirar a 2ª via pelo Portal do Sócio no site.</li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-blue-800 flex items-center">
+              <HelpCircle className="mr-2" /> Em caso de Dúvida Técnica
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-3">Se o sistema WhatsApp parecer travado ou não enviar mensagens:</p>
+            <ul className="text-xs space-y-2 list-disc ml-4 text-blue-900">
+              <li>Verifique se a mensagem do associado tem mais de 24 horas.</li>
+              <li>Tente enviar um "Modelo de Mensagem" de Utilidade.</li>
+              <li>Se persistir, acione o suporte técnico da ProsindWeb.</li>
+            </ul>
           </CardContent>
         </Card>
       </section>
