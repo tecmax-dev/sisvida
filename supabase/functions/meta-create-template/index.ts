@@ -38,12 +38,14 @@ serve(async (req) => {
       ]
     };
 
+    const url = "https://graph.facebook.com/" + META_GRAPH_VERSION + "/" + WABA_ID + "/message_templates";
+
     const res = await fetch(
-      \`https://graph.facebook.com/\${META_GRAPH_VERSION}/\${WABA_ID}/message_templates\`,
+      url,
       {
         method: "POST",
         headers: {
-          Authorization: \`Bearer \${TOKEN}\`,
+          Authorization: "Bearer " + TOKEN,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
