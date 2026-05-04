@@ -107,14 +107,45 @@ export default function PayslipApprovalsPage() {
       }
     }
     
-    reviewRequest({
-      requestId: selectedRequest.id,
-      status: 'approved',
-      notes: reviewNotes || undefined,
-      newExpiresAt: newExpiresAt,
-    }, {
-      onSuccess: () => setReviewDialogOpen(false),
-    });
+     reviewRequest(
+       {
+         requestId: selectedRequest.id,
+         status: 'approved',
+         notes: reviewNotes || undefined,
+         newExpiresAt: newExpiresAt,
+       },
+       {
+         onSuccess: async () => {
+           // Notify user via WhatsApp
+           if (selectedRequest.patients?.phone) {
+             try {
+               await supabase.functions.invoke('send-payslip-approval', {
+                 body: {
+                   clinic_id: clinicId,
+                   patient_id: selectedRequest.patient_id,
+                   patient_name: selectedRequest.patients.name,
+                   patient_phone: selectedRequest.patients.phone,
+                   new_expires_at: newExpiresAt,
+                   notes: reviewNotes || undefined,
+                 },
+               });
+               toast({
+                 title: "Contracheque aprovado",
+                 description: "O associado foi notificado via WhatsApp.",
+               });
+             } catch (err) {
+               console.error('Error sending approval notification:', err);
+             }
+           } else {
+             toast({
+               title: "Contracheque aprovado",
+               description: "Associado sem telefone cadastrado para notificação.",
+             });
+           }
+           setReviewDialogOpen(false);
+         },
+       }
+     );
   };
 
   const handleReject = async () => {

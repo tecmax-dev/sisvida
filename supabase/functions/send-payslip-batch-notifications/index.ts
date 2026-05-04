@@ -18,42 +18,6 @@ interface EvolutionConfig {
   is_connected: boolean;
 }
 
-async function sendWhatsAppText(
-  config: EvolutionConfig,
-  phone: string,
-  message: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    let formattedPhone = phone.replace(/\D/g, '');
-    if (!formattedPhone.startsWith('55')) {
-      formattedPhone = '55' + formattedPhone;
-    }
-
-    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.api_key,
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message,
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log(`[batch] Evolution API response: ${response.status} for ${formattedPhone}`);
-
-    if (!response.ok) {
-      return { success: false, error: `API error ${response.status}: ${responseText}` };
-    }
-
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -180,35 +144,37 @@ serve(async (req) => {
         .limit(1)
         .single();
 
-      const firstName = patient.name.split(' ')[0];
-      const cardLine = activeCard?.expires_at
-        ? `\n🪪 Sua carteirinha digital está válida até *${new Date(activeCard.expires_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}*.`
-        : '';
-
-      const message = `📄 Olá, ${firstName}!
-
-Seu *contracheque* foi atualizado pelo ${clinic.name}.
-${cardLine}
-✅ O documento já está disponível na sua área do associado.
-
-Em caso de dúvidas, entre em contato conosco.
-
-*Equipe ${clinic.name}*`;
-
-      // Add small delay between sends to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const result = await sendWhatsAppText(evolutionConfig as EvolutionConfig, patient.phone, message);
-
-      if (result.success) {
-        sent++;
-        results.push({ patient: patient.name, success: true });
-        console.log(`[batch] ✅ Sent to ${patient.name}`);
-      } else {
-        failed++;
-        results.push({ patient: patient.name, success: false, error: result.error });
-        console.error(`[batch] ❌ Failed for ${patient.name}: ${result.error}`);
-      }
+       // Try sending via the shared send-payslip-approval function which now supports Meta Templates
+       const expiryStr = activeCard?.expires_at ? new Date(activeCard.expires_at).toISOString().split('T')[0] : null;
+       
+       try {
+         const result = await supabase.functions.invoke('send-payslip-approval', {
+           body: {
+             clinic_id,
+             patient_id: patientId,
+             patient_name: patient.name,
+             patient_phone: patient.phone,
+             new_expires_at: expiryStr,
+           }
+         });
+ 
+         const data = result.data;
+         if (!result.error && data?.whatsapp_sent) {
+           sent++;
+           results.push({ patient: patient.name, success: true });
+           console.log(`[batch] ✅ Sent to ${patient.name}`);
+         } else {
+           failed++;
+           results.push({ patient: patient.name, success: false, error: result.error || data?.error || 'Falha no envio' });
+           console.error(`[batch] ❌ Failed for ${patient.name}: ${result.error || data?.error}`);
+         }
+       } catch (err: any) {
+         failed++;
+         results.push({ patient: patient.name, success: false, error: err.message });
+       }
+       
+       // Small delay to avoid overloading
+       await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     console.log(`[batch] Done. Sent: ${sent}, Failed: ${failed}, No phone: ${noPhone}`);
