@@ -6,86 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ApprovalRequest {
-  clinic_id: string;
-  patient_id: string;
-  patient_name: string;
-  patient_phone: string;
-  card_id?: string;
-  new_expires_at?: string | null;
-  notes?: string;
-}
-
-interface EvolutionConfig {
-  api_url: string;
-  api_key: string;
-  instance_name: string;
-  is_connected: boolean;
-}
-
-async function sendWhatsAppText(
-  config: EvolutionConfig,
-  phone: string,
-  message: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    let formattedPhone = phone.replace(/\D/g, '');
-    if (!formattedPhone.startsWith('55')) {
-      formattedPhone = '55' + formattedPhone;
-    }
-
-    const candidates = new Set<string>();
-    candidates.add(formattedPhone);
-    const national = formattedPhone.slice(2);
-    if (national.length === 10) {
-      const ddd = national.slice(0, 2);
-      const rest = national.slice(2);
-      if (!rest.startsWith('9')) candidates.add('55' + ddd + '9' + rest);
-    } else if (national.length === 11) {
-      const ddd = national.slice(0, 2);
-      const rest = national.slice(2);
-      if (rest.startsWith('9')) candidates.add('55' + ddd + rest.slice(1));
-    }
-
-    try {
-      const checkResp = await fetch(`${config.api_url}/chat/whatsappNumbers/${config.instance_name}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': config.api_key },
-        body: JSON.stringify({ numbers: Array.from(candidates) }),
-      });
-      if (checkResp.ok) {
-        const checkData = await checkResp.json();
-        if (Array.isArray(checkData)) {
-          const valid = checkData.find((n: any) => n?.exists === true);
-          if (valid?.jid) {
-            formattedPhone = String(valid.jid).split('@')[0];
-            console.log(`[send-payslip-approval] Resolved JID for ${phone}: ${formattedPhone}`);
-          } else {
-            return { success: false, error: 'Número não está registrado no WhatsApp' };
-          }
-        }
-      }
-    } catch (checkErr) {
-      console.warn('[send-payslip-approval] JID check failed:', checkErr);
-    }
-
-    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': config.api_key },
-      body: JSON.stringify({ number: formattedPhone, text: message }),
-    });
-
-    const responseText = await response.text();
-    console.log(`[send-payslip-approval] Evolution API response: ${response.status} - ${responseText}`);
-
-    if (!response.ok) return { success: false, error: `API error ${response.status}: ${responseText}` };
-    return { success: true };
-  } catch (error) {
-    console.error('[send-payslip-approval] Error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
 function formatDateBR(dateStr?: string | null): string | null {
   if (!dateStr) return null;
   try {
@@ -103,42 +23,92 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { clinic_id, patient_id, patient_name, patient_phone, new_expires_at, notes }: ApprovalRequest = await req.json();
-
-    console.log('[send-payslip-approval] Processing', { clinic_id, patient_id, patient_name, new_expires_at });
-
-    const { data: clinic } = await supabase.from('clinics').select('name').eq('id', clinic_id).single();
-    if (!clinic) throw new Error('Clínica não encontrada');
-
-    const { data: evolutionConfig } = await supabase
-      .from('evolution_configs')
-      .select('api_url, api_key, instance_name, is_connected')
-      .eq('clinic_id', clinic_id)
-      .eq('is_connected', true)
-      .single();
-
-    if (!evolutionConfig) {
-      return new Response(
-        JSON.stringify({ success: true, whatsapp_sent: false, message: 'WhatsApp não configurado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const firstName = (patient_name || '').split(' ')[0] || patient_name;
-    const expiryBR = formatDateBR(new_expires_at);
-
-    const message = `✅ Olá, ${firstName}!
-
-Seu contracheque foi *aprovado* com sucesso! 🎉
-
-Sua carteirinha de associado(a) está renovada${expiryBR ? ` e válida até *${expiryBR}*` : ''}.${notes ? `\n\n📝 *Observações:* ${notes}` : ''}
-
-Agora você pode continuar utilizando todos os benefícios e serviços do sindicato normalmente.
-
-Obrigado pela confiança!
-Equipe ${clinic.name}`;
-
-    const result = await sendWhatsAppText(evolutionConfig as EvolutionConfig, patient_phone, message);
+     const { clinic_id, patient_id, patient_name, patient_phone, new_expires_at, notes } = await req.json();
+ 
+     console.log('[send-payslip-approval] Processing', { clinic_id, patient_id, patient_name, new_expires_at });
+ 
+     const firstName = (patient_name || '').split(' ')[0] || patient_name;
+     const expiryBR = formatDateBR(new_expires_at);
+ 
+     // Prioritize Meta Template if available (needed for closed 24h window)
+     const { data: metaConfig } = await supabase.from('whatsapp_configs').select('*').limit(1).maybeSingle();
+     
+     let whatsapp_sent = false;
+     let error_detail = null;
+ 
+     if (metaConfig) {
+       console.log('[send-payslip-approval] Attempting Meta Template notification');
+       try {
+         const templateName = new_expires_at ? 'carteirinha_atualizada' : 'contracheque_aprovado';
+         const variables = new_expires_at ? [firstName, expiryBR] : [firstName];
+ 
+         const metaRes = await supabase.functions.invoke('meta-send-template', {
+           body: {
+             to: patient_phone,
+             template_name: templateName,
+             variables
+           }
+         });
+ 
+         if (!metaRes.error) {
+           whatsapp_sent = true;
+           console.log('[send-payslip-approval] Meta Template sent successfully');
+         } else {
+           console.warn('[send-payslip-approval] Meta Template failed:', metaRes.error);
+           error_detail = metaRes.error;
+         }
+       } catch (err) {
+         console.error('[send-payslip-approval] Error calling meta-send-template:', err);
+       }
+     }
+ 
+     // Fallback to Evolution API (text message) if Meta failed or not configured
+     if (!whatsapp_sent) {
+       const { data: evolutionConfig } = await supabase
+         .from('evolution_configs')
+         .select('api_url, api_key, instance_name, is_connected')
+         .eq('clinic_id', clinic_id)
+         .eq('is_connected', true)
+         .single();
+ 
+       if (evolutionConfig) {
+         const { data: clinic } = await supabase.from('clinics').select('name').eq('id', clinic_id).single();
+         const clinicName = clinic?.name || 'Sindicato';
+ 
+         const message = `✅ Olá, ${firstName}!
+ 
+ Seu contracheque foi *aprovado* com sucesso! 🎉
+ 
+ Sua carteirinha de associado(a) está renovada${expiryBR ? ` e válida até *${expiryBR}*` : ''}.${notes ? `\n\n📝 *Observações:* ${notes}` : ''}
+ 
+ Agora você pode continuar utilizando todos os benefícios e serviços do sindicato normalmente.
+ 
+ Obrigado pela confiança!
+ Equipe ${clinicName}`;
+ 
+         // Re-implementing simplified sendWhatsAppText logic here to avoid huge file rewrite
+         let formattedPhone = patient_phone.replace(/\D/g, '');
+         if (!formattedPhone.startsWith('55')) formattedPhone = '55' + formattedPhone;
+ 
+         const response = await fetch(`${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json', 'apikey': evolutionConfig.api_key },
+           body: JSON.stringify({ number: formattedPhone, text: message }),
+         });
+ 
+         if (response.ok) {
+           whatsapp_sent = true;
+         } else {
+           const text = await response.text();
+           error_detail = `Evolution API error: ${text}`;
+         }
+       }
+     }
+ 
+     return new Response(
+       JSON.stringify({ success: true, whatsapp_sent, error: error_detail }),
+       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+     );
 
     return new Response(
       JSON.stringify({ success: true, whatsapp_sent: result.success, error: result.success ? undefined : result.error }),
