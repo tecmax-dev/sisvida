@@ -13,6 +13,8 @@ interface SendBody {
   to: string;
   text: string;
   ticket_id?: string;
+  phone_number_id?: string;
+  token?: string;
 }
 
 function normalizePhone(raw: string): string {
@@ -26,11 +28,18 @@ serve(async (req) => {
   }
 
   try {
-    const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
-    
-    const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const body: SendBody = await req.json();
+    const { to, text, ticket_id, phone_number_id, token } = body;
+
+    let TOKEN = token || Deno.env.get("META_WHATSAPP_TOKEN");
+    if (token === "SYSTEM") {
+      TOKEN = Deno.env.get("META_SYSTEM_USER_TOKEN") || TOKEN;
+    }
+
+    const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
 
     if (!PHONE_ID || !TOKEN) {
       return new Response(
@@ -38,9 +47,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const body: SendBody = await req.json();
-    const { to, text, ticket_id } = body;
 
     if (!to || !text?.trim()) {
       return new Response(
