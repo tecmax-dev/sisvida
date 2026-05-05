@@ -163,6 +163,12 @@
               const protocolId = `META-${Date.now().toString().slice(-6)}`;
               const employeeName = "Assistente Digital"; // Nome fixo do atendente virtual
               
+              // Captura ID do telefone para garantir que responda pelo mesmo canal
+              const incomingPhoneId = metadata?.phone_number_id;
+              const workingPhoneId = (incomingPhoneId === "937233212814035" || incomingPhoneId === "1522701919380063") 
+                ? "1110151302179856" 
+                : incomingPhoneId;
+              
               const response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
                 method: 'POST',
                 headers: {
@@ -171,6 +177,7 @@
                 },
                 body: JSON.stringify({
                   to: fromPhone,
+                  phone_number_id: workingPhoneId,
                   template_name: "homologacao_protocolo",
                   variables: [
                     "Atendimento Digital",
