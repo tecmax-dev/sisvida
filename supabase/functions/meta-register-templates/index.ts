@@ -371,29 +371,80 @@ const templates: TemplatePayload[] = [
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
     ],
   },
-  {
-    name: "homologacao_protocolo",
-    language: LANG,
-    category: "UTILITY",
-    components: [
-      {
-        type: "BODY",
-        text:
-          "✅ Protocolo de {{1}}\n\nO processo de {{1}} foi concluído com sucesso.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nProtocolo: {{5}}\n\nGuarde este protocolo para seus registros. Este é um comprovante oficial.",
-        example: {
-          body_text: [[
-            "Homologação",
-            "João da Silva",
-            "Comércio ABC Ltda",
-            "15/03/2026",
-            "HOM-20260315-0001",
-          ]],
-        },
-      },
-      { type: "FOOTER", text: "Sindicato dos Comerciários" },
-    ],
-  },
-];
+   {
+     name: "homologacao_protocolo",
+     language: LANG,
+     category: "UTILITY",
+     components: [
+       {
+         type: "BODY",
+         text:
+           "✅ Protocolo de {{1}}\n\nO processo de {{1}} foi concluído com sucesso.\n\nFuncionário: {{2}}\nEmpresa: {{3}}\nData: {{4}}\nProtocolo: {{5}}\n\nGuarde este protocolo para seus registros. Este é um comprovante oficial.",
+         example: {
+           body_text: [[
+             "Homologação",
+             "João da Silva",
+             "Comércio ABC Ltda",
+             "15/03/2026",
+             "HOM-20260315-0001",
+           ]],
+         },
+       },
+       { type: "FOOTER", text: "Sindicato dos Comerciários" },
+     ],
+   },
+   {
+     name: "contracheque_aprovado",
+     language: LANG,
+     category: "UTILITY",
+     components: [
+       {
+         type: "BODY",
+         text:
+           "✅ Olá, {{1}}!\n\nSeu contracheque foi *aprovado* com sucesso! 🎉\n\nSua carteirinha de associado(a) está renovada. Agora você pode continuar utilizando todos os benefícios e serviços do sindicato normalmente.\n\nObrigado pela confiança!",
+         example: { body_text: [["João"]] },
+       },
+       { type: "FOOTER", text: "Sindicato dos Comerciários" },
+     ],
+   },
+   {
+     name: "carteirinha_atualizada",
+     language: LANG,
+     category: "UTILITY",
+     components: [
+       {
+         type: "BODY",
+         text:
+           "✅ Olá, {{1}}!\n\nSeu contracheque foi aprovado e sua carteirinha foi atualizada! 🎉\n\nValidade: {{2}}\n\nAgora você pode continuar utilizando todos os benefícios do sindicato normalmente.\n\nObrigado pela confiança!",
+         example: { body_text: [["João", "31/12/2026"]] },
+       },
+       { type: "FOOTER", text: "Sindicato dos Comerciários" },
+     ],
+   },
+   {
+     name: "agendamento_consulta",
+     language: LANG,
+     category: "UTILITY",
+     components: [
+       {
+         type: "BODY",
+         text:
+           "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://app.sindicato.com.br",
+         example: {
+           body_text: [[
+             "Maria Santos",
+             "Dr. Carlos Mendes",
+             "Cardiologia",
+             "15/03/2026",
+             "14:30",
+             "Sede Central - Rua Principal, 100",
+           ]],
+         },
+       },
+       { type: "FOOTER", text: "Sindicato dos Comerciários" },
+     ],
+   },
+ ];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
