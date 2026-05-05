@@ -123,6 +123,7 @@ export default function PublicBooking() {
   const [patientCpf, setPatientCpf] = useState("");
   const [searchingPatient, setSearchingPatient] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
+  const isSindicatoClinic = clinic?.slug === 'sindicato';
   
   // Dependents
   interface Dependent {
@@ -752,6 +753,13 @@ export default function PublicBooking() {
           description: data.dependents?.length > 0 
             ? `Seus dados foram preenchidos. Você tem ${data.dependents.length} dependente(s) cadastrado(s).`
             : "Seus dados foram preenchidos automaticamente." 
+        });
+      }
+      else if (isSindicatoClinic) {
+        toast({
+          title: "Associado não encontrado",
+          description: "Para agendar nesta clínica, você deve ser um associado ativo do sindicato. Por favor, realize sua filiação em /union.",
+          variant: "destructive",
         });
       }
     } catch (err) {
@@ -1392,8 +1400,13 @@ export default function PublicBooking() {
                       onChange={(e) => setPatientName(e.target.value)}
                       placeholder="Seu nome completo"
                       className="mt-1.5"
-                      disabled={patientFound}
+                      disabled={patientFound || (isSindicatoClinic && !patientFound)}
                     />
+                    {isSindicatoClinic && !patientFound && !searchingPatient && patientCpf.replace(/\D/g, '').length === 11 && (
+                      <p className="text-xs text-destructive mt-1">
+                        Cadastro não permitido para não-associados.
+                      </p>
+                    )}
                   </div>
 
                   {/* Phone */}
@@ -1406,6 +1419,7 @@ export default function PublicBooking() {
                       placeholder="(00) 00000-0000"
                       maxLength={15}
                       className="mt-1.5"
+                      disabled={isSindicatoClinic && !patientFound}
                     />
                   </div>
 
@@ -1419,6 +1433,7 @@ export default function PublicBooking() {
                       onChange={(e) => setPatientEmail(e.target.value)}
                       placeholder="seu@email.com"
                       className="mt-1.5"
+                      disabled={isSindicatoClinic && !patientFound}
                     />
                   </div>
                 </div>
@@ -1426,7 +1441,7 @@ export default function PublicBooking() {
                 {/* Submit Button */}
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || !patientName || !patientPhone}
+                  disabled={submitting || !patientName || !patientPhone || (isSindicatoClinic && !patientFound)}
                   className="w-full h-12 text-base mt-6"
                   size="lg"
                 >
