@@ -9275,20 +9275,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         const selectedId = msg.templateButtonReplyMessage.selectedId as string | undefined;
         mirrorText = selectedId || messageText;
         console.log(`[mirror] Template button reply: id="${selectedId}"`);
-        } else if (msg?.interactiveResponseMessage) {
-          try {
-            const paramsJson = msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson as string | undefined;
-            if (paramsJson) {
-              const params = JSON.parse(paramsJson);
-              mirrorText = params.display || params.id || messageText;
-            }
-          } catch { /* ignore */ }
-          console.log(`[mirror] Interactive response: "${mirrorText}"`);
-        } else if ((msg as any)?.interactive) {
-          const im = (msg as any).interactive;
-          mirrorText = im.button_reply?.title || im.button_reply?.id || im.list_reply?.title || im.list_reply?.id || messageText;
-          console.log(`[mirror] Meta interactive response: "${mirrorText}"`);
-        }
+      } else if (msg?.interactiveResponseMessage) {
         try {
           const paramsJson = msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson as string | undefined;
           if (paramsJson) {
@@ -9297,6 +9284,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           }
         } catch { /* ignore */ }
         console.log(`[mirror] Interactive response: "${mirrorText}"`);
+      } else if ((msg as any)?.interactive) {
+        const im = (msg as any).interactive;
+        mirrorText = im.button_reply?.title || im.button_reply?.id || im.list_reply?.title || im.list_reply?.id || messageText;
+        console.log(`[mirror] Meta interactive response: "${mirrorText}"`);
       }
 
       // Upsert ticket
