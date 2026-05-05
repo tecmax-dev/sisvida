@@ -72,28 +72,28 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
-    name: "carteira_vencendo",
+    name: "aviso_vencimento_carteira",
     language: LANG,
     category: "UTILITY",
     components: [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua carteira de sócio do Sindicato dos Comerciários vence em {{2}}.\n\nPara manter o acesso aos benefícios, regularize antes do vencimento em: https://app.sindicato.com.br",
+          "Olá, {{1}}. Informamos que sua carteira de associado do Sindicato dos Comerciários vencerá em {{2}}.\n\nPara garantir a continuidade do acesso aos serviços e benefícios, a renovação pode ser solicitada através do aplicativo ou em nossa sede.",
         example: { body_text: [["João da Silva", "30/03/2026"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
     ],
   },
   {
-    name: "carteira_vencida",
+    name: "aviso_carteira_vencida",
     language: LANG,
     category: "UTILITY",
     components: [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua carteira de sócio do Sindicato dos Comerciários venceu em {{2}}.\n\nPara reativar seus benefícios, regularize sua situação em: https://app.sindicato.com.br",
+          "Olá, {{1}}. Consta em nosso sistema que sua carteira de associado venceu em {{2}}.\n\nPara regularizar sua situação e reativar o acesso aos benefícios do sindicato, acesse o aplicativo oficial ou entre em contato com nossa secretaria.",
         example: { body_text: [["João da Silva", "28/02/2026"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -444,30 +444,30 @@ const templates: TemplatePayload[] = [
        { type: "FOOTER", text: "Sindicato dos Comerciários" },
      ],
    },
-   {
-     name: "agenda_disponivel",
-     language: LANG,
-     category: "UTILITY",
-     components: [
+    {
+      name: "informativo_agenda_medica",
+      language: LANG,
+      category: "UTILITY",
+      components: [
+         {
+           type: "BODY",
+           text:
+             "Informativo: A agenda de atendimentos médicos para o período de {{1}} já está disponível para consultas.\n\nOs horários podem ser visualizados e agendados diretamente através do aplicativo oficial do Sindicato dos Comerciários.",
+           example: { body_text: [["Maio/2026"]] },
+         },
+        { type: "FOOTER", text: "Sindicato dos Comerciários" },
         {
-          type: "BODY",
-          text:
-            "Informativo do Sindicato dos Comerciários.\n\nPrezado(a) {{1}}, informamos que a agenda médica de {{2}} já está aberta para agendamentos.\n\n📲 Utilize o aplicativo oficial para visualizar os horários disponíveis e garantir seu atendimento com antecedência.\n\nEste é um serviço de utilidade para sua saúde. 💙",
-          example: { body_text: [["Maria", "Maio/2026"]] },
+          type: "BUTTONS",
+          buttons: [
+            {
+              type: "URL",
+              text: "Acessar Aplicativo",
+              url: "https://app.sindicato.com.br",
+            },
+          ],
         },
-       { type: "FOOTER", text: "Sindicato dos Comerciários" },
-       {
-         type: "BUTTONS",
-         buttons: [
-           {
-             type: "URL",
-             text: "Abrir Aplicativo",
-             url: "https://app.sindicato.com.br",
-           },
-         ],
-       },
-     ],
-   },
+      ],
+    },
  ];
 
 serve(async (req) => {
