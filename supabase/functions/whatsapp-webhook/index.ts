@@ -315,6 +315,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     return data.message.buttonsResponseMessage.selectedButtonId;
   }
   
+  // Meta Cloud API interactive format
+  const interactive = (data.message as any)?.interactive;
+  if (interactive?.button_reply?.id) {
+    console.log('[extractMessageText] Found Meta button_reply id:', interactive.button_reply.id);
+    return interactive.button_reply.id;
+  }
+  if (interactive?.list_reply?.id) {
+    console.log('[extractMessageText] Found Meta list_reply id:', interactive.list_reply.id);
+    return interactive.list_reply.id;
+  }
+  
   // Check for interactive button response (singular - Whazing/alternative format)
   if (data.message?.buttonResponseMessage?.selectedButtonId) {
     console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
@@ -8213,7 +8224,8 @@ async function handleWebhook(req: Request) {
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
 
         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
-        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim) || 
+                             ['Atualizar Carteirinha', 'Carteirinha', 'Convenções Coletivas', 'CCT', 'Outros Assuntos', 'Outros', '2ª Via Boleto', 'Boleto'].includes(messageTextTrim);
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
@@ -9272,6 +9284,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           }
         } catch { /* ignore */ }
         console.log(`[mirror] Interactive response: "${mirrorText}"`);
+      } else if ((msg as any)?.interactive) {
+        const im = (msg as any).interactive;
+        mirrorText = im.button_reply?.title || im.button_reply?.id || im.list_reply?.title || im.list_reply?.id || messageText;
+        console.log(`[mirror] Meta interactive response: "${mirrorText}"`);
       }
 
       // Upsert ticket
