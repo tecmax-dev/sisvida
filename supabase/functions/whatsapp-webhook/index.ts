@@ -585,8 +585,10 @@ async function sendMetaButtons(phone: string, title: string, description: string
    try {
      // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
+    const FINAL_PHONE_ID = (PHONE_ID === "937233212814035" || PHONE_ID === "1522701919380063") ? "1110151302179856" : PHONE_ID;
+
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-     if (!PHONE_ID || !TOKEN) {
+    if (!FINAL_PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
        return false;
      }
@@ -620,7 +622,7 @@ async function sendMetaButtons(phone: string, title: string, description: string
         }
       };
  
-     const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+     const r = await fetch(`https://graph.facebook.com/v21.0/${FINAL_PHONE_ID}/messages`, {
        method: 'POST',
        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
        body: JSON.stringify(payload),
@@ -721,15 +723,17 @@ async function sendMetaText(phone: string, text: string, explicitPhoneId?: strin
   try {
     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
+    const FINAL_PHONE_ID = (PHONE_ID === "937233212814035" || PHONE_ID === "1522701919380063") ? "1110151302179856" : PHONE_ID;
+
     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    if (!PHONE_ID || !TOKEN) {
+    if (!FINAL_PHONE_ID || !TOKEN) {
       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
       return false;
     }
     const digits = phone.replace(/\D/g, '');
     const to = digits.startsWith('55') ? digits : `55${digits}`;
     const r = await fetch(
-      `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
+      `https://graph.facebook.com/v21.0/${FINAL_PHONE_ID}/messages`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
