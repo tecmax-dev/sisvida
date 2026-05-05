@@ -33,18 +33,20 @@
             // Extrai conteúdo de diferentes tipos de mensagens Meta
             let content = "";
              let buttonPayload = "";
-            if (msg.type === "text") {
-              content = msg.text?.body?.trim() || "";
-            } else if (msg.type === "interactive") {
-              content = msg.interactive?.button_reply?.id || 
-                        msg.interactive?.button_reply?.title || 
-                        msg.interactive?.list_reply?.id || 
-                        "";
-               buttonPayload = (msg.interactive?.button_reply?.title || msg.interactive?.button_reply?.id || "").toString();
-            } else if (msg.type === "button") {
-              content = msg.button?.payload || msg.button?.text || "";
-               buttonPayload = (msg.button?.text || msg.button?.payload || "").toString();
-            }
+             if (msg.type === "text") {
+               content = msg.text?.body?.trim() || "";
+             } else if (msg.type === "interactive") {
+               // Prefer ID for bot logic, Title as fallback
+               content = msg.interactive?.button_reply?.id || 
+                         msg.interactive?.button_reply?.title || 
+                         msg.interactive?.list_reply?.id || 
+                         msg.interactive?.list_reply?.title ||
+                         "";
+                buttonPayload = (msg.interactive?.button_reply?.title || msg.interactive?.button_reply?.id || "").toString();
+             } else if (msg.type === "button") {
+               content = msg.button?.payload || msg.button?.text || "";
+                buttonPayload = (msg.button?.text || msg.button?.payload || "").toString();
+             }
  
            console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
  
