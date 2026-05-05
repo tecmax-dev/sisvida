@@ -33,7 +33,7 @@ serve(async (req) => {
     
     console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
 
-    const PHONE_ID = "937233212814035"; // ID real do número 73 3231 1784
+    const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
     
     const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
