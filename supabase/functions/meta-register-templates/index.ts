@@ -72,7 +72,6 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
-  {
     name: "aviso_vencimento_carteira",
     language: LANG,
     category: "UTILITY",
