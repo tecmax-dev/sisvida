@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -66,6 +67,7 @@ const formatCPF = (value: string): string => {
 
 export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenForm = false }: DependentsPanelProps) {
   const { userRoles, isSuperAdmin } = useAuth();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
   const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
 
   const [searchParams] = useSearchParams();
@@ -405,7 +407,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
           <h3 className="text-lg font-semibold">Dependentes</h3>
           <Badge variant="secondary">{dependents.length}</Badge>
         </div>
-        {!isAdding && (
+         {!isAdding && !hasUnionEntity && (
           <Button onClick={() => setIsAdding(true)} size="sm">
             <Plus className="h-4 w-4 mr-1" />
             Adicionar Dependente
