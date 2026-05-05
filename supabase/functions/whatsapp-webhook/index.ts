@@ -8224,7 +8224,8 @@ async function handleWebhook(req: Request) {
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
 
         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
-        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
+        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim) || 
+                             ['Atualizar Carteirinha', 'Carteirinha', 'Convenções Coletivas', 'CCT', 'Outros Assuntos', 'Outros', '2ª Via Boleto', 'Boleto'].includes(messageTextTrim);
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
