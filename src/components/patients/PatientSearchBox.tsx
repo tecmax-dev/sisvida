@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+ import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, Loader2, User, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+ import { useAuth } from "@/hooks/useAuth";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { cn } from "@/lib/utils";
 import { QuickPatientRegistration } from "./QuickPatientRegistration";
 import { useCpfVisibility } from "@/hooks/useCpfVisibility";
@@ -25,7 +26,8 @@ export function PatientSearchBox() {
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showQuickRegister, setShowQuickRegister] = useState(false);
-  const { currentClinic } = useAuth();
+   const { currentClinic } = useAuth();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
   const { canSeeFull } = useCpfVisibility();
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -166,17 +168,24 @@ export function PatientSearchBox() {
                 <p className="text-sm text-muted-foreground text-center">
                   Nenhum paciente encontrado
                 </p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setIsOpen(false);
-                    setShowQuickRegister(true);
-                  }}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Cadastrar novo paciente
-                </Button>
+                 {!hasUnionEntity && (
+                   <Button
+                     variant="outline"
+                     className="w-full"
+                     onClick={() => {
+                       setIsOpen(false);
+                       setShowQuickRegister(true);
+                     }}
+                   >
+                     <UserPlus className="h-4 w-4 mr-2" />
+                     Cadastrar novo paciente
+                   </Button>
+                 )}
+                 {hasUnionEntity && (
+                   <p className="text-xs text-center text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                     Nesta clínica, agendamentos são permitidos apenas para associados já cadastrados.
+                   </p>
+                 )}
               </div>
             ) : (
               <ul className="py-1">

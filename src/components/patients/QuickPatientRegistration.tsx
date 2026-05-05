@@ -25,6 +25,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { toast } from "sonner";
 import { CpfInputCard } from "@/components/ui/cpf-input-card";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
@@ -77,7 +78,8 @@ export function QuickPatientRegistration({
   const [cpfChecking, setCpfChecking] = useState(false);
   const [cpfExists, setCpfExists] = useState(false);
   const [cpfExistsType, setCpfExistsType] = useState<'associado' | 'paciente' | null>(null);
-  const { currentClinic } = useAuth();
+   const { currentClinic } = useAuth();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
 
   const form = useForm<QuickRegistrationForm>({
     resolver: zodResolver(quickRegistrationSchema),
@@ -200,7 +202,14 @@ export function QuickPatientRegistration({
       return;
     }
 
-    setIsLoading(true);
+     if (hasUnionEntity) {
+       toast.error("Ação não permitida", {
+         description: "Nesta clínica, novos cadastros devem ser realizados via portal do associado (/union).",
+       });
+       return;
+     }
+ 
+     setIsLoading(true);
     try {
       // Check if CPF already exists
       const cpfCleaned = data.cpf.replace(/\D/g, "");
@@ -424,7 +433,7 @@ export function QuickPatientRegistration({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading} className="flex-1">
+               <Button type="submit" disabled={isLoading || hasUnionEntity} className="flex-1">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

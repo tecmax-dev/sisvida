@@ -102,6 +102,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn, calculateAge } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useClinicBookingWindowEndDate } from "@/hooks/useClinicBookingWindowEndDate";
@@ -411,6 +412,7 @@ interface Appointment {
 export default function CalendarPage() {
   const { currentClinic, user, userRoles } = useAuth();
   const { isProfessionalOnly, hasPermission, isAdmin, accessGroupId } = usePermissions();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
   
   // Permissão para atender pacientes (requer acesso a prontuários médicos)
   const canAttendPatient = hasPermission('manage_medical_records');
@@ -3197,10 +3199,15 @@ const updateData: Record<string, any> = {
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   Digite ao menos 2 caracteres para buscar
                 </div>
-              ) : patientSearchResults.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  Nenhum paciente encontrado.
-                </div>
+             ) : patientSearchResults.length === 0 ? (
+               <div className="py-6 text-center text-sm text-muted-foreground flex flex-col gap-2 px-4">
+                 <p>Nenhum paciente encontrado.</p>
+                 {hasUnionEntity && (
+                   <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                     Nesta clínica, agendamentos são permitidos apenas para associados já cadastrados no sindicato.
+                   </p>
+                 )}
+               </div>
               ) : (
                 <div className="space-y-1">
                   {patientSearchResults.map((patient) => (

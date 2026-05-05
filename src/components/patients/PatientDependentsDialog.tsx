@@ -21,6 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -64,12 +65,13 @@ const formatCPF = (value: string): string => {
 };
 
 export function PatientDependentsDialog({
-  open,
-  onOpenChange,
-  patientId,
-  patientName,
-}: PatientDependentsDialogProps) {
-  const { userRoles, isSuperAdmin } = useAuth();
+   open,
+   onOpenChange,
+   patientId,
+   patientName,
+ }: PatientDependentsDialogProps) {
+   const { userRoles, isSuperAdmin } = useAuth();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
   const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -220,16 +222,18 @@ export function PatientDependentsDialog({
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
                 <p>Nenhum dependente ativo.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-3"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
-                  }}
-                >
-                  Adicionar Dependente
-                </Button>
+                 {!hasUnionEntity && (
+                   <Button 
+                     variant="outline" 
+                     className="mt-3"
+                     onClick={() => {
+                       onOpenChange(false);
+                       navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
+                     }}
+                   >
+                     Adicionar Dependente
+                   </Button>
+                 )}
               </div>
             ) : (
               dependents.map((dependent) => {
@@ -306,7 +310,7 @@ export function PatientDependentsDialog({
             )}
           </div>
 
-          {dependents.length > 0 && (
+           {dependents.length > 0 && !hasUnionEntity && (
             <div className="flex justify-end mt-4 pt-4 border-t">
               <Button
                 variant="outline"
