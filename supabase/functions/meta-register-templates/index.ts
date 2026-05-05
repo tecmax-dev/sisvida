@@ -444,6 +444,30 @@ const templates: TemplatePayload[] = [
        { type: "FOOTER", text: "Sindicato dos Comerciários" },
      ],
    },
+   {
+     name: "agenda_disponivel",
+     language: LANG,
+     category: "UTILITY",
+     components: [
+       {
+         type: "BODY",
+         text:
+           "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
+         example: { body_text: [["Maria", "Maio/2026"]] },
+       },
+       { type: "FOOTER", text: "Sindicato dos Comerciários" },
+       {
+         type: "BUTTONS",
+         buttons: [
+           {
+             type: "URL",
+             text: "Abrir Aplicativo",
+             url: "https://app.sindicato.com.br",
+           },
+         ],
+       },
+     ],
+   },
  ];
 
 serve(async (req) => {
