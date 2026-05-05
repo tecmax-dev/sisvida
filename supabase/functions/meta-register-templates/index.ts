@@ -72,7 +72,7 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
-    name: "notificacao_vencimento_carteira",
+    name: "aviso_vencimento_carteira",
     language: LANG,
     category: "UTILITY",
     components: [
@@ -86,7 +86,7 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
-    name: "notificacao_carteira_vencida",
+    name: "aviso_carteira_vencida",
     language: LANG,
     category: "UTILITY",
     components: [
