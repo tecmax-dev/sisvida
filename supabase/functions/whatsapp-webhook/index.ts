@@ -315,6 +315,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     return data.message.buttonsResponseMessage.selectedButtonId;
   }
   
+  // Meta Cloud API interactive format
+  const interactive = (data.message as any)?.interactive;
+  if (interactive?.button_reply?.id) {
+    console.log('[extractMessageText] Found Meta button_reply id:', interactive.button_reply.id);
+    return interactive.button_reply.id;
+  }
+  if (interactive?.list_reply?.id) {
+    console.log('[extractMessageText] Found Meta list_reply id:', interactive.list_reply.id);
+    return interactive.list_reply.id;
+  }
+  
   // Check for interactive button response (singular - Whazing/alternative format)
   if (data.message?.buttonResponseMessage?.selectedButtonId) {
     console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
@@ -9263,7 +9274,20 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         const selectedId = msg.templateButtonReplyMessage.selectedId as string | undefined;
         mirrorText = selectedId || messageText;
         console.log(`[mirror] Template button reply: id="${selectedId}"`);
-      } else if (msg?.interactiveResponseMessage) {
+        } else if (msg?.interactiveResponseMessage) {
+          try {
+            const paramsJson = msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson as string | undefined;
+            if (paramsJson) {
+              const params = JSON.parse(paramsJson);
+              mirrorText = params.display || params.id || messageText;
+            }
+          } catch { /* ignore */ }
+          console.log(`[mirror] Interactive response: "${mirrorText}"`);
+        } else if ((msg as any)?.interactive) {
+          const im = (msg as any).interactive;
+          mirrorText = im.button_reply?.title || im.button_reply?.id || im.list_reply?.title || im.list_reply?.id || messageText;
+          console.log(`[mirror] Meta interactive response: "${mirrorText}"`);
+        }
         try {
           const paramsJson = msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson as string | undefined;
           if (paramsJson) {
