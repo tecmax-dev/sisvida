@@ -8038,10 +8038,14 @@ async function handleWebhook(req: Request) {
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}. Incoming PhoneID: ${payload.metadata?.phone_number_id}`);
-        
-        // Correção de ID de telefone caso venha o ID de teste/alternativo da Meta que o token não reconhece
-        if (payload.metadata?.phone_number_id === "937233212814035" || payload.metadata?.phone_number_id === "1522701919380063") {
-          console.log(`[webhook] Corrigindo Phone ID para Sindicato (${payload.metadata.phone_number_id} -> 1110151302179856)`);
+      }
+
+      // Correção de ID de telefone global para o Sindicato (seja via instance ou explicitClinicId)
+      if (explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
+        const incomingId = payload.metadata?.phone_number_id;
+        if (incomingId === "937233212814035" || incomingId === "1522701919380063" || !incomingId) {
+          console.log(`[webhook] Forçando Phone ID correto para Sindicato (${incomingId || 'vazio'} -> 1110151302179856)`);
+          if (!payload.metadata) payload.metadata = {};
           payload.metadata.phone_number_id = "1110151302179856";
         }
       }
