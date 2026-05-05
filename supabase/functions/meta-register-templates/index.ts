@@ -79,7 +79,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Informamos que sua carteira de associado do Sindicato dos Comerciários vencerá em {{2}}.\n\nPara garantir a continuidade do acesso aos serviços e benefícios, a renovação pode ser solicitada através do aplicativo ou em nossa sede.",
+          "Aviso de Atualização: Olá, {{1}}. Notificamos que o prazo de validade da sua carteira de associado encerra em {{2}}.\n\nPara orientações sobre o procedimento de renovação e continuidade do seu registro, consulte o aplicativo oficial do Sindicato dos Comerciários.",
         example: { body_text: [["João da Silva", "30/03/2026"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -93,7 +93,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Consta em nosso sistema que sua carteira de associado venceu em {{2}}.\n\nPara regularizar sua situação e reativar o acesso aos benefícios do sindicato, acesse o aplicativo oficial ou entre em contato com nossa secretaria.",
+          "Notificação de Registro: Olá, {{1}}. Identificamos que sua carteira de associado atingiu o prazo de validade em {{2}}.\n\nPara regularizar seu cadastro e manter as informações atualizadas, acesse o aplicativo oficial ou entre em contato com nossa secretaria.",
         example: { body_text: [["João da Silva", "28/02/2026"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
