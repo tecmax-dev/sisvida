@@ -3199,10 +3199,15 @@ const updateData: Record<string, any> = {
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   Digite ao menos 2 caracteres para buscar
                 </div>
-              ) : patientSearchResults.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  Nenhum paciente encontrado.
-                </div>
+             ) : patientSearchResults.length === 0 ? (
+               <div className="py-6 text-center text-sm text-muted-foreground flex flex-col gap-2 px-4">
+                 <p>Nenhum paciente encontrado.</p>
+                 {hasUnionEntity && (
+                   <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                     Nesta clínica, agendamentos são permitidos apenas para associados já cadastrados no sindicato.
+                   </p>
+                 )}
+               </div>
               ) : (
                 <div className="space-y-1">
                   {patientSearchResults.map((patient) => (
