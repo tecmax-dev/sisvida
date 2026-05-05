@@ -123,7 +123,8 @@ export default function PublicBooking() {
   const [patientCpf, setPatientCpf] = useState("");
   const [searchingPatient, setSearchingPatient] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
-  const isSindicatoClinic = clinic?.slug === 'sindicato';
+   const [hasUnionEntity, setHasUnionEntity] = useState(false);
+   const isSindicatoClinic = clinic?.slug === 'sindicato' || hasUnionEntity;
   
   // Dependents
   interface Dependent {
@@ -145,7 +146,7 @@ export default function PublicBooking() {
     }
   }, [clinic, selectedProfessional, selectedDate]);
 
-  const fetchClinicData = async () => {
+   const fetchClinicData = async () => {
     if (!clinicSlug) return;
     
     setLoading(true);
@@ -166,6 +167,17 @@ export default function PublicBooking() {
       }
 
       setClinic(clinicData);
+ 
+       // Check if clinic is linked to a union
+       const { data: unionData } = await supabase
+         .from('union_entities')
+         .select('id')
+         .eq('clinic_id', clinicData.id)
+         .maybeSingle();
+       
+       if (unionData) {
+         setHasUnionEntity(true);
+       }
 
       // Check if clinic plan includes telemedicine feature
       const { data: subscriptionData } = await supabase
