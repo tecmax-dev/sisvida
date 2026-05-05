@@ -34,7 +34,11 @@ serve(async (req) => {
     const body: SendBody = await req.json();
     const { to, text, ticket_id, phone_number_id, token } = body;
 
-    const TOKEN = token || Deno.env.get("META_WHATSAPP_TOKEN");
+    let TOKEN = token || Deno.env.get("META_WHATSAPP_TOKEN");
+    if (token === "SYSTEM") {
+      TOKEN = Deno.env.get("META_SYSTEM_USER_TOKEN") || TOKEN;
+    }
+
     const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
 
     if (!PHONE_ID || !TOKEN) {
