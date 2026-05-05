@@ -102,6 +102,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn, calculateAge } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useClinicBookingWindowEndDate } from "@/hooks/useClinicBookingWindowEndDate";
@@ -411,6 +412,7 @@ interface Appointment {
 export default function CalendarPage() {
   const { currentClinic, user, userRoles } = useAuth();
   const { isProfessionalOnly, hasPermission, isAdmin, accessGroupId } = usePermissions();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
   
   // Permissão para atender pacientes (requer acesso a prontuários médicos)
   const canAttendPatient = hasPermission('manage_medical_records');
