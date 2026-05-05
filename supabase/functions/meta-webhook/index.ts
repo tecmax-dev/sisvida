@@ -61,7 +61,9 @@ serve(async (req) => {
           else if (msg.type === "button") content = msg.button?.text ?? "";
           else if (msg.type === "interactive") {
             content =
+              msg.interactive?.button_reply?.id ??
               msg.interactive?.button_reply?.title ??
+              msg.interactive?.list_reply?.id ??
               msg.interactive?.list_reply?.title ??
               "";
           } else if (msg.type === "image") content = msg.image?.caption ?? "[imagem]";
