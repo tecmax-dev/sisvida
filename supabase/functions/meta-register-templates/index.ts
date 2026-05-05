@@ -449,12 +449,12 @@ const templates: TemplatePayload[] = [
      language: LANG,
      category: "UTILITY",
      components: [
-       {
-         type: "BODY",
-         text:
-           "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
-         example: { body_text: [["Maria", "Maio/2026"]] },
-       },
+        {
+          type: "BODY",
+          text:
+            "Informativo do Sindicato dos Comerciários.\n\nPrezado(a) {{1}}, informamos que a agenda médica de {{2}} já está aberta para agendamentos.\n\n📲 Utilize o aplicativo oficial para visualizar os horários disponíveis e garantir seu atendimento com antecedência.\n\nEste é um serviço de utilidade para sua saúde. 💙",
+          example: { body_text: [["Maria", "Maio/2026"]] },
+        },
        { type: "FOOTER", text: "Sindicato dos Comerciários" },
        {
          type: "BUTTONS",
