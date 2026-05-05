@@ -8038,7 +8038,13 @@ async function handleWebhook(req: Request) {
       // Special routing for Meta Official (Sindicato)
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}`);
+        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}. PhoneID: ${payload.metadata?.phone_number_id}`);
+        
+        // Correção de ID de telefone caso venha o ID de teste/alternativo da Meta que o token não reconhece
+        if (payload.metadata?.phone_number_id === "937233212814035") {
+          console.log("[webhook] Corrigindo Phone ID para Sindicato (937233212814035 -> 1110151302179856)");
+          payload.metadata.phone_number_id = "1110151302179856";
+        }
       }
 
       if (activeSession?.clinic_id) {
