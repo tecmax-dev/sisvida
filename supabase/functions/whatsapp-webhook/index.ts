@@ -8032,20 +8032,21 @@ async function handleWebhook(req: Request) {
       let configData: EvolutionConfig | null = null;
 
       // Check if clinic_id was explicitly provided (e.g. from zapster-webhook or meta routing)
-     let explicitClinicId = (payload as any).clinic_id;
-     const explicitPhoneId = payload.metadata?.phone_number_id || null;
-
+      let explicitClinicId = (payload as any).clinic_id;
+      
       // Special routing for Meta Official (Sindicato)
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}. PhoneID: ${payload.metadata?.phone_number_id}`);
+        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}. Incoming PhoneID: ${payload.metadata?.phone_number_id}`);
         
         // Correção de ID de telefone caso venha o ID de teste/alternativo da Meta que o token não reconhece
-        if (payload.metadata?.phone_number_id === "937233212814035") {
-          console.log("[webhook] Corrigindo Phone ID para Sindicato (937233212814035 -> 1110151302179856)");
+        if (payload.metadata?.phone_number_id === "937233212814035" || payload.metadata?.phone_number_id === "1522701919380063") {
+          console.log(`[webhook] Corrigindo Phone ID para Sindicato (${payload.metadata.phone_number_id} -> 1110151302179856)`);
           payload.metadata.phone_number_id = "1110151302179856";
         }
       }
+
+      const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
       if (activeSession?.clinic_id) {
         const { data: configByClinic, error: configByClinicError } = await supabase
