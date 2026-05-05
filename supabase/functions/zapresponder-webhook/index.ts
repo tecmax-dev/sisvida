@@ -181,7 +181,7 @@
                 ? "1110151302179856" 
                 : incomingPhoneId;
               
-              const response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
+              let response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -200,6 +200,26 @@
                   ]
                 })
               }).catch(err => console.error("[zapresponder] Erro template:", err));
+
+              // Fallback se o template falhar (ex: status PENDING)
+              if (!response || !response.ok) {
+                console.log(`[zapresponder] Template falhou ou pendente, enviando texto simples como fallback`);
+                const textFallback = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nAguarde um momento que o menu de opções aparecerá em seguida.`;
+                
+                await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SERVICE_ROLE}`
+                  },
+                  body: JSON.stringify({
+                    to: fromPhone,
+                    phone_number_id: workingPhoneId,
+                    text: textFallback,
+                    ticket_id: ticketIdFromMeta
+                  })
+                }).catch(err => console.error("[zapresponder] Erro fallback texto:", err));
+              }
 
               // Registra o envio no banco para auditoria e controle de duplicidade
               if (response && response.ok) {
