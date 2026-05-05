@@ -114,10 +114,20 @@
                    
                     // Chamada direta para meta-send-text passando o ticket_id
                     console.log(`[zapresponder] Enviando resposta textual para ${fromPhone}`);
+                    const incomingId = metadata?.phone_number_id;
+                    const workingId = (incomingId === "937233212814035" || incomingId === "1522701919380063") 
+                      ? "1110151302179856" 
+                      : incomingId;
+
                     const replyRes = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_ROLE}` },
-                      body: JSON.stringify({ to: fromPhone, text: replyText, ticket_id: ticketIdFromMeta })
+                      body: JSON.stringify({ 
+                        to: fromPhone, 
+                        text: replyText, 
+                        ticket_id: ticketIdFromMeta,
+                        phone_number_id: workingId
+                      })
                     });
                    
                    if (!replyRes.ok) {
