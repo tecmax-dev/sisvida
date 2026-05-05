@@ -15,7 +15,8 @@ serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const VERIFY_TOKEN = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") ?? "prosindweb_meta_2026";
+  const CONFIG_TOKEN = (Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "").trim();
+  const DEFAULT_TOKEN = "prosindweb_meta_2026";
 
   // Verificação inicial Meta (GET com hub.challenge)
   if (req.method === "GET") {
@@ -23,10 +24,14 @@ serve(async (req) => {
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
+    
+    console.log(`[meta-webhook] VERIFICAÇÃO: token=${token}`);
 
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    if (mode === "subscribe" && (token === CONFIG_TOKEN || token === DEFAULT_TOKEN)) {
+      console.log("[meta-webhook] Verificação bem-sucedida!");
       return new Response(challenge ?? "", { status: 200 });
     }
+    console.error("[meta-webhook] Verificação falhou. Token não corresponde.");
     return new Response("Forbidden", { status: 403 });
   }
 
