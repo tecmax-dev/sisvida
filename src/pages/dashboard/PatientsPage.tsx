@@ -82,6 +82,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useNomenclature } from "@/hooks/useNomenclature";
 import { usePermissions } from "@/hooks/usePermissions";
+ import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -201,6 +202,7 @@ export default function PatientsPage() {
   const { currentClinic } = useAuth();
   const nomenclature = useNomenclature();
   const { hasPermission, isAdmin } = usePermissions();
+   const { hasUnionEntity } = useClinicHasUnionEntity();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -1069,7 +1071,7 @@ export default function PatientsPage() {
           </p>
           <RealtimeIndicator className="mt-1" />
         </div>
-        {hasPermission("manage_patients") && (
+         {hasPermission("manage_patients") && !hasUnionEntity && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
@@ -1524,7 +1526,7 @@ export default function PatientsPage() {
             <div className="text-center py-12 text-muted-foreground">
               <HeartPulse className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="mb-4">Nenhum paciente encontrado</p>
-              {hasPermission("manage_patients") && (
+               {hasPermission("manage_patients") && !hasUnionEntity && (
                 <Button variant="outline" onClick={() => setDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar paciente
