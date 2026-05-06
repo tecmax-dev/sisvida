@@ -8112,20 +8112,9 @@ async function handleWebhook(req: Request) {
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
       
-      // CONSOLIDATED ROUTING LOGIC
-      const isMetaOfficial = payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
-      
-      if (isMetaOfficial) {
-        console.log(`[webhook] OFFICIAL META / SINDICATO request detected. Forcing Meta configuration.`);
-        configData = {
-          clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
-          instance_name: 'meta_official',
-          api_url: 'meta',
-          api_key: 'meta',
-          booking_enabled: true,
-          direct_reply_enabled: true
-        } as EvolutionConfig;
-      } else if (!configData) {
+      // CONSOLIDATED ROUTING LOGIC (v2.2)
+      // Check if we already found a valid database config before applying fallbacks
+      if (!configData) {
         // Try zapster_configs as a second fallback if standard Evolution config failed
         if (payload.instance || explicitClinicId) {
           const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
@@ -8145,6 +8134,22 @@ async function handleWebhook(req: Request) {
             } as EvolutionConfig;
           }
         }
+      }
+
+      // FINAL FALLBACK: If still no config, and it looks like the official Meta Sindicato instance, apply it.
+      // But DO NOT overwrite if we found a Zapster/Evolution config already.
+      const isMetaOfficial = (payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") && !configData;
+      
+      if (isMetaOfficial) {
+        console.log(`[webhook] OFFICIAL META / SINDICATO request detected. Applying default Meta configuration.`);
+        configData = {
+          clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
+          instance_name: 'meta_official',
+          api_url: 'meta',
+          api_key: 'meta',
+          booking_enabled: true,
+          direct_reply_enabled: true
+        } as EvolutionConfig;
       }
        if (configData) {
          clinicId = configData.clinic_id;
