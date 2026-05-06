@@ -8520,18 +8520,7 @@ async function handleWebhook(req: Request) {
           }
 
           const category = choice as WhazingCategory;
-          
-          if (!category) {
-            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
-            return createSuccessResponse({ message: 'Invalid L1 choice' });
-          }
-          
-          if (!category) {
-            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
-            return createSuccessResponse({ message: 'Invalid L1 choice' });
-          }
-          
-          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
+          console.log(`[webhook] Whazing L1 category selected: ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
           await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
@@ -8558,27 +8547,23 @@ async function handleWebhook(req: Request) {
            // Map numeric choices (1, 2, 3) to button IDs based on category
             const btnLower = btnId.toLowerCase();
             
-            if (btnId === '1') {
-              btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-            } else if (btnLower.includes('carteirinha')) {
-              btnId = 'whazing_sub_carteirinha';
-            } else if (btnLower.includes('boleto')) {
-              btnId = 'whazing_sub_boleto';
-            } else if (btnLower === 'sou empresa' || btnLower === 'empresa') {
-              btnId = 'whazing_empresa';
-            } else if (btnLower === 'sou associado' || btnLower === 'associado') {
-              btnId = 'whazing_associado';
-            } else if (btnLower === 'sou contabilidade' || btnLower === 'contabilidade') {
-              btnId = 'whazing_contabilidade';
-            } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct')) {
-              btnId = 'whazing_sub_convencoes';
-            } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
-              btnId = 'whazing_sub_outros';
-            } else if (btnLower.includes('homologacao') || btnLower.includes('homologação')) {
-              btnId = 'whazing_outros_homologacao';
-            } else if (btnLower.includes('juridico') || btnLower.includes('jurídico')) {
-              btnId = 'whazing_outros_juridico';
-            }
+             // Better Mapping for Sub-menu Choices (Level 2)
+             if (btnId === '1' || btnLower.includes('boleto') || btnLower.includes('carteirinha')) {
+               btnId = (currentCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+             } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct') || btnLower.includes('convenção')) {
+               btnId = 'whazing_sub_convencoes';
+             } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
+               btnId = 'whazing_sub_outros';
+             } else if (btnLower.includes('homologacao')) {
+               btnId = 'whazing_outros_homologacao';
+             } else if (btnLower.includes('juridico')) {
+               btnId = 'whazing_outros_juridico';
+             } else if (btnId === 'whazing_empresa' || btnLower === 'empresa') {
+               // Fallback if user sends category name in sub-menu
+               await storeWhazingContext(supabase, clinicId, phone, 'empresa', 'sub');
+               await sendWhazingSubMenu(configData, phone, 'empresa', explicitPhoneId);
+               return createSuccessResponse({ message: 'Category reset to empresa' });
+             }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
