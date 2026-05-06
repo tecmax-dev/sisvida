@@ -40,6 +40,9 @@
       }), { status: 422, headers: { "Content-Type": "application/json" } });
     }
 
+    console.log(`[zapresponder] DEBUG: Payload keys: ${Object.keys(payload).join(", ")}`);
+    console.log(`[zapresponder] DEBUG: Payload.phone: ${payload.phone}`);
+
     // Se não tiver entry (formato Meta), tenta normalizar formatos simples (ZapResponder) ou Evolution API
     if (!Array.isArray(payload.entry)) {
       const data = payload.data ?? {};
