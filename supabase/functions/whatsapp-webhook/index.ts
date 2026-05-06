@@ -1049,7 +1049,7 @@ async function storeWhazingContext(
   phone: string,
   category: WhazingCategory,
   lastMenuType: 'main' | 'sub' | 'followup' = 'main',
-  expiresInMinutes: number = 10
+  expiresInMinutes: number = 30
 ): Promise<void> {
   const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
     clinic_id: clinicId,
