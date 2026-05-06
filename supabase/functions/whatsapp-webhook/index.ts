@@ -8187,8 +8187,7 @@ async function handleWebhook(req: Request) {
                });
              }
              
-             // Mirror para o dashboard mesmo fora do horário
-             botSkipped = true; 
+             // Mirror para o dashboard mesmo fora do horário, mas NÃO para o robô (botSkipped continua false)
            }
          }
 
