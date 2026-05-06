@@ -16,7 +16,7 @@
    return null;
  }
  
-// whatsapp-webhook v2.1 - 2026-02-18
+ // whatsapp-webhook v2.2 - 2026-05-06 - Support for Meta Official Instance
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AsyncLocalStorage } from "node:async_hooks";
