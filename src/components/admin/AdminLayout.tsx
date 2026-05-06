@@ -52,6 +52,7 @@ const adminNavItems = [
   { path: "/admin/banners", label: "Banners Carrossel", icon: Image },
   { path: "/admin/chat", label: "Chat Suporte", icon: MessageCircle },
   { path: "/admin/whatsapp-templates", label: "Templates WhatsApp", icon: FileCode },
+  { path: "/admin/whatsapp-status", label: "Status WhatsApp", icon: Sparkles },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/addon-requests", label: "Solicitações Add-ons", icon: Sparkles, hasBadge: true },
   { path: "/admin/dependent-approvals", label: "Aprovação Dependentes", icon: Users, hasBadge: true },
