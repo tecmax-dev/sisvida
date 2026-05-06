@@ -1144,10 +1144,11 @@ function getBrazilSupportContext(): {
   const isBusinessDay = dayOfWeek >= 1 && dayOfWeek <= 5;
   const [hours, minutes] = time.split(':').map(Number);
   const totalMinutes = (hours * 60) + minutes;
-  const isBusinessHours = isBusinessDay && (
-    (totalMinutes >= 540 && totalMinutes < 720) ||
-    (totalMinutes >= 780 && totalMinutes < 960)
-  );
+   // 09h às 12h (540-720) e 13h às 16h (780-960)
+   const isBusinessHours = isBusinessDay && (
+     (totalMinutes >= 540 && totalMinutes < 720) ||
+     (totalMinutes >= 780 && totalMinutes < 960)
+   );
 
   return {
     date,
@@ -8154,9 +8155,42 @@ async function handleWebhook(req: Request) {
           direct_reply_enabled: true
         } as EvolutionConfig;
       }
-      if (configData) {
-        clinicId = configData.clinic_id;
-        console.log(`[webhook] Processing for clinic ${clinicId}`);
+       if (configData) {
+         clinicId = configData.clinic_id;
+         console.log(`[webhook] Processing for clinic ${clinicId}`);
+ 
+         // Especial para o Sindicato: Se estiver fora do horário, apenas enviar mensagem informativa
+         if (clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
+           const availability = await getHumanSupportAvailability(supabase, clinicId);
+           if (!availability.isHumanAvailable) {
+             console.log(`[webhook] Fora do horário para Sindicato: ${availability.reason}`);
+             
+             // Verifica se já notificamos recentemente para não spammar
+             const { data: recentOffHours } = await supabase
+               .from('whatsapp_incoming_logs')
+               .select('id')
+               .eq('clinic_id', clinicId)
+               .eq('phone', phone)
+               .eq('processed_action', 'off_hours_notification')
+               .gt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+               .limit(1);
+ 
+             if (!recentOffHours || recentOffHours.length === 0) {
+               const offHoursMsg = `Olá! 👋 Obrigado por entrar em contato.\n\nNo momento estamos fora do nosso horário de atendimento.\n\n🕒 *Horário de Funcionamento:*\nSegunda a sexta: 09h às 12h e 13h às 16h.\n\nSua mensagem foi recebida e assim que nossa equipe retornar, daremos continuidade ao seu atendimento. 🙏`;
+               await sendWhatsAppMessage(configData, phone, offHoursMsg, explicitPhoneId);
+               
+               await supabase.from('whatsapp_incoming_logs').insert({
+                 clinic_id: clinicId,
+                 phone,
+                 message_text: messageText,
+                 processed_action: 'off_hours_notification',
+               });
+             }
+             
+             // Mirror para o dashboard mesmo fora do horário
+             botSkipped = true; 
+           }
+         }
 
         const messageTextTrim = messageText?.trim();
 
