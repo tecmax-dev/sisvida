@@ -1027,8 +1027,12 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
 
 function parseWhazingCategory(messages: unknown): WhazingCategory | null {
   if (!messages || typeof messages !== 'object' || Array.isArray(messages)) return null;
-  const category = (messages as Record<string, unknown>).whazing_category;
-  return category === 'associado' || category === 'empresa' || category === 'contabilidade' ? category : null;
+   const category = (messages as Record<string, unknown>).whazing_category as string;
+   if (category === 'associado' || category === 'empresa' || category === 'contabilidade') return category as WhazingCategory;
+   if (category === 'Sou Associado') return 'associado';
+   if (category === 'Sou Empresa') return 'empresa';
+   if (category === 'Sou Contabilidade') return 'contabilidade';
+   return null;
 }
 
 async function storeWhazingContext(
@@ -8202,7 +8206,11 @@ async function handleWebhook(req: Request) {
         }
         
         // ===== WHAZING / META CONTEXT RETRIEVAL =====
-        const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
+         let storedCategory: WhazingCategory | null = null;
+         let lastMenuType: string | null = null;
+         const context = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
+         storedCategory = context.category;
+         lastMenuType = context.lastMenuType;
         
         // Level IDs for mapping
         const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', 'Sou Associado', 'Sou Empresa', 'Sou Contabilidade'];
@@ -8244,16 +8252,16 @@ async function handleWebhook(req: Request) {
 
         // LEVEL 1 keywords: Check specifically for "Sou Associado", "Sou Empresa", "Sou Contabilidade"
         // Note: we use startsWith or includes for better tolerance to extra punctuation/emojis
-        let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || 
-                             !!L1_CHOICES[messageTextLower] ||
-                             /sou (associado|empresa|contabilidade|contador)/i.test(messageTextLower) ||
-                             (messageTextTrim === '5') || 
-                             (messageTextTrim === '6');
-
-        let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || 
-                             !!L2_CHOICES[messageTextLower] || 
-                             messageTextTrim.startsWith('whazing_sub_') ||
-                             /2. via boleto|cct|conven[cç][oõ]es|outros assuntos|carteirinha/i.test(messageTextLower);
+         let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || !!L1_CHOICES[messageTextLower] || 
+                              /sou (associado|empresa|contabilidade|contador)/i.test(messageTextLower);
+         if (!isWhazingLevel1 && /^[1-6]$/.test(messageTextTrim)) {
+           if (!lastMenuType || lastMenuType === 'main') isWhazingLevel1 = true;
+         }
+         let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || !!L2_CHOICES[messageTextLower] || 
+                              messageTextTrim.startsWith('whazing_sub_');
+         if (!isWhazingLevel2 && /^[1-3]$/.test(messageTextTrim) && storedCategory && lastMenuType === 'sub') {
+           isWhazingLevel2 = true;
+         }
 
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
