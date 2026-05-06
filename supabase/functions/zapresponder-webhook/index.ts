@@ -5,17 +5,9 @@
  
  serve(async (req) => {
    try {
-    // ===== Validação de Content-Type =====
-    const contentType = req.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      return new Response(JSON.stringify({
-        error: "INVALID_CONTENT_TYPE",
-        message: "O cabeçalho Content-Type deve ser 'application/json'.",
-        received: contentType || "(vazio)"
-      }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
-
     // ===== Parse seguro do JSON =====
+    // ZapResponder pode não enviar Content-Type, então aceitamos o corpo se for JSON válido.
+    const contentType = req.headers.get("content-type") || "";
     let payload: any;
     const rawBody = await req.text();
     if (!rawBody || rawBody.trim() === "") {
@@ -31,9 +23,13 @@
       return new Response(JSON.stringify({
         error: "INVALID_JSON",
         message: "O corpo da requisição não é um JSON válido. Verifique vírgulas, aspas e chaves.",
+        content_type_received: contentType || "(vazio)",
         details: String(parseErr),
         received_preview: rawBody.slice(0, 200)
       }), { status: 400, headers: { "Content-Type": "application/json" } });
+    }
+    if (contentType && !contentType.includes("application/json")) {
+      console.warn(`[zapresponder] Content-Type não padrão recebido: ${contentType}. Continuando porque o corpo é JSON válido.`);
     }
 
     // ===== Validação estrutural =====
