@@ -41,6 +41,7 @@ serve(async (req) => {
 
   try {
     let body = await req.json();
+    console.log("[meta-webhook] Body recebido:", JSON.stringify(body));
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     // Se não tiver entry (formato Meta), tenta normalizar formatos simples (ZapResponder) ou Evolution API
