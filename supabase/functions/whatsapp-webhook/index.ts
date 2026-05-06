@@ -8120,12 +8120,11 @@ async function handleWebhook(req: Request) {
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
       
-      // PRE-EMPTIVE ROUTING FOR SINDICATO (META)
-      const isSindicatoClinic = explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
-      const isMetaInstance = payload.instance === 'meta' || payload.instance === 'meta_official';
+      // CONSOLIDATED ROUTING LOGIC
+      const isMetaOfficial = payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
       
-      if (isSindicatoClinic || isMetaInstance) {
-        console.log(`[webhook] Sindicato/Meta request detected. Forcing Meta configuration.`);
+      if (isMetaOfficial) {
+        console.log(`[webhook] OFFICIAL META / SINDICATO request detected. Forcing Meta configuration.`);
         configData = {
           clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
           instance_name: 'meta_official',
@@ -8134,24 +8133,19 @@ async function handleWebhook(req: Request) {
           booking_enabled: true,
           direct_reply_enabled: true
         } as EvolutionConfig;
-      }
-
-      // Standard routing if not already handled by Sindicato force
-      if (!configData) {
-        // Final fallback: Check zapster_configs
+      } else if (!configData) {
+        // Try zapster_configs as a second fallback if standard Evolution config failed
         if (payload.instance || explicitClinicId) {
           const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
           if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
           else query.eq('instance_id', payload.instance);
 
           const { data: zapsterConfigs } = await query.limit(1);
-          const zapsterCfg = zapsterConfigs && zapsterConfigs.length > 0 ? zapsterConfigs[0] : null;
-
-          if (zapsterCfg) {
-            console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
+          if (zapsterConfigs?.[0]) {
+            console.log(`[webhook] Found Zapster config for clinic ${zapsterConfigs[0].clinic_id}`);
             configData = {
-              clinic_id: zapsterCfg.clinic_id,
-              instance_name: zapsterCfg.instance_id,
+              clinic_id: zapsterConfigs[0].clinic_id,
+              instance_name: zapsterConfigs[0].instance_id,
               api_url: 'zapster',
               api_key: 'zapster',
               booking_enabled: true,
