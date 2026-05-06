@@ -8104,12 +8104,21 @@ async function handleWebhook(req: Request) {
           );
         }
 
-        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
+        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as any) : null;
+        if (configData) {
+           // Map internal fields to EvolutionConfig interface if necessary
+           configData = {
+             clinic_id: configData.clinic_id,
+             api_url: configData.api_url,
+             api_key: configData.api_key,
+             instance_name: configData.instance_name,
+             direct_reply_enabled: configData.direct_reply_enabled,
+             booking_enabled: configData.booking_enabled,
+           } as EvolutionConfig;
+        }
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
       
-      console.log(`[webhook] Final configData resolution check: clinicId=${configData?.clinic_id}, apiUrl=${configData?.api_url}`);
-
       // Final fallback: Check zapster_configs if still no configData
       if (!configData && (payload.instance || explicitClinicId)) {
         const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
