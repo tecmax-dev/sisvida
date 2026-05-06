@@ -54,11 +54,15 @@ serve(async (req) => {
       const phoneValue = body.phone || body.wa_id || key.remoteJid || "";
       const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
       
-      // Tenta pegar a mensagem de várias formas
+      // Tenta pegar a mensagem de várias formas (incluindo sub-campos e cliques em botões)
       const textBody = String(
         body.mensagem || 
+        body.message?.mensagem ||
+        body.message?.text ||
         body.message || 
         body.text || 
+        body.raw_message?.content ||
+        body.raw_message?.body ||
         message.conversation || 
         message.extendedTextMessage?.text || 
         ""

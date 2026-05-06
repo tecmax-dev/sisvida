@@ -335,11 +335,15 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
       console.log('[extractMessageText] Found explicit ID:', explicitId);
      if (explicitId === 'whazing_associado') return 'Sou Associado';
      if (explicitId === 'whazing_empresa') return 'Sou Empresa';
-     if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
-     return String(explicitId);
-   }
+      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
+      if (explicitId === 'whazing_sub_boleto') return '2ª Via Boleto';
+      if (explicitId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
+      if (explicitId === 'whazing_sub_outros') return 'Outros Assuntos';
+      if (explicitId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
+      return String(explicitId);
+    }
  
-   if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+    if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
      try {
        const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
        const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
