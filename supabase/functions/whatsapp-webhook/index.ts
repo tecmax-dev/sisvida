@@ -333,13 +333,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
  
    if (explicitId) {
       console.log('[extractMessageText] Found explicit ID:', explicitId);
-      if (explicitId === 'whazing_associado' || explicitId === 'Sou Associado') return 'Sou Associado';
-      if (explicitId === 'whazing_empresa' || explicitId === 'Sou Empresa') return 'Sou Empresa';
-      if (explicitId === 'whazing_contabilidade' || explicitId === 'Sou Contabilidade') return 'Sou Contabilidade';
+      // Map technical Whazing IDs back to trigger labels for Level 1
+      if (explicitId === 'whazing_associado') return 'Sou Associado';
+      if (explicitId === 'whazing_empresa') return 'Sou Empresa';
+      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
+      
+      // Map technical Whazing IDs back to trigger labels for Level 2
       if (explicitId === 'whazing_sub_boleto') return '2ª Via Boleto';
       if (explicitId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
       if (explicitId === 'whazing_sub_outros') return 'Outros Assuntos';
       if (explicitId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
+      
       return String(explicitId);
     }
  
@@ -8225,10 +8229,34 @@ async function handleWebhook(req: Request) {
 
         const messageTextLower = messageTextTrim?.toLowerCase() || '';
         
-        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim) || 
-                             ['sou associado', 'sou empresa', 'sou contabilidade'].includes(messageTextLower);
-        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim) || 
-                             ['atualizar carteirinha', 'carteirinha', 'conveções coletivas', 'cct', 'outros assuntos', 'outros', '2ª via boleto', 'boleto'].includes(messageTextLower);
+        // LEVEL 1: Map both IDs and literal text (buttons send ID, but display text is used as fallback)
+        const L1_CHOICES: Record<string, string> = {
+          'whazing_associado': 'Sou Associado',
+          'whazing_empresa': 'Sou Empresa',
+          'whazing_contabilidade': 'Sou Contabilidade',
+          'sou associado': 'Sou Associado',
+          'sou empresa': 'Sou Empresa',
+          'sou contabilidade': 'Sou Contabilidade'
+        };
+
+        // LEVEL 2: Map both IDs and literal text/keywords
+        const L2_CHOICES: Record<string, string> = {
+          'whazing_sub_carteirinha': 'Atualizar Carteirinha',
+          'whazing_sub_convencoes': 'Convenções Coletivas',
+          'whazing_sub_outros': 'Outros Assuntos',
+          'whazing_sub_boleto': '2ª Via Boleto',
+          'atualizar carteirinha': 'Atualizar Carteirinha',
+          'carteirinha': 'Atualizar Carteirinha',
+          'convenções coletivas': 'Convenções Coletivas',
+          'cct': 'Convenções Coletivas',
+          'outros assuntos': 'Outros Assuntos',
+          'outros': 'Outros Assuntos',
+          '2ª via boleto': '2ª Via Boleto',
+          'boleto': '2ª Via Boleto'
+        };
+
+        let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || !!L1_CHOICES[messageTextLower];
+        let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || !!L2_CHOICES[messageTextLower] || ['Convenções Coletivas', 'Outros Assuntos', 'Homologacoes', 'Juridico'].includes(messageTextTrim);
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
@@ -8420,26 +8448,22 @@ async function handleWebhook(req: Request) {
         // LEVEL 1: Main menu choices
         if (isWhazingLevel1) {
           const categoryMap: Record<string, WhazingCategory> = {
-            whazing_associado: 'associado',
-            whazing_empresa: 'empresa',
-            whazing_contabilidade: 'contabilidade',
-            'Sou Associado': 'associado',
-            'Sou Empresa': 'empresa',
-            'Sou Contabilidade': 'contabilidade',
+            'whazing_associado': 'associado',
+            'whazing_empresa': 'empresa',
+            'whazing_contabilidade': 'contabilidade',
+            'sou associado': 'associado',
+            'sou empresa': 'empresa',
+            'sou contabilidade': 'contabilidade',
             'sou associado': 'associado',
             'sou empresa': 'empresa',
             'sou contabilidade': 'contabilidade',
             '1': 'associado',
             '2': 'empresa',
-            '3': 'contabilidade',
+            '3': 'contabilidade'
           };
           
-          let lookupKey = messageTextTrim;
-          if (!categoryMap[lookupKey]) {
-            lookupKey = messageTextTrim.toLowerCase();
-          }
-          
-          const category = categoryMap[lookupKey];
+          let effectiveChoice = L1_CHOICES[messageTextTrim] || L1_CHOICES[messageTextLower] || messageTextTrim;
+          const category = categoryMap[messageTextTrim] || categoryMap[messageTextLower] || categoryMap[messageTextTrim[0]];
           
           if (!category) {
             console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
