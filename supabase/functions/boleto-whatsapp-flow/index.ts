@@ -56,7 +56,10 @@ const CONTRIBUTION_TYPE_MAP = {
   */
  async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
    try {
-     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+      const RAW_PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
+      // Correção de ID para o Sindicato (SECMI)
+      const PHONE_ID = (RAW_PHONE_ID === "937233212814035" || RAW_PHONE_ID === "1522701919380063") ? "1110151302179856" : RAW_PHONE_ID;
+      
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
      if (!PHONE_ID || !TOKEN) {
        console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
@@ -93,7 +96,10 @@ const CONTRIBUTION_TYPE_MAP = {
   */
  async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
     try {
-     const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
+      const RAW_PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
+      // Correção de ID para o Sindicato (SECMI)
+      const PHONE_ID = (RAW_PHONE_ID === "937233212814035" || RAW_PHONE_ID === "1522701919380063") ? "1110151302179856" : RAW_PHONE_ID;
+      
       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
       if (!PHONE_ID || !TOKEN) {
         console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
