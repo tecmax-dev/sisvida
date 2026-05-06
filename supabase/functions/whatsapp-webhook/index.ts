@@ -1043,16 +1043,28 @@ async function storeWhazingContext(
   lastMenuType: 'main' | 'sub' | 'followup' = 'main',
   expiresInMinutes: number = 120
 ): Promise<void> {
-  const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
-    clinic_id: clinicId,
-    phone,
-    messages: { 
-      whazing_category: category, 
-      last_menu_type: lastMenuType,
-      source: 'whazing_menu' 
-    },
-    expires_at: new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(),
-  }, { onConflict: 'clinic_id,phone' });
+   // Tenta recuperar contexto existente para não perder dados
+   const { data: existing } = await supabase
+     .from('whatsapp_ai_conversations')
+     .select('messages')
+     .eq('clinic_id', clinicId)
+     .eq('phone', phone)
+     .maybeSingle();
+ 
+   const messages = { 
+     ...(typeof existing?.messages === 'object' ? existing.messages : {}),
+     whazing_category: category, 
+     last_menu_type: lastMenuType,
+     source: 'whazing_menu',
+     updated_at: new Date().toISOString()
+   };
+ 
+   const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
+     clinic_id: clinicId,
+     phone,
+     messages,
+     expires_at: new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(),
+   }, { onConflict: 'clinic_id,phone' });
 
   if (error) {
     console.log('[webhook] Could not store whazing context:', error.message);
@@ -8220,19 +8232,25 @@ async function handleWebhook(req: Request) {
         const messageTextLower = messageTextTrim?.toLowerCase() || '';
         
         // LEVEL 1: Map both IDs and literal text (buttons send ID, but display text is used as fallback)
+        // LEVEL 1: Mapeamento de IDs e texto literal para o menu principal
         const L1_CHOICES: Record<string, string> = {
           'whazing_associado': 'associado',
           'whazing_empresa': 'empresa',
           'whazing_contabilidade': 'contabilidade',
           'sou associado': 'associado',
+          'sou associado(a)': 'associado',
           'sou empresa': 'empresa',
           'sou contabilidade': 'contabilidade',
+          'sou contador/escritório contábil': 'contabilidade',
           'associado': 'associado',
           'empresa': 'empresa',
           'contabilidade': 'contabilidade',
-          'contador': 'contabilidade'
+          'contador': 'contabilidade',
+          'falar com atendente': 'atendente',
+          'segunda via de boleto (empresa)': 'boleto'
         };
 
+        // LEVEL 2: Mapeamento para sub-menus
         const L2_CHOICES: Record<string, string> = {
           'whazing_sub_carteirinha': 'carteirinha',
           'whazing_sub_convencoes': 'convencoes',
@@ -8468,11 +8486,12 @@ async function handleWebhook(req: Request) {
             '6': 'boleto'
           };
           
-          const choice = categoryMap[messageTextTrim] || 
-                        categoryMap[messageTextLower] || 
+          const choice = L1_CHOICES[messageTextTrim] || 
+                        L1_CHOICES[messageTextLower] || 
                         (messageTextLower.includes('associado') ? 'associado' : null) ||
                         (messageTextLower.includes('empresa') ? 'empresa' : null) ||
                         (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
+                        (messageTextLower.includes('contador') ? 'contabilidade' : null) ||
                         (messageTextLower.includes('atendente') ? 'atendente' : null) ||
                         (messageTextLower.includes('boleto') ? 'boleto' : null);
           
