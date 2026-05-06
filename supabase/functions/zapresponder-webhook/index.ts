@@ -40,38 +40,45 @@
       }), { status: 422, headers: { "Content-Type": "application/json" } });
     }
 
-    if (!Array.isArray(payload.entry) && payload?.data?.key) {
+    // Se não tiver entry (formato Meta), tenta normalizar formatos simples (ZapResponder) ou Evolution API
+    if (!Array.isArray(payload.entry)) {
       const data = payload.data ?? {};
       const key = data.key ?? {};
       const message = data.message ?? {};
-      const remoteJid = String(key.remoteJid || payload.phone || "");
-      const fromPhone = String(payload.phone || remoteJid.replace(/@.*/, "")).replace(/\D/g, "");
+      
+      // Tenta pegar o telefone de várias formas
+      const phoneValue = payload.phone || payload.wa_id || key.remoteJid || "";
+      const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
+      
+      // Tenta pegar a mensagem de várias formas
       const textBody = String(
-        message.conversation ||
-        message.extendedTextMessage?.text ||
-        payload.mensagem ||
-        payload.message ||
-        payload.text ||
+        payload.mensagem || 
+        payload.message || 
+        payload.text || 
+        message.conversation || 
+        message.extendedTextMessage?.text || 
         ""
-      );
+      ).trim();
 
-      payload.entry = [{
-        changes: [{
-          field: "messages",
-          value: {
-            metadata: payload.metadata ?? {},
-            contacts: [{ profile: { name: data.pushName || payload.nome || payload.name || "Cliente" } }],
-            messages: [{
-              from: fromPhone,
-              id: key.id || payload.id || `zap-${Date.now()}`,
-              timestamp: String(data.messageTimestamp || payload.timestamp || Math.floor(Date.now() / 1000)),
-              type: "text",
-              text: { body: textBody }
-            }]
-          }
-        }]
-      }];
-      console.log(`[zapresponder] Payload simples normalizado para formato Meta. De ${fromPhone}: "${textBody}"`);
+      if (fromPhone) {
+        payload.entry = [{
+          changes: [{
+            field: "messages",
+            value: {
+              metadata: payload.metadata ?? {},
+              contacts: [{ profile: { name: data.pushName || payload.nome || payload.name || "Cliente" } }],
+              messages: [{
+                from: fromPhone,
+                id: key.id || payload.id || `zap-${Date.now()}`,
+                timestamp: String(data.messageTimestamp || payload.timestamp || Math.floor(Date.now() / 1000)),
+                type: "text",
+                text: { body: textBody }
+              }]
+            }
+          }]
+        }];
+        console.log(`[zapresponder] Payload simples normalizado. De ${fromPhone}: "${textBody}"`);
+      }
     }
 
     if (!Array.isArray(payload.entry)) {
