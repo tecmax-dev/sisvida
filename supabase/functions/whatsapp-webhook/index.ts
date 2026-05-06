@@ -8402,17 +8402,26 @@ async function handleWebhook(req: Request) {
               }
             );
 
-            await supabase.from('whatsapp_ai_conversations').insert({
+            const { data: currentContext } = await supabase
+              .from('whatsapp_ai_conversations')
+              .select('messages')
+              .eq('clinic_id', clinicId)
+              .eq('phone', phone)
+              .maybeSingle();
+
+            await supabase.from('whatsapp_ai_conversations').upsert({
               clinic_id: clinicId,
               phone,
               messages: {
+                ...(typeof currentContext?.messages === 'object' ? currentContext.messages : {}),
                 source: 'whazing_menu',
                 action: 'handoff_completed',
                 support_stage: 'human_handoff_active',
                 context: `Perfil: ${storedCategory || 'associado'} | Menu: Outros Assuntos`,
+                updated_at: new Date().toISOString()
               },
               expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-            });
+            }, { onConflict: 'clinic_id,phone' });
 
             await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
             return createSuccessResponse({ message: 'Routed to atendente' });
