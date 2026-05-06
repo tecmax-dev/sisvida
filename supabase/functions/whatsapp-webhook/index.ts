@@ -5,7 +5,15 @@
      'c7efdda1-d773-40ea-84e5-4c8b46e0ef8e': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Contabilidade
       '6644c29c-95b9-414f-ba8c-62a2402ede34': '972827ca-657d-4c37-a164-944e6e6113b3', // Administrativo -> Outros assuntos
    };
-   return (queueId && map[queueId]) || '3259b59a-8f9d-4027-8520-2b78167d59ab';
+   return (queueId && map[queueId]) || 'fa193a46-e119-4994-852b-29e551ab37f1';
+ }
+ 
+ function getZapsterDeptIdFromKeyword(text: string): string | null {
+   const lower = text.toLowerCase();
+   if (lower.includes('associado')) return 'fa193a46-e119-4994-852b-29e551ab37f1';
+   if (lower.includes('empresa')) return '3259b59a-8f9d-4027-8520-2b78167d59ab';
+   if (lower.includes('contabilidade') || lower.includes('contador')) return '3259b59a-8f9d-4027-8520-2b78167d59ab';
+   return null;
  }
  
 // whatsapp-webhook v2.1 - 2026-02-18
@@ -310,54 +318,39 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   const messageAny = data.message as any;
   
   // Check for interactive button response (plural - Evolution API native)
-  if (data.message?.buttonsResponseMessage?.selectedButtonId) {
-    console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
-    return data.message.buttonsResponseMessage.selectedButtonId;
-  }
-  
-  // Meta Cloud API interactive format
-  const interactive = (data.message as any)?.interactive;
-  if (interactive?.button_reply?.id) {
-    console.log('[extractMessageText] Found Meta button_reply id:', interactive.button_reply.id);
-    return interactive.button_reply.id;
-  }
-  if (interactive?.list_reply?.id) {
-    console.log('[extractMessageText] Found Meta list_reply id:', interactive.list_reply.id);
-    return interactive.list_reply.id;
-  }
-  
-  // Check for interactive button response (singular - Whazing/alternative format)
-  if (data.message?.buttonResponseMessage?.selectedButtonId) {
-    console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
-    return data.message.buttonResponseMessage.selectedButtonId;
-  }
-  
-  // Check for list response
-  if (data.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
-    return data.message.listResponseMessage.singleSelectReply.selectedRowId;
-  }
-  
-  // Check for interactive message response (newer Evolution API format)
-  if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-    try {
-      const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      const buttonId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
-      if (buttonId) return String(buttonId);
-    } catch { /* ignore parse errors */ }
-  }
-
-  const alternateButtonId =
-    messageAny?.buttonReplyMessage?.id ||
-    messageAny?.buttonReplyMessage?.selectedId ||
-    messageAny?.buttonReplyMessage?.selectedButtonId ||
-    messageAny?.interactiveResponseMessage?.id ||
-    messageAny?.interactiveResponseMessage?.button_id ||
-    messageAny?.templateButtonReplyMessage?.selectedId ||
-    messageAny?.listResponseMessage?.singleSelectReply?.selectedRowId;
-  if (alternateButtonId) {
-    console.log('[extractMessageText] Found alternate button id:', alternateButtonId);
-    return String(alternateButtonId);
-  }
+   const explicitId =
+     data.message?.buttonsResponseMessage?.selectedButtonId ||
+     (data.message as any)?.interactive?.button_reply?.id ||
+     (data.message as any)?.interactive?.list_reply?.id ||
+     data.message?.buttonResponseMessage?.selectedButtonId ||
+     data.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+     messageAny?.buttonReplyMessage?.id ||
+     messageAny?.buttonReplyMessage?.selectedId ||
+     messageAny?.buttonReplyMessage?.selectedButtonId ||
+     messageAny?.interactiveResponseMessage?.id ||
+     messageAny?.interactiveResponseMessage?.button_id ||
+     messageAny?.templateButtonReplyMessage?.selectedId;
+ 
+   if (explicitId) {
+     console.log('[extractMessageText] Found explicit ID:', explicitId);
+     if (explicitId === 'whazing_associado') return 'Sou Associado';
+     if (explicitId === 'whazing_empresa') return 'Sou Empresa';
+     if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
+     return String(explicitId);
+   }
+ 
+   if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+     try {
+       const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+       const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
+       if (bId) {
+         if (bId === 'whazing_associado') return 'Sou Associado';
+         if (bId === 'whazing_empresa') return 'Sou Empresa';
+         if (bId === 'whazing_contabilidade') return 'Sou Contabilidade';
+         return String(bId);
+       }
+     } catch { /* ignore */ }
+   }
 
   // Some clients/instances deliver the user's choice as a reaction to the button/message.
   // Treat positive/negative reactions as confirmation/cancellation fallbacks.
