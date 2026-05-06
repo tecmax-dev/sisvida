@@ -8077,44 +8077,44 @@ async function handleWebhook(req: Request) {
          }
        }
 
-       // Fallback: Find config by instance name or instance id (for Z-API)
+       // Final priority: Meta Official (Sindicato)
+       const isSindicatoMeta = (payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d");
+       
+       if (isSindicatoMeta) {
+         console.log(`[webhook] Sindicato Meta/WABA detected. Prioritizing Meta API routing.`);
+         configData = {
+           clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
+           instance_name: 'meta_official',
+           api_url: 'meta',
+           api_key: 'meta',
+           booking_enabled: true,
+           direct_reply_enabled: true
+         } as EvolutionConfig;
+       }
+ 
        if (!configData) {
          const { data: configByInstance, error: configError } = await supabase
            .from('evolution_configs')
            .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled, instance_id, zapi_token')
            .or(`instance_name.eq."${payload.instance}",instance_id.eq."${payload.instance}"`)
            .eq('is_connected', true);
-
-        if (configError) {
-          console.error('[webhook] Error fetching config:', configError);
-        }
-
-        // If multiple clinics share same instance, log detailed warning with all affected clinics
-        if (configByInstance && configByInstance.length > 1) {
-          const affectedClinics = configByInstance.map(c => c.clinic_id).join(', ');
-          console.warn(
-            `[webhook] WARNING: Multiple clinics (${configByInstance.length}) share the same instance "${payload.instance}". ` +
-              `Affected clinic_ids: [${affectedClinics}]. ` +
-              `Each clinic should have a unique Evolution instance for proper routing. ` +
-              `Using first match: clinic_id=${configByInstance[0].clinic_id}. ` +
-              `TIP: Update instance_name in evolution_configs to be unique per clinic (e.g., "eclini_clinicaA", "eclini_clinicaB").`
-          );
-        }
-
-        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as any) : null;
-        if (configData) {
-           // Map internal fields to EvolutionConfig interface if necessary
-           configData = {
-             clinic_id: configData.clinic_id,
-             api_url: configData.api_url,
-             api_key: configData.api_key,
-             instance_name: configData.instance_name,
-             direct_reply_enabled: configData.direct_reply_enabled,
-             booking_enabled: configData.booking_enabled,
-           } as EvolutionConfig;
-        }
-        console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
-      }
+ 
+         if (configError) {
+           console.error('[webhook] Error fetching config:', configError);
+         }
+ 
+         configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as any) : null;
+         if (configData) {
+            configData = {
+              clinic_id: configData.clinic_id,
+              api_url: configData.api_url,
+              api_key: configData.api_key,
+              instance_name: configData.instance_name,
+              direct_reply_enabled: configData.direct_reply_enabled,
+              booking_enabled: configData.booking_enabled,
+            } as EvolutionConfig;
+         }
+       }
       
       // CONSOLIDATED ROUTING LOGIC (v2.2)
       // Check if we already found a valid database config before applying fallbacks
