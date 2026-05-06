@@ -8231,24 +8231,32 @@ async function handleWebhook(req: Request) {
 
         const messageTextLower = messageTextTrim?.toLowerCase() || '';
         
-        // LEVEL 1: Map both IDs and literal text (buttons send ID, but display text is used as fallback)
-        // LEVEL 1: Mapeamento de IDs e texto literal para o menu principal
-        const L1_CHOICES: Record<string, string> = {
-          'whazing_associado': 'associado',
-          'whazing_empresa': 'empresa',
-          'whazing_contabilidade': 'contabilidade',
-          'sou associado': 'associado',
-          'sou associado(a)': 'associado',
-          'sou empresa': 'empresa',
-          'sou contabilidade': 'contabilidade',
-          'sou contador/escritório contábil': 'contabilidade',
-          'associado': 'associado',
-          'empresa': 'empresa',
-          'contabilidade': 'contabilidade',
-          'contador': 'contabilidade',
-          'falar com atendente': 'atendente',
-          'segunda via de boleto (empresa)': 'boleto'
-        };
+         // LEVEL 1: Mapeamento de IDs e texto literal para o menu principal
+         const L1_CHOICES: Record<string, string> = {
+           'whazing_associado': 'associado',
+           'whazing_empresa': 'empresa',
+           'whazing_contabilidade': 'contabilidade',
+           'sou associado': 'associado',
+           'sou associado(a)': 'associado',
+           'sou empresa': 'empresa',
+           'sou contabilidade': 'contabilidade',
+           'sou contador/escritório contábil': 'contabilidade',
+           'associado': 'associado',
+           'empresa': 'empresa',
+           'contabilidade': 'contabilidade',
+           'contador': 'contabilidade',
+           'falar com atendente': 'atendente',
+           'falar c/ atendente': 'atendente',
+           'atendente': 'atendente',
+           'segunda via de boleto (empresa)': 'boleto',
+           'boleto': 'boleto',
+           '2ª via boleto': 'boleto',
+           '6': 'boleto',
+           '5': 'atendente',
+           '1': 'associado',
+           '2': 'empresa',
+           '3': 'contabilidade'
+         };
 
         // LEVEL 2: Mapeamento para sub-menus
         const L2_CHOICES: Record<string, string> = {
@@ -8268,17 +8276,17 @@ async function handleWebhook(req: Request) {
           'boleto': 'boleto'
         };
 
-        // LEVEL 1 keywords: Check specifically for "Sou Associado", "Sou Empresa", "Sou Contabilidade"
-        // Note: we use startsWith or includes for better tolerance to extra punctuation/emojis
+         // Determinação aprimorada de nível do menu
          let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || !!L1_CHOICES[messageTextLower] || 
                               /sou (associado|empresa|contabilidade|contador)/i.test(messageTextLower);
-         if (!isWhazingLevel1 && /^[1-6]$/.test(messageTextTrim)) {
-           if (!lastMenuType || lastMenuType === 'main') isWhazingLevel1 = true;
-         }
+         
          let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || !!L2_CHOICES[messageTextLower] || 
                               messageTextTrim.startsWith('whazing_sub_');
-         if (!isWhazingLevel2 && /^[1-3]$/.test(messageTextTrim) && storedCategory && lastMenuType === 'sub') {
-           isWhazingLevel2 = true;
+
+         // Fallback numérico baseado no último menu
+         if (/^[1-6]$/.test(messageTextTrim)) {
+           if (!lastMenuType || lastMenuType === 'main') isWhazingLevel1 = true;
+           else if (lastMenuType === 'sub') isWhazingLevel2 = true;
          }
 
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
@@ -8469,22 +8477,9 @@ async function handleWebhook(req: Request) {
           }
         }
 
-        // LEVEL 1: Main menu choices
-        if (isWhazingLevel1) {
-          const categoryMap: Record<string, string> = {
-            'whazing_associado': 'associado',
-            'whazing_empresa': 'empresa',
-            'whazing_contabilidade': 'contabilidade',
-            'sou associado': 'associado',
-            'sou empresa': 'empresa',
-            'sou contabilidade': 'contabilidade',
-            '1': 'associado',
-            '2': 'empresa',
-            '3': 'contabilidade',
-            '4': 'diacomerciario',
-            '5': 'atendente',
-            '6': 'boleto'
-          };
+        // LEVEL 1: Processamento de escolhas do menu principal
+        if (isWhazingLevel1 && (!lastMenuType || lastMenuType === 'main' || ['0', 'menu', 'reiniciar'].includes(messageTextLower))) {
+          console.log(`[webhook] Processando escolha L1: "${messageTextTrim}"`);
           
           const choice = L1_CHOICES[messageTextTrim] || 
                         L1_CHOICES[messageTextLower] || 
