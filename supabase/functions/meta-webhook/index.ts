@@ -43,41 +43,48 @@ serve(async (req) => {
     let body = await req.json();
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    if (!Array.isArray(body.entry) && body?.data?.key) {
+    // Se não tiver entry (formato Meta), tenta normalizar formatos simples (ZapResponder) ou Evolution API
+    if (!Array.isArray(body.entry)) {
       const data = body.data ?? {};
       const key = data.key ?? {};
       const message = data.message ?? {};
-      const remoteJid = String(key.remoteJid || body.phone || "");
-      const fromPhone = String(body.phone || remoteJid.replace(/@.*/, "")).replace(/\D/g, "");
+      
+      // Tenta pegar o telefone de várias formas
+      const phoneValue = body.phone || body.wa_id || key.remoteJid || "";
+      const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
+      
+      // Tenta pegar a mensagem de várias formas
       const textBody = String(
-        message.conversation ||
-        message.extendedTextMessage?.text ||
-        body.mensagem ||
-        body.message ||
-        body.text ||
+        body.mensagem || 
+        body.message || 
+        body.text || 
+        message.conversation || 
+        message.extendedTextMessage?.text || 
         ""
-      );
+      ).trim();
 
-      body = {
-        ...body,
-        entry: [{
-          changes: [{
-            field: "messages",
-            value: {
-              metadata: body.metadata ?? {},
-              contacts: [{ profile: { name: data.pushName || body.nome || body.name || "Cliente" } }],
-              messages: [{
-                from: fromPhone,
-                id: key.id || body.id || `zap-${Date.now()}`,
-                timestamp: String(data.messageTimestamp || body.timestamp || Math.floor(Date.now() / 1000)),
-                type: "text",
-                text: { body: textBody }
-              }]
-            }
+      if (fromPhone) {
+        body = {
+          ...body,
+          entry: [{
+            changes: [{
+              field: "messages",
+              value: {
+                metadata: body.metadata ?? {},
+                contacts: [{ profile: { name: data.pushName || body.nome || body.name || "Cliente" } }],
+                messages: [{
+                  from: fromPhone,
+                  id: key.id || body.id || `zap-${Date.now()}`,
+                  timestamp: String(data.messageTimestamp || body.timestamp || Math.floor(Date.now() / 1000)),
+                  type: "text",
+                  text: { body: textBody }
+                }]
+              }
+            }]
           }]
-        }]
-      };
-      console.log(`[meta-webhook] Payload simples normalizado. De ${fromPhone}: "${textBody}"`);
+        };
+        console.log(`[meta-webhook] Payload simples normalizado. De ${fromPhone}: "${textBody}"`);
+      }
     }
 
     // Estrutura padrão Meta WhatsApp Cloud API
