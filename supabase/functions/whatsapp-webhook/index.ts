@@ -8440,15 +8440,21 @@ async function handleWebhook(req: Request) {
            let btnId = messageText.trim();
  
            // Map numeric choices (1, 2, 3) to button IDs based on category
-           if (btnId === '1') {
-             btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-          } else if (btnId === 'Sou Empresa' || btnId === 'Empresa') {
-             btnId = 'whazing_empresa';
-          } else if (btnId === 'Sou Associado' || btnId === 'Associado') {
-             btnId = 'whazing_associado';
-          } else if (btnId === 'Sou Contabilidade' || btnId === 'Contabilidade') {
-             btnId = 'whazing_contabilidade';
-           } else if (btnId === '2' || btnId === 'Convenções Coletivas') {
+            if (btnId === '1') {
+              btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+            } else if (btnId === 'Atualizar Carteirinha' || btnId === 'Carteirinha') {
+              btnId = 'whazing_sub_carteirinha';
+            } else if (btnId === '2ª Via Boleto' || btnId === 'Boleto') {
+              btnId = 'whazing_sub_boleto';
+            } else if (btnId === 'Sou Empresa' || btnId === 'Empresa') {
+              btnId = 'whazing_empresa';
+            } else if (btnId === 'Sou Associado' || btnId === 'Associado') {
+              btnId = 'whazing_associado';
+            } else if (btnId === 'Sou Contabilidade' || btnId === 'Contabilidade') {
+              btnId = 'whazing_contabilidade';
+            } else if (btnId === '2' || btnId === 'Convenções Coletivas' || btnId === 'CCT') {
+              btnId = 'whazing_sub_convencoes';
+            } else if (btnId === '3' || btnId === 'Outros Assuntos' || btnId === 'Outros') {
              btnId = 'whazing_sub_convencoes';
            } else if (btnId === '3' || btnId === 'Outros Assuntos') {
              btnId = 'whazing_sub_outros';
