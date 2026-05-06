@@ -8455,7 +8455,7 @@ async function handleWebhook(req: Request) {
             } else if (btnId === '2' || btnId === 'Convenções Coletivas' || btnId === 'CCT') {
               btnId = 'whazing_sub_convencoes';
             } else if (btnId === '3' || btnId === 'Outros Assuntos' || btnId === 'Outros') {
-             btnId = 'whazing_sub_convencoes';
+             btnId = 'whazing_sub_outros';
            } else if (btnId === '3' || btnId === 'Outros Assuntos') {
              btnId = 'whazing_sub_outros';
            } else if (btnId === 'Homologacoes') {
