@@ -8454,28 +8454,77 @@ async function handleWebhook(req: Request) {
 
         // LEVEL 1: Main menu choices
         if (isWhazingLevel1) {
-          const categoryMap: Record<string, WhazingCategory> = {
+          const categoryMap: Record<string, string> = {
             'whazing_associado': 'associado',
             'whazing_empresa': 'empresa',
             'whazing_contabilidade': 'contabilidade',
             'sou associado': 'associado',
             'sou empresa': 'empresa',
             'sou contabilidade': 'contabilidade',
-            'sou associado': 'associado',
-            'sou empresa': 'empresa',
-            'sou contabilidade': 'contabilidade',
             '1': 'associado',
             '2': 'empresa',
-            '3': 'contabilidade'
+            '3': 'contabilidade',
+            '4': 'diacomerciario',
+            '5': 'atendente',
+            '6': 'boleto'
           };
           
-          let effectiveChoice = L1_CHOICES[messageTextTrim] || L1_CHOICES[messageTextLower] || messageTextTrim;
-          const category = categoryMap[messageTextTrim] || 
-                          categoryMap[messageTextLower] || 
-                          (messageTextLower.includes('associado') ? 'associado' : null) ||
-                          (messageTextLower.includes('empresa') ? 'empresa' : null) ||
-                          (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
-                          categoryMap[messageTextTrim[0]];
+          const choice = categoryMap[messageTextTrim] || 
+                        categoryMap[messageTextLower] || 
+                        (messageTextLower.includes('associado') ? 'associado' : null) ||
+                        (messageTextLower.includes('empresa') ? 'empresa' : null) ||
+                        (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
+                        (messageTextLower.includes('atendente') ? 'atendente' : null) ||
+                        (messageTextLower.includes('boleto') ? 'boleto' : null);
+          
+          if (!choice) {
+            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not matched, skipping.`);
+            return createSuccessResponse({ message: 'Invalid L1 choice' });
+          }
+          
+          console.log(`[webhook] Whazing L1 choice selected: ${choice}`);
+
+          if (choice === 'atendente') {
+             // Reutilizar a lógica de falar com atendente que já existe no followup
+             console.log(`[webhook] Human handoff requested via Main Menu for ${phone}`);
+             const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
+             const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
+             const targetZapsterDeptId = '972827ca-657d-4c37-a164-944e6e6113b3'; // Administrativo
+             
+             await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente diretamente pelo menu inicial.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}`, targetZapsterDeptId);
+             await freezeBotForHumanHandoff(supabase, phone, payload.data?.pushName || null, 'Solicitou falar com atendente pelo menu inicial');
+             await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
+             return createSuccessResponse({ message: 'Routed to atendente directly' });
+          }
+
+          if (choice === 'boleto') {
+             // Iniciar fluxo de boleto diretamente
+             console.log(`[webhook] Starting boleto flow via Main Menu for ${phone}`);
+             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+             try {
+                await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnonKey}` },
+                  body: JSON.stringify({ clinic_id: clinicId, phone: phone, action: 'start', evolution_config: configData, explicit_phone_id: explicitPhoneId }),
+                });
+             } catch (_e) {}
+             return createSuccessResponse({ message: 'Boleto flow started' });
+          }
+
+          if (choice === 'diacomerciario') {
+             const textMsg = `🎉 *Dia do Comerciário (30/10)*\n\nO Dia do Comerciário é comemorado anualmente em *30 de Outubro*. É um feriado da categoria garantido por lei e pela Convenção Coletiva.\n\nNesta data, o comércio de Ilhéus e região geralmente permanece fechado para que os trabalhadores possam desfrutar de seu merecido descanso.\n\n*Posso ajudar com mais alguma coisa?*`;
+             await sendWhatsAppMessage(configData, phone, textMsg, explicitPhoneId);
+             await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
+             return createSuccessResponse({ message: 'Dia do Comerciário info sent' });
+          }
+
+          const category = choice as WhazingCategory;
+          
+          if (!category) {
+            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
+            return createSuccessResponse({ message: 'Invalid L1 choice' });
+          }
           
           if (!category) {
             console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
