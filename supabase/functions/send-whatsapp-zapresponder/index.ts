@@ -6,15 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-   // Final official and verified endpoints for ZapResponder/ZapThinker (Evolution legacy)
-   // Use only those that are currently resolving and returning 200/403/404, avoiding DNS errors.
-   const ENDPOINTS = [
-     "https://api.zapthinker.com/api/messages/send",
-     "https://api.zapresponder.com.br/api/messages/send",
-     "https://app.zapresponder.com.br/api/external/messages/send",
-     "https://api.zapresponder.com.br/message/sendText",
-     "https://api.zapthinker.com/message/sendText"
-   ];
+    // Known base URLs for ZapResponder/ZapThinker/Evolution
+    const BASE_URLS = [
+      "https://api.zapthinker.com",
+      "https://api.zapresponder.com.br",
+      "https://app.zapresponder.com.br",
+      Deno.env.get("EVOLUTION_API_URL") || ""
+    ].filter(url => url.length > 0);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -99,22 +97,49 @@ serve(async (req) => {
         let response;
         let currentResult = {};
 
-        for (const url of ENDPOINTS) {
-          console.log(`[zapresponder] Trying transfer endpoint: ${url}`);
+        // Generate all possible endpoints to try
+        const endpointsToTry: string[] = [];
+        for (const base of BASE_URLS) {
+          const cleanBase = base.replace(/\/$/, "");
+          // Try Evolution v1 format with instance in URL
+          endpointsToTry.push(`${cleanBase}/message/sendText/${cfg.instance_id}`);
+          // Try ZapResponder v2 formats
+          endpointsToTry.push(`${cleanBase}/api/messages/send`);
+          endpointsToTry.push(`${cleanBase}/api/external/messages/send`);
+          // Try legacy formats
+          endpointsToTry.push(`${cleanBase}/message/sendText`);
+        }
+
+        for (const url of endpointsToTry) {
+          console.log(`[zapresponder] Trying endpoint: ${url}`);
           
-          // Prepare payload based on endpoint type
-          const isV2 = url.includes('/api/messages/send') || url.includes('/api/external/messages/send');
-          const payloadData = isV2 
-            ? { number: cleanPhone, body: message, department_id: payload.departmentId }
-            : { number: cleanPhone, text: message, departmentId: payload.departmentId };
+          const isV2 = url.includes('/api/') || url.includes('/external/');
+          const isEvoV1 = url.includes(`/message/sendText/${cfg.instance_id}`);
+          
+          let payloadData: any;
+          if (isV2) {
+            payloadData = { number: cleanPhone, body: message, department_id: payload.departmentId };
+          } else {
+            payloadData = { number: cleanPhone, text: message };
+            if (!isEvoV1) payloadData.departmentId = payload.departmentId;
+          }
 
           try {
+            const headers: Record<string, string> = {
+              "Content-Type": "application/json",
+            };
+
+            // Try different header names for the API key
+            if (url.includes("evo.tecmax.net") || (Deno.env.get("EVOLUTION_API_URL") && url.includes(Deno.env.get("EVOLUTION_API_URL")!))) {
+              headers["apikey"] = Deno.env.get("EVOLUTION_API_KEY") || apiToken;
+            } else {
+              headers["Authorization"] = `Bearer ${apiToken}`;
+              headers["apikey"] = apiToken; // Some rebranded versions use this
+            }
+
             response = await fetch(url, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiToken}`,
-              },
+              headers,
               body: JSON.stringify(payloadData),
             });
 
@@ -124,7 +149,7 @@ serve(async (req) => {
               console.log(`[zapresponder] Success via ${url}`);
               break;
             }
-            console.warn(`[zapresponder] ${url} failed with ${response.status}`);
+            console.warn(`[zapresponder] ${url} failed with ${response.status}: ${JSON.stringify(currentResult)}`);
           } catch (fetchErr) {
             console.error(`[zapresponder] Fetch error for ${url}:`, fetchErr.message);
             continue;
