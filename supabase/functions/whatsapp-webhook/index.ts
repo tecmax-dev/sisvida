@@ -8119,49 +8119,45 @@ async function handleWebhook(req: Request) {
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
       
-      // Final fallback: Check zapster_configs if still no configData
-      if (!configData && (payload.instance || explicitClinicId)) {
-        const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
-        
-        // Se temos o clinic_id explícito, ele é a melhor forma de encontrar a config
-        if (explicitClinicId) {
-          query.eq('clinic_id', explicitClinicId);
-        } else {
-          query.eq('instance_id', payload.instance);
-        }
-
-        // Usamos .limit(1) para evitar erro se houver múltiplos mapeamentos para a mesma clínica
-        const { data: zapsterConfigs } = await query.limit(1);
-        const zapsterCfg = zapsterConfigs && zapsterConfigs.length > 0 ? zapsterConfigs[0] : null;
-
-        if (zapsterCfg) {
-          console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
-          const isSindicato = zapsterCfg.clinic_id === "89e7585e-7bce-4e58-91fa-c37080d1170d";
-          
-          configData = {
-            clinic_id: zapsterCfg.clinic_id,
-            instance_name: zapsterCfg.instance_id,
-            api_url: isSindicato ? 'meta' : 'zapster', // Sindicato uses direct Meta logic
-            api_key: isSindicato ? 'meta' : 'zapster',
-            booking_enabled: true,
-            direct_reply_enabled: true
-          } as EvolutionConfig;
-        }
-      }
-
-      // Emergency fallback for Meta: If instance is 'meta' or explicitClinicId is Sindicato, and configData is missing or incorrectly resolved
-      const isMetaRequest = payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      // PRE-EMPTIVE ROUTING FOR SINDICATO (META)
+      const isSindicatoClinic = explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      const isMetaInstance = payload.instance === 'meta' || payload.instance === 'meta_official';
       
-      if (isMetaRequest && (!configData || configData.api_url !== 'meta')) {
-        console.log(`[webhook] Forcing Meta configuration for Sindicato clinic (isMetaRequest=${isMetaRequest})`);
+      if (isSindicatoClinic || isMetaInstance) {
+        console.log(`[webhook] Sindicato/Meta request detected. Forcing Meta configuration.`);
         configData = {
           clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
           instance_name: 'meta_official',
-          api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
+          api_url: 'meta',
           api_key: 'meta',
           booking_enabled: true,
           direct_reply_enabled: true
         } as EvolutionConfig;
+      }
+
+      // Standard routing if not already handled by Sindicato force
+      if (!configData) {
+        // Final fallback: Check zapster_configs
+        if (payload.instance || explicitClinicId) {
+          const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
+          if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
+          else query.eq('instance_id', payload.instance);
+
+          const { data: zapsterConfigs } = await query.limit(1);
+          const zapsterCfg = zapsterConfigs && zapsterConfigs.length > 0 ? zapsterConfigs[0] : null;
+
+          if (zapsterCfg) {
+            console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
+            configData = {
+              clinic_id: zapsterCfg.clinic_id,
+              instance_name: zapsterCfg.instance_id,
+              api_url: 'zapster',
+              api_key: 'zapster',
+              booking_enabled: true,
+              direct_reply_enabled: true
+            } as EvolutionConfig;
+          }
+        }
       }
        if (configData) {
          clinicId = configData.clinic_id;
