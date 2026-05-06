@@ -91,12 +91,17 @@ serve(async (req) => {
 
         try {
           const endpoints = [
-            // Official Meta API Endpoints (Zap Responder uses app. prefix for many webhooks/APIs)
-            { url: "https://app.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            // Primary: ZapThinker / ZapResponder v2 API (Official Meta integration)
+            { url: "https://api.zapthinker.com/api/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
             { url: "https://api.zapresponder.com.br/api/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
+            
+            // External/Legacy Endpoints
+            { url: "https://app.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
             { url: "https://api.zapresponder.com.br/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
-            // Legacy or Alternative Endpoints
+            
+            // Legacy or Alternative Endpoints (often used in unofficial instances)
             { url: "https://api.zapthinker.com.br/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
+            { url: "https://api.zapthinker.com/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
             { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } }
           ];
 
