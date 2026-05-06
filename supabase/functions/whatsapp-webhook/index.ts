@@ -8232,9 +8232,12 @@ async function handleWebhook(req: Request) {
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto', 'Atualizar Carteirinha', 'Convenções Coletivas', 'Outros Assuntos', '2ª Via Boleto'];
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
 
-        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+        const messageTextLower = messageTextTrim?.toLowerCase() || '';
+        
+        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim) || 
+                             ['sou associado', 'sou empresa', 'sou contabilidade'].includes(messageTextLower);
         let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim) || 
-                             ['Atualizar Carteirinha', 'Carteirinha', 'Convenções Coletivas', 'CCT', 'Outros Assuntos', 'Outros', '2ª Via Boleto', 'Boleto'].includes(messageTextTrim);
+                             ['atualizar carteirinha', 'carteirinha', 'conveções coletivas', 'cct', 'outros assuntos', 'outros', '2ª via boleto', 'boleto'].includes(messageTextLower);
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
