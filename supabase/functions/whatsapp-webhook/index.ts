@@ -8255,8 +8255,18 @@ async function handleWebhook(req: Request) {
           'boleto': '2ª Via Boleto'
         };
 
-        let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || !!L1_CHOICES[messageTextLower];
-        let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || !!L2_CHOICES[messageTextLower] || ['Convenções Coletivas', 'Outros Assuntos', 'Homologacoes', 'Juridico'].includes(messageTextTrim);
+        // LEVEL 1 keywords: Check specifically for "Sou Associado", "Sou Empresa", "Sou Contabilidade"
+        // Note: we use startsWith or includes for better tolerance to extra punctuation/emojis
+        let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || 
+                             !!L1_CHOICES[messageTextLower] ||
+                             /sou (associado|empresa|contabilidade)/i.test(messageTextLower);
+
+        // LEVEL 2 keywords
+        let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || 
+                             !!L2_CHOICES[messageTextLower] || 
+                             ['Convenções Coletivas', 'Outros Assuntos', 'Homologacoes', 'Juridico'].includes(messageTextTrim) ||
+                             /2. via boleto|cct|conven[cç][oõ]es|outros assuntos|carteirinha/i.test(messageTextLower);
+
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
@@ -8463,7 +8473,12 @@ async function handleWebhook(req: Request) {
           };
           
           let effectiveChoice = L1_CHOICES[messageTextTrim] || L1_CHOICES[messageTextLower] || messageTextTrim;
-          const category = categoryMap[messageTextTrim] || categoryMap[messageTextLower] || categoryMap[messageTextTrim[0]];
+          const category = categoryMap[messageTextTrim] || 
+                          categoryMap[messageTextLower] || 
+                          (messageTextLower.includes('associado') ? 'associado' : null) ||
+                          (messageTextLower.includes('empresa') ? 'empresa' : null) ||
+                          (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
+                          categoryMap[messageTextTrim[0]];
           
           if (!category) {
             console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
