@@ -8056,22 +8056,26 @@ async function handleWebhook(req: Request) {
 
       const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
-      if (activeSession?.clinic_id) {
-        const { data: configByClinic, error: configByClinicError } = await supabase
-          .from('evolution_configs')
-          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
-          .eq('clinic_id', activeSession.clinic_id)
-          .eq('is_connected', true)
-          .eq('direct_reply_enabled', true)
-          .maybeSingle();
-
-        if (configByClinicError) {
-          console.error('[webhook] Error fetching config by clinic_id:', configByClinicError);
-        }
-
-        configData = (configByClinic as EvolutionConfig) ?? null;
-        console.log(`[webhook] Routing by active session -> clinic: ${configData?.clinic_id ?? 'not found'}`);
-      }
+       const targetClinicId = explicitClinicId || activeSession?.clinic_id;
+       
+       if (targetClinicId) {
+         const { data: configByClinic, error: configByClinicError } = await supabase
+           .from('evolution_configs')
+           .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
+           .eq('clinic_id', targetClinicId)
+           .eq('is_connected', true)
+           .eq('direct_reply_enabled', true)
+           .maybeSingle();
+ 
+         if (configByClinicError) {
+           console.error('[webhook] Error fetching config by clinic_id:', configByClinicError);
+         }
+ 
+         if (configByClinic) {
+           configData = configByClinic as EvolutionConfig;
+           console.log(`[webhook] Routing by explicit/active clinic_id -> clinic: ${configData.clinic_id}`);
+         }
+       }
 
        // Fallback: Find config by instance name or instance id (for Z-API)
        if (!configData) {
