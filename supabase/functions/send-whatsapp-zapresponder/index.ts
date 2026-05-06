@@ -118,10 +118,20 @@ serve(async (req) => {
           
           let payloadData: any;
           if (isV2) {
-            payloadData = { number: cleanPhone, body: message, department_id: payload.departmentId };
+            // Whazing/Chatgoo v2 format
+            payloadData = { 
+              number: cleanPhone, 
+              body: message, 
+              // Whazing API Oficial uses departmentId (camelCase) or department_id
+              departmentId: body.departmentId || payload.departmentId,
+              department_id: body.departmentId || payload.departmentId 
+            };
           } else {
+            // Evolution v1 or legacy format
             payloadData = { number: cleanPhone, text: message };
-            if (!isEvoV1) payloadData.departmentId = payload.departmentId;
+            if (!isEvoV1) {
+              payloadData.departmentId = body.departmentId || payload.departmentId;
+            }
           }
 
           try {
