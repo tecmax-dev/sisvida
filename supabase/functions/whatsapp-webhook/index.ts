@@ -1044,9 +1044,10 @@ async function storeWhazingContext(
   clinicId: string,
   phone: string,
   category: WhazingCategory,
-  lastMenuType: 'main' | 'sub' | 'followup' = 'main'
+  lastMenuType: 'main' | 'sub' | 'followup' = 'main',
+  expiresInMinutes: number = 10
 ): Promise<void> {
-  const { error } = await supabase.from('whatsapp_ai_conversations').insert({
+  const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
     clinic_id: clinicId,
     phone,
     messages: { 
@@ -1054,8 +1055,8 @@ async function storeWhazingContext(
       last_menu_type: lastMenuType,
       source: 'whazing_menu' 
     },
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-  });
+    expires_at: new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(),
+  }, { onConflict: 'clinic_id,phone' });
 
   if (error) {
     console.log('[webhook] Could not store whazing context:', error.message);
@@ -8104,53 +8105,54 @@ async function handleWebhook(req: Request) {
           );
         }
 
-        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
+        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as any) : null;
+        if (configData) {
+           // Map internal fields to EvolutionConfig interface if necessary
+           configData = {
+             clinic_id: configData.clinic_id,
+             api_url: configData.api_url,
+             api_key: configData.api_key,
+             instance_name: configData.instance_name,
+             direct_reply_enabled: configData.direct_reply_enabled,
+             booking_enabled: configData.booking_enabled,
+           } as EvolutionConfig;
+        }
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
       
-      console.log(`[webhook] Final configData resolution check: clinicId=${configData?.clinic_id}, apiUrl=${configData?.api_url}`);
-
-      // Final fallback: Check zapster_configs if still no configData
-      if (!configData && (payload.instance || explicitClinicId)) {
-        const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
-        
-        // Se temos o clinic_id explícito, ele é a melhor forma de encontrar a config
-        if (explicitClinicId) {
-          query.eq('clinic_id', explicitClinicId);
-        } else {
-          query.eq('instance_id', payload.instance);
-        }
-
-        // Usamos .limit(1) para evitar erro se houver múltiplos mapeamentos para a mesma clínica
-        const { data: zapsterConfigs } = await query.limit(1);
-        const zapsterCfg = zapsterConfigs && zapsterConfigs.length > 0 ? zapsterConfigs[0] : null;
-
-        if (zapsterCfg) {
-          console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
-          const isSindicato = zapsterCfg.clinic_id === "89e7585e-7bce-4e58-91fa-c37080d1170d";
-          
-          configData = {
-            clinic_id: zapsterCfg.clinic_id,
-            instance_name: zapsterCfg.instance_id,
-            api_url: isSindicato ? 'meta' : 'zapster', // Sindicato uses direct Meta logic
-            api_key: isSindicato ? 'meta' : 'zapster',
-            booking_enabled: true,
-            direct_reply_enabled: true
-          } as EvolutionConfig;
-        }
-      }
-
-      // Emergency fallback for Meta if still no configData (ensure Sindicato flow runs)
-      if (!configData && explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
-        console.log(`[webhook] Applying emergency Meta config for Sindicato clinic`);
+      // CONSOLIDATED ROUTING LOGIC
+      const isMetaOfficial = payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      
+      if (isMetaOfficial) {
+        console.log(`[webhook] OFFICIAL META / SINDICATO request detected. Forcing Meta configuration.`);
         configData = {
-          clinic_id: explicitClinicId,
+          clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
           instance_name: 'meta_official',
-          api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
+          api_url: 'meta',
           api_key: 'meta',
           booking_enabled: true,
           direct_reply_enabled: true
         } as EvolutionConfig;
+      } else if (!configData) {
+        // Try zapster_configs as a second fallback if standard Evolution config failed
+        if (payload.instance || explicitClinicId) {
+          const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
+          if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
+          else query.eq('instance_id', payload.instance);
+
+          const { data: zapsterConfigs } = await query.limit(1);
+          if (zapsterConfigs?.[0]) {
+            console.log(`[webhook] Found Zapster config for clinic ${zapsterConfigs[0].clinic_id}`);
+            configData = {
+              clinic_id: zapsterConfigs[0].clinic_id,
+              instance_name: zapsterConfigs[0].instance_id,
+              api_url: 'zapster',
+              api_key: 'zapster',
+              booking_enabled: true,
+              direct_reply_enabled: true
+            } as EvolutionConfig;
+          }
+        }
       }
        if (configData) {
          clinicId = configData.clinic_id;
@@ -8221,9 +8223,12 @@ async function handleWebhook(req: Request) {
         const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto', 'Atualizar Carteirinha', 'Convenções Coletivas', 'Outros Assuntos', '2ª Via Boleto'];
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
 
-        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+        const messageTextLower = messageTextTrim?.toLowerCase() || '';
+        
+        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim) || 
+                             ['sou associado', 'sou empresa', 'sou contabilidade'].includes(messageTextLower);
         let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim) || 
-                             ['Atualizar Carteirinha', 'Carteirinha', 'Convenções Coletivas', 'CCT', 'Outros Assuntos', 'Outros', '2ª Via Boleto', 'Boleto'].includes(messageTextTrim);
+                             ['atualizar carteirinha', 'carteirinha', 'conveções coletivas', 'cct', 'outros assuntos', 'outros', '2ª via boleto', 'boleto'].includes(messageTextLower);
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
@@ -8421,11 +8426,20 @@ async function handleWebhook(req: Request) {
             'Sou Associado': 'associado',
             'Sou Empresa': 'empresa',
             'Sou Contabilidade': 'contabilidade',
+            'sou associado': 'associado',
+            'sou empresa': 'empresa',
+            'sou contabilidade': 'contabilidade',
             '1': 'associado',
             '2': 'empresa',
             '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim];
+          
+          let lookupKey = messageTextTrim;
+          if (!categoryMap[lookupKey]) {
+            lookupKey = messageTextTrim.toLowerCase();
+          }
+          
+          const category = categoryMap[lookupKey];
           
           if (!category) {
             console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
@@ -8457,29 +8471,29 @@ async function handleWebhook(req: Request) {
            let btnId = messageText.trim();
  
            // Map numeric choices (1, 2, 3) to button IDs based on category
+            const btnLower = btnId.toLowerCase();
+            
             if (btnId === '1') {
               btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-            } else if (btnId === 'Atualizar Carteirinha' || btnId === 'Carteirinha') {
+            } else if (btnLower.includes('carteirinha')) {
               btnId = 'whazing_sub_carteirinha';
-            } else if (btnId === '2ª Via Boleto' || btnId === 'Boleto') {
+            } else if (btnLower.includes('boleto')) {
               btnId = 'whazing_sub_boleto';
-            } else if (btnId === 'Sou Empresa' || btnId === 'Empresa') {
+            } else if (btnLower === 'sou empresa' || btnLower === 'empresa') {
               btnId = 'whazing_empresa';
-            } else if (btnId === 'Sou Associado' || btnId === 'Associado') {
+            } else if (btnLower === 'sou associado' || btnLower === 'associado') {
               btnId = 'whazing_associado';
-            } else if (btnId === 'Sou Contabilidade' || btnId === 'Contabilidade') {
+            } else if (btnLower === 'sou contabilidade' || btnLower === 'contabilidade') {
               btnId = 'whazing_contabilidade';
-            } else if (btnId === '2' || btnId === 'Convenções Coletivas' || btnId === 'CCT') {
+            } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct')) {
               btnId = 'whazing_sub_convencoes';
-            } else if (btnId === '3' || btnId === 'Outros Assuntos' || btnId === 'Outros') {
-             btnId = 'whazing_sub_outros';
-           } else if (btnId === '3' || btnId === 'Outros Assuntos') {
-             btnId = 'whazing_sub_outros';
-           } else if (btnId === 'Homologacoes') {
-             btnId = 'whazing_outros_homologacao';
-           } else if (btnId === 'Juridico') {
-             btnId = 'whazing_outros_juridico';
-           }
+            } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
+              btnId = 'whazing_sub_outros';
+            } else if (btnLower.includes('homologacao') || btnLower.includes('homologação')) {
+              btnId = 'whazing_outros_homologacao';
+            } else if (btnLower.includes('juridico') || btnLower.includes('jurídico')) {
+              btnId = 'whazing_outros_juridico';
+            }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
