@@ -8480,29 +8480,29 @@ async function handleWebhook(req: Request) {
            let btnId = messageText.trim();
  
            // Map numeric choices (1, 2, 3) to button IDs based on category
+            const btnLower = btnId.toLowerCase();
+            
             if (btnId === '1') {
               btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-            } else if (btnId === 'Atualizar Carteirinha' || btnId === 'Carteirinha') {
+            } else if (btnLower.includes('carteirinha')) {
               btnId = 'whazing_sub_carteirinha';
-            } else if (btnId === '2ª Via Boleto' || btnId === 'Boleto') {
+            } else if (btnLower.includes('boleto')) {
               btnId = 'whazing_sub_boleto';
-            } else if (btnId === 'Sou Empresa' || btnId === 'Empresa') {
+            } else if (btnLower === 'sou empresa' || btnLower === 'empresa') {
               btnId = 'whazing_empresa';
-            } else if (btnId === 'Sou Associado' || btnId === 'Associado') {
+            } else if (btnLower === 'sou associado' || btnLower === 'associado') {
               btnId = 'whazing_associado';
-            } else if (btnId === 'Sou Contabilidade' || btnId === 'Contabilidade') {
+            } else if (btnLower === 'sou contabilidade' || btnLower === 'contabilidade') {
               btnId = 'whazing_contabilidade';
-            } else if (btnId === '2' || btnId === 'Convenções Coletivas' || btnId === 'CCT') {
+            } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct')) {
               btnId = 'whazing_sub_convencoes';
-            } else if (btnId === '3' || btnId === 'Outros Assuntos' || btnId === 'Outros') {
-             btnId = 'whazing_sub_outros';
-           } else if (btnId === '3' || btnId === 'Outros Assuntos') {
-             btnId = 'whazing_sub_outros';
-           } else if (btnId === 'Homologacoes') {
-             btnId = 'whazing_outros_homologacao';
-           } else if (btnId === 'Juridico') {
-             btnId = 'whazing_outros_juridico';
-           }
+            } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
+              btnId = 'whazing_sub_outros';
+            } else if (btnLower.includes('homologacao') || btnLower.includes('homologação')) {
+              btnId = 'whazing_outros_homologacao';
+            } else if (btnLower.includes('juridico') || btnLower.includes('jurídico')) {
+              btnId = 'whazing_outros_juridico';
+            }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
