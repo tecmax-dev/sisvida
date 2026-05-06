@@ -8292,9 +8292,12 @@ async function handleWebhook(req: Request) {
             return createSuccessResponse({ message: 'Main menu resent' });
           }
 
-          if (followUpId === 'whazing_voltar_sub') {
-            await sendWhazingSubMenu(configData, phone, (storedCategory as any) || 'associado', explicitPhoneId);
-            return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
+          if (followUpId === 'whazing_voltar_sub' || followUpId === 'Voltar') {
+            const targetCategory = (storedCategory as WhazingCategory) || 'associado';
+            console.log(`[webhook] Returning to sub-menu for category: ${targetCategory}`);
+            await sendWhazingSubMenu(configData, phone, targetCategory, explicitPhoneId);
+            await storeWhazingContext(supabase, clinicId, phone, targetCategory, 'sub');
+            return createSuccessResponse({ message: `Sub-menu resent for ${targetCategory}` });
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
