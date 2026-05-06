@@ -8209,8 +8209,8 @@ async function handleWebhook(req: Request) {
         const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
         
         // Level IDs for mapping
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', 'Sou Associado', 'Sou Empresa', 'Sou Contabilidade'];
+        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto', 'Atualizar Carteirinha', 'Convenções Coletivas', 'Outros Assuntos', '2ª Via Boleto'];
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
 
         let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
@@ -8407,6 +8407,9 @@ async function handleWebhook(req: Request) {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
             whazing_contabilidade: 'contabilidade',
+            'Sou Associado': 'associado',
+            'Sou Empresa': 'empresa',
+            'Sou Contabilidade': 'contabilidade',
             '1': 'associado',
             '2': 'empresa',
             '3': 'contabilidade',
@@ -8439,6 +8442,12 @@ async function handleWebhook(req: Request) {
            // Map numeric choices (1, 2, 3) to button IDs based on category
            if (btnId === '1') {
              btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+          } else if (btnId === 'Sou Empresa' || btnId === 'Empresa') {
+             btnId = 'whazing_empresa';
+          } else if (btnId === 'Sou Associado' || btnId === 'Associado') {
+             btnId = 'whazing_associado';
+          } else if (btnId === 'Sou Contabilidade' || btnId === 'Contabilidade') {
+             btnId = 'whazing_contabilidade';
            } else if (btnId === '2' || btnId === 'Convenções Coletivas') {
              btnId = 'whazing_sub_convencoes';
            } else if (btnId === '3' || btnId === 'Outros Assuntos') {
@@ -8518,7 +8527,7 @@ async function handleWebhook(req: Request) {
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
-          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros' || btnId === 'Outros Assuntos') {
+          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros' || btnId === 'Outros Assuntos' || btnId === 'Outros') {
             console.log(`[webhook] Whazing "Outros Assuntos" → sub-menu (${currentCategory})`);
             await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
 
