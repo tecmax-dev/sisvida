@@ -1144,21 +1144,8 @@ serve(async (req) => {
     // Check if user selected option 6 or equivalent submenu path
     // IMPORTANT: When booking is disabled, option 6 is boleto (not booking)
     const isOption6Selection = cleanMessage === '6' || /^6(?:-\d+)+$/.test(cleanMessage);
-    if (isOption6Selection) {
-      if (isBookingEnabledEarly) {
-        console.log('[ai-assistant] Option 6 selected and booking enabled - handing off to booking flow');
-        return new Response(
-          JSON.stringify({ response: null, handoff_to_booking: true, action: 'start_booking_flow' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log('[ai-assistant] Option 6 selected and booking disabled - handing off to boleto flow');
-      return new Response(
-        JSON.stringify({ response: 'HANDOFF_BOLETO', handoff_to_booking: false, action: 'handoff_boleto' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Let AI handle Option 6 and other choices dynamically based on system prompt.
+    // Removing early return for Option 6 to allow AI to decide between HANDOFF_BOOKING and HANDOFF_BOLETO.
 
     // Any other booking intent: either handoff to booking (enabled) or redirect to app (disabled)
     if (/\b(agendar|agendamento|marcar\s+consulta|marcar\s+exame|consulta|horário|horario|vaga|dispon(í|i)vel|disponivel)\b/i.test(cleanMessage) && !cleanMessage.includes('conve') && !cleanMessage.includes('cct')) {
