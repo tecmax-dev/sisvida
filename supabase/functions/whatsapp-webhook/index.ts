@@ -332,7 +332,7 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
      messageAny?.templateButtonReplyMessage?.selectedId;
  
    if (explicitId) {
-     console.log('[extractMessageText] Found explicit ID:', explicitId);
+      console.log('[extractMessageText] Found explicit ID:', explicitId);
      if (explicitId === 'whazing_associado') return 'Sou Associado';
      if (explicitId === 'whazing_empresa') return 'Sou Empresa';
      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
