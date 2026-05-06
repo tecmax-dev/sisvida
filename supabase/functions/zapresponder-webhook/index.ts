@@ -19,6 +19,7 @@
     }
     try {
       payload = JSON.parse(rawBody);
+      console.log("[zapresponder] Body recebido:", JSON.stringify(payload));
     } catch (parseErr) {
       return new Response(JSON.stringify({
         error: "INVALID_JSON",
