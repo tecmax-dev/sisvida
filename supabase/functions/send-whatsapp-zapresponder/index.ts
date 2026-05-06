@@ -6,13 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-    // Known base URLs for ZapResponder/ZapThinker/Evolution
-    const BASE_URLS = [
-      "https://api.zapthinker.com",
-      "https://api.zapresponder.com.br",
-      "https://app.zapresponder.com.br",
-      Deno.env.get("EVOLUTION_API_URL") || ""
-    ].filter(url => url.length > 0);
+const ZAP_RESPONDER_BASE_URL = "https://api.zapresponder.com.br/api/whatsapp";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -78,10 +72,10 @@ serve(async (req) => {
       console.log(`[zapresponder] Attempting send via instance ${cfg.instance_id} to ${cleanPhone}`);
       
       const payload: any = {
-         phone: cleanPhone,
-         message: message,
-         departmentId: body.departmentId || cfg.instance_id,
-       };
+        phone: cleanPhone,
+        message: message,
+        departmentId: cfg.instance_id,
+      };
 
       if (templateName) {
         payload.template = {
@@ -94,83 +88,26 @@ serve(async (req) => {
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 
       try {
-        let response;
-        let currentResult = {};
+        const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/messages/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiToken}`,
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload),
+        });
 
-        // Generate all possible endpoints to try
-        const endpointsToTry: string[] = [];
-        for (const base of BASE_URLS) {
-          const cleanBase = base.replace(/\/$/, "");
-          // Try Evolution v1 format with instance in URL
-          endpointsToTry.push(`${cleanBase}/message/sendText/${cfg.instance_id}`);
-          // Try ZapResponder v2 formats
-          endpointsToTry.push(`${cleanBase}/api/messages/send`);
-          endpointsToTry.push(`${cleanBase}/api/external/messages/send`);
-          // Try legacy formats
-          endpointsToTry.push(`${cleanBase}/message/sendText`);
+        const result = await response.json().catch(() => ({}));
+        lastResult = { status: response.status, data: result };
+
+        if (response.ok) {
+          console.log(`[zapresponder] Success via instance ${cfg.instance_id}`);
+          success = true;
+          break;
+        } else {
+          console.warn(`[zapresponder] Failed via ${cfg.instance_id}: ${response.status}`, result);
         }
-
-        for (const url of endpointsToTry) {
-          console.log(`[zapresponder] Trying endpoint: ${url}`);
-          
-          const isV2 = url.includes('/api/') || url.includes('/external/');
-          const isEvoV1 = url.includes(`/message/sendText/${cfg.instance_id}`);
-          
-          let payloadData: any;
-          if (isV2) {
-            // Whazing/Chatgoo v2 format
-            payloadData = { 
-              number: cleanPhone, 
-              body: message, 
-              // Whazing API Oficial uses departmentId (camelCase) or department_id
-              departmentId: body.departmentId || payload.departmentId,
-              department_id: body.departmentId || payload.departmentId 
-            };
-          } else {
-            // Evolution v1 or legacy format
-            payloadData = { number: cleanPhone, text: message };
-            if (!isEvoV1) {
-              payloadData.departmentId = body.departmentId || payload.departmentId;
-            }
-          }
-
-          try {
-            const headers: Record<string, string> = {
-              "Content-Type": "application/json",
-            };
-
-            // Try different header names for the API key
-            if (url.includes("evo.tecmax.net") || (Deno.env.get("EVOLUTION_API_URL") && url.includes(Deno.env.get("EVOLUTION_API_URL")!))) {
-              headers["apikey"] = Deno.env.get("EVOLUTION_API_KEY") || apiToken;
-            } else {
-              headers["Authorization"] = `Bearer ${apiToken}`;
-              headers["apikey"] = apiToken; // Some rebranded versions use this
-            }
-
-            response = await fetch(url, {
-              method: "POST",
-              headers,
-              body: JSON.stringify(payloadData),
-            });
-
-            currentResult = await response.json().catch(() => ({}));
-            
-            if (response.ok) {
-              console.log(`[zapresponder] Success via ${url}`);
-              break;
-            }
-            console.warn(`[zapresponder] ${url} failed with ${response.status}: ${JSON.stringify(currentResult)}`);
-          } catch (fetchErr) {
-            console.error(`[zapresponder] Fetch error for ${url}:`, fetchErr.message);
-            continue;
-          }
-        }
-
-          lastResult = { status: response?.status || 500, data: currentResult };
-          if (response?.ok) {
-            success = true;
-            break;
-          }
       } catch (err) {
         console.error(`[zapresponder] Exception via ${cfg.instance_id}:`, err);
       }

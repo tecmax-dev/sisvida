@@ -1,22 +1,4 @@
- function getZapsterDeptIdFromQueue(queueId: string | null): string {
-   const map: Record<string, string> = {
-     '2c1ef611-09d4-4866-b0db-19164e8f8611': 'fa193a46-e119-4994-852b-29e551ab37f1', // Associdos
-     'f6f0911b-8bb5-49c1-8d86-e519dc7515d4': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Empresas
-     'c7efdda1-d773-40ea-84e5-4c8b46e0ef8e': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Contabilidade
-      '6644c29c-95b9-414f-ba8c-62a2402ede34': '972827ca-657d-4c37-a164-944e6e6113b3', // Administrativo -> Outros assuntos
-   };
-   return (queueId && map[queueId]) || 'fa193a46-e119-4994-852b-29e551ab37f1';
- }
- 
- function getZapsterDeptIdFromKeyword(text: string): string | null {
-   const lower = text.toLowerCase();
-   if (lower.includes('associado')) return 'fa193a46-e119-4994-852b-29e551ab37f1';
-   if (lower.includes('empresa')) return '3259b59a-8f9d-4027-8520-2b78167d59ab';
-   if (lower.includes('contabilidade') || lower.includes('contador')) return '3259b59a-8f9d-4027-8520-2b78167d59ab';
-   return null;
- }
- 
- // whatsapp-webhook v2.2 - 2026-05-06 - Support for Meta Official Instance
+// whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -318,52 +300,42 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   const messageAny = data.message as any;
   
   // Check for interactive button response (plural - Evolution API native)
-   const explicitId =
-     data.message?.buttonsResponseMessage?.selectedButtonId ||
-     (data.message as any)?.interactive?.button_reply?.id ||
-     (data.message as any)?.interactive?.list_reply?.id ||
-     data.message?.buttonResponseMessage?.selectedButtonId ||
-     data.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
-     messageAny?.buttonReplyMessage?.id ||
-     messageAny?.buttonReplyMessage?.selectedId ||
-     messageAny?.buttonReplyMessage?.selectedButtonId ||
-     messageAny?.interactiveResponseMessage?.id ||
-     messageAny?.interactiveResponseMessage?.button_id ||
-     messageAny?.templateButtonReplyMessage?.selectedId;
- 
-  if (explicitId) {
-    console.log('[extractMessageText] Found explicit ID:', explicitId);
-    const sId = String(explicitId);
-    // Map internal technical IDs back to readable terms for the flow logic
-    if (sId === 'whazing_associado') return 'Sou Associado';
-    if (sId === 'whazing_empresa') return 'Sou Empresa';
-    if (sId === 'whazing_contabilidade') return 'Sou Contabilidade';
-    if (sId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
-    if (sId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
-    if (sId === 'whazing_sub_outros') return 'Outros Assuntos';
-    if (sId === 'whazing_sub_boleto') return '2ª Via Boleto';
-    if (sId === 'whazing_voltar_menu') return 'Menu Principal';
-    if (sId === 'whazing_voltar_sub') return 'Voltar';
-    if (sId === 'whazing_falar_atendente' || sId === 'whazing_outros_atendente') return 'Falar c/ Atendente';
-    return sId;
+  if (data.message?.buttonsResponseMessage?.selectedButtonId) {
+    console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
+    return data.message.buttonsResponseMessage.selectedButtonId;
   }
-
+  
+  // Check for interactive button response (singular - Whazing/alternative format)
+  if (data.message?.buttonResponseMessage?.selectedButtonId) {
+    console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
+    return data.message.buttonResponseMessage.selectedButtonId;
+  }
+  
+  // Check for list response
+  if (data.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
+    return data.message.listResponseMessage.singleSelectReply.selectedRowId;
+  }
+  
+  // Check for interactive message response (newer Evolution API format)
   if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
     try {
       const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
-      if (bId) {
-        const sId = String(bId);
-        if (sId === 'whazing_associado' || sId === 'Sou Associado') return 'Sou Associado';
-        if (sId === 'whazing_empresa' || sId === 'Sou Empresa') return 'Sou Empresa';
-        if (sId === 'whazing_contabilidade' || sId === 'Sou Contabilidade') return 'Sou Contabilidade';
-        if (sId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
-        if (sId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
-        if (sId === 'whazing_sub_outros') return 'Outros Assuntos';
-        if (sId === 'whazing_sub_boleto') return '2ª Via Boleto';
-        return sId;
-      }
-    } catch { /* ignore */ }
+      const buttonId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
+      if (buttonId) return String(buttonId);
+    } catch { /* ignore parse errors */ }
+  }
+
+  const alternateButtonId =
+    messageAny?.buttonReplyMessage?.id ||
+    messageAny?.buttonReplyMessage?.selectedId ||
+    messageAny?.buttonReplyMessage?.selectedButtonId ||
+    messageAny?.interactiveResponseMessage?.id ||
+    messageAny?.interactiveResponseMessage?.button_id ||
+    messageAny?.templateButtonReplyMessage?.selectedId ||
+    messageAny?.listResponseMessage?.singleSelectReply?.selectedRowId;
+  if (alternateButtonId) {
+    console.log('[extractMessageText] Found alternate button id:', alternateButtonId);
+    return String(alternateButtonId);
   }
 
   // Some clients/instances deliver the user's choice as a reaction to the button/message.
@@ -557,7 +529,7 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
   }
 }
 
- async function sendZapsterMessage(clinicId: string, phone: string, message: string, departmentId?: string): Promise<boolean> {
+async function sendZapsterMessage(clinicId: string, phone: string, message: string): Promise<boolean> {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -571,11 +543,10 @@ async function sendWhazingTextMessage(phone: string, message: string): Promise<b
         'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-         clinicId,
-         phone,
-         message: sanitizeOutgoingWhatsAppText(message),
-         departmentId,
-       }),
+        clinicId,
+        phone,
+        message: sanitizeOutgoingWhatsAppText(message),
+      }),
     });
     
     if (!response.ok) {
@@ -602,11 +573,9 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
 async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
    try {
      // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
-    const FINAL_PHONE_ID = (PHONE_ID === "937233212814035" || PHONE_ID === "1522701919380063") ? "1110151302179856" : PHONE_ID;
-
+    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    if (!FINAL_PHONE_ID || !TOKEN) {
+     if (!PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
        return false;
      }
@@ -640,7 +609,7 @@ async function sendMetaButtons(phone: string, title: string, description: string
         }
       };
  
-     const r = await fetch(`https://graph.facebook.com/v21.0/${FINAL_PHONE_ID}/messages`, {
+     const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
        method: 'POST',
        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
        body: JSON.stringify(payload),
@@ -740,18 +709,16 @@ async function sendWhatsAppMessage(
 async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
   try {
     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
-    const FINAL_PHONE_ID = (PHONE_ID === "937233212814035" || PHONE_ID === "1522701919380063") ? "1110151302179856" : PHONE_ID;
-
+    const PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    if (!FINAL_PHONE_ID || !TOKEN) {
+    if (!PHONE_ID || !TOKEN) {
       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
       return false;
     }
     const digits = phone.replace(/\D/g, '');
     const to = digits.startsWith('55') ? digits : `55${digits}`;
     const r = await fetch(
-      `https://graph.facebook.com/v21.0/${FINAL_PHONE_ID}/messages`,
+      `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
@@ -996,14 +963,17 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
 }
 
 async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string, explicitPhoneId?: string): Promise<boolean> {
-  const title = "Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.";
-  const description = "Como posso ajudar? Escolha uma opção:\n\n1️⃣ Sou associado(a)\n2️⃣ Sou empresa\n3️⃣ Sou contador/escritório contábil\n4️⃣ Dia do Comerciário (30/10)\n5️⃣ Falar com atendente\n6️⃣ Segunda via de boleto (empresa)\n\nDigite o número da opção desejada:";
-  const buttons = [
-    { id: "whazing_associado", text: "Sou Associado" },
-    { id: "whazing_empresa", text: "Sou Empresa" },
-    { id: "whazing_contabilidade", text: "Sou Contabilidade" },
-  ];
-  return sendWhatsAppButtons(config, phone, title, description, buttons, "", explicitPhoneId);
+  return sendWhatsAppButtons(config, phone, 
+    "Olá! 👋 Bem-vindo(a) ao atendimento.",
+    "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
+    [
+      { id: "whazing_associado", text: "Sou Associado" },
+      { id: "whazing_empresa", text: "Sou Empresa" },
+      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
+    ],
+    "",
+    explicitPhoneId
+  );
 }
 
 type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
@@ -1011,7 +981,7 @@ type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory, explicitPhoneId?: string): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
-      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:\n\n1️⃣ Atualizar Carteirinha\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
         { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1019,7 +989,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
       ],
     },
     empresa: {
-      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:\n\n1️⃣ 2ª Via Boleto\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1027,7 +997,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
       ],
     },
     contabilidade: {
-      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:\n\n1️⃣ 2ª Via Boleto\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1042,12 +1012,8 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
 
 function parseWhazingCategory(messages: unknown): WhazingCategory | null {
   if (!messages || typeof messages !== 'object' || Array.isArray(messages)) return null;
-   const category = (messages as Record<string, unknown>).whazing_category as string;
-   if (category === 'associado' || category === 'empresa' || category === 'contabilidade') return category as WhazingCategory;
-   if (category === 'Sou Associado') return 'associado';
-   if (category === 'Sou Empresa') return 'empresa';
-   if (category === 'Sou Contabilidade') return 'contabilidade';
-   return null;
+  const category = (messages as Record<string, unknown>).whazing_category;
+  return category === 'associado' || category === 'empresa' || category === 'contabilidade' ? category : null;
 }
 
 async function storeWhazingContext(
@@ -1055,31 +1021,18 @@ async function storeWhazingContext(
   clinicId: string,
   phone: string,
   category: WhazingCategory,
-  lastMenuType: 'main' | 'sub' | 'followup' = 'main',
-  expiresInMinutes: number = 120
+  lastMenuType: 'main' | 'sub' | 'followup' = 'main'
 ): Promise<void> {
-   // Tenta recuperar contexto existente para não perder dados
-   const { data: existing } = await supabase
-     .from('whatsapp_ai_conversations')
-     .select('messages')
-     .eq('clinic_id', clinicId)
-     .eq('phone', phone)
-     .maybeSingle();
- 
-   const messages = { 
-     ...(typeof existing?.messages === 'object' ? existing.messages : {}),
-     whazing_category: category, 
-     last_menu_type: lastMenuType,
-     source: 'whazing_menu',
-     updated_at: new Date().toISOString()
-   };
- 
-   const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
-     clinic_id: clinicId,
-     phone,
-     messages,
-     expires_at: new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(),
-   }, { onConflict: 'clinic_id,phone' });
+  const { error } = await supabase.from('whatsapp_ai_conversations').insert({
+    clinic_id: clinicId,
+    phone,
+    messages: { 
+      whazing_category: category, 
+      last_menu_type: lastMenuType,
+      source: 'whazing_menu' 
+    },
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+  });
 
   if (error) {
     console.log('[webhook] Could not store whazing context:', error.message);
@@ -1165,11 +1118,10 @@ function getBrazilSupportContext(): {
   const isBusinessDay = dayOfWeek >= 1 && dayOfWeek <= 5;
   const [hours, minutes] = time.split(':').map(Number);
   const totalMinutes = (hours * 60) + minutes;
-   // 09h às 12h (540-720) e 13h às 16h (780-960)
-   const isBusinessHours = isBusinessDay && (
-     (totalMinutes >= 540 && totalMinutes < 720) ||
-     (totalMinutes >= 780 && totalMinutes < 960)
-   );
+  const isBusinessHours = isBusinessDay && (
+    (totalMinutes >= 540 && totalMinutes < 720) ||
+    (totalMinutes >= 780 && totalMinutes < 960)
+  );
 
   return {
     date,
@@ -1223,12 +1175,8 @@ async function freezeBotForHumanHandoff(
   phone: string,
   contactName: string | null,
   lastMessage: string,
-  options: { queueId?: string, messageId?: string, timestamp?: number } = {}
 ): Promise<void> {
   const now = new Date().toISOString();
-  const timestamp = options.timestamp || Math.floor(Date.now() / 1000);
-  const messageId = options.messageId || `handoff-${phone}-${Date.now()}`;
-
   const { error } = await supabase
     .from('whazing_tickets')
     .upsert({
@@ -1241,27 +1189,10 @@ async function freezeBotForHumanHandoff(
       updated_at: now,
       closed_at: null,
       bot_active: false,
-      ...(options.queueId ? { assigned_queue_id: options.queueId } : {}),
     }, { onConflict: 'ticket_id' });
 
   if (error) {
     console.error('[webhook] Failed to freeze bot for human handoff:', error);
-    return;
-  }
-
-  // Also insert the message into whazing_messages so it appears in the dashboard
-  const { error: msgError } = await supabase.from('whazing_messages').upsert({
-    ticket_id: phone,
-    message_id: messageId,
-    body: lastMessage.slice(0, 2000),
-    from_me: false,
-    sender_name: contactName || 'Contato',
-    sender_phone: phone,
-    timestamp: timestamp,
-  }, { onConflict: 'message_id' });
-
-  if (msgError) {
-    console.error('[webhook] Failed to mirror handoff message to whazing_messages:', msgError);
   }
 }
 
@@ -1274,7 +1205,11 @@ Nosso atendimento funciona de segunda a sexta, das 09h às 12h e das 13h às 16h
 Por favor, aguarde um momento por aqui.`;
   }
 
-    return `Fora do horário de atendimento, mas recebemos seu contato e em breve retornaremos.`;
+  return `Entendi! Registrei seu pedido para atendimento humano. 🙏
+
+Nosso atendimento funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados).
+
+No momento estamos fora do horário, mas um atendente continuará seu atendimento por aqui assim que estiver disponível.`;
 }
 
 function buildAskSubjectMessage(): string {
@@ -2012,13 +1947,12 @@ type SupabaseClient = any;
 // AI BOOKING FLOW HANDLER
 // ==========================================
 
- async function handleAIBookingFlow(
-   supabase: SupabaseClient,
-   config: EvolutionConfig,
-   phone: string,
-   messageText: string,
-   explicitPhoneId?: string | null
- ): Promise<void> {
+async function handleAIBookingFlow(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string
+): Promise<void> {
   const clinicId = config.clinic_id;
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
 
@@ -2051,11 +1985,11 @@ type SupabaseClient = any;
         } else {
           const errorText = await boletoResponse.text();
           console.error('[ai-booking] Boleto flow error:', errorText);
-           await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.', explicitPhoneId);
+          await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos. Por favor, tente novamente.');
         }
       } catch (boletoError) {
         console.error('[ai-booking] Exception calling boleto flow:', boletoError);
-         await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.', explicitPhoneId);
+        await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro ao iniciar o fluxo de boletos.');
       }
       return;
     }
@@ -2092,7 +2026,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-     await sendWhatsAppMessage(config, phone, appBlockMsg, explicitPhoneId);
+    await sendWhatsAppMessage(config, phone, appBlockMsg);
     return;
   }
   // =========================================================================
@@ -2113,15 +2047,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
     if (existingBookingSession) {
       console.log(`[ai-booking] Found active booking session in state: ${existingBookingSession.state}, switching to traditional flow`);
       // Use traditional booking flow for active sessions
-       await handleBookingFlow(
-         supabase,
-         config,
-         phone,
-         messageText,
-         existingBookingSession as BookingSession,
-         false,
-         explicitPhoneId
-       );
+      await handleBookingFlow(
+        supabase,
+        config,
+        phone,
+        messageText,
+        existingBookingSession as BookingSession,
+        false
+      );
       return;
     }
 
@@ -2137,15 +2070,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         console.log(`[ai-booking] Detected valid CPF, creating booking session and processing`);
         // Create session and process CPF directly through traditional flow
         const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
-         await handleBookingFlow(supabase, config, phone, messageText, newSession, false, explicitPhoneId);
+        await handleBookingFlow(supabase, config, phone, messageText, newSession, false);
         return;
       } else {
         // CPF has 11 digits but failed validation - send clear error message
         console.log(`[ai-booking] CPF has 11 digits but failed checksum validation`);
-         await sendWhatsAppMessage(config, phone, 
-           `❌ *CPF inválido*\n\nO CPF informado não passou na validação. Por favor, verifique se digitou corretamente.\n\n💡 Digite apenas os 11 números do seu CPF.`,
-           explicitPhoneId
-         );
+        await sendWhatsAppMessage(config, phone, 
+          `❌ *CPF inválido*\n\nO CPF informado não passou na validação. Por favor, verifique se digitou corretamente.\n\n💡 Digite apenas os 11 números do seu CPF.`
+        );
         return;
       }
     }
@@ -2204,14 +2136,14 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
          phone: phone,
          conversation_history: conversationHistory,
          deliver_response_via_caller: isSync,
-         explicit_phone_id: explicitPhoneId || null
+         explicit_phone_id: explicitPhoneId
        }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('[ai-booking] AI assistant error:', aiResponse.status, errorText);
-       await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente em instantes.', explicitPhoneId);
+      await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente em instantes.');
       return;
     }
 
@@ -2222,7 +2154,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       // SAFETY CHECK: Never proceed with booking handoff if booking is disabled
       if (config.booking_enabled !== true) {
         console.log('[ai-booking] handoff_to_booking=true but booking_enabled=false - blocking handoff');
-         await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance, explicitPhoneId);
+        await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
         return;
       }
 
@@ -2246,7 +2178,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         `• CPF: 12345678901 (11 dígitos)\n` +
         `• Carteirinha: 000001 (5 a 10 dígitos)`;
       
-       await sendWhatsAppMessage(config, phone, bookingWelcome, explicitPhoneId);
+      await sendWhatsAppMessage(config, phone, bookingWelcome);
       return;
     }
     
@@ -7450,11 +7382,9 @@ async function handleWebhook(req: Request) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    console.log(`[webhook] Incoming request: ${req.method} ${new URL(req.url).pathname}`);
-
     // Log raw body for debugging
     const rawBody = await req.text();
-    console.log('[webhook] Raw body received:', rawBody);
+    console.log('[webhook] Raw body received:', rawBody.substring(0, 500));
     
     // Parse the body
     let payload: any;
@@ -8067,161 +7997,115 @@ async function handleWebhook(req: Request) {
       let configData: EvolutionConfig | null = null;
 
       // Check if clinic_id was explicitly provided (e.g. from zapster-webhook or meta routing)
-      let explicitClinicId = (payload as any).clinic_id;
-      
+     let explicitClinicId = (payload as any).clinic_id;
+     const explicitPhoneId = payload.metadata?.phone_number_id || null;
+
       // Special routing for Meta Official (Sindicato)
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}. Incoming PhoneID: ${payload.metadata?.phone_number_id}`);
+        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}`);
       }
 
-      // Correção de ID de telefone global para o Sindicato (seja via instance ou explicitClinicId)
-      if (explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
-        const incomingId = payload.metadata?.phone_number_id;
-        if (incomingId === "937233212814035" || incomingId === "1522701919380063" || !incomingId) {
-          console.log(`[webhook] Forçando Phone ID correto para Sindicato (${incomingId || 'vazio'} -> 1110151302179856)`);
-          if (!payload.metadata) payload.metadata = {};
-          payload.metadata.phone_number_id = "1110151302179856";
+      if (activeSession?.clinic_id) {
+        const { data: configByClinic, error: configByClinicError } = await supabase
+          .from('evolution_configs')
+          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
+          .eq('clinic_id', activeSession.clinic_id)
+          .eq('is_connected', true)
+          .eq('direct_reply_enabled', true)
+          .maybeSingle();
+
+        if (configByClinicError) {
+          console.error('[webhook] Error fetching config by clinic_id:', configByClinicError);
         }
+
+        configData = (configByClinic as EvolutionConfig) ?? null;
+        console.log(`[webhook] Routing by active session -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
 
-      const explicitPhoneId = payload.metadata?.phone_number_id || null;
-
-       const targetClinicId = explicitClinicId || activeSession?.clinic_id;
-       
-       if (targetClinicId) {
-         const { data: configByClinic, error: configByClinicError } = await supabase
-           .from('evolution_configs')
-           .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled')
-           .eq('clinic_id', targetClinicId)
-           .eq('is_connected', true)
-           .eq('direct_reply_enabled', true)
-           .maybeSingle();
- 
-         if (configByClinicError) {
-           console.error('[webhook] Error fetching config by clinic_id:', configByClinicError);
-         }
- 
-         if (configByClinic) {
-           configData = configByClinic as EvolutionConfig;
-           console.log(`[webhook] Routing by explicit/active clinic_id -> clinic: ${configData.clinic_id}`);
-         }
-       }
-
-       // Final priority: Meta Official (Sindicato)
-       const isSindicatoMeta = (payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d");
-       
-       if (isSindicatoMeta) {
-         console.log(`[webhook] Sindicato Meta/WABA detected. Prioritizing Meta API routing.`);
-         configData = {
-           clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
-           instance_name: 'meta_official',
-           api_url: 'meta',
-           api_key: 'meta',
-           booking_enabled: true,
-           direct_reply_enabled: true
-         } as EvolutionConfig;
-       }
- 
+       // Fallback: Find config by instance name or instance id (for Z-API)
        if (!configData) {
          const { data: configByInstance, error: configError } = await supabase
            .from('evolution_configs')
            .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled, booking_enabled, instance_id, zapi_token')
            .or(`instance_name.eq."${payload.instance}",instance_id.eq."${payload.instance}"`)
            .eq('is_connected', true);
- 
-         if (configError) {
-           console.error('[webhook] Error fetching config:', configError);
-         }
- 
-         configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as any) : null;
-         if (configData) {
-            configData = {
-              clinic_id: configData.clinic_id,
-              api_url: configData.api_url,
-              api_key: configData.api_key,
-              instance_name: configData.instance_name,
-              direct_reply_enabled: configData.direct_reply_enabled,
-              booking_enabled: configData.booking_enabled,
-            } as EvolutionConfig;
-         }
-       }
-      
-      // CONSOLIDATED ROUTING LOGIC (v2.2)
-      // Check if we already found a valid database config before applying fallbacks
-      if (!configData) {
-        // Try zapster_configs as a second fallback if standard Evolution config failed
-        if (payload.instance || explicitClinicId) {
-          const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
-          if (explicitClinicId) query.eq('clinic_id', explicitClinicId);
-          else query.eq('instance_id', payload.instance);
 
-          const { data: zapsterConfigs } = await query.limit(1);
-          if (zapsterConfigs?.[0]) {
-            console.log(`[webhook] Found Zapster config for clinic ${zapsterConfigs[0].clinic_id}`);
-            configData = {
-              clinic_id: zapsterConfigs[0].clinic_id,
-              instance_name: zapsterConfigs[0].instance_id,
-              api_url: 'zapster',
-              api_key: 'zapster',
-              booking_enabled: true,
-              direct_reply_enabled: true
-            } as EvolutionConfig;
-          }
+        if (configError) {
+          console.error('[webhook] Error fetching config:', configError);
+        }
+
+        // If multiple clinics share same instance, log detailed warning with all affected clinics
+        if (configByInstance && configByInstance.length > 1) {
+          const affectedClinics = configByInstance.map(c => c.clinic_id).join(', ');
+          console.warn(
+            `[webhook] WARNING: Multiple clinics (${configByInstance.length}) share the same instance "${payload.instance}". ` +
+              `Affected clinic_ids: [${affectedClinics}]. ` +
+              `Each clinic should have a unique Evolution instance for proper routing. ` +
+              `Using first match: clinic_id=${configByInstance[0].clinic_id}. ` +
+              `TIP: Update instance_name in evolution_configs to be unique per clinic (e.g., "eclini_clinicaA", "eclini_clinicaB").`
+          );
+        }
+
+        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
+        console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
+      }
+
+      // Final fallback: Check zapster_configs if still no configData
+      if (!configData && (payload.instance || explicitClinicId)) {
+        const query = supabase.from('zapster_configs').select('clinic_id, instance_id').eq('is_active', true);
+        
+        // Se temos o clinic_id explícito, ele é a melhor forma de encontrar a config
+        if (explicitClinicId) {
+          query.eq('clinic_id', explicitClinicId);
+        } else {
+          query.eq('instance_id', payload.instance);
+        }
+
+        // Usamos .limit(1) para evitar erro se houver múltiplos mapeamentos para a mesma clínica
+        const { data: zapsterConfigs } = await query.limit(1);
+        const zapsterCfg = zapsterConfigs && zapsterConfigs.length > 0 ? zapsterConfigs[0] : null;
+
+        if (zapsterCfg) {
+          console.log(`[webhook] Found Zapster config for clinic ${zapsterCfg.clinic_id}`);
+          const isSindicato = zapsterCfg.clinic_id === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+          
+          configData = {
+            clinic_id: zapsterCfg.clinic_id,
+            instance_name: zapsterCfg.instance_id,
+            api_url: isSindicato ? 'meta' : 'zapster', // Sindicato uses direct Meta logic
+            api_key: isSindicato ? 'meta' : 'zapster',
+            booking_enabled: true,
+            direct_reply_enabled: true
+          } as EvolutionConfig;
         }
       }
 
-       if (configData) {
-         clinicId = configData.clinic_id;
-         console.log(`[webhook] Processing for clinic ${clinicId}`);
- 
-        const messageTextTrim = messageText?.trim();
+      // Emergency fallback for Meta if still no configData (ensure Sindicato flow runs)
+      if (!configData && explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
+        console.log(`[webhook] Applying emergency Meta config for Sindicato clinic`);
+        configData = {
+          clinic_id: explicitClinicId,
+          instance_name: 'meta_official',
+          api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
+          api_key: 'meta',
+          booking_enabled: true,
+          direct_reply_enabled: true
+        } as EvolutionConfig;
+      }
+      if (configData) {
+        clinicId = configData.clinic_id;
+        console.log(`[webhook] Processing for clinic ${clinicId}`);
 
-        // If the user has already been transferred to a human attendant, keep the
-        // bot silent until the user explicitly requests MENU/reiniciar.
-        let botSkipped = false;
-        if (messageTextTrim && !/^(0|menu|reiniciar)$/i.test(messageTextTrim)) {
-          const { data: pausedTicket } = await supabase
-            .from('whazing_tickets')
-            .select('bot_active, status')
-            .eq('ticket_id', phone)
-            .maybeSingle();
-
-          if (pausedTicket?.bot_active === false && pausedTicket?.status === 'open') {
-            console.log(`[webhook] Bot paused for human handoff on ${phone}; message mirrored only.`);
-            const nowIso = new Date().toISOString();
-            await supabase.from('whazing_tickets').upsert({
-              ticket_id: phone,
-              contact_number: phone,
-              ...(payload.data?.pushName ? { contact_name: payload.data.pushName } : {}),
-              last_message: messageTextTrim.slice(0, 500),
-              status: 'open',
-              updated_at: nowIso,
-              closed_at: null,
-              bot_active: false,
-            }, { onConflict: 'ticket_id' });
-            await supabase.from('whazing_messages').upsert({
-              ticket_id: phone,
-              message_id: payload.data?.key?.id || `handoff-in-${Date.now()}`,
-              body: messageTextTrim.slice(0, 2000),
-              from_me: false,
-              sender_name: payload.data?.pushName || 'Contato',
-              sender_phone: phone,
-              timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : Math.floor(Date.now() / 1000),
-            }, { onConflict: 'message_id' });
-            botSkipped = true;
-            return createSuccessResponse({ message: 'Human handoff active; bot paused' });
-          }
-        }
+        // Reativando processamento automático do bot
+        const botSkipped = false;
 
         if (!botSkipped) {
         // ===== WHAZING / META BUTTON RESPONSE HANDLER =====
+        const messageTextTrim = messageText?.trim();
+
         // Force main menu on test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
-          await supabase
-            .from('whazing_tickets')
-            .update({ bot_active: true, updated_at: new Date().toISOString() })
-            .eq('ticket_id', phone);
           await supabase
             .from('whatsapp_ai_conversations')
             .update({ expires_at: new Date(Date.now() - 1000).toISOString() })
@@ -8233,82 +8117,20 @@ async function handleWebhook(req: Request) {
         }
         
         // ===== WHAZING / META CONTEXT RETRIEVAL =====
-         let storedCategory: WhazingCategory | null = null;
-         let lastMenuType: string | null = null;
-         const context = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
-         storedCategory = context.category;
-         lastMenuType = context.lastMenuType;
+        const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
         
         // Level IDs for mapping
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade', 'Sou Associado', 'Sou Empresa', 'Sou Contabilidade'];
-        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto', 'Atualizar Carteirinha', 'Convenções Coletivas', 'Outros Assuntos', '2ª Via Boleto'];
+        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
+        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
         const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
 
-        const messageTextLower = messageTextTrim?.toLowerCase() || '';
-        
-         // LEVEL 1: Mapeamento de IDs e texto literal para o menu principal
-         const L1_CHOICES: Record<string, string> = {
-           'whazing_associado': 'associado',
-           'whazing_empresa': 'empresa',
-           'whazing_contabilidade': 'contabilidade',
-           'sou associado': 'associado',
-           'sou associado(a)': 'associado',
-           'sou empresa': 'empresa',
-           'sou contabilidade': 'contabilidade',
-           'sou contador/escritório contábil': 'contabilidade',
-           'associado': 'associado',
-           'empresa': 'empresa',
-           'contabilidade': 'contabilidade',
-           'contador': 'contabilidade',
-           'falar com atendente': 'atendente',
-           'falar c/ atendente': 'atendente',
-           'atendente': 'atendente',
-           'segunda via de boleto (empresa)': 'boleto',
-           'boleto': 'boleto',
-           '2ª via boleto': 'boleto',
-           '6': 'boleto',
-           '5': 'atendente',
-           '1': 'associado',
-           '2': 'empresa',
-           '3': 'contabilidade'
-         };
-
-        // LEVEL 2: Mapeamento para sub-menus
-        const L2_CHOICES: Record<string, string> = {
-          'whazing_sub_carteirinha': 'carteirinha',
-          'whazing_sub_convencoes': 'convencoes',
-          'whazing_sub_outros': 'outros',
-          'whazing_sub_boleto': 'boleto',
-          'carteirinha': 'carteirinha',
-          'atualizar carteirinha': 'carteirinha',
-          'convenções coletivas': 'convencoes',
-          'convencoes': 'convencoes',
-          'cct': 'convencoes',
-          'outros assuntos': 'outros',
-          'outros': 'outros',
-          '2ª via boleto': 'boleto',
-          'segunda via': 'boleto',
-          'boleto': 'boleto'
-        };
-
-         // Determinação aprimorada de nível do menu
-         let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || !!L1_CHOICES[messageTextLower] || 
-                              /sou (associado|empresa|contabilidade|contador)/i.test(messageTextLower);
-         
-         let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || !!L2_CHOICES[messageTextLower] || 
-                              messageTextTrim.startsWith('whazing_sub_');
-
-         // Fallback numérico baseado no último menu
-         if (/^[1-6]$/.test(messageTextTrim)) {
-           if (!lastMenuType || lastMenuType === 'main') isWhazingLevel1 = true;
-           else if (lastMenuType === 'sub') isWhazingLevel2 = true;
-         }
-
+        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
+        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
-        if (['1', '2', '3', '4', '5', '6'].includes(messageTextTrim)) {
+        if (['1', '2', '3'].includes(messageTextTrim)) {
           if (!lastMenuType || lastMenuType === 'main') {
             isWhazingLevel1 = true;
           } else if (lastMenuType === 'sub') {
@@ -8372,78 +8194,36 @@ async function handleWebhook(req: Request) {
             return createSuccessResponse({ message: 'Main menu resent' });
           }
 
-          if (followUpId === 'whazing_voltar_sub' || followUpId === 'Voltar') {
-            const targetCategory = (storedCategory as WhazingCategory) || 'associado';
-            console.log(`[webhook] Returning to sub-menu for category: ${targetCategory}`);
-            await sendWhazingSubMenu(configData, phone, targetCategory, explicitPhoneId);
-            await storeWhazingContext(supabase, clinicId, phone, targetCategory, 'sub');
-            return createSuccessResponse({ message: `Sub-menu resent for ${targetCategory}` });
+          if (followUpId === 'whazing_voltar_sub') {
+            await sendWhazingSubMenu(configData, phone, (storedCategory as any) || 'associado', explicitPhoneId);
+            return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
           }
 
-          if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
-            console.log(`[webhook] Human handoff requested via Whazing button for ${phone}`);
-            const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
-            const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
-            
-            // Default queue: Administrativo (6644c29c-95b9-414f-ba8c-62a2402ede34)
-            const queueId = "6644c29c-95b9-414f-ba8c-62a2402ede34";
-
-             // Map Whazing category to Zap Responder Department ID
-             const zapsterDeptMap: Record<string, string> = {
-               'associado': 'fa193a46-e119-4994-852b-29e551ab37f1',
-               'empresa': '3259b59a-8f9d-4027-8520-2b78167d59ab',
-               'contabilidade': '3259b59a-8f9d-4027-8520-2b78167d59ab', // Mapping to Empresas as fallback
-             };
-              const targetZapsterDeptId = (storedCategory && zapsterDeptMap[storedCategory as string]) || '972827ca-657d-4c37-a164-944e6e6113b3';
-              const deptName = storedCategory === 'associado' ? 'Associados' : (storedCategory === 'empresa' || storedCategory === 'contabilidade' ? 'Empresas/Escritórios' : 'Outros assuntos');
- 
-              // Notify Zap Responder for Handoff using sendZapsterMessage which handles multiple endpoints
-              await sendZapsterMessage(
-                clinicId, 
-                phone, 
-                `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente pelo menu WhatsApp.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}\n*Fila:* ${deptName}\n*Mensagem:* Solicitação via menu de botões.`, 
-                targetZapsterDeptId
-              );
-
-            await freezeBotForHumanHandoff(
-              supabase,
-              phone,
-              payload.data?.pushName || null,
-              'Solicitou falar com atendente pelo menu Outros Assuntos',
-              { 
-                queueId,
-                messageId: payload.data?.key?.id,
-                timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : undefined
-              }
-            );
-
-            const { data: currentContext } = await supabase
-              .from('whatsapp_ai_conversations')
-              .select('messages')
-              .eq('clinic_id', clinicId)
-              .eq('phone', phone)
-              .maybeSingle();
-
-            await supabase.from('whatsapp_ai_conversations').upsert({
-              clinic_id: clinicId,
-              phone,
-              messages: {
-                ...(typeof currentContext?.messages === 'object' ? currentContext.messages : {}),
-                source: 'whazing_menu',
-                action: 'handoff_completed',
-                support_stage: 'human_handoff_active',
-                context: `Perfil: ${storedCategory || 'associado'} | Menu: Outros Assuntos`,
-                updated_at: new Date().toISOString()
-              },
-              expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-            }, { onConflict: 'clinic_id,phone' });
-
-            await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
+          if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente') {
+            const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
+            const supabaseAnonKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+            try {
+              await fetch(`${supabaseUrlEnv2}/functions/v1/external-integration`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey2}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  action: 'atendente',
+                  context: `Perfil: ${storedCategory || 'associado'}`,
+                  clinic_id: clinicId,
+                 instance_name: configData.instance_name,
+                 explicit_phone_id: explicitPhoneId
+                }),
+              });
+            } catch (_e) { /* ignore */ }
             return createSuccessResponse({ message: 'Routed to atendente' });
           }
 
           // "Outros Assuntos" sub-option: Jurídico
-          if (followUpId === 'whazing_outros_juridico' || followUpId === 'Juridico') {
+          if (followUpId === 'whazing_outros_juridico') {
             const storedCat = await getWhazingCategory(supabase, clinicId, phoneCandidates, 'associado');
 
             const supabaseUrlEnv2 = Deno.env.get('SUPABASE_URL')!;
@@ -8468,7 +8248,6 @@ async function handleWebhook(req: Request) {
             } catch (_e) { /* ignore */ }
 
             // Follow-up buttons after AI response
-            await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
@@ -8480,91 +8259,48 @@ async function handleWebhook(req: Request) {
           }
 
           // "Outros Assuntos" sub-option: Homologações
-          if (followUpId === 'whazing_outros_homologacao' || followUpId === 'Homologacoes' || followUpId === 'homologacao') {
-            // Send informational message with scheduling link using general helper
+          if (followUpId === 'whazing_outros_homologacao') {
+            // Send informational message with scheduling link
             const homologacaoMsg = `📋 *Homologações*\n\nO agendamento de homologação é realizado através do portal do sindicato.\n\nAcesse o link abaixo para agendar:\n👉 https://prosindweb.com.br/agendamento/profissional/ione-atos-1`;
             
-            await sendWhatsAppMessage(configData, phone, homologacaoMsg, explicitPhoneId);
+            try {
+              await fetch(`${configData.api_url}/message/sendText/${configData.instance_name}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': configData.api_key,
+                },
+                body: JSON.stringify({
+                  number: phone,
+                  text: homologacaoMsg,
+                }),
+              });
+            } catch (_e) { /* ignore */ }
 
-            // Set context for follow-up buttons
-            await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
-            
             // Follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
             await sendWhatsAppButtons(configData, phone, "Posso ajudar com mais alguma coisa?", "", [
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ], "", explicitPhoneId);
+            ]);
 
             return createSuccessResponse({ message: 'Routed to homologacao' });
           }
         }
 
-        // LEVEL 1: Processamento de escolhas do menu principal
-        if (isWhazingLevel1 && (!lastMenuType || lastMenuType === 'main' || ['0', 'menu', 'reiniciar'].includes(messageTextLower))) {
-          console.log(`[webhook] Processando escolha L1: "${messageTextTrim}"`);
-          
-          const choice = L1_CHOICES[messageTextTrim] || 
-                        L1_CHOICES[messageTextLower] || 
-                        (messageTextLower.includes('associado') ? 'associado' : null) ||
-                        (messageTextLower.includes('empresa') ? 'empresa' : null) ||
-                        (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
-                        (messageTextLower.includes('contador') ? 'contabilidade' : null) ||
-                        (messageTextLower.includes('atendente') ? 'atendente' : null) ||
-                        (messageTextLower.includes('boleto') ? 'boleto' : null);
-          
-          if (!choice) {
-            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not matched, skipping.`);
-            return createSuccessResponse({ message: 'Invalid L1 choice' });
-          }
-          
-          console.log(`[webhook] Whazing L1 choice selected: ${choice}`);
-
-          if (choice === 'atendente') {
-             console.log(`[webhook] Human handoff requested via Main Menu for ${phone}`);
-             const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
-             const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
-             const targetZapsterDeptId = '972827ca-657d-4c37-a164-944e6e6113b3'; 
-             
-             await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente diretamente pelo menu inicial.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}`, targetZapsterDeptId);
-             await freezeBotForHumanHandoff(supabase, phone, payload.data?.pushName || null, 'Solicitou falar com atendente pelo menu inicial');
-             
-             await supabase.from('whatsapp_ai_conversations').upsert({
-               clinic_id: clinicId,
-               phone,
-               messages: { source: 'whazing_menu', action: 'handoff_completed', support_stage: 'human_handoff_active', updated_at: new Date().toISOString() },
-               expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-             }, { onConflict: 'clinic_id,phone' });
-
-             await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
-             return createSuccessResponse({ message: 'Routed to atendente directly' });
-          }
-
-          if (choice === 'boleto') {
-             // Iniciar fluxo de boleto diretamente
-             console.log(`[webhook] Starting boleto flow via Main Menu for ${phone}`);
-             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
-             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-             try {
-                await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnonKey}` },
-                  body: JSON.stringify({ clinic_id: clinicId, phone: phone, action: 'start', evolution_config: configData, explicit_phone_id: explicitPhoneId }),
-                });
-             } catch (_e) {}
-             return createSuccessResponse({ message: 'Boleto flow started' });
-          }
-
-          if (choice === 'diacomerciario') {
-             const textMsg = `🎉 *Dia do Comerciário (30/10)*\n\nO Dia do Comerciário é comemorado anualmente em *30 de Outubro*. É um feriado da categoria garantido por lei e pela Convenção Coletiva.\n\nNesta data, o comércio de Ilhéus e região geralmente permanece fechado para que os trabalhadores possam desfrutar de seu merecido descanso.\n\n*Posso ajudar com mais alguma coisa?*`;
-             await sendWhatsAppMessage(configData, phone, textMsg, explicitPhoneId);
-             await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
-             return createSuccessResponse({ message: 'Dia do Comerciário info sent' });
-          }
-
-          const category = choice as WhazingCategory;
-          console.log(`[webhook] Whazing L1 category selected: ${category}`);
+        // LEVEL 1: Main menu choices
+        if (isWhazingLevel1) {
+          const categoryMap: Record<string, WhazingCategory> = {
+            whazing_associado: 'associado',
+            whazing_empresa: 'empresa',
+            whazing_contabilidade: 'contabilidade',
+            '1': 'associado',
+            '2': 'empresa',
+            '3': 'contabilidade',
+          };
+          const category = categoryMap[messageTextTrim] || 'associado';
+          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
           await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
@@ -8582,32 +8318,20 @@ async function handleWebhook(req: Request) {
         }
 
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
-          if (isWhazingLevel2 || isWhazingLegacy || ['Convenções Coletivas', 'Outros Assuntos', 'Homologacoes', 'Juridico'].includes(messageTextTrim)) {
+        if (isWhazingLevel2 || isWhazingLegacy) {
           const currentCategory = storedCategory || 'associado';
           console.log(`[webhook] Whazing L2 button: "${messageTextTrim}" (category: ${currentCategory})`);
           
            let btnId = messageText.trim();
  
            // Map numeric choices (1, 2, 3) to button IDs based on category
-            const btnLower = btnId.toLowerCase();
-            
-             // Better Mapping for Sub-menu Choices (Level 2)
-             if (btnId === '1' || btnLower.includes('boleto') || btnLower.includes('carteirinha')) {
-               btnId = (currentCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-             } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct') || btnLower.includes('convenção')) {
-               btnId = 'whazing_sub_convencoes';
-             } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
-               btnId = 'whazing_sub_outros';
-             } else if (btnLower.includes('homologacao')) {
-               btnId = 'whazing_outros_homologacao';
-             } else if (btnLower.includes('juridico')) {
-               btnId = 'whazing_outros_juridico';
-             } else if (btnId === 'whazing_empresa' || btnLower === 'empresa') {
-               // Fallback if user sends category name in sub-menu
-               await storeWhazingContext(supabase, clinicId, phone, 'empresa', 'sub');
-               await sendWhazingSubMenu(configData, phone, 'empresa', explicitPhoneId);
-               return createSuccessResponse({ message: 'Category reset to empresa' });
-             }
+           if (btnId === '1') {
+             btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+           } else if (btnId === '2') {
+             btnId = 'whazing_sub_convencoes';
+           } else if (btnId === '3') {
+             btnId = 'whazing_sub_outros';
+           }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
@@ -8663,7 +8387,7 @@ async function handleWebhook(req: Request) {
             console.log(`[webhook] Whazing carteirinha button → redirect to app`);
             const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
             
-            await sendWhatsAppMessage(configData, phone, textMessage, explicitPhoneId);
+            await sendWhatsAppMessage(configData, phone, textMessage);
 
             // Send follow-up buttons
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -8672,13 +8396,13 @@ async function handleWebhook(req: Request) {
               { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
               { id: "whazing_voltar_sub", title: "Voltar" },
               { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ], "", explicitPhoneId);
+            ]);
 
             return createSuccessResponse({ message: 'Carteirinha redirect sent' });
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
-          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros' || btnId === 'Outros Assuntos' || btnId === 'Outros') {
+          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
             console.log(`[webhook] Whazing "Outros Assuntos" → sub-menu (${currentCategory})`);
             await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
 
@@ -8687,13 +8411,13 @@ async function handleWebhook(req: Request) {
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
-              ], "", explicitPhoneId);
+              ]);
             } else {
               await sendWhatsAppButtons(configData, phone, "*Outros Assuntos*\n\nComo podemos ajudar?", "", [
                 { id: "whazing_outros_juridico", title: "Juridico" },
                 { id: "whazing_outros_homologacao", title: "Homologacoes" },
-                { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
-              ], "", explicitPhoneId);
+                { id: "whazing_outros_atendente", title: "Falar c/ Atendente" },
+              ]);
             }
             return createSuccessResponse({ message: `Outros Assuntos sub-menu sent` });
           }
@@ -8701,39 +8425,7 @@ async function handleWebhook(req: Request) {
           // ── OTHER SUB-BUTTONS: route via external-integration (AI) ──
           const subActionMap: Record<string, string> = {
             'whazing_sub_convencoes': 'cct',
-            'Convenções Coletivas': 'cct',
           };
-          const isCct = messageTextTrim.includes('Convenções') || btnId === 'whazing_sub_convencoes' || btnId === 'Convenções Coletivas';
-
-          if (isCct) {
-            console.log(`[webhook] Direct CCT response for ${phone}`);
-            const cctMsg = `O Sindicato dos Comerciários de Ilhéus e Região informa que a Convenção Coletiva de Trabalho (CCT) 2026/2027 do comércio varejista de Ilhéus e demais cidades da base territorial, bem como do comércio atacadista (supermercados), ainda não foi finalizada.
-
-As negociações seguem em andamento entre as partes envolvidas, não havendo, até o presente momento, definição ou fechamento dos termos da nova convenção.
-
-No que se refere ao comércio varejista, está agendada uma nova reunião para o dia 24 de abril de 2026, ocasião em que as partes darão continuidade às tratativas, com o objetivo de avançar nas negociações e buscar a formalização da CCT.
-
-O Sindicato reforça seu compromisso em manter a categoria informada sobre quaisquer atualizações.
-
-Link para consulta das CCTs anteriores: https://comerciariosilheus.org.br/ccts/
-
-Atenciosamente,
-Sindicato dos Comerciários de Ilhéus e Região`;
-
-            await sendWhatsAppMessage(configData, phone, cctMsg, explicitPhoneId);
-            
-            // Send follow-up buttons
-            await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            await sendWhatsAppButtons(configData, phone, "O que deseja fazer agora?", "", [
-              { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
-              { id: "whazing_voltar_sub", title: "Voltar" },
-              { id: "whazing_voltar_menu", title: "Menu Principal" },
-            ], "", explicitPhoneId);
-
-            return createSuccessResponse({ message: 'Direct CCT info sent' });
-          }
-
           const action = subActionMap[btnId] || 'atendente';
           const contextStr = `Perfil: ${storedCategory}`;
 
@@ -8763,13 +8455,12 @@ Sindicato dos Comerciários de Ilhéus e Região`;
             if (action !== 'atendente') {
               // Send follow-up buttons only for informational flows.
               // For human-support handoff, avoid re-opening submenus/buttons and causing loop/re-entry.
-              await storeWhazingContext(supabase, clinicId, phone, (storedCategory as any) || 'associado', 'followup');
               await new Promise(resolve => setTimeout(resolve, 2000));
               await sendWhatsAppButtons(configData, phone, "O que deseja fazer agora?", "", [
                 { id: "whazing_falar_atendente", title: "Falar c/ Atendente" },
                 { id: "whazing_voltar_sub", title: "Voltar" },
                 { id: "whazing_voltar_menu", title: "Menu Principal" },
-              ], "", explicitPhoneId);
+              ]);
             } else {
               console.log('[webhook] Skipping follow-up buttons after atendente handoff to avoid loop');
             }
@@ -8851,7 +8542,7 @@ Sindicato dos Comerciários de Ilhéus e Região`;
           // Greetings/menu commands should always restart the Whazing button menu,
           // even with an active AI session.
           const isGreeting = /^(oi|olá|ola|hey|hi|hello|bom\s*dia|boa\s*tarde|boa\s*noite|eai|e\s*ai|opa|fala)/i.test(msgClean);
-          const isMenuCommand = MENU_REGEX.test(msgClean) || msgClean === '0';
+          const isMenuCommand = MENU_REGEX.test(msgClean);
           // A greeting/menu command should re-open the main menu even if a previous Whazing ticket
           // is still open or an AI conversation exists — only active booking/boleto
           // flows should block the menu reset.
@@ -8969,11 +8660,10 @@ Sindicato dos Comerciários de Ilhéus e Região`;
           }
         }
 
-        // Check if the user is explicitly requesting a boleto (via technical ID or keywords)
-        const isBoletoRequest = 
-          messageText.trim() === 'whazing_sub_boleto' || 
-          (/^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && 
-           (configData.booking_enabled === false ? messageText.trim().startsWith('6') || !/^\d$/.test(messageText.trim()) : true));
+        // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
+        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && configData.booking_enabled === false
+          ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim())
+          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
 
         if (revivedBoletoSession || isBoletoRequest || isBoletoButton) {
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
@@ -9078,9 +8768,7 @@ Sindicato dos Comerciários de Ilhéus e Região`;
             // including doctor names, specialties, scheduling verbs and non-external numeric fallbacks
             const bookingIntentRegex = /\b(agendar|agendamento|agenda|consulta|consultas|marcar|desmarcar|cancelar|remarcar|reagendar|retorno|retornar|horario|horarios|medico|medicos|doutor|doutora|dentista|exame|exames|profissional|disponivel|disponibilidade|vaga|vagas|atendimento|especialidade|pediatra|clinico|ginecologista|especialista|ortopedista|cardiologista|alcides|juliane|uiara|tiuba|dr |dra |dr\.|dra\.|pediatrico|nutricionist|fisioterapeuta|psicologo|psicologa|data|datas|quando atende|proxima data|proximos dias|proxima semana|tem vaga|tem horario|quero agendar|preciso agendar|gostaria de agendar|quero marcar|preciso marcar|quero consulta|preciso de consulta|quero ver medico|ir ao medico)\b/i;
             const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed) && !isExternalMenuSelection;
-          // Whitelist ALL Whazing technical IDs from being blocked by the booking gate
-          const isWhazingTechnicalId = messageText.trim().startsWith('whazing_');
-          const hasBookingIntent = !isWhazingTechnicalId && !isBoletoRequest && (bookingIntentRegex.test(msgLower) || isBookingMenuOption);
+            const hasBookingIntent = (bookingIntentRegex.test(msgLower) || isBookingMenuOption) && !isBoletoRequest;
 
             if (hasBookingIntent) {
               console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false, booking intent detected for clinic ${clinicId}. Message: "${messageText}"`);
@@ -9108,7 +8796,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 • iPhone: abra pelo *Safari* → Compartilhar → Adicionar à Tela Inicial
 • Android: abra pelo *Chrome* → menu ⋮ → Adicionar à tela inicial`;
 
-              await sendWhatsAppMessage(configData, phone, appOnlyMsg, explicitPhoneId);
+              await sendWhatsAppMessage(configData, phone, appOnlyMsg);
 
               await supabase.from('whatsapp_incoming_logs').insert({
                 clinic_id: clinicId,
@@ -9161,8 +8849,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             await sendWhatsAppMessage(
               configData,
               phone,
-              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`,
-              explicitPhoneId
+              `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
             );
              return createSuccessResponse({ message: 'Feature not available for clinic' });
           }
@@ -9210,24 +8897,21 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   supabase,
                   phone,
                   payload.data?.pushName || null,
-                  messageText,
-                  {
-                    queueId: chosenQueue?.id,
-                    messageId: payload.data?.key?.id,
-                    timestamp: payload.data?.messageTimestamp ? Number(payload.data.messageTimestamp) : undefined
-                  }
+                  messageText
                 );
 
+                // Update the ticket with the chosen queue and the subject text
                 if (chosenQueue) {
-                   const cleanedPhone = phone.replace(/\D/g, '');
-                   await supabase
-                     .from('whazing_tickets')
-                     .update({
-                       subject: messageText.slice(0, 250),
-                       updated_at: new Date().toISOString(),
-                     })
-                     .eq('contact_number', cleanedPhone);
-                   console.log(`[webhook] Ticket subject updated for queue "${chosenQueue.name}"`);
+                  const cleanedPhone = phone.replace(/\D/g, '');
+                  await supabase
+                    .from('whazing_tickets')
+                    .update({
+                      assigned_queue_id: chosenQueue.id,
+                      subject: messageText.slice(0, 250),
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('contact_number', cleanedPhone);
+                  console.log(`[webhook] Ticket routed to queue "${chosenQueue.name}" (${chosenQueue.id})`);
                 }
 
                 // Expire the awaiting_subject session
@@ -9254,16 +8938,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   ? `\n\n📌 Encaminhei para a equipe de *${chosenQueue.name}*.`
                   : '';
                 const handoffMessage = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable) + queueLine;
-                await sendWhatsAppMessage(configData, phone, handoffMessage, explicitPhoneId);
-                
-                 // Notify Zap Responder of completion of handoff (with subject)
-                 const zapDeptId = getZapsterDeptIdFromQueue(chosenQueue?.id || null);
-                 await sendZapsterMessage(
-                   clinicId, 
-                   phone, 
-                   `✅ *HANDOFF CONCLUÍDO*\n\nAssunto: ${messageText}${chosenQueue ? `\nFila: ${chosenQueue.name}` : ''}\n\nO robô foi pausado.`,
-                   zapDeptId
-                 );
+                await sendWhatsAppMessage(configData, phone, handoffMessage);
 
                  return createSuccessResponse({ message: 'Subject captured and routed to queue' });
               }
@@ -9287,7 +8962,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                   expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
                 });
 
-                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage(), explicitPhoneId);
+                await sendWhatsAppMessage(configData, phone, buildAskSubjectMessage());
 
                  return createSuccessResponse({ message: 'Asked user for subject' });
               }
@@ -9366,7 +9041,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         if (clinicSettings?.use_ai_booking) {
           // Use AI-powered booking flow
           console.log(`[webhook] Using AI booking for clinic ${clinicId}`);
-          await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
+          await handleAIBookingFlow(supabase, configData, phone, messageText);
         } else {
           // Use traditional menu-based flow
           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
@@ -9437,10 +9112,6 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           }
         } catch { /* ignore */ }
         console.log(`[mirror] Interactive response: "${mirrorText}"`);
-      } else if ((msg as any)?.interactive) {
-        const im = (msg as any).interactive;
-        mirrorText = im.button_reply?.title || im.button_reply?.id || im.list_reply?.title || im.list_reply?.id || messageText;
-        console.log(`[mirror] Meta interactive response: "${mirrorText}"`);
       }
 
       // Upsert ticket
