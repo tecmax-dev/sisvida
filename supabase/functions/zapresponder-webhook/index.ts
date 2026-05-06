@@ -51,15 +51,21 @@
       const phoneValue = payload.phone || payload.wa_id || key.remoteJid || "";
       const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
       
-      // Tenta pegar a mensagem de várias formas
-      const textBody = String(
+      // Melhoria na extração de texto para formatos simples/proxies
+      const textBody = (
         payload.mensagem || 
+        payload.message?.mensagem ||
+        payload.message?.text ||
+        payload.message?.conversation ||
+        payload.message?.selectedButtonId ||
+        (payload.message as any)?.button_reply?.id ||
+        (payload.message as any)?.interactive?.button_reply?.id ||
         payload.message || 
         payload.text || 
         message.conversation || 
         message.extendedTextMessage?.text || 
         ""
-      ).trim();
+      ).toString().trim();
 
       if (fromPhone) {
         payload.entry = [{

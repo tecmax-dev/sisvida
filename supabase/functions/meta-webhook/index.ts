@@ -54,19 +54,22 @@ serve(async (req) => {
       const phoneValue = body.phone || body.wa_id || key.remoteJid || "";
       const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
       
-      // Tenta pegar a mensagem de várias formas (incluindo sub-campos e cliques em botões)
-      const textBody = String(
+      // Melhoria na extração de texto para formatos simples/proxies
+      const textBody = (
         body.mensagem || 
         body.message?.mensagem ||
         body.message?.text ||
-        body.message || 
+        body.message?.conversation ||
+        body.message?.selectedButtonId || // Suporte a IDs de botões no formato simples
+        (body.message as any)?.button_reply?.id ||
+        (body.message as any)?.interactive?.button_reply?.id ||
         body.text || 
         body.raw_message?.content ||
         body.raw_message?.body ||
         message.conversation || 
         message.extendedTextMessage?.text || 
         ""
-      ).trim();
+      ).toString().trim();
 
       if (fromPhone) {
         body = {
