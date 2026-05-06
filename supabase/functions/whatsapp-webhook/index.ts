@@ -333,9 +333,9 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
  
    if (explicitId) {
       console.log('[extractMessageText] Found explicit ID:', explicitId);
-     if (explicitId === 'whazing_associado') return 'Sou Associado';
-     if (explicitId === 'whazing_empresa') return 'Sou Empresa';
-      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
+      if (explicitId === 'whazing_associado' || explicitId === 'Sou Associado') return 'Sou Associado';
+      if (explicitId === 'whazing_empresa' || explicitId === 'Sou Empresa') return 'Sou Empresa';
+      if (explicitId === 'whazing_contabilidade' || explicitId === 'Sou Contabilidade') return 'Sou Contabilidade';
       if (explicitId === 'whazing_sub_boleto') return '2ª Via Boleto';
       if (explicitId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
       if (explicitId === 'whazing_sub_outros') return 'Outros Assuntos';
