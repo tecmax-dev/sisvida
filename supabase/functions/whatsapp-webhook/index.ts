@@ -348,9 +348,9 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
        const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
        const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
        if (bId) {
-         if (bId === 'whazing_associado') return 'Sou Associado';
-         if (bId === 'whazing_empresa') return 'Sou Empresa';
-         if (bId === 'whazing_contabilidade') return 'Sou Contabilidade';
+          if (bId === 'whazing_associado' || bId === 'Sou Associado') return 'Sou Associado';
+          if (bId === 'whazing_empresa' || bId === 'Sou Empresa') return 'Sou Empresa';
+          if (bId === 'whazing_contabilidade' || bId === 'Sou Contabilidade') return 'Sou Contabilidade';
          return String(bId);
        }
      } catch { /* ignore */ }
