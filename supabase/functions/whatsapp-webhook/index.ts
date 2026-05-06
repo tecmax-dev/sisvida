@@ -981,17 +981,14 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
 }
 
 async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string, explicitPhoneId?: string): Promise<boolean> {
-  return sendWhatsAppButtons(config, phone, 
-    "Olá! 👋 Bem-vindo(a) ao atendimento.",
-    "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
-    [
-      { id: "whazing_associado", text: "Sou Associado" },
-      { id: "whazing_empresa", text: "Sou Empresa" },
-      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
-    ],
-    "",
-    explicitPhoneId
-  );
+  const title = "Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.";
+  const description = "Como posso ajudar? Escolha uma opção:\n\n1️⃣ Sou associado(a)\n2️⃣ Sou empresa\n3️⃣ Sou contador/escritório contábil\n4️⃣ Dia do Comerciário (30/10)\n5️⃣ Falar com atendente\n6️⃣ Segunda via de boleto (empresa)\n\nDigite o número da opção desejada:";
+  const buttons = [
+    { id: "whazing_associado", text: "Sou Associado" },
+    { id: "whazing_empresa", text: "Sou Empresa" },
+    { id: "whazing_contabilidade", text: "Sou Contabilidade" },
+  ];
+  return sendWhatsAppButtons(config, phone, title, description, buttons, "", explicitPhoneId);
 }
 
 type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
@@ -999,7 +996,7 @@ type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory, explicitPhoneId?: string): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
-      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:\n\n1️⃣ Atualizar Carteirinha\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
       buttons: [
         { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1007,7 +1004,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
       ],
     },
     empresa: {
-      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:\n\n1️⃣ 2ª Via Boleto\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1015,7 +1012,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
       ],
     },
     contabilidade: {
-      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:\n\n1️⃣ 2ª Via Boleto\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
