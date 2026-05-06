@@ -40,6 +40,40 @@
       }), { status: 422, headers: { "Content-Type": "application/json" } });
     }
 
+    if (!Array.isArray(payload.entry) && payload?.data?.key) {
+      const data = payload.data ?? {};
+      const key = data.key ?? {};
+      const message = data.message ?? {};
+      const remoteJid = String(key.remoteJid || payload.phone || "");
+      const fromPhone = String(payload.phone || remoteJid.replace(/@.*/, "")).replace(/\D/g, "");
+      const textBody = String(
+        message.conversation ||
+        message.extendedTextMessage?.text ||
+        payload.mensagem ||
+        payload.message ||
+        payload.text ||
+        ""
+      );
+
+      payload.entry = [{
+        changes: [{
+          field: "messages",
+          value: {
+            metadata: payload.metadata ?? {},
+            contacts: [{ profile: { name: data.pushName || payload.nome || payload.name || "Cliente" } }],
+            messages: [{
+              from: fromPhone,
+              id: key.id || payload.id || `zap-${Date.now()}`,
+              timestamp: String(data.messageTimestamp || payload.timestamp || Math.floor(Date.now() / 1000)),
+              type: "text",
+              text: { body: textBody }
+            }]
+          }
+        }]
+      }];
+      console.log(`[zapresponder] Payload simples normalizado para formato Meta. De ${fromPhone}: "${textBody}"`);
+    }
+
     if (!Array.isArray(payload.entry)) {
       return new Response(JSON.stringify({
         error: "MISSING_FIELD_ENTRY",
