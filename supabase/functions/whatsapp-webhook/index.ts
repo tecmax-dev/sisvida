@@ -332,7 +332,7 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
      messageAny?.templateButtonReplyMessage?.selectedId;
  
    if (explicitId) {
-     console.log('[extractMessageText] Found explicit ID:', explicitId);
+      console.log('[extractMessageText] Found explicit ID:', explicitId);
      if (explicitId === 'whazing_associado') return 'Sou Associado';
      if (explicitId === 'whazing_empresa') return 'Sou Empresa';
      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
@@ -7422,9 +7422,11 @@ async function handleWebhook(req: Request) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
+    console.log(`[webhook] Incoming request: ${req.method} ${new URL(req.url).pathname}`);
+
     // Log raw body for debugging
     const rawBody = await req.text();
-    console.log('[webhook] Raw body received:', rawBody.substring(0, 500));
+    console.log('[webhook] Raw body received:', rawBody);
     
     // Parse the body
     let payload: any;
@@ -8101,6 +8103,8 @@ async function handleWebhook(req: Request) {
         configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
         console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
+      
+      console.log(`[webhook] Final configData resolution check: clinicId=${configData?.clinic_id}, apiUrl=${configData?.api_url}`);
 
       // Final fallback: Check zapster_configs if still no configData
       if (!configData && (payload.instance || explicitClinicId)) {
