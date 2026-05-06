@@ -331,27 +331,40 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
      messageAny?.interactiveResponseMessage?.button_id ||
      messageAny?.templateButtonReplyMessage?.selectedId;
  
-   if (explicitId) {
-     console.log('[extractMessageText] Found explicit ID:', explicitId);
-     const sId = String(explicitId);
-     if (sId === 'whazing_associado') return 'Sou Associado';
-     if (sId === 'whazing_empresa') return 'Sou Empresa';
-     if (sId === 'whazing_contabilidade') return 'Sou Contabilidade';
-     return sId;
-   }
- 
-    if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-     try {
-       const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-       const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
-       if (bId) {
-          if (bId === 'whazing_associado' || bId === 'Sou Associado') return 'Sou Associado';
-          if (bId === 'whazing_empresa' || bId === 'Sou Empresa') return 'Sou Empresa';
-          if (bId === 'whazing_contabilidade' || bId === 'Sou Contabilidade') return 'Sou Contabilidade';
-         return String(bId);
-       }
-     } catch { /* ignore */ }
-   }
+  if (explicitId) {
+    console.log('[extractMessageText] Found explicit ID:', explicitId);
+    const sId = String(explicitId);
+    // Map internal technical IDs back to readable terms for the flow logic
+    if (sId === 'whazing_associado') return 'Sou Associado';
+    if (sId === 'whazing_empresa') return 'Sou Empresa';
+    if (sId === 'whazing_contabilidade') return 'Sou Contabilidade';
+    if (sId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
+    if (sId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
+    if (sId === 'whazing_sub_outros') return 'Outros Assuntos';
+    if (sId === 'whazing_sub_boleto') return '2ª Via Boleto';
+    if (sId === 'whazing_voltar_menu') return 'Menu Principal';
+    if (sId === 'whazing_voltar_sub') return 'Voltar';
+    if (sId === 'whazing_falar_atendente' || sId === 'whazing_outros_atendente') return 'Falar c/ Atendente';
+    return sId;
+  }
+
+  if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+    try {
+      const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+      const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
+      if (bId) {
+        const sId = String(bId);
+        if (sId === 'whazing_associado' || sId === 'Sou Associado') return 'Sou Associado';
+        if (sId === 'whazing_empresa' || sId === 'Sou Empresa') return 'Sou Empresa';
+        if (sId === 'whazing_contabilidade' || sId === 'Sou Contabilidade') return 'Sou Contabilidade';
+        if (sId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
+        if (sId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
+        if (sId === 'whazing_sub_outros') return 'Outros Assuntos';
+        if (sId === 'whazing_sub_boleto') return '2ª Via Boleto';
+        return sId;
+      }
+    } catch { /* ignore */ }
+  }
 
   // Some clients/instances deliver the user's choice as a reaction to the button/message.
   // Treat positive/negative reactions as confirmation/cancellation fallbacks.
