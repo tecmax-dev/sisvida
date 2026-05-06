@@ -86,6 +86,7 @@ const SindicatoExclusaoConta = lazy(() => import("./pages/SindicatoExclusaoConta
 const SignatureAuthorizationPage = lazy(() => import("./pages/public/SignatureAuthorizationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const WhatsAppTemplatesPage = lazy(() => import("./pages/admin/WhatsAppTemplatesPage"));
+const WhatsAppStatusPage = lazy(() => import("./pages/admin/WhatsAppStatusPage"));
 
 
 // Mobile App Pages - lazy load
@@ -520,6 +521,7 @@ function App() {
                   <Route path="audit" element={<AuditLogsPage />} />
                   <Route path="chat" element={<ChatSupportPage />} />
                   <Route path="whatsapp-templates" element={<WhatsAppTemplatesPage />} />
+                  <Route path="whatsapp-status" element={<WhatsAppStatusPage />} />
                   <Route path="hero" element={<HeroSettingsPage />} />
                   <Route path="banners" element={<CarouselBannersPage />} />
                   <Route path="config" element={<GlobalConfigPage />} />
