@@ -334,16 +334,7 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
    if (explicitId) {
       console.log('[extractMessageText] Found explicit ID:', explicitId);
       // Map technical Whazing IDs back to trigger labels for Level 1
-      if (explicitId === 'whazing_associado') return 'Sou Associado';
-      if (explicitId === 'whazing_empresa') return 'Sou Empresa';
-      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
-      
-      // Map technical Whazing IDs back to trigger labels for Level 2
-      if (explicitId === 'whazing_sub_boleto') return '2ª Via Boleto';
-      if (explicitId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
-      if (explicitId === 'whazing_sub_outros') return 'Outros Assuntos';
-      if (explicitId === 'whazing_sub_carteirinha') return 'Atualizar Carteirinha';
-      
+      // Return technical IDs as-is to make routing more reliable
       return String(explicitId);
     }
  
@@ -990,17 +981,14 @@ async function sendWhazingButtons(phone: string, bodyText: string, buttons: Arra
 }
 
 async function sendWhazingMenuButtons(config: EvolutionConfig, phone: string, explicitPhoneId?: string): Promise<boolean> {
-  return sendWhatsAppButtons(config, phone, 
-    "Olá! 👋 Bem-vindo(a) ao atendimento.",
-    "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
-    [
-      { id: "whazing_associado", text: "Sou Associado" },
-      { id: "whazing_empresa", text: "Sou Empresa" },
-      { id: "whazing_contabilidade", text: "Sou Contabilidade" },
-    ],
-    "",
-    explicitPhoneId
-  );
+  const title = "Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.";
+  const description = "Como posso ajudar? Escolha uma opção:\n\n1️⃣ Sou associado(a)\n2️⃣ Sou empresa\n3️⃣ Sou contador/escritório contábil\n4️⃣ Dia do Comerciário (30/10)\n5️⃣ Falar com atendente\n6️⃣ Segunda via de boleto (empresa)\n\nDigite o número da opção desejada:";
+  const buttons = [
+    { id: "whazing_associado", text: "Sou Associado" },
+    { id: "whazing_empresa", text: "Sou Empresa" },
+    { id: "whazing_contabilidade", text: "Sou Contabilidade" },
+  ];
+  return sendWhatsAppButtons(config, phone, title, description, buttons, "", explicitPhoneId);
 }
 
 type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
@@ -1008,7 +996,7 @@ type WhazingCategory = 'associado' | 'empresa' | 'contabilidade';
 async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, category: WhazingCategory, explicitPhoneId?: string): Promise<boolean> {
   const subMenus: Record<WhazingCategory, { text: string; buttons: Array<{ id: string; title: string }> }> = {
     associado: {
-      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja (digite o número):",
+      text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:\n\n1️⃣ Atualizar Carteirinha\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
       buttons: [
         { id: "whazing_sub_carteirinha", title: "Atualizar Carteirinha" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1016,7 +1004,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
       ],
     },
     empresa: {
-      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja (digite o número):",
+      text: "Você selecionou *Sou Empresa*.\n\nEscolha o que deseja:\n\n1️⃣ 2ª Via Boleto\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1024,7 +1012,7 @@ async function sendWhazingSubMenu(config: EvolutionConfig, phone: string, catego
       ],
     },
     contabilidade: {
-      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja (digite o número):",
+      text: "Você selecionou *Sou Contabilidade*.\n\nEscolha o que deseja:\n\n1️⃣ 2ª Via Boleto\n2️⃣ Convenções Coletivas\n3️⃣ Outros Assuntos\n\nDigite o número da opção desejada:",
       buttons: [
         { id: "whazing_sub_boleto", title: "2ª Via Boleto" },
         { id: "whazing_sub_convencoes", title: "Convenções Coletivas" },
@@ -1049,7 +1037,7 @@ async function storeWhazingContext(
   phone: string,
   category: WhazingCategory,
   lastMenuType: 'main' | 'sub' | 'followup' = 'main',
-  expiresInMinutes: number = 30
+  expiresInMinutes: number = 120
 ): Promise<void> {
   const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
     clinic_id: clinicId,
@@ -8231,47 +8219,53 @@ async function handleWebhook(req: Request) {
         
         // LEVEL 1: Map both IDs and literal text (buttons send ID, but display text is used as fallback)
         const L1_CHOICES: Record<string, string> = {
-          'whazing_associado': 'Sou Associado',
-          'whazing_empresa': 'Sou Empresa',
-          'whazing_contabilidade': 'Sou Contabilidade',
-          'sou associado': 'Sou Associado',
-          'sou empresa': 'Sou Empresa',
-          'sou contabilidade': 'Sou Contabilidade'
+          'whazing_associado': 'associado',
+          'whazing_empresa': 'empresa',
+          'whazing_contabilidade': 'contabilidade',
+          'sou associado': 'associado',
+          'sou empresa': 'empresa',
+          'sou contabilidade': 'contabilidade',
+          'associado': 'associado',
+          'empresa': 'empresa',
+          'contabilidade': 'contabilidade',
+          'contador': 'contabilidade'
         };
 
-        // LEVEL 2: Map both IDs and literal text/keywords
         const L2_CHOICES: Record<string, string> = {
-          'whazing_sub_carteirinha': 'Atualizar Carteirinha',
-          'whazing_sub_convencoes': 'Convenções Coletivas',
-          'whazing_sub_outros': 'Outros Assuntos',
-          'whazing_sub_boleto': '2ª Via Boleto',
-          'atualizar carteirinha': 'Atualizar Carteirinha',
-          'carteirinha': 'Atualizar Carteirinha',
-          'convenções coletivas': 'Convenções Coletivas',
-          'cct': 'Convenções Coletivas',
-          'outros assuntos': 'Outros Assuntos',
-          'outros': 'Outros Assuntos',
-          '2ª via boleto': '2ª Via Boleto',
-          'boleto': '2ª Via Boleto'
+          'whazing_sub_carteirinha': 'carteirinha',
+          'whazing_sub_convencoes': 'convencoes',
+          'whazing_sub_outros': 'outros',
+          'whazing_sub_boleto': 'boleto',
+          'carteirinha': 'carteirinha',
+          'atualizar carteirinha': 'carteirinha',
+          'convenções coletivas': 'convencoes',
+          'convencoes': 'convencoes',
+          'cct': 'convencoes',
+          'outros assuntos': 'outros',
+          'outros': 'outros',
+          '2ª via boleto': 'boleto',
+          'segunda via': 'boleto',
+          'boleto': 'boleto'
         };
 
         // LEVEL 1 keywords: Check specifically for "Sou Associado", "Sou Empresa", "Sou Contabilidade"
         // Note: we use startsWith or includes for better tolerance to extra punctuation/emojis
         let isWhazingLevel1 = !!L1_CHOICES[messageTextTrim] || 
                              !!L1_CHOICES[messageTextLower] ||
-                             /sou (associado|empresa|contabilidade)/i.test(messageTextLower);
+                             /sou (associado|empresa|contabilidade|contador)/i.test(messageTextLower) ||
+                             (messageTextTrim === '5') || 
+                             (messageTextTrim === '6');
 
-        // LEVEL 2 keywords
         let isWhazingLevel2 = !!L2_CHOICES[messageTextTrim] || 
                              !!L2_CHOICES[messageTextLower] || 
-                             ['Convenções Coletivas', 'Outros Assuntos', 'Homologacoes', 'Juridico'].includes(messageTextTrim) ||
+                             messageTextTrim.startsWith('whazing_sub_') ||
                              /2. via boleto|cct|conven[cç][oõ]es|outros assuntos|carteirinha/i.test(messageTextLower);
 
         let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
         const isWhazingLegacy = messageTextTrim === 'whazing_outros';
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
-        if (['1', '2', '3'].includes(messageTextTrim)) {
+        if (['1', '2', '3', '4', '5', '6'].includes(messageTextTrim)) {
           if (!lastMenuType || lastMenuType === 'main') {
             isWhazingLevel1 = true;
           } else if (lastMenuType === 'sub') {
@@ -8457,35 +8451,73 @@ async function handleWebhook(req: Request) {
 
         // LEVEL 1: Main menu choices
         if (isWhazingLevel1) {
-          const categoryMap: Record<string, WhazingCategory> = {
+          const categoryMap: Record<string, string> = {
             'whazing_associado': 'associado',
             'whazing_empresa': 'empresa',
             'whazing_contabilidade': 'contabilidade',
             'sou associado': 'associado',
             'sou empresa': 'empresa',
             'sou contabilidade': 'contabilidade',
-            'sou associado': 'associado',
-            'sou empresa': 'empresa',
-            'sou contabilidade': 'contabilidade',
             '1': 'associado',
             '2': 'empresa',
-            '3': 'contabilidade'
+            '3': 'contabilidade',
+            '4': 'diacomerciario',
+            '5': 'atendente',
+            '6': 'boleto'
           };
           
-          let effectiveChoice = L1_CHOICES[messageTextTrim] || L1_CHOICES[messageTextLower] || messageTextTrim;
-          const category = categoryMap[messageTextTrim] || 
-                          categoryMap[messageTextLower] || 
-                          (messageTextLower.includes('associado') ? 'associado' : null) ||
-                          (messageTextLower.includes('empresa') ? 'empresa' : null) ||
-                          (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
-                          categoryMap[messageTextTrim[0]];
+          const choice = categoryMap[messageTextTrim] || 
+                        categoryMap[messageTextLower] || 
+                        (messageTextLower.includes('associado') ? 'associado' : null) ||
+                        (messageTextLower.includes('empresa') ? 'empresa' : null) ||
+                        (messageTextLower.includes('contabilidade') ? 'contabilidade' : null) ||
+                        (messageTextLower.includes('atendente') ? 'atendente' : null) ||
+                        (messageTextLower.includes('boleto') ? 'boleto' : null);
           
-          if (!category) {
-            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
+          if (!choice) {
+            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not matched, skipping.`);
             return createSuccessResponse({ message: 'Invalid L1 choice' });
           }
           
-          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
+          console.log(`[webhook] Whazing L1 choice selected: ${choice}`);
+
+          if (choice === 'atendente') {
+             // Reutilizar a lógica de falar com atendente que já existe no followup
+             console.log(`[webhook] Human handoff requested via Main Menu for ${phone}`);
+             const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
+             const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
+             const targetZapsterDeptId = '972827ca-657d-4c37-a164-944e6e6113b3'; // Administrativo
+             
+             await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente diretamente pelo menu inicial.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}`, targetZapsterDeptId);
+             await freezeBotForHumanHandoff(supabase, phone, payload.data?.pushName || null, 'Solicitou falar com atendente pelo menu inicial');
+             await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
+             return createSuccessResponse({ message: 'Routed to atendente directly' });
+          }
+
+          if (choice === 'boleto') {
+             // Iniciar fluxo de boleto diretamente
+             console.log(`[webhook] Starting boleto flow via Main Menu for ${phone}`);
+             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
+             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+             try {
+                await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnonKey}` },
+                  body: JSON.stringify({ clinic_id: clinicId, phone: phone, action: 'start', evolution_config: configData, explicit_phone_id: explicitPhoneId }),
+                });
+             } catch (_e) {}
+             return createSuccessResponse({ message: 'Boleto flow started' });
+          }
+
+          if (choice === 'diacomerciario') {
+             const textMsg = `🎉 *Dia do Comerciário (30/10)*\n\nO Dia do Comerciário é comemorado anualmente em *30 de Outubro*. É um feriado da categoria garantido por lei e pela Convenção Coletiva.\n\nNesta data, o comércio de Ilhéus e região geralmente permanece fechado para que os trabalhadores possam desfrutar de seu merecido descanso.\n\n*Posso ajudar com mais alguma coisa?*`;
+             await sendWhatsAppMessage(configData, phone, textMsg, explicitPhoneId);
+             await sendWhazingMenuButtons(configData, phone, explicitPhoneId);
+             return createSuccessResponse({ message: 'Dia do Comerciário info sent' });
+          }
+
+          const category = choice as WhazingCategory;
+          console.log(`[webhook] Whazing L1 category selected: ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
           await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
@@ -8512,27 +8544,23 @@ async function handleWebhook(req: Request) {
            // Map numeric choices (1, 2, 3) to button IDs based on category
             const btnLower = btnId.toLowerCase();
             
-            if (btnId === '1') {
-              btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-            } else if (btnLower.includes('carteirinha')) {
-              btnId = 'whazing_sub_carteirinha';
-            } else if (btnLower.includes('boleto')) {
-              btnId = 'whazing_sub_boleto';
-            } else if (btnLower === 'sou empresa' || btnLower === 'empresa') {
-              btnId = 'whazing_empresa';
-            } else if (btnLower === 'sou associado' || btnLower === 'associado') {
-              btnId = 'whazing_associado';
-            } else if (btnLower === 'sou contabilidade' || btnLower === 'contabilidade') {
-              btnId = 'whazing_contabilidade';
-            } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct')) {
-              btnId = 'whazing_sub_convencoes';
-            } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
-              btnId = 'whazing_sub_outros';
-            } else if (btnLower.includes('homologacao') || btnLower.includes('homologação')) {
-              btnId = 'whazing_outros_homologacao';
-            } else if (btnLower.includes('juridico') || btnLower.includes('jurídico')) {
-              btnId = 'whazing_outros_juridico';
-            }
+             // Better Mapping for Sub-menu Choices (Level 2)
+             if (btnId === '1' || btnLower.includes('boleto') || btnLower.includes('carteirinha')) {
+               btnId = (currentCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+             } else if (btnId === '2' || btnLower.includes('convenções') || btnLower.includes('cct') || btnLower.includes('convenção')) {
+               btnId = 'whazing_sub_convencoes';
+             } else if (btnId === '3' || btnLower.includes('outros assuntos') || btnLower === 'outros') {
+               btnId = 'whazing_sub_outros';
+             } else if (btnLower.includes('homologacao')) {
+               btnId = 'whazing_outros_homologacao';
+             } else if (btnLower.includes('juridico')) {
+               btnId = 'whazing_outros_juridico';
+             } else if (btnId === 'whazing_empresa' || btnLower === 'empresa') {
+               // Fallback if user sends category name in sub-menu
+               await storeWhazingContext(supabase, clinicId, phone, 'empresa', 'sub');
+               await sendWhazingSubMenu(configData, phone, 'empresa', explicitPhoneId);
+               return createSuccessResponse({ message: 'Category reset to empresa' });
+             }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
