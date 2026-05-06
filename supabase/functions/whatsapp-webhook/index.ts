@@ -8894,10 +8894,11 @@ Sindicato dos Comerciários de Ilhéus e Região`;
           }
         }
 
-        // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
-        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && configData.booking_enabled === false
-          ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim())
-          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
+        // Check if the user is explicitly requesting a boleto (via technical ID or keywords)
+        const isBoletoRequest = 
+          messageText.trim() === 'whazing_sub_boleto' || 
+          (/^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && 
+           (configData.booking_enabled === false ? messageText.trim().startsWith('6') || !/^\d$/.test(messageText.trim()) : true));
 
         if (revivedBoletoSession || isBoletoRequest || isBoletoButton) {
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
@@ -9002,7 +9003,9 @@ Sindicato dos Comerciários de Ilhéus e Região`;
             // including doctor names, specialties, scheduling verbs and non-external numeric fallbacks
             const bookingIntentRegex = /\b(agendar|agendamento|agenda|consulta|consultas|marcar|desmarcar|cancelar|remarcar|reagendar|retorno|retornar|horario|horarios|medico|medicos|doutor|doutora|dentista|exame|exames|profissional|disponivel|disponibilidade|vaga|vagas|atendimento|especialidade|pediatra|clinico|ginecologista|especialista|ortopedista|cardiologista|alcides|juliane|uiara|tiuba|dr |dra |dr\.|dra\.|pediatrico|nutricionist|fisioterapeuta|psicologo|psicologa|data|datas|quando atende|proxima data|proximos dias|proxima semana|tem vaga|tem horario|quero agendar|preciso agendar|gostaria de agendar|quero marcar|preciso marcar|quero consulta|preciso de consulta|quero ver medico|ir ao medico)\b/i;
             const isBookingMenuOption = /^[1-4]$/.test(msgTrimmed) && !isExternalMenuSelection;
-            const hasBookingIntent = (bookingIntentRegex.test(msgLower) || isBookingMenuOption) && !isBoletoRequest;
+          // Whitelist ALL Whazing technical IDs from being blocked by the booking gate
+          const isWhazingTechnicalId = messageText.trim().startsWith('whazing_');
+          const hasBookingIntent = !isWhazingTechnicalId && !isBoletoRequest && (bookingIntentRegex.test(msgLower) || isBookingMenuOption);
 
             if (hasBookingIntent) {
               console.log(`[webhook] DEFINITIVE BLOCK: booking_enabled=false, booking intent detected for clinic ${clinicId}. Message: "${messageText}"`);
