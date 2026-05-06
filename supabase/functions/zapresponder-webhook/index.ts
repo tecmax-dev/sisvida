@@ -282,57 +282,35 @@
  
            const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi)$/i.test(content);
  
-            // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
-            if (isGreeting && !alreadySent) {
-              console.log(`[zapresponder] Nova conversa - enviando protocolo`);
-              const protocolId = `META-${Date.now().toString().slice(-6)}`;
-              const employeeName = "Assistente Digital"; // Nome fixo do atendente virtual
-              
-              // Captura ID do telefone para garantir que responda pelo mesmo canal
-              const incomingPhoneId = metadata?.phone_number_id;
-              const workingPhoneId = (incomingPhoneId === "937233212814035" || incomingPhoneId === "1522701919380063") 
-                ? "1110151302179856" 
-                : incomingPhoneId;
-              
-              let response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-template`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${SERVICE_ROLE}`
-                },
-                body: JSON.stringify({
-                  to: fromPhone,
-                  phone_number_id: workingPhoneId,
-                  template_name: "homologacao_protocolo",
-                  variables: [
-                    "Atendimento Digital",
-                    employeeName, // Agora fixo como Assistente Digital
-                    "Sindicato dos Comerciários",
-                    new Date().toLocaleDateString('pt-BR'),
-                    protocolId
-                  ]
-                })
-              }).catch(err => console.error("[zapresponder] Erro template:", err));
-
-              // Fallback se o template falhar (ex: status PENDING)
-              if (!response || !response.ok) {
-                console.log(`[zapresponder] Template falhou ou pendente, enviando texto simples como fallback`);
-                const textFallback = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nAguarde um momento que o menu de opções aparecerá em seguida.`;
-                
-                await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SERVICE_ROLE}`
-                  },
-                  body: JSON.stringify({
-                    to: fromPhone,
-                    phone_number_id: workingPhoneId,
-                    text: textFallback,
-                    ticket_id: ticketIdFromMeta
-                  })
-                }).catch(err => console.error("[zapresponder] Erro fallback texto:", err));
-              }
+             // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
+             if (isGreeting && !alreadySent) {
+               console.log(`[zapresponder] Nova conversa - enviando boas-vindas`);
+               const protocolId = `META-${Date.now().toString().slice(-6)}`;
+               
+               // Captura ID do telefone para garantir que responda pelo mesmo canal
+               const incomingPhoneId = metadata?.phone_number_id;
+               const workingPhoneId = (incomingPhoneId === "937233212814035" || incomingPhoneId === "1522701919380063") 
+                 ? "1110151302179856" 
+                 : incomingPhoneId;
+               
+               const welcomeText = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nEm que posso ajudar hoje?`;
+               
+               // Como o template 'homologacao_protocolo' está PENDING, enviamos texto diretamente
+               // para garantir que o bot responda IMEDIATAMENTE.
+               console.log(`[zapresponder] Enviando saudação textual (fallback direto)`);
+               const response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+                 method: 'POST',
+                 headers: {
+                   'Content-Type': 'application/json',
+                   'Authorization': `Bearer ${SERVICE_ROLE}`
+                 },
+                 body: JSON.stringify({
+                   to: fromPhone,
+                   phone_number_id: workingPhoneId,
+                   text: welcomeText,
+                   ticket_id: ticketIdFromMeta
+                 })
+               }).catch(err => console.error("[zapresponder] Erro envio saudação:", err));
 
               // Registra o envio no banco para auditoria e controle de duplicidade
               if (response && response.ok) {
