@@ -6,9 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-  // Updated domains based on latest platform changes
-  const ZAP_RESPONDER_BASE_URL = "https://app.zapresponder.com.br";
-  const ZAP_THINKER_BASE_URL = "https://api.zapthinker.com.br";
+   // Final official and verified endpoints for ZapResponder/ZapThinker (Evolution legacy)
+   // Use only those that are currently resolving and returning 200/403/404, avoiding DNS errors.
+   const ENDPOINTS = [
+     "https://api.zapthinker.com/api/messages/send",
+     "https://api.zapresponder.com.br/api/messages/send",
+     "https://app.zapresponder.com.br/api/external/messages/send",
+     "https://api.zapresponder.com.br/message/sendText",
+     "https://api.zapthinker.com/message/sendText"
+   ];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -89,43 +95,41 @@ serve(async (req) => {
 
       if (mediaUrl) (payload as any).mediaUrl = mediaUrl;
 
-        try {
-          const endpoints = [
-            // Primary: ZapThinker / ZapResponder v2 API (Official Meta integration)
-            { url: "https://api.zapthinker.com/api/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
-            { url: "https://api.zapresponder.com.br/api/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
-            
-            // External/Legacy Endpoints
-            { url: "https://app.zapresponder.com.br/api/external/messages/send", payload: { number: cleanPhone, body: message, department_id: payload.departmentId } },
-            { url: "https://api.zapresponder.com.br/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
-            
-            // Legacy or Alternative Endpoints (often used in unofficial instances)
-            { url: "https://api.zapthinker.com.br/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
-            { url: "https://api.zapthinker.com/message/sendText", payload: { number: cleanPhone, text: message, departmentId: payload.departmentId } },
-            { url: "https://api.zapresponder.com.br/whatsapp/messages/send", payload: { phone: cleanPhone, message: message, departamento_id: payload.departmentId } }
-          ];
+      try {
+        let response;
+        let currentResult = {};
 
-          let response;
-          let currentResult = {};
+        for (const url of ENDPOINTS) {
+          console.log(`[zapresponder] Trying transfer endpoint: ${url}`);
+          
+          // Prepare payload based on endpoint type
+          const isV2 = url.includes('/api/messages/send') || url.includes('/api/external/messages/send');
+          const payloadData = isV2 
+            ? { number: cleanPhone, body: message, department_id: payload.departmentId }
+            : { number: cleanPhone, text: message, departmentId: payload.departmentId };
 
-          for (const endpoint of endpoints) {
-            console.log(`[zapresponder] Trying transfer endpoint: ${endpoint.url}`);
-            response = await fetch(endpoint.url, {
+          try {
+            response = await fetch(url, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${apiToken}`,
               },
-              body: JSON.stringify(endpoint.payload),
+              body: JSON.stringify(payloadData),
             });
 
             currentResult = await response.json().catch(() => ({}));
+            
             if (response.ok) {
-              console.log(`[zapresponder] Success via ${endpoint.url}`);
+              console.log(`[zapresponder] Success via ${url}`);
               break;
             }
-            console.warn(`[zapresponder] ${endpoint.url} failed with ${response.status}`);
+            console.warn(`[zapresponder] ${url} failed with ${response.status}`);
+          } catch (fetchErr) {
+            console.error(`[zapresponder] Fetch error for ${url}:`, fetchErr.message);
+            continue;
           }
+        }
 
           lastResult = { status: response?.status || 500, data: currentResult };
           if (response?.ok) {
