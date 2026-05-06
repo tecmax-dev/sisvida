@@ -1253,7 +1253,7 @@ Nosso atendimento funciona de segunda a sexta, das 09h às 12h e das 13h às 16h
 Por favor, aguarde um momento por aqui.`;
   }
 
-   return `Olá! 👋 Obrigado por entrar em contato.\n\nNo momento estamos fora do nosso horário de atendimento.\n\n🕒 *Horário de Funcionamento:*\nSegunda a sexta: 09h às 12h e 13h às 16h.\n\nSua solicitação para falar com um atendente foi registrada e assim que nossa equipe retornar, daremos continuidade ao seu atendimento. 🙏`;
+    return `Fora do horário de atendimento, mas recebemos seu contato e em breve retornaremos.`;
 }
 
 function buildAskSubjectMessage(): string {
