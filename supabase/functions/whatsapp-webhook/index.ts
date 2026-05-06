@@ -332,11 +332,13 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
      messageAny?.templateButtonReplyMessage?.selectedId;
  
    if (explicitId) {
-      console.log('[extractMessageText] Found explicit ID:', explicitId);
-      // Map technical Whazing IDs back to trigger labels for Level 1
-      // Return technical IDs as-is to make routing more reliable
-      return String(explicitId);
-    }
+     console.log('[extractMessageText] Found explicit ID:', explicitId);
+     const sId = String(explicitId);
+     if (sId === 'whazing_associado') return 'Sou Associado';
+     if (sId === 'whazing_empresa') return 'Sou Empresa';
+     if (sId === 'whazing_contabilidade') return 'Sou Contabilidade';
+     return sId;
+   }
  
     if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
      try {
@@ -8507,14 +8509,21 @@ async function handleWebhook(req: Request) {
           console.log(`[webhook] Whazing L1 choice selected: ${choice}`);
 
           if (choice === 'atendente') {
-             // Reutilizar a lógica de falar com atendente que já existe no followup
              console.log(`[webhook] Human handoff requested via Main Menu for ${phone}`);
              const supportAvailability = await getHumanSupportAvailability(supabase, clinicId);
              const handoffText = buildDirectHumanHandoffMessage(supportAvailability.isHumanAvailable);
-             const targetZapsterDeptId = '972827ca-657d-4c37-a164-944e6e6113b3'; // Administrativo
+             const targetZapsterDeptId = '972827ca-657d-4c37-a164-944e6e6113b3'; 
              
              await sendZapsterMessage(clinicId, phone, `🔔 *SOLICITAÇÃO DE ATENDIMENTO HUMANO*\n\nO usuário solicitou falar com um atendente diretamente pelo menu inicial.\n\n*Nome:* ${payload.data?.pushName || 'Usuário'}`, targetZapsterDeptId);
              await freezeBotForHumanHandoff(supabase, phone, payload.data?.pushName || null, 'Solicitou falar com atendente pelo menu inicial');
+             
+             await supabase.from('whatsapp_ai_conversations').upsert({
+               clinic_id: clinicId,
+               phone,
+               messages: { source: 'whazing_menu', action: 'handoff_completed', support_stage: 'human_handoff_active', updated_at: new Date().toISOString() },
+               expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+             }, { onConflict: 'clinic_id,phone' });
+
              await sendWhatsAppMessage(configData, phone, handoffText, explicitPhoneId);
              return createSuccessResponse({ message: 'Routed to atendente directly' });
           }
@@ -8829,7 +8838,7 @@ Sindicato dos Comerciários de Ilhéus e Região`;
           // Greetings/menu commands should always restart the Whazing button menu,
           // even with an active AI session.
           const isGreeting = /^(oi|olá|ola|hey|hi|hello|bom\s*dia|boa\s*tarde|boa\s*noite|eai|e\s*ai|opa|fala)/i.test(msgClean);
-          const isMenuCommand = MENU_REGEX.test(msgClean);
+          const isMenuCommand = MENU_REGEX.test(msgClean) || msgClean === '0';
           // A greeting/menu command should re-open the main menu even if a previous Whazing ticket
           // is still open or an AI conversation exists — only active booking/boleto
           // flows should block the menu reset.
