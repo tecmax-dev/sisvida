@@ -5,7 +5,83 @@
  
  serve(async (req) => {
    try {
-     const payload = await req.json();
+    // ===== Validação de Content-Type =====
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      return new Response(JSON.stringify({
+        error: "INVALID_CONTENT_TYPE",
+        message: "O cabeçalho Content-Type deve ser 'application/json'.",
+        received: contentType || "(vazio)"
+      }), { status: 400, headers: { "Content-Type": "application/json" } });
+    }
+
+    // ===== Parse seguro do JSON =====
+    let payload: any;
+    const rawBody = await req.text();
+    if (!rawBody || rawBody.trim() === "") {
+      return new Response(JSON.stringify({
+        error: "EMPTY_BODY",
+        message: "O corpo da requisição está vazio. Envie um JSON com a estrutura { entry: [...] }.",
+        example: { entry: [{ changes: [{ field: "messages", value: { messages: [{ from: "5573...", type: "text", text: { body: "Oi" } }] } }] }] }
+      }), { status: 400, headers: { "Content-Type": "application/json" } });
+    }
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (parseErr) {
+      return new Response(JSON.stringify({
+        error: "INVALID_JSON",
+        message: "O corpo da requisição não é um JSON válido. Verifique vírgulas, aspas e chaves.",
+        details: String(parseErr),
+        received_preview: rawBody.slice(0, 200)
+      }), { status: 400, headers: { "Content-Type": "application/json" } });
+    }
+
+    // ===== Validação estrutural =====
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return new Response(JSON.stringify({
+        error: "INVALID_PAYLOAD_TYPE",
+        message: "O corpo deve ser um objeto JSON (não um array nem um valor primitivo)."
+      }), { status: 422, headers: { "Content-Type": "application/json" } });
+    }
+
+    if (!Array.isArray(payload.entry)) {
+      return new Response(JSON.stringify({
+        error: "MISSING_FIELD_ENTRY",
+        message: "Campo obrigatório 'entry' ausente ou inválido. Deve ser um array no formato Meta WhatsApp Cloud API.",
+        hint: "Exemplo: { \"entry\": [{ \"changes\": [{ \"field\": \"messages\", \"value\": { \"messages\": [...] } }] }] }",
+        received_keys: Object.keys(payload)
+      }), { status: 422, headers: { "Content-Type": "application/json" } });
+    }
+
+    // Valida que pelo menos uma entry tem changes/messages com formato esperado
+    const entryProblems: string[] = [];
+    payload.entry.forEach((entry: any, i: number) => {
+      if (!entry || typeof entry !== "object") {
+        entryProblems.push(`entry[${i}] não é um objeto`);
+        return;
+      }
+      if (!Array.isArray(entry.changes)) {
+        entryProblems.push(`entry[${i}].changes ausente ou não é array`);
+        return;
+      }
+      entry.changes.forEach((c: any, j: number) => {
+        if (!c || typeof c !== "object") {
+          entryProblems.push(`entry[${i}].changes[${j}] não é objeto`);
+        } else if (c.field !== "messages") {
+          // só warning — apenas ignoramos
+        } else if (!c.value || typeof c.value !== "object") {
+          entryProblems.push(`entry[${i}].changes[${j}].value ausente`);
+        }
+      });
+    });
+    if (entryProblems.length === payload.entry.length && payload.entry.length > 0) {
+      return new Response(JSON.stringify({
+        error: "INVALID_ENTRY_STRUCTURE",
+        message: "Nenhuma 'entry' válida encontrada. Verifique a estrutura.",
+        problems: entryProblems
+      }), { status: 422, headers: { "Content-Type": "application/json" } });
+    }
+
      const ticketIdFromMeta = payload.ticket_id;
      console.log(`[zapresponder] Webhook received. Ticket ID: ${ticketIdFromMeta}`);
  
