@@ -8159,38 +8159,6 @@ async function handleWebhook(req: Request) {
          clinicId = configData.clinic_id;
          console.log(`[webhook] Processing for clinic ${clinicId}`);
  
-         // Especial para o Sindicato: Se estiver fora do horário, apenas enviar mensagem informativa
-         if (clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
-           const availability = await getHumanSupportAvailability(supabase, clinicId);
-           if (!availability.isHumanAvailable) {
-             console.log(`[webhook] Fora do horário para Sindicato: ${availability.reason}`);
-             
-             // Verifica se já notificamos recentemente para não spammar
-             const { data: recentOffHours } = await supabase
-               .from('whatsapp_incoming_logs')
-               .select('id')
-               .eq('clinic_id', clinicId)
-               .eq('phone', phone)
-               .eq('processed_action', 'off_hours_notification')
-               .gt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
-               .limit(1);
- 
-             if (!recentOffHours || recentOffHours.length === 0) {
-               const offHoursMsg = `Olá! 👋 Obrigado por entrar em contato.\n\nNo momento estamos fora do nosso horário de atendimento.\n\n🕒 *Horário de Funcionamento:*\nSegunda a sexta: 09h às 12h e 13h às 16h.\n\nSua mensagem foi recebida e assim que nossa equipe retornar, daremos continuidade ao seu atendimento. 🙏`;
-               await sendWhatsAppMessage(configData, phone, offHoursMsg, explicitPhoneId);
-               
-               await supabase.from('whatsapp_incoming_logs').insert({
-                 clinic_id: clinicId,
-                 phone,
-                 message_text: messageText,
-                 processed_action: 'off_hours_notification',
-               });
-             }
-             
-             // Mirror para o dashboard mesmo fora do horário, mas NÃO para o robô (botSkipped continua false)
-           }
-         }
-
         const messageTextTrim = messageText?.trim();
 
         // If the user has already been transferred to a human attendant, keep the
