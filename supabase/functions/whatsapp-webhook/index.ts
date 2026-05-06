@@ -8149,11 +8149,13 @@ async function handleWebhook(req: Request) {
         }
       }
 
-      // Emergency fallback for Meta if still no configData (ensure Sindicato flow runs)
-      if (!configData && explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
-        console.log(`[webhook] Applying emergency Meta config for Sindicato clinic`);
+      // Emergency fallback for Meta: If instance is 'meta' or explicitClinicId is Sindicato, and configData is missing or incorrectly resolved
+      const isMetaRequest = payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+      
+      if (isMetaRequest && (!configData || configData.api_url !== 'meta')) {
+        console.log(`[webhook] Forcing Meta configuration for Sindicato clinic (isMetaRequest=${isMetaRequest})`);
         configData = {
-          clinic_id: explicitClinicId,
+          clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
           instance_name: 'meta_official',
           api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
           api_key: 'meta',
