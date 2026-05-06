@@ -8425,7 +8425,13 @@ async function handleWebhook(req: Request) {
             '2': 'empresa',
             '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim] || 'associado';
+          const category = categoryMap[messageTextTrim];
+          
+          if (!category) {
+            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
+            return createSuccessResponse({ message: 'Invalid L1 choice' });
+          }
+          
           console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
