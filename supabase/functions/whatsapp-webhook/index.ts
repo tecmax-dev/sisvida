@@ -8435,11 +8435,20 @@ async function handleWebhook(req: Request) {
             'Sou Associado': 'associado',
             'Sou Empresa': 'empresa',
             'Sou Contabilidade': 'contabilidade',
+            'sou associado': 'associado',
+            'sou empresa': 'empresa',
+            'sou contabilidade': 'contabilidade',
             '1': 'associado',
             '2': 'empresa',
             '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim];
+          
+          let lookupKey = messageTextTrim;
+          if (!categoryMap[lookupKey]) {
+            lookupKey = messageTextTrim.toLowerCase();
+          }
+          
+          const category = categoryMap[lookupKey];
           
           if (!category) {
             console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
