@@ -333,9 +333,9 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
  
    if (explicitId) {
       console.log('[extractMessageText] Found explicit ID:', explicitId);
-     if (explicitId === 'whazing_associado') return 'Sou Associado';
-     if (explicitId === 'whazing_empresa') return 'Sou Empresa';
-      if (explicitId === 'whazing_contabilidade') return 'Sou Contabilidade';
+      if (explicitId === 'whazing_associado' || explicitId === 'Sou Associado') return 'Sou Associado';
+      if (explicitId === 'whazing_empresa' || explicitId === 'Sou Empresa') return 'Sou Empresa';
+      if (explicitId === 'whazing_contabilidade' || explicitId === 'Sou Contabilidade') return 'Sou Contabilidade';
       if (explicitId === 'whazing_sub_boleto') return '2ª Via Boleto';
       if (explicitId === 'whazing_sub_convencoes') return 'Convenções Coletivas';
       if (explicitId === 'whazing_sub_outros') return 'Outros Assuntos';
@@ -348,9 +348,9 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
        const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
        const bId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
        if (bId) {
-         if (bId === 'whazing_associado') return 'Sou Associado';
-         if (bId === 'whazing_empresa') return 'Sou Empresa';
-         if (bId === 'whazing_contabilidade') return 'Sou Contabilidade';
+          if (bId === 'whazing_associado' || bId === 'Sou Associado') return 'Sou Associado';
+          if (bId === 'whazing_empresa' || bId === 'Sou Empresa') return 'Sou Empresa';
+          if (bId === 'whazing_contabilidade' || bId === 'Sou Contabilidade') return 'Sou Contabilidade';
          return String(bId);
        }
      } catch { /* ignore */ }
@@ -8292,9 +8292,12 @@ async function handleWebhook(req: Request) {
             return createSuccessResponse({ message: 'Main menu resent' });
           }
 
-          if (followUpId === 'whazing_voltar_sub') {
-            await sendWhazingSubMenu(configData, phone, (storedCategory as any) || 'associado', explicitPhoneId);
-            return createSuccessResponse({ message: `Sub-menu resent for ${storedCategory}` });
+          if (followUpId === 'whazing_voltar_sub' || followUpId === 'Voltar') {
+            const targetCategory = (storedCategory as WhazingCategory) || 'associado';
+            console.log(`[webhook] Returning to sub-menu for category: ${targetCategory}`);
+            await sendWhazingSubMenu(configData, phone, targetCategory, explicitPhoneId);
+            await storeWhazingContext(supabase, clinicId, phone, targetCategory, 'sub');
+            return createSuccessResponse({ message: `Sub-menu resent for ${targetCategory}` });
           }
 
           if (followUpId === 'whazing_falar_atendente' || followUpId === 'whazing_outros_atendente' || followUpId === 'Falar c/ Atendente') {
@@ -8422,7 +8425,13 @@ async function handleWebhook(req: Request) {
             '2': 'empresa',
             '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim] || 'associado';
+          const category = categoryMap[messageTextTrim];
+          
+          if (!category) {
+            console.log(`[webhook] Whazing L1: Choice "${messageTextTrim}" not in category map, skipping.`);
+            return createSuccessResponse({ message: 'Invalid L1 choice' });
+          }
+          
           console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
