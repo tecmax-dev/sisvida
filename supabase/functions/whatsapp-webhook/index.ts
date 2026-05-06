@@ -8140,21 +8140,6 @@ async function handleWebhook(req: Request) {
         }
       }
 
-      // FINAL FALLBACK: If still no config, and it looks like the official Meta Sindicato instance, apply it.
-      // But DO NOT overwrite if we found a Zapster/Evolution config already.
-      const isMetaOfficial = (payload.instance === 'meta' || payload.instance === 'meta_official' || explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") && !configData;
-      
-      if (isMetaOfficial) {
-        console.log(`[webhook] OFFICIAL META / SINDICATO request detected. Applying default Meta configuration.`);
-        configData = {
-          clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
-          instance_name: 'meta_official',
-          api_url: 'meta',
-          api_key: 'meta',
-          booking_enabled: true,
-          direct_reply_enabled: true
-        } as EvolutionConfig;
-      }
        if (configData) {
          clinicId = configData.clinic_id;
          console.log(`[webhook] Processing for clinic ${clinicId}`);
