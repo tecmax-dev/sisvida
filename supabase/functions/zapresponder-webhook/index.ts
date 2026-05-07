@@ -334,7 +334,7 @@
              // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
              if (isGreeting && !alreadySent) {
                console.log(`[zapresponder] Nova conversa - enviando boas-vindas`);
-               const protocolId = `META-${Date.now().toString().slice(-6)}`;
+                const protocolId = payload.protocol || `META-${Date.now().toString().slice(-6)}`;
                
                // Captura ID do telefone para garantir que responda pelo mesmo canal
                const incomingPhoneId = metadata?.phone_number_id;
@@ -357,7 +357,7 @@
                    to: fromPhone,
                    phone_number_id: workingPhoneId,
                    text: welcomeText,
-                   ticket_id: ticketIdFromMeta
+                  ticket_id: ticketId || ticketIdFromMeta
                  })
                }).catch(err => console.error("[zapresponder] Erro envio saudação:", err));
 
