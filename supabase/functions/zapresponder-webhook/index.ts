@@ -233,7 +233,7 @@
                     console.log(`[zapresponder] Enviando resposta textual para ${fromPhone}`);
                     const incomingId = metadata?.phone_number_id;
                     const workingId = (incomingId === "937233212814035" || incomingId === "1522701919380063" || !incomingId) 
-                      ? "380961811776953" 
+                      ? "1110151302179856" 
                       : incomingId;
 
                     const replyRes = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
@@ -292,7 +292,7 @@
                // Captura ID do telefone para garantir que responda pelo mesmo canal
                const incomingPhoneId = metadata?.phone_number_id;
                 const workingPhoneId = (incomingPhoneId === "937233212814035" || incomingPhoneId === "1522701919380063" || !incomingPhoneId) 
-                  ? "380961811776953" 
+                  ? "1110151302179856" 
                   : incomingPhoneId;
                
                const welcomeText = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nEm que posso ajudar hoje?`;
