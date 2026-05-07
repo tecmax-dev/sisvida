@@ -302,16 +302,21 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   console.log('[extractMessageText] Parsing raw message structure:', JSON.stringify(data?.message));
   
   // Check for interactive button response (plural - Evolution API native)
-  if (data.message?.buttonsResponseMessage?.selectedButtonId) {
-    console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
-    return data.message.buttonsResponseMessage.selectedButtonId;
-  }
-  
-  // Check for interactive button response (singular - Whazing/alternative format)
-  if (data.message?.buttonResponseMessage?.selectedButtonId) {
-    console.log('[extractMessageText] Found buttonResponseMessage:', data.message.buttonResponseMessage.selectedButtonId);
-    return data.message.buttonResponseMessage.selectedButtonId;
-  }
+   const buttonResponseId = data.message?.buttonsResponseMessage?.selectedButtonId || 
+                            data.message?.buttonResponseMessage?.selectedButtonId;
+   
+   if (buttonResponseId) {
+     const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText || 
+                         data.message?.buttonResponseMessage?.selectedDisplayText;
+     console.log(`[extractMessageText] Found button response: id="${buttonResponseId}", display="${displayText || ''}"`);
+     
+     // Prefer display text for Whazing routing if it's one of the known labels
+     const whazingLabels = ['sou associado', 'sou empresa', 'sou contabilidade', 'associado', 'empresa', 'contabilidade'];
+     if (displayText && whazingLabels.includes(displayText.toLowerCase().trim())) {
+       return displayText.trim();
+     }
+     return buttonResponseId;
+   }
   
   // Check for list response
   if (data.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
