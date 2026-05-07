@@ -289,7 +289,7 @@
                       body: JSON.stringify({ 
                         to: fromPhone, 
                         text: replyText, 
-                        ticket_id: ticketIdFromMeta,
+                        ticket_id: ticketId || ticketIdFromMeta,
                         phone_number_id: workingId
                       })
                     });
