@@ -21,11 +21,19 @@ const PortalAccessPage = () => {
     fetchClinicData();
   }, []);
 
-  const portals = [
-    { id: "empresa", title: "Empresa", path: `/portal-empresa/${clinicData?.slug || ""}` },
-    { id: "socios", title: "Sócio", path: `/portal-socio/${clinicData?.slug || ""}` },
-    { id: "escritorio", title: "Escritório", path: `/portal-contador/${clinicData?.slug || ""}` },
-  ];
+   const portals = [
+     { id: "empresa", title: "Empresa", path: `/portal-empresa/${clinicData?.slug || ""}` },
+     { id: "socios", title: "Sócio", path: `/portal-socio/${clinicData?.slug || ""}` },
+     { id: "escritorio", title: "Escritório", path: `/portal-contador/${clinicData?.slug || ""}` },
+   ];
+
+   // Verificação para redirecionar se já houver slug e evitar rota /portal-acesso crua
+   useEffect(() => {
+     if (clinicData?.slug && window.location.pathname === "/portal-acesso") {
+       // Se o usuário acessar a rota raiz sem slug, mas já carregamos os dados da clínica alvo,
+       // opcionalmente poderíamos redirecionar para incluir o slug na URL para consistência.
+     }
+   }, [clinicData]);
 
   return (
     <PublicPageWrapper>
