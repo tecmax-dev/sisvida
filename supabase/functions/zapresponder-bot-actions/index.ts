@@ -35,7 +35,7 @@
        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
      );
  
-     const apiToken = Deno.env.get("ZAPSTER_API_TOKEN") || Deno.env.get("ZAPRESPONDER_API_TOKEN");
+      const apiToken = Deno.env.get("ZAPSTER_API_TOKEN") || Deno.env.get("ZAPRESPONDER_API_TOKEN") || Deno.env.get("LOVABLE_ZAPSTER_API_TOKEN");
      if (!apiToken) {
        console.error("[zapresponder-bot] ZAPSTER_API_TOKEN not configured");
        return new Response(
@@ -105,6 +105,9 @@
       }
 
       console.log(`[zapresponder-bot] Performing ${action} for ${cleanPhone}`);
+
+      console.log(`[zapresponder-bot] URL: ${ZAP_RESPONDER_BASE_URL}${endpoint}`);
+      console.log(`[zapresponder-bot] Payload:`, JSON.stringify(payload));
 
       const response = await fetch(`${ZAP_RESPONDER_BASE_URL}${endpoint}`, {
         method: "POST",
