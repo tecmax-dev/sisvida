@@ -99,8 +99,9 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
     try {
       const { data, error } = await supabase
         .from("zapresponder_configs")
-        .select("*")
-        .maybeSingle();
+         .select("*")
+         .eq("clinic_id", clinicId)
+         .maybeSingle();
 
        if (data) {
          setConfig(data);
@@ -117,31 +118,33 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
    const handleSaveConfig = async () => {
      setSaving(true);
      try {
-       if (config) {
-         const { error } = await supabase
-           .from("zapresponder_configs")
-           .update({
-             instance_id: instanceId,
-             is_active: isActive,
-           })
-           .eq("id", config.id);
- 
-         if (error) throw error;
-       } else {
-         const { data, error } = await supabase
-           .from("zapresponder_configs")
-           .insert({
-             instance_id: instanceId,
-             is_active: true,
-             api_token: "managed-via-secrets",
-           })
-           .select()
-           .single();
- 
-         if (error) throw error;
-         setConfig(data);
-         setIsActive(true);
-       }
+      if (config) {
+        const { error } = await supabase
+          .from("zapresponder_configs")
+          .update({
+            instance_id: instanceId,
+            is_active: isActive,
+          })
+          .eq("id", config.id);
+
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("zapresponder_configs")
+          .insert({
+            clinic_id: clinicId,
+            instance_id: instanceId,
+            is_active: true,
+            api_token: "managed-via-secrets",
+            name: "Zap Responder Config"
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setConfig(data);
+        setIsActive(true);
+      }
  
        toast({
          title: "Configuração salva",
