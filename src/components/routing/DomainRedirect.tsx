@@ -62,22 +62,6 @@ export function DomainRedirect() {
       return;
     }
 
-    // Mapeia rotas raiz para rotas do sindicato
-    const routeMappings: Record<string, string> = {
-      "/app": "/sindicato/app",
-      "/app/home": "/sindicato/app/home",
-      "/app/login": "/sindicato/app/login",
-      "/app/agendar": "/sindicato/app/agendar",
-      "/app/consultas": "/sindicato/app/consultas",
-      "/app/perfil": "/sindicato/app/perfil",
-      "/app/carteirinha": "/sindicato/app/carteirinha",
-    };
-
-    const mappedRoute = routeMappings[currentPath];
-    if (mappedRoute) {
-      console.info(`[DomainRedirect] Mapeando ${currentPath} para ${mappedRoute}`);
-      navigate(mappedRoute, { replace: true });
-    }
   }, [customDomain, location.pathname, navigate]);
 
   return null;
