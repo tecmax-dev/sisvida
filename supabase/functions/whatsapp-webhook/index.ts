@@ -8003,6 +8003,7 @@ async function handleWebhook(req: Request) {
 
       // Special routing for Meta Official (Sindicato)
       // Explicitly check for 'meta', 'meta_official', 'secmi' or if the target phone belongs to Sindicato
+      const SINDICATO_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       const isSindicatoTarget = payload.metadata?.display_phone_number === "557332311784" || 
                                 payload.metadata?.phone_number_id === "1110151302179856" ||
                                 payload.instance === 'meta' || 
@@ -8010,8 +8011,21 @@ async function handleWebhook(req: Request) {
                                 payload.instance === 'secmi';
 
       if (!explicitClinicId && isSindicatoTarget) {
-        explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+        explicitClinicId = SINDICATO_ID;
         console.log(`[webhook] Mapping to Sindicato clinic (isSindicatoTarget=true): ${explicitClinicId}`);
+      }
+
+      // If we already know it's Sindicato, force configData immediately to bypass any ambiguous Evolution search
+      if (explicitClinicId === SINDICATO_ID) {
+        configData = {
+          clinic_id: SINDICATO_ID,
+          instance_name: payload.instance || 'meta_official',
+          api_url: 'meta',
+          api_key: 'meta',
+          booking_enabled: true,
+          direct_reply_enabled: true
+        } as EvolutionConfig;
+        console.log(`[webhook] Forced Sindicato config for routing`);
       }
 
       if (activeSession?.clinic_id) {
@@ -8089,18 +8103,6 @@ async function handleWebhook(req: Request) {
         }
       }
 
-      // Emergency fallback for Meta if still no configData (ensure Sindicato flow runs)
-      if (!configData && explicitClinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d") {
-        console.log(`[webhook] Applying emergency Meta config for Sindicato clinic`);
-        configData = {
-          clinic_id: explicitClinicId,
-          instance_name: 'meta_official',
-          api_url: 'meta', // Special marker to use sendMetaText/sendMetaButtons
-          api_key: 'meta',
-          booking_enabled: true,
-          direct_reply_enabled: true
-        } as EvolutionConfig;
-      }
       if (configData) {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
