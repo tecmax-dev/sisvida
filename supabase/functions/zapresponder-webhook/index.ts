@@ -149,15 +149,16 @@
              let buttonPayload = "";
              if (msg.type === "text") {
                content = msg.text?.body?.trim() || "";
-             } else if (msg.type === "interactive") {
-               // Prefer ID for bot logic, Title as fallback
-               content = msg.interactive?.button_reply?.id || 
-                         msg.interactive?.button_reply?.title || 
-                         msg.interactive?.list_reply?.id || 
-                         msg.interactive?.list_reply?.title ||
-                         "";
-                buttonPayload = (msg.interactive?.button_reply?.title || msg.interactive?.button_reply?.id || "").toString();
-             } else if (msg.type === "button") {
+            } else if (msg.type === "interactive") {
+              const interactive = msg.interactive || {};
+              // Prefer ID for bot logic, Title as fallback
+              content = interactive.button_reply?.id || 
+                        interactive.button_reply?.title || 
+                        interactive.list_reply?.id || 
+                        interactive.list_reply?.title ||
+                        "";
+              buttonPayload = (interactive.button_reply?.title || interactive.button_reply?.id || "").toString();
+            } else if (msg.type === "button") {
                content = msg.button?.payload || msg.button?.text || "";
                 buttonPayload = (msg.button?.text || msg.button?.payload || "").toString();
              }
