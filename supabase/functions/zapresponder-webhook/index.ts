@@ -170,11 +170,20 @@
             // ===== Registro da mensagem recebida para auditoria =====
             let ticketId = ticketIdFromMeta;
             try {
-              const { data: contact } = await supabase
+              let { data: contact } = await supabase
                 .from('whatsapp_contacts')
                 .select('id')
                 .eq('phone', fromPhone)
                 .maybeSingle();
+
+              if (!contact && (payload.is_test || payload.test)) {
+                const { data: newContact } = await supabase
+                  .from('whatsapp_contacts')
+                  .insert({ phone: fromPhone, name: pushName, clinic_id: SINDICATO_CLINIC_ID })
+                  .select('id')
+                  .single();
+                contact = newContact;
+              }
 
               if (contact) {
                 let { data: ticket } = await supabase
