@@ -8001,9 +8001,15 @@ async function handleWebhook(req: Request) {
      const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
       // Special routing for Meta Official (Sindicato)
+      // Explicitly check for 'meta' or 'meta_official' in the instance field
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}`);
+      } else if (!explicitClinicId && payload.instance === 'secmi') {
+        // The user mentioned the sindicato bot isn't working on /sindicato.
+        // The instance "secmi" is associated with the Sindicato clinic in evolution_configs.
+        explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+        console.log(`[webhook] Mapping Evolution instance "secmi" to Sindicato clinic: ${explicitClinicId}`);
       }
 
       if (activeSession?.clinic_id) {
