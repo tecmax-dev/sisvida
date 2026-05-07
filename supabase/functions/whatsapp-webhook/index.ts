@@ -1951,7 +1951,8 @@ async function handleAIBookingFlow(
   supabase: SupabaseClient,
   config: EvolutionConfig,
   phone: string,
-  messageText: string
+  messageText: string,
+  explicitPhoneId?: string | null
 ): Promise<void> {
   const clinicId = config.clinic_id;
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
@@ -8001,9 +8002,15 @@ async function handleWebhook(req: Request) {
      const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
       // Special routing for Meta Official (Sindicato)
+      // Explicitly check for 'meta' or 'meta_official' in the instance field
       if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}`);
+      } else if (!explicitClinicId && payload.instance === 'secmi') {
+        // The user mentioned the sindicato bot isn't working on /sindicato.
+        // The instance "secmi" is associated with the Sindicato clinic in evolution_configs.
+        explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+        console.log(`[webhook] Mapping Evolution instance "secmi" to Sindicato clinic: ${explicitClinicId}`);
       }
 
       if (activeSession?.clinic_id) {
@@ -9041,7 +9048,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         if (clinicSettings?.use_ai_booking) {
           // Use AI-powered booking flow
           console.log(`[webhook] Using AI booking for clinic ${clinicId}`);
-          await handleAIBookingFlow(supabase, configData, phone, messageText);
+          await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
         } else {
           // Use traditional menu-based flow
           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
