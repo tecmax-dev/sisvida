@@ -642,8 +642,26 @@ async function sendMetaButtons(phone: string, title: string, description: string
         }
         return false;
       }
+      if (r.ok) {
+        try {
+          const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+          const { data: contact } = await sb.from('whatsapp_contacts').select('id').eq('phone', to).maybeSingle();
+          if (contact) {
+            const { data: ticket } = await sb.from('whatsapp_tickets').select('id').eq('contact_id', contact.id).eq('status', 'open').maybeSingle();
+            if (ticket) {
+              await sb.from('whatsapp_ticket_messages').insert({
+                ticket_id: ticket.id,
+                sender_type: 'operator',
+                message_type: 'text',
+                content: `Menu: ${cleanTitle}\n${cleanDescription}`,
+                metadata: { via: 'whatsapp-webhook-buttons', buttons: buttons.map(b => b.title || b.text) }
+              });
+            }
+          }
+        } catch (err) { console.error('[meta-buttons] Log error:', err); }
+      }
       return true;
-   } catch (e) {
+    } catch (e) {
      console.error('[meta-buttons] Exception:', e);
      return false;
    }
