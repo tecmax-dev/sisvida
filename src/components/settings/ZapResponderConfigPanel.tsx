@@ -1,3 +1,43 @@
+   const [testPhone, setTestPhone] = useState("");
+   const [activatingBot, setActivatingBot] = useState(false);
+    const handleTestBotActivation = async () => {
+      if (!testPhone) {
+        toast({
+          title: "Atenção",
+          description: "Informe um número de telefone para testar a ativação do bot.",
+          variant: "destructive",
+        });
+        return;
+      }
+ 
+      setActivatingBot(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('zapresponder-bot-actions', {
+          body: { 
+            phone: testPhone,
+            clinicId: clinicId,
+            action: 'startBot'
+          }
+        });
+ 
+        if (error) throw error;
+ 
+        toast({
+          title: "Bot ativado!",
+          description: "A API do ZapResponder respondeu com sucesso.",
+        });
+      } catch (error: any) {
+        console.error("Erro ao ativar bot:", error);
+        toast({
+          title: "Falha na ativação",
+          description: "Ocorreu um erro ao chamar a API de ativação do bot.",
+          variant: "destructive",
+        });
+      } finally {
+        setActivatingBot(false);
+      }
+    };
+ 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -220,20 +260,42 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
           </div>
         </div>
 
-         <div className="flex justify-between items-center pt-4">
-           <Button 
-             variant="outline" 
-             onClick={handleTestConnection} 
-             disabled={testing || !config}
-           >
-             {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
-             Testar Conexão
-           </Button>
-           <Button onClick={handleSaveConfig} disabled={saving}>
-             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-             Salvar Configurações
-           </Button>
-         </div>
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex flex-col gap-2">
+              <Label>Testar Ativação de Bot (iniciarBot)</Label>
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="55739..." 
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  className="max-w-[200px]"
+                />
+                <Button 
+                  variant="secondary" 
+                  onClick={handleTestBotActivation}
+                  disabled={activatingBot || !config}
+                >
+                  {activatingBot ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bot className="h-4 w-4 mr-2" />}
+                  Testar Iniciar Bot
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <Button 
+                variant="outline" 
+                onClick={handleTestConnection} 
+                disabled={testing || !config}
+              >
+                {testing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                Testar Conexão
+              </Button>
+              <Button onClick={handleSaveConfig} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Configurações
+              </Button>
+            </div>
+          </div>
       </CardContent>
     </Card>
   );
