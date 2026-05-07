@@ -16,6 +16,7 @@ import {
     ExternalLink,
     Bot,
     StopCircle,
+    Info,
   } from "lucide-react";
 interface ZapResponderConfig {
   id: string;
@@ -34,6 +35,7 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
    const [testPhone, setTestPhone] = useState("");
    const [activatingBot, setActivatingBot] = useState(false);
    const [stoppingBot, setStoppingBot] = useState(false);
+   const [apiResponse, setApiResponse] = useState<any>(null);
 
    const handleBotAction = async (action: 'startBot' | 'stopBot') => {
      if (!testPhone) {
@@ -47,6 +49,7 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
 
      if (action === 'startBot') setActivatingBot(true);
      else setStoppingBot(true);
+     setApiResponse(null);
 
      try {
        const { data, error } = await supabase.functions.invoke('zapresponder-bot-actions', {
@@ -57,8 +60,12 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
          }
        });
 
-       if (error) throw error;
+       if (error) {
+         setApiResponse(error);
+         throw error;
+       }
 
+       setApiResponse(data);
        toast({
          title: action === 'startBot' ? "Bot ativado!" : "Conversa encerrada!",
          description: "A API do ZapResponder respondeu com sucesso.",
@@ -299,6 +306,18 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
                  </Button>
                </div>
              </div>
+
+             {apiResponse && (
+               <div className="mt-4 p-3 bg-slate-900 rounded-md overflow-hidden">
+                 <div className="flex items-center gap-2 mb-2 text-slate-300">
+                   <Info className="h-4 w-4" />
+                   <span className="text-xs font-mono uppercase tracking-wider">Resposta da API:</span>
+                 </div>
+                 <pre className="text-[10px] font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap max-h-[200px]">
+                   {JSON.stringify(apiResponse, null, 2)}
+                 </pre>
+               </div>
+             )}
            </div>
 
             <div className="flex justify-between items-center pt-2">
