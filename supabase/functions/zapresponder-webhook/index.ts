@@ -163,9 +163,56 @@
                 buttonPayload = (msg.button?.text || msg.button?.payload || "").toString();
              }
  
-           console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
- 
-           if (!content) continue;
+            console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
+
+            if (!content) continue;
+
+            // ===== Registro da mensagem recebida para auditoria =====
+            let ticketId = ticketIdFromMeta;
+            try {
+              const { data: contact } = await supabase
+                .from('whatsapp_contacts')
+                .select('id')
+                .eq('phone', fromPhone)
+                .maybeSingle();
+
+              if (contact) {
+                let { data: ticket } = await supabase
+                  .from('whatsapp_tickets')
+                  .select('id, protocol')
+                  .eq('contact_id', contact.id)
+                  .eq('status', 'open')
+                  .maybeSingle();
+
+                if (!ticket) {
+                  const newProtocol = payload.protocol || `META-${Date.now().toString().slice(-6)}`;
+                  const { data: newTicket } = await supabase
+                    .from('whatsapp_tickets')
+                    .insert({
+                      contact_id: contact.id,
+                      clinic_id: SINDICATO_CLINIC_ID,
+                      status: 'open',
+                      protocol: newProtocol
+                    })
+                    .select()
+                    .single();
+                  ticket = newTicket;
+                }
+
+                if (ticket) {
+                  ticketId = ticket.id;
+                  await supabase.from('whatsapp_ticket_messages').insert({
+                    ticket_id: ticket.id,
+                    sender_type: 'user',
+                    message_type: 'text',
+                    content: content,
+                    metadata: { from: fromPhone, msg_id: msg.id, type: msg.type }
+                  });
+                }
+              }
+            } catch (regErr) {
+              console.error("[zapresponder] Erro ao registrar mensagem recebida:", regErr);
+            }
 
             // ===== Tratamento de botões do template lembrete_consulta_v2 (Confirmar / Cancelar) =====
             const normalized = (buttonPayload || content).toString().trim().toLowerCase();
