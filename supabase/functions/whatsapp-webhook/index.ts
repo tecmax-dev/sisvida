@@ -8159,6 +8159,33 @@ async function handleWebhook(req: Request) {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing for clinic ${clinicId}`);
 
+        // Auditoria Sindicato (Mensagem Recebida)
+        if (clinicId === SINDICATO_ID) {
+          try {
+            let { data: contact } = await supabase.from('whatsapp_contacts').select('id').eq('phone', phone).maybeSingle();
+            if (!contact && (payload.is_test || payload.test)) {
+              const { data: newC } = await supabase.from('whatsapp_contacts').insert({ phone, name: payload.data?.pushName || 'Tester', clinic_id: SINDICATO_ID }).select('id').single();
+              contact = newC;
+            }
+            if (contact) {
+              let { data: ticket } = await supabase.from('whatsapp_tickets').select('id').eq('contact_id', contact.id).eq('status', 'open').maybeSingle();
+              if (!ticket) {
+                const { data: newT } = await supabase.from('whatsapp_tickets').insert({ contact_id: contact.id, clinic_id: SINDICATO_ID, status: 'open', protocol: `TEST-${Date.now().toString().slice(-4)}` }).select('id').single();
+                ticket = newT;
+              }
+              if (ticket) {
+                await supabase.from('whatsapp_ticket_messages').insert({
+                  ticket_id: ticket.id,
+                  sender_type: 'user',
+                  message_type: 'text',
+                  content: messageText,
+                  metadata: { via: 'whatsapp-webhook-inbound', is_test: payload.is_test || payload.test }
+                });
+              }
+            }
+          } catch (e) { console.error('[webhook] Audit error:', e); }
+        }
+
         // Reativando processamento automático do bot
         const botSkipped = false;
 
