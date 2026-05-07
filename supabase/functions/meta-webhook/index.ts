@@ -44,32 +44,25 @@ serve(async (req) => {
     console.log("[meta-webhook] Body recebido:", JSON.stringify(body));
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Se não tiver entry (formato Meta), tenta normalizar formatos simples (ZapResponder) ou Evolution API
+    // Normalização agressiva para qualquer formato do ZapResponder (inclusive on-message)
     if (!Array.isArray(body.entry)) {
-      const data = body.data ?? {};
-      const key = data.key ?? {};
-      const message = data.message ?? {};
-      
-      // Tenta pegar o telefone de várias formas
-      const phoneValue = body.phone || body.wa_id || key.remoteJid || "";
+      const rawMsg = body.raw_message ?? {};
+      const phoneValue = body.phone || body.wa_id || body.chatId || rawMsg.from || (body.data?.key?.remoteJid) || "";
       const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
       
-      // Melhoria na extração de texto para formatos simples/proxies
       const textBody = (
         body.mensagem || 
         body.message?.mensagem ||
         body.message?.text ||
-        body.message?.conversation ||
-        body.message?.selectedButtonId || // Suporte a IDs de botões no formato simples
-        (body.message as any)?.button_reply?.id ||
-        (body.message as any)?.interactive?.button_reply?.id ||
+        body.message?.content ||
+        rawMsg.content ||
         body.text || 
-        body.raw_message?.content ||
         body.raw_message?.body ||
-        message.conversation || 
-        message.extendedTextMessage?.text || 
+        body.data?.message?.conversation ||
         ""
       ).toString().trim();
+
+      const pushName = body.pushName || rawMsg.pushName || body.data?.pushName || body.nome || "Cliente";
 
       if (fromPhone) {
         body = {
@@ -78,12 +71,12 @@ serve(async (req) => {
             changes: [{
               field: "messages",
               value: {
-                metadata: body.metadata ?? {},
-                contacts: [{ profile: { name: data.pushName || body.nome || body.name || "Cliente" } }],
+                metadata: body.metadata || { display_phone_number: rawMsg.device || "557332311784" },
+                contacts: [{ profile: { name: pushName } }],
                 messages: [{
                   from: fromPhone,
-                  id: key.id || body.id || `zap-${Date.now()}`,
-                  timestamp: String(data.messageTimestamp || body.timestamp || Math.floor(Date.now() / 1000)),
+                  id: rawMsg.id || body.id || `zap-${Date.now()}`,
+                  timestamp: String(rawMsg.timestamp || body.timestamp || Math.floor(Date.now() / 1000)),
                   type: "text",
                   text: { body: textBody }
                 }]
@@ -91,7 +84,7 @@ serve(async (req) => {
             }]
           }]
         };
-        console.log(`[meta-webhook] Payload simples normalizado. De ${fromPhone}: "${textBody}"`);
+        console.log(`[meta-webhook] Rota customizada detectada. Normalizando De ${fromPhone}: "${textBody}"`);
       }
     }
 
