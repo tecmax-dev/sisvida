@@ -44,18 +44,34 @@
        );
      }
  
-     const { data: config, error: configError } = await supabase
-       .from("zapresponder_configs")
-       .select("instance_id")
-       .eq("clinic_id", clinicId)
-       .maybeSingle();
- 
-     if (configError || !config) {
-       return new Response(
-         JSON.stringify({ success: false, error: "Zap Responder não configurado para esta clínica" }),
-         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-       );
-     }
+      // First try zapster_configs (used for sending messages)
+      let { data: config, error: configError } = await supabase
+        .from("zapster_configs")
+        .select("instance_id")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      // Fallback to zapresponder_configs (legacy/specific for bot)
+      if (!config) {
+        const { data: legacyConfig, error: legacyError } = await supabase
+          .from("zapresponder_configs")
+          .select("instance_id")
+          .eq("clinic_id", clinicId)
+          .maybeSingle();
+        
+        if (legacyConfig) {
+          config = legacyConfig;
+        }
+      }
+
+      if (!config) {
+        console.error(`[zapresponder-bot] No config found for clinic ${clinicId}`);
+        return new Response(
+          JSON.stringify({ success: false, error: "Zap Responder não configurado para esta clínica" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
  
      let cleanPhone = phone.replace(/\D/g, "");
      if (!cleanPhone.startsWith("55") && cleanPhone.length >= 10 && cleanPhone.length <= 11) {
