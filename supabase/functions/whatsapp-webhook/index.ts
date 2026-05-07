@@ -1,6 +1,6 @@
 // whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AsyncLocalStorage } from "node:async_hooks";
 
 const corsHeaders = {
@@ -720,7 +720,7 @@ async function sendWhatsAppMessage(
  * número oficial Meta. Não substitui sendWhatsAppMessage (Evolution) — é uma
  * via paralela isolada.
  */
-async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
+async function sendMetaText(phone: string, text: string, explicitPhoneId?: string, supabase?: SupabaseClient): Promise<boolean> {
   try {
     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
     // ID real do número 73 3231 1784 (1110151302179856)
@@ -745,11 +745,29 @@ async function sendMetaText(phone: string, text: string, explicitPhoneId?: strin
         }),
       }
     );
-    if (!r.ok) {
-      console.error('[meta-text] Meta error:', await r.text());
-      return false;
+    if (r.ok) {
+      // Registro para auditoria (Sindicato)
+      if (supabase) {
+        try {
+          const { data: contact } = await supabase.from('whatsapp_contacts').select('id').eq('phone', to).maybeSingle();
+          if (contact) {
+            const { data: ticket } = await supabase.from('whatsapp_tickets').select('id').eq('contact_id', contact.id).eq('status', 'open').maybeSingle();
+            if (ticket) {
+              await supabase.from('whatsapp_ticket_messages').insert({
+                ticket_id: ticket.id,
+                sender_type: 'operator',
+                message_type: 'text',
+                content: text,
+                metadata: { via: 'whatsapp-webhook' }
+              });
+            }
+          }
+        } catch (err) { console.error('[meta-text] Log error:', err); }
+      }
+      return true;
     }
-    return true;
+    console.error('[meta-text] Meta error:', await r.text());
+    return false;
   } catch (e) {
     console.error('[meta-text] Exception:', e);
     return false;
