@@ -365,6 +365,19 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     return displayText;
   }
 
+  // Check for button/list selection (Meta direct or standard interactive)
+  const interactive = data.message?.interactive;
+  if (interactive) {
+    const buttonId = interactive.button_reply?.id || interactive.list_reply?.id;
+    if (buttonId) return String(buttonId);
+    const buttonTitle = interactive.button_reply?.title || interactive.list_reply?.title;
+    if (buttonTitle) return String(buttonTitle);
+  }
+
+  // Check for direct button field (Meta format)
+  if (data.message?.button?.payload) return String(data.message.button.payload);
+  if (data.message?.button?.text) return String(data.message.button.text);
+
   // Standard text message
   const text = data.message?.conversation || 
                data.message?.extendedTextMessage?.text ||
