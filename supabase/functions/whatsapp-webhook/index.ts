@@ -1951,7 +1951,8 @@ async function handleAIBookingFlow(
   supabase: SupabaseClient,
   config: EvolutionConfig,
   phone: string,
-  messageText: string
+  messageText: string,
+  explicitPhoneId?: string | null
 ): Promise<void> {
   const clinicId = config.clinic_id;
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
@@ -9047,7 +9048,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
         if (clinicSettings?.use_ai_booking) {
           // Use AI-powered booking flow
           console.log(`[webhook] Using AI booking for clinic ${clinicId}`);
-          await handleAIBookingFlow(supabase, configData, phone, messageText);
+          await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
         } else {
           // Use traditional menu-based flow
           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
