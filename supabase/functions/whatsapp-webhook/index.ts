@@ -8218,37 +8218,84 @@ async function handleWebhook(req: Request) {
         // ===== WHAZING / META CONTEXT RETRIEVAL =====
         const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
         
-        // Level IDs for mapping
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-        const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
+        // Robust mapping for Whazing buttons (handles both IDs and display labels)
+        const whazingLevel1Map: Record<string, string> = {
+          'whazing_associado': 'whazing_associado',
+          'whazing_empresa': 'whazing_empresa',
+          'whazing_contabilidade': 'whazing_contabilidade',
+          'sou associado': 'whazing_associado',
+          'sou empresa': 'whazing_empresa',
+          'sou contabilidade': 'whazing_contabilidade',
+          'associado': 'whazing_associado',
+          'empresa': 'whazing_empresa',
+          'contabilidade': 'whazing_contabilidade',
+        };
 
-        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
-        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
-        let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
-        const isWhazingLegacy = messageTextTrim === 'whazing_outros';
+        const whazingLevel2Map: Record<string, string> = {
+          'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
+          'whazing_sub_convencoes': 'whazing_sub_convencoes',
+          'whazing_sub_outros': 'whazing_sub_outros',
+          'whazing_sub_boleto': 'whazing_sub_boleto',
+          'atualizar carteirinha': 'whazing_sub_carteirinha',
+          'carteirinha': 'whazing_sub_carteirinha',
+          'convenções coletivas': 'whazing_sub_convencoes',
+          'convencoes coletivas': 'whazing_sub_convencoes',
+          'outros assuntos': 'whazing_sub_outros',
+          'outros': 'whazing_sub_outros',
+          '2ª via boleto': 'whazing_sub_boleto',
+          'segunda via boleto': 'whazing_sub_boleto',
+          'boleto': 'whazing_sub_boleto',
+        };
+
+        const whazingFollowUpMap: Record<string, string> = {
+          'whazing_voltar_menu': 'whazing_voltar_menu',
+          'whazing_falar_atendente': 'whazing_falar_atendente',
+          'whazing_voltar_sub': 'whazing_voltar_sub',
+          'whazing_outros_juridico': 'whazing_outros_juridico',
+          'whazing_outros_homologacao': 'whazing_outros_homologacao',
+          'whazing_outros_atendente': 'whazing_outros_atendente',
+          'voltar ao menu': 'whazing_voltar_menu',
+          'falar com atendente': 'whazing_falar_atendente',
+          'voltar': 'whazing_voltar_sub',
+          'jurídico': 'whazing_outros_juridico',
+          'homologações': 'whazing_outros_homologacao',
+          'atendente': 'whazing_outros_atendente',
+        };
+
+        const normalizedMsgText = messageTextTrim?.toLowerCase() || '';
+        
+        let mappedWhazingId = 
+          whazingLevel1Map[normalizedMsgText] || 
+          whazingLevel2Map[normalizedMsgText] || 
+          whazingFollowUpMap[normalizedMsgText];
+
+        let isWhazingLevel1 = !!whazingLevel1Map[normalizedMsgText];
+        let isWhazingLevel2 = !!whazingLevel2Map[normalizedMsgText];
+        let isWhazingFollowUp = !!whazingFollowUpMap[normalizedMsgText];
+        const isWhazingLegacy = normalizedMsgText === 'whazing_outros';
+
+        // Actual ID to use (prefer the mapped ID if found). 
+        // If it's numeric, we keep it as is for disambiguation logic below.
+        let activeBtnId = mappedWhazingId || messageTextTrim;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
           if (!lastMenuType || lastMenuType === 'main') {
             isWhazingLevel1 = true;
+            activeBtnId = messageTextTrim === '1' ? 'whazing_associado' : (messageTextTrim === '2' ? 'whazing_empresa' : 'whazing_contabilidade');
           } else if (lastMenuType === 'sub') {
             isWhazingLevel2 = true;
+            // activeBtnId remains '1', '2', '3' for the sub-menu logic below
           } else if (lastMenuType === 'followup') {
             isWhazingFollowUp = true;
+            activeBtnId = messageTextTrim === '1' ? 'whazing_falar_atendente' : (messageTextTrim === '2' ? 'whazing_voltar_sub' : 'whazing_voltar_menu');
           }
         }
 
         // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
         if (isWhazingFollowUp) {
-          let followUpId = messageTextTrim;
-          
-          // Numeric choice mapping for follow-up
-          if (followUpId === '1') followUpId = 'whazing_falar_atendente';
-          else if (followUpId === '2') followUpId = 'whazing_voltar_sub';
-          else if (followUpId === '3') followUpId = 'whazing_voltar_menu';
-
-          console.log(`[webhook] Whazing follow-up action: "${followUpId}"`);
+          const followUpId = activeBtnId;
+          console.log(`[webhook] Whazing follow-up action: "${followUpId}" (original: "${messageTextTrim}")`);
 
           // Mirror/reopen local ticket immediately so dashboard reflects the active chat
           try {
@@ -8394,12 +8441,9 @@ async function handleWebhook(req: Request) {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
             whazing_contabilidade: 'contabilidade',
-            '1': 'associado',
-            '2': 'empresa',
-            '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim] || 'associado';
-          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
+          const category = categoryMap[activeBtnId] || 'associado';
+          console.log(`[webhook] Whazing L1 choice: "${activeBtnId}" → ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
           await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
@@ -8419,18 +8463,18 @@ async function handleWebhook(req: Request) {
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
         if (isWhazingLevel2 || isWhazingLegacy) {
           const currentCategory = storedCategory || 'associado';
-          console.log(`[webhook] Whazing L2 button: "${messageTextTrim}" (category: ${currentCategory})`);
+          console.log(`[webhook] Whazing L2 button: "${activeBtnId}" (category: ${currentCategory}, original: "${messageTextTrim}")`);
           
-           let btnId = messageText.trim();
+          let btnId = activeBtnId;
  
-           // Map numeric choices (1, 2, 3) to button IDs based on category
-           if (btnId === '1') {
-             btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-           } else if (btnId === '2') {
-             btnId = 'whazing_sub_convencoes';
-           } else if (btnId === '3') {
-             btnId = 'whazing_sub_outros';
-           }
+          // Map numeric choices (1, 2, 3) to button IDs based on category
+          if (btnId === '1') {
+            btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+          } else if (btnId === '2') {
+            btnId = 'whazing_sub_convencoes';
+          } else if (btnId === '3') {
+            btnId = 'whazing_sub_outros';
+          }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
