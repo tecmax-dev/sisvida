@@ -16,48 +16,6 @@ import {
    ExternalLink,
    Bot,
  } from "lucide-react";
-    const [testPhone, setTestPhone] = useState("");
-    const [activatingBot, setActivatingBot] = useState(false);
-
-    const handleTestBotActivation = async () => {
-      if (!testPhone) {
-        toast({
-          title: "Atenção",
-          description: "Informe um número de telefone para testar a ativação do bot.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setActivatingBot(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('zapresponder-bot-actions', {
-          body: { 
-            phone: testPhone,
-            clinicId: clinicId,
-            action: 'startBot'
-          }
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "Bot ativado!",
-          description: "A API do ZapResponder respondeu com sucesso.",
-        });
-      } catch (error: any) {
-        console.error("Erro ao ativar bot:", error);
-        toast({
-          title: "Falha na ativação",
-          description: "Ocorreu um erro ao chamar a API de ativação do bot.",
-          variant: "destructive",
-        });
-      } finally {
-        setActivatingBot(false);
-      }
-    };
-
-
 interface ZapResponderConfig {
   id: string;
   name: string;
@@ -72,6 +30,47 @@ interface ZapResponderConfigPanelProps {
 
 export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelProps) {
   const { toast } = useToast();
+   const [testPhone, setTestPhone] = useState("");
+   const [activatingBot, setActivatingBot] = useState(false);
+
+   const handleTestBotActivation = async () => {
+     if (!testPhone) {
+       toast({
+         title: "Atenção",
+         description: "Informe um número de telefone para testar a ativação do bot.",
+         variant: "destructive",
+       });
+       return;
+     }
+
+     setActivatingBot(true);
+     try {
+       const { data, error } = await supabase.functions.invoke('zapresponder-bot-actions', {
+         body: { 
+           phone: testPhone,
+           clinicId: clinicId,
+           action: 'startBot'
+         }
+       });
+
+       if (error) throw error;
+
+       toast({
+         title: "Bot ativado!",
+         description: "A API do ZapResponder respondeu com sucesso.",
+       });
+     } catch (error: any) {
+       console.error("Erro ao ativar bot:", error);
+       toast({
+         title: "Falha na ativação",
+         description: "Ocorreu um erro ao chamar a API de ativação do bot.",
+         variant: "destructive",
+       });
+     } finally {
+       setActivatingBot(false);
+     }
+   };
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<ZapResponderConfig | null>(null);
