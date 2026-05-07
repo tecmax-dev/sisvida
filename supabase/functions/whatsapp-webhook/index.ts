@@ -8002,15 +8002,16 @@ async function handleWebhook(req: Request) {
      const explicitPhoneId = payload.metadata?.phone_number_id || null;
 
       // Special routing for Meta Official (Sindicato)
-      // Explicitly check for 'meta' or 'meta_official' in the instance field
-      if (!explicitClinicId && (payload.instance === 'meta' || payload.instance === 'meta_official')) {
+      // Explicitly check for 'meta', 'meta_official', 'secmi' or if the target phone belongs to Sindicato
+      const isSindicatoTarget = payload.metadata?.display_phone_number === "557332311784" || 
+                                payload.metadata?.phone_number_id === "1110151302179856" ||
+                                payload.instance === 'meta' || 
+                                payload.instance === 'meta_official' ||
+                                payload.instance === 'secmi';
+
+      if (!explicitClinicId && isSindicatoTarget) {
         explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-        console.log(`[webhook] Mapping Meta instance to Sindicato clinic: ${explicitClinicId}`);
-      } else if (!explicitClinicId && payload.instance === 'secmi') {
-        // The user mentioned the sindicato bot isn't working on /sindicato.
-        // The instance "secmi" is associated with the Sindicato clinic in evolution_configs.
-        explicitClinicId = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-        console.log(`[webhook] Mapping Evolution instance "secmi" to Sindicato clinic: ${explicitClinicId}`);
+        console.log(`[webhook] Mapping to Sindicato clinic (isSindicatoTarget=true): ${explicitClinicId}`);
       }
 
       if (activeSession?.clinic_id) {
