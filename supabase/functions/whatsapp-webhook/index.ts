@@ -8593,14 +8593,18 @@ async function handleWebhook(req: Request) {
           if ((isFreshConversation && isNotSpecificAction) || shouldShowMenu) {
             console.log(`[webhook] Fresh conversation detected - sending Whazing interactive buttons to ${phone}`);
      console.log(`[webhook] Fresh conversation or greeting - sending Whazing menu to ${phone}`);
-     const buttonsSent = await sendWhatsAppButtons(configData, phone, 
-       "Olá! 👋 Bem-vindo(a) ao atendimento.",
-       "Como podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
+     const buttonsSent = await sendWhatsAppButtons(
+       configData, 
+       phone, 
+       "Sindicato dos Comerciários Ilhéus",
+       "Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?\n\nDigite o número da opção desejada:",
        [
          { id: "whazing_associado", title: "Sou Associado" },
          { id: "whazing_empresa", title: "Sou Empresa" },
          { id: "whazing_contabilidade", title: "Sou Contabilidade" },
-       ]
+       ],
+       "Selecione uma opção",
+       explicitPhoneId
      );
             
             if (buttonsSent) {
