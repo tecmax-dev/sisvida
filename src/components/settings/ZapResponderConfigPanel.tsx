@@ -13,9 +13,10 @@ import {
    Save,
    Check,
    X,
-   ExternalLink,
-   Bot,
- } from "lucide-react";
+    ExternalLink,
+    Bot,
+    StopCircle,
+  } from "lucide-react";
 interface ZapResponderConfig {
   id: string;
   name: string;
@@ -32,42 +33,46 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
   const { toast } = useToast();
    const [testPhone, setTestPhone] = useState("");
    const [activatingBot, setActivatingBot] = useState(false);
+   const [stoppingBot, setStoppingBot] = useState(false);
 
-   const handleTestBotActivation = async () => {
+   const handleBotAction = async (action: 'startBot' | 'stopBot') => {
      if (!testPhone) {
        toast({
          title: "Atenção",
-         description: "Informe um número de telefone para testar a ativação do bot.",
+         description: "Informe um número de telefone para testar a ação do bot.",
          variant: "destructive",
        });
        return;
      }
 
-     setActivatingBot(true);
+     if (action === 'startBot') setActivatingBot(true);
+     else setStoppingBot(true);
+
      try {
        const { data, error } = await supabase.functions.invoke('zapresponder-bot-actions', {
          body: { 
            phone: testPhone,
            clinicId: clinicId,
-           action: 'startBot'
+           action: action
          }
        });
 
        if (error) throw error;
 
        toast({
-         title: "Bot ativado!",
+         title: action === 'startBot' ? "Bot ativado!" : "Conversa encerrada!",
          description: "A API do ZapResponder respondeu com sucesso.",
        });
      } catch (error: any) {
-       console.error("Erro ao ativar bot:", error);
+       console.error(`Erro ao ${action === 'startBot' ? 'ativar' : 'parar'} bot:`, error);
        toast({
-         title: "Falha na ativação",
-         description: "Ocorreu um erro ao chamar a API de ativação do bot.",
+         title: "Falha na operação",
+         description: `Ocorreu um erro ao chamar a API: ${error.message || 'Erro desconhecido'}`,
          variant: "destructive",
        });
      } finally {
        setActivatingBot(false);
+       setStoppingBot(false);
      }
    };
 
@@ -262,25 +267,39 @@ export function ZapResponderConfigPanel({ clinicId }: ZapResponderConfigPanelPro
         </div>
 
           <div className="space-y-4 pt-4 border-t">
-            <div className="flex flex-col gap-2">
-              <Label>Testar Ativação de Bot (iniciarBot)</Label>
-              <div className="flex gap-2">
-                <Input 
-                  placeholder="55739..." 
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  className="max-w-[200px]"
-                />
-                <Button 
-                  variant="secondary" 
-                  onClick={handleTestBotActivation}
-                  disabled={activatingBot || !config}
-                >
-                  {activatingBot ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bot className="h-4 w-4 mr-2" />}
-                  Testar Iniciar Bot
-                </Button>
-              </div>
-            </div>
+           <div className="flex flex-col gap-2 bg-slate-50 p-4 border rounded-lg">
+             <Label className="font-semibold">Painel de Testes da API</Label>
+             <p className="text-sm text-muted-foreground mb-2">Use para validar o funcionamento do Bot ou encerrar conversas manualmente.</p>
+             <div className="flex flex-wrap gap-3">
+               <div className="flex-1 min-w-[200px]">
+                 <Input 
+                   placeholder="Número (Ex: 55739...)" 
+                   value={testPhone}
+                   onChange={(e) => setTestPhone(e.target.value)}
+                 />
+               </div>
+               <div className="flex gap-2">
+                 <Button 
+                   variant="secondary" 
+                   onClick={() => handleBotAction('startBot')}
+                   disabled={activatingBot || stoppingBot || !config}
+                   className="flex-1"
+                 >
+                   {activatingBot ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bot className="h-4 w-4 mr-2" />}
+                   Ativar Bot
+                 </Button>
+                 <Button 
+                   variant="outline" 
+                   onClick={() => handleBotAction('stopBot')}
+                   disabled={activatingBot || stoppingBot || !config}
+                   className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                 >
+                   {stoppingBot ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <StopCircle className="h-4 w-4 mr-2" />}
+                   Encerrar Conversa
+                 </Button>
+               </div>
+             </div>
+           </div>
 
             <div className="flex justify-between items-center pt-2">
               <Button 
