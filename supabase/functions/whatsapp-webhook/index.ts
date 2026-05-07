@@ -8274,30 +8274,28 @@ async function handleWebhook(req: Request) {
         let isWhazingFollowUp = !!whazingFollowUpMap[normalizedMsgText];
         const isWhazingLegacy = normalizedMsgText === 'whazing_outros';
 
-        // Actual ID to use (prefer the mapped ID if found)
-        const activeBtnId = mappedWhazingId || messageTextTrim;
+        // Actual ID to use (prefer the mapped ID if found). 
+        // If it's numeric, we keep it as is for disambiguation logic below.
+        let activeBtnId = mappedWhazingId || messageTextTrim;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
           if (!lastMenuType || lastMenuType === 'main') {
             isWhazingLevel1 = true;
+            activeBtnId = messageTextTrim === '1' ? 'whazing_associado' : (messageTextTrim === '2' ? 'whazing_empresa' : 'whazing_contabilidade');
           } else if (lastMenuType === 'sub') {
             isWhazingLevel2 = true;
+            // activeBtnId remains '1', '2', '3' for the sub-menu logic below
           } else if (lastMenuType === 'followup') {
             isWhazingFollowUp = true;
+            activeBtnId = messageTextTrim === '1' ? 'whazing_falar_atendente' : (messageTextTrim === '2' ? 'whazing_voltar_sub' : 'whazing_voltar_menu');
           }
         }
 
         // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
         if (isWhazingFollowUp) {
-          let followUpId = messageTextTrim;
-          
-          // Numeric choice mapping for follow-up
-          if (followUpId === '1') followUpId = 'whazing_falar_atendente';
-          else if (followUpId === '2') followUpId = 'whazing_voltar_sub';
-          else if (followUpId === '3') followUpId = 'whazing_voltar_menu';
-
-          console.log(`[webhook] Whazing follow-up action: "${followUpId}"`);
+          const followUpId = activeBtnId;
+          console.log(`[webhook] Whazing follow-up action: "${followUpId}" (original: "${messageTextTrim}")`);
 
           // Mirror/reopen local ticket immediately so dashboard reflects the active chat
           try {
@@ -8443,12 +8441,9 @@ async function handleWebhook(req: Request) {
             whazing_associado: 'associado',
             whazing_empresa: 'empresa',
             whazing_contabilidade: 'contabilidade',
-            '1': 'associado',
-            '2': 'empresa',
-            '3': 'contabilidade',
           };
-          const category = categoryMap[messageTextTrim] || 'associado';
-          console.log(`[webhook] Whazing L1 choice: "${messageTextTrim}" → ${category}`);
+          const category = categoryMap[activeBtnId] || 'associado';
+          console.log(`[webhook] Whazing L1 choice: "${activeBtnId}" → ${category}`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
           await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
