@@ -9028,7 +9028,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone,
-                message: aiMessage,
+               message: messageText,
                 evolution_config: {
                   api_url: configData.api_url,
                   api_key: configData.api_key,
@@ -9037,11 +9037,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
                 booking_enabled: false,
                  deliver_response_via_caller: isSync,
                  explicit_phone_id: explicitPhoneId,
-                 // Only suppress LIA's internal text menu when the user selected an
-                // external menu option (ex: "1-2"). If Whazing buttons fail (403),
-                // greetings like "oi" must still receive the normal text menu.
-                suppress_internal_menu: externalMenuMode,
-                external_menu_mode: externalMenuMode,
+                 suppress_internal_menu: false,
+                 external_menu_mode: false,
               }),
             });
 
