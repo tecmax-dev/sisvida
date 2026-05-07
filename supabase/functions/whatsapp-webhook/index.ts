@@ -8218,15 +8218,64 @@ async function handleWebhook(req: Request) {
         // ===== WHAZING / META CONTEXT RETRIEVAL =====
         const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
         
-        // Level IDs for mapping
-        const whazingLevel1Ids = ['whazing_associado', 'whazing_empresa', 'whazing_contabilidade'];
-        const whazingLevel2Ids = ['whazing_sub_carteirinha', 'whazing_sub_convencoes', 'whazing_sub_outros', 'whazing_sub_boleto'];
-        const whazingFollowUpIds = ['whazing_voltar_menu', 'whazing_falar_atendente', 'whazing_voltar_sub', 'whazing_outros_juridico', 'whazing_outros_homologacao', 'whazing_outros_atendente'];
+        // Robust mapping for Whazing buttons (handles both IDs and display labels)
+        const whazingLevel1Map: Record<string, string> = {
+          'whazing_associado': 'whazing_associado',
+          'whazing_empresa': 'whazing_empresa',
+          'whazing_contabilidade': 'whazing_contabilidade',
+          'sou associado': 'whazing_associado',
+          'sou empresa': 'whazing_empresa',
+          'sou contabilidade': 'whazing_contabilidade',
+          'associado': 'whazing_associado',
+          'empresa': 'whazing_empresa',
+          'contabilidade': 'whazing_contabilidade',
+        };
 
-        let isWhazingLevel1 = whazingLevel1Ids.includes(messageTextTrim);
-        let isWhazingLevel2 = whazingLevel2Ids.includes(messageTextTrim);
-        let isWhazingFollowUp = whazingFollowUpIds.includes(messageTextTrim);
-        const isWhazingLegacy = messageTextTrim === 'whazing_outros';
+        const whazingLevel2Map: Record<string, string> = {
+          'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
+          'whazing_sub_convencoes': 'whazing_sub_convencoes',
+          'whazing_sub_outros': 'whazing_sub_outros',
+          'whazing_sub_boleto': 'whazing_sub_boleto',
+          'atualizar carteirinha': 'whazing_sub_carteirinha',
+          'carteirinha': 'whazing_sub_carteirinha',
+          'convenções coletivas': 'whazing_sub_convencoes',
+          'convencoes coletivas': 'whazing_sub_convencoes',
+          'outros assuntos': 'whazing_sub_outros',
+          'outros': 'whazing_sub_outros',
+          '2ª via boleto': 'whazing_sub_boleto',
+          'segunda via boleto': 'whazing_sub_boleto',
+          'boleto': 'whazing_sub_boleto',
+        };
+
+        const whazingFollowUpMap: Record<string, string> = {
+          'whazing_voltar_menu': 'whazing_voltar_menu',
+          'whazing_falar_atendente': 'whazing_falar_atendente',
+          'whazing_voltar_sub': 'whazing_voltar_sub',
+          'whazing_outros_juridico': 'whazing_outros_juridico',
+          'whazing_outros_homologacao': 'whazing_outros_homologacao',
+          'whazing_outros_atendente': 'whazing_outros_atendente',
+          'voltar ao menu': 'whazing_voltar_menu',
+          'falar com atendente': 'whazing_falar_atendente',
+          'voltar': 'whazing_voltar_sub',
+          'jurídico': 'whazing_outros_juridico',
+          'homologações': 'whazing_outros_homologacao',
+          'atendente': 'whazing_outros_atendente',
+        };
+
+        const normalizedMsgText = messageTextTrim?.toLowerCase() || '';
+        
+        let mappedWhazingId = 
+          whazingLevel1Map[normalizedMsgText] || 
+          whazingLevel2Map[normalizedMsgText] || 
+          whazingFollowUpMap[normalizedMsgText];
+
+        let isWhazingLevel1 = !!whazingLevel1Map[normalizedMsgText];
+        let isWhazingLevel2 = !!whazingLevel2Map[normalizedMsgText];
+        let isWhazingFollowUp = !!whazingFollowUpMap[normalizedMsgText];
+        const isWhazingLegacy = normalizedMsgText === 'whazing_outros';
+
+        // Actual ID to use (prefer the mapped ID if found)
+        const activeBtnId = mappedWhazingId || messageTextTrim;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
