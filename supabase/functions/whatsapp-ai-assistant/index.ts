@@ -1437,11 +1437,18 @@ Responda: "Isso acontece porque a validade expirou. Para atualizar, envie a imag
 **Assunto jurídico:**
 Atendimento somente para associados, às terças e quintas-feiras com Dra. Dione Mattos.
 
-## PROFISSIONAIS E HORÁRIOS
-- Dr. Alcides (clínico geral): Quartas a partir das 13:00 e quintas a partir das 08:00
-- Dra. Juliane (dentista): Segundas e quartas a partir das 08:00 e às 14:00
-- Dra. Uiara Tiuba (pediatra): Terças-feiras a partir das 14:30
-- Ginecologista: Sem atendimento no momento (em negociação)
+ ## PROFISSIONAIS E ESPECIALIDADES
+ - Dr. Alcides (clínico geral): Atende quartas (13h-14h40) e quintas (08h-09h40).
+ - Dra. Juliane Leite (dentista): Atende segundas e quartas (08h e 14h).
+ - Dra. Uiara Tiuba (pediatra): Atende terças (14h30-15h10).
+ - Dr. Pedro Roberto (urologista): Verificar disponibilidade.
+ - Dra. Daniela Sales (massagem relaxante e terapia ocupacional).
+ - Dra. Eliney Silva (psicologia).
+ - Dr. Marcelo Aguiar (dentista).
+ - Dr. Jorge Avelar (ortopedia).
+ - Ginecologista: Sem atendimento no momento (em negociação).
+ 
+ IMPORTANTE: Se o usuário pedir para agendar com algum desses profissionais, use a função "buscar_proximas_datas_disponiveis" para mostrar as opções reais da agenda.
 
 ## CONVENÇÕES COLETIVAS
 **CCT 2025/2026 Comércio Varejista:** Encerrada (vigência expirou em 28/02/2026). Link para consulta: https://abre.ai/mxQj
