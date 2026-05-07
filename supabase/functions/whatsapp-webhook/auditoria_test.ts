@@ -40,11 +40,15 @@ Deno.test("Auditoria: whatsapp-webhook deve registrar mensagem no banco", async 
   await new Promise(r => setTimeout(r, 2000));
 
   // Verifica se o log foi criado na tabela de auditoria (whatsapp_ticket_messages)
-  const { data: contact } = await supabase.from('whatsapp_contacts').select('id').eq('phone', TEST_PHONE).maybeSingle();
-  assert(contact, "Contato de teste deveria ter sido criado/encontrado");
+  const { data: contact } = await supabase.from('whatsapp_contacts').select('id, phone').eq('phone', TEST_PHONE).maybeSingle();
+  if (!contact) {
+    const { data: all } = await supabase.from('whatsapp_contacts').select('phone').order('created_at', { ascending: false }).limit(10);
+    console.log("Últimos contatos:", all);
+    assert(contact, `Contato ${TEST_PHONE} não encontrado.`);
+  }
 
-  const { data: ticket } = await supabase.from('whatsapp_tickets').select('id').eq('contact_id', contact.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
-  assert(ticket, "Ticket de teste deveria ter sido criado");
+  const { data: ticket } = await supabase.from('whatsapp_tickets').select('id').eq('contact_id', contact?.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  assert(ticket, `Ticket para ${TEST_PHONE} não encontrado.`);
 
   const { data: messages } = await supabase
     .from('whatsapp_ticket_messages')
