@@ -333,6 +333,9 @@ interface Message {
    };
  
    const toggleBot = async (ticketId: string, currentStatus: boolean) => {
+     const ticket = tickets.find(t => t.id === ticketId);
+     if (!ticket) return;
+ 
      try {
        const { error } = await supabase
          .from('whatsapp_tickets')
@@ -340,13 +343,47 @@ interface Message {
          .eq('id', ticketId);
        
        if (error) throw error;
+ 
+       // Se estiver ativando o robô, chama a API do ZapResponder
+       if (!currentStatus) {
+         try {
+           const { data, error: botError } = await supabase.functions.invoke('zapresponder-bot-actions', {
+             body: {
+               phone: ticket.contact.phone,
+               clinicId: currentClinic?.id,
+               action: 'startBot'
+             }
+           });
+ 
+           if (botError) {
+             console.error("Error starting ZapResponder bot:", botError);
+             toast({
+               title: "Aviso",
+               description: "O status foi alterado localmente, mas houve um erro ao ativar o bot no ZapResponder.",
+               variant: "destructive"
+             });
+           }
+         } catch (apiErr) {
+           console.error("API Error starting bot:", apiErr);
+         }
+       }
        
        toast({
          title: !currentStatus ? "Robô ativado" : "Atendimento humano ativado",
          description: !currentStatus ? "A Lia assumiu o atendimento." : "O robô foi pausado para intervenção humana."
        });
+ 
+       // Atualiza a lista local
+       setTickets(prev => prev.map(t => 
+         t.id === ticketId ? { ...t, is_bot_active: !currentStatus } : t
+       ));
      } catch (err) {
        console.error("Error toggling bot:", err);
+       toast({
+         title: "Erro",
+         description: "Não foi possível alterar o status do robô.",
+         variant: "destructive"
+       });
      }
    };
  
