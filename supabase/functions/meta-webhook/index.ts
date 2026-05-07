@@ -107,15 +107,25 @@ serve(async (req) => {
           // Determinar tipo e conteúdo
           let messageType = msg.type ?? "text";
           let content = "";
-          if (msg.type === "text") content = msg.text?.body ?? "";
-          else if (msg.type === "button") content = msg.button?.text ?? "";
-          else if (msg.type === "interactive") {
-            content =
-              msg.interactive?.button_reply?.id ??
-              msg.interactive?.button_reply?.title ??
-              msg.interactive?.list_reply?.id ??
-              msg.interactive?.list_reply?.title ??
-              "";
+          
+          if (msg.type === "text") {
+            content = msg.text?.body ?? "";
+          } else if (msg.type === "button") {
+            content = msg.button?.payload || msg.button?.text || "";
+          } else if (msg.type === "interactive") {
+            const interactive = msg.interactive || {};
+            if (interactive.type === "button_reply") {
+              content = interactive.button_reply?.id || interactive.button_reply?.title || "";
+            } else if (interactive.type === "list_reply") {
+              content = interactive.list_reply?.id || interactive.list_reply?.title || "";
+            } else {
+              content = 
+                interactive.button_reply?.id || 
+                interactive.button_reply?.title || 
+                interactive.list_reply?.id || 
+                interactive.list_reply?.title || 
+                "";
+            }
           } else if (msg.type === "image") content = msg.image?.caption ?? "[imagem]";
           else if (msg.type === "audio") content = "[áudio]";
           else if (msg.type === "document") content = msg.document?.filename ?? "[documento]";
