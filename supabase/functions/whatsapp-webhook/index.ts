@@ -586,7 +586,7 @@ async function sendMetaButtons(phone: string, title: string, description: string
    try {
      // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
      // ID real do número 73 3231 1784 (1110151302179856)
-     const PHONE_ID = "1110151302179856";
+     const PHONE_ID = "380961811776953";
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
      if (!PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
