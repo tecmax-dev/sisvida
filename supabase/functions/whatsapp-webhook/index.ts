@@ -299,6 +299,8 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   if (!data) return null;
   const messageAny = data.message as any;
   
+  console.log('[extractMessageText] Parsing raw message structure:', JSON.stringify(data?.message));
+  
   // Check for interactive button response (plural - Evolution API native)
   if (data.message?.buttonsResponseMessage?.selectedButtonId) {
     console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
@@ -316,15 +318,6 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     return data.message.listResponseMessage.singleSelectReply.selectedRowId;
   }
   
-  // Check for interactive message response (newer Evolution API format)
-  if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-    try {
-      const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      const buttonId = params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload;
-      if (buttonId) return String(buttonId);
-    } catch { /* ignore parse errors */ }
-  }
-
   const alternateButtonId =
     messageAny?.buttonReplyMessage?.id ||
     messageAny?.buttonReplyMessage?.selectedId ||
@@ -367,11 +360,17 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
 
   // Check for button/list selection (Meta direct or standard interactive)
   const interactive = data.message?.interactive;
-  if (interactive) {
-    const buttonId = interactive.button_reply?.id || interactive.list_reply?.id;
+  if (!interactive && messageAny?.interactive) {
+    // Handle cases where 'interactive' might be nested or direct depending on the payload structure
+    console.log('[extractMessageText] Using alternate interactive source');
+  }
+  
+  const finalInteractive = interactive || messageAny?.interactive;
+
+  if (finalInteractive) {
+    console.log('[extractMessageText] Found interactive field:', JSON.stringify(finalInteractive));
+    const buttonId = finalInteractive.button_reply?.id || finalInteractive.list_reply?.id || finalInteractive.button_reply?.title || finalInteractive.list_reply?.title;
     if (buttonId) return String(buttonId);
-    const buttonTitle = interactive.button_reply?.title || interactive.list_reply?.title;
-    if (buttonTitle) return String(buttonTitle);
   }
 
   // Check for direct button field (Meta format)
