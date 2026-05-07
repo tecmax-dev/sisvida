@@ -163,9 +163,56 @@
                 buttonPayload = (msg.button?.text || msg.button?.payload || "").toString();
              }
  
-           console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
- 
-           if (!content) continue;
+            console.log(`[zapresponder] De ${fromPhone}: "${content}"`);
+
+            if (!content) continue;
+
+            // ===== Registro da mensagem recebida para auditoria =====
+            let ticketId = ticketIdFromMeta;
+            try {
+              const { data: contact } = await supabase
+                .from('whatsapp_contacts')
+                .select('id')
+                .eq('phone', fromPhone)
+                .maybeSingle();
+
+              if (contact) {
+                let { data: ticket } = await supabase
+                  .from('whatsapp_tickets')
+                  .select('id, protocol')
+                  .eq('contact_id', contact.id)
+                  .eq('status', 'open')
+                  .maybeSingle();
+
+                if (!ticket) {
+                  const newProtocol = payload.protocol || `META-${Date.now().toString().slice(-6)}`;
+                  const { data: newTicket } = await supabase
+                    .from('whatsapp_tickets')
+                    .insert({
+                      contact_id: contact.id,
+                      clinic_id: SINDICATO_CLINIC_ID,
+                      status: 'open',
+                      protocol: newProtocol
+                    })
+                    .select()
+                    .single();
+                  ticket = newTicket;
+                }
+
+                if (ticket) {
+                  ticketId = ticket.id;
+                  await supabase.from('whatsapp_ticket_messages').insert({
+                    ticket_id: ticket.id,
+                    sender_type: 'user',
+                    message_type: 'text',
+                    content: content,
+                    metadata: { from: fromPhone, msg_id: msg.id, type: msg.type }
+                  });
+                }
+              }
+            } catch (regErr) {
+              console.error("[zapresponder] Erro ao registrar mensagem recebida:", regErr);
+            }
 
             // ===== Tratamento de botões do template lembrete_consulta_v2 (Confirmar / Cancelar) =====
             const normalized = (buttonPayload || content).toString().trim().toLowerCase();
@@ -233,7 +280,7 @@
                     console.log(`[zapresponder] Enviando resposta textual para ${fromPhone}`);
                     const incomingId = metadata?.phone_number_id;
                     const workingId = (incomingId === "937233212814035" || incomingId === "1522701919380063" || !incomingId) 
-                      ? "380961811776953" 
+                      ? "1110151302179856" 
                       : incomingId;
 
                     const replyRes = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
@@ -242,7 +289,7 @@
                       body: JSON.stringify({ 
                         to: fromPhone, 
                         text: replyText, 
-                        ticket_id: ticketIdFromMeta,
+                        ticket_id: ticketId || ticketIdFromMeta,
                         phone_number_id: workingId
                       })
                     });
@@ -287,12 +334,12 @@
              // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
              if (isGreeting && !alreadySent) {
                console.log(`[zapresponder] Nova conversa - enviando boas-vindas`);
-               const protocolId = `META-${Date.now().toString().slice(-6)}`;
+                const protocolId = payload.protocol || `META-${Date.now().toString().slice(-6)}`;
                
                // Captura ID do telefone para garantir que responda pelo mesmo canal
                const incomingPhoneId = metadata?.phone_number_id;
                 const workingPhoneId = (incomingPhoneId === "937233212814035" || incomingPhoneId === "1522701919380063" || !incomingPhoneId) 
-                  ? "380961811776953" 
+                  ? "1110151302179856" 
                   : incomingPhoneId;
                
                const welcomeText = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nEm que posso ajudar hoje?`;
@@ -310,7 +357,7 @@
                    to: fromPhone,
                    phone_number_id: workingPhoneId,
                    text: welcomeText,
-                   ticket_id: ticketIdFromMeta
+                  ticket_id: ticketId || ticketIdFromMeta
                  })
                }).catch(err => console.error("[zapresponder] Erro envio saudação:", err));
 

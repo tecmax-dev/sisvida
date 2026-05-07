@@ -35,7 +35,7 @@ serve(async (req) => {
     
     console.log(`[meta-send-template] Request for template: ${template_name} to: ${to}`);
 
-    const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "380961811776953";
+    const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
     const TOKEN = token || Deno.env.get("META_WHATSAPP_TOKEN");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;

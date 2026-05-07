@@ -1,6 +1,6 @@
 // whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AsyncLocalStorage } from "node:async_hooks";
 
 const corsHeaders = {
@@ -584,9 +584,8 @@ async function sendZapsterButtons(clinicId: string, phone: string, bodyText: str
 
 async function sendMetaButtons(phone: string, title: string, description: string, buttons: ButtonOption[], footer?: string, explicitPhoneId?: string): Promise<boolean> {
    try {
-     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
-     // ID real do número 73 3231 1784 (1110151302179856)
-     const PHONE_ID = "380961811776953";
+      // ID real do número 73 3231 1784 (1110151302179856)
+      const PHONE_ID = "1110151302179856";
      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
      if (!PHONE_ID || !TOKEN) {
        console.error('[meta-buttons] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
@@ -643,8 +642,26 @@ async function sendMetaButtons(phone: string, title: string, description: string
         }
         return false;
       }
+      if (r.ok) {
+        try {
+          const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+          const { data: contact } = await sb.from('whatsapp_contacts').select('id').eq('phone', to).maybeSingle();
+          if (contact) {
+            const { data: ticket } = await sb.from('whatsapp_tickets').select('id').eq('contact_id', contact.id).eq('status', 'open').maybeSingle();
+            if (ticket) {
+              await sb.from('whatsapp_ticket_messages').insert({
+                ticket_id: ticket.id,
+                sender_type: 'operator',
+                message_type: 'text',
+                content: `Menu: ${cleanTitle}\n${cleanDescription}`,
+                metadata: { via: 'whatsapp-webhook-buttons', buttons: buttons.map(b => b.title || b.text) }
+              });
+            }
+          }
+        } catch (err) { console.error('[meta-buttons] Log error:', err); }
+      }
       return true;
-   } catch (e) {
+    } catch (e) {
      console.error('[meta-buttons] Exception:', e);
      return false;
    }
@@ -721,7 +738,7 @@ async function sendWhatsAppMessage(
  * número oficial Meta. Não substitui sendWhatsAppMessage (Evolution) — é uma
  * via paralela isolada.
  */
-async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
+async function sendMetaText(phone: string, text: string, explicitPhoneId?: string, supabaseClient?: SupabaseClient): Promise<boolean> {
   try {
     // ID real do número 73 3231 1784 (hardcoded para evitar uso do WABA ID errado da env)
     // ID real do número 73 3231 1784 (1110151302179856)
@@ -746,11 +763,28 @@ async function sendMetaText(phone: string, text: string, explicitPhoneId?: strin
         }),
       }
     );
-    if (!r.ok) {
-      console.error('[meta-text] Meta error:', await r.text());
-      return false;
+    if (r.ok) {
+      // Registro para auditoria (Sindicato)
+      try {
+        const sb = supabaseClient || createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+        const { data: contact } = await sb.from('whatsapp_contacts').select('id').eq('phone', to).maybeSingle();
+        if (contact) {
+          const { data: ticket } = await sb.from('whatsapp_tickets').select('id').eq('contact_id', contact.id).eq('status', 'open').maybeSingle();
+          if (ticket) {
+            await sb.from('whatsapp_ticket_messages').insert({
+              ticket_id: ticket.id,
+              sender_type: 'operator',
+              message_type: 'text',
+              content: text,
+              metadata: { via: 'whatsapp-webhook' }
+            });
+          }
+        }
+      } catch (err) { console.error('[meta-text] Log error:', err); }
+      return true;
     }
-    return true;
+    console.error('[meta-text] Meta error:', await r.text());
+    return false;
   } catch (e) {
     console.error('[meta-text] Exception:', e);
     return false;

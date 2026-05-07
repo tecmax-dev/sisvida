@@ -39,7 +39,7 @@ serve(async (req) => {
       TOKEN = Deno.env.get("META_SYSTEM_USER_TOKEN") || TOKEN;
     }
 
-    const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "380961811776953";
+    const PHONE_ID = phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
 
     if (!PHONE_ID || !TOKEN) {
       return new Response(
