@@ -17421,6 +17421,7 @@ export type Database = {
       zapresponder_configs: {
         Row: {
           api_token: string
+          clinic_id: string | null
           created_at: string
           id: string
           instance_id: string | null
@@ -17430,6 +17431,7 @@ export type Database = {
         }
         Insert: {
           api_token: string
+          clinic_id?: string | null
           created_at?: string
           id?: string
           instance_id?: string | null
@@ -17439,6 +17441,7 @@ export type Database = {
         }
         Update: {
           api_token?: string
+          clinic_id?: string | null
           created_at?: string
           id?: string
           instance_id?: string | null
@@ -17446,7 +17449,22 @@ export type Database = {
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "zapresponder_configs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapresponder_configs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "public_clinic_info"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       zapster_configs: {
         Row: {
