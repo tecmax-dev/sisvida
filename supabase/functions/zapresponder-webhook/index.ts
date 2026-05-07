@@ -41,50 +41,44 @@
       }), { status: 422, headers: { "Content-Type": "application/json" } });
     }
 
-    // Se não tiver entry (formato Meta), tenta normalizar formatos simples (ZapResponder) ou Evolution API
+    // Normalização agressiva para qualquer formato do ZapResponder (inclusive on-message)
     if (!Array.isArray(payload.entry)) {
-      const data = payload.data ?? {};
-      const key = data.key ?? {};
-      const message = data.message ?? {};
-      
-      // Tenta pegar o telefone de várias formas
-      const phoneValue = payload.phone || payload.wa_id || key.remoteJid || "";
+      const rawMsg = payload.raw_message ?? {};
+      const phoneValue = payload.phone || payload.wa_id || payload.chatId || rawMsg.from || (payload.data?.key?.remoteJid) || "";
       const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
       
-      // Melhoria na extração de texto para formatos simples/proxies
       const textBody = (
         payload.mensagem || 
         payload.message?.mensagem ||
         payload.message?.text ||
-        payload.message?.conversation ||
-        payload.message?.selectedButtonId ||
-        (payload.message as any)?.button_reply?.id ||
-        (payload.message as any)?.interactive?.button_reply?.id ||
-        payload.message || 
+        payload.message?.content ||
+        rawMsg.content ||
         payload.text || 
-        message.conversation || 
-        message.extendedTextMessage?.text || 
+        payload.raw_message?.body ||
+        payload.data?.message?.conversation ||
         ""
       ).toString().trim();
+
+      const pushName = payload.pushName || rawMsg.pushName || payload.data?.pushName || payload.nome || "Cliente";
 
       if (fromPhone) {
         payload.entry = [{
           changes: [{
             field: "messages",
             value: {
-              metadata: payload.metadata ?? {},
-              contacts: [{ profile: { name: data.pushName || payload.nome || payload.name || "Cliente" } }],
+              metadata: payload.metadata || { display_phone_number: rawMsg.device || "557332311784" },
+              contacts: [{ profile: { name: pushName } }],
               messages: [{
                 from: fromPhone,
-                id: key.id || payload.id || `zap-${Date.now()}`,
-                timestamp: String(data.messageTimestamp || payload.timestamp || Math.floor(Date.now() / 1000)),
+                id: rawMsg.id || payload.id || `zap-${Date.now()}`,
+                timestamp: String(rawMsg.timestamp || payload.timestamp || Math.floor(Date.now() / 1000)),
                 type: "text",
                 text: { body: textBody }
               }]
             }
           }]
         }];
-        console.log(`[zapresponder] Payload simples normalizado. De ${fromPhone}: "${textBody}"`);
+        console.log(`[zapresponder] Rota customizada detectada. Normalizando De ${fromPhone}: "${textBody}"`);
       }
     }
 
