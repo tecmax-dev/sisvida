@@ -18,7 +18,7 @@
      const {
        phone,
        clinicId,
-       action, // "startBot" or "stopBot" (though doc only shows start/iniciar)
+        action, // "startBot" or "stopBot"
        variables = {},
        initialMessage = "start"
      } = body;
@@ -62,47 +62,58 @@
        cleanPhone = "55" + cleanPhone;
      }
  
-     if (action === "startBot") {
-       const payload = {
-         chatId: cleanPhone,
-         departamento: config.instance_id,
-         aplicacao: "whatsapp",
-         mensagemInicial: initialMessage,
-         variaveis: variables
-       };
- 
-       console.log(`[zapresponder-bot] Starting bot for ${cleanPhone} via dept ${config.instance_id}`);
- 
-       const response = await fetch(`${ZAP_RESPONDER_BASE_URL}/conversa/iniciarBot`, {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-           "Authorization": `Bearer ${apiToken}`,
-           "Accept": "application/json"
-         },
-         body: JSON.stringify(payload),
-       });
- 
-       const result = await response.json().catch(() => ({}));
-       
-       if (!response.ok) {
-         console.error(`[zapresponder-bot] API Error: ${response.status}`, result);
-         return new Response(
-           JSON.stringify({ success: false, error: `Zapster ${response.status}`, details: result }),
-           { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-         );
-       }
- 
-       return new Response(
-         JSON.stringify({ success: true, data: result }),
-         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-       );
-     }
- 
-     return new Response(
-       JSON.stringify({ success: false, error: "Action not supported" }),
-       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-     );
+      let endpoint = "";
+      let payload = {};
+
+      if (action === "startBot") {
+        endpoint = "/conversa/iniciarBot";
+        payload = {
+          chatId: cleanPhone,
+          departamento: config.instance_id,
+          aplicacao: "whatsapp",
+          mensagemInicial: initialMessage,
+          variaveis: variables
+        };
+      } else if (action === "stopBot") {
+        endpoint = "/conversa/encerrar";
+        payload = {
+          chatId: cleanPhone,
+          departamento: config.instance_id,
+          aplicacao: "whatsapp"
+        };
+      } else {
+        return new Response(
+          JSON.stringify({ success: false, error: "Action not supported" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`[zapresponder-bot] Performing ${action} for ${cleanPhone}`);
+
+      const response = await fetch(`${ZAP_RESPONDER_BASE_URL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiToken}`,
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      
+      if (!response.ok) {
+        console.error(`[zapresponder-bot] API Error: ${response.status}`, result);
+        return new Response(
+          JSON.stringify({ success: false, error: `API Error ${response.status}`, details: result }),
+          { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data: result }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
  
    } catch (error) {
      console.error("[zapresponder-bot] Error:", error);
