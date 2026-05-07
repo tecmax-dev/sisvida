@@ -7846,7 +7846,7 @@ async function handleWebhook(req: Request) {
       );
     }
 
-    const phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
+      let phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
     let messageText = extractMessageText(payload.data);
     const messageType = payload.data?.messageType;
     const imageMessage = payload.data?.message?.imageMessage;
