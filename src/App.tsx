@@ -396,7 +396,8 @@ function App() {
                 <Route path="/sindicato/politica-de-privacidade" element={<SindicatoPrivacyPolicy />} />
                 <Route path="/sindicato/exclusao-de-conta" element={<SindicatoExclusaoConta />} />
                 <Route path="/excluir-conta" element={<SindicatoExclusaoConta />} />
-                <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
+                 <Route path="/sindicato/instalar" element={<Navigate to="/app/instalar" replace />} />
+                 <Route path="/sindicato/app/*" element={<Navigate to="/app" replace />} />
                 <Route path="/sindicato/recuperar-senha" element={<MobilePasswordResetPage />} />
                 {/* Aliases para portais sindicais - redireciona para rotas corretas */}
                 <Route path="/sindicato/portal-contador" element={<Navigate to="/portal-contador" replace />} />
