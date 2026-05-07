@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("VIT
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY);
 
-const TEST_PHONE = "5573999887766";
+const TEST_PHONE = "5573981852427";
 const CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 Deno.test("Auditoria: whatsapp-webhook deve registrar mensagem no banco", async () => {
