@@ -8463,18 +8463,18 @@ async function handleWebhook(req: Request) {
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
         if (isWhazingLevel2 || isWhazingLegacy) {
           const currentCategory = storedCategory || 'associado';
-          console.log(`[webhook] Whazing L2 button: "${messageTextTrim}" (category: ${currentCategory})`);
+          console.log(`[webhook] Whazing L2 button: "${activeBtnId}" (category: ${currentCategory}, original: "${messageTextTrim}")`);
           
-           let btnId = messageText.trim();
+          let btnId = activeBtnId;
  
-           // Map numeric choices (1, 2, 3) to button IDs based on category
-           if (btnId === '1') {
-             btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
-           } else if (btnId === '2') {
-             btnId = 'whazing_sub_convencoes';
-           } else if (btnId === '3') {
-             btnId = 'whazing_sub_outros';
-           }
+          // Map numeric choices (1, 2, 3) to button IDs based on category
+          if (btnId === '1') {
+            btnId = (storedCategory === 'associado') ? 'whazing_sub_carteirinha' : 'whazing_sub_boleto';
+          } else if (btnId === '2') {
+            btnId = 'whazing_sub_convencoes';
+          } else if (btnId === '3') {
+            btnId = 'whazing_sub_outros';
+          }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
           if (btnId === 'whazing_sub_boleto') {
