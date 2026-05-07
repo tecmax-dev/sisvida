@@ -29,6 +29,7 @@
  
  function metaMessage(text: string, phoneId: string = "1110151302179856") {
    return {
+     event: "messages.upsert",
      instance: "meta",
      metadata: { phone_number_id: phoneId },
      data: {
@@ -40,6 +41,7 @@
  
  function evolutionMessage(text: string, instanceName: string = "secmi") {
    return {
+     event: "messages.upsert",
      instance: instanceName,
      data: {
        key: { remoteJid: "557332311784@s.whatsapp.net", fromMe: false },
