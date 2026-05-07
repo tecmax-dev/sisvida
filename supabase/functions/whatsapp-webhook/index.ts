@@ -7846,7 +7846,7 @@ async function handleWebhook(req: Request) {
       );
     }
 
-    const phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
+      let phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
     let messageText = extractMessageText(payload.data);
     const messageType = payload.data?.messageType;
     const imageMessage = payload.data?.message?.imageMessage;
@@ -8054,13 +8054,23 @@ async function handleWebhook(req: Request) {
       // Special routing for Meta Official (Sindicato)
       // Explicitly check for 'meta', 'meta_official', 'secmi' or if the target phone belongs to Sindicato
       const SINDICATO_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
-        const isSindicatoTarget = payload.metadata?.display_phone_number === "557332311784" || 
-                                payload.metadata?.phone_number_id === "1110151302179856" ||
-                                payload.instance === 'meta' || 
-                                payload.instance === 'meta_official' ||
-                                payload.instance === 'secmi' ||
-                                payload.is_test === true || 
-                                payload.test === true;
+      const isSindicatoTarget = payload.metadata?.display_phone_number === "557332311784" ||
+        payload.metadata?.phone_number_id === "1110151302179856" ||
+        payload.instance === 'meta' ||
+        payload.instance === 'meta_official' ||
+        payload.instance === 'secmi' ||
+        payload.is_test === true ||
+        payload.test === true;
+
+      // If we don't have a phone number but have a remoteJid from a Meta instance,
+      // try to extract the phone number from it for Sindicato routing.
+      if ((!phone || phone === "550000000000") && isSindicatoTarget && remoteJid) {
+        const extractedPhone = remoteJid.replace(/@.*$/, '').replace(/\D/g, '');
+        if (extractedPhone && extractedPhone.length >= 10) {
+          console.log(`[webhook] Updating phone from ${phone} to ${extractedPhone} for Sindicato routing`);
+          phone = extractedPhone.startsWith('55') ? extractedPhone : '55' + extractedPhone;
+        }
+      }
 
       if (!explicitClinicId && isSindicatoTarget) {
         explicitClinicId = SINDICATO_ID;

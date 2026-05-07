@@ -338,7 +338,7 @@
              return String(phoneInMeta).replace(/\D/g, "").endsWith(fromPhone.replace(/\D/g, "").slice(-9));
            });
  
-           const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi)$/i.test(content);
+            const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi|atendente)$/i.test(content);
  
              // Envia o protocolo APENAS se for saudação E não tivermos enviado nas últimas 4h
              if (isGreeting && !alreadySent) {
@@ -356,7 +356,8 @@
                // Como o template 'homologacao_protocolo' está PENDING, enviamos texto diretamente
                // para garantir que o bot responda IMEDIATAMENTE.
                console.log(`[zapresponder] Enviando saudação textual (fallback direto)`);
-               const response = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+               const response = await (async () => {
+                 const res = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
                  method: 'POST',
                  headers: {
                    'Content-Type': 'application/json',
@@ -368,7 +369,12 @@
                    text: welcomeText,
                   ticket_id: ticketId || ticketIdFromMeta
                  })
-               }).catch(err => console.error("[zapresponder] Erro envio saudação:", err));
+                 });
+                 return res;
+               })().catch(err => {
+                 console.error("[zapresponder] Erro envio saudação:", err);
+                 return null;
+               });
 
               // Registra o envio no banco para auditoria e controle de duplicidade
               if (response && response.ok) {
