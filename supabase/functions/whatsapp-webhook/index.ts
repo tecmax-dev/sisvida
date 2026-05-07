@@ -623,15 +623,17 @@ async function sendMetaButtons(phone: string, title: string, description: string
         }
       };
  
-     const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+      console.log(`[meta-buttons] Fetching Meta API for ${to} using PHONE_ID=${PHONE_ID}`);
+      const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, {
        method: 'POST',
        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
        body: JSON.stringify(payload),
      });
  
       if (!r.ok) {
-        const errorText = await r.text();
-        console.error('[meta-buttons] Meta error:', errorText);
+        const errorJson = await r.json().catch(() => ({}));
+        console.error('[meta-buttons] Meta error:', JSON.stringify(errorJson));
+        const errorText = JSON.stringify(errorJson);
         
         // Fallback: If interactive buttons are not supported/authorized, send as TEXT
         if (errorText.includes('GraphMethodException') || errorText.includes('permissions')) {
