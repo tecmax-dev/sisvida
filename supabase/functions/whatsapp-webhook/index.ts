@@ -299,6 +299,8 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   if (!data) return null;
   const messageAny = data.message as any;
   
+  console.log('[extractMessageText] Parsing raw message structure:', JSON.stringify(data?.message));
+  
   // Check for interactive button response (plural - Evolution API native)
   if (data.message?.buttonsResponseMessage?.selectedButtonId) {
     console.log('[extractMessageText] Found buttonsResponseMessage:', data.message.buttonsResponseMessage.selectedButtonId);
@@ -368,6 +370,7 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
   // Check for button/list selection (Meta direct or standard interactive)
   const interactive = data.message?.interactive;
   if (interactive) {
+    console.log('[extractMessageText] Found interactive field:', JSON.stringify(interactive));
     const buttonId = interactive.button_reply?.id || interactive.list_reply?.id;
     if (buttonId) return String(buttonId);
     const buttonTitle = interactive.button_reply?.title || interactive.list_reply?.title;
