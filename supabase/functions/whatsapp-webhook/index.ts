@@ -310,12 +310,8 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
                          data.message?.buttonResponseMessage?.selectedDisplayText;
      console.log(`[extractMessageText] Found button response: id="${buttonResponseId}", display="${displayText || ''}"`);
      
-     // Prefer display text for Whazing routing if it's one of the known labels
-     const whazingLabels = ['sou associado', 'sou empresa', 'sou contabilidade', 'associado', 'empresa', 'contabilidade'];
-     if (displayText && whazingLabels.includes(displayText.toLowerCase().trim())) {
-       return displayText.trim();
-     }
-     return buttonResponseId;
+   console.log(`[extractMessageText] Button response: id="${buttonResponseId}", display="${displayText || ''}"`);
+   return buttonResponseId;
    }
   
   // Check for list response
@@ -8224,17 +8220,21 @@ async function handleWebhook(req: Request) {
         const { category: storedCategory, lastMenuType } = await getWhazingContext(supabase, clinicId, phoneCandidates, null as any);
         
         // Robust mapping for Whazing buttons (handles both IDs and display labels)
-        const whazingLevel1Map: Record<string, string> = {
-          'whazing_associado': 'whazing_associado',
-          'whazing_empresa': 'whazing_empresa',
-          'whazing_contabilidade': 'whazing_contabilidade',
-          'sou associado': 'whazing_associado',
-          'sou empresa': 'whazing_empresa',
-          'sou contabilidade': 'whazing_contabilidade',
-          'associado': 'whazing_associado',
-          'empresa': 'whazing_empresa',
-          'contabilidade': 'whazing_contabilidade',
-        };
+   const whazingLevel1Map: Record<string, string> = {
+     'whazing_associado': 'whazing_associado',
+     'whazing_empresa': 'whazing_empresa',
+     'whazing_contabilidade': 'whazing_contabilidade',
+     'sou associado': 'whazing_associado',
+     'sou empresa': 'whazing_empresa',
+     'sou contabilidade': 'whazing_contabilidade',
+     'associado': 'whazing_associado',
+     'empresa': 'whazing_empresa',
+     'contabilidade': 'whazing_contabilidade',
+     // Zap Responder button ID variants
+     '1': 'whazing_associado',
+     '2': 'whazing_empresa',
+     '3': 'whazing_contabilidade',
+   };
 
         const whazingLevel2Map: Record<string, string> = {
           'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
@@ -8252,20 +8252,24 @@ async function handleWebhook(req: Request) {
           'boleto': 'whazing_sub_boleto',
         };
 
-        const whazingFollowUpMap: Record<string, string> = {
-          'whazing_voltar_menu': 'whazing_voltar_menu',
-          'whazing_falar_atendente': 'whazing_falar_atendente',
-          'whazing_voltar_sub': 'whazing_voltar_sub',
-          'whazing_outros_juridico': 'whazing_outros_juridico',
-          'whazing_outros_homologacao': 'whazing_outros_homologacao',
-          'whazing_outros_atendente': 'whazing_outros_atendente',
-          'voltar ao menu': 'whazing_voltar_menu',
-          'falar com atendente': 'whazing_falar_atendente',
-          'voltar': 'whazing_voltar_sub',
-          'jurídico': 'whazing_outros_juridico',
-          'homologações': 'whazing_outros_homologacao',
-          'atendente': 'whazing_outros_atendente',
-        };
+   const whazingFollowUpMap: Record<string, string> = {
+     'whazing_voltar_menu': 'whazing_voltar_menu',
+     'whazing_falar_atendente': 'whazing_falar_atendente',
+     'whazing_voltar_sub': 'whazing_voltar_sub',
+     'whazing_outros_juridico': 'whazing_outros_juridico',
+     'whazing_outros_homologacao': 'whazing_outros_homologacao',
+     'whazing_outros_atendente': 'whazing_outros_atendente',
+     'voltar ao menu': 'whazing_voltar_menu',
+     'falar com atendente': 'whazing_falar_atendente',
+     'voltar': 'whazing_voltar_sub',
+     'jurídico': 'whazing_outros_juridico',
+     'homologações': 'whazing_outros_homologacao',
+     'atendente': 'whazing_outros_atendente',
+     // Zap Responder button ID variants for follow-ups
+     'followup_atendente': 'whazing_falar_atendente',
+     'followup_voltar_sub': 'whazing_voltar_sub',
+     'followup_voltar_menu': 'whazing_voltar_menu',
+   };
 
         const normalizedMsgText = messageTextTrim?.toLowerCase() || '';
         
