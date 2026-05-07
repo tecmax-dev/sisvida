@@ -8064,12 +8064,11 @@ async function handleWebhook(req: Request) {
 
       // If we don't have a phone number but have a remoteJid from a Meta instance,
       // try to extract the phone number from it for Sindicato routing.
-      if (!phone && isSindicatoTarget && remoteJid) {
+      if ((!phone || phone === "550000000000") && isSindicatoTarget && remoteJid) {
         const extractedPhone = remoteJid.replace(/@.*$/, '').replace(/\D/g, '');
         if (extractedPhone && extractedPhone.length >= 10) {
-          console.log(`[webhook] Extracted phone ${extractedPhone} for Sindicato routing`);
-          // We don't redefine 'phone' here as it's a const/let already validated,
-          // but we ensure configData is forced below.
+          console.log(`[webhook] Updating phone from ${phone} to ${extractedPhone} for Sindicato routing`);
+          phone = extractedPhone.startsWith('55') ? extractedPhone : '55' + extractedPhone;
         }
       }
 
