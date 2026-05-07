@@ -1,14 +1,11 @@
 [
   {
-    "relation": [
-      "delegate_permission/common.handle_all_urls",
-      "delegate_permission/common.get_login_creds"
-    ],
+    "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
       "package_name": "br.org.secmi.comerciariosilheus.app",
       "sha256_cert_fingerprints": [
-        "5A:08:AA:85:44:AF:A1:87:18:EA:D6:4A:2B:14:80:02:EC:42:A2:4B:63:68:C8:D0:BC:2A:A5:08:83:D7:48:65"
+        "1E:C5:37:A2:3E:92:B2:76:A8:12:F1:C8:6D:E8:2A:20:8D:17:F1:2F:A0:E2:B0:12:E8:A0:1D:95:90:E2:A0:1E"
       ]
     }
   }
