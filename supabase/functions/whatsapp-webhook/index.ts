@@ -8911,7 +8911,7 @@ async function handleWebhook(req: Request) {
         // =========================================================================
         let externalMenuMode = false;
         if (configData.booking_enabled === false) {
-          const msgTrimmed = (messageText || '').trim();
+          const msgTrimmed = (mappedMessageText || '').trim();
           const msgLower = msgTrimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
           // ---------------------------------------------------------------
