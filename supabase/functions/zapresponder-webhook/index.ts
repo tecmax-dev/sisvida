@@ -3,8 +3,11 @@
  
  const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
  
+ const BUILD_VERSION = 'FLOW_V2_BUILD_20260508';
+ const HANDLER_NAME = 'zapresponder-webhook';
+ 
  serve(async (req) => {
-    console.log('[CLICK ENTRYPOINT]', 'zapresponder-webhook');
+    console.log(`[ENTRYPOINT][${HANDLER_NAME}]`, BUILD_VERSION);
    try {
     // ===== Parse seguro do JSON =====
     // ZapResponder pode não enviar Content-Type, então aceitamos o corpo se for JSON válido.
@@ -353,20 +356,21 @@
                   : incomingPhoneId;
                
                 console.log(`[zapresponder] Nova conversa - enviando Menu Principal com Botões`);
-                const welcomeText = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nComo podemos ajudar você hoje?`;
+                 const welcomeText = `[${BUILD_VERSION}]\nOlá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nComo podemos ajudar você hoje?`;
                 
                 const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
                 const PHONE_ID = workingPhoneId;
                 const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
 
-                const menuPayload = {
-                  messaging_product: "whatsapp",
-                  recipient_type: "individual",
-                  to,
-                  type: "interactive",
-                  interactive: {
-                    type: "button",
-                    header: { type: "text", text: "Menu Sindicato" },
+                 console.log('[MENU_SENDER]', { handler: HANDLER_NAME, build: BUILD_VERSION });
+                 const menuPayload = {
+                   messaging_product: "whatsapp",
+                   recipient_type: "individual",
+                   to,
+                   type: "interactive",
+                   interactive: {
+                     type: "button",
+                     header: { type: "text", text: `[${BUILD_VERSION}] Menu Sindicato` },
                     body: { text: welcomeText },
                     footer: { text: "Selecione uma opção abaixo" },
                     action: {
