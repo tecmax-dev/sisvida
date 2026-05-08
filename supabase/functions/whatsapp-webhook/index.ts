@@ -8598,6 +8598,19 @@ async function handleWebhook(req: Request) {
             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+            console.log('[BOLETO FLOW START (L2)]', { btnId, phone });
+            const boletoPayloadL2 = {
+              clinic_id: clinicId,
+              phone: phone,
+              action: 'start',
+              evolution_config: {
+                api_url: configData.api_url,
+                api_key: configData.api_key,
+                instance_name: configData.instance_name,
+              },
+              explicit_phone_id: explicitPhoneId
+            };
+            console.log('[CALLING boleto-whatsapp-flow (L2)]', JSON.stringify(boletoPayloadL2));
             try {
               const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
                 method: 'POST',
@@ -8605,28 +8618,17 @@ async function handleWebhook(req: Request) {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${supabaseAnonKey}`,
                 },
-                body: JSON.stringify({
-                  clinic_id: clinicId,
-                  phone: phone,
-                  action: 'start',
-                   evolution_config: {
-                     api_url: configData.api_url,
-                     api_key: configData.api_key,
-                     instance_name: configData.instance_name,
-                   },
-                   explicit_phone_id: explicitPhoneId
-                 }),
+                body: JSON.stringify(boletoPayloadL2),
               });
-
               if (boletoResponse.ok) {
                 const boletoResult = await boletoResponse.json();
-                console.log(`[webhook] Boleto flow started via Whazing button: state=${boletoResult.state}`);
+                console.log('[BOLETO FLOW RESPONSE (L2)]', JSON.stringify(boletoResult));
               } else {
                 const errText = await boletoResponse.text();
-                console.error('[webhook] Boleto flow error from Whazing button:', errText);
+                console.error('[BOLETO FLOW ERROR RESPONSE (L2)]', errText);
               }
             } catch (bErr) {
-              console.error('[webhook] Error calling boleto flow from Whazing button:', bErr);
+              console.error('[BOLETO FLOW EXCEPTION (L2)]', bErr);
             }
 
             await supabase.from('whatsapp_incoming_logs').insert({
