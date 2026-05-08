@@ -1456,7 +1456,7 @@ function extractInteractiveResponseId(messageData: any): string | null {
      try {
        const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
        return params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload || null;
-     } catch { /* ignore */ }
+    } catch (err) { /* ignore */ }
    }
   return messageData?.buttonReplyMessage?.id ||
     messageData?.buttonReplyMessage?.selectedId ||
