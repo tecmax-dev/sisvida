@@ -9575,7 +9575,10 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
   }
 }
 
- serve(async (req) => {
+ serve(async (_req) => {
+   console.log("[whatsapp-webhook] DISABLED TO PREVENT CONCURRENCY");
+   return new Response("Legacy system disabled", { status: 200 });
+   /*
    console.log('[WEBHOOK_SERVER_START] Request received:', req.method);
    const collector: string[] = [];
    const clonedReq = req.clone();
