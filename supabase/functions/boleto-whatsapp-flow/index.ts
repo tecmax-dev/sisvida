@@ -3123,7 +3123,15 @@ async function handleCnpjInput(
 // MAIN HANDLER
 // ==========================================
 
-serve(async (req) => {
+ serve(async (req: Request) => {
+   console.log('[DEBUG_BOLETO_FLOW][REQUEST_RECEIVED]', req.method);
+   const clonedReq = req.clone();
+   try {
+     const body = await clonedReq.json();
+     console.log('[DEBUG_BOLETO_FLOW][BODY]', JSON.stringify(body));
+   } catch (e) {
+     console.log('[DEBUG_BOLETO_FLOW][BODY_PARSE_ERROR]', e.message);
+   }
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

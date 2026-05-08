@@ -1,3 +1,5 @@
+           console.log('[DEBUG_BOLETO][RAW_PAYLOAD_FULL]', JSON.stringify(payload));
+           console.log('[DEBUG_BOLETO][NORMALIZED_SELECTION]', JSON.stringify(selection));
 // whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -9034,8 +9036,8 @@ async function handleWebhook(req: Request) {
             explicit_phone_id: explicitPhoneId
           };
 
-          console.log('[CALLING boleto-whatsapp-flow]', JSON.stringify(boletoPayload));
-           console.log('[BEFORE INVOKE]', boletoPayload);
+             console.log('[DEBUG_BOLETO][BEFORE_INVOKE_L2]', JSON.stringify(boletoPayloadL2));
+               console.log('[DEBUG_BOLETO][AFTER_INVOKE_L2]', { status: respStatus, body: JSON.stringify(boletoResult).slice(0, 500) });
            
            try {
              const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
