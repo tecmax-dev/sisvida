@@ -1110,7 +1110,11 @@ async function storeWhazingContext(
   category: WhazingCategory,
   lastMenuType: 'main' | 'sub' | 'followup' = 'main'
 ): Promise<void> {
-  const { error } = await supabase.from('whatsapp_ai_conversations').insert({
+   const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
+     updated_at: new Date().toISOString()
+   }, {
+     onConflict: 'clinic_id,phone'
+   });
     clinic_id: clinicId,
     phone,
     messages: { 
