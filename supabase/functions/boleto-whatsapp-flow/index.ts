@@ -14,10 +14,11 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[DEBUG_NOVA_STATE_MACHINE][ENTRY]');
     const body = await req.json();
     const { clinic_id, phone, message, action, explicit_phone_id } = body;
 
-    console.log('[DEBUG_BOLETO_FLOW][REQUEST_RECEIVED]', { phone, message, action });
+    console.log('[DEBUG_NOVA_STATE_MACHINE][BUTTON]', message);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -47,6 +48,8 @@ serve(async (req) => {
     }
 
     if (!session) throw new Error("Could not create session");
+
+    console.log('[DEBUG_NOVA_STATE_MACHINE][STATE]', session.state);
 
     let responseText = "";
     let buttons: any[] = [];
@@ -119,12 +122,14 @@ serve(async (req) => {
       nextState = 'SELECT_BOLETO_TYPE';
     }
 
+    console.log('[DEBUG_NOVA_STATE_MACHINE][NEXT]', nextState);
+
     // 3. Atualizar estado no banco
     await supabase.from('whatsapp_boleto_sessions')
       .update({ state: nextState })
       .eq('id', session.id);
 
-    console.log('[DEBUG_BOLETO_FLOW][RESPONSE_PREPARED]', { responseText, nextState, buttons });
+    console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', responseText);
 
     // 4. Retornar resposta para o webhook enviar
     return new Response(
