@@ -2221,7 +2221,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
     // Call the AI assistant
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+             const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Detect if we are in a synchronous call to collect responses
     const collector = syncReplyStore.getStore();
@@ -2231,7 +2231,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+                   'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
         message: messageText,
@@ -2299,7 +2299,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       
       // Call boleto flow edge function to start the flow
       const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
-      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+           const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       
       try {
         const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
@@ -8659,7 +8659,7 @@ async function handleWebhook(req: Request) {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                  'Authorization': `Bearer ${supabaseServiceKey}`,
                 },
                 body: JSON.stringify(boletoPayloadL2),
               });
