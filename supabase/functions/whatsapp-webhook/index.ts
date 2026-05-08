@@ -305,14 +305,18 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
    const buttonResponseId = data.message?.buttonsResponseMessage?.selectedButtonId || 
                             data.message?.buttonResponseMessage?.selectedButtonId;
    
-   if (buttonResponseId) {
-     const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText || 
-                         data.message?.buttonResponseMessage?.selectedDisplayText;
-     console.log(`[extractMessageText] Found button response: id="${buttonResponseId}", display="${displayText || ''}"`);
-     
-   console.log(`[extractMessageText] Button response: id="${buttonResponseId}", display="${displayText || ''}"`);
-   return buttonResponseId;
-   }
+  if (buttonResponseId) {
+    const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText || 
+                        data.message?.buttonResponseMessage?.selectedDisplayText;
+    console.log(`[extractMessageText] Found button response: id="${buttonResponseId}", display="${displayText || ''}"`);
+    
+    // If ID is numeric (like "1", "2") or a technical string (like "whazing_associado"),
+    // use it directly. Otherwise, use display text as fallback.
+    if (buttonResponseId.length > 0) {
+      return buttonResponseId;
+    }
+    return displayText || null;
+  }
   
   // Check for list response
   if (data.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
@@ -370,7 +374,11 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
 
   if (finalInteractive) {
     console.log('[extractMessageText] Found interactive field:', JSON.stringify(finalInteractive));
-    const buttonId = finalInteractive.button_reply?.id || finalInteractive.list_reply?.id || finalInteractive.button_reply?.title || finalInteractive.list_reply?.title;
+    const buttonId = finalInteractive.button_reply?.id || 
+                     finalInteractive.list_reply?.id || 
+                     finalInteractive.button_reply?.title || 
+                     finalInteractive.list_reply?.title;
+    
     if (buttonId) return String(buttonId);
   }
 
