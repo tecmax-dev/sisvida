@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+
+const HANDLER_VERSION = "1.0.1-HEALTH-CHECK";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,14 @@ serve(async (req) => {
     if (mode === "subscribe") {
       return new Response(challenge ?? "", { status: 200 });
     }
-    return new Response("OK", { status: 200 });
+    return new Response(JSON.stringify({ 
+      status: "online", 
+      version: HANDLER_VERSION,
+      timestamp: new Date().toISOString()
+    }), { 
+      status: 200, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   }
 
   try {
@@ -45,10 +53,10 @@ serve(async (req) => {
     const to = from.startsWith('55') ? from : `55${from}`;
 
     const sendResponse = async (payload: any) => {
-      const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+      const res = await fetch(\`https://graph.facebook.com/v21.0/\${PHONE_ID}/messages\`, {
         method: 'POST',
         headers: { 
-          'Authorization': `Bearer ${META_TOKEN}`, 
+          'Authorization': \`Bearer \${META_TOKEN}\`, 
           'Content-Type': 'application/json' 
         },
         body: JSON.stringify({
