@@ -47,13 +47,7 @@ serve(async (req) => {
        return new Response("missing_creds", { status: 200 });
      }
  
-     // 1. EXTRAIR DADOS DA MENSAGEM
-     let phone = "";
-     let messageText = "";
-     let buttonId = "";
-     let buttonTitle = "";
- 
-    // 1. EXTRAÇÃO DE DADOS (Hibrida para diagnóstico)
+    // 1. EXTRAÇÃO DE DADOS
     let phone = "";
     let messageText = "";
     let buttonId = "";
