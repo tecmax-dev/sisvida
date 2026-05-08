@@ -52,18 +52,26 @@ serve(async (req) => {
     let messageText = "";
     let buttonId = "";
 
+    // Diagnóstico de Entrada
     if (body.object === 'whatsapp_business_account') {
-      // Meta Direto
       const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
       if (message) {
         phone = message.from;
         if (message.type === 'text') messageText = message.text?.body;
         if (message.type === 'interactive') buttonId = message.interactive?.button_reply?.id;
       }
-    } else if (body.message || body.raw_message) {
-      // ZapResponder
+    } else {
+      // Lógica ZapResponder (ajustada para pegar ID de botão mesmo com mensagem null)
       phone = body.chatId || body.raw_message?.from;
       messageText = body.message?.mensagem || body.raw_message?.content;
+      
+      // Se ZapResponder envia mensagem null mas tem button_id em algum lugar
+      buttonId = body.message?.button_id || body.raw_message?.button_id || null;
+      
+      // Heurística de segurança se o ZapResponder não mapear o ID mas enviar o payload
+      if (!buttonId && body.raw_message?.type === 'interactive') {
+         buttonId = body.raw_message?.interactive?.button_reply?.id;
+      }
     }
 
     const user = phone; // Alias conforme solicitado no snippet
