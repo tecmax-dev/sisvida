@@ -351,30 +351,50 @@
                   ? "1110151302179856" 
                   : incomingPhoneId;
                
-               const welcomeText = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nEm que posso ajudar hoje?`;
-               
-               // Como o template 'homologacao_protocolo' está PENDING, enviamos texto diretamente
-               // para garantir que o bot responda IMEDIATAMENTE.
-               console.log(`[zapresponder] Enviando saudação textual (fallback direto)`);
-               const response = await (async () => {
-                 const res = await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
-                 method: 'POST',
-                 headers: {
-                   'Content-Type': 'application/json',
-                   'Authorization': `Bearer ${SERVICE_ROLE}`
-                 },
-                 body: JSON.stringify({
-                   to: fromPhone,
-                   phone_number_id: workingPhoneId,
-                   text: welcomeText,
-                  ticket_id: ticketId || ticketIdFromMeta
-                 })
-                 });
-                 return res;
-               })().catch(err => {
-                 console.error("[zapresponder] Erro envio saudação:", err);
-                 return null;
-               });
+                console.log(`[zapresponder] Nova conversa - enviando Menu Principal com Botões`);
+                const welcomeText = `Olá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nSeu protocolo de atendimento é: ${protocolId}\n\nComo podemos ajudar você hoje?`;
+                
+                const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+                const PHONE_ID = workingPhoneId;
+                const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+
+                const menuPayload = {
+                  messaging_product: "whatsapp",
+                  recipient_type: "individual",
+                  to,
+                  type: "interactive",
+                  interactive: {
+                    type: "button",
+                    header: { type: "text", text: "Menu Sindicato" },
+                    body: { text: welcomeText },
+                    footer: { text: "Selecione uma opção abaixo" },
+                    action: {
+                      buttons: [
+                        { type: "reply", reply: { id: "whazing_sub_boleto", title: "Sou Empresa (Boleto)" } },
+                        { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
+                        { type: "reply", reply: { id: "whazing_homologacao", title: "Homologação" } }
+                      ]
+                    }
+                  }
+                };
+
+                const response = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(menuPayload),
+                });
+                
+                if (!response.ok) {
+                  const errData = await response.json();
+                  console.error("[zapresponder] Erro ao enviar Menu Principal:", errData);
+                  
+                  // Fallback para texto simples se o interativo falhar
+                  await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_ROLE}` },
+                    body: JSON.stringify({ to: fromPhone, phone_number_id: workingPhoneId, text: welcomeText, ticket_id: ticketId || ticketIdFromMeta })
+                  });
+                }
 
               // Registra o envio no banco para auditoria e controle de duplicidade
               if (response && response.ok) {
