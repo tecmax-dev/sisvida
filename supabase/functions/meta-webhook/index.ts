@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-   const HANDLER_VERSION = "1.0.4-ENV-DIAGNOSTIC";
+    const HANDLER_VERSION = "1.0.5-FINAL-DIAGNOSTIC";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,80 +33,55 @@ serve(async (req) => {
     console.log('[STEP_1_MESSAGE_RECEIVED]', new Date().toISOString());
     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
 
-    // Extraction (Phone Only)
-    const from = (
-      body.raw_message?.from || 
-      body.chatId || 
-      body.wa_id || 
-      body.phone || 
-      ""
-    ).toString().replace(/\D/g, "");
+    console.log('[WEBHOOK_RECEIVED]');
+    const PHONE_NUMBER_ID = Deno.env.get("META_PHONE_NUMBER_ID");
+    const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
+    const url = `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
 
-    console.log('[EXTRACTED_PHONE]', from);
+    console.log('[PHONE_NUMBER_ID]', PHONE_NUMBER_ID);
+    console.log('[META_URL]', url);
+    console.log('[TOKEN_PREFIX]', TOKEN?.slice(0, 10));
 
-    if (!from) {
-      console.log('[ERROR] No phone found in payload');
-      return new Response(JSON.stringify({ ok: false, reason: "no phone" }), { status: 200 });
+    if (!PHONE_NUMBER_ID || !TOKEN) {
+      console.log('[META_SEND_FAIL] Missing credentials');
+      return new Response("missing_creds", { status: 200 });
     }
 
-     const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-     const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID");
-     
-     console.log('[ENV_CHECK]', { 
-       has_token: !!META_TOKEN, 
-       token_length: META_TOKEN?.length,
-       phone_id: PHONE_ID,
-       all_keys: Object.keys(Deno.env.toObject()).filter(k => k.includes('META'))
-     });
- 
-     if (!META_TOKEN || !PHONE_ID) {
-        console.log('[ERROR] Missing environment variables', { META_TOKEN: !!META_TOKEN, PHONE_ID: !!PHONE_ID });
-        return new Response(JSON.stringify({ ok: false, reason: "missing env" }), { status: 200 });
-     }
-    const to = from.startsWith('55') ? from : `55${from}`;
+    const user = (body.chatId || body.raw_message?.from || "").toString().replace(/\D/g, "");
+    if (!user) {
+      console.log('[META_SEND_FAIL] No user found');
+      return new Response("no_user", { status: 200 });
+    }
 
-    console.log('[ATTEMPTING_SEND]', { to, phone_id: PHONE_ID });
-
-    // MANDATORY SEND TEST
-    const sendWhatsAppMessage = async (recipient: string, message: string) => {
-      const payload = {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         messaging_product: 'whatsapp',
-        to: recipient,
+        to: user,
         type: 'text',
-        text: { body: message }
-      };
+        text: {
+          body: '[TESTE_META] ENVIO_OK'
+        }
+      })
+    });
 
-      console.log('[SEND_REQUEST_PAYLOAD]', JSON.stringify(payload));
+    console.log('[META_STATUS]', response.status);
+    const responseBody = await response.text();
+    console.log('[META_RESPONSE]', responseBody);
 
-      const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${META_TOKEN}`, 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify(payload),
-      });
+    if (response.ok) {
+      console.log('[META_SEND_SUCCESS]');
+    } else {
+      console.log('[META_SEND_FAIL]');
+    }
 
-      const status = res.status;
-      const resultText = await res.text();
-      
-      let resultJson;
-      try { resultJson = JSON.parse(resultText); } catch { resultJson = resultText; }
-
-      return { status, body: resultJson };
-    };
-
-    const sendResult = await sendWhatsAppMessage(to, 'TESTE DIRETO');
-
-    console.log('[STEP_2_SEND_RESULT]');
-    console.log(JSON.stringify(sendResult, null, 2));
-
-    return new Response(JSON.stringify({ 
-      ok: true, 
-      sendResult,
-      version: HANDLER_VERSION 
-    }), { 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    return new Response(responseBody, {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (e) {
