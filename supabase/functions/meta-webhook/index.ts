@@ -197,7 +197,7 @@ serve(async (req) => {
 
     console.log(`[FLOW_SINGLE_POINT] Checking session for: "${fromPhone}"`);
     
-    // Check if there's an active boleto session even if no keyword matched
+    // CRITICAL: Check session for ANY input to prevent main menu loop
     const { data: session } = await supabase
       .from('whatsapp_boleto_sessions')
       .select('state')
@@ -206,8 +206,10 @@ serve(async (req) => {
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    if (session) {
-      console.log(`[FLOW_SINGLE_POINT] Active session found (${session.state}). Routing to boleto flow.`);
+    console.log('[SESSION_LOOKUP_ROUTER]', { fromPhone, sessionFound: !!session, currentState: session?.state });
+
+    if (session && !['menu', 'start', 'oi'].includes(content.toLowerCase())) {
+      console.log(`[FLOW_SINGLE_POINT] Active session found (${session.state}). Routing to boleto flow for content: "${content}"`);
       // Manually trigger the flow to see if it can handle the input (even if not a keyword)
       const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
         method: 'POST',
@@ -265,6 +267,28 @@ serve(async (req) => {
         });
         return new Response(JSON.stringify({ ok: true, flow: "boleto_reentry" }));
       }
+    }
+
+    // CRITICAL: Check if this was a button click that should have been a boleto action but failed lookup
+    const isExplicitButtonClick = body.raw_message?.interactive?.button_reply?.id || body.message?.button?.payload;
+    
+    if (isExplicitButtonClick) {
+      console.log('[DEBUG_SESSION_FAIL] Button click received but no session found and not a boleto keyword');
+      // If it's a button click and we reached here, something is wrong with session or routing
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      const PHONE_ID = "1110151302179856";
+      const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+      
+      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: `[DEBUG_SESSION_FAIL]\nuserId: ${fromPhone}\nbuttonId: ${content}\nNo session found.` },
+        }),
+      });
     }
 
     // Only send main menu if NO session exists and NO keyword matched
