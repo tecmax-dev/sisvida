@@ -76,13 +76,18 @@ serve(async (req) => {
      } else {
        // ZapResponder Format
        phone = (body.chatId || body.raw_message?.from || "").toString().replace(/\D/g, "");
-       messageText = body.message?.mensagem || body.raw_message?.content || "";
-       
-       // Tentar extrair botão se vier no ZapResponder (formato pode variar)
-       if (body.raw_message?.type === 'buttons_response') {
-         buttonId = body.raw_message.selectedButtonId;
-         buttonTitle = body.raw_message.selectedButtonText;
-       }
+        messageText = body.message?.mensagem || body.raw_message?.content || body.raw_message?.body || "";
+        
+        // Tentar extrair botão se vier no ZapResponder (formato pode variar)
+        // Alguns gateways enviam no type: 'button_response' ou 'interactive'
+        const rawMsg = body.raw_message;
+        if (rawMsg?.type === 'buttons_response' || rawMsg?.type === 'button_response') {
+          buttonId = rawMsg.selectedButtonId || rawMsg.buttonId;
+          buttonTitle = rawMsg.selectedButtonText || rawMsg.buttonText;
+        } else if (rawMsg?.type === 'interactive' && rawMsg.interactive?.type === 'button_reply') {
+          buttonId = rawMsg.interactive.button_reply?.id;
+          buttonTitle = rawMsg.interactive.button_reply?.title;
+        }
      }
  
      if (!phone) {
