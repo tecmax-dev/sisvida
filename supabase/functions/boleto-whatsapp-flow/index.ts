@@ -111,7 +111,12 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     };
 
     const stateTransitions = transitionMap[session.state as string] || {};
-    const transition = Object.keys(stateTransitions).find(k => text === k || text.includes(k));
+    // Prioritize ID match, then title match
+    let transition = Object.keys(stateTransitions).find(k => text === k);
+    if (!transition) {
+      // Try partial/title match if ID match fails
+      transition = Object.keys(stateTransitions).find(k => text.includes(k));
+    }
 
     const transitionFound = !!transition;
     if (transitionFound) {
