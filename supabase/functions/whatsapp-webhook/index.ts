@@ -3812,7 +3812,9 @@ async function handleSelectBookingFor(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = parseInt(messageText.trim());
+   const rawText = (messageText || "").trim().toLowerCase();
+   const choice = parseInt(rawText);
+   console.log(`[SELECT_BOOKING_FOR] Incoming: "${messageText}", parsed choice: ${choice}, state: ${session.state}`);
   const dependents = session.available_dependents || [];
   const totalOptions = 2 + dependents.length; // 1 = titular + dependents + 1 = menu option
 
@@ -3821,8 +3823,8 @@ async function handleSelectBookingFor(
     return { handled: true, newState: 'SELECT_BOOKING_FOR' };
   }
 
-  // Option 1 = Titular
-  if (choice === 1) {
+   // Handle Option 1 or textual fallback
+   if (choice === 1 || rawText === 'confirm_yes' || rawText.includes('sim') || rawText.includes('sou eu')) {
     return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
   }
 
