@@ -8999,14 +8999,16 @@ async function handleWebhook(req: Request) {
               const boletoResult = await boletoResponse.json();
               console.log('[BOLETO FLOW RESPONSE]', JSON.stringify(boletoResult));
               
-              await supabase.from('whatsapp_incoming_logs').insert({
-                clinic_id: clinicId,
-                phone,
-                message_text: messageText,
-                raw_payload: payload,
-                processed: true,
-                processed_action: 'boleto_flow',
-              });
+               const logPayload = {
+                 clinic_id: clinicId,
+                 phone,
+                 message_text: `[DEBUG_BOLETO] ${messageText} | Result: ${JSON.stringify(boletoResult).slice(0, 500)}`,
+                 raw_payload: payload,
+                 processed: true,
+                 processed_action: 'boleto_flow_verified',
+               };
+               console.log('[AUDIT_LOG_INSERT]', JSON.stringify(logPayload));
+               await supabase.from('whatsapp_incoming_logs').insert(logPayload);
 
               return new Response(
                 JSON.stringify({ success: true, message: 'Boleto flow processed' }),
