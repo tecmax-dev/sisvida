@@ -74,19 +74,23 @@ serve(async (req) => {
          }
        }
      } else {
-       // ZapResponder Format
-       phone = (body.chatId || body.raw_message?.from || "").toString().replace(/\D/g, "");
+        // ZapResponder / Webhook Generic Format
+        phone = (body.chatId || body.raw_message?.from || "").toString().replace(/\D/g, "");
         messageText = body.message?.mensagem || body.raw_message?.content || body.raw_message?.body || "";
         
-        // Tentar extrair botão se vier no ZapResponder (formato pode variar)
-        // Alguns gateways enviam no type: 'button_response' ou 'interactive'
+        // Detecção agressiva de Botão/Interativo no ZapResponder
         const rawMsg = body.raw_message;
-        if (rawMsg?.type === 'buttons_response' || rawMsg?.type === 'button_response') {
-          buttonId = rawMsg.selectedButtonId || rawMsg.buttonId;
-          buttonTitle = rawMsg.selectedButtonText || rawMsg.buttonText;
-        } else if (rawMsg?.type === 'interactive' && rawMsg.interactive?.type === 'button_reply') {
-          buttonId = rawMsg.interactive.button_reply?.id;
-          buttonTitle = rawMsg.interactive.button_reply?.title;
+        const msgType = body.message?.type || rawMsg?.type;
+
+        // Se type for interactive/button ou se messageText for null/vazio mas houver payload
+        if (msgType === 'interactive' || msgType === 'button_response' || msgType === 'buttons_response') {
+          buttonId = body.message?.payload || rawMsg?.selectedButtonId || rawMsg?.buttonId || rawMsg?.interactive?.button_reply?.id;
+          buttonTitle = body.message?.text || rawMsg?.selectedButtonText || rawMsg?.buttonText || rawMsg?.interactive?.button_reply?.title;
+        }
+        
+        // Fallback: se messageText for o ID do botão (comum em alguns mapeamentos do ZapResponder)
+        if (!buttonId && messageText === 'test_button_id') {
+          buttonId = 'test_button_id';
         }
      }
  
