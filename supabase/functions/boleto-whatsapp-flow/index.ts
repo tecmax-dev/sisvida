@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
- const BUILD_VERSION = 'FLOW_V2_BUILD_20260508';
+  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v3';
  
  serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,7 +20,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     const body = await req.json();
     const { clinic_id, phone, message, action, explicit_phone_id } = body;
 
-    console.log('[DEBUG_NOVA_STATE_MACHINE][BUTTON]', message);
+    console.log('[STATE_BEFORE_CLICK]', 'Fetching state from DB...');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -35,7 +35,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    if (!session || action === 'start') {
+    if (!session || action === 'start' || message === 'whazing_sub_boleto') {
+      console.log('[NO_STATE_RESET]', 'Initializing or resetting to SELECT_BOLETO_TYPE');
       const { data: newSession } = await supabase
         .from('whatsapp_boleto_sessions')
         .insert({
@@ -51,7 +52,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     if (!session) throw new Error("Could not create session");
 
-    console.log('[DEBUG_NOVA_STATE_MACHINE][STATE]', session.state);
+    console.log('[STATE_BEFORE_CLICK]', session.state);
+    console.log('[BUTTON_CLICKED]', message);
 
     let responseText = "";
     let buttons: any[] = [];
@@ -60,9 +62,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     const rawText = (message || "").trim();
     const text = rawText.toLowerCase();
     
-    console.log('[DEBUG_FLOW][STATE]', session.state);
-    console.log('[DEBUG_FLOW][RAW_CONTENT]', rawText);
-    console.log('[DEBUG_FLOW][NORMALIZED]', text);
+    console.log('[NORMALIZED_ACTION]', text);
 
     // 2. Máquina de Estados Simplificada e Robusta
     // Máquina de Estados com mapeamento explícito de botões
@@ -74,7 +74,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         '2': 'WAITING_CNPJ',
         'vencer': 'WAITING_CNPJ',
         'vencido': 'WAITING_CNPJ',
-        'sou empresa': 'WAITING_CNPJ'
+        'sou empresa': 'WAITING_CNPJ',
+        'whazing_sub_boleto': 'SELECT_BOLETO_TYPE'
       },
       'WAITING_CNPJ': {
         // Transições de CNPJ são lógicas, não baseadas em botões fixos
@@ -92,9 +93,11 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     const stateTransitions = transitionMap[session.state as string] || {};
     const transition = Object.keys(stateTransitions).find(k => text === k || text.includes(k));
 
-    if (transition) {
-      console.log('[DEBUG_FLOW][TRANSITION_FOUND]', transition);
-      nextState = stateTransitions[transition];
+    const transitionFound = !!transition;
+    if (transitionFound) {
+      console.log('[TRANSITION_FOUND]', transition);
+      nextState = stateTransitions[transition!];
+      console.log('[STATE_AFTER]', nextState);
       
       if (nextState === 'WAITING_CNPJ') {
         responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
@@ -105,12 +108,17 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           { id: 'boleto_type_2', title: 'Taxa' }
         ];
       }
-    } else if (session.state === 'SELECT_BOLETO_TYPE') {
-       responseText = `[${BUILD_VERSION}]\nVou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
+    } else {
+      console.log('[TRANSITION_NOT_FOUND]', { state: session.state, input: text });
+    }
+
+    if (nextState === 'SELECT_BOLETO_TYPE' || (!transitionFound && session.state === 'SELECT_BOLETO_TYPE')) {
+      responseText = `[${BUILD_VERSION}]\nVou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
       buttons = [
         { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
       ];
+      nextState = 'SELECT_BOLETO_TYPE';
     } else if (session.state === 'WAITING_CNPJ') {
       const cleanCnpj = text.replace(/\D/g, '');
       if (cleanCnpj.length === 14) {
@@ -157,17 +165,9 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           { id: 'boleto_type_2', title: 'Taxa' }
         ];
       }
-    } else {
-      // Fallback para reinício se o estado estiver perdido
-       responseText = `[${BUILD_VERSION}]\nMenu Sindicato\nComo podemos ajudar você hoje?`;
-      buttons = [
-        { id: 'whazing_sub_boleto', title: 'Sou Empresa (Boleto)' },
-        { id: 'whazing_associado', title: 'Sou Associado' }
-      ];
-      nextState = 'SELECT_BOLETO_TYPE';
+    } else if (!transitionFound) {
+      responseText = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nEntrada: ${text}`;
     }
-
-    console.log('[DEBUG_NOVA_STATE_MACHINE][NEXT]', nextState);
 
     // 3. Atualizar estado no banco
     await supabase.from('whatsapp_boleto_sessions')

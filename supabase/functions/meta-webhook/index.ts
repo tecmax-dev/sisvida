@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
- const BUILD_VERSION = 'FLOW_V2_BUILD_20260508';
+  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v3';
  console.log('[FLOW VERSION]', BUILD_VERSION);
 
 serve(async (req) => {
@@ -81,46 +81,31 @@ serve(async (req) => {
                             rawMsg.interactive?.list_reply?.id || 
                             rawMsg.button?.payload ||
                             body.message?.button?.payload ||
-                            body.button_id ||
-                            rawMsg.content; // Alguns mandam no content o ID
+                            body.button_id;
       
-      if (interactiveId && interactiveId !== content) {
+      if (interactiveId) {
         content = interactiveId;
-        console.log("[DEBUG_NOVA_STATE_MACHINE][BUTTON_EXTRACTED]", interactiveId);
+        console.log("[BUTTON_ID_REAL]", interactiveId);
       }
     }
 
-    if (!fromPhone) return new Response("No phone", { status: 200 });
+    if (!fromPhone) {
+      console.log('[ENTRYPOINT] No phone found in payload');
+      return new Response("No phone", { status: 200 });
+    }
 
     // Roteamento expandido para cobrir todos os IDs da State Machine
-     // BRUTALLY SIMPLE TEST requested by user
-     if (content.toLowerCase().includes("sou empresa") || content.toLowerCase().includes("boleto")) {
-       console.log('[TESTE DIRETO] CLIQUE EM BOLETO DETECTADO');
-       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-       const PHONE_ID = "1110151302179856";
-       const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-       
-       await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-         method: 'POST',
-         headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           messaging_product: 'whatsapp',
-           to,
-           type: 'text',
-           text: { body: `[${BUILD_VERSION}]\n[TESTE DIRETO] CLIQUE RECEBIDO\nConteúdo: ${content}` },
-         }),
-       });
-       console.log('[TESTE DIRETO] Resposta enviada');
-     }
 
-     const boletoKeywords = [
-       "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
-       "sou empresa", "boleto_sim", "boleto_nao", "boleto_type_1", "boleto_type_2",
-       "vencer", "vencido"
-     ];
-     
-     const isBoletoAction = boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
-                            (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content));
+      const boletoKeywords = [
+        "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
+        "sou empresa", "boleto_sim", "boleto_nao", "boleto_type_1", "boleto_type_2",
+        "vencer", "vencido", "empresa"
+      ];
+      
+      const isBoletoAction = (content && content.length > 0) && (
+                             boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
+                             (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content))
+                             );
  
      if (isBoletoAction) {
        console.log(`[ROUTER] Routing to boleto-whatsapp-flow for ${fromPhone}`);
@@ -147,13 +132,13 @@ serve(async (req) => {
         
         console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', JSON.stringify(resData));
 
-        if (resData.response || resData.success) {
+        if (resData.response || resData.success || resData.newState) {
           const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
           const PHONE_ID = "1110151302179856";
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
           
           // Signature for debugging
-           const finalResponseText = `[${BUILD_VERSION}]\n${resData.response}`;
+          const finalResponseText = `[${BUILD_VERSION}]\n${resData.response || '[ERRO] Sem resposta do flow'}`;
 
           let payload: any;
 
@@ -210,41 +195,116 @@ serve(async (req) => {
     //   body: JSON.stringify({ ...body, phone: fromPhone, content: content })
     // }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder:", err));
 
-    console.log(`[FLOW_SINGLE_POINT] Handling non-boleto message: "${content}"`);
+    console.log(`[FLOW_SINGLE_POINT] Checking session for: "${fromPhone}"`);
     
-    // If not a boleto action, send the main menu directly from here to keep control.
-    const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    const PHONE_ID = "1110151302179856";
-    const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-    
-    const welcomeText = `[${BUILD_VERSION}]\nOlá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nComo podemos ajudar você hoje?`;
-    
-    const menuPayload = {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: "interactive",
-      interactive: {
-        type: "button",
-        header: { type: "text", text: `[${BUILD_VERSION}] Menu Sindicato` },
-        body: { text: welcomeText },
-        footer: { text: "Selecione uma opção abaixo" },
-        action: {
-          buttons: [
-            { type: "reply", reply: { id: "whazing_sub_boleto", title: "Sou Empresa (Boleto)" } },
-            { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
-            { type: "reply", reply: { id: "whazing_homologacao", title: "Homologação" } }
-          ]
-        }
-      }
-    };
+    // Check if there's an active boleto session even if no keyword matched
+    const { data: session } = await supabase
+      .from('whatsapp_boleto_sessions')
+      .select('state')
+      .eq('clinic_id', SINDICATO_CLINIC_ID)
+      .eq('phone', fromPhone)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
 
-    await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(menuPayload),
-    });
-    console.log('[FLOW_SINGLE_POINT] Main menu sent from meta-webhook');
+    if (session) {
+      console.log(`[FLOW_SINGLE_POINT] Active session found (${session.state}). Routing to boleto flow.`);
+      // Manually trigger the flow to see if it can handle the input (even if not a keyword)
+      const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SERVICE_ROLE}`
+        },
+        body: JSON.stringify({
+          clinic_id: SINDICATO_CLINIC_ID,
+          phone: fromPhone,
+          message: content,
+          explicit_phone_id: "1110151302179856"
+        })
+      });
+
+      const resData = await flowRes.json();
+      if (resData.response || resData.success) {
+        const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+        const PHONE_ID = "1110151302179856";
+        const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+        const finalResponseText = `[${BUILD_VERSION}]\n${resData.response}`;
+        
+        let payload: any;
+        if (resData.buttons && resData.buttons.length > 0) {
+          payload = {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to,
+            type: "interactive",
+            interactive: {
+              type: "button",
+              header: { type: "text", text: "Boleto Sindicato" },
+              body: { text: finalResponseText },
+              action: {
+                buttons: resData.buttons.slice(0, 3).map((b: any) => ({
+                  type: "reply",
+                  reply: { id: b.id, title: (b.text || b.title || "").substring(0, 20) }
+                }))
+              }
+            }
+          };
+        } else {
+          payload = {
+            messaging_product: 'whatsapp',
+            to,
+            type: 'text',
+            text: { body: finalResponseText },
+          };
+        }
+
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        return new Response(JSON.stringify({ ok: true, flow: "boleto_reentry" }));
+      }
+    }
+
+    // Only send main menu if NO session exists and NO keyword matched
+    if (!content || content.toLowerCase() === 'oi' || content.toLowerCase() === 'menu' || content.toLowerCase() === 'start') {
+      console.log(`[FLOW_SINGLE_POINT] Sending main menu for: "${content}"`);
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      const PHONE_ID = "1110151302179856";
+      const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+      
+      const welcomeText = `[${BUILD_VERSION}]\nOlá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nComo podemos ajudar você hoje?`;
+      
+      const menuPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          header: { type: "text", text: `[${BUILD_VERSION}] Menu Sindicato` },
+          body: { text: welcomeText },
+          footer: { text: "Selecione uma opção abaixo" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_boleto", title: "Sou Empresa (Boleto)" } },
+              { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
+              { type: "reply", reply: { id: "whazing_homologacao", title: "Homologação" } }
+            ]
+          }
+        }
+      };
+
+      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(menuPayload),
+      });
+      console.log('[FLOW_SINGLE_POINT] Main menu sent from meta-webhook');
+    } else {
+      console.log(`[FLOW_SINGLE_POINT] Ignoring unrecognized message: "${content}" to avoid loops`);
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
