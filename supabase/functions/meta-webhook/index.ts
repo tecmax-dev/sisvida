@@ -267,6 +267,28 @@ serve(async (req) => {
       }
     }
 
+    // CRITICAL: Check if this was a button click that should have been a boleto action but failed lookup
+    const isExplicitButtonClick = body.raw_message?.interactive?.button_reply?.id || body.message?.button?.payload;
+    
+    if (isExplicitButtonClick) {
+      console.log('[DEBUG_SESSION_FAIL] Button click received but no session found and not a boleto keyword');
+      // If it's a button click and we reached here, something is wrong with session or routing
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      const PHONE_ID = "1110151302179856";
+      const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+      
+      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: `[DEBUG_SESSION_FAIL]\nuserId: ${fromPhone}\nbuttonId: ${content}\nNo session found.` },
+        }),
+      });
+    }
+
     // Only send main menu if NO session exists and NO keyword matched
     if (!content || content.toLowerCase() === 'oi' || content.toLowerCase() === 'menu' || content.toLowerCase() === 'start') {
       console.log(`[FLOW_SINGLE_POINT] Sending main menu for: "${content}"`);
