@@ -66,10 +66,11 @@ serve(async (req) => {
       
       if (msg?.type === "text") {
         content = msg.text?.body || "";
-      }
-      else if (msg?.type === "interactive") {
+      } else if (msg?.type === "interactive") {
         content = msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || msg.interactive?.button_reply?.title || "";
       } else if (msg?.type === "button") {
+        content = msg.button?.payload || msg.button?.text || "";
+      }
     } else {
       const rawMsg = body.raw_message ?? {};
       fromPhone = String(body.phone || body.wa_id || body.chatId || rawMsg.from || "").replace(/\D/g, "");
@@ -81,20 +82,13 @@ serve(async (req) => {
                             rawMsg.interactive?.list_reply?.id || 
                             rawMsg.button?.payload ||
                             body.message?.button?.payload ||
-                            body.button_id;
+                            body.button_id ||
+                            rawMsg.content; // Alguns mandam no content o ID
       
-      if (interactiveId) {
+      if (interactiveId && interactiveId !== content) {
         content = interactiveId;
         console.log("[DEBUG_NOVA_STATE_MACHINE][BUTTON_EXTRACTED]", interactiveId);
       }
-    }
-        content = msg.button?.payload || msg.button?.text || "";
-      }
-    } else {
-      const rawMsg = body.raw_message ?? {};
-      fromPhone = String(body.phone || body.wa_id || body.chatId || rawMsg.from || "").replace(/\D/g, "");
-      content = (body.mensagem || body.text || rawMsg.content || body.message?.mensagem || "").toString().trim();
-      profileName = body.pushName || rawMsg.pushName || body.nome || "Cliente";
     }
 
     if (!fromPhone) return new Response("No phone", { status: 200 });
