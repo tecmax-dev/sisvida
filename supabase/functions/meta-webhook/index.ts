@@ -83,9 +83,7 @@ serve(async (req) => {
                             body.message?.button?.payload ||
                             body.button_id;
       
-      const buttonTitle = msg?.interactive?.button_reply?.title || 
-                          msg?.interactive?.list_reply?.title ||
-                          rawMsg.interactive?.button_reply?.title ||
+      const buttonTitle = rawMsg.interactive?.button_reply?.title || 
                           rawMsg.interactive?.list_reply?.title || "";
 
       if (interactiveId) {
@@ -97,7 +95,7 @@ serve(async (req) => {
       }
       
       console.log("[PARSER_DEBUG]", { 
-        type: msg?.type || rawMsg.type, 
+        type: rawMsg.type, 
         id: interactiveId, 
         title: buttonTitle, 
         finalContent: content 
