@@ -16956,6 +16956,33 @@ export type Database = {
           },
         ]
       }
+      whatsapp_sessions: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          phone: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          phone: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          phone?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_templates: {
         Row: {
           category: string
