@@ -58,7 +58,12 @@ const CONTRIBUTION_TYPE_MAP = {
     try {
       const RAW_PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
       const PHONE_ID = (RAW_PHONE_ID === "937233212814035" || RAW_PHONE_ID === "1522701919380063") ? "1110151302179856" : RAW_PHONE_ID;
-      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN') || "";
+       console.log('[DEBUG_BOLETO][TOKEN_CHECK]', { 
+         length: TOKEN.length, 
+         prefix: TOKEN.substring(0, 10), 
+         suffix: TOKEN.substring(TOKEN.length - 10) 
+       });
       if (!PHONE_ID || !TOKEN) {
         console.error('[DEBUG_BOLETO][META_CONFIG_ERROR] Missing ID or Token');
         return false;
@@ -73,7 +78,7 @@ const CONTRIBUTION_TYPE_MAP = {
         text: { body: text },
       };
 
-      console.log('[DEBUG_BOLETO][BEFORE_META_TEXT_SEND]', { url: metaUrl, phone_id: PHONE_ID, payload: JSON.stringify(payload) });
+      console.log('[DEBUG_BOLETO][BEFORE_META_TEXT_SEND]', { url: metaUrl, phone_id: PHONE_ID, to: payload.to, body: payload.text.body });
 
       const r = await fetch(metaUrl, {
         method: 'POST',
