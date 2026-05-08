@@ -8339,28 +8339,34 @@ async function handleWebhook(req: Request) {
      'followup_voltar_menu': 'whazing_voltar_menu',
     };
 
-        const normalizedId = effectiveId?.toLowerCase() || '';
+        const rawNormalizedId = effectiveId?.toLowerCase() || '';
 
-        let isWhazingLevel1 = !!whazingLevel1Map[normalizedId];
-        let isWhazingLevel2 = !!whazingLevel2Map[normalizedId];
-        let isWhazingFollowUp = !!whazingFollowUpMap[normalizedId];
-        const isWhazingLegacy = normalizedId === 'whazing_outros';
+        // Re-avaliar mapas com o ID já normalizado pelo normalizador central
+        let isWhazingLevel1 = !!whazingLevel1Map[rawNormalizedId];
+        let isWhazingLevel2 = !!whazingLevel2Map[rawNormalizedId];
+        let isWhazingFollowUp = !!whazingFollowUpMap[rawNormalizedId];
+        const isWhazingLegacy = rawNormalizedId === 'whazing_outros';
 
-        let activeBtnId = normalizedId;
+        let activeBtnId = rawNormalizedId;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
+          console.log(`[webhook] Numeric disambiguation for "${messageTextTrim}" at stage: ${lastMenuType || 'main'}`);
           if (!lastMenuType || lastMenuType === 'main') {
             isWhazingLevel1 = true;
             activeBtnId = messageTextTrim === '1' ? 'whazing_associado' : (messageTextTrim === '2' ? 'whazing_empresa' : 'whazing_contabilidade');
           } else if (lastMenuType === 'sub') {
             isWhazingLevel2 = true;
-            // activeBtnId remains '1', '2', '3' for the sub-menu logic below
+            // No sub-menu (Nível 2), o ID pode ser o número da opção (1, 2, 3)
+            // O mapeamento real acontece no bloco do LEVEL 2 abaixo
           } else if (lastMenuType === 'followup') {
             isWhazingFollowUp = true;
             activeBtnId = messageTextTrim === '1' ? 'whazing_falar_atendente' : (messageTextTrim === '2' ? 'whazing_voltar_sub' : 'whazing_voltar_menu');
           }
         }
+
+        // Debug log final do estado de roteamento
+        console.log(`[webhook] Final Routing: id="${activeBtnId}", L1=${isWhazingLevel1}, L2=${isWhazingLevel2}, Follow=${isWhazingFollowUp}`);
 
         // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
         if (isWhazingFollowUp) {
