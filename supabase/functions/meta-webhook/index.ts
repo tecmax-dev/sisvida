@@ -166,32 +166,50 @@ serve(async (req) => {
                 if (resData.response) {
                   console.log(`[meta-webhook][DEBUG_BOLETO] Enviando resposta do boleto para o usuário...`);
                   
-                  // Decidir se envia Botões ou Texto
-                  const sendUrl = (resData.buttons && resData.buttons.length > 0) 
-                    ? `${SUPABASE_URL}/functions/v1/meta-send-buttons`
-                    : `${SUPABASE_URL}/functions/v1/meta-send-text`;
+                  const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+                  const PHONE_ID = "1110151302179856";
+                  const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
 
-                  const sendBody = (resData.buttons && resData.buttons.length > 0)
-                    ? {
-                        to: fromPhone,
-                        title: "Boleto Sindicato",
-                        description: resData.response,
-                        buttons: resData.buttons,
-                        phone_number_id: "1110151302179856"
+                  let payload: any;
+
+                  if (resData.buttons && resData.buttons.length > 0) {
+                    payload = {
+                      messaging_product: "whatsapp",
+                      recipient_type: "individual",
+                      to,
+                      type: "interactive",
+                      interactive: {
+                        type: "button",
+                        header: { type: "text", text: "Boleto Sindicato" },
+                        body: { text: resData.response },
+                        action: {
+                          buttons: resData.buttons.slice(0, 3).map((b: any) => ({
+                            type: "reply",
+                            reply: {
+                              id: b.id,
+                              title: (b.text || b.title || "").substring(0, 20)
+                            }
+                          }))
+                        }
                       }
-                    : {
-                        to: fromPhone,
-                        text: resData.response,
-                        phone_number_id: "1110151302179856"
-                      };
+                    };
+                  } else {
+                    payload = {
+                      messaging_product: 'whatsapp',
+                      to,
+                      type: 'text',
+                      text: { body: resData.response },
+                    };
+                  }
 
-                  await fetch(sendUrl, {
+                  const metaUrl = `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`;
+                  await fetch(metaUrl, {
                     method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${SERVICE_ROLE}`
+                    headers: { 
+                      'Authorization': `Bearer ${TOKEN}`, 
+                      'Content-Type': 'application/json' 
                     },
-                    body: JSON.stringify(sendBody)
+                    body: JSON.stringify(payload),
                   });
                 }
                 
