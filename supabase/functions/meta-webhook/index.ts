@@ -121,31 +121,19 @@ serve(async (req) => {
       const PHONE_ID = "1110151302179856";
       const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
       
-      console.log('[BOTAO_GLOBAL_RECEBIDO]');
-      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+      console.log('[BOTAO_GLOBAL_RECEBIDO_VERBOSE]', JSON.stringify(body, null, 2));
+      const forensicResponse = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           to,
           type: 'text',
-          text: { body: `[BOTAO_GLOBAL_RECEBIDO]\nbuttonId: ${rawButtonId}\ntitle: ${rawButtonTitle}` },
+          text: { body: `[FORENSIC_ECHO]\nbuttonId: ${rawButtonId}\ntitle: ${rawButtonTitle}\ncontent: ${content}\nphone: ${fromPhone}\nraw: ${JSON.stringify(body).substring(0, 100)}` },
         }),
       });
-
-      if (content === 'boleto_a_vencer' || content === 'boleto_vencido' || content.toLowerCase().includes('vencer')) {
-        console.log('[TESTE_REAL] BOTAO RECEBIDO');
-        await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            to,
-            type: 'text',
-            text: { body: `[TESTE_REAL] BOTAO RECEBIDO\nrouteMatch: boleto_flow` },
-          }),
-        });
-      }
+      const forensicResBody = await forensicResponse.text();
+      console.log('[FORENSIC_ECHO_STATUS]', forensicResponse.status, forensicResBody);
     }
     // --- FORENSIC PARSER END ---
 
@@ -352,44 +340,8 @@ serve(async (req) => {
       });
     }
 
-    // Only send main menu if NO session exists and NO keyword matched
-    if (!content || content.toLowerCase() === 'oi' || content.toLowerCase() === 'menu' || content.toLowerCase() === 'start') {
-      console.log(`[FLOW_SINGLE_POINT] Sending main menu for: "${content}"`);
-      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-      const PHONE_ID = "1110151302179856";
-      const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-      
-      const welcomeText = `[${BUILD_VERSION}]\nOlá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nComo podemos ajudar você hoje?`;
-      
-      const menuPayload = {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to,
-        type: "interactive",
-        interactive: {
-          type: "button",
-          header: { type: "text", text: `[${BUILD_VERSION}] Menu Sindicato` },
-          body: { text: welcomeText },
-          footer: { text: "Selecione uma opção abaixo" },
-          action: {
-            buttons: [
-              { type: "reply", reply: { id: "whazing_sub_boleto", title: "Sou Empresa (Boleto)" } },
-              { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
-              { type: "reply", reply: { id: "whazing_homologacao", title: "Homologação" } }
-            ]
-          }
-        }
-      };
-
-      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(menuPayload),
-      });
-      console.log('[FLOW_SINGLE_POINT] Main menu sent from meta-webhook');
-    } else {
-      console.log(`[FLOW_SINGLE_POINT] Ignoring unrecognized message: "${content}" to avoid loops`);
-    }
+    // FORENSIC AUDIT: Disabled auto-main-menu loop
+    console.log(`[FLOW_SINGLE_POINT_FORENSIC] Ignored unhandled content: "${content}" to prevent loop. No fallback sent.`);
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
