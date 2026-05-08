@@ -55,23 +55,60 @@ serve(async (req) => {
     let buttons: any[] = [];
     let nextState = session.state;
 
-    const text = (message || "").trim().toLowerCase();
+    const rawText = (message || "").trim();
+    const text = rawText.toLowerCase();
+    
+    console.log('[DEBUG_FLOW][STATE]', session.state);
+    console.log('[DEBUG_FLOW][RAW_CONTENT]', rawText);
+    console.log('[DEBUG_FLOW][NORMALIZED]', text);
 
     // 2. Máquina de Estados Simplificada e Robusta
-    if (session.state === 'SELECT_BOLETO_TYPE') {
-      if (text === 'boleto_a_vencer' || text === '1' || text.includes('vencer') || text === 'sou empresa') {
+    // Máquina de Estados com mapeamento explícito de botões
+    const transitionMap: Record<string, Record<string, string>> = {
+      'SELECT_BOLETO_TYPE': {
+        'boleto_a_vencer': 'WAITING_CNPJ',
+        'boleto_vencido': 'WAITING_CNPJ',
+        '1': 'WAITING_CNPJ',
+        '2': 'WAITING_CNPJ',
+        'vencer': 'WAITING_CNPJ',
+        'vencido': 'WAITING_CNPJ',
+        'sou empresa': 'WAITING_CNPJ'
+      },
+      'WAITING_CNPJ': {
+        // Transições de CNPJ são lógicas, não baseadas em botões fixos
+      },
+      'CONFIRM_EMPLOYER': {
+        'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
+        'sim': 'SELECT_CONTRIBUTION_TYPE',
+        '1': 'SELECT_CONTRIBUTION_TYPE',
+        'boleto_nao': 'WAITING_CNPJ',
+        'nao': 'WAITING_CNPJ',
+        '2': 'WAITING_CNPJ'
+      }
+    };
+
+    const stateTransitions = transitionMap[session.state as string] || {};
+    const transition = Object.keys(stateTransitions).find(k => text === k || text.includes(k));
+
+    if (transition) {
+      console.log('[DEBUG_FLOW][TRANSITION_FOUND]', transition);
+      nextState = stateTransitions[transition];
+      
+      if (nextState === 'WAITING_CNPJ') {
         responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
-        nextState = 'WAITING_CNPJ';
-      } else if (text === 'boleto_vencido' || text === '2' || text.includes('vencido')) {
-        responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
-        nextState = 'WAITING_CNPJ';
-      } else {
-        responseText = "Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
+      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
+        responseText = "📝 Qual o *tipo de contribuição*?\n\n1. Mensalidade Sindical\n2. Taxa Negocial";
         buttons = [
-          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+          { id: 'boleto_type_1', title: 'Mensalidade' },
+          { id: 'boleto_type_2', title: 'Taxa' }
         ];
       }
+    } else if (session.state === 'SELECT_BOLETO_TYPE') {
+      responseText = "Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
+      buttons = [
+        { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+        { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+      ];
     } else if (session.state === 'WAITING_CNPJ') {
       const cleanCnpj = text.replace(/\D/g, '');
       if (cleanCnpj.length === 14) {
@@ -101,16 +138,22 @@ serve(async (req) => {
         responseText = "❌ CNPJ inválido. Digite os 14 números do CNPJ da empresa:";
       }
     } else if (session.state === 'CONFIRM_EMPLOYER') {
-      if (text === 'boleto_sim' || text === 'sim' || text === '1') {
-        responseText = "📝 Qual o *tipo de contribuição*?\n\n1. Mensalidade Sindical\n2. Taxa Negocial";
+      // Caso onde clicou no botão mas não foi mapeado acima
+      responseText = "Ok, vamos tentar outro CNPJ. Por favor, digite o CNPJ correto:";
+      nextState = 'WAITING_CNPJ';
+    } else if (session.state === 'SELECT_CONTRIBUTION_TYPE') {
+      // Próximo passo após selecionar tipo de contribuição
+      if (text.includes('type_1') || text === '1' || text.includes('mensalidade')) {
+        responseText = "🔍 Buscando boletos de *Mensalidade*...\n\nAguarde um instante.";
+        // Aqui entraria a lógica de busca real
+      } else if (text.includes('type_2') || text === '2' || text.includes('taxa')) {
+        responseText = "🔍 Buscando boletos de *Taxa Negocial*...\n\nAguarde um instante.";
+      } else {
+        responseText = "Por favor, selecione o tipo de contribuição:";
         buttons = [
           { id: 'boleto_type_1', title: 'Mensalidade' },
           { id: 'boleto_type_2', title: 'Taxa' }
         ];
-        nextState = 'SELECT_CONTRIBUTION_TYPE';
-      } else {
-        responseText = "Ok, vamos tentar outro CNPJ. Por favor, digite o CNPJ correto:";
-        nextState = 'WAITING_CNPJ';
       }
     } else {
       // Fallback para reinício se o estado estiver perdido
