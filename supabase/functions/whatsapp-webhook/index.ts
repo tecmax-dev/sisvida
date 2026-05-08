@@ -8334,14 +8334,25 @@ async function handleWebhook(req: Request) {
       'whazing_associado': 'whazing_associado',
       'whazing_empresa': 'whazing_empresa',
       'whazing_contabilidade': 'whazing_contabilidade',
+      'sou associado': 'whazing_associado',
+      'sou empresa': 'whazing_empresa',
+      'sou contabilidade': 'whazing_contabilidade',
+      '1': 'whazing_associado',
+      '2': 'whazing_empresa',
+      '3': 'whazing_contabilidade'
    };
 
-        const whazingLevel2Map: Record<string, string> = {
-          'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
-          'whazing_sub_convencoes': 'whazing_sub_convencoes',
-          'whazing_sub_outros': 'whazing_sub_outros',
-          'whazing_sub_boleto': 'whazing_sub_boleto',
-        };
+         const whazingLevel2Map: Record<string, string> = {
+           'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
+           'whazing_sub_convencoes': 'whazing_sub_convencoes',
+           'whazing_sub_outros': 'whazing_sub_outros',
+           'whazing_sub_boleto': 'whazing_sub_boleto',
+           'atualizar carteirinha': 'whazing_sub_carteirinha',
+           'convenções coletivas': 'whazing_sub_convencoes',
+           'outros assuntos': 'whazing_sub_outros',
+           '2ª via boleto': 'whazing_sub_boleto',
+           '2 via boleto': 'whazing_sub_boleto'
+         };
 
    const whazingFollowUpMap: Record<string, string> = {
      'whazing_voltar_menu': 'whazing_voltar_menu',
@@ -8362,15 +8373,21 @@ async function handleWebhook(req: Request) {
      'followup_voltar_menu': 'whazing_voltar_menu',
     };
 
-        const rawNormalizedId = effectiveId?.toLowerCase() || '';
+         const rawNormalizedId = selection.actionId?.toLowerCase() || selection.actionLabel?.toLowerCase().trim() || '';
 
         // Re-avaliar mapas com o ID já normalizado pelo normalizador central
-        let isWhazingLevel1 = !!whazingLevel1Map[rawNormalizedId];
-        let isWhazingLevel2 = !!whazingLevel2Map[rawNormalizedId];
+         let isWhazingLevel1 = !!whazingLevel1Map[rawNormalizedId] || !!whazingLevel1Map[selection.actionLabel?.toLowerCase().trim()];
+         let isWhazingLevel2 = !!whazingLevel2Map[rawNormalizedId] || !!whazingLevel2Map[selection.actionLabel?.toLowerCase().trim()];
         let isWhazingFollowUp = !!whazingFollowUpMap[rawNormalizedId];
         const isWhazingLegacy = rawNormalizedId === 'whazing_outros';
 
-        let activeBtnId = rawNormalizedId;
+         let activeBtnId = whazingLevel1Map[rawNormalizedId] || 
+                          whazingLevel2Map[rawNormalizedId] || 
+                          whazingFollowUpMap[rawNormalizedId] || 
+                          whazingLevel1Map[selection.actionLabel?.toLowerCase().trim()] ||
+                          whazingLevel2Map[selection.actionLabel?.toLowerCase().trim()] ||
+                          whazingFollowUpMap[selection.actionLabel?.toLowerCase().trim()] ||
+                          rawNormalizedId;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
@@ -8878,8 +8895,8 @@ async function handleWebhook(req: Request) {
           else if (rawBtnId === 'whazing_empresa') mappedMessageText = '2';
           else if (rawBtnId === 'whazing_contabilidade') mappedMessageText = '3';
           
-          if (isBoletoButton) {
-            console.log(`[webhook] Boleto button "${rawBtnId}" routed as raw id`);
+          if (isBoletoButton || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto') {
+            console.log(`[webhook] Boleto action detected: raw="${rawBtnId}", active="${activeBtnId}", effective="${effectiveId}"`);
           }
         // ===== END BOLETO BUTTON ROUTING =====
 
@@ -8924,11 +8941,13 @@ async function handleWebhook(req: Request) {
         }
 
         // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
-        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) && configData.booking_enabled === false
+        const isBoletoRequest = (/^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) && configData.booking_enabled === false
           ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())
-          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) || rawBtnId === 'whazing_sub_boleto';
+          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())) || 
+          rawBtnId === 'whazing_sub_boleto' || 
+          activeBtnId === 'whazing_sub_boleto';
 
-        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto';
+        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto';
         
         if (revivedBoletoSession || effectiveBoletoRequest || isBoletoButton) {
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${effectiveBoletoRequest}, is button: ${isBoletoButton}`);
@@ -8948,8 +8967,8 @@ async function handleWebhook(req: Request) {
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone: phone,
-                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
-                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto') ? 'start' : undefined,
+                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto') ? (isBoletoButton ? rawBtnId : mappedMessageText) : undefined,
+                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto' && activeBtnId !== 'whazing_sub_boleto') ? 'start' : undefined,
                  evolution_config: {
                    api_url: configData.api_url,
                    api_key: configData.api_key,
