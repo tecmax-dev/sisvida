@@ -1113,19 +1113,18 @@ async function storeWhazingContext(
   lastMenuType: 'main' | 'sub' | 'followup' = 'main'
 ): Promise<void> {
    const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
+     clinic_id: clinicId,
+     phone,
+     messages: { 
+       whazing_category: category, 
+       last_menu_type: lastMenuType,
+       source: 'whazing_menu' 
+     },
+     expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
      updated_at: new Date().toISOString()
    }, {
      onConflict: 'clinic_id,phone'
    });
-    clinic_id: clinicId,
-    phone,
-    messages: { 
-      whazing_category: category, 
-      last_menu_type: lastMenuType,
-      source: 'whazing_menu' 
-    },
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-  });
 
   if (error) {
     console.log('[webhook] Could not store whazing context:', error.message);
