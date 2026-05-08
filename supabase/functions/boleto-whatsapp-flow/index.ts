@@ -207,13 +207,15 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       console.log('[SESSION_SAVE_SUCCESS]', { id: session.id, nextState });
     }
 
-    console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', responseText);
+    // 4. Retornar resposta com prefixo forensic
+    const finalResponse = forensicPrefix + responseText;
+    console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', finalResponse);
 
     // 4. Retornar resposta para o webhook enviar
     return new Response(
       JSON.stringify({ 
         success: true, 
-        response: responseText, 
+        response: finalResponse, 
         buttons: buttons,
         newState: nextState 
       }),
