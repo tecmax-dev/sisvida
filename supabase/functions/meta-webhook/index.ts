@@ -298,7 +298,6 @@ serve(async (req) => {
         console.error('[FALLBACK_SEND_ERROR]', err);
       }
     }
-    }
 
     // FORENSIC AUDIT: Disabled auto-main-menu loop
     console.log(`[FLOW_SINGLE_POINT_FORENSIC] Ignored unhandled content: "${content}" to prevent loop. No fallback sent.`);
