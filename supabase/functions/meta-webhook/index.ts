@@ -40,187 +40,156 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[ENTRY] meta-webhook');
     let body = await req.json();
     console.log("[meta-webhook] Body recebido:", JSON.stringify(body));
+
+    // 1. Identificar se é uma mensagem do usuário (message_received)
+    // ZapResponder envia diversos tipos de eventos. Queremos apenas as mensagens.
+    if (body.type !== "message_received" && !Array.isArray(body.entry)) {
+      console.log(`[meta-webhook] Ignorando evento tipo: ${body.type}`);
+      return new Response(JSON.stringify({ ok: true, ignored: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Normalização agressiva para qualquer formato do ZapResponder (inclusive on-message)
-    if (!Array.isArray(body.entry)) {
-      const rawMsg = body.raw_message ?? {};
-      const phoneValue = body.phone || body.wa_id || body.chatId || rawMsg.from || (body.data?.key?.remoteJid) || "";
-      const fromPhone = String(phoneValue).replace(/@.*/, "").replace(/\D/g, "");
+    // 2. Normalizar payload para extrair De (phone) e O que (content)
+    let fromPhone = "";
+    let content = "";
+    let profileName = "Cliente";
+    let messageType = "text";
+
+    if (Array.isArray(body.entry)) {
+      // Formato nativo Meta
+      const entry = body.entry[0]?.changes?.[0]?.value;
+      const msg = entry?.messages?.[0];
+      fromPhone = msg?.from || "";
+      profileName = entry?.contacts?.[0]?.profile?.name || "Cliente";
+      messageType = msg?.type || "text";
       
-      const textBody = (
-        body.mensagem || 
-        body.message?.mensagem ||
-        body.message?.text ||
-        body.message?.content ||
-        rawMsg.content ||
-        body.text || 
-        body.raw_message?.body ||
-        body.data?.message?.conversation ||
-        ""
-      ).toString().trim();
+      if (msg?.type === "text") content = msg.text?.body || "";
+      else if (msg?.type === "interactive") {
+        content = msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || msg.interactive?.button_reply?.title || "";
+      } else if (msg?.type === "button") {
+        content = msg.button?.payload || msg.button?.text || "";
+      }
+    } else {
+      // Formato ZapResponder (message_received)
+      const rawMsg = body.raw_message ?? {};
+      fromPhone = String(body.phone || body.wa_id || body.chatId || rawMsg.from || "").replace(/\D/g, "");
+      content = (body.mensagem || body.text || rawMsg.content || body.message?.mensagem || "").toString().trim();
+      profileName = body.pushName || rawMsg.pushName || body.nome || "Cliente";
+    }
 
-      const pushName = body.pushName || rawMsg.pushName || body.data?.pushName || body.nome || "Cliente";
+    console.log(`[meta-webhook][ROUTER] FROM: ${fromPhone} | MSG: "${content}"`);
 
-      if (fromPhone) {
-        body = {
-          ...body,
-          entry: [{
-            changes: [{
-              field: "messages",
-              value: {
-                metadata: body.metadata || { display_phone_number: rawMsg.device || "557332311784" },
-                contacts: [{ profile: { name: pushName } }],
-                messages: [{
-                  from: fromPhone,
-                  id: rawMsg.id || body.id || `zap-${Date.now()}`,
-                  timestamp: String(rawMsg.timestamp || body.timestamp || Math.floor(Date.now() / 1000)),
-                  type: "text",
-                  text: { body: textBody }
-                }]
+    if (!fromPhone) {
+      console.error("[meta-webhook] Telefone não identificado no payload.");
+      return new Response("No phone", { status: 200 });
+    }
+
+    // 3. ROTEAMENTO DE ALTA PRIORIDADE: BOLETOS
+    const isBoletoAction = content.toLowerCase().includes("boleto") || 
+                           content === "whazing_sub_boleto" || 
+                           content === "boleto_a_vencer" || 
+                           content === "boleto_vencido" ||
+                           content === "Sou Empresa";
+
+    if (isBoletoAction) {
+      console.log(`[STEP] before boleto routing: ${fromPhone}`);
+      try {
+        const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_ROLE}`
+          },
+          body: JSON.stringify({
+            clinic_id: SINDICATO_CLINIC_ID,
+            phone: fromPhone,
+            message: content,
+            action: (content === "whazing_sub_boleto" || content === "Sou Empresa") ? "start" : undefined,
+            explicit_phone_id: "1110151302179856"
+          })
+        });
+
+        const resData = await flowRes.json();
+        console.log(`[meta-webhook][DEBUG_BOLETO] Resposta do fluxo:`, JSON.stringify(resData));
+        
+        if (resData.response) {
+          const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+          const PHONE_ID = "1110151302179856";
+          const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+          let payload: any;
+
+          if (resData.buttons && resData.buttons.length > 0) {
+            payload = {
+              messaging_product: "whatsapp",
+              recipient_type: "individual",
+              to,
+              type: "interactive",
+              interactive: {
+                type: "button",
+                header: { type: "text", text: "Boleto Sindicato" },
+                body: { text: resData.response },
+                action: {
+                  buttons: resData.buttons.slice(0, 3).map((b: any) => ({
+                    type: "reply",
+                    reply: { id: b.id, title: (b.text || b.title || "").substring(0, 20) }
+                  }))
+                }
               }
-            }]
-          }]
-        };
-        console.log(`[meta-webhook] Rota customizada detectada. Normalizando De ${fromPhone}: "${textBody}"`);
+            };
+          } else {
+            payload = {
+              messaging_product: 'whatsapp',
+              to,
+              type: 'text',
+              text: { body: resData.response },
+            };
+          }
+
+          await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+        
+        console.log('[STEP] before return (boleto success)');
+        return new Response(JSON.stringify({ ok: true, flow: "boleto" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.error("[meta-webhook][DEBUG_BOLETO] Erro ao chamar fluxo:", err);
       }
     }
 
-    // Estrutura padrão Meta WhatsApp Cloud API
-    const entries = body.entry ?? [];
-    for (const entry of entries) {
-      const changes = entry.changes ?? [];
-      for (const change of changes) {
-        if (change.field !== "messages") continue;
-        const value = change.value ?? {};
-        const messages = value.messages ?? [];
-        const contacts = value.contacts ?? [];
+    // 4. ROTEAMENTO DE PRIORIDADE: MENU PRINCIPAL (SAUDAÇÃO)
+    const isGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|menu|inicio|início|voltar|começar|comecar|hello|hi|atendente)$/i.test(content);
+    if (isGreeting) {
+      console.log(`[STEP] before main menu routing: ${fromPhone}`);
+      // O Menu Principal é enviado pela IA ou pelo ZapResponder, mas vamos garantir que ele envie OS BOTÕES do Sindicato.
+      // Chamamos o zapresponder-webhook mas controlamos o retorno.
+    }
 
-        for (const msg of messages) {
-          const fromPhone = msg.from as string; // já normalizado pela Meta (E.164 sem +)
-          const wamid = msg.id as string;
-          const timestamp = new Date(Number(msg.timestamp) * 1000).toISOString();
-          const profileName = contacts[0]?.profile?.name ?? null;
+    // 5. ENCAMINHAMENTO PADRÃO (DASHBOARD + ZAPRESPONDER)
+    // Aqui o meta-webhook age apenas como pass-through para o sistema que lida com o "atendimento humano" e fallback genérico.
+    // MAS, vamos logar quem está disparando o protocolo.
+    console.log(`[STEP] before zapresponder legacy routing`);
 
-          // Determinar tipo e conteúdo
-          let messageType = msg.type ?? "text";
-          let content = "";
-          
-          if (msg.type === "text") {
-            content = msg.text?.body ?? "";
-          } else if (msg.type === "button") {
-            content = msg.button?.payload || msg.button?.text || "";
-          } else if (msg.type === "interactive") {
-            const interactive = msg.interactive || {};
-            if (interactive.type === "button_reply") {
-              content = interactive.button_reply?.id || interactive.button_reply?.title || "";
-            } else if (interactive.type === "list_reply") {
-              content = interactive.list_reply?.id || interactive.list_reply?.title || "";
-            } else {
-              content = 
-                interactive.button_reply?.id || 
-                interactive.button_reply?.title || 
-                interactive.list_reply?.id || 
-                interactive.list_reply?.title || 
-                "";
-            }
-          } else if (msg.type === "image") content = msg.image?.caption ?? "[imagem]";
-          else if (msg.type === "audio") content = "[áudio]";
-          else if (msg.type === "document") content = msg.document?.filename ?? "[documento]";
-          else content = `[${msg.type}]`;
+    fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SERVICE_ROLE}`
+      },
+      body: JSON.stringify({ ...body, phone: fromPhone, content: content })
+    }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder:", err));
 
-          console.log(`[meta-webhook] DEBUG: Nova mensagem recebida da Meta`);
-          console.log(`[meta-webhook] DE: ${fromPhone}`);
-           console.log(`[meta-webhook][DEBUG_BOLETO] MSG_CONTENT: "${content}" | TYPE: ${messageType} | FROM: ${fromPhone}`);
- 
-           // ── REDIRECIONAMENTO PARA FLUXO DE BOLETO (SINDICATO) ──
-           const isBoletoAction = content.toLowerCase().includes("boleto") || 
-                                 content === "whazing_sub_boleto" || 
-                                 content === "boleto_a_vencer" || 
-                                 content === "boleto_vencido";
- 
-            if (isBoletoAction && SINDICATO_CLINIC_ID) {
-              console.log(`[meta-webhook][DEBUG_BOLETO] Redirecionando para boleto-whatsapp-flow: ${fromPhone}`);
-              
-              try {
-                const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SERVICE_ROLE}`
-                  },
-                  body: JSON.stringify({
-                    clinic_id: SINDICATO_CLINIC_ID,
-                    phone: fromPhone,
-                    message: content,
-                    action: (content === "whazing_sub_boleto") ? "start" : undefined,
-                    explicit_phone_id: "1110151302179856"
-                  })
-                });
-
-                const resData = await flowRes.json();
-                console.log(`[meta-webhook][DEBUG_BOLETO] Resposta do fluxo:`, JSON.stringify(resData));
-                
-                if (resData.response) {
-                  console.log(`[meta-webhook][DEBUG_BOLETO] Enviando resposta do boleto para o usuário...`);
-                  
-                  const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-                  const PHONE_ID = "1110151302179856";
-                  const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-
-                  let payload: any;
-
-                  if (resData.buttons && resData.buttons.length > 0) {
-                    payload = {
-                      messaging_product: "whatsapp",
-                      recipient_type: "individual",
-                      to,
-                      type: "interactive",
-                      interactive: {
-                        type: "button",
-                        header: { type: "text", text: "Boleto Sindicato" },
-                        body: { text: resData.response },
-                        action: {
-                          buttons: resData.buttons.slice(0, 3).map((b: any) => ({
-                            type: "reply",
-                            reply: {
-                              id: b.id,
-                              title: (b.text || b.title || "").substring(0, 20)
-                            }
-                          }))
-                        }
-                      }
-                    };
-                  } else {
-                    payload = {
-                      messaging_product: 'whatsapp',
-                      to,
-                      type: 'text',
-                      text: { body: resData.response },
-                    };
-                  }
-
-                  const metaUrl = `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`;
-                  await fetch(metaUrl, {
-                    method: 'POST',
-                    headers: { 
-                      'Authorization': `Bearer ${TOKEN}`, 
-                      'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify(payload),
-                  });
-                }
-                
-                // IMPORTANTE: Se processou boleto, encerramos aqui para evitar que a saudação do ZapResponder sobrescreva ou duplique
-                return new Response(JSON.stringify({ ok: true, flow: "boleto" }), {
-                  headers: { ...corsHeaders, "Content-Type": "application/json" },
-                });
-              } catch (err) {
-                console.error("[meta-webhook][DEBUG_BOLETO] Erro ao chamar fluxo:", err);
-              }
-            }
+    console.log('[STEP] before return (default)');
           console.log(`[meta-webhook] ID: ${wamid}`);
           
           
