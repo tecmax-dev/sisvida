@@ -695,8 +695,10 @@ async function sendWhatsAppMessage(
     const destination = formatPhoneForWhatsApp(phone);
 
     if (config.api_url === 'meta') {
-      console.log(`[booking] Routing text to Meta Cloud API for ${destination}`);
-      return await sendMetaText(phone, message, explicitPhoneId);
+      console.log(`[DEBUG_BOLETO][BEFORE_SEND_TEXT] Routing to Meta:`, { phone, message, explicitPhoneId });
+      const metaOk = await sendMetaText(phone, message, explicitPhoneId);
+      console.log(`[DEBUG_BOLETO][AFTER_SEND_TEXT] Meta routing result: ${metaOk}`);
+      return metaOk;
     }
 
     if (config.api_url === 'zapster') {
@@ -759,19 +761,34 @@ async function sendMetaText(phone: string, text: string, explicitPhoneId?: strin
     }
     const digits = phone.replace(/\D/g, '');
     const to = digits.startsWith('55') ? digits : `55${digits}`;
-    const r = await fetch(
-      `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: 'text',
-          text: { body: text },
-        }),
-      }
-    );
+    const metaUrl = `https://graph.facebook.com/v22.0/${PHONE_ID}/messages`;
+    const metaPayload = {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'text',
+      text: { body: text },
+    };
+
+    console.log('[DEBUG_BOLETO][BEFORE_META_TEXT_FETCH]', {
+      url: metaUrl,
+      phone_id: PHONE_ID,
+      to: to,
+      payload: JSON.stringify(metaPayload)
+    });
+
+    const r = await fetch(metaUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(metaPayload),
+    });
+
+    const respStatus = r.status;
+    const respText = await r.text();
+    console.log('[DEBUG_BOLETO][AFTER_META_TEXT_FETCH]', {
+      status: respStatus,
+      body: respText
+    });
+
     if (r.ok) {
       // Registro para auditoria (Sindicato)
       try {
@@ -792,10 +809,19 @@ async function sendMetaText(phone: string, text: string, explicitPhoneId?: strin
       } catch (err) { console.error('[meta-text] Log error:', err); }
       return true;
     }
-    console.error('[meta-text] Meta error:', await r.text());
-    return false;
-  } catch (e) {
-    console.error('[meta-text] Exception:', e);
+    if (!r.ok) {
+      console.error('[DEBUG_BOLETO][META_SEND_ERROR_TEXT]', {
+        status: respStatus,
+        data: respText
+      });
+      return false;
+    }
+    return true;
+  } catch (e: any) {
+    console.error('[DEBUG_BOLETO][META_SEND_EXCEPTION_TEXT]', {
+      message: e.message,
+      stack: e.stack
+    });
     return false;
   }
 }
@@ -839,8 +865,10 @@ async function sendWhatsAppButtons(
 
     // Special Routing: If API URL is 'meta', use Meta Cloud API
     if (config.api_url === 'meta') {
-      console.log(`[booking] Routing buttons to Meta Cloud API for ${phone}`);
-      return await sendMetaButtons(phone, title, description, limitedButtons, footer, explicitPhoneId);
+      console.log(`[DEBUG_BOLETO][BEFORE_SEND_BUTTONS] Routing to Meta:`, { phone, title, limitedButtons });
+      const metaOk = await sendMetaButtons(phone, title, description, limitedButtons, footer, explicitPhoneId);
+      console.log(`[DEBUG_BOLETO][AFTER_SEND_BUTTONS] Meta routing result: ${metaOk}`);
+      return metaOk;
     }
 
     // If we are in a synchronous call (collector exists), push to it and return
@@ -8638,8 +8666,9 @@ async function handleWebhook(req: Request) {
 
                   // If boletoResult contains an interactive response, send it back immediately
                   if (boletoResult.response) {
-                    console.log('[DEBUG_BOLETO] Sending boleto response back to WhatsApp:', boletoResult.response);
-                    await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                    console.log('[DEBUG_BOLETO][BEFORE_SEND_BACK_L2] Sending response back:', boletoResult.response);
+                    const sendBackOk = await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                    console.log('[DEBUG_BOLETO][AFTER_SEND_BACK_L2] Result:', sendBackOk);
                     return createSuccessResponse({ message: 'Boleto flow L2 started and response sent' });
                   }
 
@@ -9017,12 +9046,15 @@ async function handleWebhook(req: Request) {
              const boletoResult = await boletoResponse.json();
              console.log('[AFTER INVOKE]', { status: boletoResponse.status, result: JSON.stringify(boletoResult) });
 
-             if (boletoResponse.ok) {
+            if (boletoResponse.ok) {
                // Send result response back to user
                if (boletoResult.response) {
-                 console.log('[DEBUG_BOLETO] Sending response to WhatsApp:', boletoResult.response);
-                 await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                 console.log('[DEBUG_BOLETO][BEFORE_SEND_FROM_WEBHOOK] Sending response back:', boletoResult.response);
+                 const sendResult = await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                 console.log('[DEBUG_BOLETO][AFTER_SEND_FROM_WEBHOOK] Send result:', sendResult);
                }
+
+               console.log('[DEBUG_BOLETO][SEND_COMPLETE]');
 
                const logPayload = {
                  clinic_id: clinicId,

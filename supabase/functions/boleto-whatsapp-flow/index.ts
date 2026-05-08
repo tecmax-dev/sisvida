@@ -54,42 +54,47 @@ const CONTRIBUTION_TYPE_MAP = {
  /**
   * Envia texto livre via Meta Cloud API.
   */
- async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
-   try {
+  async function sendMetaText(phone: string, text: string, explicitPhoneId?: string): Promise<boolean> {
+    try {
       const RAW_PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
-      // Correção de ID para o Sindicato (SECMI)
       const PHONE_ID = (RAW_PHONE_ID === "937233212814035" || RAW_PHONE_ID === "1522701919380063") ? "1110151302179856" : RAW_PHONE_ID;
-      
-     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-     if (!PHONE_ID || !TOKEN) {
-       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
-       return false;
-     }
-     const digits = phone.replace(/\D/g, '');
-     const to = digits.startsWith('55') ? digits : `55${digits}`;
-     const r = await fetch(
-       `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`,
-       {
-         method: 'POST',
-         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           messaging_product: 'whatsapp',
-           to,
-           type: 'text',
-           text: { body: text },
-         }),
-       }
-     );
-     if (!r.ok) {
-       console.error('[meta-text] Meta error:', await r.text());
-       return false;
-     }
-     return true;
-   } catch (e) {
-     console.error('[meta-text] Exception:', e);
-     return false;
-   }
- }
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      if (!PHONE_ID || !TOKEN) {
+        console.error('[DEBUG_BOLETO][META_CONFIG_ERROR] Missing ID or Token');
+        return false;
+      }
+      const digits = phone.replace(/\D/g, '');
+      const to = digits.startsWith('55') ? digits : `55${digits}`;
+      const metaUrl = `https://graph.facebook.com/v22.0/${PHONE_ID}/messages`;
+      const payload = {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'text',
+        text: { body: text },
+      };
+
+      console.log('[DEBUG_BOLETO][BEFORE_META_TEXT_SEND]', { url: metaUrl, phone_id: PHONE_ID, payload: JSON.stringify(payload) });
+
+      const r = await fetch(metaUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const respStatus = r.status;
+      const respText = await r.text();
+      console.log('[DEBUG_BOLETO][AFTER_META_TEXT_SEND]', { status: respStatus, body: respText });
+
+      if (!r.ok) {
+        console.error('[DEBUG_BOLETO][META_SEND_ERROR_TEXT]', { status: respStatus, data: respText });
+        return false;
+      }
+      return true;
+    } catch (e: any) {
+      console.error('[DEBUG_BOLETO][META_SEND_EXCEPTION_TEXT]', { message: e.message, stack: e.stack });
+      return false;
+    }
+  }
  
  /**
   * Envia botões interativos via Meta Cloud API.
@@ -134,24 +139,27 @@ const CONTRIBUTION_TYPE_MAP = {
          }
        };
   
-      console.log('[DEBUG_BOLETO] [META_BUTTONS] Sending payload:', JSON.stringify(payload));
+      console.log('[DEBUG_BOLETO][BEFORE_META_BUTTONS_SEND]', { phone_id: PHONE_ID, payload: JSON.stringify(payload) });
       const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
   
-        const responseText = await r.text();
-        if (!r.ok) {
-          console.error('[meta-buttons] Meta API error:', r.status, responseText);
-          return false;
-        }
-        console.log('[meta-buttons] Meta API Success:', responseText);
-        return true;
-     } catch (error) {
-       console.error('[meta-buttons] Error in sendMetaButtons:', error);
-       return false;
-     }
+      const respStatus = r.status;
+      const responseText = await r.text();
+      console.log('[DEBUG_BOLETO][AFTER_META_BUTTONS_SEND]', { status: respStatus, body: responseText });
+
+      if (!r.ok) {
+        console.error('[DEBUG_BOLETO][META_SEND_ERROR_BUTTONS]', { status: respStatus, data: responseText });
+        return false;
+      }
+      console.log('[DEBUG_BOLETO][META_SEND_SUCCESS_BUTTONS]', responseText);
+      return true;
+    } catch (error: any) {
+      console.error('[DEBUG_BOLETO][META_SEND_EXCEPTION_BUTTONS]', { message: error.message, stack: error.stack });
+      return false;
+    }
  }
  
  async function analyzeUserIntent(
@@ -961,8 +969,10 @@ function buildWhazingExternalButtonPayload(phone: string, bodyText: string, butt
  ): Promise<boolean> {
    try {
      if (config.api_url === 'meta') {
-       console.log(`[boleto-flow] Routing text to Meta Cloud API for ${phone}`);
-       return await sendMetaText(phone, message, explicitPhoneId);
+       console.log(`[DEBUG_BOLETO][BEFORE_SEND_TEXT_BOLETO_FLOW] Routing to Meta:`, { phone, message });
+       const metaOk = await sendMetaText(phone, message, explicitPhoneId);
+       console.log(`[DEBUG_BOLETO][AFTER_SEND_TEXT_BOLETO_FLOW] Result: ${metaOk}`);
+       return metaOk;
      }
  
     let formattedPhone = phone.replace(/\D/g, '');
