@@ -8625,16 +8625,25 @@ async function handleWebhook(req: Request) {
                  const boletoResult = await boletoResponse.json();
                  console.log('[BOLETO FLOW RESPONSE (L2)]', JSON.stringify(boletoResult));
                  
-                 // CRITICAL AUDIT LOG FOR PROOF OF EXECUTION
-                 await supabase.from('whatsapp_incoming_logs').insert({
-                   clinic_id: clinicId,
-                   phone,
-                   message_text: `[PROVA_REAL] Invoke boleto-flow L2 SUCESSO | Status: ${respStatus} | State: ${boletoResult.state}`,
-                   processed: true,
-                   processed_action: 'invoke_l2_success',
-                 });
+                  console.log('[DEBUG_BOLETO] [PROVA_REAL] Invoke boleto-flow L2 SUCESSO | Status:', respStatus, '| Result:', JSON.stringify(boletoResult));
+                  
+                  // Log internal result
+                  await supabase.from('whatsapp_incoming_logs').insert({
+                    clinic_id: clinicId,
+                    phone,
+                    message_text: `[PROVA_REAL] Invoke boleto-flow L2 SUCESSO | Status: ${respStatus} | Result: ${JSON.stringify(boletoResult).slice(0, 500)}`,
+                    processed: true,
+                    processed_action: 'invoke_l2_success',
+                  });
 
-                 return createSuccessResponse({ message: 'Whazing boleto flow started via L2' });
+                  // If boletoResult contains an interactive response, send it back immediately
+                  if (boletoResult.response) {
+                    console.log('[DEBUG_BOLETO] Sending boleto response back to WhatsApp:', boletoResult.response);
+                    await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                    return createSuccessResponse({ message: 'Boleto flow L2 started and response sent' });
+                  }
+
+                  return createSuccessResponse({ message: 'Whazing boleto flow started via L2 (no explicit response)' });
                } else {
                 const errText = await boletoResponse.text();
                 console.error('[BOLETO FLOW ERROR RESPONSE (L2)]', errText);
@@ -8993,54 +9002,56 @@ async function handleWebhook(req: Request) {
           };
 
           console.log('[CALLING boleto-whatsapp-flow]', JSON.stringify(boletoPayload));
-          console.log('[BEFORE INVOKE]');
-          
-          try {
-            const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabaseAnonKey}`,
-              },
-              body: JSON.stringify(boletoPayload),
-            });
+           console.log('[BEFORE INVOKE]', boletoPayload);
+           
+           try {
+             const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${supabaseAnonKey}`,
+               },
+               body: JSON.stringify(boletoPayload),
+             });
 
-            console.log('[AFTER INVOKE]', { status: boletoResponse.status });
+             const boletoResult = await boletoResponse.json();
+             console.log('[AFTER INVOKE]', { status: boletoResponse.status, result: JSON.stringify(boletoResult) });
 
-            if (boletoResponse.ok) {
-              const boletoResult = await boletoResponse.json();
-              console.log('[BOLETO FLOW RESPONSE]', JSON.stringify(boletoResult));
-              
+             if (boletoResponse.ok) {
+               // Send result response back to user
+               if (boletoResult.response) {
+                 console.log('[DEBUG_BOLETO] Sending response to WhatsApp:', boletoResult.response);
+                 await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+               }
+
                const logPayload = {
                  clinic_id: clinicId,
                  phone,
-                 message_text: `[DEBUG_BOLETO] ${messageText} | Result: ${JSON.stringify(boletoResult).slice(0, 500)}`,
+                 message_text: `[DEBUG_BOLETO] Result: ${JSON.stringify(boletoResult).slice(0, 500)}`,
                  raw_payload: payload,
                  processed: true,
                  processed_action: 'boleto_flow_verified',
                };
-               console.log('[AUDIT_LOG_INSERT]', JSON.stringify(logPayload));
                await supabase.from('whatsapp_incoming_logs').insert(logPayload);
 
-              return new Response(
-                JSON.stringify({ success: true, message: 'Boleto flow processed' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            } else {
-              const errorText = await boletoResponse.text();
-              console.error('[BOLETO FLOW ERROR RESPONSE]', errorText);
-              return new Response(
-                JSON.stringify({ success: false, message: 'Boleto flow failed' }),
-                { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            }
-          } catch (boletoError) {
-            console.error('[BOLETO FLOW EXCEPTION]', boletoError);
-            return new Response(
-              JSON.stringify({ success: false, message: 'Boleto flow exception' }),
-              { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
+               return new Response(
+                 JSON.stringify({ success: true, message: 'Boleto flow processed' }),
+                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+               );
+             } else {
+               console.error('[BOLETO FLOW ERROR RESPONSE]', boletoResult);
+               return new Response(
+                 JSON.stringify({ success: false, message: 'Boleto flow failed' }),
+                 { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+               );
+             }
+           } catch (boletoError) {
+             console.error('[BOLETO FLOW EXCEPTION]', boletoError);
+             return new Response(
+               JSON.stringify({ success: false, message: 'Boleto flow exception' }),
+               { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+             );
+           }
         }
 
         // =========================================================================

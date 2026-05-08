@@ -134,18 +134,20 @@ const CONTRIBUTION_TYPE_MAP = {
          }
        };
   
-      const r = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+      console.log('[DEBUG_BOLETO] [META_BUTTONS] Sending payload:', JSON.stringify(payload));
+      const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
   
-       if (!r.ok) {
-         const errorText = await r.text();
-         console.error('[meta-buttons] Meta error:', errorText);
-         return false;
-       }
-       return true;
+        const responseText = await r.text();
+        if (!r.ok) {
+          console.error('[meta-buttons] Meta API error:', r.status, responseText);
+          return false;
+        }
+        console.log('[meta-buttons] Meta API Success:', responseText);
+        return true;
      } catch (error) {
        console.error('[meta-buttons] Error in sendMetaButtons:', error);
        return false;
