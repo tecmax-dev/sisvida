@@ -126,103 +126,85 @@ serve(async (req) => {
      let nextState = currentState;
      let responseMessage: any = null;
  
-      // 3. LOGICA DE ROTEAMENTO (SINGLE ROUTER)
-      let nextState = currentState;
-      let responseMessage: any = null;
-      let routeMatch = "";
-
-      // FASE 1.5: VALIDAÇÃO DO BUTTON_REPLY.ID REAL
-      if (buttonId === 'empresa_btn') {
-        routeMatch = 'EMPRESA_ROUTE';
-        responseMessage = {
-          type: 'text',
-          text: { body: '[BTN_OK] empresa_btn' }
-        };
-        nextState = 'EMPRESA_FLOW'; // Simulando transição
-      } else if (buttonId === 'associado_btn') {
-        routeMatch = 'ASSOCIADO_ROUTE';
-        responseMessage = {
-          type: 'text',
-          text: { body: '[BTN_OK] associado_btn' }
-        };
-        nextState = 'ASSOCIADO_FLOW'; // Simulando transição
-     } else if (messageText && messageText.toLowerCase().includes('oi')) {
-        routeMatch = 'WELCOME_ROUTE';
-        // Enviar menu com 2 botões reais da Meta
-       responseMessage = {
-         type: 'interactive',
-         interactive: {
-           type: 'button',
-            body: { text: 'Escolha seu perfil:' },
-           action: {
-             buttons: [
-               {
-                 type: 'reply',
-                  reply: { id: 'empresa_btn', title: 'Empresa' }
+      // IMPLEMENTAÇÃO OBRIGATÓRIA - TESTE DE ENVIO BRUTO
+      if (messageText && messageText.toLowerCase().includes('oi')) {
+        const payload = {
+          messaging_product: 'whatsapp',
+          to: phone,
+          type: 'interactive',
+          interactive: {
+            type: 'button',
+            body: {
+              text: 'Teste Botões Meta'
+            },
+            action: {
+              buttons: [
+                {
+                  type: 'reply',
+                  reply: {
+                    id: 'empresa_btn',
+                    title: 'Empresa'
+                  }
                 },
                 {
                   type: 'reply',
-                  reply: { id: 'associado_btn', title: 'Associado' }
+                  reply: {
+                    id: 'associado_btn',
+                    title: 'Associado'
+                  }
                 }
-             ]
-           }
-         }
-       };
-       nextState = 'MAIN_MENU';
-     } else {
-        routeMatch = 'NONE';
-       responseMessage = {
-         type: 'text',
-         text: { body: '[DEBUG] TRANSITION_NOT_FOUND' }
-       };
-     }
+              ]
+            }
+          }
+        };
 
-      console.log('[ROUTE_MATCH]', routeMatch);
-      console.log('[CURRENT_STATE]', currentState);
-      console.log('[NEXT_STATE]', nextState);
- 
-     // 4. ATUALIZAR SESSÃO
-     if (nextState !== currentState) {
-       console.log('[NEXT_STATE]', nextState);
-       const { error: updateError } = await supabase
-         .from('whatsapp_sessions')
-         .update({ state: nextState })
-         .eq('phone', phone);
-       
-       if (!updateError) console.log('[SESSION_SAVE_SUCCESS]');
-     }
- 
-     // 5. ENVIAR (SINGLE SENDER)
-     if (responseMessage) {
-       const url = `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
-       const res = await fetch(url, {
-         method: 'POST',
-         headers: {
-           'Authorization': `Bearer ${TOKEN}`,
-           'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-           messaging_product: 'whatsapp',
-           to: phone,
-           ...responseMessage
-         })
-       });
- 
-       const resData = await res.text();
-       console.log('[META_STATUS]', res.status);
-       console.log('[META_RESPONSE]', resData);
- 
-       if (res.ok) {
-         console.log('[META_SEND_SUCCESS]');
-       } else {
-         console.log('[META_SEND_FAIL]');
-       }
- 
-       return new Response(resData, {
-         status: 200,
-         headers: { ...corsHeaders, "Content-Type": "application/json" }
-       });
-     }
+        console.log('[META_INTERACTIVE_PAYLOAD]', JSON.stringify(payload, null, 2));
+
+        const response = await fetch(
+          `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        const resData = await response.text();
+        console.log('[META_STATUS]', response.status);
+        console.log('[META_RESPONSE]', resData);
+
+        return new Response(resData, {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // Se clicar em um dos botões, responder apenas com o ID real
+      if (buttonId) {
+        const payload = {
+          messaging_product: 'whatsapp',
+          to: phone,
+          type: 'text',
+          text: { body: `[BTN_OK] ${buttonId}` }
+        };
+
+        const response = await fetch(
+          `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        return new Response(await response.text(), { status: 200 });
+      }
  
      return new Response("ok", { status: 200 });
  
