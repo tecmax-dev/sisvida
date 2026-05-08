@@ -53,10 +53,10 @@ serve(async (req) => {
     const to = from.startsWith('55') ? from : `55${from}`;
 
     const sendResponse = async (payload: any) => {
-      const res = await fetch(\`https://graph.facebook.com/v21.0/\${PHONE_ID}/messages\`, {
+      const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { 
-          'Authorization': \`Bearer \${META_TOKEN}\`, 
+          'Authorization': `Bearer ${META_TOKEN}`, 
           'Content-Type': 'application/json' 
         },
         body: JSON.stringify({
