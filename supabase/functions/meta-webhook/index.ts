@@ -171,7 +171,7 @@ serve(async (req) => {
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
           
           // Signature for debugging
-          const finalResponseText = `[${BUILD_VERSION}]\n${resData.response || '[ERRO] Sem resposta do flow'}`;
+          const finalResponseText = resData.response || '[ERRO] Sem resposta do flow';
 
           let payload: any;
 
