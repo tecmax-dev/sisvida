@@ -8598,6 +8598,19 @@ async function handleWebhook(req: Request) {
             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+            console.log('[BOLETO FLOW START (L2)]', { btnId, phone });
+            const boletoPayloadL2 = {
+              clinic_id: clinicId,
+              phone: phone,
+              action: 'start',
+              evolution_config: {
+                api_url: configData.api_url,
+                api_key: configData.api_key,
+                instance_name: configData.instance_name,
+              },
+              explicit_phone_id: explicitPhoneId
+            };
+            console.log('[CALLING boleto-whatsapp-flow (L2)]', JSON.stringify(boletoPayloadL2));
             try {
               const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
                 method: 'POST',
@@ -8605,28 +8618,29 @@ async function handleWebhook(req: Request) {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${supabaseAnonKey}`,
                 },
-                body: JSON.stringify({
-                  clinic_id: clinicId,
-                  phone: phone,
-                  action: 'start',
-                   evolution_config: {
-                     api_url: configData.api_url,
-                     api_key: configData.api_key,
-                     instance_name: configData.instance_name,
-                   },
-                   explicit_phone_id: explicitPhoneId
-                 }),
+                body: JSON.stringify(boletoPayloadL2),
               });
+               const respStatus = boletoResponse.status;
+               if (boletoResponse.ok) {
+                 const boletoResult = await boletoResponse.json();
+                 console.log('[BOLETO FLOW RESPONSE (L2)]', JSON.stringify(boletoResult));
+                 
+                 // CRITICAL AUDIT LOG FOR PROOF OF EXECUTION
+                 await supabase.from('whatsapp_incoming_logs').insert({
+                   clinic_id: clinicId,
+                   phone,
+                   message_text: `[PROVA_REAL] Invoke boleto-flow L2 SUCESSO | Status: ${respStatus} | State: ${boletoResult.state}`,
+                   processed: true,
+                   processed_action: 'invoke_l2_success',
+                 });
 
-              if (boletoResponse.ok) {
-                const boletoResult = await boletoResponse.json();
-                console.log(`[webhook] Boleto flow started via Whazing button: state=${boletoResult.state}`);
-              } else {
+                 return createSuccessResponse({ message: 'Whazing boleto flow started via L2' });
+               } else {
                 const errText = await boletoResponse.text();
-                console.error('[webhook] Boleto flow error from Whazing button:', errText);
+                console.error('[BOLETO FLOW ERROR RESPONSE (L2)]', errText);
               }
             } catch (bErr) {
-              console.error('[webhook] Error calling boleto flow from Whazing button:', bErr);
+              console.error('[BOLETO FLOW EXCEPTION (L2)]', bErr);
             }
 
             await supabase.from('whatsapp_incoming_logs').insert({
@@ -8944,18 +8958,42 @@ async function handleWebhook(req: Request) {
         const isBoletoRequest = (/^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) && configData.booking_enabled === false
           ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())
           : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())) || 
-          rawBtnId === 'whazing_sub_boleto' || 
-          activeBtnId === 'whazing_sub_boleto';
+           rawBtnId === 'whazing_sub_boleto' || 
+           activeBtnId === 'whazing_sub_boleto' ||
+           selection.actionId === 'whazing_sub_boleto';
 
-        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto';
+         const effectiveBoletoRequest = isBoletoRequest || 
+                                       effectiveId === 'whazing_sub_boleto' || 
+                                       activeBtnId === 'whazing_sub_boleto' ||
+                                       selection.actionId === 'whazing_sub_boleto';
         
         if (revivedBoletoSession || effectiveBoletoRequest || isBoletoButton) {
-          console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${effectiveBoletoRequest}, is button: ${isBoletoButton}`);
-          console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
+          console.log(`[BOLETO FLOW START]`, {
+            activeBtnId,
+            selectionId: selection.actionId,
+            isRequest: effectiveBoletoRequest,
+            isButton: isBoletoButton,
+            userId: phone
+          });
           
-          // Call boleto flow edge function
           const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
           const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+          
+          const boletoPayload = {
+            clinic_id: clinicId,
+            phone: phone,
+            message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto' || selection.actionId === 'whazing_sub_boleto') ? (isBoletoButton ? rawBtnId : (mappedMessageText || selection.actionId)) : undefined,
+            action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto' && activeBtnId !== 'whazing_sub_boleto' && selection.actionId !== 'whazing_sub_boleto') ? 'start' : undefined,
+            evolution_config: {
+              api_url: configData.api_url,
+              api_key: configData.api_key,
+              instance_name: configData.instance_name,
+            },
+            explicit_phone_id: explicitPhoneId
+          };
+
+          console.log('[CALLING boleto-whatsapp-flow]', JSON.stringify(boletoPayload));
+          console.log('[BEFORE INVOKE]');
           
           try {
             const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
@@ -8964,33 +9002,25 @@ async function handleWebhook(req: Request) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${supabaseAnonKey}`,
               },
-              body: JSON.stringify({
-                clinic_id: clinicId,
-                phone: phone,
-                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto') ? (isBoletoButton ? rawBtnId : mappedMessageText) : undefined,
-                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto' && activeBtnId !== 'whazing_sub_boleto') ? 'start' : undefined,
-                 evolution_config: {
-                   api_url: configData.api_url,
-                   api_key: configData.api_key,
-                   instance_name: configData.instance_name,
-                 },
-                 explicit_phone_id: explicitPhoneId
-               }),
+              body: JSON.stringify(boletoPayload),
             });
+
+            console.log('[AFTER INVOKE]', { status: boletoResponse.status });
 
             if (boletoResponse.ok) {
               const boletoResult = await boletoResponse.json();
-              console.log(`[webhook] Boleto flow result: state=${boletoResult.state}`);
+              console.log('[BOLETO FLOW RESPONSE]', JSON.stringify(boletoResult));
               
-              // Log the interaction
-              await supabase.from('whatsapp_incoming_logs').insert({
-                clinic_id: clinicId,
-                phone,
-                message_text: messageText,
-                raw_payload: payload,
-                processed: true,
-                processed_action: 'boleto_flow',
-              });
+               const logPayload = {
+                 clinic_id: clinicId,
+                 phone,
+                 message_text: `[DEBUG_BOLETO] ${messageText} | Result: ${JSON.stringify(boletoResult).slice(0, 500)}`,
+                 raw_payload: payload,
+                 processed: true,
+                 processed_action: 'boleto_flow_verified',
+               };
+               console.log('[AUDIT_LOG_INSERT]', JSON.stringify(logPayload));
+               await supabase.from('whatsapp_incoming_logs').insert(logPayload);
 
               return new Response(
                 JSON.stringify({ success: true, message: 'Boleto flow processed' }),
@@ -8998,16 +9028,16 @@ async function handleWebhook(req: Request) {
               );
             } else {
               const errorText = await boletoResponse.text();
-              console.error('[webhook] Boleto flow error:', errorText);
+              console.error('[BOLETO FLOW ERROR RESPONSE]', errorText);
               return new Response(
-                JSON.stringify({ success: false, message: 'Boleto flow failed without AI fallback' }),
+                JSON.stringify({ success: false, message: 'Boleto flow failed' }),
                 { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
               );
             }
           } catch (boletoError) {
-            console.error('[webhook] Error calling boleto flow:', boletoError);
+            console.error('[BOLETO FLOW EXCEPTION]', boletoError);
             return new Response(
-              JSON.stringify({ success: false, message: 'Boleto flow unavailable without AI fallback' }),
+              JSON.stringify({ success: false, message: 'Boleto flow exception' }),
               { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
@@ -9341,6 +9371,16 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
              );
              console.log(`[STATE SAVE] newState: ${flowResult.newState || 'unchanged'}`);
              console.log(`[FLOW AFTER] handled: ${flowResult.handled}`);
+             
+             // Audit log for traditional flow
+             await supabase.from('whatsapp_incoming_logs').insert({
+               clinic_id: clinicId,
+               phone,
+               message_text: `[DEBUG_TRADITIONAL] ${messageText} | State: ${sessionResult.session.state} -> ${flowResult.newState || 'same'}`,
+               processed: true,
+               processed_action: 'booking_flow_verified',
+             });
+
              if (!flowResult.handled) {
                console.error('ERRO CRÍTICO: handleBookingFlow returned handled=false');
              }
@@ -9480,22 +9520,21 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
   }
 }
 
-serve(async (req) => {
-  const collector: string[] = [];
-  // Only use the synchronous reply collector for explicit internal tests.
-  // Real Evolution API webhooks must send messages through the provider; if
-  // they run inside AsyncLocalStorage, sendWhatsAppButtons/sendWhatsAppMessage
-  // only append to the HTTP response and nothing is delivered to WhatsApp.
-  const clonedReq = req.clone();
-  let isTestPayload = false;
-  try {
-    const body = await clonedReq.json();
-    isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
-  } catch { /* ignore */ }
-
-  if (isTestPayload) {
-    return await syncReplyStore.run(collector, () => handleWebhook(req));
-  }
-
-  return await handleWebhook(req);
-});
+ serve(async (req) => {
+   console.log('[WEBHOOK_SERVER_START] Request received:', req.method);
+   const collector: string[] = [];
+   const clonedReq = req.clone();
+   let isTestPayload = false;
+   try {
+     const body = await clonedReq.json();
+     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
+   } catch { /* ignore */ }
+ 
+   if (isTestPayload) {
+     console.log('[WEBHOOK_SERVER] Running in test mode (sync)');
+     return await syncReplyStore.run(collector, () => handleWebhook(req));
+   }
+ 
+   console.log('[WEBHOOK_SERVER] Running in production mode');
+   return await handleWebhook(req);
+ });
