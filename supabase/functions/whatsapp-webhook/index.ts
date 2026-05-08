@@ -8895,8 +8895,8 @@ async function handleWebhook(req: Request) {
           else if (rawBtnId === 'whazing_empresa') mappedMessageText = '2';
           else if (rawBtnId === 'whazing_contabilidade') mappedMessageText = '3';
           
-          if (isBoletoButton) {
-            console.log(`[webhook] Boleto button "${rawBtnId}" routed as raw id`);
+          if (isBoletoButton || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto') {
+            console.log(`[webhook] Boleto action detected: raw="${rawBtnId}", active="${activeBtnId}", effective="${effectiveId}"`);
           }
         // ===== END BOLETO BUTTON ROUTING =====
 
@@ -8941,11 +8941,13 @@ async function handleWebhook(req: Request) {
         }
 
         // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
-        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) && configData.booking_enabled === false
+        const isBoletoRequest = (/^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) && configData.booking_enabled === false
           ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())
-          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) || rawBtnId === 'whazing_sub_boleto';
+          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())) || 
+          rawBtnId === 'whazing_sub_boleto' || 
+          activeBtnId === 'whazing_sub_boleto';
 
-        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto';
+        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto';
         
         if (revivedBoletoSession || effectiveBoletoRequest || isBoletoButton) {
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${effectiveBoletoRequest}, is button: ${isBoletoButton}`);
@@ -8965,8 +8967,8 @@ async function handleWebhook(req: Request) {
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone: phone,
-                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
-                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto') ? 'start' : undefined,
+                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto' || activeBtnId === 'whazing_sub_boleto') ? (isBoletoButton ? rawBtnId : mappedMessageText) : undefined,
+                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto' && activeBtnId !== 'whazing_sub_boleto') ? 'start' : undefined,
                  evolution_config: {
                    api_url: configData.api_url,
                    api_key: configData.api_key,
