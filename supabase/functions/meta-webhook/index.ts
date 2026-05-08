@@ -95,25 +95,6 @@ serve(async (req) => {
     }
 
     // Roteamento expandido para cobrir todos os IDs da State Machine
-     // BRUTALLY SIMPLE TEST requested by user
-     if (content.toLowerCase().includes("sou empresa") || content.toLowerCase().includes("boleto")) {
-       console.log('[TESTE DIRETO] CLIQUE EM BOLETO DETECTADO');
-       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-       const PHONE_ID = "1110151302179856";
-       const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-       
-       await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-         method: 'POST',
-         headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           messaging_product: 'whatsapp',
-           to,
-           type: 'text',
-           text: { body: `[${BUILD_VERSION}]\n[TESTE DIRETO] CLIQUE RECEBIDO\nConteúdo: ${content}` },
-         }),
-       });
-       console.log('[TESTE DIRETO] Resposta enviada');
-     }
 
       const boletoKeywords = [
         "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
