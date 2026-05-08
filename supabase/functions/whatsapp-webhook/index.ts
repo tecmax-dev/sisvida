@@ -9494,22 +9494,21 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
   }
 }
 
-serve(async (req) => {
-  const collector: string[] = [];
-  // Only use the synchronous reply collector for explicit internal tests.
-  // Real Evolution API webhooks must send messages through the provider; if
-  // they run inside AsyncLocalStorage, sendWhatsAppButtons/sendWhatsAppMessage
-  // only append to the HTTP response and nothing is delivered to WhatsApp.
-  const clonedReq = req.clone();
-  let isTestPayload = false;
-  try {
-    const body = await clonedReq.json();
-    isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
-  } catch { /* ignore */ }
-
-  if (isTestPayload) {
-    return await syncReplyStore.run(collector, () => handleWebhook(req));
-  }
-
-  return await handleWebhook(req);
-});
+ serve(async (req) => {
+   console.log('[WEBHOOK_SERVER_START] Request received:', req.method);
+   const collector: string[] = [];
+   const clonedReq = req.clone();
+   let isTestPayload = false;
+   try {
+     const body = await clonedReq.json();
+     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
+   } catch { /* ignore */ }
+ 
+   if (isTestPayload) {
+     console.log('[WEBHOOK_SERVER] Running in test mode (sync)');
+     return await syncReplyStore.run(collector, () => handleWebhook(req));
+   }
+ 
+   console.log('[WEBHOOK_SERVER] Running in production mode');
+   return await handleWebhook(req);
+ });
