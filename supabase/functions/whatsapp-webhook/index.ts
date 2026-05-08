@@ -9588,8 +9588,6 @@ async function legacyServe(req: Request) {
      isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
    } catch { /* ignore */ }
  
-    /*
-    if (isTestPayload) {
-   console.log('[WEBHOOK_SERVER] Running in production mode');
-   return await handleWebhook(req);
- });
+  return handleWebhook(req);
+}
+*/
