@@ -199,15 +199,52 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[STEP] before zapresponder legacy routing`);
-    fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
+    // CRITICAL ARCHITECTURE CHANGE: Disabling legacy routing to avoid concurrency.
+    // console.log(`[STEP] before zapresponder legacy routing`);
+    // fetch(`${SUPABASE_URL}/functions/v1/zapresponder-webhook`, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${SERVICE_ROLE}`
+    //   },
+    //   body: JSON.stringify({ ...body, phone: fromPhone, content: content })
+    // }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder:", err));
+
+    console.log(`[FLOW_SINGLE_POINT] Handling non-boleto message: "${content}"`);
+    
+    // If not a boleto action, send the main menu directly from here to keep control.
+    const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+    const PHONE_ID = "1110151302179856";
+    const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+    
+    const welcomeText = `[${BUILD_VERSION}]\nOlá! Seja bem-vindo ao Sindicato dos Comerciários.\n\nComo podemos ajudar você hoje?`;
+    
+    const menuPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        header: { type: "text", text: `[${BUILD_VERSION}] Menu Sindicato` },
+        body: { text: welcomeText },
+        footer: { text: "Selecione uma opção abaixo" },
+        action: {
+          buttons: [
+            { type: "reply", reply: { id: "whazing_sub_boleto", title: "Sou Empresa (Boleto)" } },
+            { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
+            { type: "reply", reply: { id: "whazing_homologacao", title: "Homologação" } }
+          ]
+        }
+      }
+    };
+
+    await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SERVICE_ROLE}`
-      },
-      body: JSON.stringify({ ...body, phone: fromPhone, content: content })
-    }).catch(err => console.error("[meta-webhook] Erro ao chamar Zap Responder:", err));
+      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(menuPayload),
+    });
+    console.log('[FLOW_SINGLE_POINT] Main menu sent from meta-webhook');
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
