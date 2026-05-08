@@ -6,8 +6,11 @@
  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508';
  const HANDLER_NAME = 'zapresponder-webhook';
  
- serve(async (req) => {
-    console.log(`[ENTRYPOINT][${HANDLER_NAME}]`, BUILD_VERSION);
+ serve(async (_req) => {
+    console.log(`[ENTRYPOINT][${HANDLER_NAME}] DISABLED TO PREVENT CONCURRENCY`, BUILD_VERSION);
+    return new Response(JSON.stringify({ ok: true, status: "legacy_disabled" }), { status: 200 });
+    /*
+    // Original code disabled:
    try {
     // ===== Parse seguro do JSON =====
     // ZapResponder pode não enviar Content-Type, então aceitamos o corpo se for JSON válido.
