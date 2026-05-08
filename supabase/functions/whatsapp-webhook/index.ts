@@ -9304,18 +9304,24 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
         } else {
           // Use traditional menu-based flow
-          const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
-          console.log(`[webhook] Session state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
+           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
+           console.log(`[FLOW BEFORE] clinicId: ${clinicId}, phone: ${phone}, state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
+           console.log(`[BUTTON RAW] ${JSON.stringify(payload.data?.message)}`);
+           console.log(`[BUTTON NORMALIZED] ${messageText}`);
 
           if (sessionResult?.session) {
-            await handleBookingFlow(
+             const flowResult = await handleBookingFlow(
               supabase,
               configData,
               phone,
               messageText,
               sessionResult.session,
               sessionResult.wasExpired
-            );
+             );
+             console.log(`[FLOW AFTER] newState: ${flowResult.newState || 'unchanged'}`);
+             if (!flowResult.handled) {
+               console.error('ERRO CRÍTICO: handleBookingFlow returned handled=false');
+             }
           } else {
             console.error('[webhook] Failed to get or create session');
           }
