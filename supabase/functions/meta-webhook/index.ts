@@ -57,57 +57,84 @@ serve(async (req) => {
     let content = "";
     let profileName = "Cliente";
 
-    if (Array.isArray(body.entry) && body.entry.length > 0) {
-      const entry = body.entry[0]?.changes?.[0]?.value;
-      const msg = entry?.messages?.[0];
-      fromPhone = msg?.from || "";
-      profileName = entry?.contacts?.[0]?.profile?.name || "Cliente";
-      
-      if (msg?.type === "text") {
-        content = msg.text?.body || "";
-      } else if (msg?.type === "interactive") {
-        content = msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || msg.interactive?.button_reply?.title || "";
-      } else if (msg?.type === "button") {
-        content = msg.button?.payload || msg.button?.text || "";
-      }
-    } else {
-      const rawMsg = body.raw_message ?? {};
-      fromPhone = String(body.phone || body.wa_id || body.chatId || rawMsg.from || "").replace(/\D/g, "");
-      content = (body.mensagem || body.text || rawMsg.content || body.message?.mensagem || "").toString().trim();
-      profileName = body.pushName || rawMsg.pushName || body.nome || "Cliente";
-      
-      // Tenta extrair ID de botão de formatos alternativos (Whazing/ZapResponder)
-      const interactiveId = rawMsg.interactive?.button_reply?.id || 
-                            rawMsg.interactive?.list_reply?.id || 
-                            rawMsg.button?.payload ||
-                            body.message?.button?.payload ||
-                            body.button_id;
-      
-      const buttonTitle = rawMsg.interactive?.button_reply?.title || 
-                          rawMsg.interactive?.list_reply?.title || "";
+    // --- FORENSIC PARSER START ---
+    console.log('[RAW_BUTTON_PAYLOAD_START]');
+    console.log(JSON.stringify(body, null, 2));
+    console.log('[RAW_BUTTON_PAYLOAD_END]');
 
-      if (interactiveId) {
-        content = interactiveId;
-        console.log("[BUTTON_ID_REAL]", interactiveId);
-      } else if (buttonTitle) {
-        content = buttonTitle;
-        console.log("[BUTTON_TITLE_FALLBACK]", buttonTitle);
+    // Exhaustive property search for Meta, Whazing, ZapResponder, and others
+    const findDeep = (obj: any, keys: string[]): any => {
+      for (const key of keys) {
+        if (obj && typeof obj === 'object') {
+          if (key in obj) return obj[key];
+          for (const k in obj) {
+            const found = findDeep(obj[k], [key]);
+            if (found !== undefined) return found;
+          }
+        }
       }
+      return undefined;
+    };
+
+    // Phone extraction
+    fromPhone = String(
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from ||
+      body.phone || body.wa_id || body.chatId || 
+      body.raw_message?.from || 
+      body.data?.message?.from || ""
+    ).replace(/\D/g, "");
+
+    // Button/Content extraction
+    const rawButtonId = 
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.id ||
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.payload ||
+      body.message?.interactive?.button_reply?.id ||
+      body.message?.interactiveResponseMessage?.id ||
+      body.message?.buttonsResponseMessage?.selectedButtonId ||
+      body.button?.payload ||
+      body.button_id ||
+      findDeep(body, ['button_reply', 'selectedButtonId', 'button_id', 'payload']);
+
+    const rawButtonTitle = 
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.title ||
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.text ||
+      body.message?.interactive?.button_reply?.title ||
+      body.button?.text ||
+      findDeep(body, ['button_reply_title', 'button_text', 'display_text']);
+
+    const rawText = 
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body ||
+      body.message?.conversation ||
+      body.data?.message?.conversation ||
+      body.mensagem || body.text || 
+      "";
+
+    content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();
+    
+    console.log("[BUTTON_ID_REAL]", rawButtonId || 'null');
+    console.log("[BUTTON_TITLE_REAL]", rawButtonTitle || 'null');
+    console.log("[PARSER_DEBUG]", { fromPhone, content, isButton: !!(rawButtonId || rawButtonTitle) });
+
+    // GLOBAL BRUTAL TEST
+    if (rawButtonId || rawButtonTitle) {
+      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+      const PHONE_ID = "1110151302179856";
+      const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
       
-      console.log("[PARSER_DEBUG]", { 
-        type: rawMsg.type, 
-        id: interactiveId, 
-        title: buttonTitle, 
-        finalContent: content 
+      console.log('[BOTAO_GLOBAL_RECEBIDO]');
+      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          type: 'text',
+          text: { body: `[BOTAO_GLOBAL_RECEBIDO]\nbuttonId: ${rawButtonId}\ntitle: ${rawButtonTitle}` },
+        }),
       });
 
-      // [TESTE_REAL] requested by user
-      if (content === 'boleto_a_vencer') {
-        console.log('[BUTTON_ROUTE_OK]');
-        const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-        const PHONE_ID = "1110151302179856";
-        const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-        
+      if (content === 'boleto_a_vencer' || content === 'boleto_vencido' || content.toLowerCase().includes('vencer')) {
+        console.log('[TESTE_REAL] BOTAO RECEBIDO');
         await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
@@ -115,11 +142,12 @@ serve(async (req) => {
             messaging_product: 'whatsapp',
             to,
             type: 'text',
-            text: { body: `[TESTE_REAL] BOTAO RECEBIDO\nbuttonId: ${content}` },
+            text: { body: `[TESTE_REAL] BOTAO RECEBIDO\nrouteMatch: boleto_flow` },
           }),
         });
       }
     }
+    // --- FORENSIC PARSER END ---
 
     if (!fromPhone) {
       console.log('[ENTRYPOINT] No phone found in payload');
