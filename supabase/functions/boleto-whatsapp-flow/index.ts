@@ -144,7 +144,12 @@ const CONTRIBUTION_TYPE_MAP = {
          }
        };
   
-      console.log('[DEBUG_BOLETO][BEFORE_META_BUTTONS_SEND]', { phone_id: PHONE_ID, payload: JSON.stringify(payload) });
+      console.log('[DEBUG_BOLETO][BEFORE_META_BUTTONS_SEND]', { 
+        url: `https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, 
+        phone_id: PHONE_ID, 
+        to: payload.to, 
+        buttons: payload.interactive.action.buttons.map(b => b.reply.title) 
+      });
       const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
