@@ -9568,18 +9568,18 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
   } catch (error: unknown) {
     console.error('[webhook] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal error';
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }
 
- serve(async (_req) => {
-   console.log("[whatsapp-webhook] DISABLED TO PREVENT CONCURRENCY");
-   return new Response("Legacy system disabled", { status: 200 });
-   /*
-   console.log('[WEBHOOK_SERVER_START] Request received:', req.method);
+serve(async (_req) => {
+  console.log("[whatsapp-webhook] DISABLED TO PREVENT CONCURRENCY");
+  return new Response("Legacy system disabled", { status: 200 });
+});
+
+/*
+async function legacyServe(req: Request) {
+  console.log('[WEBHOOK_SERVER_START] Request received:', req.method);
    const collector: string[] = [];
    const clonedReq = req.clone();
    let isTestPayload = false;
