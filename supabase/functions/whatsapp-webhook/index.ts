@@ -1370,7 +1370,7 @@ Responda APENAS com um JSON no formato {"queue_name":"<nome exato da fila>"} sem
     const json = await resp.json();
     const raw = json?.choices?.[0]?.message?.content || '{}';
     let parsed: any = {};
-    try { parsed = JSON.parse(raw); } catch { /* ignore */ }
+    try { parsed = JSON.parse(raw); } catch (e) { /* ignore */ }
     const chosenName = String(parsed?.queue_name || '').trim().toLowerCase();
     const match = queues.find((q: any) => q.name.toLowerCase() === chosenName)
       || queues.find((q: any) => chosenName.includes(q.name.toLowerCase()) || q.name.toLowerCase().includes(chosenName));
@@ -5306,7 +5306,7 @@ async function handleConfirmCompany(
         const cnpjData = JSON.parse(session.pending_registration_cnpj);
         cnpj = cnpjData.cnpj || null;
         employerName = cnpjData.employerName || null;
-      } catch {
+      } catch (e) {
         cnpj = session.pending_registration_cnpj;
       }
     }
@@ -5414,7 +5414,7 @@ async function handleConfirmRegistration(
           employerCnpj = cnpjData.cnpj || null;
           employerName = cnpjData.employerName || null;
           console.log(`[registration] Parsed CNPJ data: cnpj=${employerCnpj}, employerName=${employerName}`);
-        } catch {
+        } catch (e) {
           // Not JSON, use as plain CNPJ
           employerCnpj = session.pending_registration_cnpj;
           console.log(`[registration] Plain CNPJ: ${employerCnpj}`);
@@ -8292,7 +8292,7 @@ async function handleWebhook(req: Request) {
              try {
                const params = JSON.parse(msg.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
                actionLabel = params.title || params.display || params.text || "";
-             } catch { /* ignore */ }
+             } catch (e) { /* ignore */ }
           }
           
           if (!actionLabel && trimText) actionLabel = trimText;
@@ -9493,7 +9493,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
             const params = JSON.parse(paramsJson);
             mirrorText = params.display || params.id || messageText;
           }
-        } catch { /* ignore */ }
+        } catch (e) { /* ignore */ }
         console.log(`[mirror] Interactive response: "${mirrorText}"`);
       }
 
