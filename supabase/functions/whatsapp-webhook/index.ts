@@ -9577,17 +9577,3 @@ serve(async (_req) => {
   return new Response("Legacy system disabled", { status: 200 });
 });
 
-/*
-async function legacyServe(req: Request) {
-  console.log('[WEBHOOK_SERVER_START] Request received:', req.method);
-   const collector: string[] = [];
-   const clonedReq = req.clone();
-   let isTestPayload = false;
-   try {
-     const body = await clonedReq.json();
-     isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
-    } catch (err) { /* ignore */ }
- 
-  return handleWebhook(req);
-}
-*/
