@@ -305,14 +305,18 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
    const buttonResponseId = data.message?.buttonsResponseMessage?.selectedButtonId || 
                             data.message?.buttonResponseMessage?.selectedButtonId;
    
-   if (buttonResponseId) {
-     const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText || 
-                         data.message?.buttonResponseMessage?.selectedDisplayText;
-     console.log(`[extractMessageText] Found button response: id="${buttonResponseId}", display="${displayText || ''}"`);
-     
-   console.log(`[extractMessageText] Button response: id="${buttonResponseId}", display="${displayText || ''}"`);
-   return buttonResponseId;
-   }
+  if (buttonResponseId) {
+    const displayText = data.message?.buttonsResponseMessage?.selectedDisplayText || 
+                        data.message?.buttonResponseMessage?.selectedDisplayText;
+    console.log(`[extractMessageText] Found button response: id="${buttonResponseId}", display="${displayText || ''}"`);
+    
+    // If ID is numeric (like "1", "2") or a technical string (like "whazing_associado"),
+    // use it directly. Otherwise, use display text as fallback.
+    if (buttonResponseId.length > 0) {
+      return buttonResponseId;
+    }
+    return displayText || null;
+  }
   
   // Check for list response
   if (data.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
@@ -370,7 +374,11 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
 
   if (finalInteractive) {
     console.log('[extractMessageText] Found interactive field:', JSON.stringify(finalInteractive));
-    const buttonId = finalInteractive.button_reply?.id || finalInteractive.list_reply?.id || finalInteractive.button_reply?.title || finalInteractive.list_reply?.title;
+    const buttonId = finalInteractive.button_reply?.id || 
+                     finalInteractive.list_reply?.id || 
+                     finalInteractive.button_reply?.title || 
+                     finalInteractive.list_reply?.title;
+    
     if (buttonId) return String(buttonId);
   }
 
@@ -8772,11 +8780,18 @@ async function handleWebhook(req: Request) {
         // ===== BOLETO BUTTON ROUTING =====
         // Keep raw button IDs. The boleto function validates each ID against the current state,
         // preventing duplicated/late button events from advancing the flow automatically.
-        const rawBtnId = messageText?.trim();
-        const isBoletoButton = rawBtnId?.startsWith('boleto_') ?? false;
-        if (isBoletoButton) {
-          console.log(`[webhook] Boleto button "${rawBtnId}" routed as raw id`);
-        }
+          const rawBtnId = messageText?.trim();
+          const isBoletoButton = rawBtnId?.startsWith('boleto_') ?? false;
+          
+          // Map Whazing technical IDs to numeric options for the definitive gate
+          let mappedMessageText = messageText;
+          if (rawBtnId === 'whazing_associado') mappedMessageText = '1';
+          else if (rawBtnId === 'whazing_empresa') mappedMessageText = '2';
+          else if (rawBtnId === 'whazing_contabilidade') mappedMessageText = '3';
+          
+          if (isBoletoButton) {
+            console.log(`[webhook] Boleto button "${rawBtnId}" routed as raw id`);
+          }
         // ===== END BOLETO BUTTON ROUTING =====
 
         // Check if there's an active boleto session or user is requesting boleto (option 7)
@@ -8820,9 +8835,9 @@ async function handleWebhook(req: Request) {
         }
 
         // '6' is also boleto when booking is disabled (menu without booking: 6=boleto)
-        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim()) && configData.booking_enabled === false
-          ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim())
-          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(messageText.trim());
+        const isBoletoRequest = /^(6|7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) && configData.booking_enabled === false
+          ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())
+          : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) || rawBtnId === 'whazing_sub_boleto';
 
         if (revivedBoletoSession || isBoletoRequest || isBoletoButton) {
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
@@ -8841,8 +8856,8 @@ async function handleWebhook(req: Request) {
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone: phone,
-                message: (revivedBoletoSession || isBoletoButton) ? messageText : undefined,
-                action: (!revivedBoletoSession && !isBoletoButton) ? 'start' : undefined,
+                message: (revivedBoletoSession || isBoletoButton || rawBtnId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
+                action: (!revivedBoletoSession && !isBoletoButton && rawBtnId !== 'whazing_sub_boleto') ? 'start' : undefined,
                  evolution_config: {
                    api_url: configData.api_url,
                    api_key: configData.api_key,
@@ -8896,7 +8911,7 @@ async function handleWebhook(req: Request) {
         // =========================================================================
         let externalMenuMode = false;
         if (configData.booking_enabled === false) {
-          const msgTrimmed = (messageText || '').trim();
+          const msgTrimmed = (mappedMessageText || '').trim();
           const msgLower = msgTrimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
           // ---------------------------------------------------------------
