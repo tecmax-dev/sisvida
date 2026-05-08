@@ -8209,44 +8209,87 @@ async function handleWebhook(req: Request) {
         const botSkipped = false;
 
         if (!botSkipped) {
-        // ===== WHAZING / META BUTTON RESPONSE HANDLER =====
-        const messageTextTrim = messageText?.trim();
+        // ==========================================
+        // NORMALIZADOR CENTRAL DE SELEÇÃO WHATSAPP
+        // ==========================================
+        /**
+         * Normaliza qualquer tipo de entrada (botão, lista, texto, reação)
+         * em uma estrutura padrão de ação.
+         */
+        const normalizeWhatsAppSelection = (payloadData: any, rawText: string | null) => {
+          const msg = payloadData?.message || {};
+          const trimText = rawText?.trim() || "";
+          
+          // 1. Extração de ID Técnico (Prioridade Máxima)
+          let actionId = extractInteractiveResponseId(msg);
+          
+          // 2. Extração de Rótulo (Label)
+          let actionLabel = "";
+          if (msg.buttonsResponseMessage) actionLabel = msg.buttonsResponseMessage.selectedDisplayText;
+          else if (msg.buttonResponseMessage) actionLabel = msg.buttonResponseMessage.selectedDisplayText;
+          else if (msg.listResponseMessage) actionLabel = msg.listResponseMessage.title || msg.listResponseMessage.singleSelectReply?.selectedRowId;
+          else if (msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+             try {
+               const params = JSON.parse(msg.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+               actionLabel = params.title || params.display || params.text || "";
+             } catch { /* ignore */ }
+          }
+          
+          if (!actionLabel && trimText) actionLabel = trimText;
 
-        // Attempt to extract raw button ID for precise matching
-        const extractedButtonId = extractInteractiveResponseId(payload.data?.message);
-        const normalizedButtonId = extractedButtonId?.toLowerCase() || '';
+          // 3. Mapeamento de Fallback por Texto/Título (Se ID falhar ou for genérico)
+          const textToIdMap: Record<string, string> = {
+            'sou associado': 'whazing_associado',
+            'sou empresa': 'whazing_empresa',
+            'sou contabilidade': 'whazing_contabilidade',
+            'associado': 'whazing_associado',
+            'empresa': 'whazing_empresa',
+            'contabilidade': 'whazing_contabilidade',
+            '2ª via boleto': 'whazing_sub_boleto',
+            '2 via boleto': 'whazing_sub_boleto',
+            'segunda via boleto': 'whazing_sub_boleto',
+            'boleto': 'whazing_sub_boleto',
+            'atualizar carteirinha': 'whazing_sub_carteirinha',
+            'carteirinha': 'whazing_sub_carteirinha',
+            'convenções coletivas': 'whazing_sub_convencoes',
+            'convencoes coletivas': 'whazing_sub_convencoes',
+            'outros assuntos': 'whazing_sub_outros',
+            'outros': 'whazing_sub_outros',
+            'falar com atendente': 'whazing_falar_atendente',
+            'atendente': 'whazing_falar_atendente',
+            'voltar ao menu': 'whazing_voltar_menu',
+            'menu principal': 'whazing_voltar_menu',
+            'voltar': 'whazing_voltar_sub'
+          };
 
-        // Map display text to common IDs for backward compatibility and text fallback
-        const textToIdMap: Record<string, string> = {
-          'sou associado': 'whazing_associado',
-          'sou empresa': 'whazing_empresa',
-          'sou contabilidade': 'whazing_contabilidade',
-          'associado': 'whazing_associado',
-          'empresa': 'whazing_empresa',
-          'contabilidade': 'whazing_contabilidade',
-          '2ª via boleto': 'whazing_sub_boleto',
-          'segunda via boleto': 'whazing_sub_boleto',
-          'boleto': 'whazing_sub_boleto',
-          'atualizar carteirinha': 'whazing_sub_carteirinha',
-          'carteirinha': 'whazing_sub_carteirinha',
-          'convenções coletivas': 'whazing_sub_convencoes',
-          'convencoes coletivas': 'whazing_sub_convencoes',
-          'outros assuntos': 'whazing_sub_outros',
-          'outros': 'whazing_sub_outros',
+          const normalizeStr = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const normalizedLabel = normalizeStr(actionLabel);
+          const mappedId = textToIdMap[normalizedLabel] || textToIdMap[actionLabel.toLowerCase().trim()];
+
+          // Se o ID extraído parece um número ou texto comum, e temos um mapeamento melhor pelo label, usamos o mapeamento
+          if (mappedId && (!actionId || /^\d+$/.test(actionId) || actionId === trimText)) {
+            actionId = mappedId;
+          }
+
+          return {
+            actionId: actionId || trimText,
+            actionLabel: actionLabel,
+            sourceType: payloadData?.messageType || (actionId ? "interactive" : "text"),
+            rawPayload: payloadData
+          };
         };
 
-        // Effective button ID prioritized by:
-        // 1. Exact technical ID from payload
-        // 2. Technical ID found in text mapping
-        // 3. Raw message text
+        const selection = normalizeWhatsAppSelection(payload.data, messageText);
+        const messageTextTrim = selection.actionLabel?.trim() || messageText?.trim();
+        const effectiveId = selection.actionId;
+
+        console.log(`[webhook] Whatsapp Selection: id="${effectiveId}", label="${selection.actionLabel}", type="${selection.sourceType}"`);
+
+        // Attempt to extract raw button ID for precise matching
+        const normalizedButtonId = effectiveId?.toLowerCase() || '';
+
         // Map messageText and extractedButtonId to clean technical IDs
         const messageTextLower = messageTextTrim?.toLowerCase() || '';
-        const mappedFromText = textToIdMap[messageTextLower];
-        
-        // Use normalizedButtonId if present, otherwise use the mapped ID from text, or the raw text as last resort
-        const effectiveId = normalizedButtonId || mappedFromText || messageTextTrim;
-        
-        console.log(`[webhook] Whazing interaction detected: raw="${messageTextTrim}", id="${normalizedButtonId}", effective="${effectiveId}"`);
 
         // Force main menu on test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
