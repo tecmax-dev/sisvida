@@ -9359,6 +9359,16 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
              );
              console.log(`[STATE SAVE] newState: ${flowResult.newState || 'unchanged'}`);
              console.log(`[FLOW AFTER] handled: ${flowResult.handled}`);
+             
+             // Audit log for traditional flow
+             await supabase.from('whatsapp_incoming_logs').insert({
+               clinic_id: clinicId,
+               phone,
+               message_text: `[DEBUG_TRADITIONAL] ${messageText} | State: ${sessionResult.session.state} -> ${flowResult.newState || 'same'}`,
+               processed: true,
+               processed_action: 'booking_flow_verified',
+             });
+
              if (!flowResult.handled) {
                console.error('ERRO CRÍTICO: handleBookingFlow returned handled=false');
              }
