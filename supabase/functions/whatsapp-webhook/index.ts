@@ -8239,7 +8239,14 @@ async function handleWebhook(req: Request) {
         // 1. Exact technical ID from payload
         // 2. Technical ID found in text mapping
         // 3. Raw message text
-        const effectiveId = normalizedButtonId || textToIdMap[messageTextTrim?.toLowerCase() || ''] || messageTextTrim;
+        // Map messageText and extractedButtonId to clean technical IDs
+        const messageTextLower = messageTextTrim?.toLowerCase() || '';
+        const mappedFromText = textToIdMap[messageTextLower];
+        
+        // Use normalizedButtonId if present, otherwise use the mapped ID from text, or the raw text as last resort
+        const effectiveId = normalizedButtonId || mappedFromText || messageTextTrim;
+        
+        console.log(`[webhook] Whazing interaction detected: raw="${messageTextTrim}", id="${normalizedButtonId}", effective="${effectiveId}"`);
 
         // Force main menu on test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
