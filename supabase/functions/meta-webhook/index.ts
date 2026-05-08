@@ -83,10 +83,25 @@ serve(async (req) => {
                             body.message?.button?.payload ||
                             body.button_id;
       
+      const buttonTitle = msg?.interactive?.button_reply?.title || 
+                          msg?.interactive?.list_reply?.title ||
+                          rawMsg.interactive?.button_reply?.title ||
+                          rawMsg.interactive?.list_reply?.title || "";
+
       if (interactiveId) {
         content = interactiveId;
         console.log("[BUTTON_ID_REAL]", interactiveId);
+      } else if (buttonTitle) {
+        content = buttonTitle;
+        console.log("[BUTTON_TITLE_FALLBACK]", buttonTitle);
       }
+      
+      console.log("[PARSER_DEBUG]", { 
+        type: msg?.type || rawMsg.type, 
+        id: interactiveId, 
+        title: buttonTitle, 
+        finalContent: content 
+      });
     }
 
     if (!fromPhone) {
@@ -132,7 +147,8 @@ serve(async (req) => {
         
         console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', JSON.stringify(resData));
 
-        if (resData.response || resData.success || resData.newState) {
+      console.log("[ROUTE_MATCH_SUCCESS]", { state: resData.newState });
+      if (resData.response || resData.success || resData.newState) {
           const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
           const PHONE_ID = "1110151302179856";
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
