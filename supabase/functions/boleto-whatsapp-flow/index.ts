@@ -20,6 +20,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     const body = await req.json();
     const { clinic_id, phone, message, action, explicit_phone_id } = body;
 
+    console.log('[USER_ID_RAW]', phone);
     console.log('[STATE_BEFORE_CLICK]', 'Fetching state from DB...');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -35,7 +36,16 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    if (!session || action === 'start' || message === 'whazing_sub_boleto') {
+    const isStartAction = action === 'start' || message === 'whazing_sub_boleto';
+    console.log('[SESSION_LOOKUP]', {
+      phone,
+      sessionFound: !!session,
+      currentState: session?.state,
+      sessionId: session?.id,
+      isStartAction
+    });
+
+    if (!session || isStartAction) {
       console.log('[NO_STATE_RESET]', 'Initializing or resetting to SELECT_BOLETO_TYPE');
       const { data: newSession } = await supabase
         .from('whatsapp_boleto_sessions')
@@ -47,10 +57,20 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         })
         .select()
         .single();
-      session = newSession;
+      
+      if (newSession) {
+        console.log('[SESSION_SAVE_SUCCESS]', newSession.id);
+        session = newSession;
+      } else {
+        console.error('[SESSION_SAVE_FAILED]');
+      }
     }
 
-    if (!session) throw new Error("Could not create session");
+    if (!session) {
+      console.error('[SESSION_LOAD_FAILED]');
+      throw new Error("Could not create session");
+    }
+    console.log('[SESSION_LOAD_SUCCESS]', session.id);
 
     console.log('[STATE_BEFORE_CLICK]', session.state);
     console.log('[BUTTON_CLICKED]', message);
@@ -170,9 +190,15 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     }
 
     // 3. Atualizar estado no banco
-    await supabase.from('whatsapp_boleto_sessions')
-      .update({ state: nextState })
+    const { error: updateError } = await supabase.from('whatsapp_boleto_sessions')
+      .update({ state: nextState, updated_at: new Date().toISOString() })
       .eq('id', session.id);
+    
+    if (updateError) {
+      console.error('[SESSION_UPDATE_FAILED]', updateError);
+    } else {
+      console.log('[SESSION_SAVE_SUCCESS]', { id: session.id, nextState });
+    }
 
     console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', responseText);
 
