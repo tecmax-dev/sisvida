@@ -312,7 +312,7 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     
     // If ID is numeric (like "1", "2") or a technical string (like "whazing_associado"),
     // use it directly. Otherwise, use display text as fallback.
-    if (buttonResponseId.length > 0) {
+   if (buttonResponseId && buttonResponseId.length > 0) {
       return buttonResponseId;
     }
     return displayText || null;
@@ -3881,14 +3881,15 @@ async function handleMainMenu(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = messageText.trim().toLowerCase();
+   const choice = (messageText || "").trim().toLowerCase();
+   console.log(`[MAIN_MENU] Incoming: "${messageText}", choice: "${choice}", state: ${session.state}`);
   const bookingEnabled = config.booking_enabled !== false;
 
   // Try AI intent extraction for natural language
   let intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | null = null;
   
   // Check for interactive button responses first
-  if (choice === 'menu_schedule' || choice === '📅 agendar' || choice === 'agendar') {
+   if (choice === 'menu_schedule' || choice === '📅 agendar' || choice === 'agendar' || choice === 'whazing_empresa' || choice.includes('sou empresa')) {
     intent = 'schedule';
   } else if (choice === 'menu_cancel' || choice === '❌ cancelar' || choice === 'cancelar') {
     intent = 'cancel';
@@ -3900,10 +3901,25 @@ async function handleMainMenu(
   // Then check traditional numeric patterns - adjust based on booking_enabled
   else if (bookingEnabled) {
     // With booking: 1=schedule, 2=cancel, 3=reschedule, 4=list
-    if (choice === '1') intent = 'schedule';
-    else if (choice === '2') intent = 'cancel';
-    else if (choice === '3') intent = 'reschedule';
-    else if (choice === '4') intent = 'list';
+     if (choice === '1' || choice === 'whazing_empresa' || choice.includes('sou empresa')) intent = 'schedule';
+     else if (choice === '2' || choice === 'whazing_sub_boleto' || choice.includes('boleto')) {
+       // Priority redirect to boleto flow for option 2/boleto
+       console.log('[MAIN_MENU] Redirecting to boleto-whatsapp-flow via button/text');
+       const supabaseUrlEnv = Deno.env.get('SUPABASE_URL') || '';
+       try {
+         await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+           method: 'POST',
+           headers: {
+             'Content-Type': 'application/json',
+             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''}`,
+           },
+           body: JSON.stringify({ clinic_id: config.clinic_id, phone, evolution_config: config }),
+         });
+         return { handled: true, newState: 'MAIN_MENU' };
+       } catch (e) { console.error('[MAIN_MENU] Boleto flow error:', e); }
+     }
+     else if (choice === '3') intent = 'cancel';
+     else if (choice === '4') intent = 'reschedule';
   } else {
     // Without booking: 1=cancel, 2=reschedule, 3=list, 6=boleto
     if (choice === '1') intent = 'cancel';
