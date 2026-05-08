@@ -8239,7 +8239,14 @@ async function handleWebhook(req: Request) {
         // 1. Exact technical ID from payload
         // 2. Technical ID found in text mapping
         // 3. Raw message text
-        const effectiveId = normalizedButtonId || textToIdMap[messageTextTrim?.toLowerCase() || ''] || messageTextTrim;
+        // Map messageText and extractedButtonId to clean technical IDs
+        const messageTextLower = messageTextTrim?.toLowerCase() || '';
+        const mappedFromText = textToIdMap[messageTextLower];
+        
+        // Use normalizedButtonId if present, otherwise use the mapped ID from text, or the raw text as last resort
+        const effectiveId = normalizedButtonId || mappedFromText || messageTextTrim;
+        
+        console.log(`[webhook] Whazing interaction detected: raw="${messageTextTrim}", id="${normalizedButtonId}", effective="${effectiveId}"`);
 
         // Force main menu on test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
@@ -8839,7 +8846,10 @@ async function handleWebhook(req: Request) {
           ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())
           : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) || rawBtnId === 'whazing_sub_boleto';
 
-        if (revivedBoletoSession || isBoletoRequest || isBoletoButton) {
+        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto';
+        
+        if (revivedBoletoSession || effectiveBoletoRequest || isBoletoButton) {
+          console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${effectiveBoletoRequest}, is button: ${isBoletoButton}`);
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
           
           // Call boleto flow edge function
@@ -8856,8 +8866,8 @@ async function handleWebhook(req: Request) {
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone: phone,
-                message: (revivedBoletoSession || isBoletoButton || rawBtnId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
-                action: (!revivedBoletoSession && !isBoletoButton && rawBtnId !== 'whazing_sub_boleto') ? 'start' : undefined,
+                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
+                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto') ? 'start' : undefined,
                  evolution_config: {
                    api_url: configData.api_url,
                    api_key: configData.api_key,
