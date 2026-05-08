@@ -492,8 +492,5 @@
        headers: { "Content-Type": "application/json" },
        status: 200,
      });
-   } catch (error) {
-     console.error("[zapresponder] Webhook error:", error);
-     return new Response(JSON.stringify({ error: String(error) }), { status: 500 });
-   }
+    */
  });
