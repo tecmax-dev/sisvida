@@ -100,6 +100,25 @@ serve(async (req) => {
         title: buttonTitle, 
         finalContent: content 
       });
+
+      // [TESTE_REAL] requested by user
+      if (content === 'boleto_a_vencer') {
+        console.log('[BUTTON_ROUTE_OK]');
+        const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+        const PHONE_ID = "1110151302179856";
+        const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+        
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to,
+            type: 'text',
+            text: { body: `[TESTE_REAL] BOTAO RECEBIDO\nbuttonId: ${content}` },
+          }),
+        });
+      }
     }
 
     if (!fromPhone) {
