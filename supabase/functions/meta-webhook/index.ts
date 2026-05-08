@@ -83,9 +83,41 @@ serve(async (req) => {
                             body.message?.button?.payload ||
                             body.button_id;
       
+      const buttonTitle = rawMsg.interactive?.button_reply?.title || 
+                          rawMsg.interactive?.list_reply?.title || "";
+
       if (interactiveId) {
         content = interactiveId;
         console.log("[BUTTON_ID_REAL]", interactiveId);
+      } else if (buttonTitle) {
+        content = buttonTitle;
+        console.log("[BUTTON_TITLE_FALLBACK]", buttonTitle);
+      }
+      
+      console.log("[PARSER_DEBUG]", { 
+        type: rawMsg.type, 
+        id: interactiveId, 
+        title: buttonTitle, 
+        finalContent: content 
+      });
+
+      // [TESTE_REAL] requested by user
+      if (content === 'boleto_a_vencer') {
+        console.log('[BUTTON_ROUTE_OK]');
+        const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+        const PHONE_ID = "1110151302179856";
+        const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+        
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to,
+            type: 'text',
+            text: { body: `[TESTE_REAL] BOTAO RECEBIDO\nbuttonId: ${content}` },
+          }),
+        });
       }
     }
 
@@ -132,13 +164,14 @@ serve(async (req) => {
         
         console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', JSON.stringify(resData));
 
-        if (resData.response || resData.success || resData.newState) {
+      console.log("[ROUTE_MATCH_SUCCESS]", { state: resData.newState });
+      if (resData.response || resData.success || resData.newState) {
           const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
           const PHONE_ID = "1110151302179856";
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
           
           // Signature for debugging
-          const finalResponseText = `[${BUILD_VERSION}]\n${resData.response || '[ERRO] Sem resposta do flow'}`;
+          const finalResponseText = resData.response || '[ERRO] Sem resposta do flow';
 
           let payload: any;
 
