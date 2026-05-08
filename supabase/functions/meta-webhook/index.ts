@@ -53,44 +53,44 @@ serve(async (req) => {
      let buttonId = "";
      let buttonTitle = "";
  
-     // Suporte a diferentes formatos de payload (ZapResponder vs Meta Direto)
-     if (body.object === 'whatsapp_business_account') {
-       // Meta Webhook Direto
-       const entry = body.entry?.[0];
-       const change = entry?.changes?.[0];
-       const value = change?.value;
-       const message = value?.messages?.[0];
-       
-       if (!message) return new Response("no_message", { status: 200 });
-       
-       phone = message.from;
-       if (message.type === 'text') {
-         messageText = message.text?.body;
-       } else if (message.type === 'interactive') {
-         const interactive = message.interactive;
-         if (interactive.type === 'button_reply') {
-           buttonId = interactive.button_reply?.id;
-           buttonTitle = interactive.button_reply?.title;
-         }
-       }
-     } else {
-        // ZapResponder / Webhook Generic Format
-        phone = (body.chatId || body.raw_message?.from || "").toString().replace(/\D/g, "");
-        messageText = body.message?.mensagem || body.raw_message?.content || body.raw_message?.body || "";
-        
-        // Detecção de clique no ZapResponder (quando mensagem vem null)
-        if (body.message?.mensagem === null && body.type === 'message_received') {
-          // No ZapResponder, cliques de botões interativos costumam vir com mensagem null
-          // mas o ID do botão costuma ser mapeado para o conteúdo se não for texto
-          buttonId = body.message?.payload || body.message?.id || body.raw_message?.selectedButtonId || 'test_button_id';
-          console.log('[ZAP_CLIQUE_DETECTADO]', buttonId);
-        }
+      // 1. EXTRAÇÃO PURA DA META (OPÇÃO A)
+      if (body.object !== 'whatsapp_business_account') {
+        console.log('[RAW_PAYLOAD_REJECTED] Not Meta format');
+        return new Response("not_meta_format", { status: 200 });
+      }
 
-        // Fallback para IDs conhecidos no texto ou payload
-        if (!buttonId && (messageText === 'test_button_id' || body.message?.payload === 'test_button_id')) {
-          buttonId = 'test_button_id';
+      console.log('[RAW_META_PAYLOAD]', JSON.stringify(body, null, 2));
+
+      const entry = body.entry?.[0];
+      const change = entry?.changes?.[0];
+      const value = change?.value;
+      const message = value?.messages?.[0];
+      
+      if (!message) {
+        console.log('[DEBUG] No message in Meta payload');
+        return new Response("no_message", { status: 200 });
+      }
+
+      phone = message.from;
+      if (message.type === 'text') {
+        messageText = message.text?.body;
+      } else if (message.type === 'interactive') {
+        const interactive = message.interactive;
+        if (interactive.type === 'button_reply') {
+          const buttonReply = interactive.button_reply;
+          buttonId = buttonReply?.id;
+          buttonTitle = buttonReply?.title;
+          console.log('[BUTTON_REPLY_ID]', buttonId);
+          console.log('[BUTTON_REPLY_TITLE]', buttonTitle);
         }
-     }
+      }
+
+      if (!phone) {
+        console.log('[META_SEND_FAIL] No user phone found');
+        return new Response("no_phone", { status: 200 });
+      }
+
+      console.log('[USER_PHONE]', phone);
  
      if (!phone) {
        console.log('[META_SEND_FAIL] No user phone found');
@@ -126,40 +126,60 @@ serve(async (req) => {
      let nextState = currentState;
      let responseMessage: any = null;
  
-     // FASE 1: TESTE MÍNIMO DE BOTÃO
-     if (buttonId === 'test_button_id') {
-       console.log('[BUTTON_ROUTE_OK]');
-       responseMessage = {
-         type: 'text',
-         text: { body: '[TESTE_BOTAO_OK]' }
-       };
-       // Para teste de sessão na FASE 2, poderíamos mudar o estado aqui
-       // nextState = 'WAITING_CNPJ';
+      // 3. LOGICA DE ROTEAMENTO (SINGLE ROUTER)
+      let nextState = currentState;
+      let responseMessage: any = null;
+      let routeMatch = "";
+
+      // FASE 1.5: VALIDAÇÃO DO BUTTON_REPLY.ID REAL
+      if (buttonId === 'empresa_btn') {
+        routeMatch = 'EMPRESA_ROUTE';
+        responseMessage = {
+          type: 'text',
+          text: { body: '[BTN_OK] empresa_btn' }
+        };
+        nextState = 'EMPRESA_FLOW'; // Simulando transição
+      } else if (buttonId === 'associado_btn') {
+        routeMatch = 'ASSOCIADO_ROUTE';
+        responseMessage = {
+          type: 'text',
+          text: { body: '[BTN_OK] associado_btn' }
+        };
+        nextState = 'ASSOCIADO_FLOW'; // Simulando transição
      } else if (messageText && messageText.toLowerCase().includes('oi')) {
-       // Enviar menu com botão
+        routeMatch = 'WELCOME_ROUTE';
+        // Enviar menu com 2 botões reais da Meta
        responseMessage = {
          type: 'interactive',
          interactive: {
            type: 'button',
-           body: { text: 'Menu Teste' },
+            body: { text: 'Escolha seu perfil:' },
            action: {
              buttons: [
                {
                  type: 'reply',
-                 reply: { id: 'test_button_id', title: 'Teste Botão' }
-               }
+                  reply: { id: 'empresa_btn', title: 'Empresa' }
+                },
+                {
+                  type: 'reply',
+                  reply: { id: 'associado_btn', title: 'Associado' }
+                }
              ]
            }
          }
        };
        nextState = 'MAIN_MENU';
      } else {
-       console.log('[DEBUG] TRANSITION_NOT_FOUND');
+        routeMatch = 'NONE';
        responseMessage = {
          type: 'text',
          text: { body: '[DEBUG] TRANSITION_NOT_FOUND' }
        };
      }
+
+      console.log('[ROUTE_MATCH]', routeMatch);
+      console.log('[CURRENT_STATE]', currentState);
+      console.log('[NEXT_STATE]', nextState);
  
      // 4. ATUALIZAR SESSÃO
      if (nextState !== currentState) {
