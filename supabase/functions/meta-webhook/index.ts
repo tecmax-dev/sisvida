@@ -85,29 +85,39 @@ serve(async (req) => {
     ).replace(/\D/g, "");
 
     // Button/Content extraction
-    const rawButtonId = 
+    // BRUTAL WHATSAPP PARSER
+    const rawButtonId = (
       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.id ||
       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.payload ||
       body.message?.interactive?.button_reply?.id ||
-      body.message?.interactiveResponseMessage?.id ||
-      body.message?.buttonsResponseMessage?.selectedButtonId ||
-      body.button?.payload ||
+      body.message?.selectedButtonId ||
+      body.message?.buttonId ||
+      body.raw_message?.buttonId ||
+      body.raw_message?.content || // Some providers put ID in content
       body.button_id ||
-      findDeep(body, ['button_reply', 'selectedButtonId', 'button_id', 'payload']);
+      findDeep(body, ['button_reply', 'selectedButtonId', 'buttonId', 'button_id', 'payload'])
+    );
 
-    const rawButtonTitle = 
+    const rawButtonTitle = (
       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.title ||
       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.text ||
       body.message?.interactive?.button_reply?.title ||
+      body.message?.buttonText ||
+      body.raw_message?.buttonText ||
       body.button?.text ||
-      findDeep(body, ['button_reply_title', 'button_text', 'display_text']);
+      findDeep(body, ['button_reply_title', 'button_text', 'display_text', 'title'])
+    );
 
-    const rawText = 
+    const rawText = (
       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body ||
       body.message?.conversation ||
+      body.message?.text ||
+      body.raw_message?.content ||
       body.data?.message?.conversation ||
-      body.mensagem || body.text || 
-      "";
+      body.mensagem || 
+      body.text || 
+      ""
+    );
 
     content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();
     
