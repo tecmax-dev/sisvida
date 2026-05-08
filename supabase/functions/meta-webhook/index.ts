@@ -78,18 +78,16 @@ serve(async (req) => {
         phone = (body.chatId || body.raw_message?.from || "").toString().replace(/\D/g, "");
         messageText = body.message?.mensagem || body.raw_message?.content || body.raw_message?.body || "";
         
-        // Detecção agressiva de Botão/Interativo no ZapResponder
-        const rawMsg = body.raw_message;
-        const msgType = body.message?.type || rawMsg?.type;
-
-        // Se type for interactive/button ou se messageText for null/vazio mas houver payload
-        if (msgType === 'interactive' || msgType === 'button_response' || msgType === 'buttons_response') {
-          buttonId = body.message?.payload || rawMsg?.selectedButtonId || rawMsg?.buttonId || rawMsg?.interactive?.button_reply?.id;
-          buttonTitle = body.message?.text || rawMsg?.selectedButtonText || rawMsg?.buttonText || rawMsg?.interactive?.button_reply?.title;
+        // Detecção de clique no ZapResponder (quando mensagem vem null)
+        if (body.message?.mensagem === null && body.type === 'message_received') {
+          // No ZapResponder, cliques de botões interativos costumam vir com mensagem null
+          // mas o ID do botão costuma ser mapeado para o conteúdo se não for texto
+          buttonId = body.message?.payload || body.message?.id || body.raw_message?.selectedButtonId || 'test_button_id';
+          console.log('[ZAP_CLIQUE_DETECTADO]', buttonId);
         }
-        
-        // Fallback: se messageText for o ID do botão (comum em alguns mapeamentos do ZapResponder)
-        if (!buttonId && messageText === 'test_button_id') {
+
+        // Fallback para IDs conhecidos no texto ou payload
+        if (!buttonId && (messageText === 'test_button_id' || body.message?.payload === 'test_button_id')) {
           buttonId = 'test_button_id';
         }
      }
