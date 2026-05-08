@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v3';
+   const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v4';
  console.log('[FLOW VERSION]', BUILD_VERSION);
 
 serve(async (req) => {
@@ -57,12 +57,7 @@ serve(async (req) => {
     let content = "";
     let profileName = "Cliente";
 
-    // --- FORENSIC PARSER START ---
-    console.log('[RAW_BUTTON_PAYLOAD_START]');
-    console.log(JSON.stringify(body, null, 2));
-    console.log('[RAW_BUTTON_PAYLOAD_END]');
-
-    // --- WHAZING/OFFICIAL BRUTAL PARSER ---
+    // 1. EXTRAÇÃO BRUTAL (Whazing, Meta, ZapResponder)
     fromPhone = (
       body.wa_id || 
       body.phone || 
@@ -98,35 +93,10 @@ serve(async (req) => {
       ""
     );
 
-    content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();
-
-    content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();
-    
+    content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();    
     console.log("[BUTTON_ID_REAL]", rawButtonId || 'null');
     console.log("[BUTTON_TITLE_REAL]", rawButtonTitle || 'null');
     console.log("[PARSER_DEBUG]", { fromPhone, content, isButton: !!(rawButtonId || rawButtonTitle) });
-
-    // GLOBAL BRUTAL TEST
-    if (rawButtonId || rawButtonTitle) {
-      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-      const PHONE_ID = "1110151302179856";
-      const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
-      
-      console.log('[BOTAO_GLOBAL_RECEBIDO_VERBOSE]', JSON.stringify(body, null, 2));
-      const forensicResponse = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: 'text',
-          text: { body: `[FORENSIC_ECHO]\nbuttonId: ${rawButtonId}\ntitle: ${rawButtonTitle}\ncontent: ${content}\nphone: ${fromPhone}\nraw: ${JSON.stringify(body).substring(0, 100)}` },
-        }),
-      });
-      const forensicResBody = await forensicResponse.text();
-      console.log('[FORENSIC_ECHO_STATUS]', forensicResponse.status, forensicResBody);
-    }
-    // --- FORENSIC PARSER END ---
 
     if (!fromPhone) {
       console.log('[ENTRYPOINT] No phone found in payload');
@@ -135,18 +105,14 @@ serve(async (req) => {
 
     // Roteamento expandido para cobrir todos os IDs da State Machine
 
-      const boletoKeywords = [
-        "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
-        "sou empresa", "boleto_sim", "boleto_nao", "boleto_type_1", "boleto_type_2",
-        "vencer", "vencido", "empresa"
-      ];
-      
+      const boletoKeywords = ["boleto", "whazing_sub_boleto", "sou empresa", "empresa", "oi", "menu", "olá", "ola", "vencer", "vencido"];
       const isBoletoAction = (content && content.length > 0) && (
-                             boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
-                             (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content))
-                             );
- 
-     if (isBoletoAction) {
+        boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
+        (rawButtonId && rawButtonId.startsWith('boleto_')) ||
+        (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content))
+      );
+
+      if (isBoletoAction) {
        console.log(`[ROUTER] Routing to boleto-whatsapp-flow for ${fromPhone}`);
        console.log(`[BEFORE_SEND] Content: ${content}`);
        console.log('[MENU_SENDER]', { handler: HANDLER_NAME, build: BUILD_VERSION });
@@ -174,7 +140,7 @@ serve(async (req) => {
       console.log("[ROUTE_MATCH_SUCCESS]", { state: resData.newState });
       if (resData.response || resData.success || resData.newState) {
           const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-          const PHONE_ID = "1110151302179856";
+          const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
           
           // Signature for debugging
@@ -248,9 +214,8 @@ serve(async (req) => {
 
     console.log('[SESSION_LOOKUP_ROUTER]', { fromPhone, sessionFound: !!session, currentState: session?.state });
 
-    if (session && !['menu', 'start', 'oi'].includes(content.toLowerCase())) {
-      console.log(`[FLOW_SINGLE_POINT] Active session found (${session.state}). Routing to boleto flow for content: "${content}"`);
-      // Manually trigger the flow to see if it can handle the input (even if not a keyword)
+    if (session) {
+      console.log(`[FLOW_SINGLE_POINT] Session active (${session.state}).`);
       const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
         method: 'POST',
         headers: {
@@ -268,7 +233,7 @@ serve(async (req) => {
       const resData = await flowRes.json();
       if (resData.response || resData.success) {
         const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-        const PHONE_ID = "1110151302179856";
+        const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
         const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
         const finalResponseText = `[${BUILD_VERSION}]\n${resData.response}`;
         
@@ -309,26 +274,29 @@ serve(async (req) => {
       }
     }
 
-    // CRITICAL: Check if this was a button click that should have been a boleto action but failed lookup
-    const isExplicitButtonClick = body.raw_message?.interactive?.button_reply?.id || body.message?.button?.payload;
-    
-    if (isExplicitButtonClick) {
-      console.log('[DEBUG_SESSION_FAIL] Button click received but no session found and not a boleto keyword');
-      // If it's a button click and we reached here, something is wrong with session or routing
+    // 4. FALLBACK PARA QUALQUER BOTÃO (Prevenir silêncio)
+    if (rawButtonId || rawButtonTitle) {
+      console.log('[FALLBACK_BUTTON_REPLY] Sending forensic fallback for unknown button');
       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-      const PHONE_ID = "1110151302179856";
+      const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
       const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
       
-      await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: 'text',
-          text: { body: `[DEBUG_SESSION_FAIL]\nuserId: ${fromPhone}\nbuttonId: ${content}\nNo session found.` },
-        }),
-      });
+      const fallbackText = `[FORENSIC_FALLBACK]\nButtonId: ${rawButtonId}\nTitle: ${rawButtonTitle}\nPhone: ${fromPhone}\nNo matching route found.`;
+      
+      try {
+        await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to,
+            type: 'text',
+            text: { body: fallbackText },
+          }),
+        });
+      } catch (err) {
+        console.error('[FALLBACK_SEND_ERROR]', err);
+      }
     }
 
     // FORENSIC AUDIT: Disabled auto-main-menu loop
