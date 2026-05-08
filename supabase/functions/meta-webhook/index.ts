@@ -197,7 +197,7 @@ serve(async (req) => {
 
     console.log(`[FLOW_SINGLE_POINT] Checking session for: "${fromPhone}"`);
     
-    // Check if there's an active boleto session even if no keyword matched
+    // CRITICAL: Check session for ANY input to prevent main menu loop
     const { data: session } = await supabase
       .from('whatsapp_boleto_sessions')
       .select('state')
@@ -206,8 +206,10 @@ serve(async (req) => {
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    if (session) {
-      console.log(`[FLOW_SINGLE_POINT] Active session found (${session.state}). Routing to boleto flow.`);
+    console.log('[SESSION_LOOKUP_ROUTER]', { fromPhone, sessionFound: !!session, currentState: session?.state });
+
+    if (session && !['menu', 'start', 'oi'].includes(content.toLowerCase())) {
+      console.log(`[FLOW_SINGLE_POINT] Active session found (${session.state}). Routing to boleto flow for content: "${content}"`);
       // Manually trigger the flow to see if it can handle the input (even if not a keyword)
       const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
         method: 'POST',
