@@ -8,13 +8,15 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-serve(async (req) => {
+ const BUILD_VERSION = 'FLOW_V2_BUILD_20260508';
+ 
+ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    console.log('[DEBUG_NOVA_STATE_MACHINE][ENTRY]');
+     console.log(`[ENTRYPOINT][boleto-whatsapp-flow]`, BUILD_VERSION);
     const body = await req.json();
     const { clinic_id, phone, message, action, explicit_phone_id } = body;
 
@@ -104,7 +106,7 @@ serve(async (req) => {
         ];
       }
     } else if (session.state === 'SELECT_BOLETO_TYPE') {
-      responseText = "Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
+       responseText = `[${BUILD_VERSION}]\nVou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
       buttons = [
         { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
@@ -157,7 +159,7 @@ serve(async (req) => {
       }
     } else {
       // Fallback para reinício se o estado estiver perdido
-      responseText = "Como podemos ajudar você hoje?";
+       responseText = `[${BUILD_VERSION}]\nMenu Sindicato\nComo podemos ajudar você hoje?`;
       buttons = [
         { id: 'whazing_sub_boleto', title: 'Sou Empresa (Boleto)' },
         { id: 'whazing_associado', title: 'Sou Associado' }

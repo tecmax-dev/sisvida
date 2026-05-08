@@ -8,7 +8,8 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-console.log('[FLOW VERSION]', 'STATE_MACHINE_V2');
+ const BUILD_VERSION = 'FLOW_V2_BUILD_20260508';
+ console.log('[FLOW VERSION]', BUILD_VERSION);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,20 +33,18 @@ serve(async (req) => {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const handlerName = 'meta-webhook';
+   const HANDLER_NAME = 'meta-webhook';
   try {
-    console.log('[CLICK ENTRYPOINT]', handlerName);
-    console.log('[DEBUG_NOVA_STATE_MACHINE][ENTRY]');
-    
-    let body;
-    try {
-      body = await req.json();
-    } catch (e) {
-      console.error('[DEBUG_NOVA_STATE_MACHINE][BODY_ERROR]', e);
-      return new Response("Invalid JSON", { status: 400 });
-    }
-    
-    console.log("[DEBUG_NOVA_STATE_MACHINE][BODY]", JSON.stringify(body));
+     console.log(`[ENTRYPOINT][${HANDLER_NAME}]`, BUILD_VERSION);
+     
+     let body: any;
+     try {
+       body = await req.json();
+       console.log('[RAW_CLICK_PAYLOAD]', JSON.stringify(body, null, 2));
+     } catch (e) {
+       console.error('[BODY_ERROR]', e);
+       return new Response("Invalid JSON", { status: 400 });
+     }
 
     if (body.type !== "message_received" && !Array.isArray(body.entry)) {
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
@@ -94,17 +93,39 @@ serve(async (req) => {
     if (!fromPhone) return new Response("No phone", { status: 200 });
 
     // Roteamento expandido para cobrir todos os IDs da State Machine
-    const boletoKeywords = [
-      "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
-      "sou empresa", "boleto_sim", "boleto_nao", "boleto_type_1", "boleto_type_2"
-    ];
-    
-    const isBoletoAction = boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
-                           (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content));
+     // BRUTALLY SIMPLE TEST requested by user
+     if (content.toLowerCase().includes("sou empresa") || content.toLowerCase().includes("boleto")) {
+       console.log('[TESTE DIRETO] CLIQUE EM BOLETO DETECTADO');
+       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+       const PHONE_ID = "1110151302179856";
+       const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+       
+       await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+         method: 'POST',
+         headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           messaging_product: 'whatsapp',
+           to,
+           type: 'text',
+           text: { body: `[${BUILD_VERSION}]\n[TESTE DIRETO] CLIQUE RECEBIDO\nConteúdo: ${content}` },
+         }),
+       });
+       console.log('[TESTE DIRETO] Resposta enviada');
+     }
 
-    if (isBoletoAction) {
-      console.log(`[DEBUG_NOVA_STATE_MACHINE][ROUTE_MATCH] boleto-whatsapp-flow for ${fromPhone}`);
-      console.log(`[DEBUG_NOVA_STATE_MACHINE][BEFORE_SEND] Content: ${content}`);
+     const boletoKeywords = [
+       "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
+       "sou empresa", "boleto_sim", "boleto_nao", "boleto_type_1", "boleto_type_2",
+       "vencer", "vencido"
+     ];
+     
+     const isBoletoAction = boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
+                            (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content));
+ 
+     if (isBoletoAction) {
+       console.log(`[ROUTER] Routing to boleto-whatsapp-flow for ${fromPhone}`);
+       console.log(`[BEFORE_SEND] Content: ${content}`);
+       console.log('[MENU_SENDER]', { handler: HANDLER_NAME, build: BUILD_VERSION });
       
       try {
         const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
@@ -132,7 +153,7 @@ serve(async (req) => {
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
           
           // Signature for debugging
-          const finalResponseText = `[DEBUG_NOVA_STATE_MACHINE]\n${resData.response}`;
+           const finalResponseText = `[${BUILD_VERSION}]\n${resData.response}`;
 
           let payload: any;
 
