@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
- const HANDLER_VERSION = "1.0.2-COEX-AUDIT";
+  const HANDLER_VERSION = "1.0.3-SEND-DIAGNOSTIC";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,108 +28,75 @@ serve(async (req) => {
     });
   }
 
-   try {
-     const body = await req.json();
-     console.log('[COEX_ENTRY_CONFIRMED]', HANDLER_VERSION);
-     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
- 
-     // COEX/ZapResponder Parser Logic
-     const from = (
-       body.raw_message?.from || 
-       body.chatId || 
-       body.wa_id || 
-       body.phone || 
-       ""
-     ).toString().replace(/\D/g, "");
- 
-     const text = (
-       body.message?.mensagem || 
-       body.raw_message?.content || 
-       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body || 
-       ""
-     ).toString().trim();
- 
-     const extractedButtonId = body.raw_message?.interactive?.button_reply?.id || body.buttonId || null;
-     const extractedButtonTitle = body.raw_message?.interactive?.button_reply?.title || body.buttonText || null;
- 
-     console.log('[BUTTON_ID]', extractedButtonId);
-     console.log('[BUTTON_TITLE]', extractedButtonTitle);
+  try {
+    const body = await req.json();
+    console.log('[STEP_1_MESSAGE_RECEIVED]', new Date().toISOString());
+    console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
+
+    // Extraction (Phone Only)
+    const from = (
+      body.raw_message?.from || 
+      body.chatId || 
+      body.wa_id || 
+      body.phone || 
+      ""
+    ).toString().replace(/\D/g, "");
+
+    console.log('[EXTRACTED_PHONE]', from);
 
     if (!from) {
-      return new Response(JSON.stringify({ ok: true, reason: "no phone" }), { status: 200 });
+      console.log('[ERROR] No phone found in payload');
+      return new Response(JSON.stringify({ ok: false, reason: "no phone" }), { status: 200 });
     }
 
     const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
     const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
     const to = from.startsWith('55') ? from : `55${from}`;
 
-    const sendResponse = async (payload: any) => {
+    console.log('[ATTEMPTING_SEND]', { to, phone_id: PHONE_ID });
+
+    // MANDATORY SEND TEST
+    const sendWhatsAppMessage = async (recipient: string, message: string) => {
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: recipient,
+        type: 'text',
+        text: { body: message }
+      };
+
+      console.log('[SEND_REQUEST_PAYLOAD]', JSON.stringify(payload));
+
       const res = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${META_TOKEN}`, 
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          ...payload
-        }),
+        body: JSON.stringify(payload),
       });
-      const result = await res.text();
-      console.log('[MESSAGE_SENT]', result);
-      return result;
+
+      const status = res.status;
+      const resultText = await res.text();
+      
+      let resultJson;
+      try { resultJson = JSON.parse(resultText); } catch { resultJson = resultText; }
+
+      return { status, body: resultJson };
     };
 
-    // FASE 1: PROVAR ENTRADA
-    if (text.toLowerCase() === "oi") {
-      await sendResponse({
-        type: 'text',
-        text: { body: "MENU TESTE" }
-      });
-      return new Response(JSON.stringify({ ok: true, phase: 1 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    const sendResult = await sendWhatsAppMessage(to, 'TESTE DIRETO');
 
-    // FASE 2: MENU PRINCIPAL
-    if (text.toLowerCase() === "menu") {
-      await sendResponse({
-        type: "interactive",
-        interactive: {
-          type: "button",
-          body: { text: "Escolha uma opção:" },
-          action: {
-            buttons: [
-              { type: "reply", reply: { id: "main_empresa", title: "Sou Empresa" } },
-              { type: "reply", reply: { id: "main_associado", title: "Sou Associado" } },
-              { type: "reply", reply: { id: "main_homologacao", title: "Homologacao" } }
-            ]
-          }
-        }
-      });
-      return new Response(JSON.stringify({ ok: true, phase: 2 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    console.log('[STEP_2_SEND_RESULT]');
+    console.log(JSON.stringify(sendResult, null, 2));
 
-    // FASE 3: TESTE DE CLIQUE
-    if (extractedButtonId === "main_empresa") {
-      await sendResponse({
-        type: 'text',
-        text: { body: "BOTAO EMPRESA RECEBIDO" }
-      });
-      return new Response(JSON.stringify({ ok: true, phase: 3 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // FASE 4: TESTE SUBMENU
-    if (extractedButtonId === "boleto_2via") {
-       await sendResponse({
-        type: 'text',
-        text: { body: "BOLETO RECEBIDO" }
-      });
-      return new Response(JSON.stringify({ ok: true, phase: 4 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ 
+      ok: true, 
+      sendResult,
+      version: HANDLER_VERSION 
+    }), { 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
+
   } catch (e) {
     console.error("[ERROR]", e);
     return new Response(JSON.stringify({ ok: false, error: e.message }), { 
