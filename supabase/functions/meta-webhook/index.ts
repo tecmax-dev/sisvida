@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-  const HANDLER_VERSION = "1.0.3-SEND-DIAGNOSTIC";
+   const HANDLER_VERSION = "1.0.4-ENV-DIAGNOSTIC";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,8 +49,20 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: false, reason: "no phone" }), { status: 200 });
     }
 
-    const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
+     const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+     const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID");
+     
+     console.log('[ENV_CHECK]', { 
+       has_token: !!META_TOKEN, 
+       token_length: META_TOKEN?.length,
+       phone_id: PHONE_ID,
+       all_keys: Object.keys(Deno.env.toObject()).filter(k => k.includes('META'))
+     });
+ 
+     if (!META_TOKEN || !PHONE_ID) {
+        console.log('[ERROR] Missing environment variables', { META_TOKEN: !!META_TOKEN, PHONE_ID: !!PHONE_ID });
+        return new Response(JSON.stringify({ ok: false, reason: "missing env" }), { status: 200 });
+     }
     const to = from.startsWith('55') ? from : `55${from}`;
 
     console.log('[ATTEMPTING_SEND]', { to, phone_id: PHONE_ID });
