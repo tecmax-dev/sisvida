@@ -8707,6 +8707,16 @@ async function handleWebhook(req: Request) {
         const whazingUrl = Deno.env.get('WHAZING_API_URL');
         const whazingToken = Deno.env.get('WHAZING_API_TOKEN');
         
+        // Variáveis de controle para logs da investigação
+        const investigateLogs = {
+          rawPayload: payload,
+          extractedText: messageText,
+          selection: selection,
+          activeBtnId: activeBtnId,
+          stage: lastMenuType || 'main',
+          storedCategory: storedCategory
+        };
+
         if (whazingUrl && whazingToken) {
           // Check for any active sessions (booking, boleto, AI)
           const { data: anyBookingSession } = await supabase
