@@ -8334,14 +8334,25 @@ async function handleWebhook(req: Request) {
       'whazing_associado': 'whazing_associado',
       'whazing_empresa': 'whazing_empresa',
       'whazing_contabilidade': 'whazing_contabilidade',
+      'sou associado': 'whazing_associado',
+      'sou empresa': 'whazing_empresa',
+      'sou contabilidade': 'whazing_contabilidade',
+      '1': 'whazing_associado',
+      '2': 'whazing_empresa',
+      '3': 'whazing_contabilidade'
    };
 
-        const whazingLevel2Map: Record<string, string> = {
-          'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
-          'whazing_sub_convencoes': 'whazing_sub_convencoes',
-          'whazing_sub_outros': 'whazing_sub_outros',
-          'whazing_sub_boleto': 'whazing_sub_boleto',
-        };
+         const whazingLevel2Map: Record<string, string> = {
+           'whazing_sub_carteirinha': 'whazing_sub_carteirinha',
+           'whazing_sub_convencoes': 'whazing_sub_convencoes',
+           'whazing_sub_outros': 'whazing_sub_outros',
+           'whazing_sub_boleto': 'whazing_sub_boleto',
+           'atualizar carteirinha': 'whazing_sub_carteirinha',
+           'convenções coletivas': 'whazing_sub_convencoes',
+           'outros assuntos': 'whazing_sub_outros',
+           '2ª via boleto': 'whazing_sub_boleto',
+           '2 via boleto': 'whazing_sub_boleto'
+         };
 
    const whazingFollowUpMap: Record<string, string> = {
      'whazing_voltar_menu': 'whazing_voltar_menu',
@@ -8362,7 +8373,7 @@ async function handleWebhook(req: Request) {
      'followup_voltar_menu': 'whazing_voltar_menu',
     };
 
-        const rawNormalizedId = effectiveId?.toLowerCase() || '';
+         const rawNormalizedId = selection.actionId?.toLowerCase() || selection.actionLabel?.toLowerCase().trim() || '';
 
         // Re-avaliar mapas com o ID já normalizado pelo normalizador central
         let isWhazingLevel1 = !!whazingLevel1Map[rawNormalizedId];
