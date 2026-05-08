@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const HANDLER_VERSION = "1.0.1-HEALTH-CHECK";
+ const HANDLER_VERSION = "1.0.2-COEX-AUDIT";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,21 +28,32 @@ serve(async (req) => {
     });
   }
 
-  try {
-    const body = await req.json();
-    console.log('[WEBHOOK_ENTRY]');
-    console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
-
-    // Minimalist Parser
-    const messageObj = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0] || body.message || {};
-    const from = (body.wa_id || body.phone || messageObj.from || "").toString().replace(/\D/g, "");
-    
-    const extractedButtonId = messageObj.interactive?.button_reply?.id || messageObj.buttonId || null;
-    const extractedButtonTitle = messageObj.interactive?.button_reply?.title || messageObj.buttonText || null;
-    const text = (messageObj.text?.body || messageObj.conversation || "").toString().trim();
-
-    console.log('[BUTTON_ID]', extractedButtonId);
-    console.log('[BUTTON_TITLE]', extractedButtonTitle);
+   try {
+     const body = await req.json();
+     console.log('[COEX_ENTRY_CONFIRMED]', HANDLER_VERSION);
+     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
+ 
+     // COEX/ZapResponder Parser Logic
+     const from = (
+       body.raw_message?.from || 
+       body.chatId || 
+       body.wa_id || 
+       body.phone || 
+       ""
+     ).toString().replace(/\D/g, "");
+ 
+     const text = (
+       body.message?.mensagem || 
+       body.raw_message?.content || 
+       body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body || 
+       ""
+     ).toString().trim();
+ 
+     const extractedButtonId = body.raw_message?.interactive?.button_reply?.id || body.buttonId || null;
+     const extractedButtonTitle = body.raw_message?.interactive?.button_reply?.title || body.buttonText || null;
+ 
+     console.log('[BUTTON_ID]', extractedButtonId);
+     console.log('[BUTTON_TITLE]', extractedButtonTitle);
 
     if (!from) {
       return new Response(JSON.stringify({ ok: true, reason: "no phone" }), { status: 200 });
