@@ -1446,12 +1446,21 @@ function extractInteractiveResponseId(messageData: any): string | null {
     return messageData.listResponseMessage.singleSelectReply.selectedRowId;
   }
   // Check for interactive message response (newer format)
-  if (messageData?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-    try {
-      const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      return params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload || null;
-    } catch { /* ignore */ }
-  }
+   // Handle Meta Native Interactive Response
+   if (messageData?.interactive?.button_reply?.id) {
+     return messageData.interactive.button_reply.id;
+   }
+   if (messageData?.interactive?.list_reply?.id) {
+     return messageData.interactive.list_reply.id;
+   }
+ 
+   // Handle Native Flow (paramsJson)
+   if (messageData?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+     try {
+       const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+       return params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload || null;
+     } catch { /* ignore */ }
+   }
   return messageData?.buttonReplyMessage?.id ||
     messageData?.buttonReplyMessage?.selectedId ||
     messageData?.buttonReplyMessage?.selectedButtonId ||
