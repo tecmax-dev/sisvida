@@ -8376,12 +8376,18 @@ async function handleWebhook(req: Request) {
          const rawNormalizedId = selection.actionId?.toLowerCase() || selection.actionLabel?.toLowerCase().trim() || '';
 
         // Re-avaliar mapas com o ID já normalizado pelo normalizador central
-        let isWhazingLevel1 = !!whazingLevel1Map[rawNormalizedId];
-        let isWhazingLevel2 = !!whazingLevel2Map[rawNormalizedId];
+         let isWhazingLevel1 = !!whazingLevel1Map[rawNormalizedId] || !!whazingLevel1Map[selection.actionLabel?.toLowerCase().trim()];
+         let isWhazingLevel2 = !!whazingLevel2Map[rawNormalizedId] || !!whazingLevel2Map[selection.actionLabel?.toLowerCase().trim()];
         let isWhazingFollowUp = !!whazingFollowUpMap[rawNormalizedId];
         const isWhazingLegacy = rawNormalizedId === 'whazing_outros';
 
-        let activeBtnId = rawNormalizedId;
+         let activeBtnId = whazingLevel1Map[rawNormalizedId] || 
+                          whazingLevel2Map[rawNormalizedId] || 
+                          whazingFollowUpMap[rawNormalizedId] || 
+                          whazingLevel1Map[selection.actionLabel?.toLowerCase().trim()] ||
+                          whazingLevel2Map[selection.actionLabel?.toLowerCase().trim()] ||
+                          whazingFollowUpMap[selection.actionLabel?.toLowerCase().trim()] ||
+                          rawNormalizedId;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
