@@ -8204,6 +8204,35 @@ async function handleWebhook(req: Request) {
         // ===== WHAZING / META BUTTON RESPONSE HANDLER =====
         const messageTextTrim = messageText?.trim();
 
+        // Attempt to extract raw button ID for precise matching
+        const extractedButtonId = extractInteractiveResponseId(payload.data?.message);
+        const normalizedButtonId = extractedButtonId?.toLowerCase() || '';
+
+        // Map display text to common IDs for backward compatibility and text fallback
+        const textToIdMap: Record<string, string> = {
+          'sou associado': 'whazing_associado',
+          'sou empresa': 'whazing_empresa',
+          'sou contabilidade': 'whazing_contabilidade',
+          'associado': 'whazing_associado',
+          'empresa': 'whazing_empresa',
+          'contabilidade': 'whazing_contabilidade',
+          '2ª via boleto': 'whazing_sub_boleto',
+          'segunda via boleto': 'whazing_sub_boleto',
+          'boleto': 'whazing_sub_boleto',
+          'atualizar carteirinha': 'whazing_sub_carteirinha',
+          'carteirinha': 'whazing_sub_carteirinha',
+          'convenções coletivas': 'whazing_sub_convencoes',
+          'convencoes coletivas': 'whazing_sub_convencoes',
+          'outros assuntos': 'whazing_sub_outros',
+          'outros': 'whazing_sub_outros',
+        };
+
+        // Effective button ID prioritized by:
+        // 1. Exact technical ID from payload
+        // 2. Technical ID found in text mapping
+        // 3. Raw message text
+        const effectiveId = normalizedButtonId || textToIdMap[messageTextTrim?.toLowerCase() || ''] || messageTextTrim;
+
         // Force main menu on test command "0" or reset keywords
         if (messageTextTrim === '0' || messageTextTrim?.toLowerCase() === 'reiniciar' || messageTextTrim?.toLowerCase() === 'menu') {
           await supabase
@@ -8224,22 +8253,6 @@ async function handleWebhook(req: Request) {
       'whazing_associado': 'whazing_associado',
       'whazing_empresa': 'whazing_empresa',
       'whazing_contabilidade': 'whazing_contabilidade',
-      'sou associado': 'whazing_associado',
-      'sou empresa': 'whazing_empresa',
-      'sou contabilidade': 'whazing_contabilidade',
-      'associado': 'whazing_associado',
-      'empresa': 'whazing_empresa',
-      'contabilidade': 'whazing_contabilidade',
-      '1': 'whazing_associado',
-      '2': 'whazing_empresa',
-      '3': 'whazing_contabilidade',
-     'associado': 'whazing_associado',
-     'empresa': 'whazing_empresa',
-     'contabilidade': 'whazing_contabilidade',
-     // Zap Responder button ID variants
-     '1': 'whazing_associado',
-     '2': 'whazing_empresa',
-     '3': 'whazing_contabilidade',
    };
 
         const whazingLevel2Map: Record<string, string> = {
@@ -8247,15 +8260,6 @@ async function handleWebhook(req: Request) {
           'whazing_sub_convencoes': 'whazing_sub_convencoes',
           'whazing_sub_outros': 'whazing_sub_outros',
           'whazing_sub_boleto': 'whazing_sub_boleto',
-          'atualizar carteirinha': 'whazing_sub_carteirinha',
-          'carteirinha': 'whazing_sub_carteirinha',
-          'convenções coletivas': 'whazing_sub_convencoes',
-          'convencoes coletivas': 'whazing_sub_convencoes',
-          'outros assuntos': 'whazing_sub_outros',
-          'outros': 'whazing_sub_outros',
-          '2ª via boleto': 'whazing_sub_boleto',
-          'segunda via boleto': 'whazing_sub_boleto',
-          'boleto': 'whazing_sub_boleto',
         };
 
    const whazingFollowUpMap: Record<string, string> = {
@@ -8275,23 +8279,16 @@ async function handleWebhook(req: Request) {
      'followup_atendente': 'whazing_falar_atendente',
      'followup_voltar_sub': 'whazing_voltar_sub',
      'followup_voltar_menu': 'whazing_voltar_menu',
-   };
+    };
 
-        const normalizedMsgText = messageTextTrim?.toLowerCase() || '';
-        
-        let mappedWhazingId = 
-          whazingLevel1Map[normalizedMsgText] || 
-          whazingLevel2Map[normalizedMsgText] || 
-          whazingFollowUpMap[normalizedMsgText];
+        const normalizedId = effectiveId?.toLowerCase() || '';
 
-        let isWhazingLevel1 = !!whazingLevel1Map[normalizedMsgText];
-        let isWhazingLevel2 = !!whazingLevel2Map[normalizedMsgText];
-        let isWhazingFollowUp = !!whazingFollowUpMap[normalizedMsgText];
-        const isWhazingLegacy = normalizedMsgText === 'whazing_outros';
+        let isWhazingLevel1 = !!whazingLevel1Map[normalizedId];
+        let isWhazingLevel2 = !!whazingLevel2Map[normalizedId];
+        let isWhazingFollowUp = !!whazingFollowUpMap[normalizedId];
+        const isWhazingLegacy = normalizedId === 'whazing_outros';
 
-        // Actual ID to use (prefer the mapped ID if found). 
-        // If it's numeric, we keep it as is for disambiguation logic below.
-        let activeBtnId = mappedWhazingId || messageTextTrim;
+        let activeBtnId = normalizedId;
 
         // Numeric Disambiguation (1, 2, 3) based on lastMenuType
         if (['1', '2', '3'].includes(messageTextTrim)) {
