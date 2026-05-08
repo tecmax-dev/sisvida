@@ -9586,7 +9586,7 @@ async function legacyServe(req: Request) {
    try {
      const body = await clonedReq.json();
      isTestPayload = body.test === true || body.is_test === true || body.from_internal_tester === true;
-   } catch (err) { /* ignore */ }
+    } catch (err) { /* ignore */ }
  
   return handleWebhook(req);
 }
