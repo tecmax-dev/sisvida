@@ -7464,7 +7464,7 @@ async function handleWebhook(req: Request) {
   try {
     // Log raw body for debugging
     const rawBody = await req.text();
-    console.log('[webhook] Raw body received:', rawBody.substring(0, 500));
+     console.log('[webhook] Raw body received:', rawBody);
     
     // Parse the body
     let payload: any;
@@ -8299,9 +8299,12 @@ async function handleWebhook(req: Request) {
           };
         };
 
-        const selection = normalizeWhatsAppSelection(payload.data, messageText);
-        const messageTextTrim = selection.actionLabel?.trim() || messageText?.trim();
-        const effectiveId = selection.actionId;
+         const selection = normalizeWhatsAppSelection(payload.data, messageText);
+         const messageTextTrim = selection.actionLabel?.trim() || messageText?.trim();
+         const effectiveId = selection.actionId;
+ 
+         console.log(`[BUTTON RAW] ${JSON.stringify(payload.data?.message)}`);
+         console.log(`[BUTTON NORMALIZED] id="${effectiveId}", label="${selection.actionLabel}", sourceType="${selection.sourceType}"`);
 
         console.log(`[webhook] Whatsapp Selection: id="${effectiveId}", label="${selection.actionLabel}", type="${selection.sourceType}"`);
 
@@ -8388,10 +8391,10 @@ async function handleWebhook(req: Request) {
         // Debug log final do estado de roteamento
         console.log(`[webhook] Final Routing: id="${activeBtnId}", L1=${isWhazingLevel1}, L2=${isWhazingLevel2}, Follow=${isWhazingFollowUp}`);
 
-        // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
-        if (isWhazingFollowUp) {
-          const followUpId = activeBtnId;
-          console.log(`[webhook] Whazing follow-up action: "${followUpId}" (original: "${messageTextTrim}")`);
+         // ===== FOLLOW-UP BUTTON HANDLER (Level 3) =====
+         if (isWhazingFollowUp) {
+           const followUpId = activeBtnId;
+           console.log(`[NEXT NODE] followup → ${followUpId}`);
 
           // Mirror/reopen local ticket immediately so dashboard reflects the active chat
           try {
@@ -8532,14 +8535,14 @@ async function handleWebhook(req: Request) {
         }
 
         // LEVEL 1: Main menu choices
-        if (isWhazingLevel1) {
-          const categoryMap: Record<string, WhazingCategory> = {
-            whazing_associado: 'associado',
-            whazing_empresa: 'empresa',
-            whazing_contabilidade: 'contabilidade',
-          };
-          const category = categoryMap[activeBtnId] || 'associado';
-          console.log(`[webhook] Whazing L1 choice: "${activeBtnId}" → ${category}`);
+         if (isWhazingLevel1) {
+           const categoryMap: Record<string, WhazingCategory> = {
+             whazing_associado: 'associado',
+             whazing_empresa: 'empresa',
+             whazing_contabilidade: 'contabilidade',
+           };
+           const category = categoryMap[activeBtnId] || 'associado';
+           console.log(`[NEXT NODE] main → sub (${category})`);
 
           await storeWhazingContext(supabase, clinicId, phone, category, 'sub');
           await sendWhazingSubMenu(configData, phone, category, explicitPhoneId);
@@ -8557,9 +8560,9 @@ async function handleWebhook(req: Request) {
         }
 
         // LEVEL 2: Sub-menu choices (1, 2, 3 when category is already set)
-        if (isWhazingLevel2 || isWhazingLegacy) {
-          const currentCategory = storedCategory || 'associado';
-          console.log(`[webhook] Whazing L2 button: "${activeBtnId}" (category: ${currentCategory}, original: "${messageTextTrim}")`);
+         if (isWhazingLevel2 || isWhazingLegacy) {
+           const currentCategory = storedCategory || 'associado';
+           console.log(`[webhook] Whazing L2 button: "${activeBtnId}" (category: ${currentCategory})`);
           
           let btnId = activeBtnId;
  
@@ -8573,8 +8576,8 @@ async function handleWebhook(req: Request) {
           }
 
           // ── BOLETO: route directly to boleto-whatsapp-flow ──
-          if (btnId === 'whazing_sub_boleto') {
-            console.log(`[webhook] Whazing boleto button → direct boleto flow (category: ${currentCategory})`);
+           if (btnId === 'whazing_sub_boleto') {
+             console.log(`[NEXT NODE] sub → boleto`);
             const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
@@ -8622,8 +8625,8 @@ async function handleWebhook(req: Request) {
           }
 
           // ── CARTEIRINHA: redirect to app (not available via WhatsApp) ──
-          if (btnId === 'whazing_sub_carteirinha') {
-            console.log(`[webhook] Whazing carteirinha button → redirect to app`);
+           if (btnId === 'whazing_sub_carteirinha') {
+             console.log(`[NEXT NODE] sub → carteirinha`);
             const textMessage = `📱 *Atualização de Carteirinha*\n\n⚠️ A atualização da carteirinha deve ser realizada *exclusivamente pelo aplicativo do sindicato*. Este serviço *não está disponível* por WhatsApp.\n\n📋 *Como fazer:*\n1️⃣ Abra o app do sindicato\n2️⃣ Na tela principal, em *"Nossos Serviços"*, toque em *"Atualizar Carteirinha"*\n3️⃣ Envie a foto do contracheque pelo app\n4️⃣ Aguarde a análise da equipe\n\n📥 *Baixe o app:*\n👉 https://prosindweb.com.br/sindicato/instalar\n\nSiga este procedimento para evitar erros e garantir a atualização correta da sua carteirinha. ✅`;
             
             await sendWhatsAppMessage(configData, phone, textMessage);
@@ -8641,8 +8644,8 @@ async function handleWebhook(req: Request) {
           }
 
           // ── OUTROS ASSUNTOS: show category-specific sub-menu ──
-          if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
-            console.log(`[webhook] Whazing "Outros Assuntos" → sub-menu (${currentCategory})`);
+           if (btnId === 'whazing_sub_outros' || btnId === 'whazing_outros') {
+             console.log(`[NEXT NODE] sub → outros`);
             await storeWhazingContext(supabase, clinicId, phone, currentCategory, 'followup');
 
             if (currentCategory === 'associado') {
@@ -9304,10 +9307,9 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
         } else {
           // Use traditional menu-based flow
-           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
-           console.log(`[FLOW BEFORE] clinicId: ${clinicId}, phone: ${phone}, state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
-           console.log(`[BUTTON RAW] ${JSON.stringify(payload.data?.message)}`);
-           console.log(`[BUTTON NORMALIZED] ${messageText}`);
+            const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
+            console.log(`[FLOW BEFORE] clinicId: ${clinicId}, phone: ${phone}, state: ${sessionResult?.session?.state ?? 'null'}`);
+            // [BUTTON RAW] and [BUTTON NORMALIZED] moved earlier for all flows
 
           if (sessionResult?.session) {
              const flowResult = await handleBookingFlow(
@@ -9318,7 +9320,8 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
               sessionResult.session,
               sessionResult.wasExpired
              );
-             console.log(`[FLOW AFTER] newState: ${flowResult.newState || 'unchanged'}`);
+             console.log(`[STATE SAVE] newState: ${flowResult.newState || 'unchanged'}`);
+             console.log(`[FLOW AFTER] handled: ${flowResult.handled}`);
              if (!flowResult.handled) {
                console.error('ERRO CRÍTICO: handleBookingFlow returned handled=false');
              }
