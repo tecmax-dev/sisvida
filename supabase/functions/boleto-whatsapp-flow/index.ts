@@ -111,18 +111,42 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     };
 
     const stateTransitions = transitionMap[session.state as string] || {};
-    // Prioritize ID match, then title match
-    let transition = Object.keys(stateTransitions).find(k => text === k);
+    let transition = null;
+    
+    // FORENSIC ECHO MODE: Replying with internal state before processing
+    const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+    const PHONE_ID = "1110151302179856";
+    const to = phone.startsWith('55') ? phone : `55${phone}`;
+
+    // BRUTAL MATCHING
+    transition = Object.keys(stateTransitions).find(k => text === k.toLowerCase());
     if (!transition) {
-      // Try partial/title match if ID match fails
-      transition = Object.keys(stateTransitions).find(k => text.includes(k));
+      transition = Object.keys(stateTransitions).find(k => text.includes(k.toLowerCase()));
     }
 
     const transitionFound = !!transition;
+
+    // FORENSIC ECHO TRIGGER
+    await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'text',
+        text: { 
+          body: `[FORENSIC_ECHO_STRICT]\n` +
+                `currentState: ${session.state}\n` +
+                `inputReceived: "${text}"\n` +
+                `transitionFound: ${transitionFound}\n` +
+                `nextStateTarget: ${transition ? stateTransitions[transition] : 'NONE'}\n` +
+                `sessionId: ${session.id}`
+        },
+      }),
+    });
+
     if (transitionFound) {
-      console.log('[TRANSITION_FOUND]', transition);
       nextState = stateTransitions[transition!];
-      console.log('[STATE_AFTER]', nextState);
       
       if (nextState === 'WAITING_CNPJ') {
         responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";

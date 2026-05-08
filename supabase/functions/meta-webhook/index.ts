@@ -62,62 +62,43 @@ serve(async (req) => {
     console.log(JSON.stringify(body, null, 2));
     console.log('[RAW_BUTTON_PAYLOAD_END]');
 
-    // Exhaustive property search for Meta, Whazing, ZapResponder, and others
-    const findDeep = (obj: any, keys: string[]): any => {
-      for (const key of keys) {
-        if (obj && typeof obj === 'object') {
-          if (key in obj) return obj[key];
-          for (const k in obj) {
-            const found = findDeep(obj[k], [key]);
-            if (found !== undefined) return found;
-          }
-        }
-      }
-      return undefined;
-    };
-
-    // Phone extraction
-    fromPhone = String(
-      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from ||
-      body.phone || body.wa_id || body.chatId || 
+    // --- WHAZING/OFFICIAL BRUTAL PARSER ---
+    fromPhone = (
+      body.wa_id || 
+      body.phone || 
+      body.chatId || 
       body.raw_message?.from || 
-      body.data?.message?.from || ""
-    ).replace(/\D/g, "");
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from || 
+      ""
+    ).toString().replace(/\D/g, "");
 
-    // Button/Content extraction
-    // BRUTAL WHATSAPP PARSER
     const rawButtonId = (
-      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.id ||
-      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.payload ||
-      body.message?.interactive?.button_reply?.id ||
       body.message?.selectedButtonId ||
       body.message?.buttonId ||
       body.raw_message?.buttonId ||
-      body.raw_message?.content || // Some providers put ID in content
-      body.button_id ||
-      findDeep(body, ['button_reply', 'selectedButtonId', 'buttonId', 'button_id', 'payload'])
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.id ||
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.payload ||
+      null
     );
 
     const rawButtonTitle = (
-      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.title ||
-      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.text ||
-      body.message?.interactive?.button_reply?.title ||
       body.message?.buttonText ||
       body.raw_message?.buttonText ||
-      body.button?.text ||
-      findDeep(body, ['button_reply_title', 'button_text', 'display_text', 'title'])
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.interactive?.button_reply?.title ||
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.text ||
+      null
     );
 
     const rawText = (
-      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body ||
       body.message?.conversation ||
       body.message?.text ||
       body.raw_message?.content ||
-      body.data?.message?.conversation ||
-      body.mensagem || 
-      body.text || 
+      body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body ||
+      body.mensagem ||
       ""
     );
+
+    content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();
 
     content = (rawButtonId || rawButtonTitle || rawText || "").toString().trim();
     
