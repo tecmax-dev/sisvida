@@ -141,47 +141,68 @@ serve(async (req) => {
                                  content === "boleto_a_vencer" || 
                                  content === "boleto_vencido";
  
-           if (isBoletoAction && SINDICATO_CLINIC_ID) {
-             console.log(`[meta-webhook][DEBUG_BOLETO] Redirecionando para boleto-whatsapp-flow: ${fromPhone}`);
-             fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${SERVICE_ROLE}`
-               },
-               body: JSON.stringify({
-                 clinic_id: SINDICATO_CLINIC_ID,
-                 phone: fromPhone,
-                 message: content,
-                 action: (content === "whazing_sub_boleto") ? "start" : undefined,
-                 explicit_phone_id: "1110151302179856"
-               })
-             }).then(async r => {
-               const resData = await r.json();
-               console.log(`[meta-webhook][DEBUG_BOLETO] Resposta do fluxo:`, JSON.stringify(resData));
-               
-               // Se o fluxo retornou uma resposta, enviamos via Meta
-               if (resData.response) {
-                 console.log(`[meta-webhook][DEBUG_BOLETO] Enviando resposta do boleto para o usuário...`);
-                 // Usamos a função interna meta-send-text para garantir o envio
-                 await fetch(`${SUPABASE_URL}/functions/v1/meta-send-text`, {
-                   method: 'POST',
-                   headers: {
-                     'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${SERVICE_ROLE}`
-                   },
-                   body: JSON.stringify({
-                     to: fromPhone,
-                     text: resData.response,
-                     phone_number_id: "1110151302179856"
-                   })
-                 });
-               }
-             }).catch(err => console.error("[meta-webhook][DEBUG_BOLETO] Erro ao chamar fluxo:", err));
-             
-             // Se for uma ação de boleto, não precisamos necessariamente seguir para o Zap Responder, 
-             // mas vamos deixar seguir para registro no dashboard se necessário.
-           }
+            if (isBoletoAction && SINDICATO_CLINIC_ID) {
+              console.log(`[meta-webhook][DEBUG_BOLETO] Redirecionando para boleto-whatsapp-flow: ${fromPhone}`);
+              
+              try {
+                const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SERVICE_ROLE}`
+                  },
+                  body: JSON.stringify({
+                    clinic_id: SINDICATO_CLINIC_ID,
+                    phone: fromPhone,
+                    message: content,
+                    action: (content === "whazing_sub_boleto") ? "start" : undefined,
+                    explicit_phone_id: "1110151302179856"
+                  })
+                });
+
+                const resData = await flowRes.json();
+                console.log(`[meta-webhook][DEBUG_BOLETO] Resposta do fluxo:`, JSON.stringify(resData));
+                
+                if (resData.response) {
+                  console.log(`[meta-webhook][DEBUG_BOLETO] Enviando resposta do boleto para o usuário...`);
+                  
+                  // Decidir se envia Botões ou Texto
+                  const sendUrl = (resData.buttons && resData.buttons.length > 0) 
+                    ? `${SUPABASE_URL}/functions/v1/meta-send-buttons`
+                    : `${SUPABASE_URL}/functions/v1/meta-send-text`;
+
+                  const sendBody = (resData.buttons && resData.buttons.length > 0)
+                    ? {
+                        to: fromPhone,
+                        title: "Boleto Sindicato",
+                        description: resData.response,
+                        buttons: resData.buttons,
+                        phone_number_id: "1110151302179856"
+                      }
+                    : {
+                        to: fromPhone,
+                        text: resData.response,
+                        phone_number_id: "1110151302179856"
+                      };
+
+                  await fetch(sendUrl, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${SERVICE_ROLE}`
+                    },
+                    body: JSON.stringify(sendBody)
+                  });
+                }
+                
+                // IMPORTANTE: Se processou boleto, encerramos aqui para evitar que a saudação do ZapResponder sobrescreva ou duplique
+                return new Response(JSON.stringify({ ok: true, flow: "boleto" }), {
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+              } catch (err) {
+                console.error("[meta-webhook][DEBUG_BOLETO] Erro ao chamar fluxo:", err);
+              }
+            }
           console.log(`[meta-webhook] ID: ${wamid}`);
           
           
