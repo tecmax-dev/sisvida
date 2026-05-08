@@ -8846,7 +8846,10 @@ async function handleWebhook(req: Request) {
           ? /^(6|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim())
           : /^(7|boleto|2[ª°]?\s*via|segunda\s*via)/i.test(mappedMessageText.trim()) || rawBtnId === 'whazing_sub_boleto';
 
-        if (revivedBoletoSession || isBoletoRequest || isBoletoButton) {
+        const effectiveBoletoRequest = isBoletoRequest || effectiveId === 'whazing_sub_boleto';
+        
+        if (revivedBoletoSession || effectiveBoletoRequest || isBoletoButton) {
+          console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${effectiveBoletoRequest}, is button: ${isBoletoButton}`);
           console.log(`[webhook] Routing to boleto flow - active session: ${!!revivedBoletoSession}, is request: ${isBoletoRequest}, is button: ${isBoletoButton}`);
           
           // Call boleto flow edge function
@@ -8863,8 +8866,8 @@ async function handleWebhook(req: Request) {
               body: JSON.stringify({
                 clinic_id: clinicId,
                 phone: phone,
-                message: (revivedBoletoSession || isBoletoButton || rawBtnId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
-                action: (!revivedBoletoSession && !isBoletoButton && rawBtnId !== 'whazing_sub_boleto') ? 'start' : undefined,
+                message: (revivedBoletoSession || isBoletoButton || effectiveId === 'whazing_sub_boleto') ? mappedMessageText : undefined,
+                action: (!revivedBoletoSession && !isBoletoButton && effectiveId !== 'whazing_sub_boleto') ? 'start' : undefined,
                  evolution_config: {
                    api_url: configData.api_url,
                    api_key: configData.api_key,
