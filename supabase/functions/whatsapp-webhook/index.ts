@@ -1,3 +1,5 @@
+           console.log('[DEBUG_BOLETO][RAW_PAYLOAD_FULL]', JSON.stringify(payload));
+           console.log('[DEBUG_BOLETO][NORMALIZED_SELECTION]', JSON.stringify(selection));
 // whatsapp-webhook v2.1 - 2026-02-18
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -1110,16 +1112,19 @@ async function storeWhazingContext(
   category: WhazingCategory,
   lastMenuType: 'main' | 'sub' | 'followup' = 'main'
 ): Promise<void> {
-  const { error } = await supabase.from('whatsapp_ai_conversations').insert({
-    clinic_id: clinicId,
-    phone,
-    messages: { 
-      whazing_category: category, 
-      last_menu_type: lastMenuType,
-      source: 'whazing_menu' 
-    },
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-  });
+   const { error } = await supabase.from('whatsapp_ai_conversations').upsert({
+     clinic_id: clinicId,
+     phone,
+     messages: { 
+       whazing_category: category, 
+       last_menu_type: lastMenuType,
+       source: 'whazing_menu' 
+     },
+     expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+     updated_at: new Date().toISOString()
+   }, {
+     onConflict: 'clinic_id,phone'
+   });
 
   if (error) {
     console.log('[webhook] Could not store whazing context:', error.message);
@@ -1440,12 +1445,21 @@ function extractInteractiveResponseId(messageData: any): string | null {
     return messageData.listResponseMessage.singleSelectReply.selectedRowId;
   }
   // Check for interactive message response (newer format)
-  if (messageData?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
-    try {
-      const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
-      return params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload || null;
-    } catch { /* ignore */ }
-  }
+   // Handle Meta Native Interactive Response
+   if (messageData?.interactive?.button_reply?.id) {
+     return messageData.interactive.button_reply.id;
+   }
+   if (messageData?.interactive?.list_reply?.id) {
+     return messageData.interactive.list_reply.id;
+   }
+ 
+   // Handle Native Flow (paramsJson)
+   if (messageData?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+     try {
+       const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+       return params.id || params.button_id || params.buttonId || params.selectedButtonId || params.selectedId || params.payload || null;
+     } catch { /* ignore */ }
+   }
   return messageData?.buttonReplyMessage?.id ||
     messageData?.buttonReplyMessage?.selectedId ||
     messageData?.buttonReplyMessage?.selectedButtonId ||
@@ -2206,7 +2220,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 
     // Call the AI assistant
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+             const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Detect if we are in a synchronous call to collect responses
     const collector = syncReplyStore.getStore();
@@ -2216,7 +2230,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+                   'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
         message: messageText,
@@ -2284,7 +2298,7 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
       
       // Call boleto flow edge function to start the flow
       const supabaseUrlEnv = Deno.env.get('SUPABASE_URL')!;
-      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+           const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       
       try {
         const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
@@ -8644,7 +8658,7 @@ async function handleWebhook(req: Request) {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                  'Authorization': `Bearer ${supabaseServiceKey}`,
                 },
                 body: JSON.stringify(boletoPayloadL2),
               });
@@ -9030,8 +9044,8 @@ async function handleWebhook(req: Request) {
             explicit_phone_id: explicitPhoneId
           };
 
-          console.log('[CALLING boleto-whatsapp-flow]', JSON.stringify(boletoPayload));
-           console.log('[BEFORE INVOKE]', boletoPayload);
+             console.log('[DEBUG_BOLETO][BEFORE_INVOKE_L2]', JSON.stringify(boletoPayloadL2));
+               console.log('[DEBUG_BOLETO][AFTER_INVOKE_L2]', { status: respStatus, body: JSON.stringify(boletoResult).slice(0, 500) });
            
            try {
              const boletoResponse = await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {

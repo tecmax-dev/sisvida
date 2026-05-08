@@ -58,7 +58,12 @@ const CONTRIBUTION_TYPE_MAP = {
     try {
       const RAW_PHONE_ID = explicitPhoneId || Deno.env.get('META_PHONE_NUMBER_ID') || "1110151302179856";
       const PHONE_ID = (RAW_PHONE_ID === "937233212814035" || RAW_PHONE_ID === "1522701919380063") ? "1110151302179856" : RAW_PHONE_ID;
-      const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+       const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN') || "";
+       console.log('[DEBUG_BOLETO][TOKEN_CHECK]', { 
+         length: TOKEN.length, 
+         prefix: TOKEN.substring(0, 10), 
+         suffix: TOKEN.substring(TOKEN.length - 10) 
+       });
       if (!PHONE_ID || !TOKEN) {
         console.error('[DEBUG_BOLETO][META_CONFIG_ERROR] Missing ID or Token');
         return false;
@@ -73,7 +78,7 @@ const CONTRIBUTION_TYPE_MAP = {
         text: { body: text },
       };
 
-      console.log('[DEBUG_BOLETO][BEFORE_META_TEXT_SEND]', { url: metaUrl, phone_id: PHONE_ID, payload: JSON.stringify(payload) });
+      console.log('[DEBUG_BOLETO][BEFORE_META_TEXT_SEND]', { url: metaUrl, phone_id: PHONE_ID, to: payload.to, body: payload.text.body });
 
       const r = await fetch(metaUrl, {
         method: 'POST',
@@ -139,7 +144,12 @@ const CONTRIBUTION_TYPE_MAP = {
          }
        };
   
-      console.log('[DEBUG_BOLETO][BEFORE_META_BUTTONS_SEND]', { phone_id: PHONE_ID, payload: JSON.stringify(payload) });
+      console.log('[DEBUG_BOLETO][BEFORE_META_BUTTONS_SEND]', { 
+        url: `https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, 
+        phone_id: PHONE_ID, 
+        to: payload.to, 
+        buttons: payload.interactive.action.buttons.map(b => b.reply.title) 
+      });
       const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_ID}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
@@ -3123,7 +3133,15 @@ async function handleCnpjInput(
 // MAIN HANDLER
 // ==========================================
 
-serve(async (req) => {
+ serve(async (req: Request) => {
+   console.log('[DEBUG_BOLETO_FLOW][REQUEST_RECEIVED]', req.method);
+   const clonedReq = req.clone();
+   try {
+     const body = await clonedReq.json();
+     console.log('[DEBUG_BOLETO_FLOW][BODY]', JSON.stringify(body));
+   } catch (e) {
+     console.log('[DEBUG_BOLETO_FLOW][BODY_PARSE_ERROR]', e.message);
+   }
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
