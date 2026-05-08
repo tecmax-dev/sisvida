@@ -4,6 +4,7 @@
  const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
  
  serve(async (req) => {
+    console.log('[CLICK ENTRYPOINT]', 'zapresponder-webhook');
    try {
     // ===== Parse seguro do JSON =====
     // ZapResponder pode não enviar Content-Type, então aceitamos o corpo se for JSON válido.

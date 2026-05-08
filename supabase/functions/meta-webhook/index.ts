@@ -8,6 +8,8 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
+console.log('[FLOW VERSION]', 'STATE_MACHINE_V2');
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -30,10 +32,20 @@ serve(async (req) => {
     return new Response("Forbidden", { status: 403 });
   }
 
+  const handlerName = 'meta-webhook';
   try {
-    console.log('[ENTRY] meta-webhook');
-    let body = await req.json();
-    console.log("[meta-webhook] Body recebido:", JSON.stringify(body));
+    console.log('[CLICK ENTRYPOINT]', handlerName);
+    console.log('[DEBUG_NOVA_STATE_MACHINE][ENTRY]');
+    
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error('[DEBUG_NOVA_STATE_MACHINE][BODY_ERROR]', e);
+      return new Response("Invalid JSON", { status: 400 });
+    }
+    
+    console.log("[DEBUG_NOVA_STATE_MACHINE][BODY]", JSON.stringify(body));
 
     if (body.type !== "message_received" && !Array.isArray(body.entry)) {
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
@@ -46,14 +58,15 @@ serve(async (req) => {
     let content = "";
     let profileName = "Cliente";
 
-    if (Array.isArray(body.entry)) {
+    if (Array.isArray(body.entry) && body.entry.length > 0) {
       const entry = body.entry[0]?.changes?.[0]?.value;
       const msg = entry?.messages?.[0];
       fromPhone = msg?.from || "";
       profileName = entry?.contacts?.[0]?.profile?.name || "Cliente";
       
-      if (msg?.type === "text") content = msg.text?.body || "";
-      else if (msg?.type === "interactive") {
+      if (msg?.type === "text") {
+        content = msg.text?.body || "";
+      } else if (msg?.type === "interactive") {
         content = msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || msg.interactive?.button_reply?.title || "";
       } else if (msg?.type === "button") {
         content = msg.button?.payload || msg.button?.text || "";
@@ -63,18 +76,36 @@ serve(async (req) => {
       fromPhone = String(body.phone || body.wa_id || body.chatId || rawMsg.from || "").replace(/\D/g, "");
       content = (body.mensagem || body.text || rawMsg.content || body.message?.mensagem || "").toString().trim();
       profileName = body.pushName || rawMsg.pushName || body.nome || "Cliente";
+      
+      // Tenta extrair ID de botão de formatos alternativos (Whazing/ZapResponder)
+      const interactiveId = rawMsg.interactive?.button_reply?.id || 
+                            rawMsg.interactive?.list_reply?.id || 
+                            rawMsg.button?.payload ||
+                            body.message?.button?.payload ||
+                            body.button_id ||
+                            rawMsg.content; // Alguns mandam no content o ID
+      
+      if (interactiveId && interactiveId !== content) {
+        content = interactiveId;
+        console.log("[DEBUG_NOVA_STATE_MACHINE][BUTTON_EXTRACTED]", interactiveId);
+      }
     }
 
     if (!fromPhone) return new Response("No phone", { status: 200 });
 
-    const isBoletoAction = content.toLowerCase().includes("boleto") || 
-                           content === "whazing_sub_boleto" || 
-                           content === "boleto_a_vencer" || 
-                           content === "boleto_vencido" ||
-                           content === "Sou Empresa";
+    // Roteamento expandido para cobrir todos os IDs da State Machine
+    const boletoKeywords = [
+      "boleto", "whazing_sub_boleto", "boleto_a_vencer", "boleto_vencido", 
+      "sou empresa", "boleto_sim", "boleto_nao", "boleto_type_1", "boleto_type_2"
+    ];
+    
+    const isBoletoAction = boletoKeywords.some(k => content.toLowerCase().includes(k)) || 
+                           (content.length >= 11 && content.length <= 14 && /^\d+$/.test(content));
 
     if (isBoletoAction) {
-      console.log(`[STEP] before boleto routing: ${fromPhone}`);
+      console.log(`[DEBUG_NOVA_STATE_MACHINE][ROUTE_MATCH] boleto-whatsapp-flow for ${fromPhone}`);
+      console.log(`[DEBUG_NOVA_STATE_MACHINE][BEFORE_SEND] Content: ${content}`);
+      
       try {
         const flowRes = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
           method: 'POST',
@@ -92,10 +123,17 @@ serve(async (req) => {
         });
 
         const resData = await flowRes.json();
-        if (resData.response) {
+        
+        console.log('[DEBUG_NOVA_STATE_MACHINE][RESPONSE]', JSON.stringify(resData));
+
+        if (resData.response || resData.success) {
           const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
           const PHONE_ID = "1110151302179856";
           const to = fromPhone.startsWith('55') ? fromPhone : `55${fromPhone}`;
+          
+          // Signature for debugging
+          const finalResponseText = `[DEBUG_NOVA_STATE_MACHINE]\n${resData.response}`;
+
           let payload: any;
 
           if (resData.buttons && resData.buttons.length > 0) {
@@ -107,7 +145,7 @@ serve(async (req) => {
               interactive: {
                 type: "button",
                 header: { type: "text", text: "Boleto Sindicato" },
-                body: { text: resData.response },
+                body: { text: finalResponseText },
                 action: {
                   buttons: resData.buttons.slice(0, 3).map((b: any) => ({
                     type: "reply",
@@ -121,7 +159,7 @@ serve(async (req) => {
               messaging_product: 'whatsapp',
               to,
               type: 'text',
-              text: { body: resData.response },
+            text: { body: finalResponseText },
             };
           }
 
@@ -130,6 +168,7 @@ serve(async (req) => {
             headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
+          console.log('[DEBUG_NOVA_STATE_MACHINE][AFTER_SEND]', 'Message sent successfully to Meta');
         }
         return new Response(JSON.stringify({ ok: true, flow: "boleto" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
