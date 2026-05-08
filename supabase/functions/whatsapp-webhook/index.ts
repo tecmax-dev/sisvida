@@ -312,7 +312,7 @@ function extractMessageText(data: EvolutionWebhookPayload['data']): string | nul
     
     // If ID is numeric (like "1", "2") or a technical string (like "whazing_associado"),
     // use it directly. Otherwise, use display text as fallback.
-    if (buttonResponseId.length > 0) {
+   if (buttonResponseId && buttonResponseId.length > 0) {
       return buttonResponseId;
     }
     return displayText || null;
@@ -3607,7 +3607,9 @@ Por favor, entre em contato com a clínica para renovar sua carteirinha.`
   };
 
   // Check for interactive button response first
-  if (messageText === 'confirm_yes' || messageText.toLowerCase() === 'sim, sou eu' || messageText.toLowerCase() === '✅ sim, sou eu') {
+   const choice = (messageText || "").trim().toLowerCase();
+   console.log(`[CONFIRM_IDENTITY] Incoming: "${messageText}", choice: "${choice}", state: ${session.state}`);
+   if (choice === 'confirm_yes' || choice === 'sim, sou eu' || choice === '✅ sim, sou eu' || choice === '1' || POSITIVE_REGEX.test(choice)) {
     return await proceedAfterConfirmation();
   }
   
@@ -3812,7 +3814,9 @@ async function handleSelectBookingFor(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = parseInt(messageText.trim());
+   const rawText = (messageText || "").trim().toLowerCase();
+   const choice = parseInt(rawText);
+   console.log(`[SELECT_BOOKING_FOR] Incoming: "${messageText}", parsed choice: ${choice}, state: ${session.state}`);
   const dependents = session.available_dependents || [];
   const totalOptions = 2 + dependents.length; // 1 = titular + dependents + 1 = menu option
 
@@ -3821,8 +3825,8 @@ async function handleSelectBookingFor(
     return { handled: true, newState: 'SELECT_BOOKING_FOR' };
   }
 
-  // Option 1 = Titular
-  if (choice === 1) {
+   // Handle Option 1 or textual fallback
+   if (choice === 1 || rawText === 'confirm_yes' || rawText.includes('sim') || rawText.includes('sou eu')) {
     return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
   }
 
@@ -3881,14 +3885,15 @@ async function handleMainMenu(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = messageText.trim().toLowerCase();
+   const choice = (messageText || "").trim().toLowerCase();
+   console.log(`[MAIN_MENU] Incoming: "${messageText}", choice: "${choice}", state: ${session.state}`);
   const bookingEnabled = config.booking_enabled !== false;
 
   // Try AI intent extraction for natural language
   let intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | null = null;
   
   // Check for interactive button responses first
-  if (choice === 'menu_schedule' || choice === '📅 agendar' || choice === 'agendar') {
+   if (choice === 'menu_schedule' || choice === '📅 agendar' || choice === 'agendar' || choice === 'whazing_empresa' || choice.includes('sou empresa')) {
     intent = 'schedule';
   } else if (choice === 'menu_cancel' || choice === '❌ cancelar' || choice === 'cancelar') {
     intent = 'cancel';
@@ -3900,10 +3905,25 @@ async function handleMainMenu(
   // Then check traditional numeric patterns - adjust based on booking_enabled
   else if (bookingEnabled) {
     // With booking: 1=schedule, 2=cancel, 3=reschedule, 4=list
-    if (choice === '1') intent = 'schedule';
-    else if (choice === '2') intent = 'cancel';
-    else if (choice === '3') intent = 'reschedule';
-    else if (choice === '4') intent = 'list';
+     if (choice === '1' || choice === 'whazing_empresa' || choice.includes('sou empresa')) intent = 'schedule';
+     else if (choice === '2' || choice === 'whazing_sub_boleto' || choice.includes('boleto')) {
+       // Priority redirect to boleto flow for option 2/boleto
+       console.log('[MAIN_MENU] Redirecting to boleto-whatsapp-flow via button/text');
+       const supabaseUrlEnv = Deno.env.get('SUPABASE_URL') || '';
+       try {
+         await fetch(`${supabaseUrlEnv}/functions/v1/boleto-whatsapp-flow`, {
+           method: 'POST',
+           headers: {
+             'Content-Type': 'application/json',
+             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''}`,
+           },
+           body: JSON.stringify({ clinic_id: config.clinic_id, phone, evolution_config: config }),
+         });
+         return { handled: true, newState: 'MAIN_MENU' };
+       } catch (e) { console.error('[MAIN_MENU] Boleto flow error:', e); }
+     }
+     else if (choice === '3') intent = 'cancel';
+     else if (choice === '4') intent = 'reschedule';
   } else {
     // Without booking: 1=cancel, 2=reschedule, 3=list, 6=boleto
     if (choice === '1') intent = 'cancel';
@@ -9284,18 +9304,24 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
           await handleAIBookingFlow(supabase, configData, phone, messageText, explicitPhoneId);
         } else {
           // Use traditional menu-based flow
-          const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
-          console.log(`[webhook] Session state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
+           const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
+           console.log(`[FLOW BEFORE] clinicId: ${clinicId}, phone: ${phone}, state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
+           console.log(`[BUTTON RAW] ${JSON.stringify(payload.data?.message)}`);
+           console.log(`[BUTTON NORMALIZED] ${messageText}`);
 
           if (sessionResult?.session) {
-            await handleBookingFlow(
+             const flowResult = await handleBookingFlow(
               supabase,
               configData,
               phone,
               messageText,
               sessionResult.session,
               sessionResult.wasExpired
-            );
+             );
+             console.log(`[FLOW AFTER] newState: ${flowResult.newState || 'unchanged'}`);
+             if (!flowResult.handled) {
+               console.error('ERRO CRÍTICO: handleBookingFlow returned handled=false');
+             }
           } else {
             console.error('[webhook] Failed to get or create session');
           }
