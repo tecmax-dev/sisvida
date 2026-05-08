@@ -8666,8 +8666,9 @@ async function handleWebhook(req: Request) {
 
                   // If boletoResult contains an interactive response, send it back immediately
                   if (boletoResult.response) {
-                    console.log('[DEBUG_BOLETO] Sending boleto response back to WhatsApp:', boletoResult.response);
-                    await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                    console.log('[DEBUG_BOLETO][BEFORE_SEND_BACK_L2] Sending response back:', boletoResult.response);
+                    const sendBackOk = await sendWhatsAppMessage(configData, phone, boletoResult.response, explicitPhoneId);
+                    console.log('[DEBUG_BOLETO][AFTER_SEND_BACK_L2] Result:', sendBackOk);
                     return createSuccessResponse({ message: 'Boleto flow L2 started and response sent' });
                   }
 
