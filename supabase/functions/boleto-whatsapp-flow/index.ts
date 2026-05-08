@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v3';
+  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v4';
  
  serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,7 +36,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    const isStartAction = action === 'start' || message === 'whazing_sub_boleto';
+    const startingKeywords = ['start', 'whazing_sub_boleto', 'sou empresa', 'empresa', 'oi', 'menu', 'olá', 'ola'];
+    const isStartAction = action === 'start' || startingKeywords.includes(message?.toLowerCase());
     console.log('[SESSION_LOOKUP]', {
       phone,
       sessionFound: !!session,
@@ -113,11 +114,6 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     const stateTransitions = transitionMap[session.state as string] || {};
     let transition = null;
     
-    // FORENSIC ECHO MODE: Replying with internal state before processing
-    const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    const PHONE_ID = "1110151302179856";
-    const to = phone.startsWith('55') ? phone : `55${phone}`;
-
     // BRUTAL MATCHING
     transition = Object.keys(stateTransitions).find(k => text === k.toLowerCase());
     if (!transition) {
@@ -125,25 +121,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     }
 
     const transitionFound = !!transition;
-
-    // FORENSIC ECHO TRIGGER
-    await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}/messages`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { 
-          body: `[FORENSIC_ECHO_STRICT]\n` +
-                `currentState: ${session.state}\n` +
-                `inputReceived: "${text}"\n` +
-                `transitionFound: ${transitionFound}\n` +
-                `nextStateTarget: ${transition ? stateTransitions[transition] : 'NONE'}\n` +
-                `sessionId: ${session.id}`
-        },
-      }),
-    });
+    const forensicPrefix = `[FORENSIC_V4] ${session.state} -> ${transition ? stateTransitions[transition] : 'NONE'} | Input: "${text}"\n\n`;
 
     if (transitionFound) {
       nextState = stateTransitions[transition!];
