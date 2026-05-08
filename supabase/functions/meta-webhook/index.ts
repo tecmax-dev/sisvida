@@ -53,84 +53,33 @@ serve(async (req) => {
      let buttonId = "";
      let buttonTitle = "";
  
-      // 1. EXTRAÇÃO PURA DA META (OPÇÃO A)
-      if (body.object !== 'whatsapp_business_account') {
-        console.log('[RAW_PAYLOAD_REJECTED] Not Meta format');
-        return new Response("not_meta_format", { status: 200 });
+    // 1. EXTRAÇÃO DE DADOS (Hibrida para diagnóstico)
+    let phone = "";
+    let messageText = "";
+    let buttonId = "";
+
+    if (body.object === 'whatsapp_business_account') {
+      // Meta Direto
+      const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+      if (message) {
+        phone = message.from;
+        if (message.type === 'text') messageText = message.text?.body;
+        if (message.type === 'interactive') buttonId = message.interactive?.button_reply?.id;
       }
+    } else if (body.message || body.raw_message) {
+      // ZapResponder
+      phone = body.chatId || body.raw_message?.from;
+      messageText = body.message?.mensagem || body.raw_message?.content;
+    }
 
-      console.log('[RAW_META_PAYLOAD]', JSON.stringify(body, null, 2));
+    const user = phone; // Alias conforme solicitado no snippet
 
-      const entry = body.entry?.[0];
-      const change = entry?.changes?.[0];
-      const value = change?.value;
-      const message = value?.messages?.[0];
-      
-      if (!message) {
-        console.log('[DEBUG] No message in Meta payload');
-        return new Response("no_message", { status: 200 });
-      }
-
-      phone = message.from;
-      if (message.type === 'text') {
-        messageText = message.text?.body;
-      } else if (message.type === 'interactive') {
-        const interactive = message.interactive;
-        if (interactive.type === 'button_reply') {
-          const buttonReply = interactive.button_reply;
-          buttonId = buttonReply?.id;
-          buttonTitle = buttonReply?.title;
-          console.log('[BUTTON_REPLY_ID]', buttonId);
-          console.log('[BUTTON_REPLY_TITLE]', buttonTitle);
-        }
-      }
-
-      if (!phone) {
-        console.log('[META_SEND_FAIL] No user phone found');
-        return new Response("no_phone", { status: 200 });
-      }
-
-      console.log('[USER_PHONE]', phone);
- 
-     if (!phone) {
-       console.log('[META_SEND_FAIL] No user phone found');
-       return new Response("no_phone", { status: 200 });
-     }
- 
-     console.log('[USER_PHONE]', phone);
-     if (buttonId) {
-       console.log('[RAW_BUTTON_PAYLOAD]', JSON.stringify(body, null, 2));
-       console.log('[BUTTON_ID]', buttonId);
-       console.log('[BUTTON_TITLE]', buttonTitle);
-     }
- 
-     // 2. BUSCAR OU CRIAR SESSÃO
-     console.log('[SESSION_LOOKUP]');
-     const { data: session, error: sessionError } = await supabase
-       .from('whatsapp_sessions')
-       .select('*')
-       .eq('phone', phone)
-       .single();
- 
-     let currentState = 'MAIN_MENU';
-     if (session) {
-       console.log('[SESSION_FOUND]');
-       currentState = session.state;
-     } else {
-       console.log('[SESSION_NOT_FOUND] Initializing MAIN_MENU');
-       await supabase.from('whatsapp_sessions').insert({ phone, state: 'MAIN_MENU' });
-     }
-     console.log('[CURRENT_STATE]', currentState);
- 
-     // 3. LOGICA DE ROTEAMENTO (SINGLE ROUTER)
-     let nextState = currentState;
-     let responseMessage: any = null;
- 
-      // IMPLEMENTAÇÃO OBRIGATÓRIA - TESTE DE ENVIO BRUTO
-      if (messageText && messageText.toLowerCase().includes('oi')) {
+    // 2. BLOCO DE ENVIO OBRIGATÓRIO (Diagnóstico Puro)
+    if (messageText && messageText.toLowerCase().includes('oi')) {
+      try {
         const payload = {
           messaging_product: 'whatsapp',
-          to: phone,
+          to: user,
           type: 'interactive',
           interactive: {
             type: 'button',
@@ -156,40 +105,9 @@ serve(async (req) => {
               ]
             }
           }
-        };
+        }
 
-        console.log('[META_INTERACTIVE_PAYLOAD]', JSON.stringify(payload, null, 2));
-
-        const response = await fetch(
-          `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          }
-        );
-
-        const resData = await response.text();
-        console.log('[META_STATUS]', response.status);
-        console.log('[META_RESPONSE]', resData);
-
-        return new Response(resData, {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-
-      // Se clicar em um dos botões, responder apenas com o ID real
-      if (buttonId) {
-        const payload = {
-          messaging_product: 'whatsapp',
-          to: phone,
-          type: 'text',
-          text: { body: `[BTN_OK] ${buttonId}` }
-        };
+        console.log('[META_INTERACTIVE_PAYLOAD]', JSON.stringify(payload, null, 2))
 
         const response = await fetch(
           `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
@@ -201,10 +119,35 @@ serve(async (req) => {
             },
             body: JSON.stringify(payload)
           }
-        );
+        )
 
-        return new Response(await response.text(), { status: 200 });
+        console.log('[META_STATUS]', response.status)
+
+        const text = await response.text()
+        console.log('[META_RESPONSE]', text)
+
+        return new Response(text, { status: 200 });
+
+      } catch (error) {
+        console.log('[SEND_EXCEPTION]', error)
+        return new Response(JSON.stringify({ error: error.message }), { status: 200 });
       }
+    }
+
+    // Resposta para clique de botão (Diagnóstico)
+    if (buttonId) {
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: user,
+        type: 'text',
+        text: { body: `[BTN_OK] ${buttonId}` }
+      };
+      await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
  
      return new Response("ok", { status: 200 });
  
