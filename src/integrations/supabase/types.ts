@@ -16260,6 +16260,7 @@ export type Database = {
         Row: {
           available_contributions: Json | null
           boleto_type: string | null
+          build_version: string | null
           clinic_id: string
           competence_month: number | null
           competence_year: number | null
@@ -16272,6 +16273,8 @@ export type Database = {
           expires_at: string
           flow_context: Json | null
           id: string
+          last_raw_payload: Json | null
+          last_webhook_handler: string | null
           new_due_date: string | null
           phone: string
           state: string
@@ -16281,6 +16284,7 @@ export type Database = {
         Insert: {
           available_contributions?: Json | null
           boleto_type?: string | null
+          build_version?: string | null
           clinic_id: string
           competence_month?: number | null
           competence_year?: number | null
@@ -16293,6 +16297,8 @@ export type Database = {
           expires_at?: string
           flow_context?: Json | null
           id?: string
+          last_raw_payload?: Json | null
+          last_webhook_handler?: string | null
           new_due_date?: string | null
           phone: string
           state?: string
@@ -16302,6 +16308,7 @@ export type Database = {
         Update: {
           available_contributions?: Json | null
           boleto_type?: string | null
+          build_version?: string | null
           clinic_id?: string
           competence_month?: number | null
           competence_year?: number | null
@@ -16314,6 +16321,8 @@ export type Database = {
           expires_at?: string
           flow_context?: Json | null
           id?: string
+          last_raw_payload?: Json | null
+          last_webhook_handler?: string | null
           new_due_date?: string | null
           phone?: string
           state?: string

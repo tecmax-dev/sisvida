@@ -1,6 +1,4 @@
-           console.log('[DEBUG_BOLETO][RAW_PAYLOAD_FULL]', JSON.stringify(payload));
-           console.log('[DEBUG_BOLETO][NORMALIZED_SELECTION]', JSON.stringify(selection));
-// whatsapp-webhook v2.1 - 2026-02-18
+ // whatsapp-webhook v2.1 - 2026-02-18 (Fixed syntax error)
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AsyncLocalStorage } from "node:async_hooks";
