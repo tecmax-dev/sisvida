@@ -3607,7 +3607,9 @@ Por favor, entre em contato com a clínica para renovar sua carteirinha.`
   };
 
   // Check for interactive button response first
-  if (messageText === 'confirm_yes' || messageText.toLowerCase() === 'sim, sou eu' || messageText.toLowerCase() === '✅ sim, sou eu') {
+   const choice = (messageText || "").trim().toLowerCase();
+   console.log(`[CONFIRM_IDENTITY] Incoming: "${messageText}", choice: "${choice}", state: ${session.state}`);
+   if (choice === 'confirm_yes' || choice === 'sim, sou eu' || choice === '✅ sim, sou eu' || choice === '1' || POSITIVE_REGEX.test(choice)) {
     return await proceedAfterConfirmation();
   }
   
