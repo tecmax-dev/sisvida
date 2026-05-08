@@ -8620,10 +8620,22 @@ async function handleWebhook(req: Request) {
                 },
                 body: JSON.stringify(boletoPayloadL2),
               });
-              if (boletoResponse.ok) {
-                const boletoResult = await boletoResponse.json();
-                console.log('[BOLETO FLOW RESPONSE (L2)]', JSON.stringify(boletoResult));
-              } else {
+               const respStatus = boletoResponse.status;
+               if (boletoResponse.ok) {
+                 const boletoResult = await boletoResponse.json();
+                 console.log('[BOLETO FLOW RESPONSE (L2)]', JSON.stringify(boletoResult));
+                 
+                 // CRITICAL AUDIT LOG FOR PROOF OF EXECUTION
+                 await supabase.from('whatsapp_incoming_logs').insert({
+                   clinic_id: clinicId,
+                   phone,
+                   message_text: `[PROVA_REAL] Invoke boleto-flow L2 SUCESSO | Status: ${respStatus} | State: ${boletoResult.state}`,
+                   processed: true,
+                   processed_action: 'invoke_l2_success',
+                 });
+
+                 return createSuccessResponse({ message: 'Whazing boleto flow started via L2' });
+               } else {
                 const errText = await boletoResponse.text();
                 console.error('[BOLETO FLOW ERROR RESPONSE (L2)]', errText);
               }
