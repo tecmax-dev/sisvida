@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-  const BUILD_VERSION = 'FLOW_V2_BUILD_20260508_v4';
+   const BUILD_VERSION = 'FLOW_V2_BUILD_20260509_FIX';
  
  serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,8 +36,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    const startingKeywords = ['start', 'whazing_sub_boleto', 'sou empresa', 'empresa', 'oi', 'menu', 'olá', 'ola'];
-    const isStartAction = action === 'start' || startingKeywords.includes(message?.toLowerCase());
+     const startingKeywords = ['start', 'whazing_sub_boleto', 'sind_empresa', 'sou empresa', 'empresa', 'oi', 'menu', 'olá', 'ola'];
+     const isStartAction = action === 'start' || (typeof message === 'string' && startingKeywords.includes(message.toLowerCase()));
     console.log('[SESSION_LOOKUP]', {
       phone,
       sessionFound: !!session,
@@ -46,8 +46,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       isStartAction
     });
 
-    if (!session || isStartAction) {
-      console.log('[NO_STATE_RESET]', 'Initializing or resetting to SELECT_BOLETO_TYPE');
+     if (!session || (isStartAction && session.state !== 'SELECT_BOLETO_TYPE')) {
+       console.log('[SESSION_INIT_OR_RESET]', 'Initializing or resetting to SELECT_BOLETO_TYPE');
       const { data: newSession } = await supabase
         .from('whatsapp_boleto_sessions')
         .insert({
@@ -87,60 +87,51 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     // 2. Máquina de Estados Simplificada e Robusta
     // Máquina de Estados com mapeamento explícito de botões
-    const transitionMap: Record<string, Record<string, string>> = {
-      'SELECT_BOLETO_TYPE': {
-        'boleto_a_vencer': 'WAITING_CNPJ',
-        'boleto_vencido': 'WAITING_CNPJ',
-        '1': 'WAITING_CNPJ',
-        '2': 'WAITING_CNPJ',
-        'vencer': 'WAITING_CNPJ',
-        'vencido': 'WAITING_CNPJ',
-        'sou empresa': 'WAITING_CNPJ',
-        'whazing_sub_boleto': 'SELECT_BOLETO_TYPE'
-      },
-      'WAITING_CNPJ': {
-        // Transições de CNPJ são lógicas, não baseadas em botões fixos
-      },
-      'CONFIRM_EMPLOYER': {
-        'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
-        'sim': 'SELECT_CONTRIBUTION_TYPE',
-        '1': 'SELECT_CONTRIBUTION_TYPE',
-        'boleto_nao': 'WAITING_CNPJ',
-        'nao': 'WAITING_CNPJ',
-        '2': 'WAITING_CNPJ'
-      }
-    };
+     // DEFINITIVE TRANSITION MAP
+     const transitions: Record<string, Record<string, string>> = {
+       'SELECT_BOLETO_TYPE': {
+         'boleto_a_vencer': 'WAITING_CNPJ',
+         'boleto_vencido': 'WAITING_CNPJ',
+         '1': 'WAITING_CNPJ',
+         '2': 'WAITING_CNPJ',
+         'vencer': 'WAITING_CNPJ',
+         'vencido': 'WAITING_CNPJ'
+       },
+       'CONFIRM_EMPLOYER': {
+         'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
+         'boleto_nao': 'WAITING_CNPJ'
+       },
+       'SELECT_CONTRIBUTION_TYPE': {
+         'boleto_type_1': 'SEARCHING_BOLETO',
+         'boleto_type_2': 'SEARCHING_BOLETO'
+       }
+     };
 
-    const stateTransitions = transitionMap[session.state as string] || {};
-    let transition = null;
-    
-    // BRUTAL MATCHING
-    transition = Object.keys(stateTransitions).find(k => text === k.toLowerCase());
-    if (!transition) {
-      transition = Object.keys(stateTransitions).find(k => text.includes(k.toLowerCase()));
-    }
+     console.log('[CURRENT_STATE]', session.state);
+     console.log('[BUTTON_ID]', text);
+     console.log('[TRANSITION_MAP]', transitions[session.state]);
 
-    const transitionFound = !!transition;
-    const forensicPrefix = `[FORENSIC_V4] ${session.state} -> ${transition ? stateTransitions[transition] : 'NONE'} | Input: "${text}"\n\n`;
+     let nextState = transitions[session.state]?.[text] || session.state;
+     
+     if (transitions[session.state] && transitions[session.state][text]) {
+       console.log('[NEXT_STATE]', nextState);
+     } else {
+       console.log('[TRANSITION_NOT_FOUND]', { state: session.state, input: text });
+     }
 
-    if (transitionFound) {
-      nextState = stateTransitions[transition!];
-      
-      if (nextState === 'WAITING_CNPJ') {
-        responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
-      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
-        responseText = "📝 Qual o *tipo de contribuição*?\n\n1. Mensalidade Sindical\n2. Taxa Negocial";
-        buttons = [
-          { id: 'boleto_type_1', title: 'Mensalidade' },
-          { id: 'boleto_type_2', title: 'Taxa' }
-        ];
-      }
-    } else {
-      console.log('[TRANSITION_NOT_FOUND]', { state: session.state, input: text });
-    }
+     const forensicPrefix = `[FORENSIC_FIX] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
-    if (nextState === 'SELECT_BOLETO_TYPE' || (!transitionFound && session.state === 'SELECT_BOLETO_TYPE')) {
-      responseText = `[${BUILD_VERSION}]\nVou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
+     // STATE HANDLERS
+     if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
+       responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
+     } else if (nextState === 'SELECT_CONTRIBUTION_TYPE' && session.state !== 'SELECT_CONTRIBUTION_TYPE') {
+       responseText = "📝 Qual o *tipo de contribuição*?";
+       buttons = [
+         { id: 'boleto_type_1', title: 'Mensalidade' },
+         { id: 'boleto_type_2', title: 'Taxa' }
+       ];
+     } else if (nextState === 'SELECT_BOLETO_TYPE') {
+       responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
       buttons = [
         { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
