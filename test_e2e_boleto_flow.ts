@@ -1,17 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const PHONE = "557388633535";
 const CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 async function callFlow(phone: string, message: string, action?: string) {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow`, {
+  const response = await fetch(\`\${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow\`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Authorization': \`Bearer \${SUPABASE_SERVICE_ROLE_KEY}\`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
