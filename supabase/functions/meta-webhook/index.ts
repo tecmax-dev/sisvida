@@ -201,7 +201,14 @@ serve(async (req) => {
     // 3. FALLBACK PROTECTION (NO AUTOMATIC FALLBACK)
     if (!nextState) {
       // Allow text input for specific states
-      const textInputStates = ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA'];
+      const textInputStates = [
+        'WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 
+        'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA',
+        'CARTEIRINHA_FLOW', 'CONVENIOS_FLOW', 'ATENDIMENTO_FLOW',
+        'CONVENCOES_FLOW', 'HOMOLOGACAO_FLOW', 'OUTROS_FLOW',
+        'CONTABILIDADE_FLOW', 'ASSOCIADO_FLOW'
+      ];
+      
       if (textInputStates.includes(currentState)) {
         nextState = currentState;
       } else if (currentState === 'ASSOCIADO_MENU' || currentState === 'EMPRESA_MENU') {
