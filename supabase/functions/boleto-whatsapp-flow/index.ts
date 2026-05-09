@@ -77,8 +77,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     let responseText = "";
     let buttons: any[] = [];
-    let nextState = session.state;
-
+    
     const rawText = (message || "").trim();
     const text = rawText.toLowerCase();
     
