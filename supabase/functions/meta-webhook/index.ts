@@ -1,7 +1,8 @@
  import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
  
- const HANDLER_VERSION = "2.0.0-FLOW-RECONSTRUCTION";
+const HANDLER_VERSION = "2.1.0-SINDICATO-ROUTER";
+const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -69,116 +70,179 @@ serve(async (req) => {
        return new Response("missing_creds", { status: 200 });
      }
  
-    // 1. EXTRAÇÃO DE DADOS (NATURAL META ONLY)
-    const message = body.entry[0].changes[0].value.messages[0];
-    const phone = message.from;
-    let messageText = "";
+    // 1. EXTRAÇÃO DE DADOS (NATIVE META ONLY)
+    const entry = body.entry?.[0];
+    const change = entry?.changes?.[0];
+    const value = change?.value;
+    const message = value?.messages?.[0];
+
+    if (!message) {
+      console.log('[SKIP] No message in payload');
+      return new Response("No message", { status: 200 });
+    }
+
+    const from = message.from;
+    const msgType = message.type;
+    let msgText = "";
     let buttonId = "";
-    let buttonTitle = "";
 
-    if (message.type === 'text') {
-      messageText = message.text?.body;
-    }
-    
-    if (message.type === 'interactive') {
+    if (msgType === 'text') {
+      msgText = message.text?.body || "";
+    } else if (msgType === 'interactive') {
       buttonId = message.interactive?.button_reply?.id;
-      buttonTitle = message.interactive?.button_reply?.title;
-      console.log('[INTERACTIVE_RECEIVED]', { buttonId, buttonTitle });
+      msgText = message.interactive?.button_reply?.title || "";
     }
 
-    const user = phone; // Alias conforme solicitado no snippet
+    console.log('[INCOMING]', { from, msgType, msgText, buttonId });
 
-    // 2. BLOCO DE ENVIO OBRIGATÓRIO (Diagnóstico Puro)
-    if (messageText && messageText.toLowerCase().includes('oi')) {
-      try {
-        const payload = {
-          messaging_product: 'whatsapp',
-          to: user,
-          type: 'interactive',
-          interactive: {
-            type: 'button',
-            body: {
-              text: 'Teste Botões Meta'
-            },
-            action: {
-              buttons: [
-                {
-                  type: 'reply',
-                  reply: {
-                    id: 'empresa_btn',
-                    title: 'Empresa'
-                  }
-                },
-                {
-                  type: 'reply',
-                  reply: {
-                    id: 'associado_btn',
-                    title: 'Associado'
-                  }
-                }
-              ]
-            }
-          }
-        }
+    // 2. GESTÃO DE SESSÃO
+    const { data: session } = await supabase
+      .from('whatsapp_sessions')
+      .select('*')
+      .eq('phone', from)
+      .maybeSingle();
 
-        console.log('[META_INTERACTIVE_PAYLOAD]', JSON.stringify(payload, null, 2))
+    const isStart = msgText.toLowerCase().includes('oi') || 
+                   msgText.toLowerCase().includes('olá') || 
+                   msgText.toLowerCase().includes('menu') ||
+                   !session;
 
-        const response = await fetch(
-          `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          }
-        )
-
-        console.log('[META_STATUS]', response.status)
-
-        const text = await response.text()
-        console.log('[META_RESPONSE]', text)
-
-        return new Response(text, { status: 200 });
-
-      } catch (error) {
-        console.log('[SEND_EXCEPTION]', error)
-        return new Response(JSON.stringify({ error: error.message }), { status: 200 });
-      }
-    }
-
-    // 3. ROUTER DE RESPOSTA (Diagnóstico)
-    if (buttonId) {
-      let responseText = "";
-      
-      if (buttonId === 'empresa_btn') {
-        responseText = `[BTN_OK] Você escolheu: EMPRESA\nID: ${buttonId}\nTitle: ${buttonTitle}\nStatus: Transition OK`;
-      } else if (buttonId === 'associado_btn') {
-        responseText = `[BTN_OK] Você escolheu: ASSOCIADO\nID: ${buttonId}\nTitle: ${buttonTitle}\nStatus: Transition OK`;
-      } else {
-        responseText = `[BTN_UNKNOWN] Botão não reconhecido: ${buttonId}`;
-      }
-
-      console.log('[ROUTE_MATCH]', { buttonId, responseText });
-
-      const payload = {
-        messaging_product: 'whatsapp',
-        to: phone,
-        type: 'text',
-        text: { body: responseText }
-      };
-
+    // 3. ROUTER SINDICATO
+    const sendMetaMessage = async (payload: any) => {
       const res = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
         method: 'POST',
         headers: { 
-          Authorization: `Bearer ${TOKEN}`, 
+          'Authorization': `Bearer ${TOKEN}`, 
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: from,
+          ...payload
+        })
       });
-      
-      console.log('[BTN_RESPONSE_STATUS]', res.status);
+      return res;
+    };
+
+    // FLOW: MAIN MENU
+    if (isStart && !buttonId) {
+      await supabase.from('whatsapp_sessions').upsert({
+        phone: from,
+        state: 'MAIN_MENU',
+        updated_at: new Date().toISOString()
+      });
+
+      await sendMetaMessage({
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: 'Olá! 👋 Bem-vindo(a) ao *Sindicato dos Comerciários*.\n\nComo podemos ajudá-lo(a) hoje?' },
+          action: {
+            buttons: [
+              { type: 'reply', reply: { id: 'sind_associado', title: 'Sou Associado' } },
+              { type: 'reply', reply: { id: 'sind_empresa', title: 'Sou Empresa' } },
+              { type: 'reply', reply: { id: 'sind_contabilidade', title: 'Contabilidade' } }
+            ]
+          }
+        }
+      });
+      return new Response("ok", { status: 200 });
+    }
+
+    // FLOW: EMPRESA (BOLETO)
+    if (buttonId === 'sind_empresa' || session?.state?.startsWith('BOLETO_')) {
+      // Forward to boleto flow logic
+      console.log('[ROUTING] To boleto-whatsapp-flow');
+      const boletoRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/boleto-whatsapp-flow`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          clinic_id: SINDICATO_CLINIC_ID,
+          phone: from,
+          message: buttonId || msgText,
+          action: buttonId === 'sind_empresa' ? 'start' : 'continue'
+        })
+      });
+
+      const boletoData = await boletoRes.json();
+      if (boletoData.response) {
+        const payload: any = { type: 'text', text: { body: boletoData.response } };
+        if (boletoData.buttons && boletoData.buttons.length > 0) {
+          payload.type = 'interactive';
+          payload.interactive = {
+            type: 'button',
+            body: { text: boletoData.response },
+            action: {
+              buttons: boletoData.buttons.map((b: any) => ({
+                type: 'reply', reply: { id: b.id, title: b.title }
+              }))
+            }
+          };
+        }
+        await sendMetaMessage(payload);
+        
+        // Update session state to BOLETO track
+        await supabase.from('whatsapp_sessions').upsert({
+          phone: from,
+          state: 'BOLETO_' + (boletoData.newState || 'CONTINUE'),
+          updated_at: new Date().toISOString()
+        });
+      }
+      return new Response("ok", { status: 200 });
+    }
+
+    // FLOW: ASSOCIADO (AI ASSISTANT)
+    if (buttonId === 'sind_associado' || session?.state === 'ASSOCIADO_FLOW') {
+       console.log('[ROUTING] To whatsapp-ai-assistant');
+       // Implement or forward to AI assistant
+       const aiRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+           clinic_id: SINDICATO_CLINIC_ID,
+           phone: from,
+           message: buttonId === 'sind_associado' ? 'menu' : msgText,
+           deliver_response_via_caller: true // We handle sending here to keep it native
+         })
+       });
+       
+       const aiData = await aiRes.json();
+       if (aiData.response) {
+         await sendMetaMessage({ type: 'text', text: { body: aiData.response } });
+       }
+
+       await supabase.from('whatsapp_sessions').upsert({
+         phone: from,
+         state: 'ASSOCIADO_FLOW',
+         updated_at: new Date().toISOString()
+       });
+       return new Response("ok", { status: 200 });
+    }
+
+    // DEFAULT: Forward to AI Assistant for any other input
+    console.log('[ROUTING] Default to AI Assistant');
+    const defaultRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        clinic_id: SINDICATO_CLINIC_ID,
+        phone: from,
+        message: msgText,
+        deliver_response_via_caller: true
+      })
+    });
+    const defaultData = await defaultRes.json();
+    if (defaultData.response) {
+      await sendMetaMessage({ type: 'text', text: { body: defaultData.response } });
     }
  
      return new Response("ok", { status: 200 });
