@@ -121,23 +121,22 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
      const forensicPrefix = `[FORENSIC_FIX] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
-     // STATE HANDLERS
-     if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
+     // STATE HANDLERS (LOGIC)
+     if (session.state === 'SELECT_BOLETO_TYPE' && nextState === 'WAITING_CNPJ') {
        responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
-     } else if (nextState === 'SELECT_CONTRIBUTION_TYPE' && session.state !== 'SELECT_CONTRIBUTION_TYPE') {
+     } else if (session.state === 'CONFIRM_EMPLOYER' && nextState === 'SELECT_CONTRIBUTION_TYPE') {
        responseText = "📝 Qual o *tipo de contribuição*?";
        buttons = [
          { id: 'boleto_type_1', title: 'Mensalidade' },
          { id: 'boleto_type_2', title: 'Taxa' }
        ];
-     } else if (nextState === 'SELECT_BOLETO_TYPE') {
-       responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
-      buttons = [
-        { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-        { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
-      ];
-      nextState = 'SELECT_BOLETO_TYPE';
-    } else if (session.state === 'WAITING_CNPJ') {
+     } else if (session.state === 'SELECT_BOLETO_TYPE' && nextState === 'SELECT_BOLETO_TYPE') {
+        responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
+        buttons = [
+          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+        ];
+     } else if (session.state === 'WAITING_CNPJ') {
       const cleanCnpj = text.replace(/\D/g, '');
       if (cleanCnpj.length === 14) {
         const { data: employer } = await supabase
@@ -183,9 +182,12 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           { id: 'boleto_type_2', title: 'Taxa' }
         ];
       }
-    } else if (!transitionFound) {
-      responseText = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nEntrada: ${text}`;
-    }
+     } else {
+       // SE NÃO EXISTIR TRANSIÇÃO: APENAS DEBUG
+       if (nextState === session.state && !responseText) {
+         responseText = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`;
+       }
+     }
 
     // 3. Atualizar estado no banco
     const { error: updateError } = await supabase.from('whatsapp_boleto_sessions')
