@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
-const HANDLER_VERSION = "2.1.2-SINDICATO-ROUTER";
+const HANDLER_VERSION = "2.1.3-SINDICATO-ROUTER";
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const corsHeaders = {
@@ -56,6 +56,9 @@ serve(async (req) => {
 
     const from = message.from;
     const msgType = message.type;
+    // O ID do número que recebeu a mensagem (importante para enviar de volta pelo mesmo canal)
+    const recipient_phone_id = value?.metadata?.phone_number_id;
+    
     let msgText = "";
     let buttonId = "";
 
@@ -66,17 +69,16 @@ serve(async (req) => {
       msgText = message.interactive?.button_reply?.title || "";
     }
 
-    console.log('[INCOMING]', { from, msgType, msgText, buttonId });
+    console.log('[INCOMING]', { from, msgType, msgText, buttonId, recipient_phone_id });
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const PHONE_NUMBER_ID = Deno.env.get("META_PHONE_NUMBER_ID");
     const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
     
-    if (!PHONE_NUMBER_ID || !TOKEN) {
+    if (!recipient_phone_id || !TOKEN) {
       console.error('[ERROR] Missing META credentials');
       return new Response("missing_creds", { status: 200 });
     }
@@ -93,7 +95,8 @@ serve(async (req) => {
                    !session;
 
     const sendMetaMessage = async (messagePayload: any) => {
-      const url = `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
+      // Usamos o recipient_phone_id dinâmico que veio no webhook
+      const url = `https://graph.facebook.com/v22.0/${recipient_phone_id}/messages`;
       const finalPayload = {
         messaging_product: 'whatsapp',
         to: from,
