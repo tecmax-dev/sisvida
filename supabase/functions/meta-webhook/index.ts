@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
-const HANDLER_VERSION = "2.1.3-SINDICATO-ROUTER";
+ const HANDLER_VERSION = "2.1.4-DEBUG-SENDER";
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const corsHeaders = {
@@ -57,7 +57,14 @@ serve(async (req) => {
     const from = message.from;
     const msgType = message.type;
     // O ID do número que recebeu a mensagem (importante para enviar de volta pelo mesmo canal)
-    const recipient_phone_id = value?.metadata?.phone_number_id;
+     const recipient_phone_id = value?.metadata?.phone_number_id;
+     const display_phone_number = value?.metadata?.display_phone_number;
+     
+     console.log('[DEBUG_PAYLOAD]', {
+       metadata: value?.metadata,
+       contacts: value?.contacts,
+       messages: value?.messages
+     });
     
     let msgText = "";
     let buttonId = "";
@@ -69,7 +76,7 @@ serve(async (req) => {
       msgText = message.interactive?.button_reply?.title || "";
     }
 
-    console.log('[INCOMING]', { from, msgType, msgText, buttonId, recipient_phone_id });
+     console.log('[INCOMING]', { from, msgType, msgText, buttonId, recipient_phone_id, display_phone_number });
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
