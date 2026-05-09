@@ -91,10 +91,14 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          'boleto_a_vencer': 'WAITING_CNPJ',
          'boleto_vencido': 'WAITING_CNPJ'
        },
-       'CONFIRM_EMPLOYER': {
-         'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
-         'boleto_nao': 'WAITING_CNPJ'
-       }
+      'CONFIRM_EMPLOYER': {
+        'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
+        'boleto_nao': 'WAITING_CNPJ'
+      },
+      'SELECT_CONTRIBUTION_TYPE': {
+        'boleto_type_1': 'WAITING_PERIODO',
+        'boleto_type_2': 'WAITING_PERIODO'
+      }
      };
 
     // --- ROUTER ---
