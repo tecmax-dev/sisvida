@@ -110,7 +110,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
     // Text input states persistence (allow state to persist while waiting for text)
-    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_CONTRIBUICAO'];
+    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO'];
     if (!nextState && textInputStates.includes(session.state)) {
       nextState = session.state;
     }
@@ -191,13 +191,24 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       } else if (session.state === 'WAITING_VENCIMENTO') {
         const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
         if (dateRegex.test(text)) {
-          // SIMULATED BOLETO GENERATION
-          const mockBoletoUrl = "https://example.com/boleto-teste-123.pdf";
-          responseText = `✅ *Boleto Gerado com Sucesso!*\n\n📅 Vencimento: *${text}*\n💰 Valor: *R$ 150,00*\n\n🔗 Clique no link para baixar: ${mockBoletoUrl}\n\nObrigado por utilizar nossos serviços!`;
-          nextState = 'SUCCESS';
+          responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
+          nextState = 'WAITING_VALOR';
+          await supabase.from('whatsapp_boleto_sessions').update({ expires_at: text }).eq('id', session.id); // Reusing expires_at temporarily or adding value col
         } else {
           responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
           nextState = 'WAITING_VENCIMENTO';
+        }
+      } else if (session.state === 'WAITING_VALOR') {
+        const cleanValor = text.replace(',', '.');
+        const valorNum = parseFloat(cleanValor);
+        if (!isNaN(valorNum) && valorNum > 0) {
+          // SIMULATED BOLETO GENERATION WITH REAL INPUTS
+          const mockBoletoUrl = "https://example.com/boleto-teste-123.pdf";
+          responseText = `✅ *Boleto Gerado com Sucesso!*\n\n💰 Valor: *R$ ${valorNum.toFixed(2).replace('.', ',')}*\n\n🔗 Clique no link para baixar: ${mockBoletoUrl}\n\nObrigado por utilizar nossos serviços!`;
+          nextState = 'SUCCESS';
+        } else {
+          responseText = "❌ Valor inválido. Informe o valor numérico (ex: 150,00):";
+          nextState = 'WAITING_VALOR';
         }
      } else if (session.state === 'SUCCESS') {
        // Reset flow if user types anything after success

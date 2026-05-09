@@ -177,7 +177,7 @@ serve(async (req) => {
     // 3. FALLBACK PROTECTION (NO AUTOMATIC FALLBACK)
     if (!nextState) {
       // Allow text input for specific states
-      const textInputStates = ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO'];
+      const textInputStates = ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR'];
       if (textInputStates.includes(currentState)) {
         nextState = currentState;
       } else {
@@ -290,7 +290,7 @@ serve(async (req) => {
       await sendMainMenu();
     } else if (nextState === 'EMPRESA_MENU') {
       await sendEmpresaMenu();
-    } else if (['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO'].includes(nextState)) {
+    } else if (['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'SUCCESS'].includes(nextState)) {
       // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU, it's a 'start' action
       const isTransitionToBoleto = currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn';
       const action = isTransitionToBoleto ? 'start' : 'continue';
