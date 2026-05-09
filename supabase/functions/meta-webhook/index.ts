@@ -90,10 +90,13 @@ serve(async (req) => {
       return new Response("missing_creds", { status: 200 });
     }
 
+    const phoneReceived = from;
+    const normalizedPhone = from.replace(/\D/g, '');
+
     const { data: session } = await supabase
       .from('whatsapp_sessions')
       .select('*')
-      .eq('phone', from)
+      .eq('phone', normalizedPhone)
       .maybeSingle();
 
     const sendMetaMessage = async (messagePayload: any) => {
@@ -144,13 +147,22 @@ serve(async (req) => {
       }
     };
 
+    const sessionFound = !!session;
+    console.log('[SESSION_LOOKUP]', {
+      phoneReceived,
+      normalizedPhone,
+      sessionFound,
+      state: session?.state
+    });
+
     // 2. ROUTER (SINGLE)
     const currentState = session?.state || 'MAIN_MENU';
     const inputId = buttonId || msgText.toLowerCase().trim();
 
-    // Mandatory logs
-    console.log('[CURRENT_STATE]', currentState);
-    console.log('[BUTTON_ID]', inputId);
+    console.log('[TRANSITION_INPUT]', {
+      currentState,
+      inputId
+    });
 
     let nextState = transitions[currentState]?.[inputId];
 
@@ -290,11 +302,26 @@ serve(async (req) => {
     }
 
     // FINAL SAVE
-    await supabase.from('whatsapp_sessions').upsert({
-      phone: from,
+    console.log('[SESSION_SAVE_ATTEMPT]', {
+      phone: normalizedPhone,
+      oldState: currentState,
+      nextState: finalState
+    });
+
+    const { error: saveError } = await supabase.from('whatsapp_sessions').upsert({
+      phone: normalizedPhone,
       state: finalState,
       updated_at: new Date().toISOString()
     });
+
+    if (saveError) {
+      console.error('[SESSION_SAVE_ERROR]', saveError);
+    } else {
+      console.log('[SESSION_SAVE_SUCCESS]', {
+        phone: normalizedPhone,
+        savedState: finalState
+      });
+    }
 
     return new Response("ok", { status: 200 });
 
