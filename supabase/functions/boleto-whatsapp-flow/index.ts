@@ -101,51 +101,31 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
        }
      };
 
-    // Mandatory logs
-    console.log('[CURRENT_STATE]', session.state);
-    console.log('[BUTTON_ID]', text);
+    // --- ROUTER ---
+    console.log('[ROUTER_INPUT]', { state: session.state, input: text });
+    
+    let nextState = transitions[session.state]?.[text] || null;
 
-    let nextState = transitions[session.state]?.[text];
+    // Start logic override
+    if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
-    // Default behavior for text input states
-    if (!nextState) {
-      if (session.state === 'WAITING_CNPJ' || session.state === 'SELECT_CONTRIBUTION_TYPE') {
-        nextState = session.state;
-      }
+    // Text input states persistence
+    if (!nextState && ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE'].includes(session.state)) {
+      nextState = session.state;
     }
 
     console.log('[NEXT_STATE]', nextState);
 
-    // Fallback protection
-    if (!nextState && !isStartAction) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          response: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`, 
-          buttons: [],
-          newState: session.state 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // If it's a start action, we stay in the initial state to show its view
-    if (isStartAction) {
-      nextState = 'SELECT_BOLETO_TYPE';
-    }
-
-    // If still no nextState, it's a dead end
+    // 3. TRANSITION ERROR (NO STATE FOUND)
     if (!nextState) {
-       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          response: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`, 
-          buttons: [],
-          newState: session.state 
-        }),
+      const errorMsg = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`;
+      return new Response(
+        JSON.stringify({ success: true, response: errorMsg, buttons: [], newState: session.state }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // 4. VIEWS / RENDERERS
 
      const forensicPrefix = `[FORENSIC_BOLETO] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
