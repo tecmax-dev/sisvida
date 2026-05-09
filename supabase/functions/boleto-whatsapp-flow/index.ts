@@ -33,7 +33,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .select('*')
       .eq('clinic_id', clinic_id)
       .eq('phone', phone)
-      .gt('expires_at', new Date().toISOString())
+      // Removed expiration check for debugging/stability
+      // .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
     const isStartAction = action === 'start';
