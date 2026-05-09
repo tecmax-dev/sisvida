@@ -124,7 +124,9 @@ serve(async (req) => {
       return res;
     };
 
-    // CENTRALIZED STATE MACHINE
+    // --- MANDATORY STATE MACHINE ARCHITECTURE ---
+
+    // 1. TRANSITIONS (DECLARATIVE)
     const transitions: Record<string, Record<string, string>> = {
       'MAIN_MENU': {
         'sind_empresa': 'EMPRESA_MENU',
@@ -137,10 +139,19 @@ serve(async (req) => {
       'SELECT_BOLETO_TYPE': {
         'boleto_a_vencer': 'WAITING_CNPJ',
         'boleto_vencido': 'WAITING_CNPJ'
+      },
+      'WAITING_CNPJ': {
+        // Transitions are logic-based in the view for CNPJ
+      },
+      'CONFIRM_EMPLOYER': {
+        'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
+        'boleto_nao': 'WAITING_CNPJ'
       }
     };
 
+    // 2. ROUTER (SINGLE)
     const currentState = session?.state || 'MAIN_MENU';
+    const buttonId = message.interactive?.button_reply?.id || "";
     const inputId = buttonId || msgText.toLowerCase();
 
     console.log('[CURRENT_STATE]', currentState);
@@ -148,27 +159,28 @@ serve(async (req) => {
     console.log('[AVAILABLE_TRANSITIONS]', transitions[currentState]);
 
     let nextState = transitions[currentState]?.[inputId];
-    console.log('[NEXT_STATE]', nextState);
 
-    // ROUTING LOGIC
+    // Force reset on "oi/menu"
     if (isStart && !buttonId) {
       nextState = 'MAIN_MENU';
     }
 
-    if (!nextState && currentState !== 'MAIN_MENU') {
-       // If no transition found and not in main menu, it might be a flow-specific input (like CNPJ)
-       // or we should show debug
-       if (currentState === 'WAITING_CNPJ') {
-         nextState = 'WAITING_CNPJ';
-       } else {
-         await sendMetaMessage({ type: 'text', text: { body: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${currentState}\nBotão: ${inputId}` } });
-         return new Response("ok", { status: 200 });
-       }
+    console.log('[NEXT_STATE]', nextState);
+
+    // 3. FALLBACK PROTECTION
+    if (!nextState) {
+      // If we are in a state that expects free text (like WAITING_CNPJ), we stay there
+      if (currentState === 'WAITING_CNPJ') {
+        nextState = 'WAITING_CNPJ';
+      } else {
+        console.log('[TRANSITION_NOT_FOUND]', { currentState, inputId });
+        await sendMetaMessage({ type: 'text', text: { body: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${currentState}\nBotão: ${inputId}` } });
+        return new Response("ok", { status: 200 });
+      }
     }
 
-    // EXECUTION
-    if (nextState === 'MAIN_MENU') {
-      await supabase.from('whatsapp_sessions').upsert({ phone: from, state: 'MAIN_MENU', updated_at: new Date().toISOString() });
+    // 4. VIEWS / RENDERERS
+    const sendMainMenu = async () => {
       await sendMetaMessage({
         type: 'interactive',
         interactive: {
@@ -183,8 +195,9 @@ serve(async (req) => {
           }
         }
       });
-    } else if (nextState === 'EMPRESA_MENU') {
-      await supabase.from('whatsapp_sessions').upsert({ phone: from, state: 'EMPRESA_MENU', updated_at: new Date().toISOString() });
+    };
+
+    const sendEmpresaMenu = async () => {
       await sendMetaMessage({
         type: 'interactive',
         interactive: {
@@ -197,9 +210,10 @@ serve(async (req) => {
           }
         }
       });
-    } else if (nextState === 'SELECT_BOLETO_TYPE' || nextState === 'WAITING_CNPJ' || currentState === 'EMPRESA_MENU' || currentState === 'SELECT_BOLETO_TYPE' || currentState === 'WAITING_CNPJ') {
-      // Delegate to boleto flow
-      const boletoRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/boleto-whatsapp-flow`, {
+    };
+
+    const delegateToBoletoFlow = async (action: 'start' | 'continue') => {
+      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/boleto-whatsapp-flow`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -209,21 +223,20 @@ serve(async (req) => {
           clinic_id: SINDICATO_CLINIC_ID,
           phone: from,
           message: inputId,
-          action: inputId === 'segunda_via_btn' ? 'start' : 'continue'
+          action: action
         })
       });
-
-      const boletoData = await boletoRes.json();
-      if (boletoData.response) {
-        let payload: any = { type: 'text', text: { body: boletoData.response } };
-        if (boletoData.buttons && boletoData.buttons.length > 0) {
+      const data = await res.json();
+      if (data.response) {
+        let payload: any = { type: 'text', text: { body: data.response } };
+        if (data.buttons && data.buttons.length > 0) {
           payload = {
             type: 'interactive',
             interactive: {
               type: 'button',
-              body: { text: boletoData.response },
+              body: { text: data.response },
               action: {
-                buttons: boletoData.buttons.map((b: any) => ({
+                buttons: data.buttons.map((b: any) => ({
                   type: 'reply', reply: { id: b.id, title: b.title }
                 }))
               }
@@ -231,11 +244,13 @@ serve(async (req) => {
           };
         }
         await sendMetaMessage(payload);
-        await supabase.from('whatsapp_sessions').upsert({ phone: from, state: boletoData.newState || nextState, updated_at: new Date().toISOString() });
+        return data.newState;
       }
-    } else {
-      // Fallback to AI for Associado/Contabilidade
-      const aiRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
+      return nextState;
+    };
+
+    const delegateToAI = async () => {
+      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -248,12 +263,34 @@ serve(async (req) => {
           deliver_response_via_caller: true
         })
       });
-      const aiData = await aiRes.json();
-      if (aiData.response) {
-        await sendMetaMessage({ type: 'text', text: { body: aiData.response } });
+      const data = await res.json();
+      if (data.response) {
+        await sendMetaMessage({ type: 'text', text: { body: data.response } });
       }
-      await supabase.from('whatsapp_sessions').upsert({ phone: from, state: nextState || 'ASSOCIADO_FLOW', updated_at: new Date().toISOString() });
+    };
+
+    // 5. EXECUTION & PERSISTENCE
+    let finalState = nextState;
+    if (nextState === 'MAIN_MENU') {
+      await sendMainMenu();
+    } else if (nextState === 'EMPRESA_MENU') {
+      await sendEmpresaMenu();
+    } else if (['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE'].includes(nextState)) {
+      const action = (inputId === 'segunda_via_btn' || inputId === 'sind_empresa') ? 'start' : 'continue';
+      finalState = await delegateToBoletoFlow(action);
+    } else {
+      await delegateToAI();
+      finalState = nextState || 'ASSOCIADO_FLOW';
     }
+
+    // FINAL SAVE
+    await supabase.from('whatsapp_sessions').upsert({
+      phone: from,
+      state: finalState,
+      updated_at: new Date().toISOString()
+    });
+
+    return new Response("ok", { status: 200 });
 
     return new Response("ok", { status: 200 });
 
