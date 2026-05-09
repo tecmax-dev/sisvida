@@ -37,34 +37,29 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       // .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    const isStartAction = action === 'start';
-
-    if (!session) {
-      console.log('[SESSION_INIT]', 'Creating new session in SELECT_BOLETO_TYPE');
-      const { data: newSession, error: insertError } = await supabase
+    const isStartAction = action === 'start' || !session;
+    
+    if (isStartAction) {
+      console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
+      const newState = 'SELECT_BOLETO_TYPE';
+      
+      const { data: updatedSession, error: upsertError } = await supabase
         .from('whatsapp_boleto_sessions')
-        .insert({
+        .upsert({
           clinic_id,
           phone,
-          state: 'SELECT_BOLETO_TYPE',
+          state: newState,
           expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        })
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'clinic_id,phone' })
         .select()
         .single();
-      
-      if (newSession) {
-        session = newSession;
-      } else {
-        console.error('[SESSION_SAVE_FAILED]', insertError);
-        throw new Error("Could not create session");
+
+      if (upsertError) {
+        console.error('[SESSION_UPSERT_FAILED]', upsertError);
+        throw new Error("Session persistence failed");
       }
-    } else if (isStartAction) {
-      console.log('[SESSION_RESET]', 'Resetting existing session to SELECT_BOLETO_TYPE');
-      await supabase
-        .from('whatsapp_boleto_sessions')
-        .update({ state: 'SELECT_BOLETO_TYPE' })
-        .eq('id', session.id);
-      session.state = 'SELECT_BOLETO_TYPE';
+      session = updatedSession;
     }
 
     if (!session) {
