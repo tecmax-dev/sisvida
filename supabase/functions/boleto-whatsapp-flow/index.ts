@@ -87,11 +87,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     // 2. Máquina de Estados Simplificada e Robusta
     // Máquina de Estados com mapeamento explícito de botões
-     // DEFINITIVE TRANSITION MAP (CENTRALIZED LOGIC)
+     // --- MANDATORY BOLETO STATE MACHINE ---
      const transitions: Record<string, Record<string, string>> = {
-       'MAIN_MENU': {
-         'sind_empresa': 'EMPRESA_MENU'
-       },
        'EMPRESA_MENU': {
          'segunda_via_btn': 'SELECT_BOLETO_TYPE'
        },
@@ -110,22 +107,22 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
      console.log('[AVAILABLE_TRANSITIONS]', transitions[session.state]);
 
      let nextState = transitions[session.state]?.[text] || session.state;
-     
+
      if (transitions[session.state] && transitions[session.state][text]) {
        console.log('[NEXT_STATE]', nextState);
      } else {
        console.log('[TRANSITION_NOT_FOUND]', { state: session.state, input: text });
      }
 
-     const forensicPrefix = `[FORENSIC_CENTRAL] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
+     const forensicPrefix = `[FORENSIC_BOLETO] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
-     // STATE HANDLERS (LOGIC)
+     // STATE VIEWS (LOGIC)
      if (nextState === 'SELECT_BOLETO_TYPE') {
-        responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
-        buttons = [
-          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
-        ];
+       responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
+       buttons = [
+         { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+       ];
      } else if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
        responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
      } else if (nextState === 'SELECT_CONTRIBUTION_TYPE') {
