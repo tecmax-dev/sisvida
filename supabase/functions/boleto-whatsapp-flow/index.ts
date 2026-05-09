@@ -109,8 +109,9 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     // Start logic override
     if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
-    // Text input states persistence
-    if (!nextState && ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE'].includes(session.state)) {
+    // Text input states persistence (allow state to persist while waiting for text)
+    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_CONTRIBUICAO'];
+    if (!nextState && textInputStates.includes(session.state)) {
       nextState = session.state;
     }
 
@@ -176,20 +177,26 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       // Caso onde clicou no botão mas não foi mapeado acima
       responseText = "Ok, vamos tentar outro CNPJ. Por favor, digite o CNPJ correto:";
       nextState = 'WAITING_CNPJ';
-    } else if (session.state === 'SELECT_CONTRIBUTION_TYPE') {
-      // Próximo passo após selecionar tipo de contribuição
-      if (text.includes('type_1') || text === '1' || text.includes('mensalidade')) {
-        responseText = "🔍 Buscando boletos de *Mensalidade*...\n\nAguarde um instante.";
-        // Aqui entraria a lógica de busca real
-      } else if (text.includes('type_2') || text === '2' || text.includes('taxa')) {
-        responseText = "🔍 Buscando boletos de *Taxa Negocial*...\n\nAguarde um instante.";
-      } else {
-        responseText = "Por favor, selecione o tipo de contribuição:";
-        buttons = [
-          { id: 'boleto_type_1', title: 'Mensalidade' },
-          { id: 'boleto_type_2', title: 'Taxa' }
-        ];
-      }
+      } else if (nextState === 'WAITING_PERIODO' && session.state === 'SELECT_CONTRIBUTION_TYPE') {
+        responseText = "📅 Informe o *período* do boleto (ex: 05/2026):";
+      } else if (session.state === 'WAITING_PERIODO') {
+        const periodRegex = /^(0[1-9]|1[0-2])\/\d{4}$/;
+        if (periodRegex.test(text)) {
+          responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
+          nextState = 'WAITING_VENCIMENTO';
+          await supabase.from('whatsapp_boleto_sessions').update({ competence_month: parseInt(text.split('/')[0]), competence_year: parseInt(text.split('/')[1]) }).eq('id', session.id);
+        } else {
+          responseText = "❌ Formato inválido. Informe o período como MM/AAAA (ex: 05/2026):";
+        }
+      } else if (session.state === 'WAITING_VENCIMENTO') {
+        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+        if (dateRegex.test(text)) {
+          responseText = "✅ Tudo pronto! Gerando seu boleto...\n\nAguarde um instante.";
+          nextState = 'SUCCESS';
+          // In a real scenario, here we would call Lytex/Boleto generation
+        } else {
+          responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
+        }
      } else {
        // SE NÃO EXISTIR TRANSIÇÃO: APENAS DEBUG
        if (nextState === session.state && !responseText) {
