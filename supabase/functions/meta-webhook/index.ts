@@ -30,9 +30,18 @@ serve(async (req) => {
   }
 
    try {
-     const body = await req.json();
-     console.log('[WEBHOOK_RECEIVED]', new Date().toISOString());
-     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
+      const body = await req.json();
+      console.log('[FULL_WEBHOOK_BODY]', JSON.stringify(body, null, 2));
+      
+      // BLOQUEIO DE SEGURANÇA: Se o payload não tiver a estrutura nativa da Meta, interromper processamento.
+      const isNativeMeta = body.object === 'whatsapp_business_account' && body.entry?.[0]?.changes?.[0]?.value?.messages;
+      
+      if (!isNativeMeta) {
+        console.log('[FATAL_ERROR] Webhook NÃO é nativo da Meta. Estrutura detectada:', Object.keys(body));
+        // Se quiser ver o que está chegando no ZapResponder, o log FULL_WEBHOOK_BODY acima já mostra.
+        // Mas não processamos nada que não seja nativo.
+        return new Response("Unauthorized: Non-native Meta payload", { status: 403 });
+      }
  
      const supabase = createClient(
        Deno.env.get('SUPABASE_URL') ?? '',
@@ -47,31 +56,21 @@ serve(async (req) => {
        return new Response("missing_creds", { status: 200 });
      }
  
-    // 1. EXTRAÇÃO DE DADOS
-    let phone = "";
+    // 1. EXTRAÇÃO DE DADOS (NATURAL META ONLY)
+    const message = body.entry[0].changes[0].value.messages[0];
+    const phone = message.from;
     let messageText = "";
     let buttonId = "";
+    let buttonTitle = "";
 
-    // Diagnóstico de Entrada
-    if (body.object === 'whatsapp_business_account') {
-      const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-      if (message) {
-        phone = message.from;
-        if (message.type === 'text') messageText = message.text?.body;
-        if (message.type === 'interactive') buttonId = message.interactive?.button_reply?.id;
-      }
-    } else {
-      // Lógica ZapResponder (ajustada para pegar ID de botão mesmo com mensagem null)
-      phone = body.chatId || body.raw_message?.from;
-      messageText = body.message?.mensagem || body.raw_message?.content;
-      
-      // Se ZapResponder envia mensagem null mas tem button_id em algum lugar
-      buttonId = body.message?.button_id || body.raw_message?.button_id || null;
-      
-      // Heurística de segurança se o ZapResponder não mapear o ID mas enviar o payload
-      if (!buttonId && body.raw_message?.type === 'interactive') {
-         buttonId = body.raw_message?.interactive?.button_reply?.id;
-      }
+    if (message.type === 'text') {
+      messageText = message.text?.body;
+    }
+    
+    if (message.type === 'interactive') {
+      buttonId = message.interactive?.button_reply?.id;
+      buttonTitle = message.interactive?.button_reply?.title;
+      console.log('[INTERACTIVE_RECEIVED]', { buttonId, buttonTitle });
     }
 
     const user = phone; // Alias conforme solicitado no snippet
@@ -136,19 +135,37 @@ serve(async (req) => {
       }
     }
 
-    // Resposta para clique de botão (Diagnóstico)
+    // 3. ROUTER DE RESPOSTA (Diagnóstico)
     if (buttonId) {
+      let responseText = "";
+      
+      if (buttonId === 'empresa_btn') {
+        responseText = `[BTN_OK] Você escolheu: EMPRESA\nID: ${buttonId}\nTitle: ${buttonTitle}\nStatus: Transition OK`;
+      } else if (buttonId === 'associado_btn') {
+        responseText = `[BTN_OK] Você escolheu: ASSOCIADO\nID: ${buttonId}\nTitle: ${buttonTitle}\nStatus: Transition OK`;
+      } else {
+        responseText = `[BTN_UNKNOWN] Botão não reconhecido: ${buttonId}`;
+      }
+
+      console.log('[ROUTE_MATCH]', { buttonId, responseText });
+
       const payload = {
         messaging_product: 'whatsapp',
-        to: user,
+        to: phone,
         type: 'text',
-        text: { body: `[BTN_OK] ${buttonId}` }
+        text: { body: responseText }
       };
-      await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+
+      const res = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        headers: { 
+          Authorization: `Bearer ${TOKEN}`, 
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify(payload)
       });
+      
+      console.log('[BTN_RESPONSE_STATUS]', res.status);
     }
  
      return new Response("ok", { status: 200 });
