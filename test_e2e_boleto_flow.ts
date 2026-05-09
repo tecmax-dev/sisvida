@@ -8,10 +8,11 @@ const PHONE = "557388633535";
 const CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 async function callFlow(phone: string, message: string, action?: string) {
-  const response = await fetch(\`\${SUPABASE_URL}/functions/v1/boleto-whatsapp-flow\`, {
+  const url = SUPABASE_URL + "/functions/v1/boleto-whatsapp-flow";
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': \`Bearer \${SUPABASE_SERVICE_ROLE_KEY}\`,
+      'Authorization': 'Bearer ' + SUPABASE_SERVICE_ROLE_KEY,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
