@@ -27,6 +27,9 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const rawText = (message || "").trim();
+    const text = rawText.toLowerCase();
+    
     // 1. Obter ou criar sessão
     let { data: session } = await supabase
       .from('whatsapp_boleto_sessions')
@@ -74,9 +77,6 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     let responseText = "";
     let buttons: any[] = [];
-    
-    const rawText = (message || "").trim();
-    const text = rawText.toLowerCase();
     
     console.log('[NORMALIZED_ACTION]', text);
 
