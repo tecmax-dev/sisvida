@@ -124,14 +124,51 @@ serve(async (req) => {
       return res;
     };
 
-    // FLOW: MAIN MENU
-    if (isStart && !buttonId) {
-      await supabase.from('whatsapp_sessions').upsert({
-        phone: from,
-        state: 'MAIN_MENU',
-        updated_at: new Date().toISOString()
-      });
+    // CENTRALIZED STATE MACHINE
+    const transitions: Record<string, Record<string, string>> = {
+      'MAIN_MENU': {
+        'sind_empresa': 'EMPRESA_MENU',
+        'sind_associado': 'ASSOCIADO_FLOW',
+        'sind_contabilidade': 'CONTABILIDADE_FLOW'
+      },
+      'EMPRESA_MENU': {
+        'segunda_via_btn': 'SELECT_BOLETO_TYPE'
+      },
+      'SELECT_BOLETO_TYPE': {
+        'boleto_a_vencer': 'WAITING_CNPJ',
+        'boleto_vencido': 'WAITING_CNPJ'
+      }
+    };
 
+    const currentState = session?.state || 'MAIN_MENU';
+    const inputId = buttonId || msgText.toLowerCase();
+
+    console.log('[CURRENT_STATE]', currentState);
+    console.log('[BUTTON_ID]', inputId);
+    console.log('[AVAILABLE_TRANSITIONS]', transitions[currentState]);
+
+    let nextState = transitions[currentState]?.[inputId];
+    console.log('[NEXT_STATE]', nextState);
+
+    // ROUTING LOGIC
+    if (isStart && !buttonId) {
+      nextState = 'MAIN_MENU';
+    }
+
+    if (!nextState && currentState !== 'MAIN_MENU') {
+       // If no transition found and not in main menu, it might be a flow-specific input (like CNPJ)
+       // or we should show debug
+       if (currentState === 'WAITING_CNPJ') {
+         nextState = 'WAITING_CNPJ';
+       } else {
+         await sendMetaMessage({ type: 'text', text: { body: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${currentState}\nBotão: ${inputId}` } });
+         return new Response("ok", { status: 200 });
+       }
+    }
+
+    // EXECUTION
+    if (nextState === 'MAIN_MENU') {
+      await supabase.from('whatsapp_sessions').upsert({ phone: from, state: 'MAIN_MENU', updated_at: new Date().toISOString() });
       await sendMetaMessage({
         type: 'interactive',
         interactive: {
@@ -146,11 +183,22 @@ serve(async (req) => {
           }
         }
       });
-      return new Response("ok", { status: 200 });
-    }
-
-    // FLOW: EMPRESA (BOLETO)
-    if (buttonId === 'sind_empresa' || session?.state?.startsWith('BOLETO_')) {
+    } else if (nextState === 'EMPRESA_MENU') {
+      await supabase.from('whatsapp_sessions').upsert({ phone: from, state: 'EMPRESA_MENU', updated_at: new Date().toISOString() });
+      await sendMetaMessage({
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: 'Você selecionou *Sou Empresa*. Como podemos ajudar?' },
+          action: {
+            buttons: [
+              { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } }
+            ]
+          }
+        }
+      });
+    } else if (nextState === 'SELECT_BOLETO_TYPE' || nextState === 'WAITING_CNPJ' || currentState === 'EMPRESA_MENU' || currentState === 'SELECT_BOLETO_TYPE' || currentState === 'WAITING_CNPJ') {
+      // Delegate to boleto flow
       const boletoRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/boleto-whatsapp-flow`, {
         method: 'POST',
         headers: {
@@ -160,8 +208,8 @@ serve(async (req) => {
         body: JSON.stringify({
           clinic_id: SINDICATO_CLINIC_ID,
           phone: from,
-          message: buttonId || msgText,
-          action: buttonId === 'sind_empresa' ? 'start' : 'continue'
+          message: inputId,
+          action: inputId === 'segunda_via_btn' ? 'start' : 'continue'
         })
       });
 
@@ -183,41 +231,29 @@ serve(async (req) => {
           };
         }
         await sendMetaMessage(payload);
-        
-        await supabase.from('whatsapp_sessions').upsert({
-          phone: from,
-          state: 'BOLETO_' + (boletoData.newState || 'CONTINUE'),
-          updated_at: new Date().toISOString()
-        });
+        await supabase.from('whatsapp_sessions').upsert({ phone: from, state: boletoData.newState || nextState, updated_at: new Date().toISOString() });
       }
-      return new Response("ok", { status: 200 });
+    } else {
+      // Fallback to AI for Associado/Contabilidade
+      const aiRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          clinic_id: SINDICATO_CLINIC_ID,
+          phone: from,
+          message: inputId,
+          deliver_response_via_caller: true
+        })
+      });
+      const aiData = await aiRes.json();
+      if (aiData.response) {
+        await sendMetaMessage({ type: 'text', text: { body: aiData.response } });
+      }
+      await supabase.from('whatsapp_sessions').upsert({ phone: from, state: nextState || 'ASSOCIADO_FLOW', updated_at: new Date().toISOString() });
     }
-
-    // FLOW: ASSOCIADO / DEFAULT
-    const aiRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        clinic_id: SINDICATO_CLINIC_ID,
-        phone: from,
-        message: buttonId === 'sind_associado' ? 'menu' : msgText,
-        deliver_response_via_caller: true
-      })
-    });
-    
-    const aiData = await aiRes.json();
-    if (aiData.response) {
-      await sendMetaMessage({ type: 'text', text: { body: aiData.response } });
-    }
-
-    await supabase.from('whatsapp_sessions').upsert({
-      phone: from,
-      state: 'ASSOCIADO_FLOW',
-      updated_at: new Date().toISOString()
-    });
 
     return new Response("ok", { status: 200 });
 
