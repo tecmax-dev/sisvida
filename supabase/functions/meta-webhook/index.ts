@@ -93,7 +93,8 @@ serve(async (req) => {
       msgText = message.interactive?.button_reply?.title || "";
     }
 
-    console.log('[INCOMING]', { from, msgType, msgText, buttonId });
+    console.log('[TOPOLOGY_CHECK] Native Meta payload received');
+    console.log('[INCOMING]', { from, msgType, msgText, buttonId, version: HANDLER_VERSION });
 
     // 2. GESTÃO DE SESSÃO
     const { data: session } = await supabase
