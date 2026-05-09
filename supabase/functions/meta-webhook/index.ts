@@ -56,31 +56,21 @@ serve(async (req) => {
        return new Response("missing_creds", { status: 200 });
      }
  
-    // 1. EXTRAÇÃO DE DADOS
-    let phone = "";
+    // 1. EXTRAÇÃO DE DADOS (NATURAL META ONLY)
+    const message = body.entry[0].changes[0].value.messages[0];
+    const phone = message.from;
     let messageText = "";
     let buttonId = "";
+    let buttonTitle = "";
 
-    // Diagnóstico de Entrada
-    if (body.object === 'whatsapp_business_account') {
-      const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-      if (message) {
-        phone = message.from;
-        if (message.type === 'text') messageText = message.text?.body;
-        if (message.type === 'interactive') buttonId = message.interactive?.button_reply?.id;
-      }
-    } else {
-      // Lógica ZapResponder (ajustada para pegar ID de botão mesmo com mensagem null)
-      phone = body.chatId || body.raw_message?.from;
-      messageText = body.message?.mensagem || body.raw_message?.content;
-      
-      // Se ZapResponder envia mensagem null mas tem button_id em algum lugar
-      buttonId = body.message?.button_id || body.raw_message?.button_id || null;
-      
-      // Heurística de segurança se o ZapResponder não mapear o ID mas enviar o payload
-      if (!buttonId && body.raw_message?.type === 'interactive') {
-         buttonId = body.raw_message?.interactive?.button_reply?.id;
-      }
+    if (message.type === 'text') {
+      messageText = message.text?.body;
+    }
+    
+    if (message.type === 'interactive') {
+      buttonId = message.interactive?.button_reply?.id;
+      buttonTitle = message.interactive?.button_reply?.title;
+      console.log('[INTERACTIVE_RECEIVED]', { buttonId, buttonTitle });
     }
 
     const user = phone; // Alias conforme solicitado no snippet
