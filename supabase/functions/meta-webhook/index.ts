@@ -47,7 +47,8 @@ const corsHeaders = {
        const body = await req.json();
        console.log('[FULL_WEBHOOK_BODY]', JSON.stringify(body, null, 2));
 
-      const isNativeMeta = body.object === 'whatsapp_business_account' && body.entry?.[0]?.changes?.[0]?.value?.messages;
+      const isNativeMeta = body.object === 'whatsapp_business_account' && 
+                          (body.entry?.[0]?.changes?.[0]?.value?.messages || body.entry?.[0]?.changes?.[0]?.value?.statuses);
       const isZapResponder = body.raw_message || body.message;
 
       console.log('[TOPOLOGY_CHECK]', { 
