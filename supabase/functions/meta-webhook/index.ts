@@ -16,7 +16,8 @@ const corsHeaders = {
  
    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
  
-   const VERIFY_TOKEN = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "viva_as_associacoes_2024";
+   // Token hardcoded para garantir validação imediata enquanto secrets propagam
+   const VERIFY_TOKEN = "viva_as_associacoes_2024";
  
    // Verification for Meta Webhook setup
    if (req.method === "GET") {
