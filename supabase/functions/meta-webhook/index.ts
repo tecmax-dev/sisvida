@@ -131,9 +131,12 @@ serve(async (req) => {
         'sind_associado': 'ASSOCIADO_FLOW',
         'sind_contabilidade': 'CONTABILIDADE_FLOW'
       },
-      'EMPRESA_MENU': {
-        'segunda_via_btn': 'SELECT_BOLETO_TYPE'
-      },
+       'EMPRESA_MENU': {
+         'segunda_via_btn': 'SELECT_BOLETO_TYPE',
+         'empresa_convencoes': 'CONVENCOES_FLOW',
+         'empresa_homologacao': 'HOMOLOGACAO_FLOW',
+         'empresa_outros': 'OUTROS_FLOW'
+       },
       'SELECT_BOLETO_TYPE': {
         'boleto_a_vencer': 'WAITING_CNPJ',
         'boleto_vencido': 'WAITING_CNPJ'
@@ -212,20 +215,22 @@ serve(async (req) => {
       });
     };
 
-    const sendEmpresaMenu = async () => {
-      await sendMetaMessage({
-        type: 'interactive',
-        interactive: {
-          type: 'button',
-          body: { text: 'Você selecionou *Sou Empresa*. Como podemos ajudar?' },
-          action: {
-            buttons: [
-              { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } }
-            ]
-          }
-        }
-      });
-    };
+     const sendEmpresaMenu = async () => {
+       await sendMetaMessage({
+         type: 'interactive',
+         interactive: {
+           type: 'button',
+           body: { text: '🏢 *Menu Empresa*\n\nComo podemos ajudar sua empresa hoje?' },
+           action: {
+             buttons: [
+               { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } },
+               { type: 'reply', reply: { id: 'empresa_convencoes', title: 'Convenções' } },
+               { type: 'reply', reply: { id: 'empresa_homologacao', title: 'Homologação' } }
+             ]
+           }
+         }
+       });
+     };
 
     const delegateToBoletoFlow = async (action: 'start' | 'continue') => {
       const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/boleto-whatsapp-flow`, {
