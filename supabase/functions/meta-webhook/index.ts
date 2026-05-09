@@ -190,7 +190,7 @@ serve(async (req) => {
     const startingKeywords = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início'];
     if (startingKeywords.includes(inputId)) {
       nextState = 'MAIN_MENU';
-    } else if (!session) {
+    } else if (!sessionFound) {
       // Se não houver sessão e não for uma palavra-chave de início, 
       // verificamos se o inputId já resolve para um estado no MAIN_MENU
       nextState = transitions['MAIN_MENU']?.[inputId] || 'MAIN_MENU';
