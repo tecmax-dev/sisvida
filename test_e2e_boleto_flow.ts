@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = "";
+const SUPABASE_SERVICE_ROLE_KEY = "NOT_FOUND";
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const PHONE = "557388633535";
