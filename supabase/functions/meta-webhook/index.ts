@@ -96,11 +96,6 @@ serve(async (req) => {
       .eq('phone', from)
       .maybeSingle();
 
-    const isStart = msgText.toLowerCase().includes('oi') || 
-                   msgText.toLowerCase().includes('olá') || 
-                   msgText.toLowerCase().includes('menu') ||
-                   !session;
-
     const sendMetaMessage = async (messagePayload: any) => {
       // Usamos o recipient_phone_id dinâmico que veio no webhook
       const url = `https://graph.facebook.com/v22.0/${recipient_phone_id}/messages`;
@@ -151,30 +146,34 @@ serve(async (req) => {
 
     // 2. ROUTER (SINGLE)
     const currentState = session?.state || 'MAIN_MENU';
-    const buttonId = message.interactive?.button_reply?.id || "";
-    const inputId = buttonId || msgText.toLowerCase();
+    const inputId = buttonId || msgText.toLowerCase().trim();
 
+    // Mandatory logs
     console.log('[CURRENT_STATE]', currentState);
     console.log('[BUTTON_ID]', inputId);
-    console.log('[AVAILABLE_TRANSITIONS]', transitions[currentState]);
 
     let nextState = transitions[currentState]?.[inputId];
 
-    // Force reset on "oi/menu"
-    if (isStart && !buttonId) {
+    // Start logic: "oi" or "menu" or no session always goes to MAIN_MENU
+    const startingKeywords = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início'];
+    if (startingKeywords.includes(inputId) || !session) {
       nextState = 'MAIN_MENU';
     }
 
     console.log('[NEXT_STATE]', nextState);
 
-    // 3. FALLBACK PROTECTION
+    // 3. FALLBACK PROTECTION (NO AUTOMATIC FALLBACK)
     if (!nextState) {
-      // If we are in a state that expects free text (like WAITING_CNPJ), we stay there
-      if (currentState === 'WAITING_CNPJ') {
-        nextState = 'WAITING_CNPJ';
+      // Allow text input for specific states
+      const textInputStates = ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE'];
+      if (textInputStates.includes(currentState)) {
+        nextState = currentState;
       } else {
-        console.log('[TRANSITION_NOT_FOUND]', { currentState, inputId });
-        await sendMetaMessage({ type: 'text', text: { body: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${currentState}\nBotão: ${inputId}` } });
+        console.log('[DEBUG] TRANSITION_NOT_FOUND', { currentState, inputId });
+        await sendMetaMessage({ 
+          type: 'text', 
+          text: { body: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${currentState}\nBotão: ${inputId}` } 
+        });
         return new Response("ok", { status: 200 });
       }
     }
