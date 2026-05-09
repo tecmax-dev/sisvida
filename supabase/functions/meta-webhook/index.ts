@@ -270,12 +270,19 @@ serve(async (req) => {
 
     // 5. EXECUTION & PERSISTENCE
     let finalState = nextState;
+    
+    // Mandatory log before rendering
+    console.log('[MENU_RENDER]', nextState);
+
     if (nextState === 'MAIN_MENU') {
       await sendMainMenu();
     } else if (nextState === 'EMPRESA_MENU') {
       await sendEmpresaMenu();
     } else if (['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE'].includes(nextState)) {
-      const action = (inputId === 'segunda_via_btn' || inputId === 'sind_empresa') ? 'start' : 'continue';
+      // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU, it's a 'start' action
+      const isTransitionToBoleto = currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn';
+      const action = isTransitionToBoleto ? 'start' : 'continue';
+      
       finalState = await delegateToBoletoFlow(action);
     } else {
       await delegateToAI();
