@@ -36,19 +36,11 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-     const startingKeywords = ['start', 'whazing_sub_boleto', 'sind_empresa', 'sou empresa', 'empresa', 'oi', 'menu', 'olá', 'ola'];
-     const isStartAction = action === 'start' || (typeof message === 'string' && startingKeywords.includes(message.toLowerCase()));
-    console.log('[SESSION_LOOKUP]', {
-      phone,
-      sessionFound: !!session,
-      currentState: session?.state,
-      sessionId: session?.id,
-      isStartAction
-    });
+    const isStartAction = action === 'start';
 
-     if (!session || (isStartAction && session.state !== 'SELECT_BOLETO_TYPE')) {
-       console.log('[SESSION_INIT_OR_RESET]', 'Initializing or resetting to SELECT_BOLETO_TYPE');
-      const { data: newSession } = await supabase
+    if (!session) {
+      console.log('[SESSION_INIT]', 'Creating new session in SELECT_BOLETO_TYPE');
+      const { data: newSession, error: insertError } = await supabase
         .from('whatsapp_boleto_sessions')
         .insert({
           clinic_id,
@@ -60,11 +52,18 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         .single();
       
       if (newSession) {
-        console.log('[SESSION_SAVE_SUCCESS]', newSession.id);
         session = newSession;
       } else {
-        console.error('[SESSION_SAVE_FAILED]');
+        console.error('[SESSION_SAVE_FAILED]', insertError);
+        throw new Error("Could not create session");
       }
+    } else if (isStartAction) {
+      console.log('[SESSION_RESET]', 'Resetting existing session to SELECT_BOLETO_TYPE');
+      await supabase
+        .from('whatsapp_boleto_sessions')
+        .update({ state: 'SELECT_BOLETO_TYPE' })
+        .eq('id', session.id);
+      session.state = 'SELECT_BOLETO_TYPE';
     }
 
     if (!session) {
@@ -102,17 +101,36 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
        }
      };
 
-     console.log('[CURRENT_STATE]', session.state);
-     console.log('[BUTTON_ID]', text);
-     console.log('[AVAILABLE_TRANSITIONS]', transitions[session.state]);
+    // Mandatory logs
+    console.log('[CURRENT_STATE]', session.state);
+    console.log('[BUTTON_ID]', text);
 
-     let nextState = transitions[session.state]?.[text] || session.state;
+    let nextState = transitions[session.state]?.[text];
 
-     if (transitions[session.state] && transitions[session.state][text]) {
-       console.log('[NEXT_STATE]', nextState);
-     } else {
-       console.log('[TRANSITION_NOT_FOUND]', { state: session.state, input: text });
-     }
+    // Default behavior for text input states
+    if (!nextState) {
+      if (session.state === 'WAITING_CNPJ' || session.state === 'SELECT_CONTRIBUTION_TYPE') {
+        nextState = session.state;
+      }
+    }
+
+    console.log('[NEXT_STATE]', nextState);
+
+    // Fallback protection
+    if (!nextState && !isStartAction) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          response: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`, 
+          buttons: [],
+          newState: session.state 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Ensure we have a nextState even on start
+    if (!nextState) nextState = session.state;
 
      const forensicPrefix = `[FORENSIC_BOLETO] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
