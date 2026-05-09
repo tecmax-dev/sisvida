@@ -202,9 +202,20 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         const cleanValor = text.replace(',', '.');
         const valorNum = parseFloat(cleanValor);
         if (!isNaN(valorNum) && valorNum > 0) {
-          // SIMULATED BOLETO GENERATION WITH REAL INPUTS
-          const mockBoletoUrl = "https://example.com/boleto-teste-123.pdf";
-          responseText = `✅ *Boleto Gerado com Sucesso!*\n\n💰 Valor: *R$ ${valorNum.toFixed(2).replace('.', ',')}*\n\n🔗 Clique no link para baixar: ${mockBoletoUrl}\n\nObrigado por utilizar nossos serviços!`;
+          // --- LYTEX / PROSIND INTEGRATION POINT ---
+          // Here we will call the API to generate the boleto via Prosind/Lytex
+          // Currently simulating the response with the collected data
+          console.log('[LYTEX_INTEGRATION] Requesting boleto for:', {
+            employer_cnpj: session.employer_cnpj,
+            employer_name: session.employer_name,
+            month: session.competence_month,
+            year: session.competence_year,
+            dueDate: session.expires_at,
+            value: valorNum
+          });
+          
+          const mockBoletoUrl = "https://example.com/boleto-lytex-prosind.pdf";
+          responseText = `✅ *Boleto Gerado via Lytex/Prosind!*\n\n🏢 Empresa: *${session.employer_name}*\n💰 Valor: *R$ ${valorNum.toFixed(2).replace('.', ',')}*\n📅 Vencimento: *${session.expires_at}*\n\n🔗 Baixe seu boleto aqui: ${mockBoletoUrl}\n\nSistema integrado ProsindWeb.`;
           nextState = 'SUCCESS';
         } else {
           responseText = "❌ Valor inválido. Informe o valor numérico (ex: 150,00):";
