@@ -110,7 +110,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
     // Text input states persistence (allow state to persist while waiting for text)
-    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO'];
+    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO', 'CONFIRM_DATA'];
     if (!nextState && textInputStates.includes(session.state)) {
       nextState = session.state;
     }
