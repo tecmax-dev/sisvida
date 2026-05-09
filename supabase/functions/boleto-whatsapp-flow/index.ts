@@ -98,6 +98,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       'SELECT_CONTRIBUTION_TYPE': {
         'boleto_type_1': 'WAITING_PERIODO',
         'boleto_type_2': 'WAITING_PERIODO'
+      },
+      'CONFIRM_DATA': {
+        'data_sim': 'SUCCESS',
+        'data_nao': 'SELECT_BOLETO_TYPE'
       }
      };
 
@@ -110,7 +114,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
     // Text input states persistence (allow state to persist while waiting for text)
-    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO'];
+    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO', 'CONFIRM_DATA'];
     if (!nextState && textInputStates.includes(session.state)) {
       nextState = session.state;
     }
@@ -202,25 +206,29 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         const cleanValor = text.replace(',', '.');
         const valorNum = parseFloat(cleanValor);
         if (!isNaN(valorNum) && valorNum > 0) {
-          // --- LYTEX / PROSIND INTEGRATION POINT ---
-          // Here we will call the API to generate the boleto via Prosind/Lytex
-          // Currently simulating the response with the collected data
-          console.log('[LYTEX_INTEGRATION] Requesting boleto for:', {
-            employer_cnpj: session.employer_cnpj,
-            employer_name: session.employer_name,
-            month: session.competence_month,
-            year: session.competence_year,
-            dueDate: session.expires_at,
-            value: valorNum
-          });
+          const formattedValor = valorNum.toFixed(2).replace('.', ',');
+          const competencia = `${String(session.competence_month).padStart(2, '0')}/${session.competence_year}`;
           
-          const mockBoletoUrl = "https://example.com/boleto-lytex-prosind.pdf";
-          responseText = `✅ *Boleto Gerado via Lytex/Prosind!*\n\n🏢 Empresa: *${session.employer_name}*\n💰 Valor: *R$ ${valorNum.toFixed(2).replace('.', ',')}*\n📅 Vencimento: *${session.expires_at}*\n\n🔗 Baixe seu boleto aqui: ${mockBoletoUrl}\n\nSistema integrado ProsindWeb.`;
-          nextState = 'SUCCESS';
+          responseText = `🔍 *Confirmação de Dados*\n\n🏢 Empresa: *${session.employer_name}*\n📅 Competência: *${competencia}*\n📅 Vencimento: *${session.expires_at}*\n💰 Valor: *R$ ${formattedValor}*\n\nOs dados estão corretos?`;
+          buttons = [
+            { id: 'data_sim', title: '✅ Sim' },
+            { id: 'data_nao', title: '❌ Não, Recomeçar' }
+          ];
+          nextState = 'CONFIRM_DATA';
         } else {
           responseText = "❌ Valor inválido. Informe o valor numérico (ex: 150,00):";
           nextState = 'WAITING_VALOR';
         }
+     } else if (session.state === 'CONFIRM_DATA') {
+       if (text === 'data_sim') {
+          // --- LYTEX / PROSIND INTEGRATION POINT ---
+          const mockBoletoUrl = "https://example.com/boleto-lytex-prosind.pdf";
+          responseText = `✅ *Boleto Gerado via Lytex/Prosind!*\n\n🔗 Baixe seu boleto aqui: ${mockBoletoUrl}\n\nSistema integrado ProsindWeb.`;
+          nextState = 'SUCCESS';
+       } else {
+          responseText = "Entendido. Vamos recomeçar o processo do boleto.";
+          nextState = 'SELECT_BOLETO_TYPE';
+       }
      } else if (session.state === 'SUCCESS') {
        // Reset flow if user types anything after success
        responseText = "Vou te ajudar com um novo boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
