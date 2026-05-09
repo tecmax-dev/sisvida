@@ -319,14 +319,12 @@ serve(async (req) => {
         { onConflict: 'phone' }
       );
 
-    if (saveError) {
-      console.error('[SESSION_SAVE_ERROR]', saveError);
-    } else {
-      console.log('[SESSION_SAVE_SUCCESS]', {
-        phone: normalizedPhone,
-        savedState: finalState
-      });
-    }
+    console.log('[SESSION_SAVE_RESULT]', {
+      phone: normalizedPhone,
+      savedState: finalState,
+      error: saveError ? saveError.message : null,
+      success: !saveError
+    });
 
     return new Response("ok", { status: 200 });
 
