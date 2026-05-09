@@ -38,7 +38,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .maybeSingle();
 
     const isNewSession = !session;
-    const isStartAction = action === 'start';
+    const isStartAction = action === 'start' || text === 'recomeçar' || text === 'inicio';
     
     if (isNewSession || isStartAction) {
       console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
@@ -188,7 +188,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         if (periodRegex.test(text)) {
           responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
           nextState = 'WAITING_VENCIMENTO';
-          await supabase.from('whatsapp_boleto_sessions').update({ competence_month: parseInt(text.split('/')[0]), competence_year: parseInt(text.split('/')[1]) }).eq('id', session.id);
+          await supabase.from('whatsapp_boleto_sessions').update({ 
+            competence_month: parseInt(text.split('/')[0]), 
+            competence_year: parseInt(text.split('/')[1]) 
+          }).eq('id', session.id);
         } else {
           responseText = "❌ Formato inválido. Informe o período como MM/AAAA (ex: 05/2026):";
         }
@@ -197,7 +200,15 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         if (dateRegex.test(text)) {
           responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
           nextState = 'WAITING_VALOR';
-          await supabase.from('whatsapp_boleto_sessions').update({ expires_at: text }).eq('id', session.id); // Reusing expires_at temporarily or adding value col
+          // Store the due date in a temporary field if possible, or just keep it in memory for the next response
+          // Since we are stateless between requests (mostly), we use the DB.
+          // 'expires_at' in the table seems to be a TIMESTAMP, but we are storing "10/06/2026"
+          // The previous logs showed: expires_at:2026-10-06 00:00:00+00
+          const [d, m, y] = text.split('/');
+          const isoDate = `${y}-${m}-${d}T12:00:00Z`;
+          await supabase.from('whatsapp_boleto_sessions').update({ 
+            new_due_date: isoDate 
+          }).eq('id', session.id);
         } else {
           responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
           nextState = 'WAITING_VENCIMENTO';
@@ -206,10 +217,19 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         const cleanValor = text.replace(',', '.');
         const valorNum = parseFloat(cleanValor);
         if (!isNaN(valorNum) && valorNum > 0) {
-          const formattedValor = valorNum.toFixed(2).replace('.', ',');
+          const valorCents = Math.round(valorNum * 100);
+          await supabase.from('whatsapp_boleto_sessions').update({ 
+            value_cents: valorCents 
+          }).eq('id', session.id);
+          
+          const formattedValor = valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
           const competencia = `${String(session.competence_month).padStart(2, '0')}/${session.competence_year}`;
           
-          responseText = `🔍 *Confirmação de Dados*\n\n🏢 Empresa: *${session.employer_name}*\n📅 Competência: *${competencia}*\n📅 Vencimento: *${session.expires_at}*\n💰 Valor: *R$ ${formattedValor}*\n\nOs dados estão corretos?`;
+          // Get the due date from the session (we just saved it in nextState logic above, but session variable is old)
+          const { data: updatedSession } = await supabase.from('whatsapp_boleto_sessions').select('new_due_date').eq('id', session.id).single();
+          const displayDate = updatedSession?.new_due_date ? new Date(updatedSession.new_due_date).toLocaleDateString('pt-BR') : 'Não informada';
+
+          responseText = `🔍 *Confirmação de Dados*\n\n🏢 Empresa: *${session.employer_name}*\n📅 Competência: *${competencia}*\n📅 Vencimento: *${displayDate}*\n💰 Valor: *R$ ${formattedValor}*\n\nOs dados estão corretos?`;
           buttons = [
             { id: 'data_sim', title: '✅ Sim' },
             { id: 'data_nao', title: '❌ Não, Recomeçar' }
@@ -219,16 +239,50 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           responseText = "❌ Valor inválido. Informe o valor numérico (ex: 150,00):";
           nextState = 'WAITING_VALOR';
         }
-     } else if (session.state === 'CONFIRM_DATA') {
-       if (text === 'data_sim') {
-          // --- LYTEX / PROSIND INTEGRATION POINT ---
-          const mockBoletoUrl = "https://example.com/boleto-lytex-prosind.pdf";
-          responseText = `✅ *Boleto Gerado via Lytex/Prosind!*\n\n🔗 Baixe seu boleto aqui: ${mockBoletoUrl}\n\nSistema integrado ProsindWeb.`;
-          nextState = 'SUCCESS';
-       } else {
-          responseText = "Entendido. Vamos recomeçar o processo do boleto.";
-          nextState = 'SELECT_BOLETO_TYPE';
-       }
+    } else if (session.state === 'CONFIRM_DATA') {
+      if (text === 'data_sim') {
+        console.log('[LYTEX_INTEGRATION] Calling lytex-api for', session.employer_cnpj);
+        
+        try {
+          const { data: finalSession } = await supabase.from('whatsapp_boleto_sessions').select('*').eq('id', session.id).single();
+          
+          const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`
+            },
+            body: JSON.stringify({
+              action: 'createInvoice',
+              clientName: finalSession.employer_name,
+              clientDocument: finalSession.employer_cnpj,
+              value: finalSession.value_cents,
+              valueIsInCents: true,
+              dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+              description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`
+            })
+          });
+
+          const lytexData = await lytexResponse.json();
+          console.log('[LYTEX_API_RESPONSE]', lytexData);
+
+          if (lytexData.success && lytexData.invoice) {
+            const invoiceUrl = lytexData.invoice.linkBoleto || lytexData.invoice.invoiceUrl || lytexData.invoice.linkCheckout;
+            responseText = `✅ *Boleto Gerado com Sucesso!*\n\n🔗 *Link do Boleto:* ${invoiceUrl}\n\nSistema integrado Lytex/ProsindWeb.`;
+          } else {
+            console.error('[LYTEX_FAILURE]', lytexData);
+            responseText = `❌ *Erro ao gerar boleto na Lytex*\n\nDetalhe: ${lytexData.error || 'Erro desconhecido'}\n\nPor favor, tente novamente mais tarde ou entre em contato com o suporte.`;
+          }
+        } catch (e) {
+          console.error('[LYTEX_INTEGRATION_CRITICAL_ERROR]', e);
+          responseText = "❌ Desculpe, ocorreu um erro técnico ao processar sua solicitação com a Lytex. Por favor, tente novamente em instantes.";
+        }
+        
+        nextState = 'SUCCESS';
+      } else {
+        responseText = "Entendido. Vamos recomeçar o processo do boleto.";
+        nextState = 'SELECT_BOLETO_TYPE';
+      }
      } else if (session.state === 'SUCCESS') {
        // Reset flow if user types anything after success
        responseText = "Vou te ajudar com um novo boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
