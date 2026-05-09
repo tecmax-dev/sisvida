@@ -129,8 +129,23 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       );
     }
 
-    // Ensure we have a nextState even on start
-    if (!nextState) nextState = session.state;
+    // If it's a start action, we stay in the initial state to show its view
+    if (isStartAction) {
+      nextState = 'SELECT_BOLETO_TYPE';
+    }
+
+    // If still no nextState, it's a dead end
+    if (!nextState) {
+       return new Response(
+        JSON.stringify({ 
+          success: true, 
+          response: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`, 
+          buttons: [],
+          newState: session.state 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
      const forensicPrefix = `[FORENSIC_BOLETO] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
