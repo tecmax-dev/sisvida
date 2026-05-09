@@ -308,20 +308,23 @@ serve(async (req) => {
       nextState: finalState
     });
 
-    const { error: saveError } = await supabase.from('whatsapp_sessions').upsert({
-      phone: normalizedPhone,
-      state: finalState,
-      updated_at: new Date().toISOString()
-    });
+    const { error: saveError } = await supabase
+      .from('whatsapp_sessions')
+      .upsert(
+        {
+          phone: normalizedPhone,
+          state: finalState,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'phone' }
+      );
 
-    if (saveError) {
-      console.error('[SESSION_SAVE_ERROR]', saveError);
-    } else {
-      console.log('[SESSION_SAVE_SUCCESS]', {
-        phone: normalizedPhone,
-        savedState: finalState
-      });
-    }
+    console.log('[SESSION_SAVE_RESULT]', {
+      phone: normalizedPhone,
+      savedState: finalState,
+      error: saveError ? saveError.message : null,
+      success: !saveError
+    });
 
     return new Response("ok", { status: 200 });
 
