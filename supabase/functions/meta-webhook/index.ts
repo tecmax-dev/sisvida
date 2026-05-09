@@ -30,9 +30,18 @@ serve(async (req) => {
   }
 
    try {
-     const body = await req.json();
-     console.log('[WEBHOOK_RECEIVED]', new Date().toISOString());
-     console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
+      const body = await req.json();
+      console.log('[FULL_WEBHOOK_BODY]', JSON.stringify(body, null, 2));
+      
+      // BLOQUEIO DE SEGURANÇA: Se o payload não tiver a estrutura nativa da Meta, interromper processamento.
+      const isNativeMeta = body.object === 'whatsapp_business_account' && body.entry?.[0]?.changes?.[0]?.value?.messages;
+      
+      if (!isNativeMeta) {
+        console.log('[FATAL_ERROR] Webhook NÃO é nativo da Meta. Estrutura detectada:', Object.keys(body));
+        // Se quiser ver o que está chegando no ZapResponder, o log FULL_WEBHOOK_BODY acima já mostra.
+        // Mas não processamos nada que não seja nativo.
+        return new Response("Unauthorized: Non-native Meta payload", { status: 403 });
+      }
  
      const supabase = createClient(
        Deno.env.get('SUPABASE_URL') ?? '',
