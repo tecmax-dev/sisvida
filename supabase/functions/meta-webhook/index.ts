@@ -135,19 +135,37 @@ serve(async (req) => {
       }
     }
 
-    // Resposta para clique de botão (Diagnóstico)
+    // 3. ROUTER DE RESPOSTA (Diagnóstico)
     if (buttonId) {
+      let responseText = "";
+      
+      if (buttonId === 'empresa_btn') {
+        responseText = `[BTN_OK] Você escolheu: EMPRESA\nID: ${buttonId}\nTitle: ${buttonTitle}\nStatus: Transition OK`;
+      } else if (buttonId === 'associado_btn') {
+        responseText = `[BTN_OK] Você escolheu: ASSOCIADO\nID: ${buttonId}\nTitle: ${buttonTitle}\nStatus: Transition OK`;
+      } else {
+        responseText = `[BTN_UNKNOWN] Botão não reconhecido: ${buttonId}`;
+      }
+
+      console.log('[ROUTE_MATCH]', { buttonId, responseText });
+
       const payload = {
         messaging_product: 'whatsapp',
-        to: user,
+        to: phone,
         type: 'text',
-        text: { body: `[BTN_OK] ${buttonId}` }
+        text: { body: responseText }
       };
-      await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+
+      const res = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        headers: { 
+          Authorization: `Bearer ${TOKEN}`, 
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify(payload)
       });
+      
+      console.log('[BTN_RESPONSE_STATUS]', res.status);
     }
  
      return new Response("ok", { status: 200 });
