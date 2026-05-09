@@ -128,8 +128,13 @@ serve(async (req) => {
     const transitions: Record<string, Record<string, string>> = {
       'MAIN_MENU': {
         'sind_empresa': 'EMPRESA_MENU',
-        'sind_associado': 'ASSOCIADO_FLOW',
+        'sind_associado': 'ASSOCIADO_MENU',
         'sind_contabilidade': 'CONTABILIDADE_FLOW'
+      },
+      'ASSOCIADO_MENU': {
+        'ass_carteirinha': 'CARTEIRINHA_FLOW',
+        'ass_convenios': 'CONVENIOS_FLOW',
+        'ass_atendimento': 'ATENDIMENTO_FLOW'
       },
        'EMPRESA_MENU': {
          'segunda_via_btn': 'SELECT_BOLETO_TYPE',
@@ -215,22 +220,39 @@ serve(async (req) => {
       });
     };
 
-     const sendEmpresaMenu = async () => {
-       await sendMetaMessage({
-         type: 'interactive',
-         interactive: {
-           type: 'button',
-           body: { text: '🏢 *Menu Empresa*\n\nComo podemos ajudar sua empresa hoje?' },
-           action: {
-             buttons: [
-               { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } },
-               { type: 'reply', reply: { id: 'empresa_convencoes', title: 'Convenções' } },
-               { type: 'reply', reply: { id: 'empresa_homologacao', title: 'Homologação' } }
-             ]
-           }
-         }
-       });
-     };
+    const sendAssociadoMenu = async () => {
+      await sendMetaMessage({
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: '👤 *Menu Associado*\n\nComo podemos ajudar você hoje?' },
+          action: {
+            buttons: [
+              { type: 'reply', reply: { id: 'ass_carteirinha', title: 'Carteirinha' } },
+              { type: 'reply', reply: { id: 'ass_convenios', title: 'Convênios' } },
+              { type: 'reply', reply: { id: 'ass_atendimento', title: 'Atendimento' } }
+            ]
+          }
+        }
+      });
+    };
+
+    const sendEmpresaMenu = async () => {
+      await sendMetaMessage({
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: '🏢 *Menu Empresa*\n\nComo podemos ajudar sua empresa hoje?' },
+          action: {
+            buttons: [
+              { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } },
+              { type: 'reply', reply: { id: 'empresa_convencoes', title: 'Convenções' } },
+              { type: 'reply', reply: { id: 'empresa_homologacao', title: 'Homologação' } }
+            ]
+          }
+        }
+      });
+    };
 
     const delegateToBoletoFlow = async (action: 'start' | 'continue') => {
       const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/boleto-whatsapp-flow`, {
@@ -297,6 +319,8 @@ serve(async (req) => {
 
     if (nextState === 'MAIN_MENU') {
       await sendMainMenu();
+    } else if (nextState === 'ASSOCIADO_MENU') {
+      await sendAssociadoMenu();
     } else if (nextState === 'EMPRESA_MENU') {
       await sendEmpresaMenu();
     } else if (['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA', 'SUCCESS'].includes(nextState)) {
