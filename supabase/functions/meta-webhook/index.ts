@@ -136,6 +136,14 @@ serve(async (req) => {
         'ass_convenios': 'CONVENIOS_FLOW',
         'ass_atendimento': 'ATENDIMENTO_FLOW'
       },
+      'CARTEIRINHA_FLOW': {},
+      'CONVENIOS_FLOW': {},
+      'ATENDIMENTO_FLOW': {},
+      'CONVENCOES_FLOW': {},
+      'HOMOLOGACAO_FLOW': {},
+      'OUTROS_FLOW': {},
+      'CONTABILIDADE_FLOW': {},
+      'ASSOCIADO_FLOW': {},
        'EMPRESA_MENU': {
          'segunda_via_btn': 'SELECT_BOLETO_TYPE',
          'empresa_convencoes': 'CONVENCOES_FLOW',
@@ -325,13 +333,15 @@ serve(async (req) => {
     // Mandatory log before rendering
     console.log('[MENU_RENDER]', nextState);
 
+    const isBoletoState = (state: string) => ['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA', 'SUCCESS'].includes(state);
+
     if (nextState === 'MAIN_MENU') {
       await sendMainMenu();
     } else if (nextState === 'ASSOCIADO_MENU') {
       await sendAssociadoMenu();
     } else if (nextState === 'EMPRESA_MENU') {
       await sendEmpresaMenu();
-    } else if (['SELECT_BOLETO_TYPE', 'WAITING_CNPJ', 'CONFIRM_EMPLOYER', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA', 'SUCCESS'].includes(nextState)) {
+    } else if (isBoletoState(nextState)) {
       // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU, it's a 'start' action
       const isTransitionToBoleto = currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn';
       const action = isTransitionToBoleto ? 'start' : 'continue';
