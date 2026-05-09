@@ -191,9 +191,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       } else if (session.state === 'WAITING_VENCIMENTO') {
         const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
         if (dateRegex.test(text)) {
-          responseText = "✅ Tudo pronto! Gerando seu boleto...\n\nAguarde um instante.";
+          // SIMULATED BOLETO GENERATION
+          const mockBoletoUrl = "https://example.com/boleto-teste-123.pdf";
+          responseText = `✅ *Boleto Gerado com Sucesso!*\n\n📅 Vencimento: *${text}*\n💰 Valor: *R$ 150,00*\n\n🔗 Clique no link para baixar: ${mockBoletoUrl}\n\nObrigado por utilizar nossos serviços!`;
           nextState = 'SUCCESS';
-          // In a real scenario, here we would call Lytex/Boleto generation
         } else {
           responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
         }
