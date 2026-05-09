@@ -146,7 +146,6 @@ serve(async (req) => {
 
     // 2. ROUTER (SINGLE)
     const currentState = session?.state || 'MAIN_MENU';
-    const buttonId = message.interactive?.button_reply?.id || "";
     const inputId = buttonId || msgText.toLowerCase().trim();
 
     // Mandatory logs
