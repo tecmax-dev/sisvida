@@ -31,16 +31,29 @@ serve(async (req) => {
 
    try {
       const body = await req.json();
+      
+      // Log headers for topology identification
+      const headersObj: Record<string, string> = {};
+      req.headers.forEach((value, key) => {
+        headersObj[key] = value;
+      });
+
+      console.log('[DEBUG_HEADERS]', JSON.stringify(headersObj, null, 2));
       console.log('[FULL_WEBHOOK_BODY]', JSON.stringify(body, null, 2));
-      
-      // BLOQUEIO DE SEGURANÇA: Se o payload não tiver a estrutura nativa da Meta, interromper processamento.
+
       const isNativeMeta = body.object === 'whatsapp_business_account' && body.entry?.[0]?.changes?.[0]?.value?.messages;
-      
-      if (!isNativeMeta) {
-        console.log('[FATAL_ERROR] Webhook NÃO é nativo da Meta. Estrutura detectada:', Object.keys(body));
-        // Se quiser ver o que está chegando no ZapResponder, o log FULL_WEBHOOK_BODY acima já mostra.
-        // Mas não processamos nada que não seja nativo.
-        return new Response("Unauthorized: Non-native Meta payload", { status: 403 });
+      const isZapResponder = body.raw_message || body.message;
+
+      console.log('[TOPOLOGY_CHECK]', { 
+        isNativeMeta, 
+        isZapResponder,
+        detectedKeys: Object.keys(body)
+      });
+
+      // TEMPORARY: Allow both to allow diagnosis
+      if (!isNativeMeta && !isZapResponder) {
+        console.log('[FATAL_ERROR] Webhook source unknown.');
+        return new Response("Unknown source", { status: 403 });
       }
  
      const supabase = createClient(
