@@ -196,6 +196,10 @@ serve(async (req) => {
       const textInputStates = ['WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA'];
       if (textInputStates.includes(currentState)) {
         nextState = currentState;
+      } else if (currentState === 'ASSOCIADO_MENU' || currentState === 'EMPRESA_MENU') {
+        // Se estivermos em um submenu e o input não for mapeado, tratamos como uma conversa com a IA
+        // e mantemos o estado atual para que o usuário continue no submenu se desejar
+        nextState = currentState;
       } else {
         console.log('[DEBUG] TRANSITION_NOT_FOUND', { currentState, inputId });
         await sendMetaMessage({ 
