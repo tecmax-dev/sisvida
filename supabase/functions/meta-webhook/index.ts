@@ -180,8 +180,12 @@ serve(async (req) => {
 
     // Start logic: "oi" or "menu" or no session always goes to MAIN_MENU
     const startingKeywords = ['oi', 'olá', 'ola', 'menu', 'inicio', 'início'];
-    if (startingKeywords.includes(inputId) || !session) {
+    if (startingKeywords.includes(inputId)) {
       nextState = 'MAIN_MENU';
+    } else if (!session) {
+      // Se não houver sessão e não for uma palavra-chave de início, 
+      // verificamos se o inputId já resolve para um estado no MAIN_MENU
+      nextState = transitions['MAIN_MENU']?.[inputId] || 'MAIN_MENU';
     }
 
     console.log('[NEXT_STATE]', nextState);
