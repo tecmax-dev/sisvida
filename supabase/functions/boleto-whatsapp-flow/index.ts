@@ -33,37 +33,34 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .select('*')
       .eq('clinic_id', clinic_id)
       .eq('phone', phone)
-      .gt('expires_at', new Date().toISOString())
+      // Removed expiration check for debugging/stability
+      // .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
+    const isNewSession = !session;
     const isStartAction = action === 'start';
-
-    if (!session) {
-      console.log('[SESSION_INIT]', 'Creating new session in SELECT_BOLETO_TYPE');
-      const { data: newSession, error: insertError } = await supabase
+    
+    if (isNewSession || isStartAction) {
+      console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
+      const newState = 'SELECT_BOLETO_TYPE';
+      
+      const { data: updatedSession, error: upsertError } = await supabase
         .from('whatsapp_boleto_sessions')
-        .insert({
+        .upsert({
           clinic_id,
           phone,
-          state: 'SELECT_BOLETO_TYPE',
+          state: newState,
           expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        })
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'clinic_id,phone' })
         .select()
         .single();
-      
-      if (newSession) {
-        session = newSession;
-      } else {
-        console.error('[SESSION_SAVE_FAILED]', insertError);
-        throw new Error("Could not create session");
+
+      if (upsertError) {
+        console.error('[SESSION_UPSERT_FAILED]', upsertError);
+        throw new Error("Session persistence failed");
       }
-    } else if (isStartAction) {
-      console.log('[SESSION_RESET]', 'Resetting existing session to SELECT_BOLETO_TYPE');
-      await supabase
-        .from('whatsapp_boleto_sessions')
-        .update({ state: 'SELECT_BOLETO_TYPE' })
-        .eq('id', session.id);
-      session.state = 'SELECT_BOLETO_TYPE';
+      session = updatedSession;
     }
 
     if (!session) {
@@ -94,57 +91,42 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          'boleto_a_vencer': 'WAITING_CNPJ',
          'boleto_vencido': 'WAITING_CNPJ'
        },
-       'CONFIRM_EMPLOYER': {
-         'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
-         'boleto_nao': 'WAITING_CNPJ'
-       }
+      'CONFIRM_EMPLOYER': {
+        'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
+        'boleto_nao': 'WAITING_CNPJ'
+      },
+      'SELECT_CONTRIBUTION_TYPE': {
+        'boleto_type_1': 'WAITING_PERIODO',
+        'boleto_type_2': 'WAITING_PERIODO'
+      }
      };
 
-    // Mandatory logs
-    console.log('[CURRENT_STATE]', session.state);
-    console.log('[BUTTON_ID]', text);
+    // --- ROUTER ---
+    console.log('[ROUTER_INPUT]', { state: session.state, input: text });
+    
+    let nextState = transitions[session.state]?.[text] || null;
 
-    let nextState = transitions[session.state]?.[text];
+    // Start logic override
+    if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
-    // Default behavior for text input states
-    if (!nextState) {
-      if (session.state === 'WAITING_CNPJ' || session.state === 'SELECT_CONTRIBUTION_TYPE') {
-        nextState = session.state;
-      }
+    // Text input states persistence (allow state to persist while waiting for text)
+    const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_CONTRIBUICAO'];
+    if (!nextState && textInputStates.includes(session.state)) {
+      nextState = session.state;
     }
 
     console.log('[NEXT_STATE]', nextState);
 
-    // Fallback protection
-    if (!nextState && !isStartAction) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          response: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`, 
-          buttons: [],
-          newState: session.state 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // If it's a start action, we stay in the initial state to show its view
-    if (isStartAction) {
-      nextState = 'SELECT_BOLETO_TYPE';
-    }
-
-    // If still no nextState, it's a dead end
+    // 3. TRANSITION ERROR (NO STATE FOUND)
     if (!nextState) {
-       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          response: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`, 
-          buttons: [],
-          newState: session.state 
-        }),
+      const errorMsg = `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${session.state}\nBotão: ${text}`;
+      return new Response(
+        JSON.stringify({ success: true, response: errorMsg, buttons: [], newState: session.state }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // 4. VIEWS / RENDERERS
 
      const forensicPrefix = `[FORENSIC_BOLETO] ${session.state} -> ${nextState} | Input: "${text}"\n\n`;
 
@@ -195,20 +177,26 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       // Caso onde clicou no botão mas não foi mapeado acima
       responseText = "Ok, vamos tentar outro CNPJ. Por favor, digite o CNPJ correto:";
       nextState = 'WAITING_CNPJ';
-    } else if (session.state === 'SELECT_CONTRIBUTION_TYPE') {
-      // Próximo passo após selecionar tipo de contribuição
-      if (text.includes('type_1') || text === '1' || text.includes('mensalidade')) {
-        responseText = "🔍 Buscando boletos de *Mensalidade*...\n\nAguarde um instante.";
-        // Aqui entraria a lógica de busca real
-      } else if (text.includes('type_2') || text === '2' || text.includes('taxa')) {
-        responseText = "🔍 Buscando boletos de *Taxa Negocial*...\n\nAguarde um instante.";
-      } else {
-        responseText = "Por favor, selecione o tipo de contribuição:";
-        buttons = [
-          { id: 'boleto_type_1', title: 'Mensalidade' },
-          { id: 'boleto_type_2', title: 'Taxa' }
-        ];
-      }
+      } else if (nextState === 'WAITING_PERIODO' && session.state === 'SELECT_CONTRIBUTION_TYPE') {
+        responseText = "📅 Informe o *período* do boleto (ex: 05/2026):";
+      } else if (session.state === 'WAITING_PERIODO') {
+        const periodRegex = /^(0[1-9]|1[0-2])\/\d{4}$/;
+        if (periodRegex.test(text)) {
+          responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
+          nextState = 'WAITING_VENCIMENTO';
+          await supabase.from('whatsapp_boleto_sessions').update({ competence_month: parseInt(text.split('/')[0]), competence_year: parseInt(text.split('/')[1]) }).eq('id', session.id);
+        } else {
+          responseText = "❌ Formato inválido. Informe o período como MM/AAAA (ex: 05/2026):";
+        }
+      } else if (session.state === 'WAITING_VENCIMENTO') {
+        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+        if (dateRegex.test(text)) {
+          responseText = "✅ Tudo pronto! Gerando seu boleto...\n\nAguarde um instante.";
+          nextState = 'SUCCESS';
+          // In a real scenario, here we would call Lytex/Boleto generation
+        } else {
+          responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
+        }
      } else {
        // SE NÃO EXISTIR TRANSIÇÃO: APENAS DEBUG
        if (nextState === session.state && !responseText) {
