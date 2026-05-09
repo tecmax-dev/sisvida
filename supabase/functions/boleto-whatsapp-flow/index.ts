@@ -197,7 +197,16 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           nextState = 'SUCCESS';
         } else {
           responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
+          nextState = 'WAITING_VENCIMENTO';
         }
+     } else if (session.state === 'SUCCESS') {
+       // Reset flow if user types anything after success
+       responseText = "Vou te ajudar com um novo boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
+       buttons = [
+         { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
+         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+       ];
+       nextState = 'SELECT_BOLETO_TYPE';
      } else {
        // SE NÃO EXISTIR TRANSIÇÃO: APENAS DEBUG
        if (nextState === session.state && !responseText) {
