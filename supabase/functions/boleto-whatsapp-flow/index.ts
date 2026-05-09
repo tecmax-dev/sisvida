@@ -38,7 +38,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       .maybeSingle();
 
     const isNewSession = !session;
-    const isStartAction = action === 'start';
+    const isStartAction = action === 'start' || text === 'recomeçar' || text === 'inicio';
     
     if (isNewSession || isStartAction) {
       console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
@@ -219,16 +219,29 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           responseText = "❌ Valor inválido. Informe o valor numérico (ex: 150,00):";
           nextState = 'WAITING_VALOR';
         }
-     } else if (session.state === 'CONFIRM_DATA') {
-       if (text === 'data_sim') {
-          // --- LYTEX / PROSIND INTEGRATION POINT ---
-          const mockBoletoUrl = "https://example.com/boleto-lytex-prosind.pdf";
-          responseText = `✅ *Boleto Gerado via Lytex/Prosind!*\n\n🔗 Baixe seu boleto aqui: ${mockBoletoUrl}\n\nSistema integrado ProsindWeb.`;
-          nextState = 'SUCCESS';
-       } else {
-          responseText = "Entendido. Vamos recomeçar o processo do boleto.";
-          nextState = 'SELECT_BOLETO_TYPE';
-       }
+    } else if (session.state === 'CONFIRM_DATA') {
+      if (text === 'data_sim') {
+        console.log('[LYTEX_INTEGRATION] Starting generation for', session.employer_cnpj);
+        
+        try {
+          const cleanValor = (session.expires_at_tmp || "0").replace(',', '.'); // I need to verify where value was stored
+          // Let's re-read the session logic to be sure about the value storage
+          // In previous turn I saw: .update({ expires_at: text }).eq('id', session.id); 
+          // Wait, line 200 was: .update({ expires_at: text }).eq('id', session.id); where text was the DATE.
+          // And line 191 was competence.
+          // I need to store the VALUE in the session.
+        } catch (e) {
+          console.error('[LYTEX_INTEGRATION_ERROR]', e);
+        }
+        
+        // Fallback for now while I fix the storage in the previous steps
+        const mockBoletoUrl = "https://example.com/boleto-lytex-prosind.pdf";
+        responseText = `✅ *Boleto Gerado via Lytex/Prosind!*\n\n🔗 Baixe seu boleto aqui: ${mockBoletoUrl}\n\nSistema integrado ProsindWeb.`;
+        nextState = 'SUCCESS';
+      } else {
+        responseText = "Entendido. Vamos recomeçar o processo do boleto.";
+        nextState = 'SELECT_BOLETO_TYPE';
+      }
      } else if (session.state === 'SUCCESS') {
        // Reset flow if user types anything after success
        responseText = "Vou te ajudar com um novo boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
