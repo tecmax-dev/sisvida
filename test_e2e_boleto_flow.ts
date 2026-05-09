@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = "https://czmnkrurkzuerrcjzbkp.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = "NOT_FOUND";
+const SUPABASE_SERVICE_ROLE_KEY = "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const PHONE = "557388633535";
@@ -22,15 +22,21 @@ async function callFlow(phone: string, message: string, action?: string) {
       action: action
     })
   });
+  if (!response.ok) {
+    const text = await response.text();
+    console.log('HTTP ERROR', response.status, text);
+    return { error: text };
+  }
   return await response.json();
 }
 
 async function getSession(phone: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('whatsapp_boleto_sessions')
     .select('*')
     .eq('phone', phone)
     .maybeSingle();
+  if (error) console.log('DB ERROR', error);
   return data;
 }
 
@@ -38,6 +44,7 @@ async function runTest() {
   console.log('Starting E2E Test...');
 
   // Reset session
+  console.log('Deleting existing sessions for', PHONE);
   await supabase.from('whatsapp_boleto_sessions').delete().eq('phone', PHONE);
   
   // 1. Initial State
