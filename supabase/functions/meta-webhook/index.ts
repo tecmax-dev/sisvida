@@ -497,8 +497,6 @@ serve(async (req) => {
 
     return new Response("ok", { status: 200 });
 
-    return new Response("ok", { status: 200 });
-
   } catch (e) {
     console.error("[ERROR]", e);
     return new Response(JSON.stringify({ ok: false, error: e.message }), { 
