@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const { action = 'send', to, template = 'hello_world', language = 'en_US', pin, message } = body;
 
     const token = Deno.env.get('META_WHATSAPP_TOKEN');
-    const phoneId = Deno.env.get('META_PHONE_NUMBER_ID');
+    const phoneId = Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
 
     if (!token || !phoneId) {
       return new Response(
