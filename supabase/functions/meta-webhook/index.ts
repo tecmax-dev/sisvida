@@ -345,7 +345,7 @@ serve(async (req) => {
       return nextState;
     };
 
-    const delegateToAI = async () => {
+    const delegateToAI = async (withNavigation = false) => {
       const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
         method: 'POST',
         headers: {
@@ -361,7 +361,11 @@ serve(async (req) => {
       });
       const data = await res.json();
       if (data.response) {
-        await sendMetaMessage({ type: 'text', text: { body: data.response } });
+        if (withNavigation) {
+          await sendNavigationButtons(data.response);
+        } else {
+          await sendMetaMessage({ type: 'text', text: { body: data.response } });
+        }
       }
     };
 
@@ -417,10 +421,10 @@ serve(async (req) => {
       console.log('[RENDER_CARTEIRINHA]');
       await sendNavigationButtons('atualizar sua carteirinha digital pelo aplicativo é simples e rápido. Basta acessar a aba “Atualizar Carteirinha” e seguir as instruções na tela.\n\nPara concluir o processo, é necessário enviar o seu contracheque mais recente diretamente pelo aplicativo Secmi.');
       finalState = nextState;
-    } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'ATENDIMENTO_FLOW') {
+    } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'ATENDIMENTO_FLOW' || nextState === 'CONVENCOES_FLOW' || nextState === 'HOMOLOGACAO_FLOW' || nextState === 'OUTROS_FLOW') {
       // FORCED ROUTE: If we are in one of these sub-flows, delegate to AI
       console.log('[DELEGATING_SUBFLOW]', nextState);
-      await delegateToAI();
+      await delegateToAI(true);
       finalState = nextState;
     } else if (isBoletoState(nextState)) {
       // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU or CONTABILIDADE_MENU, it's a 'start' action
