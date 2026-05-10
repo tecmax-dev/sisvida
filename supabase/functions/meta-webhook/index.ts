@@ -135,7 +135,7 @@ serve(async (req) => {
       'MAIN_MENU': {
         'sind_empresa': 'EMPRESA_MENU',
         'sind_associado': 'ASSOCIADO_MENU',
-        'sind_contabilidade': 'CONTABILIDADE_FLOW'
+        'sind_contabilidade': 'CONTABILIDADE_MENU'
       },
       'ASSOCIADO_MENU': {
         'ass_carteirinha': 'CARTEIRINHA_FLOW',
@@ -148,7 +148,11 @@ serve(async (req) => {
       'CONVENCOES_FLOW': {},
       'HOMOLOGACAO_FLOW': {},
       'OUTROS_FLOW': {},
-      'CONTABILIDADE_FLOW': {},
+      'CONTABILIDADE_MENU': {
+        'cont_segunda_via': 'SELECT_BOLETO_TYPE',
+        'cont_convencoes': 'CONVENCOES_FLOW',
+        'cont_homologacao': 'HOMOLOGACAO_FLOW'
+      },
       'ASSOCIADO_FLOW': {},
        'EMPRESA_MENU': {
          'segunda_via_btn': 'SELECT_BOLETO_TYPE',
@@ -221,7 +225,7 @@ serve(async (req) => {
       
       if (textInputStates.includes(currentState)) {
         nextState = currentState;
-      } else if (currentState === 'ASSOCIADO_MENU' || currentState === 'EMPRESA_MENU') {
+      } else if (['ASSOCIADO_MENU', 'EMPRESA_MENU', 'CONTABILIDADE_MENU'].includes(currentState)) {
         // Se estivermos em um submenu e o input não for mapeado, tratamos como uma conversa com a IA
         // e mantemos o estado atual para que o usuário continue no submenu se desejar
         nextState = currentState;
@@ -281,6 +285,23 @@ serve(async (req) => {
               { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } },
               { type: 'reply', reply: { id: 'empresa_convencoes', title: 'Convenções' } },
               { type: 'reply', reply: { id: 'empresa_homologacao', title: 'Homologação' } }
+            ]
+          }
+        }
+      });
+    };
+
+    const sendContabilidadeMenu = async () => {
+      await sendMetaMessage({
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: '📊 *Menu Contabilidade*\n\nComo podemos ajudar você hoje?' },
+          action: {
+            buttons: [
+              { type: 'reply', reply: { id: 'cont_segunda_via', title: '2ª Via Boleto' } },
+              { type: 'reply', reply: { id: 'cont_convencoes', title: 'Convenções' } },
+              { type: 'reply', reply: { id: 'cont_homologacao', title: 'Homologação' } }
             ]
           }
         }
@@ -358,16 +379,19 @@ serve(async (req) => {
       await sendAssociadoMenu();
     } else if (nextState === 'EMPRESA_MENU') {
       await sendEmpresaMenu();
+    } else if (nextState === 'CONTABILIDADE_MENU') {
+      await sendContabilidadeMenu();
     } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'CARTEIRINHA_FLOW' || nextState === 'ATENDIMENTO_FLOW') {
       // FORCED ROUTE: If we are in one of these sub-flows, delegate to AI
       console.log('[DELEGATING_SUBFLOW]', nextState);
       await delegateToAI();
       finalState = nextState;
     } else if (isBoletoState(nextState)) {
-      // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU, it's a 'start' action
-      const isTransitionToBoleto = currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn';
+      // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU or CONTABILIDADE_MENU, it's a 'start' action
+      const isTransitionToBoleto = (currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn') || 
+                                   (currentState === 'CONTABILIDADE_MENU' && inputId === 'cont_segunda_via');
       const action = isTransitionToBoleto ? 'start' : 'continue';
-      
+
       finalState = await delegateToBoletoFlow(action);
     } else {
       await delegateToAI();
