@@ -61,13 +61,17 @@ export function DomainRedirect() {
       return;
     }
 
-    // Se tentar acessar /instalar, redireciona para /sindicato/instalar
+    // Se tentar acessar /instalar no domínio app.eclini.com.br, mantemos para o redirecionamento funcionar
+    if (currentPath === "/instalar" && window.location.hostname === "app.eclini.com.br") {
+      return;
+    }
+
+    // Se tentar acessar /instalar em outros domínios customizados, redireciona para a rota padrão
     if (currentPath === "/instalar") {
       console.info(`[DomainRedirect] Redirecionando /instalar para ${customDomain.defaultRoute}`);
       navigate(customDomain.defaultRoute, { replace: true });
       return;
     }
-
   }, [customDomain, location.pathname, navigate]);
 
   return null;
