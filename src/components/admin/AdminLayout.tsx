@@ -31,6 +31,7 @@ import {
   Youtube,
   BookOpen,
   Sparkles,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
