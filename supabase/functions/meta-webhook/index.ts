@@ -381,7 +381,16 @@ serve(async (req) => {
       await sendEmpresaMenu();
     } else if (nextState === 'CONTABILIDADE_MENU') {
       await sendContabilidadeMenu();
-    } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'CARTEIRINHA_FLOW' || nextState === 'ATENDIMENTO_FLOW') {
+    } else if (nextState === 'CARTEIRINHA_FLOW') {
+      console.log('[RENDER_CARTEIRINHA]');
+      await sendMetaMessage({
+        type: 'text',
+        text: { 
+          body: 'atualizar sua carteirinha digital pelo aplicativo é simples e rápido. Basta acessar a aba “Atualizar Carteirinha” e seguir as instruções na tela.\n\nPara concluir o processo, é necessário enviar o seu contracheque mais recente diretamente pelo aplicativo Secmi.' 
+        }
+      });
+      finalState = nextState;
+    } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'ATENDIMENTO_FLOW') {
       // FORCED ROUTE: If we are in one of these sub-flows, delegate to AI
       console.log('[DELEGATING_SUBFLOW]', nextState);
       await delegateToAI();
