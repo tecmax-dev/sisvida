@@ -54,14 +54,9 @@ async function sendWhazingMainMenuButtons(phone: string): Promise<boolean> {
   let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
   if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-  const buttons = [
-    { id: 'whazing_associado', title: 'Sou Associado' },
-    { id: 'whazing_empresa', title: 'Sou Empresa' },
-    { id: 'whazing_contabilidade', title: 'Sou Contabilidade' },
-  ];
-
-  const bodyText = 'Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?';
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` };
+  // STOP: Legacy numerical menu generation should not happen
+  console.log('[LEGACY_MENU_BLOCK] Blocking sendWhazingMainMenuButtons');
+  return false;
 
   try {
     const nativePayload = {
