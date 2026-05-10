@@ -54,14 +54,9 @@ async function sendWhazingMainMenuButtons(phone: string): Promise<boolean> {
   let cleanPhone = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
   if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
 
-  const buttons = [
-    { id: 'whazing_associado', title: 'Sou Associado' },
-    { id: 'whazing_empresa', title: 'Sou Empresa' },
-    { id: 'whazing_contabilidade', title: 'Sou Contabilidade' },
-  ];
-
-  const bodyText = 'Olá! 👋 Bem-vindo(a) ao atendimento.\n\nComo podemos ajudá-lo(a) hoje?';
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${whazingToken}` };
+  // STOP: Legacy numerical menu generation should not happen
+  console.log('[LEGACY_MENU_BLOCK] Blocking sendWhazingMainMenuButtons');
+  return false;
 
   try {
     const nativePayload = {
@@ -1280,45 +1275,13 @@ _(Se o app já estiver instalado no seu celular, o link acima abrirá diretament
 Repita a mesma mensagem. NÃO tente ajudar de outra forma. NÃO há alternativa.`;
 
     // Define menu based on booking status - CRITICAL: Only show booking option if enabled
-    const menuWithBooking = `## MENU INICIAL (COPIE EXATAMENTE ao dar boas-vindas ou quando pedirem menu)
-Quando o usuário iniciar conversa ou pedir para ver as opções/menu, responda EXATAMENTE:
+    const menuWithBooking = `## MENU INICIAL BLOQUEADO
+NUNCA envie menus numéricos (1, 2, 3...). O menu principal é gerado via BOTÕES pelo sistema externo. 
+Responda apenas ao assunto solicitado.`;
 
-"Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
-
-Como posso ajudar? Escolha uma opção:
-
-1️⃣ Sou associado(a)
-2️⃣ Sou empresa
-3️⃣ Sou contador/escritório contábil
-4️⃣ Dia do Comerciário (30/10)
-5️⃣ Falar com atendente
-6️⃣ Agendar consulta ou exame
-7️⃣ Segunda via de boleto (empresa)
-
-Digite o número da opção desejada."`;
-
-    const menuWithoutBooking = `## MENU INICIAL (COPIE EXATAMENTE ao dar boas-vindas ou quando pedirem menu)
-⚠️ ATENÇÃO: O agendamento por WhatsApp está SUSPENSO. NÃO mostre opção de agendamento no menu!
-
-Quando o usuário iniciar conversa ou pedir para ver as opções/menu, responda EXATAMENTE:
-
-"Olá! 👋 Sou a *LIA*, assistente virtual do SECMI - Sindicato dos Comerciários de Ilhéus.
-
-Como posso ajudar? Escolha uma opção:
-
-1️⃣ Sou associado(a)
-2️⃣ Sou empresa
-3️⃣ Sou contador/escritório contábil
-4️⃣ Dia do Comerciário (30/10)
-5️⃣ Falar com atendente
-6️⃣ Segunda via de boleto (empresa)
-
-📲 *AGENDAMENTOS:* Disponíveis exclusivamente pelo app:
-👉 https://prosindweb.com.br/app/instalar
-
-Digite o número da opção desejada."
-
-IMPORTANTE: NUNCA mostre "Agendar consulta" como opção no menu. Se perguntarem sobre agendamento, direcione IMEDIATAMENTE para o app.`;
+    const menuWithoutBooking = `## MENU INICIAL BLOQUEADO
+NUNCA envie menus numéricos (1, 2, 3...). O menu principal é gerado via BOTÕES pelo sistema externo. 
+Responda apenas ao assunto solicitado.`;
 
     const externalMenuInstructions = `## MODO DE INTEGRAÇÃO (MENU EXTERNO)
 - O menu principal é exibido por um sistema externo.
