@@ -15,11 +15,21 @@ export default function InstallPage() {
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
+   const [isDesktop, setIsDesktop] = useState(false);
+   const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
-    // Detectar se é desktop
-    setIsDesktop(window.innerWidth >= 1024);
+     const userAgent = window.navigator.userAgent.toLowerCase();
+     const isAndroidUA = userAgent.indexOf("android") > -1;
+     setIsAndroid(isAndroidUA);
+
+     // Se estiver no domínio app.eclini.com.br e for Android, redirecionar para Play Store
+     if (window.location.hostname === "app.eclini.com.br" && isAndroidUA) {
+       window.location.href = "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app&hl=pt_BR";
+       return;
+     }
+
+     setIsDesktop(window.innerWidth >= 1024);
     // Verificar se já está instalado como PWA
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);

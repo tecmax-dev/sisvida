@@ -16,12 +16,18 @@ const CUSTOM_DOMAIN_ROUTES: Record<string, {
     defaultRoute: "/sindicato/instalar",
     clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
   },
-   // ProsindWeb - Sindicato dos Comerciários de Ilhéus (Domínio Principal)
-   "prosindweb.com.br": {
-     basePath: "/sindicato",
-     defaultRoute: "/sindicato/instalar",
-     clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
-   },
+  // ProsindWeb - Sindicato dos Comerciários de Ilhéus (Domínio Principal)
+  "prosindweb.com.br": {
+    basePath: "/sindicato",
+    defaultRoute: "/sindicato/instalar",
+    clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
+  },
+  // Eclini - App Sindicato Redirect
+  "app.eclini.com.br": {
+    basePath: "/sindicato",
+    defaultRoute: "/instalar",
+    clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
+  },
 };
 
 /**
@@ -55,13 +61,17 @@ export function DomainRedirect() {
       return;
     }
 
-    // Se tentar acessar /instalar, redireciona para /sindicato/instalar
+    // Se tentar acessar /instalar no domínio app.eclini.com.br, mantemos para o redirecionamento funcionar
+    if (currentPath === "/instalar" && window.location.hostname === "app.eclini.com.br") {
+      return;
+    }
+
+    // Se tentar acessar /instalar em outros domínios customizados, redireciona para a rota padrão
     if (currentPath === "/instalar") {
       console.info(`[DomainRedirect] Redirecionando /instalar para ${customDomain.defaultRoute}`);
       navigate(customDomain.defaultRoute, { replace: true });
       return;
     }
-
   }, [customDomain, location.pathname, navigate]);
 
   return null;
