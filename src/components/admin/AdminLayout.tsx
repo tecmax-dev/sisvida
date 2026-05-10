@@ -31,6 +31,7 @@ import {
   Youtube,
   BookOpen,
   Sparkles,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,7 @@ const adminNavItems = [
   { path: "/admin/chat", label: "Chat Suporte", icon: MessageCircle },
   { path: "/admin/whatsapp-templates", label: "Templates WhatsApp", icon: FileCode },
   { path: "/admin/whatsapp-status", label: "Status WhatsApp", icon: Sparkles },
+  { path: "/admin/whatsapp-audit", label: "Auditoria WhatsApp", icon: ClipboardList },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/addon-requests", label: "Solicitações Add-ons", icon: Sparkles, hasBadge: true },
   { path: "/admin/dependent-approvals", label: "Aprovação Dependentes", icon: Users, hasBadge: true },

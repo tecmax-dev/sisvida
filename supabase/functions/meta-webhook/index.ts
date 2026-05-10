@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
- const HANDLER_VERSION = "2.1.4-DEBUG-SENDER";
+  const HANDLER_VERSION = "2.2.0-AUDIT";
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const corsHeaders = {
@@ -99,6 +99,22 @@ serve(async (req) => {
       .eq('phone', normalizedPhone)
       .maybeSingle();
 
+    const logAudit = async (direction: 'incoming' | 'outgoing', content: string, type: string, bId?: string, state?: string, meta: any = {}) => {
+      try {
+        await supabase.from('whatsapp_audit_logs').insert({
+          phone: normalizedPhone,
+          direction,
+          content,
+          message_type: type,
+          button_id: bId,
+          session_state: state,
+          metadata: meta
+        });
+      } catch (e) {
+        console.error('[AUDIT_ERROR]', e);
+      }
+    };
+
     const sendMetaMessage = async (messagePayload: any, functionName = 'meta-webhook') => {
       console.log('[MESSAGE_SENDER]', {
         functionName,
@@ -125,6 +141,20 @@ serve(async (req) => {
 
       const responseText = await res.text();
       console.log('[META_RESPONSE]', res.status, responseText);
+
+      let content = "";
+      if (messagePayload.type === 'text') content = messagePayload.text?.body;
+      else if (messagePayload.type === 'interactive') content = messagePayload.interactive?.body?.text;
+
+      await logAudit(
+        'outgoing',
+        content,
+        messagePayload.type,
+        "",
+        nextState || currentState,
+        { status: res.status, response: responseText }
+      );
+
       return res;
     };
 
@@ -188,6 +218,8 @@ serve(async (req) => {
     // 2. ROUTER (SINGLE)
     const currentState = session?.state || 'MAIN_MENU';
     const inputId = buttonId || msgText.toLowerCase().trim();
+
+    await logAudit('incoming', msgText, msgType, buttonId, currentState, { raw: value });
 
     if (buttonId) {
       console.log('[BUTTON_ID]', buttonId);
@@ -462,8 +494,6 @@ serve(async (req) => {
       error: saveError ? saveError.message : null,
       success: !saveError
     });
-
-    return new Response("ok", { status: 200 });
 
     return new Response("ok", { status: 200 });
 

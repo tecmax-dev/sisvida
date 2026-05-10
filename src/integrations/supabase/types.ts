@@ -16182,6 +16182,42 @@ export type Database = {
           },
         ]
       }
+      whatsapp_audit_logs: {
+        Row: {
+          button_id: string | null
+          content: string | null
+          created_at: string
+          direction: string
+          id: string
+          message_type: string | null
+          metadata: Json | null
+          phone: string
+          session_state: string | null
+        }
+        Insert: {
+          button_id?: string | null
+          content?: string | null
+          created_at?: string
+          direction: string
+          id?: string
+          message_type?: string | null
+          metadata?: Json | null
+          phone: string
+          session_state?: string | null
+        }
+        Update: {
+          button_id?: string | null
+          content?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          message_type?: string | null
+          metadata?: Json | null
+          phone?: string
+          session_state?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_boleto_logs: {
         Row: {
           action: string
