@@ -57,7 +57,14 @@ export default function WhatsAppAuditPage() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setLogs(data || []);
+      
+      // Map data to ensure type safety for 'direction'
+      const formattedLogs = (data || []).map((item: any) => ({
+        ...item,
+        direction: item.direction as 'incoming' | 'outgoing'
+      }));
+      
+      setLogs(formattedLogs);
     } catch (error) {
       console.error("Erro ao buscar auditoria:", error);
       toast.error("Falha ao carregar logs de auditoria");
