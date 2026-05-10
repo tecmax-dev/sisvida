@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
-  const HANDLER_VERSION = "2.2.0-AUDIT";
+  const HANDLER_VERSION = "3.0.0-PRODUCTION";
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
 const corsHeaders = {
@@ -39,6 +39,10 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
+    // MANDATORY LOGS
+    console.log('[FULL_WEBHOOK_BODY]', JSON.stringify(body, null, 2));
+    console.log('[RAW_META_PAYLOAD]', JSON.stringify(body, null, 2));
+
     // FILTRO DE STATUS: Importante para não responder a confirmações de entrega
     const statuses = body.entry?.[0]?.changes?.[0]?.value?.statuses;
     if (statuses && statuses.length > 0) {
@@ -56,27 +60,22 @@ serve(async (req) => {
 
     const from = message.from;
     const msgType = message.type;
-    // O ID do número que recebeu a mensagem (importante para enviar de volta pelo mesmo canal)
-     const recipient_phone_id = value?.metadata?.phone_number_id;
-     const display_phone_number = value?.metadata?.display_phone_number;
-     
-     console.log('[DEBUG_PAYLOAD]', {
-       metadata: value?.metadata,
-       contacts: value?.contacts,
-       messages: value?.messages
-     });
+    const recipient_phone_id = value?.metadata?.phone_number_id;
     
     let msgText = "";
     let buttonId = "";
+    let buttonTitle = "";
 
     if (msgType === 'text') {
       msgText = message.text?.body || "";
     } else if (msgType === 'interactive') {
       buttonId = message.interactive?.button_reply?.id;
-      msgText = message.interactive?.button_reply?.title || "";
+      buttonTitle = message.interactive?.button_reply?.title || "";
+      msgText = buttonTitle;
     }
 
-     console.log('[INCOMING]', { from, msgType, msgText, buttonId, recipient_phone_id, display_phone_number });
+    console.log('[BUTTON_REPLY_ID]', buttonId);
+    console.log('[BUTTON_REPLY_TITLE]', buttonTitle);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -160,46 +159,40 @@ serve(async (req) => {
 
     // --- MANDATORY STATE MACHINE ARCHITECTURE ---
 
-    // 1. TRANSITIONS (DECLARATIVE)
+    // 1. TRANSITIONS (DECLARATIVE) - PRODUCTION VERSION
     const transitions: Record<string, Record<string, string>> = {
       'MAIN_MENU': {
-        'sind_empresa': 'EMPRESA_MENU',
-        'sind_associado': 'ASSOCIADO_MENU',
-        'sind_contabilidade': 'CONTABILIDADE_MENU'
+        'empresa_btn': 'EMPRESA_MENU',
+        'associado_btn': 'ASSOCIADO_MENU',
+        'contabilidade_btn': 'CONTABILIDADE_MENU'
       },
       'ASSOCIADO_MENU': {
         'ass_carteirinha': 'CARTEIRINHA_FLOW',
         'ass_convenios': 'CONVENIOS_FLOW',
         'ass_atendimento': 'ATENDIMENTO_FLOW'
       },
-      'CARTEIRINHA_FLOW': {},
-      'CONVENIOS_FLOW': {},
-      'ATENDIMENTO_FLOW': {},
-      'CONVENCOES_FLOW': {},
-      'HOMOLOGACAO_FLOW': {},
-      'OUTROS_FLOW': {},
+      'EMPRESA_MENU': {
+        'segunda_via_btn': 'SELECT_BOLETO_TYPE',
+        'convencoes_btn': 'CONVENCOES_FLOW',
+        'certidao_btn': 'CERTIDAO_FLOW'
+      },
       'CONTABILIDADE_MENU': {
         'cont_segunda_via': 'SELECT_BOLETO_TYPE',
         'cont_convencoes': 'CONVENCOES_FLOW',
         'cont_homologacao': 'HOMOLOGACAO_FLOW'
       },
-      'ASSOCIADO_FLOW': {},
-       'EMPRESA_MENU': {
-         'segunda_via_btn': 'SELECT_BOLETO_TYPE',
-         'empresa_convencoes': 'CONVENCOES_FLOW',
-         'empresa_homologacao': 'HOMOLOGACAO_FLOW',
-         'empresa_outros': 'OUTROS_FLOW'
-       },
       'SELECT_BOLETO_TYPE': {
         'boleto_a_vencer': 'WAITING_CNPJ',
         'boleto_vencido': 'WAITING_CNPJ'
       },
-      'WAITING_CNPJ': {
-        // Transitions are logic-based in the view for CNPJ
-      },
+      'WAITING_CNPJ': {},
       'CONFIRM_EMPLOYER': {
         'boleto_sim': 'SELECT_CONTRIBUTION_TYPE',
         'boleto_nao': 'WAITING_CNPJ'
+      },
+      'SELECT_CONTRIBUTION_TYPE': {
+        'boleto_type_1': 'WAITING_PERIODO',
+        'boleto_type_2': 'WAITING_PERIODO'
       },
       'CONFIRM_DATA': {
         'data_sim': 'SUCCESS',
@@ -221,14 +214,7 @@ serve(async (req) => {
 
     await logAudit('incoming', msgText, msgType, buttonId, currentState, { raw: value });
 
-    if (buttonId) {
-      console.log('[BUTTON_ID]', buttonId);
-    }
-
-    console.log('[TRANSITION_INPUT]', {
-      currentState,
-      inputId
-    });
+    console.log('[CURRENT_STATE]', currentState);
 
     let nextState = transitions[currentState]?.[inputId];
 
@@ -237,32 +223,23 @@ serve(async (req) => {
     if (startingKeywords.includes(inputId)) {
       nextState = 'MAIN_MENU';
     } else if (!sessionFound) {
-      // Se não houver sessão e não for uma palavra-chave de início, 
-      // verificamos se o inputId já resolve para um estado no MAIN_MENU
       nextState = transitions['MAIN_MENU']?.[inputId] || 'MAIN_MENU';
     }
 
     console.log('[NEXT_STATE]', nextState);
+    console.log('[ROUTE_MATCH]', !!nextState);
 
-    // 3. FALLBACK PROTECTION (NO AUTOMATIC FALLBACK)
+    // 3. FALLBACK PROTECTION (STRICT)
     if (!nextState) {
-      // Allow text input for specific states
       const textInputStates = [
-        'WAITING_CNPJ', 'SELECT_CONTRIBUTION_TYPE', 'WAITING_PERIODO', 
-        'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA',
-        'CARTEIRINHA_FLOW', 'CONVENIOS_FLOW', 'ATENDIMENTO_FLOW',
-        'CONVENCOES_FLOW', 'HOMOLOGACAO_FLOW', 'OUTROS_FLOW',
-        'CONTABILIDADE_FLOW', 'ASSOCIADO_FLOW'
+        'WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'CONFIRM_DATA'
       ];
       
       if (textInputStates.includes(currentState)) {
         nextState = currentState;
-      } else if (['ASSOCIADO_MENU', 'EMPRESA_MENU', 'CONTABILIDADE_MENU'].includes(currentState)) {
-        // Se estivermos em um submenu e o input não for mapeado, tratamos como uma conversa com a IA
-        // e mantemos o estado atual para que o usuário continue no submenu se desejar
-        nextState = currentState;
       } else {
         console.log('[DEBUG] TRANSITION_NOT_FOUND', { currentState, inputId });
+        console.log('[TRANSITION_MAP]', transitions[currentState]);
         await sendMetaMessage({ 
           type: 'text', 
           text: { body: `[DEBUG] TRANSITION_NOT_FOUND\nEstado: ${currentState}\nBotão: ${inputId}` } 
@@ -280,9 +257,9 @@ serve(async (req) => {
           body: { text: 'Olá! 👋 Bem-vindo(a) ao *Sindicato dos Comerciários*.\n\nComo podemos ajudá-lo(a) hoje?' },
           action: {
             buttons: [
-              { type: 'reply', reply: { id: 'sind_associado', title: 'Sou Associado' } },
-              { type: 'reply', reply: { id: 'sind_empresa', title: 'Sou Empresa' } },
-              { type: 'reply', reply: { id: 'sind_contabilidade', title: 'Contabilidade' } }
+              { type: 'reply', reply: { id: 'empresa_btn', title: 'Sou Empresa' } },
+              { type: 'reply', reply: { id: 'associado_btn', title: 'Sou Associado' } },
+              { type: 'reply', reply: { id: 'contabilidade_btn', title: 'Contabilidade' } }
             ]
           }
         }
@@ -315,8 +292,8 @@ serve(async (req) => {
           action: {
             buttons: [
               { type: 'reply', reply: { id: 'segunda_via_btn', title: '2ª Via Boleto' } },
-              { type: 'reply', reply: { id: 'empresa_convencoes', title: 'Convenções' } },
-              { type: 'reply', reply: { id: 'empresa_homologacao', title: 'Homologação' } }
+              { type: 'reply', reply: { id: 'convencoes_btn', title: 'Convenções' } },
+              { type: 'reply', reply: { id: 'certidao_btn', title: 'Certidão' } }
             ]
           }
         }
@@ -377,30 +354,6 @@ serve(async (req) => {
       return nextState;
     };
 
-    const delegateToAI = async (withNavigation = false) => {
-      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-ai-assistant`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          clinic_id: SINDICATO_CLINIC_ID,
-          phone: from,
-          message: inputId,
-          deliver_response_via_caller: true
-        })
-      });
-      const data = await res.json();
-      if (data.response) {
-        if (withNavigation) {
-          await sendNavigationButtons(data.response);
-        } else {
-          await sendMetaMessage({ type: 'text', text: { body: data.response } });
-        }
-      }
-    };
-
     const sendNavigationButtons = async (bodyText: string) => {
       await sendMetaMessage({
         type: 'interactive',
@@ -450,24 +403,17 @@ serve(async (req) => {
     } else if (nextState === 'CONTABILIDADE_MENU') {
       await sendContabilidadeMenu();
     } else if (nextState === 'CARTEIRINHA_FLOW') {
-      console.log('[RENDER_CARTEIRINHA]');
       await sendNavigationButtons('atualizar sua carteirinha digital pelo aplicativo é simples e rápido. Basta acessar a aba “Atualizar Carteirinha” e seguir as instruções na tela.\n\nPara concluir o processo, é necessário enviar o seu contracheque mais recente diretamente pelo aplicativo Secmi.');
       finalState = nextState;
-    } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'ATENDIMENTO_FLOW' || nextState === 'CONVENCOES_FLOW' || nextState === 'HOMOLOGACAO_FLOW' || nextState === 'OUTROS_FLOW') {
-      // FORCED ROUTE: If we are in one of these sub-flows, delegate to AI
-      console.log('[DELEGATING_SUBFLOW]', nextState);
-      await delegateToAI(true);
-      finalState = nextState;
     } else if (isBoletoState(nextState)) {
-      // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU or CONTABILIDADE_MENU, it's a 'start' action
       const isTransitionToBoleto = (currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn') || 
                                    (currentState === 'CONTABILIDADE_MENU' && inputId === 'cont_segunda_via');
       const action = isTransitionToBoleto ? 'start' : 'continue';
-
       finalState = await delegateToBoletoFlow(action);
     } else {
-      await delegateToAI();
-      finalState = nextState || 'ASSOCIADO_FLOW';
+      // Fallback response for missing flow implementations
+      await sendMetaMessage({ type: 'text', text: { body: "Esta funcionalidade está sendo configurada. Por favor, escolha outra opção ou digite 'Menu'." } });
+      finalState = 'MAIN_MENU';
     }
 
     // FINAL SAVE
