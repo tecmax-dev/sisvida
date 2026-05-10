@@ -64,8 +64,9 @@ export function DomainRedirect() {
       // Se tentar acessar /instalar ou /app/instalar, verificamos se é o caso especial do app.eclini.com.br
       const normalizedPath = currentPath.replace(/\/$/, "");
       if (normalizedPath === "/instalar" || normalizedPath === "/app/instalar") {
-       if (window.location.hostname.includes("app.eclini.com.br")) {
-         // Se o script no index.html não pegou (ex: SPA navigation), forçamos aqui
+        const redirectDomains = ["app.eclini.com.br", "prosindweb.com.br"];
+        if (redirectDomains.some(domain => window.location.hostname.includes(domain))) {
+          // Se o script no index.html não pegou (ex: navegação SPA), forçamos aqui
          const userAgent = window.navigator.userAgent.toLowerCase();
          if (userAgent.indexOf("android") > -1) {
            console.info("[DomainRedirect] Android detectado no /instalar do app.eclini.com.br. Redirecionando...");
