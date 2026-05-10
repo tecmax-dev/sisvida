@@ -1,7 +1,18 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
+   <head>
+     <script>
+       // Redirect /instalar as early as possible to bypass cache if it's the specific Play Store redirect
+       (function() {
+         if (window.location.hostname === "app.eclini.com.br" && window.location.pathname === "/instalar") {
+           var userAgent = window.navigator.userAgent.toLowerCase();
+           if (userAgent.indexOf("android") > -1) {
+             window.location.href = "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app&hl=pt_BR";
+           }
+         }
+       })();
+     </script>
+     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Primary Meta Tags -->
