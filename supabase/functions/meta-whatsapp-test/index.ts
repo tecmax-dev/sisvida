@@ -10,10 +10,10 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action = 'send', to, template = 'hello_world', language = 'en_US', pin } = body;
+    const { action = 'send', to, template = 'hello_world', language = 'en_US', pin, message } = body;
 
     const token = Deno.env.get('META_WHATSAPP_TOKEN');
-    const phoneId = Deno.env.get('META_PHONE_NUMBER_ID');
+    const phoneId = Deno.env.get('META_PHONE_NUMBER_ID') || "937233212814035";
 
     if (!token || !phoneId) {
       return new Response(
@@ -25,7 +25,22 @@ Deno.serve(async (req) => {
     let url: string;
     let payload: Record<string, unknown>;
 
-    if (action === 'register') {
+    if (action === 'send_text') {
+      if (!to || typeof to !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'Campo "to" obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const cleanedTo = to.replace(/\D/g, '');
+      url = `https://graph.facebook.com/v21.0/${phoneId}/messages`;
+      payload = {
+        messaging_product: 'whatsapp',
+        to: cleanedTo,
+        type: 'text',
+        text: { body: message || 'Teste de texto livre' },
+      };
+    } else if (action === 'register') {
       if (!pin || !/^\d{6}$/.test(String(pin))) {
         return new Response(
           JSON.stringify({ error: 'PIN de 6 dígitos obrigatório' }),
