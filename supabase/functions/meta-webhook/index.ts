@@ -99,8 +99,14 @@ serve(async (req) => {
       .eq('phone', normalizedPhone)
       .maybeSingle();
 
-    const sendMetaMessage = async (messagePayload: any) => {
-      // Usamos o recipient_phone_id dinâmico que veio no webhook
+    const sendMetaMessage = async (messagePayload: any, functionName = 'meta-webhook') => {
+      console.log('[MESSAGE_SENDER]', {
+        functionName,
+        currentState,
+        messageType: messagePayload.type,
+        payload: messagePayload
+      });
+
       const url = `https://graph.facebook.com/v22.0/${recipient_phone_id}/messages`;
       const finalPayload = {
         messaging_product: 'whatsapp',
@@ -178,6 +184,10 @@ serve(async (req) => {
     // 2. ROUTER (SINGLE)
     const currentState = session?.state || 'MAIN_MENU';
     const inputId = buttonId || msgText.toLowerCase().trim();
+
+    if (buttonId) {
+      console.log('[BUTTON_ID]', buttonId);
+    }
 
     console.log('[TRANSITION_INPUT]', {
       currentState,
@@ -348,6 +358,11 @@ serve(async (req) => {
       await sendAssociadoMenu();
     } else if (nextState === 'EMPRESA_MENU') {
       await sendEmpresaMenu();
+    } else if (nextState === 'CONVENIOS_FLOW' || nextState === 'CARTEIRINHA_FLOW' || nextState === 'ATENDIMENTO_FLOW') {
+      // FORCED ROUTE: If we are in one of these sub-flows, delegate to AI
+      console.log('[DELEGATING_SUBFLOW]', nextState);
+      await delegateToAI();
+      finalState = nextState;
     } else if (isBoletoState(nextState)) {
       // If we just entered SELECT_BOLETO_TYPE from EMPRESA_MENU, it's a 'start' action
       const isTransitionToBoleto = currentState === 'EMPRESA_MENU' && inputId === 'segunda_via_btn';
