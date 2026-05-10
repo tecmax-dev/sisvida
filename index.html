@@ -8,8 +8,8 @@
          console.log('[Redirect] Checking redirect for:', window.location.hostname, window.location.pathname);
          
          // Normalizamos o pathname para garantir que funcione com ou sem barra no final
-         var path = window.location.pathname.replace(/\/$/, "");
-         if ((window.location.hostname === "app.eclini.com.br" || window.location.hostname === "www.app.eclini.com.br") && path === "/instalar") {
+          var path = window.location.pathname.replace(/\/$/, "");
+          if ((window.location.hostname === "app.eclini.com.br" || window.location.hostname === "www.app.eclini.com.br") && (path === "/instalar" || path === "/app/instalar")) {
            var userAgent = window.navigator.userAgent.toLowerCase();
            console.log('[Redirect] Host and path match. UserAgent:', userAgent);
            

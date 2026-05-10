@@ -61,8 +61,9 @@ export function DomainRedirect() {
       return;
     }
 
-     // Se tentar acessar /instalar, verificamos se é o caso especial do app.eclini.com.br
-     if (currentPath.replace(/\/$/, "") === "/instalar") {
+      // Se tentar acessar /instalar ou /app/instalar, verificamos se é o caso especial do app.eclini.com.br
+      const normalizedPath = currentPath.replace(/\/$/, "");
+      if (normalizedPath === "/instalar" || normalizedPath === "/app/instalar") {
        if (window.location.hostname.includes("app.eclini.com.br")) {
          // Se o script no index.html não pegou (ex: SPA navigation), forçamos aqui
          const userAgent = window.navigator.userAgent.toLowerCase();
