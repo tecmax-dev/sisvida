@@ -12,13 +12,15 @@ serve(async (req) => {
       current_waba_id: WABA_ID,
     };
 
-    if (WABA_ID) {
-      const phonesRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}/phone_numbers`, {
+    if (PHONE_ID) {
+      const phoneRes = await fetch(`https://graph.facebook.com/v21.0/${PHONE_ID}?fields=id,display_phone_number,whatsapp_business_account`, {
         headers: { Authorization: `Bearer ${TOKEN}` }
       });
-      res.phones = await phonesRes.json();
+      res.phone_details = await phoneRes.json();
+    }
 
-      const wabaRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}?fields=id,name,message_template_namespace`, {
+    if (WABA_ID) {
+      const wabaRes = await fetch(`https://graph.facebook.com/v21.0/${WABA_ID}?fields=id,name,status,message_template_namespace`, {
         headers: { Authorization: `Bearer ${TOKEN}` }
       });
       res.waba = await wabaRes.json();

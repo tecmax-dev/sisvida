@@ -468,6 +468,58 @@ const templates: TemplatePayload[] = [
         },
       ],
     },
+  {
+    name: "agenda_disponivel",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
+        example: { body_text: [["Maria", "Maio/2026"]] },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          {
+            type: "URL",
+            text: "Abrir Aplicativo",
+            url: "https://app.sindicato.com.br/",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: "lembrete_consulta_v2",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Olá, {{1}}. Lembrete da sua consulta no Sindicato dos Comerciários.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPor favor, confirme sua presença abaixo.",
+        example: {
+          body_text: [[
+            "Maria Santos",
+            "Dr. Carlos Mendes",
+            "Cardiologia",
+            "15/03/2026",
+            "14:30",
+            "Sede Central - Rua Principal, 100",
+          ]],
+        },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          { type: "QUICK_REPLY", text: "Confirmar" },
+          { type: "QUICK_REPLY", text: "Cancelar" },
+        ],
+      },
+    ],
+  },
  ];
 
 serve(async (req) => {
