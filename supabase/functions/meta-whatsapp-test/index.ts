@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action = 'send', to, template = 'hello_world', language = 'en_US', pin } = body;
+    const { action = 'send', to, template = 'hello_world', language = 'en_US', pin, message } = body;
 
     const token = Deno.env.get('META_WHATSAPP_TOKEN');
     const phoneId = Deno.env.get('META_PHONE_NUMBER_ID');
