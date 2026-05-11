@@ -527,18 +527,18 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const WABA_ID = Deno.env.get("META_WABA_ID");
+  const url = new URL(req.url);
+  const WABA_ID = url.searchParams.get("waba_id") || Deno.env.get("META_WABA_ID");
   const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
 
   if (!WABA_ID || !TOKEN) {
     return new Response(
-      JSON.stringify({ error: "META_WABA_ID ou META_WHATSAPP_TOKEN não configurados" }),
+      JSON.stringify({ error: "WABA ID ou META_WHATSAPP_TOKEN não configurados" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
   // Optional: filter by ?only=name1,name2
-  const url = new URL(req.url);
   const only = url.searchParams.get("only");
   const onlySet = only ? new Set(only.split(",").map((s) => s.trim())) : null;
 

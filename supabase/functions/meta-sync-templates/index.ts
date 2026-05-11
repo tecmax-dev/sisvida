@@ -34,7 +34,8 @@ serve(async (req) => {
   }
 
   try {
-    const WABA_ID = Deno.env.get("META_WABA_ID");
+    const urlParams = new URL(req.url).searchParams;
+    const WABA_ID = urlParams.get("waba_id") || Deno.env.get("META_WABA_ID");
     const TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
