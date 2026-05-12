@@ -254,7 +254,7 @@ interface FiliacaoData {
       const assets = await prepareMemberImagesForFiliacaoPdf({
         clinicId,
         cpf: filiacao.cpf,
-        photoUrl: filiacao.foto_url || filiacao.documento_foto_url || null,
+         photoUrl: memberPhotoUrl || filiacao.foto_url || filiacao.documento_foto_url || null,
         signatureUrl: filiacao.assinatura_digital_url || null,
         memberPhotoFallback: member.photo_url || null,
       });
