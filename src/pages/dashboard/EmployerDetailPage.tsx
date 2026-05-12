@@ -66,7 +66,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Copy,
-  Download,
+   Download,
+   Link2,
   CreditCard,
   Pencil,
   Trash2,
@@ -257,6 +258,17 @@ export default function EmployerDetailPage() {
       fetchData();
     }
   }, [currentClinic, id]);
+
+  const copyFriendlyLink = () => {
+    if (!currentClinic?.slug || !employer?.access_code) {
+      toast.error("Dados incompletos para gerar o link");
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/portal-empresa/${currentClinic.slug}?cnpj=${employer.cnpj.replace(/\D/g, "")}&code=${employer.access_code}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link amigável copiado!");
+  };
 
   const fetchData = async () => {
     if (!currentClinic || !id) return;
@@ -883,8 +895,38 @@ export default function EmployerDetailPage() {
                     toast.success("Código de login copiado!");
                   }}
                 >
-                  <Copy className="h-3 w-3" />
-                </Button>
+                   <div className="flex items-center gap-0.5">
+                     <Tooltip>
+                       <TooltipTrigger asChild>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-6 w-6"
+                           onClick={() => {
+                             navigator.clipboard.writeText(employer.access_code || "");
+                             toast.success("Código de login copiado!");
+                           }}
+                         >
+                           <Copy className="h-3 w-3" />
+                         </Button>
+                       </TooltipTrigger>
+                       <TooltipContent>Copiar código</TooltipContent>
+                     </Tooltip>
+                     <Tooltip>
+                       <TooltipTrigger asChild>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                           onClick={copyFriendlyLink}
+                         >
+                           <Link2 className="h-3 w-3" />
+                         </Button>
+                       </TooltipTrigger>
+                       <TooltipContent>Copiar link de acesso direto</TooltipContent>
+                     </Tooltip>
+                   </div>
+                 </div>
               </div>
             )}
             <Badge variant={employer.is_active ? "default" : "secondary"}>
