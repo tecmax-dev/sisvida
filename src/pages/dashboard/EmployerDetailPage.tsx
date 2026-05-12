@@ -882,20 +882,12 @@ export default function EmployerDetailPage() {
                 Mat. {employer.registration_number}
               </Badge>
             )}
-            {employer.access_code && (
-              <div className="flex items-center gap-1.5 ml-2 p-1.5 rounded-md bg-primary/5 border border-primary/20">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground">Login:</span>
-                <span className="font-mono font-bold text-primary">{employer.access_code}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => {
-                    navigator.clipboard.writeText(employer.access_code || "");
-                    toast.success("Código de login copiado!");
-                  }}
-                >
-                   <div className="flex items-center gap-0.5">
+             {employer.access_code && (
+               <div className="flex items-center gap-1.5 ml-2 p-1.5 rounded-md bg-primary/5 border border-primary/20">
+                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Login:</span>
+                 <span className="font-mono font-bold text-primary">{employer.access_code}</span>
+                 <div className="flex items-center gap-0.5">
+                   <TooltipProvider>
                      <Tooltip>
                        <TooltipTrigger asChild>
                          <Button
@@ -925,10 +917,10 @@ export default function EmployerDetailPage() {
                        </TooltipTrigger>
                        <TooltipContent>Copiar link de acesso direto</TooltipContent>
                      </Tooltip>
-                   </div>
+                   </TooltipProvider>
                  </div>
-              </div>
-            )}
+               </div>
+             )}
             <Badge variant={employer.is_active ? "default" : "secondary"}>
               {employer.is_active ? "Ativa" : "Inativa"}
             </Badge>
