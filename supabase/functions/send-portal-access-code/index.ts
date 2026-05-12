@@ -138,6 +138,7 @@ const generateEmailHtml = (
 ): string => {
   const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
   const identifierLabel = type === "accounting_office" ? "E-mail" : "CNPJ";
+  const directLink = `${portalUrl}?${type === "accounting_office" ? "email" : "cnpj"}=${identifier.replace(/\D/g, "")}&code=${accessCode}`;
 
   const logoSection = logoUrl
     ? `<img src="${logoUrl}" alt="Logo" style="max-height: 50px; max-width: 180px; margin-bottom: 12px;" />`
@@ -176,13 +177,15 @@ ${logoSection}
 <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0;">
 <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 15px; font-weight: 600;">Como acessar:</h3>
 <ol style="margin: 0; padding: 0 0 0 20px; color: #4b5563; font-size: 14px; line-height: 1.8;">
+<li><strong>Acesso Direto (Recomendado):</strong> <a href="${directLink}" style="color: #0d9488; font-weight: 600;">Clique aqui para entrar automaticamente</a></li>
+<p style="margin: 8px 0; font-size: 12px; color: #6b7280;">Ou siga os passos abaixo:</p>
 <li>Acesse o link: <a href="${portalUrl}" style="color: #0d9488; font-weight: 500;">${portalUrl}</a></li>
 <li>Informe seu ${identifierLabel}: <strong>${identifier}</strong></li>
 <li>Digite o codigo de acesso: <strong>${accessCode}</strong></li>
 </ol>
 </div>
 <div style="text-align: center; margin: 32px 0;">
-<a href="${portalUrl}" target="_blank" style="display: inline-block; padding: 14px 40px; background: #1e3a8a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Acessar Portal</a>
+<a href="${directLink}" target="_blank" style="display: inline-block; padding: 14px 40px; background: #1e3a8a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Acessar Portal Automaticamente</a>
 </div>
 <div style="background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin: 24px 0;">
 <p style="margin: 0; color: #92400e; font-size: 13px;"><strong>Importante:</strong> Este codigo e pessoal e intransferivel. Nao compartilhe com terceiros.</p>
