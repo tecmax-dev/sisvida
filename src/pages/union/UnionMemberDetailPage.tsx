@@ -1296,8 +1296,28 @@ export default function UnionMemberDetailPage() {
         open={isModalOpen('patientAppointments')}
         onOpenChange={(open) => open ? null : closeModal('patientAppointments')}
         patientId={getModalData('patientAppointments').patientId || id || ''}
-        patientName={getModalData('patientAppointments').patientName || formData.name}
-      />
-    </div>
-  );
-}
+         patientName={getModalData('patientAppointments').patientName || formData.name}
+       />
+
+       {/* Ficha de Filiação Dialog */}
+       {id && resolvedClinic && isFiliacaoDialogOpen && (
+         <MemberFiliacaoActionsDialog
+           open={isFiliacaoDialogOpen}
+           onOpenChange={setIsFiliacaoDialogOpen}
+           clinicId={resolvedClinic.id}
+           member={{
+             id,
+             name: formData.name,
+             email: formData.email,
+             phone: formData.phone,
+             cpf: formData.cpf,
+             photo_url: patientPhotoUrl,
+             employer_name: formData.employerName,
+             employer_cnpj: formData.employerCnpj,
+             registration_number: formData.registrationNumber,
+           }}
+         />
+       )}
+     </div>
+   );
+ }
