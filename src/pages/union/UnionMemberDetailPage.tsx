@@ -1142,7 +1142,9 @@ export default function UnionMemberDetailPage() {
                       <div className="text-sm text-muted-foreground bg-muted/30 px-4 py-3 rounded-lg border border-dashed">
                         Nenhuma assinatura digital registrada.
                       </div>
-                      {canManageMembers() && formData.email && (
+                       {canManageMembers() && (
+                        <div className="flex flex-wrap gap-2">
+                          {formData.email && (
                         <Button
                           variant="outline"
                           size="sm"
