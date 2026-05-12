@@ -1174,46 +1174,46 @@ export default function UnionMemberDetailPage() {
                             </Button>
                           )}
 
-                          {formData.phone && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={sendingSignatureRequest}
-                              onClick={async () => {
-                                if (!resolvedClinic || !id) return;
-                                setSendingSignatureRequest(true);
-                                try {
-                                  const { data, error } = await supabase.functions.invoke("send-signature-request", {
-                                    body: { associadoId: id, clinicId: resolvedClinic.id, createOnly: true },
-                                  });
-                                  if (error) throw error;
-                                  if (data?.error) throw new Error(data.error);
+                           {formData.phone && (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               disabled={sendingSignatureRequest}
+                               onClick={async () => {
+                                 if (!resolvedClinic || !id) return;
+                                 setSendingSignatureRequest(true);
+                                 try {
+                                   const { data, error } = await supabase.functions.invoke("send-signature-request", {
+                                     body: { associadoId: id, clinicId: resolvedClinic.id, createOnly: true },
+                                   });
+                                   if (error) throw error;
+                                   if (data?.error) throw new Error(data.error);
 
-                                  const baseUrl = window.location.origin;
-                                  const signatureUrl = `${baseUrl}/assinar/${data.token}`;
-                                  
-                                  const { data: sindicato } = await supabase
-                                    .from("union_entities")
-                                    .select("razao_social")
-                                    .eq("clinic_id", resolvedClinic.id)
-                                    .single();
+                                   const baseUrl = window.location.origin;
+                                   const signatureUrl = `${baseUrl}/assinar/${data.token}`;
+                                   
+                                   const { data: sindicato } = await supabase
+                                     .from("union_entities")
+                                     .select("razao_social")
+                                     .eq("clinic_id", resolvedClinic.id)
+                                     .maybeSingle();
 
-                                  const message = `✍️ *Autorização de Desconto em Folha*\\n\\nOlá, *${formData.name}*!\\n\\nO *${sindicato?.razao_social || "Sindicato"}* solicita que você assine digitalmente a autorização de desconto em folha.\\n\\n📝 *Acesse o link abaixo para assinar:* \\n${signatureUrl}\\n\\nAtenciosamente,\\n*${sindicato?.razao_social || "Sindicato"}*`;
+                                   const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${formData.name}*!\n\nO *${sindicato?.razao_social || "Sindicato"}* solicita que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${sindicato?.razao_social || "Sindicato"}*`;
 
-                                  openWhatsApp(formData.phone, message);
-                                } catch (err: any) {
-                                  const extracted = extractFunctionsError(err);
-                                  toast({ title: "Erro ao gerar link", description: extracted.message, variant: "destructive" });
-                                } finally {
-                                  setSendingSignatureRequest(false);
-                                }
-                              }}
-                              className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                            >
-                              {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                              Link Assinatura (Manual por WhatsApp)
-                            </Button>
-                          )}
+                                   openWhatsApp(formData.phone, message);
+                                 } catch (err: any) {
+                                   const extracted = extractFunctionsError(err);
+                                   toast({ title: "Erro ao gerar link", description: extracted.message, variant: "destructive" });
+                                 } finally {
+                                   setSendingSignatureRequest(false);
+                                 }
+                               }}
+                               className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium"
+                             >
+                               {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                               Link Assinatura (Manual)
+                             </Button>
+                           )}
                         </div>
                       )}
                     </div>
