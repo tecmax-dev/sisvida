@@ -90,7 +90,7 @@ import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDia
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
 import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
 import { SendSignatureRequestDialog } from "@/components/union/members/SendSignatureRequestDialog";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Pen, KeyRound } from "lucide-react";
 import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
