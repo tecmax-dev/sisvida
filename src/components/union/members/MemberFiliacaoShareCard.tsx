@@ -69,10 +69,11 @@ interface FiliacaoData {
   documento_foto_url?: string | null;
 }
 
-interface Props {
-  member: MemberData;
-  clinicId: string;
-}
+ interface Props {
+   member: MemberData;
+   clinicId: string;
+   memberPhotoUrl?: string | null;
+ }
 
 export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
   const { toast } = useToast();
