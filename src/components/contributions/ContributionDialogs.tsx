@@ -47,17 +47,18 @@ import {
   FileText,
   CheckCircle2,
   XCircle,
-  Copy,
-  Download,
-  Send,
-  Loader2,
-  Pencil,
-  AlertCircle,
-  Trash2,
-  Check,
-  ChevronsUpDown,
-  Receipt,
-} from "lucide-react";
+   Copy,
+   Download,
+   Send,
+   Loader2,
+   Pencil,
+   AlertCircle,
+   Trash2,
+   Check,
+   ChevronsUpDown,
+   Receipt,
+   ExternalLink,
+ } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
