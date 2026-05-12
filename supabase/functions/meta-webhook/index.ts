@@ -253,6 +253,57 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, action: "handoff" }));
     }
 
+    // 6. PROCESSAR RESPOSTAS DO FLUXO DE BOLETO (CNPJ, etc.)
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    
+    const { data: boletoSession } = await supabase
+      .from('whatsapp_boleto_sessions')
+      .select('*')
+      .eq('phone', from)
+      .maybeSingle();
+
+    if (boletoSession && (boletoSession.state !== 'SUCCESS' || extractedButtonId?.startsWith('boleto_'))) {
+      const boletoFlowRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/boleto-whatsapp-flow`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d",
+          phone: from,
+          message: text || extractedButtonId,
+          action: extractedButtonId ? 'button' : 'text'
+        })
+      });
+
+      const boletoData = await boletoFlowRes.json();
+      if (boletoData.success) {
+        const payload: any = {
+          type: boletoData.buttons?.length > 0 ? "interactive" : "text",
+        };
+
+        if (payload.type === "interactive") {
+          payload.interactive = {
+            type: "button",
+            body: { text: boletoData.response },
+            action: {
+              buttons: boletoData.buttons.map((b: any) => ({
+                type: "reply",
+                reply: { id: b.id, title: b.title }
+              }))
+            }
+          };
+        } else {
+          payload.text = { body: boletoData.response };
+        }
+
+        await sendResponse(payload);
+        return new Response(JSON.stringify({ ok: true, action: "boleto_step" }));
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
