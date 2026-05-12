@@ -118,13 +118,25 @@ serve(async (req) => {
       await sendResponse({
         type: "interactive",
         interactive: {
-          type: "button",
+          type: "list",
           body: { text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:" },
           action: {
-            buttons: [
-              { type: "reply", reply: { id: "whazing_sub_carteirinha", title: "Atualizar Carteira" } },
-              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
-              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            button: "Ver Opções",
+            sections: [
+              {
+                title: "Serviços Associado",
+                rows: [
+                  { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
+                  { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
+                  { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Falar com atendente" }
+                ]
+              },
+              {
+                title: "Navegação",
+                rows: [
+                  { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" }
+                ]
+              }
             ]
           }
         }
@@ -137,13 +149,25 @@ serve(async (req) => {
       await sendResponse({
         type: "interactive",
         interactive: {
-          type: "button",
+          type: "list",
           body: { text: "Você selecionou *Sou Empresa*.\n\nComo podemos ajudar?" },
           action: {
-            buttons: [
-              { type: "reply", reply: { id: "whazing_sub_boleto", title: "2ª Via Boleto" } },
-              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
-              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            button: "Ver Opções",
+            sections: [
+              {
+                title: "Serviços Empresa",
+                rows: [
+                  { id: "whazing_sub_boleto", title: "2ª Via Boleto", description: "Emissão de cobranças" },
+                  { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
+                  { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Suporte especializado" }
+                ]
+              },
+              {
+                title: "Navegação",
+                rows: [
+                  { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" }
+                ]
+              }
             ]
           }
         }
@@ -156,13 +180,25 @@ serve(async (req) => {
       await sendResponse({
         type: "interactive",
         interactive: {
-          type: "button",
+          type: "list",
           body: { text: "Você selecionou *Contabilidade*.\n\nComo podemos ajudar?" },
           action: {
-            buttons: [
-              { type: "reply", reply: { id: "whazing_sub_homologacao", title: "Homologação" } },
-              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
-              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            button: "Ver Opções",
+            sections: [
+              {
+                title: "Serviços Contabilidade",
+                rows: [
+                  { id: "whazing_sub_homologacao", title: "Homologação", description: "Agendamentos" },
+                  { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
+                  { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Suporte especializado" }
+                ]
+              },
+              {
+                title: "Navegação",
+                rows: [
+                  { id: "menu_principal", title: "Menu Principal", description: "Voltar ao início" }
+                ]
+              }
             ]
           }
         }
