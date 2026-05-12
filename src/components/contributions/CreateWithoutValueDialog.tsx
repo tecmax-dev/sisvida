@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail, Link2, Check, ChevronsUpDown, MessageCircle, Building2 } from "lucide-react";
+ import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail, Link2, Check, ChevronsUpDown, MessageCircle, Building2, AlertCircle } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
