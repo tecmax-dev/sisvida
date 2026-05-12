@@ -91,28 +91,69 @@ export default function CreateAwaitingValueDialog({
   const [sendEmail, setSendEmail] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   
-  // Result state
-  const [publicLink, setPublicLink] = useState("");
-  const [copied, setCopied] = useState(false);
+   // Result state
+   const [publicLink, setPublicLink] = useState("");
+   const [copied, setCopied] = useState(false);
+   const [existingContribution, setExistingContribution] = useState<any | null>(null);
+   const [checkingExisting, setCheckingExisting] = useState(false);
 
-  // Reset form on open
-  useEffect(() => {
-    if (open) {
-      setStep("form");
-      setMode("with_value");
-      const activeType = contributionTypes.find(t => t.is_active);
-      setTypeId(activeType?.id || "");
-      setValue(activeType?.default_value ? String(activeType.default_value / 100) : "");
-      setMonth(now.getMonth() + 1);
-      setYear(now.getFullYear());
-      setDueDate(addMonths(now, 1));
-      setSendWhatsApp(false);
-      setSendEmail(false);
-      setEmailAddress(employer.email || "");
-      setPublicLink("");
-      setCopied(false);
-    }
-  }, [open, contributionTypes]);
+   // Reset form on open
+   useEffect(() => {
+     if (open) {
+       setStep("form");
+       setMode("with_value");
+       const activeType = contributionTypes.find(t => t.is_active);
+       setTypeId(activeType?.id || "");
+       setValue(activeType?.default_value ? String(activeType.default_value / 100) : "");
+       setMonth(now.getMonth() + 1);
+       setYear(now.getFullYear());
+       setDueDate(addMonths(now, 1));
+       setSendWhatsApp(false);
+       setSendEmail(false);
+       setEmailAddress(employer.email || "");
+       setPublicLink("");
+       setCopied(false);
+       setExistingContribution(null);
+     }
+   }, [open, contributionTypes]);
+ 
+   const checkExisting = async () => {
+     if (!typeId || !open) return;
+     setCheckingExisting(true);
+     try {
+       const { data, error } = await supabase
+         .from("employer_contributions")
+         .select("*")
+         .eq("employer_id", employer.id)
+         .eq("contribution_type_id", typeId)
+         .eq("competence_month", month)
+         .eq("competence_year", year)
+         .neq("status", "cancelled")
+         .maybeSingle();
+       
+       if (!error && data) {
+         setExistingContribution(data);
+         if (data.lytex_invoice_url) {
+           setPublicLink(data.lytex_invoice_url);
+         } else if (data.public_access_token) {
+           const baseUrl = window.location.origin;
+           setPublicLink(`${baseUrl}/contribuicao/${data.public_access_token}`);
+         }
+       } else {
+         setExistingContribution(null);
+       }
+     } catch (err) {
+       console.error("Error checking existing:", err);
+     } finally {
+       setCheckingExisting(false);
+     }
+   };
+ 
+   useEffect(() => {
+     if (open && typeId) {
+       checkExisting();
+     }
+   }, [typeId, month, year, open]);
 
   // Update value when type changes
   useEffect(() => {
@@ -288,9 +329,52 @@ export default function CreateAwaitingValueDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {step === "form" ? (
-          <>
-            <div className="space-y-4 py-4">
+         {step === "form" ? (
+           <>
+             <div className="space-y-4 py-4">
+               {existingContribution && (
+                 <div className={cn(
+                   "p-3 rounded-lg flex flex-col gap-2 text-sm border",
+                   existingContribution.value > 0 
+                     ? "bg-blue-50 text-blue-700 border-blue-200" 
+                     : "bg-amber-50 text-amber-700 border-amber-200"
+                 )}>
+                   <div className="flex items-start gap-2">
+                     <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                     <div>
+                       <p className="font-semibold">Já existe uma contribuição para este período</p>
+                       <p className="text-xs mt-0.5">
+                         {existingContribution.value > 0 
+                           ? "Esta competência já possui um boleto gerado. Você pode visualizar o link abaixo." 
+                           : "Esta competência existe mas está aguardando valor."}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {publicLink && (
+                     <div className="flex gap-2 mt-1">
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         className="flex-1 border-blue-200 hover:bg-blue-100 text-blue-700 h-8"
+                         onClick={() => window.open(publicLink, "_blank")}
+                       >
+                         <ExternalLink className="h-3 w-3 mr-2" />
+                         Abrir Link
+                       </Button>
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         className="flex-1 border-blue-200 hover:bg-blue-100 text-blue-700 h-8"
+                         onClick={copyLink}
+                       >
+                         <Copy className="h-3 w-3 mr-2" />
+                         Copiar Link
+                       </Button>
+                     </div>
+                   )}
+                 </div>
+               )}
               {/* Employer Info */}
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="font-medium">{employer.name}</p>
