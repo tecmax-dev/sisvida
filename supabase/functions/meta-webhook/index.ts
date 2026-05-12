@@ -88,7 +88,11 @@ serve(async (req) => {
       console.error('[LOG_ERROR]', logErr);
     }
 
-    const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu)\b/i.test(text);
+    const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu|oi lov|ola lov|olá lov)\b/i.test(text);
+    const isBoleto = /\b(boleto|segunda via|pagamento|gerar boleto|2 via|2ª via)\b/i.test(text);
+    const isCCT = /\b(cct|convenção|convencao|coletiva|piso|salário|salario|piso salarial)\b/i.test(text);
+    const isHomologacao = /\b(homologação|homologacao|agendar|agendamento|rescisão|rescisao)\b/i.test(text);
+    const isCarteirinha = /\b(carteirinha|carteira|associado|sócio|socio|atualizar carteira)\b/i.test(text);
 
     // --- ROUTING LOGIC ---
 
@@ -113,8 +117,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, action: "main_menu" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 2. SUBMENU ASSOCIADO
-    if (extractedButtonId === "whazing_associado" || extractedButtonId === "voltar_associado") {
+    // 2. SUBMENU ASSOCIADO / CARTEIRINHA
+    if (extractedButtonId === "whazing_associado" || extractedButtonId === "voltar_associado" || (isCarteirinha && !isGreeting)) {
       await sendResponse({
         type: "interactive",
         interactive: {
@@ -226,7 +230,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
     }
 
-    if (extractedButtonId === "whazing_sub_boleto") {
+    if (extractedButtonId === "whazing_sub_boleto" || (isBoleto && !isGreeting)) {
       // Delegar para o fluxo de boleto especializado
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -270,12 +274,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, action: "boleto_fallback" }));
     }
 
-    if (extractedButtonId === "whazing_sub_cct") {
+    if (extractedButtonId === "whazing_sub_cct" || (isCCT && !isGreeting)) {
       await sendResponse(followUpAction("As Convenções Coletivas e Tabelas de Pisos Salariais estão disponíveis em nosso site ou podem ser solicitadas aqui."));
       return new Response(JSON.stringify({ ok: true, action: "cct" }));
     }
 
-    if (extractedButtonId === "whazing_sub_homologacao") {
+    if (extractedButtonId === "whazing_sub_homologacao" || (isHomologacao && !isGreeting)) {
       await sendResponse(followUpAction("O agendamento de homologação deve ser feito pelo portal da empresa."));
       return new Response(JSON.stringify({ ok: true, action: "homologacao" }));
     }
