@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { generateFichaFiliacaoPDF, generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
-import { sendWhatsAppDocument } from "@/lib/whatsapp";
+ import { sendWhatsAppDocument, openWhatsApp } from "@/lib/whatsapp";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
