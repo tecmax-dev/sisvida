@@ -642,7 +642,40 @@ export default function ContributionDialogs({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+           <div className="space-y-4 pt-2">
+             {hasDuplicate && existingContribution && (
+               <div className={cn(
+                 "p-3 rounded-lg flex flex-col gap-2 text-sm border",
+                 existingContribution.value > 0 
+                   ? "bg-blue-50 text-blue-700 border-blue-200" 
+                   : "bg-amber-50 text-amber-700 border-amber-200"
+               )}>
+                 <div className="flex items-start gap-2">
+                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                   <div>
+                     <p className="font-semibold">Já existe uma contribuição para este período</p>
+                     <p className="text-xs mt-0.5">
+                       {existingContribution.value > 0 
+                         ? "Esta competência já possui um boleto gerado. Você pode visualizar o link abaixo." 
+                         : "Esta competência existe mas está aguardando valor. Informe o valor abaixo para gerar o boleto."}
+                     </p>
+                   </div>
+                 </div>
+                 
+                 {existingContribution.lytex_invoice_url && (
+                   <Button 
+                     variant="outline" 
+                     size="sm" 
+                     className="w-full mt-1 border-blue-200 hover:bg-blue-100 text-blue-700 h-8"
+                     onClick={() => window.open(existingContribution.lytex_invoice_url!, "_blank")}
+                   >
+                     <ExternalLink className="h-3 w-3 mr-2" />
+                     Acessar Boleto Existente
+                   </Button>
+                 )}
+               </div>
+             )}
+ 
             <div className="space-y-2">
               <Label>Empresa *</Label>
               <Popover open={employerPopoverOpen} onOpenChange={setEmployerPopoverOpen}>
