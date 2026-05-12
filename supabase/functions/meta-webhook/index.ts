@@ -191,8 +191,47 @@ serve(async (req) => {
     }
 
     if (extractedButtonId === "whazing_sub_boleto") {
+      // Delegar para o fluxo de boleto especializado
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        
+        const boletoFlowRes = await fetch(`${supabaseUrl}/functions/v1/boleto-whatsapp-flow`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify({
+            clinic_id: "89e7585e-7bce-4e58-91fa-c37080d1170d", // ID do Sindicato
+            phone: from,
+            action: 'start'
+          })
+        });
+        
+        const boletoData = await boletoFlowRes.json();
+        if (boletoData.success) {
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: { text: boletoData.response },
+              action: {
+                buttons: (boletoData.buttons || []).map((b: any) => ({
+                  type: "reply",
+                  reply: { id: b.id, title: b.title }
+                }))
+              }
+            }
+          });
+          return new Response(JSON.stringify({ ok: true, action: "boleto_start" }));
+        }
+      } catch (err) {
+        console.error('[BOLETO_FLOW_ERROR]', err);
+      }
+      
       await sendResponse(followUpAction("Para emitir a 2ª via do boleto, informe o CNPJ da empresa."));
-      return new Response(JSON.stringify({ ok: true, action: "boleto" }));
+      return new Response(JSON.stringify({ ok: true, action: "boleto_fallback" }));
     }
 
     if (extractedButtonId === "whazing_sub_cct") {
