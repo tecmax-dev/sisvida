@@ -24,8 +24,9 @@ import {
   Users,
   CalendarCheck,
   Signature,
-  Eye,
-  Pen,
+   Eye,
+   Pen,
+   Share2,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF, generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
@@ -126,6 +127,7 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
   const [dependents, setDependents] = useState<DependentData[]>([]);
   const [sindicato, setSindicato] = useState<any>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [sendingManualLink, setSendingManualLink] = useState(false);
   const [hasFullFiliacaoRecord, setHasFullFiliacaoRecord] = useState(false); // True if from sindical_associados
 
   // Helpers
@@ -243,6 +245,28 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
   };
 
   // Fetch filiacao data when dialog opens
+  const handleManualSendSignatureWhatsApp = async () => {
+    if (!member.phone) {
+      toast({ title: "Telefone do sócio não encontrado.", variant: "destructive" });
+      return;
+    }
+    setSendingManualLink(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-signature-request", {
+        body: { associadoId: member.id, clinicId, createOnly: true },
+      });
+      if (error) throw error;
+      const baseUrl = window.location.origin;
+      const signatureUrl = `${baseUrl}/assinar/${data.token}`;
+      const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${member.name}*!\n\nSolicitamos que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${sindicato?.razao_social || "Sindicato"}*`;
+      openWhatsApp(member.phone, message);
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar link", description: err.message || "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setSendingManualLink(false);
+    }
+  };
+
   const fetchFiliacaoData = async () => {
     if (dataLoaded) return;
 
@@ -678,6 +702,30 @@ export function MemberFiliacaoActionsDialog({ open, onOpenChange, member, clinic
                   ⚠️ Não foi possível carregar os dados. Verifique o cadastro do associado.
                 </div>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Link Manual Section */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Share2 className="h-4 w-4 text-emerald-600" />
+                Link Assinatura (Manual)
+              </Label>
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-lg p-3">
+                <p className="text-xs text-emerald-800 dark:text-emerald-300 mb-3">
+                  Gera um link de assinatura digital e abre o WhatsApp para envio manual.
+                </p>
+                <Button
+                  onClick={handleManualSendSignatureWhatsApp}
+                  disabled={sendingManualLink}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                  size="sm"
+                >
+                  {sendingManualLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                  Gerar Link e Abrir WhatsApp
+                </Button>
+              </div>
             </div>
 
             <Separator />
