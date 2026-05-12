@@ -40,7 +40,7 @@ serve(async (req) => {
     }
 
     const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
-    const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID") || "1110151302179856";
+    const PHONE_ID = Deno.env.get("META_PHONE_NUMBER_ID");
     const to = from.startsWith('55') ? from : `55${from}`;
 
     const sendResponse = async (payload: any) => {
@@ -61,50 +61,130 @@ serve(async (req) => {
       return result;
     };
 
-    // FASE 1: PROVAR ENTRADA
-    if (text.toLowerCase() === "oi") {
-      await sendResponse({
-        type: 'text',
-        text: { body: "MENU TESTE" }
-      });
-      return new Response(JSON.stringify({ ok: true, phase: 1 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu)\b/i.test(text);
 
-    // FASE 2: MENU PRINCIPAL (Para teste rápido se o usuário quiser avançar)
-    if (text.toLowerCase() === "menu") {
+    // --- ROUTING LOGIC ---
+
+    // 1. MAIN MENU
+    if (isGreeting || extractedButtonId === "menu_principal") {
       await sendResponse({
         type: "interactive",
         interactive: {
           type: "button",
-          body: { text: "Escolha uma opção:" },
+          header: { type: "text", text: "Sindicato dos Comerciários" },
+          body: { text: "Olá! Bem-vindo ao nosso canal oficial. Como podemos ajudar hoje? Escolha uma opção abaixo:" },
+          footer: { text: "Atendimento Automático" },
           action: {
             buttons: [
-              { type: "reply", reply: { id: "main_empresa", title: "Sou Empresa" } },
-              { type: "reply", reply: { id: "main_associado", title: "Sou Associado" } },
-              { type: "reply", reply: { id: "main_homologacao", title: "Homologacao" } }
+              { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
+              { type: "reply", reply: { id: "whazing_empresa", title: "Sou Empresa" } },
+              { type: "reply", reply: { id: "whazing_contabilidade", title: "Contabilidade" } }
             ]
           }
         }
       });
-      return new Response(JSON.stringify({ ok: true, phase: 2 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, action: "main_menu" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // FASE 3: TESTE DE CLIQUE
-    if (extractedButtonId === "main_empresa") {
+    // 2. SUBMENU ASSOCIADO
+    if (extractedButtonId === "whazing_associado" || extractedButtonId === "voltar_associado") {
       await sendResponse({
-        type: 'text',
-        text: { body: "BOTAO EMPRESA RECEBIDO" }
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_carteirinha", title: "Atualizar Carteira" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
       });
-      return new Response(JSON.stringify({ ok: true, phase: 3 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_associado" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // FASE 4: TESTE SUBMENU (Simulado via botão extra se necessário)
-    if (extractedButtonId === "boleto_2via") {
-       await sendResponse({
-        type: 'text',
-        text: { body: "BOLETO RECEBIDO" }
+    // 3. SUBMENU EMPRESA
+    if (extractedButtonId === "whazing_empresa" || extractedButtonId === "voltar_empresa") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Sou Empresa*.\n\nComo podemos ajudar?" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_boleto", title: "2ª Via Boleto" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: { id: "whazing_sub_outros", title: "Outros Assuntos" } } }
+            ]
+          }
+        }
       });
-      return new Response(JSON.stringify({ ok: true, phase: 4 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_empresa" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 4. SUBMENU CONTABILIDADE
+    if (extractedButtonId === "whazing_contabilidade") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Contabilidade*.\n\nComo podemos ajudar?" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_homologacao", title: "Homologação" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_contabilidade" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 5. CARTEIRINHA / BOLETO / HOMOLOGAÇÃO / CCT (Follow-up or Action)
+    const followUpAction = (msg: string) => ({
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: msg + "\n\nPosso ajudar com mais alguma coisa?" },
+        action: {
+          buttons: [
+            { type: "reply", reply: { id: "falar_atendente", title: "Falar c/ Atendente" } },
+            { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } }
+          ]
+        }
+      }
+    });
+
+    if (extractedButtonId === "whazing_sub_carteirinha") {
+      await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
+      return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_boleto") {
+      await sendResponse(followUpAction("Para emitir a 2ª via do boleto, informe o CNPJ da empresa."));
+      return new Response(JSON.stringify({ ok: true, action: "boleto" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_cct") {
+      await sendResponse(followUpAction("As Convenções Coletivas e Tabelas de Pisos Salariais estão disponíveis em nosso site ou podem ser solicitadas aqui."));
+      return new Response(JSON.stringify({ ok: true, action: "cct" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_homologacao") {
+      await sendResponse(followUpAction("O agendamento de homologação deve ser feito pelo portal da empresa."));
+      return new Response(JSON.stringify({ ok: true, action: "homologacao" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_outros" || extractedButtonId === "falar_atendente") {
+      await sendResponse({
+        type: "text",
+        text: { body: "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳" }
+      });
+      // Here you would typically trigger a handoff to human (Whazing/ZapResponder)
+      return new Response(JSON.stringify({ ok: true, action: "handoff" }));
     }
 
     return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
