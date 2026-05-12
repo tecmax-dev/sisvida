@@ -236,7 +236,8 @@ export default function UnionMemberDetailPage() {
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null);
   const [signatureAcceptedAt, setSignatureAcceptedAt] = useState<string | null>(null);
-  const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
+   const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
+   const [isFiliacaoDialogOpen, setIsFiliacaoDialogOpen] = useState(false);
 
   // Patient state
   const [isPatientActive, setIsPatientActive] = useState(true);
