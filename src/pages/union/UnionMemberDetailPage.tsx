@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo} from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle } from "lucide-react";
+ import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { openWhatsApp } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,8 @@ import { PatientPhotoUpload } from "@/components/patients/PatientPhotoUpload";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
-import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
+ import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
+ import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
 import { DependentAppointmentsList } from "@/components/union/members/DependentAppointmentsList";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
