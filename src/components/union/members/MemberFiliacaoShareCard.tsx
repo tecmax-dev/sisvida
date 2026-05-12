@@ -665,86 +665,91 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Envie a ficha de filiação completa com todos os dados cadastrais, dependentes e autorização de desconto em folha assinada digitalmente.
-        </p>
+       <div className="space-y-4">
+         <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-lg p-3">
+           <Label className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase mb-2 block flex items-center gap-1">
+             <Globe className="h-3 w-3" />
+             Assinatura Digital (Manual)
+           </Label>
+           <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mb-3">
+             Gera link de assinatura e abre o WhatsApp para envio manual.
+           </p>
+           <Button
+             onClick={handleManualSendSignatureWhatsApp}
+             disabled={sendingManualLink}
+             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-9 text-sm"
+           >
+             {sendingManualLink ? (
+               <Loader2 className="h-4 w-4 animate-spin" />
+             ) : (
+               <MessageCircle className="h-4 w-4" />
+             )}
+             Gerar Link e Abrir WhatsApp
+           </Button>
+         </div>
 
-        {/* Download PDF */}
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="flex-1 gap-2"
-            onClick={handleDownloadPDF}
-            disabled={generatingPDF}
-          >
-            {generatingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Baixar PDF
-          </Button>
-        </div>
+         <Separator />
 
-        <Separator />
+         <div className="space-y-3">
+           <Label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1">
+             <FileText className="h-3 w-3" />
+             Ficha Completa (PDF)
+           </Label>
+           <p className="text-[11px] text-muted-foreground">
+             PDF com dados, dependentes e assinatura.
+           </p>
+           
+           <div className="grid grid-cols-1 gap-2">
+             <Button 
+               variant="outline" 
+               className="w-full gap-2 h-9 text-sm"
+               onClick={handleDownloadPDF}
+               disabled={generatingPDF}
+             >
+               {generatingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+               Baixar PDF
+             </Button>
+           </div>
 
-        {/* WhatsApp */}
-        <div className="space-y-2">
-          <Label className="text-sm flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-green-500" />
-            Enviar por WhatsApp
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              placeholder="(00) 00000-0000"
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(formatPhone(e.target.value))}
-              className="flex-1"
-            />
-            <Button 
-              size="icon"
-              className="bg-green-600 hover:bg-green-700"
-              onClick={handleSendWhatsApp}
-              disabled={sendingWhatsApp}
-            >
-              {sendingWhatsApp ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
+           <div className="space-y-2 pt-1">
+             <div className="flex gap-2">
+               <Input
+                 placeholder="WhatsApp (00) 00000-0000"
+                 value={whatsappPhone}
+                 onChange={(e) => setWhatsappPhone(formatPhone(e.target.value))}
+                 className="flex-1 h-9 text-sm"
+               />
+               <Button 
+                 size="icon"
+                 className="bg-green-600 hover:bg-green-700 h-9 w-9 shrink-0"
+                 onClick={handleSendWhatsApp}
+                 disabled={sendingWhatsApp}
+               >
+                 {sendingWhatsApp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+               </Button>
+             </div>
 
-        {/* Email */}
-        <div className="space-y-2">
-          <Label className="text-sm flex items-center gap-2">
-            <Mail className="h-4 w-4 text-blue-500" />
-            Enviar por E-mail
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="email@exemplo.com"
-              value={emailAddress}
-              onChange={(e) => setEmailAddress(e.target.value)}
-              className="flex-1"
-            />
-            <Button 
-              size="icon"
-              variant="outline"
-              className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
-              onClick={handleSendEmail}
-              disabled={sendingEmail}
-            >
-              {sendingEmail ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </div>
+             <div className="flex gap-2">
+               <Input
+                 type="email"
+                 placeholder="E-mail do associado"
+                 value={emailAddress}
+                 onChange={(e) => setEmailAddress(e.target.value)}
+                 className="flex-1 h-9 text-sm"
+               />
+               <Button 
+                 size="icon"
+                 variant="outline"
+                 className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10 h-9 w-9 shrink-0"
+                 onClick={handleSendEmail}
+                 disabled={sendingEmail}
+               >
+                 {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+               </Button>
+             </div>
+           </div>
+         </div>
+       </div>
       </CardContent>
     </Card>
   );
