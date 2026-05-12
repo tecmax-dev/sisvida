@@ -93,6 +93,34 @@ serve(async (req) => {
     const isCCT = /\b(cct|convenção|convencao|coletiva|piso|salário|salario|piso salarial)\b/i.test(text);
     const isHomologacao = /\b(homologação|homologacao|agendar|agendamento|rescisão|rescisao)\b/i.test(text);
     const isCarteirinha = /\b(carteirinha|carteira|associado|sócio|socio|atualizar carteira)\b/i.test(text);
+    const isThanks = /\b(obrigado|obrigada|grato|grata|valeu|thanks|agradeço|agradecido|agradecida)\b/i.test(text);
+    const isNo = /\b(nao|não|no|nada mais|encerrar|finalizar)\b/i.test(text);
+
+    // --- 0. THANKS / END OF SERVICE ---
+    if (isThanks && !extractedButtonId) {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "De nada! 😊 Ficamos felizes em ajudar.\n\nDeseja algo mais?" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "menu_principal", title: "Sim, Ver Menu" } },
+              { type: "reply", reply: { id: "encerrar_atendimento", title: "Não, Obrigado" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "thanks_ask_more" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (extractedButtonId === "encerrar_atendimento" || (isNo && !extractedButtonId)) {
+      await sendResponse({
+        type: "text",
+        text: { body: "Perfeito! Atendimento encerrado. Se precisar de algo no futuro, é só mandar um 'Oi'. Tenha um ótimo dia! 👋" }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "terminate" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // --- ROUTING LOGIC ---
 
