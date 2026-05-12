@@ -6,22 +6,25 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('[WEBHOOK_HIT]');
-  
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   // Verification for Meta Webhook setup
-  const hubMode = new URL(req.url).searchParams.get("hub.mode");
-  if (hubMode === 'subscribe') {
-    const hubChallenge = new URL(req.url).searchParams.get("hub.challenge");
-    return new Response(hubChallenge, { status: 200 });
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("hub.mode");
+    const challenge = url.searchParams.get("hub.challenge");
+    if (mode === "subscribe") {
+      return new Response(challenge ?? "", { status: 200 });
+    }
+    return new Response("OK", { status: 200 });
   }
 
   try {
     const body = await req.json();
-    console.log('[FULL_WEBHOOK_BODY]', JSON.stringify(body, null, 2));
+    console.log('[WEBHOOK_ENTRY] Meta Webhook');
+    console.log('[RAW_PAYLOAD]', JSON.stringify(body, null, 2));
 
-    // Extract essential info
+    // Minimalist Parser
     const entry = body.entry?.[0];
     const change = entry?.changes?.[0];
     const value = change?.value;
@@ -32,52 +35,178 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    const message = value?.messages?.[0];
-    if (!message) {
-      console.log('[SKIP] No message');
-      return new Response("ok", { status: 200 });
+    const messageObj = value?.messages?.[0] || body.message || {};
+    const from = (body.wa_id || body.phone || messageObj.from || "").toString().replace(/\D/g, "");
+    
+    const extractedButtonId = messageObj.interactive?.button_reply?.id || messageObj.buttonId || null;
+    const extractedButtonTitle = messageObj.interactive?.button_reply?.title || messageObj.buttonText || null;
+    const text = (messageObj.text?.body || messageObj.conversation || "").toString().trim();
+
+    console.log('[BUTTON_ID]', extractedButtonId);
+    console.log('[BUTTON_TITLE]', extractedButtonTitle);
+
+    if (!from) {
+      return new Response(JSON.stringify({ ok: true, reason: "no phone" }), { status: 200 });
     }
 
-    const from = message.from;
-    const messageText = message.text?.body || "Interactive/Other";
-    const recipient_phone_id = value?.metadata?.phone_number_id;
-    const META_PHONE_NUMBER_ID = Deno.env.get("META_PHONE_NUMBER_ID");
-    const META_ACCESS_TOKEN = Deno.env.get("META_WHATSAPP_TOKEN");
+    const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+    const PHONE_ID = value?.metadata?.phone_number_id || Deno.env.get("META_PHONE_NUMBER_ID");
+    const to = from.startsWith('55') ? from : `55${from}`;
 
-    console.log('[PHONE_NUMBER_ID]', META_PHONE_NUMBER_ID);
-    console.log('[META_TOKEN_EXISTS]', !!META_ACCESS_TOKEN);
-    console.log('[MESSAGE_FROM]', from);
-    console.log('[MESSAGE_TEXT]', messageText);
-
-    // SEND MINIMAL RESPONSE
-    const url = `https://graph.facebook.com/v22.0/${recipient_phone_id}/messages`;
-    const payload = {
-      messaging_product: "whatsapp",
-      to: from,
-      type: "text",
-      text: { body: "[TESTE_OK]\nMensagem recebida com sucesso" }
+    const sendResponse = async (payload: any) => {
+      const url = `https://graph.facebook.com/v21.0/${PHONE_ID}/messages`;
+      console.log('[SENDING_TO]', url);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${META_TOKEN}`, 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to,
+          ...payload
+        }),
+      });
+      const result = await res.text();
+      console.log('[MESSAGE_SENT]', result);
+      return result;
     };
 
-    console.log('[META_REQUEST_URL]', url);
-    console.log('[META_PAYLOAD]', JSON.stringify(payload, null, 2));
+    const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu)\b/i.test(text);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${META_ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+    // --- ROUTING LOGIC ---
+
+    // 1. MAIN MENU
+    if (isGreeting || extractedButtonId === "menu_principal") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          header: { type: "text", text: "Sindicato dos Comerciários" },
+          body: { text: "Olá! Bem-vindo ao nosso canal oficial. Como podemos ajudar hoje? Escolha uma opção abaixo:" },
+          footer: { text: "Atendimento Automático" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_associado", title: "Sou Associado" } },
+              { type: "reply", reply: { id: "whazing_empresa", title: "Sou Empresa" } },
+              { type: "reply", reply: { id: "whazing_contabilidade", title: "Contabilidade" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "main_menu" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 2. SUBMENU ASSOCIADO
+    if (extractedButtonId === "whazing_associado" || extractedButtonId === "voltar_associado") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_carteirinha", title: "Atualizar Carteira" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_associado" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 3. SUBMENU EMPRESA
+    if (extractedButtonId === "whazing_empresa" || extractedButtonId === "voltar_empresa") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Sou Empresa*.\n\nComo podemos ajudar?" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_boleto", title: "2ª Via Boleto" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_empresa" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 4. SUBMENU CONTABILIDADE
+    if (extractedButtonId === "whazing_contabilidade") {
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "Você selecionou *Contabilidade*.\n\nComo podemos ajudar?" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "whazing_sub_homologacao", title: "Homologação" } },
+              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
+            ]
+          }
+        }
+      });
+      return new Response(JSON.stringify({ ok: true, action: "submenu_contabilidade" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 5. CARTEIRINHA / BOLETO / HOMOLOGAÇÃO / CCT (Follow-up or Action)
+    const followUpAction = (msg: string) => ({
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: msg + "\n\nPosso ajudar com mais alguma coisa?" },
+        action: {
+          buttons: [
+            { type: "reply", reply: { id: "falar_atendente", title: "Falar c/ Atendente" } },
+            { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } }
+          ]
+        }
+      }
     });
 
-    const responseText = await response.text();
-    console.log('[META_STATUS]', response.status);
-    console.log('[META_RESPONSE]', responseText);
+    if (extractedButtonId === "whazing_sub_carteirinha") {
+      await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
+      return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
+    }
 
-    return new Response("ok", { status: 200 });
+    if (extractedButtonId === "whazing_sub_boleto") {
+      await sendResponse(followUpAction("Para emitir a 2ª via do boleto, informe o CNPJ da empresa."));
+      return new Response(JSON.stringify({ ok: true, action: "boleto" }));
+    }
 
+    if (extractedButtonId === "whazing_sub_cct") {
+      await sendResponse(followUpAction("As Convenções Coletivas e Tabelas de Pisos Salariais estão disponíveis em nosso site ou podem ser solicitadas aqui."));
+      return new Response(JSON.stringify({ ok: true, action: "cct" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_homologacao") {
+      await sendResponse(followUpAction("O agendamento de homologação deve ser feito pelo portal da empresa."));
+      return new Response(JSON.stringify({ ok: true, action: "homologacao" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_outros" || extractedButtonId === "falar_atendente") {
+      await sendResponse({
+        type: "text",
+        text: { body: "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳" }
+      });
+      // Here you would typically trigger a handoff to human (Whazing/ZapResponder)
+      return new Response(JSON.stringify({ ok: true, action: "handoff" }));
+    }
+
+    return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
-    console.error("[ERROR]", e.message);
-    return new Response("error", { status: 200 });
+    console.error("[ERROR]", e);
+    return new Response(JSON.stringify({ ok: false, error: e.message }), { 
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 });
