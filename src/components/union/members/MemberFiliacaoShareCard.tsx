@@ -18,10 +18,11 @@ import {
   CheckCircle,
   Share2,
   ExternalLink,
+  Pen,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
-import { sendWhatsAppDocument } from "@/lib/whatsapp";
+import { sendWhatsAppDocument, openWhatsApp } from "@/lib/whatsapp";
 
 interface MemberData {
   id: string;
