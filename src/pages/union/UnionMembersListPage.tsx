@@ -1169,7 +1169,16 @@ export default function UnionMembersListPage() {
                                 Notificar Carteirinha
                               </DropdownMenuItem>
                             )}
-                            {member.phone && canManageMembers() && !member.signature_accepted && (
+                             {member.phone && canManageMembers() && (
+                               <DropdownMenuItem
+                                 onClick={() => handleManualSendSignatureWhatsApp(member)}
+                                 className="text-emerald-600 font-medium"
+                               >
+                                 <MessageCircle className="h-4 w-4 mr-2" />
+                                 Link Assinatura (Manual)
+                               </DropdownMenuItem>
+                             )}
+                             {member.phone && canManageMembers() && !member.signature_accepted && (
                               <DropdownMenuItem
                                 onClick={() => handleSendSignatureWhatsApp(member)}
                                 className="text-emerald-600"

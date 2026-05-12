@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo} from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle } from "lucide-react";
+ import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle, FileText } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { openWhatsApp } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,8 @@ import { PatientPhotoUpload } from "@/components/patients/PatientPhotoUpload";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
-import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
+ import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
+ import { MemberFiliacaoActionsDialog } from "@/components/union/members/MemberFiliacaoActionsDialog";
 import { UnionMemberSchedulingTab } from "@/components/union/members/UnionMemberSchedulingTab";
 import { DependentAppointmentsList } from "@/components/union/members/DependentAppointmentsList";
 import { UnionMemberAttachmentsTab } from "@/components/union/members/UnionMemberAttachmentsTab";
@@ -236,7 +237,8 @@ export default function UnionMemberDetailPage() {
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [signatureImageUrl, setSignatureImageUrl] = useState<string | null>(null);
   const [signatureAcceptedAt, setSignatureAcceptedAt] = useState<string | null>(null);
-  const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
+   const [sendingSignatureRequest, setSendingSignatureRequest] = useState(false);
+   const [isFiliacaoDialogOpen, setIsFiliacaoDialogOpen] = useState(false);
 
   // Patient state
   const [isPatientActive, setIsPatientActive] = useState(true);
@@ -888,10 +890,23 @@ export default function UnionMemberDetailPage() {
               Desvincular
             </Button>
           )}
-          <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Salvar e Voltar
-          </Button>
+           <div className="flex items-center gap-1.5">
+             {id && resolvedClinic && (
+               <Button
+                 variant="outline"
+                 size="sm"
+                 className="gap-2 text-primary font-medium"
+                 onClick={() => setIsFiliacaoDialogOpen(true)}
+               >
+                 <FileText className="h-4 w-4" />
+                 Ficha de Filiação
+               </Button>
+             )}
+             <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
+               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+               Salvar e Voltar
+             </Button>
+           </div>
         </div>
       </div>
 
@@ -1174,46 +1189,46 @@ export default function UnionMemberDetailPage() {
                             </Button>
                           )}
 
-                          {formData.phone && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={sendingSignatureRequest}
-                              onClick={async () => {
-                                if (!resolvedClinic || !id) return;
-                                setSendingSignatureRequest(true);
-                                try {
-                                  const { data, error } = await supabase.functions.invoke("send-signature-request", {
-                                    body: { associadoId: id, clinicId: resolvedClinic.id, createOnly: true },
-                                  });
-                                  if (error) throw error;
-                                  if (data?.error) throw new Error(data.error);
+                           {formData.phone && (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               disabled={sendingSignatureRequest}
+                               onClick={async () => {
+                                 if (!resolvedClinic || !id) return;
+                                 setSendingSignatureRequest(true);
+                                 try {
+                                   const { data, error } = await supabase.functions.invoke("send-signature-request", {
+                                     body: { associadoId: id, clinicId: resolvedClinic.id, createOnly: true },
+                                   });
+                                   if (error) throw error;
+                                   if (data?.error) throw new Error(data.error);
 
-                                  const baseUrl = window.location.origin;
-                                  const signatureUrl = `${baseUrl}/assinar/${data.token}`;
-                                  
-                                  const { data: sindicato } = await supabase
-                                    .from("union_entities")
-                                    .select("razao_social")
-                                    .eq("clinic_id", resolvedClinic.id)
-                                    .single();
+                                   const baseUrl = window.location.origin;
+                                   const signatureUrl = `${baseUrl}/assinar/${data.token}`;
+                                   
+                                   const { data: sindicato } = await supabase
+                                     .from("union_entities")
+                                     .select("razao_social")
+                                     .eq("clinic_id", resolvedClinic.id)
+                                     .maybeSingle();
 
-                                  const message = `✍️ *Autorização de Desconto em Folha*\\n\\nOlá, *${formData.name}*!\\n\\nO *${sindicato?.razao_social || "Sindicato"}* solicita que você assine digitalmente a autorização de desconto em folha.\\n\\n📝 *Acesse o link abaixo para assinar:* \\n${signatureUrl}\\n\\nAtenciosamente,\\n*${sindicato?.razao_social || "Sindicato"}*`;
+                                   const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${formData.name}*!\n\nO *${sindicato?.razao_social || "Sindicato"}* solicita que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${sindicato?.razao_social || "Sindicato"}*`;
 
-                                  openWhatsApp(formData.phone, message);
-                                } catch (err: any) {
-                                  const extracted = extractFunctionsError(err);
-                                  toast({ title: "Erro ao gerar link", description: extracted.message, variant: "destructive" });
-                                } finally {
-                                  setSendingSignatureRequest(false);
-                                }
-                              }}
-                              className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                            >
-                              {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                              Link Assinatura (Manual por WhatsApp)
-                            </Button>
-                          )}
+                                   openWhatsApp(formData.phone, message);
+                                 } catch (err: any) {
+                                   const extracted = extractFunctionsError(err);
+                                   toast({ title: "Erro ao gerar link", description: extracted.message, variant: "destructive" });
+                                 } finally {
+                                   setSendingSignatureRequest(false);
+                                 }
+                               }}
+                               className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium"
+                             >
+                               {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                               Link Assinatura (Manual)
+                             </Button>
+                           )}
                         </div>
                       )}
                     </div>
@@ -1246,7 +1261,8 @@ export default function UnionMemberDetailPage() {
                 phone: formData.phone,
                 cpf: formData.cpf,
               }}
-              clinicId={resolvedClinic?.id || ''}
+               clinicId={resolvedClinic?.id || ''}
+               memberPhotoUrl={patientPhotoUrl}
             />
           </div>
         </div>
@@ -1281,8 +1297,28 @@ export default function UnionMemberDetailPage() {
         open={isModalOpen('patientAppointments')}
         onOpenChange={(open) => open ? null : closeModal('patientAppointments')}
         patientId={getModalData('patientAppointments').patientId || id || ''}
-        patientName={getModalData('patientAppointments').patientName || formData.name}
-      />
-    </div>
-  );
-}
+         patientName={getModalData('patientAppointments').patientName || formData.name}
+       />
+
+       {/* Ficha de Filiação Dialog */}
+       {id && resolvedClinic && isFiliacaoDialogOpen && (
+         <MemberFiliacaoActionsDialog
+           open={isFiliacaoDialogOpen}
+           onOpenChange={setIsFiliacaoDialogOpen}
+           clinicId={resolvedClinic.id}
+           member={{
+             id,
+             name: formData.name,
+             email: formData.email,
+             phone: formData.phone,
+             cpf: formData.cpf,
+             photo_url: patientPhotoUrl,
+             employer_name: formData.employerName,
+             employer_cnpj: formData.employerCnpj,
+             registration_number: formData.registrationNumber,
+           }}
+         />
+       )}
+     </div>
+   );
+ }
