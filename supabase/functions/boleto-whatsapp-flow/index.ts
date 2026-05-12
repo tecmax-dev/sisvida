@@ -146,7 +146,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
        responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
        buttons = [
          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         { id: 'menu_principal', title: 'Menu Principal' }
        ];
      } else if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
        responseText = "📋 Por favor, informe o *CNPJ* da empresa (apenas números):";
@@ -154,7 +155,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
        responseText = "📝 Qual o *tipo de contribuição*?";
        buttons = [
          { id: 'boleto_type_1', title: 'Mensalidade' },
-         { id: 'boleto_type_2', title: 'Taxa' }
+         { id: 'boleto_type_2', title: 'Taxa' },
+         { id: 'menu_principal', title: 'Menu Principal' }
        ];
      } else if (session.state === 'WAITING_CNPJ') {
       const cleanCnpj = text.replace(/\D/g, '');
@@ -170,7 +172,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           responseText = `✅ *Empresa identificada!*\n\n🏢 *${employer.name}*\n\nÉ essa a empresa correta?`;
           buttons = [
             { id: 'boleto_sim', title: '✅ Sim' },
-            { id: 'boleto_nao', title: '❌ Não' }
+           { id: 'boleto_nao', title: '❌ Não' },
+           { id: 'menu_principal', title: 'Menu Principal' }
           ];
           nextState = 'CONFIRM_EMPLOYER';
           await supabase.from('whatsapp_boleto_sessions').update({ 
@@ -259,7 +262,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           responseText = `🔍 *Confirmação de Dados*\n\n🏢 Empresa: *${session.employer_name}*\n📅 Competência: *${competencia}*\n📅 Vencimento: *${displayDate}*\n💰 Valor: *R$ ${formattedValor}*\n\nOs dados estão corretos?`;
           buttons = [
             { id: 'data_sim', title: '✅ Sim' },
-            { id: 'data_nao', title: '❌ Não, Recomeçar' }
+           { id: 'data_nao', title: '❌ Não, Recomeçar' },
+           { id: 'menu_principal', title: 'Menu Principal' }
           ];
           nextState = 'CONFIRM_DATA';
         } else {
@@ -316,7 +320,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
        responseText = "Vou te ajudar com um novo boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?";
        buttons = [
          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
-         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' }
+         { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         { id: 'menu_principal', title: 'Menu Principal' }
        ];
        nextState = 'SELECT_BOLETO_TYPE';
      } else {
