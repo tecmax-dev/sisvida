@@ -113,6 +113,13 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     // Start logic override
     if (isStartAction) nextState = 'SELECT_BOLETO_TYPE';
 
+    // Persist boleto_type selection ('a_vencer' = auto due date, 'vencido' = ask user)
+    if (session.state === 'SELECT_BOLETO_TYPE' && (text === 'boleto_a_vencer' || text === 'boleto_vencido')) {
+      const tipo = text === 'boleto_a_vencer' ? 'a_vencer' : 'vencido';
+      await supabase.from('whatsapp_boleto_sessions').update({ boleto_type: tipo }).eq('id', session.id);
+      session.boleto_type = tipo;
+    }
+
     // Text input states persistence (allow state to persist while waiting for text)
     const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO', 'CONFIRM_DATA'];
     if (!nextState && textInputStates.includes(session.state)) {
@@ -186,12 +193,32 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       } else if (session.state === 'WAITING_PERIODO') {
         const periodRegex = /^(0[1-9]|1[0-2])\/\d{4}$/;
         if (periodRegex.test(text)) {
-          responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
-          nextState = 'WAITING_VENCIMENTO';
+          const cMonth = parseInt(text.split('/')[0]);
+          const cYear = parseInt(text.split('/')[1]);
           await supabase.from('whatsapp_boleto_sessions').update({ 
-            competence_month: parseInt(text.split('/')[0]), 
-            competence_year: parseInt(text.split('/')[1]) 
+            competence_month: cMonth, 
+            competence_year: cYear 
           }).eq('id', session.id);
+
+          if (session.boleto_type === 'a_vencer') {
+            // Auto-calcula vencimento: dia 10 do mês seguinte à competência, ajustando para dia útil
+            let dueYear = cYear;
+            let dueMonth = cMonth + 1;
+            if (dueMonth > 12) { dueMonth = 1; dueYear += 1; }
+            const due = new Date(Date.UTC(dueYear, dueMonth - 1, 10, 12, 0, 0));
+            // Se cair em sábado (6) ou domingo (0), avançar para próxima segunda
+            const dow = due.getUTCDay();
+            if (dow === 6) due.setUTCDate(due.getUTCDate() + 2);
+            else if (dow === 0) due.setUTCDate(due.getUTCDate() + 1);
+            const isoDate = due.toISOString();
+            await supabase.from('whatsapp_boleto_sessions').update({ new_due_date: isoDate }).eq('id', session.id);
+
+            responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
+            nextState = 'WAITING_VALOR';
+          } else {
+            responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
+            nextState = 'WAITING_VENCIMENTO';
+          }
         } else {
           responseText = "❌ Formato inválido. Informe o período como MM/AAAA (ex: 05/2026):";
         }
