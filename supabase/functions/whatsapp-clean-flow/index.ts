@@ -116,7 +116,7 @@ serve(async (req) => {
             buttons: [
               { type: "reply", reply: { id: "whazing_sub_boleto", title: "2ª Via Boleto" } },
               { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
-              { type: "reply", reply: { id: { id: "whazing_sub_outros", title: "Outros Assuntos" } } }
+              { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
             ]
           }
         }
