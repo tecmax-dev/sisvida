@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail, Link2, Check, ChevronsUpDown, MessageCircle, Building2 } from "lucide-react";
+ import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail, Link2, Check, ChevronsUpDown, MessageCircle, Building2, AlertCircle } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -110,28 +110,71 @@ export default function CreateWithoutValueDialog({
   const [sendEmail, setSendEmail] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
   
-  // Created contribution data
-  const [publicToken, setPublicToken] = useState<string | null>(null);
-  const [publicUrl, setPublicUrl] = useState<string | null>(null);
+   // Created contribution data
+   const [publicToken, setPublicToken] = useState<string | null>(null);
+   const [publicUrl, setPublicUrl] = useState<string | null>(null);
+   const [existingContribution, setExistingContribution] = useState<any | null>(null);
+   const [checkingExisting, setCheckingExisting] = useState(false);
 
   const selectedEmployer = employers.find(e => e.id === selectedEmployerId);
   const activeTypes = contributionTypes.filter(t => t.is_active);
   const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
 
-  useEffect(() => {
-    if (open) {
-      setStep("form");
-      setSelectedEmployerId("");
-      setTypeId("");
-      setMonth(new Date().getMonth() + 1);
-      setYear(new Date().getFullYear());
-      setDueDate(addMonths(new Date(), 1));
-      setSendWhatsApp(false);
-      setSendEmail(false);
-      setPublicToken(null);
-      setPublicUrl(null);
-    }
-  }, [open]);
+   useEffect(() => {
+     if (open) {
+       setStep("form");
+       setSelectedEmployerId("");
+       setTypeId("");
+       setMonth(new Date().getMonth() + 1);
+       setYear(new Date().getFullYear());
+       setDueDate(addMonths(new Date(), 1));
+       setSendWhatsApp(false);
+       setSendEmail(false);
+       setPublicToken(null);
+       setPublicUrl(null);
+       setExistingContribution(null);
+     }
+   }, [open]);
+ 
+   const checkExisting = async () => {
+     if (!selectedEmployerId || !typeId || !open) return;
+     setCheckingExisting(true);
+     try {
+       const { data, error } = await supabase
+         .from("employer_contributions")
+         .select("*")
+         .eq("employer_id", selectedEmployerId)
+         .eq("contribution_type_id", typeId)
+         .eq("competence_month", month)
+         .eq("competence_year", year)
+         .neq("status", "cancelled")
+         .maybeSingle();
+       
+       if (!error && data) {
+         setExistingContribution(data);
+         if (data.value > 0 && data.lytex_invoice_url) {
+           // If it exists with value, we can just show the link
+           setPublicUrl(data.lytex_invoice_url);
+         } else if (data.public_access_token) {
+           // If it exists without value, we can use its token
+           const baseUrl = window.location.origin;
+           setPublicUrl(`${baseUrl}/contribuicao/${data.public_access_token}`);
+         }
+       } else {
+         setExistingContribution(null);
+       }
+     } catch (err) {
+       console.error("Error checking existing:", err);
+     } finally {
+       setCheckingExisting(false);
+     }
+   };
+ 
+   useEffect(() => {
+     if (open && selectedEmployerId && typeId) {
+       checkExisting();
+     }
+   }, [selectedEmployerId, typeId, month, year, open]);
 
   const handleCreate = async () => {
     if (!selectedEmployerId || !typeId) {
@@ -301,19 +344,62 @@ ${currentClinic.name}`;
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5 text-primary" />
-            Nova Contribuição - Sem Valor
-          </DialogTitle>
-          <DialogDescription>
-            Crie uma contribuição aguardando valor. A empresa receberá um link para informar o valor e gerar o boleto.
-          </DialogDescription>
-        </DialogHeader>
-
-        {step === "form" ? (
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4 py-4 pr-4">
+         <DialogHeader>
+           <DialogTitle className="flex items-center gap-2">
+             <Link2 className="h-5 w-5 text-primary" />
+             Nova Contribuição - Sem Valor
+           </DialogTitle>
+           <DialogDescription>
+             Crie uma contribuição aguardando valor. A empresa receberá um link para informar o valor e gerar o boleto.
+           </DialogDescription>
+         </DialogHeader>
+ 
+         {step === "form" ? (
+           <ScrollArea className="max-h-[60vh]">
+             <div className="space-y-4 py-4 pr-4">
+               {existingContribution && (
+                 <div className={cn(
+                   "p-3 rounded-lg flex flex-col gap-2 text-sm border",
+                   existingContribution.value > 0 
+                     ? "bg-blue-50 text-blue-700 border-blue-200" 
+                     : "bg-amber-50 text-amber-700 border-amber-200"
+                 )}>
+                   <div className="flex items-start gap-2">
+                     <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                     <div>
+                       <p className="font-semibold">Já existe uma contribuição para este período</p>
+                       <p className="text-xs mt-0.5">
+                         {existingContribution.value > 0 
+                           ? "Esta competência já possui um boleto gerado. Você pode visualizar o link abaixo." 
+                           : "Esta competência existe mas está aguardando valor. Você pode enviar o link existente."}
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {publicUrl && (
+                     <div className="flex gap-2 mt-1">
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         className="flex-1 border-blue-200 hover:bg-blue-100 text-blue-700 h-8"
+                         onClick={() => window.open(publicUrl, "_blank")}
+                       >
+                         <ExternalLink className="h-3 w-3 mr-2" />
+                         Abrir Link
+                       </Button>
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         className="flex-1 border-blue-200 hover:bg-blue-100 text-blue-700 h-8"
+                         onClick={handleCopyLink}
+                       >
+                         <Copy className="h-3 w-3 mr-2" />
+                         Copiar Link
+                       </Button>
+                     </div>
+                   )}
+                 </div>
+               )}
               {/* Employer Selection */}
               <div className="space-y-2">
                 <Label>Empresa *</Label>

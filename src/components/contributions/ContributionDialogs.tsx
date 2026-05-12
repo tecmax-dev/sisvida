@@ -47,17 +47,18 @@ import {
   FileText,
   CheckCircle2,
   XCircle,
-  Copy,
-  Download,
-  Send,
-  Loader2,
-  Pencil,
-  AlertCircle,
-  Trash2,
-  Check,
-  ChevronsUpDown,
-  Receipt,
-} from "lucide-react";
+   Copy,
+   Download,
+   Send,
+   Loader2,
+   Pencil,
+   AlertCircle,
+   Trash2,
+   Check,
+   ChevronsUpDown,
+   Receipt,
+   ExternalLink,
+ } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -173,14 +174,15 @@ export default function ContributionDialogs({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Receipt dialog
-  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
-
-  // Duplicate check for edit dialog
-  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
-  const [hasDuplicate, setHasDuplicate] = useState(false);
-  const [forceDuplicate, setForceDuplicate] = useState(false);
-  const [duplicateId, setDuplicateId] = useState<string | null>(null);
+   // Receipt dialog
+   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+ 
+   // Duplicate check
+   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+   const [hasDuplicate, setHasDuplicate] = useState(false);
+   const [forceDuplicate, setForceDuplicate] = useState(false);
+   const [duplicateId, setDuplicateId] = useState<string | null>(null);
+   const [existingContribution, setExistingContribution] = useState<Contribution | null>(null);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -207,68 +209,136 @@ export default function ContributionDialogs({
     }
   };
 
-  const handleSaveContribution = async () => {
-    if (!formEmployerId || !formTypeId || !formValue || !formDueDate) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const valueInCents = Math.round(parseFloat(formValue.replace(",", ".")) * 100);
-
-      const { data: newContribution, error } = await supabase
-        .from("employer_contributions")
-        .insert({
-          clinic_id: clinicId,
-          employer_id: formEmployerId,
-          contribution_type_id: formTypeId,
-          competence_month: formMonth,
-          competence_year: formYear,
-          value: valueInCents,
-          due_date: formDueDate,
-          notes: formNotes || null,
-          created_by: userId,
-        })
-        .select(`
-          *,
-          employers (*),
-          contribution_types (*)
-        `)
-        .single();
-
-      if (error) {
-        if (error.message.includes("unique_active_contribution_per_employer") && !allowDuplicateCompetence) {
-          toast.error("Já existe uma contribuição ativa deste tipo para esta competência");
-          return;
-        }
-        // If duplicate is allowed or it's a different error, throw it
-        if (!error.message.includes("unique_active_contribution_per_employer")) {
-          throw error;
-        }
-      }
-
-      toast.success("Contribuição criada! Gerando boleto...");
-      onCreateDialogChange(false);
-      resetCreateForm();
-      onRefresh();
-
-      // Gerar boleto automaticamente
-      if (newContribution) {
-        try {
-          await onGenerateInvoice(newContribution as Contribution);
-        } catch (invoiceError) {
-          console.error("Error generating invoice:", invoiceError);
-          // O erro já será tratado pela função onGenerateInvoice
-        }
-      }
-    } catch (error) {
-      console.error("Error saving contribution:", error);
-      toast.error("Erro ao salvar contribuição");
-    } finally {
-      setSaving(false);
-    }
-  };
+   const checkExistingContribution = async () => {
+     if (!formEmployerId || !formTypeId || !createDialogOpen) return;
+ 
+     setCheckingDuplicate(true);
+     try {
+       const { data, error } = await supabase
+         .from("employer_contributions")
+         .select(`
+           *,
+           employers (*),
+           contribution_types (*)
+         `)
+         .eq("employer_id", formEmployerId)
+         .eq("contribution_type_id", formTypeId)
+         .eq("competence_month", formMonth)
+         .eq("competence_year", formYear)
+         .neq("status", "cancelled")
+         .maybeSingle();
+ 
+       if (!error && data) {
+         setExistingContribution(data as Contribution);
+         setHasDuplicate(true);
+         if (data.value > 0) {
+           setFormValue((data.value / 100).toFixed(2).replace(".", ","));
+           setFormDueDate(data.due_date);
+         }
+       } else {
+         setExistingContribution(null);
+         setHasDuplicate(false);
+       }
+     } catch (error) {
+       console.error("Error checking existing contribution:", error);
+     } finally {
+       setCheckingDuplicate(false);
+     }
+   };
+ 
+   useEffect(() => {
+     if (createDialogOpen && formEmployerId && formTypeId) {
+       checkExistingContribution();
+     }
+   }, [formEmployerId, formTypeId, formMonth, formYear, createDialogOpen]);
+ 
+   const handleSaveContribution = async () => {
+     if (!formEmployerId || !formTypeId || !formValue || !formDueDate) {
+       toast.error("Preencha todos os campos obrigatórios");
+       return;
+     }
+ 
+     setSaving(true);
+     try {
+       const valueInCents = Math.round(parseFloat(formValue.replace(",", ".")) * 100);
+ 
+       let contributionToInvoice: Contribution | null = null;
+ 
+       if (existingContribution && existingContribution.value === 0) {
+         // Update existing zero-value contribution
+         const { data, error } = await supabase
+           .from("employer_contributions")
+           .update({
+             value: valueInCents,
+             due_date: formDueDate,
+             status: "pending",
+             notes: formNotes || existingContribution.notes,
+           })
+           .eq("id", existingContribution.id)
+           .select(`
+             *,
+             employers (*),
+             contribution_types (*)
+           `)
+           .single();
+ 
+         if (error) throw error;
+         contributionToInvoice = data as Contribution;
+         toast.success("Contribuição atualizada! Gerando boleto...");
+       } else {
+         // Create new
+         const { data: newContribution, error } = await supabase
+           .from("employer_contributions")
+           .insert({
+             clinic_id: clinicId,
+             employer_id: formEmployerId,
+             contribution_type_id: formTypeId,
+             competence_month: formMonth,
+             competence_year: formYear,
+             value: valueInCents,
+             due_date: formDueDate,
+             notes: formNotes || null,
+             created_by: userId,
+           })
+           .select(`
+             *,
+             employers (*),
+             contribution_types (*)
+           `)
+           .single();
+ 
+         if (error) {
+           if (error.message.includes("unique_active_contribution_per_employer") && !allowDuplicateCompetence) {
+             toast.error("Já existe uma contribuição ativa deste tipo para esta competência");
+             return;
+           }
+           if (!error.message.includes("unique_active_contribution_per_employer")) {
+             throw error;
+           }
+         }
+         contributionToInvoice = newContribution as Contribution;
+         toast.success("Contribuição criada! Gerando boleto...");
+       }
+ 
+       onCreateDialogChange(false);
+       resetCreateForm();
+       onRefresh();
+ 
+       // Gerar boleto automaticamente
+       if (contributionToInvoice) {
+         try {
+           await onGenerateInvoice(contributionToInvoice);
+         } catch (invoiceError) {
+           console.error("Error generating invoice:", invoiceError);
+         }
+       }
+     } catch (error) {
+       console.error("Error saving contribution:", error);
+       toast.error("Erro ao salvar contribuição");
+     } finally {
+       setSaving(false);
+     }
+   };
 
   const handleCopyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -573,7 +643,40 @@ export default function ContributionDialogs({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+           <div className="space-y-4 pt-2">
+             {hasDuplicate && existingContribution && (
+               <div className={cn(
+                 "p-3 rounded-lg flex flex-col gap-2 text-sm border",
+                 existingContribution.value > 0 
+                   ? "bg-blue-50 text-blue-700 border-blue-200" 
+                   : "bg-amber-50 text-amber-700 border-amber-200"
+               )}>
+                 <div className="flex items-start gap-2">
+                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                   <div>
+                     <p className="font-semibold">Já existe uma contribuição para este período</p>
+                     <p className="text-xs mt-0.5">
+                       {existingContribution.value > 0 
+                         ? "Esta competência já possui um boleto gerado. Você pode visualizar o link abaixo." 
+                         : "Esta competência existe mas está aguardando valor. Informe o valor abaixo para gerar o boleto."}
+                     </p>
+                   </div>
+                 </div>
+                 
+                 {existingContribution.lytex_invoice_url && (
+                   <Button 
+                     variant="outline" 
+                     size="sm" 
+                     className="w-full mt-1 border-blue-200 hover:bg-blue-100 text-blue-700 h-8"
+                     onClick={() => window.open(existingContribution.lytex_invoice_url!, "_blank")}
+                   >
+                     <ExternalLink className="h-3 w-3 mr-2" />
+                     Acessar Boleto Existente
+                   </Button>
+                 )}
+               </div>
+             )}
+ 
             <div className="space-y-2">
               <Label>Empresa *</Label>
               <Popover open={employerPopoverOpen} onOpenChange={setEmployerPopoverOpen}>
