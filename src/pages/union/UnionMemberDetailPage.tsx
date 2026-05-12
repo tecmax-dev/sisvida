@@ -889,10 +889,23 @@ export default function UnionMemberDetailPage() {
               Desvincular
             </Button>
           )}
-          <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Salvar e Voltar
-          </Button>
+           <div className="flex items-center gap-1.5">
+             {id && resolvedClinic && (
+               <Button
+                 variant="outline"
+                 size="sm"
+                 className="gap-2 text-primary font-medium"
+                 onClick={() => setIsFiliacaoDialogOpen(true)}
+               >
+                 <FileText className="h-4 w-4" />
+                 Ficha de Filiação
+               </Button>
+             )}
+             <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
+               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+               Salvar e Voltar
+             </Button>
+           </div>
         </div>
       </div>
 
