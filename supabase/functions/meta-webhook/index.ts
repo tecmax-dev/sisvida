@@ -38,8 +38,8 @@ serve(async (req) => {
     const messageObj = value?.messages?.[0] || body.message || {};
     const from = (body.wa_id || body.phone || messageObj.from || "").toString().replace(/\D/g, "");
     
-    const extractedButtonId = messageObj.interactive?.button_reply?.id || messageObj.buttonId || null;
-    const extractedButtonTitle = messageObj.interactive?.button_reply?.title || messageObj.buttonText || null;
+    const extractedButtonId = messageObj.interactive?.button_reply?.id || messageObj.interactive?.list_reply?.id || messageObj.buttonId || null;
+    const extractedButtonTitle = messageObj.interactive?.button_reply?.title || messageObj.interactive?.list_reply?.title || messageObj.buttonText || null;
     const text = (messageObj.text?.body || messageObj.conversation || "").toString().trim();
 
     console.log('[BUTTON_ID]', extractedButtonId);
