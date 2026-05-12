@@ -75,7 +75,7 @@ interface FiliacaoData {
    memberPhotoUrl?: string | null;
  }
 
-export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
+ export function MemberFiliacaoShareCard({ member, clinicId, memberPhotoUrl }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
