@@ -23,8 +23,9 @@ import {
   Filter,
   Send,
   Key,
-  Copy,
-  Download
+   Copy,
+   Download,
+   Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,6 +214,17 @@ export default function EmployersPage() {
     setCurrentPage(1);
     sessionStorage.setItem("employers_category", categoryFilter);
   }, [categoryFilter]);
+
+  const copyFriendlyLink = (employer: Employer) => {
+    if (!currentClinic?.slug || !employer.access_code) {
+      toast.error("Dados incompletos para gerar o link");
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/portal-empresa/${currentClinic.slug}?cnpj=${employer.cnpj.replace(/\D/g, "")}&code=${employer.access_code}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link amigável copiado!");
+  };
 
   const fetchCategories = async () => {
     if (!currentClinic) return;
@@ -977,11 +989,28 @@ export default function EmployersPage() {
                                             setSendCodeDialogOpen(true);
                                           }}
                                         >
-                                          <Send className="h-3.5 w-3.5" />
+                                         <div className="flex items-center gap-1">
+                                           <Send className="h-3.5 w-3.5" />
+                                         </div>
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Enviar código por e-mail</TooltipContent>
+                                      <TooltipContent>Enviar código e link por e-mail</TooltipContent>
                                     </Tooltip>
+                                 )}
+                                 {!isVirtual && employer.access_code && (
+                                   <Tooltip>
+                                     <TooltipTrigger asChild>
+                                       <Button
+                                         variant="ghost"
+                                         size="icon"
+                                         className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+                                         onClick={() => copyFriendlyLink(employer)}
+                                       >
+                                         <Link2 className="h-3.5 w-3.5" />
+                                       </Button>
+                                     </TooltipTrigger>
+                                     <TooltipContent>Copiar link de acesso direto</TooltipContent>
+                                   </Tooltip>
                                   ) : (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -1197,17 +1226,28 @@ export default function EmployersPage() {
                     <div className="flex-1 p-2 rounded-md bg-primary/5 border border-primary/20 text-center font-mono font-bold text-primary">
                       {selectedEmployer.access_code}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(selectedEmployer.access_code || "");
-                        toast.success("Código de login copiado!");
-                      }}
-                      title="Copiar código de login"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                     <div className="flex gap-1">
+                       <Button
+                         variant="outline"
+                         size="icon"
+                         onClick={() => {
+                           navigator.clipboard.writeText(selectedEmployer.access_code || "");
+                           toast.success("Código de login copiado!");
+                         }}
+                         title="Copiar código de login"
+                       >
+                         <Copy className="h-4 w-4" />
+                       </Button>
+                       <Button
+                         variant="outline"
+                         size="icon"
+                         onClick={() => copyFriendlyLink(selectedEmployer)}
+                         title="Copiar link de acesso direto"
+                         className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                       >
+                         <Link2 className="h-4 w-4" />
+                       </Button>
+                     </div>
                   </div>
                 </div>
               )}
