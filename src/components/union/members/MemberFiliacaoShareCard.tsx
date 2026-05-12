@@ -17,8 +17,9 @@ import {
   Copy,
   CheckCircle,
   Share2,
-  ExternalLink,
-  Pen,
+   ExternalLink,
+   Pen,
+   Globe,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
@@ -83,6 +84,37 @@ export function MemberFiliacaoShareCard({ member, clinicId }: Props) {
   const [whatsappPhone, setWhatsappPhone] = useState(member.phone || "");
   const [emailAddress, setEmailAddress] = useState(member.email || "");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [sendingManualLink, setSendingManualLink] = useState(false);
+
+  const handleManualSendSignatureWhatsApp = async () => {
+    if (!member.phone) {
+      toast({ title: "Telefone do sócio não encontrado.", variant: "destructive" });
+      return;
+    }
+    setSendingManualLink(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-signature-request", {
+        body: { associadoId: member.id, clinicId, createOnly: true },
+      });
+      if (error) throw error;
+
+      // Get sindicato info
+      const { data: sindicato } = await supabase
+        .from("union_entities")
+        .select("razao_social")
+        .eq("clinic_id", clinicId)
+        .single();
+
+      const baseUrl = window.location.origin;
+      const signatureUrl = `${baseUrl}/assinar/${data.token}`;
+      const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${member.name}*!\n\nSolicitamos que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${sindicato?.razao_social || "Sindicato"}*`;
+      openWhatsApp(member.phone, message);
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar link", description: err.message || "Erro desconhecido", variant: "destructive" });
+    } finally {
+      setSendingManualLink(false);
+    }
+  };
 
   // Fetch filiacao data for the member
   const fetchFiliacaoData = async (): Promise<{ filiacao: FiliacaoData | null; dependents: any[]; sindicato: any | null }> => {
