@@ -61,6 +61,21 @@ serve(async (req) => {
       return result;
     };
 
+    // Log the incoming message
+    try {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      await supabase.from('whatsapp_incoming_logs').insert({
+        phone: to,
+        message_text: text || `[Button: ${extractedButtonTitle || extractedButtonId}]`,
+        raw_payload: body,
+        processed: true,
+        processed_action: extractedButtonId ? `button_${extractedButtonId}` : 'text_message'
+      });
+    } catch (logErr) {
+      console.error('[LOG_ERROR]', logErr);
+    }
+
     const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu)\b/i.test(text);
 
     // --- ROUTING LOGIC ---
