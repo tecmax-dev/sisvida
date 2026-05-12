@@ -121,14 +121,16 @@ export function SendAccessCodeDialog({
     const portalDomain = "https://prosindweb.com.br";
     
     const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
-    const portalUrl = type === "accounting_office" 
-      ? `${portalDomain}/portal-contador/${currentClinic.slug}`
-      : `${portalDomain}/portal-empresa/${currentClinic.slug}`;
-    
     const identifier = type === "accounting_office" 
       ? email 
       : codeData.identifier || "";
 
+    const portalUrl = type === "accounting_office" 
+      ? `${portalDomain}/portal-contador/${currentClinic.slug}`
+      : `${portalDomain}/portal-empresa/${currentClinic.slug}`;
+
+    const directLink = `${portalUrl}?${type === "accounting_office" ? "email" : "cnpj"}=${identifier.replace(/\D/g, "")}&code=${codeData.accessCode}`;
+    
     const message = `🔑 *Código de Acesso - ${portalName}*
 
 Olá *${entityName}*!
@@ -138,9 +140,13 @@ Segue seu código de acesso ao ${portalName} da ${currentClinic.name}:
 📌 *Código:* ${codeData.accessCode}
 
 📋 *Como acessar:*
-1️⃣ Acesse: ${portalUrl}
-2️⃣ Informe: ${identifier}
-3️⃣ Digite o código acima
+ 🚀 *Acesso Direto (Clique aqui):*
+ ${directLink}
+ 
+ *Ou manualmente:*
+ 1️⃣ Acesse: ${portalUrl}
+ 2️⃣ Informe: ${identifier}
+ 3️⃣ Digite o código acima
 
 ⚠️ Este código é pessoal e intransferível.
 

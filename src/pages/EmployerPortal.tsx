@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+ import { useState, useEffect, useMemo, useRef } from "react";
+ import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -131,6 +131,7 @@ type ContributionTab = "pending" | "overdue" | "paid" | "all";
 
 export default function EmployerPortal() {
   const { clinicSlug } = useParams();
+  const [searchParams] = useSearchParams();
   const [cnpj, setCnpj] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -159,6 +160,48 @@ export default function EmployerPortal() {
       loadClinicBySlug(clinicSlug);
     }
   }, [clinicSlug]);
+
+  // Auto-login from query params
+  const autoLoginAttempted = useRef(false);
+  useEffect(() => {
+    const paramCnpj = searchParams.get("cnpj");
+    const paramCode = searchParams.get("code") || searchParams.get("access_code");
+
+    if (paramCnpj && paramCode && !employer && !isLoading && !autoLoginAttempted.current) {
+      autoLoginAttempted.current = true;
+      setCnpj(paramCnpj);
+      setAccessCode(paramCode);
+      
+      // Precisamos chamar o login com os valores dos params diretamente 
+      // pois o state pode não ter atualizado ainda
+      const attemptLogin = async () => {
+        setIsLoading(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("employer-portal-auth", {
+            body: { action: "login", cnpj: paramCnpj, access_code: paramCode },
+          });
+
+          if (!error && data?.employer) {
+            setEmployer(data.employer);
+            sessionStorage.setItem("employer_session", JSON.stringify(data.employer));
+            if (data.employer.clinic_id) {
+              loadClinicById(data.employer.clinic_id);
+            }
+            toast.success(`Bem-vindo, ${data.employer.name}!`);
+            loadContributions(data.employer.id);
+          } else if (data?.error) {
+            toast.error(data.error);
+          }
+        } catch (err) {
+          console.error("[EmployerPortal] Auto-login error:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      attemptLogin();
+    }
+  }, [searchParams, employer, isLoading]);
 
   const loadClinicBySlug = async (slug: string) => {
     try {
