@@ -23,6 +23,7 @@ import {
   Filter,
   Send,
   Key,
+  Copy,
   Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1189,6 +1190,27 @@ export default function EmployersPage() {
                   )}
                 </div>
               </div>
+              {selectedEmployer?.access_code && (
+                <div>
+                  <Label>Código de Login</Label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 p-2 rounded-md bg-primary/5 border border-primary/20 text-center font-mono font-bold text-primary">
+                      {selectedEmployer.access_code}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedEmployer.access_code || "");
+                        toast.success("Código de login copiado!");
+                      }}
+                      title="Copiar código de login"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <Label htmlFor="name">Razão Social *</Label>
