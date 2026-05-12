@@ -1246,7 +1246,8 @@ export default function UnionMemberDetailPage() {
                 phone: formData.phone,
                 cpf: formData.cpf,
               }}
-              clinicId={resolvedClinic?.id || ''}
+               clinicId={resolvedClinic?.id || ''}
+               memberPhotoUrl={patientPhotoUrl}
             />
           </div>
         </div>
