@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+ import { useState, useEffect, useMemo, useRef } from "react";
+ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +109,7 @@ const MONTHS_FULL = [
 
 export default function AccountingOfficePortal() {
   const { clinicSlug } = useParams<{ clinicSlug: string }>();
+  const [searchParams] = useSearchParams();
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -170,6 +171,48 @@ export default function AccountingOfficePortal() {
       loadClinicBySlug(clinicSlug);
     }
   }, [clinicSlug]);
+
+  // Auto-login from query params
+  const autoLoginAttempted = useRef(false);
+  useEffect(() => {
+    const paramEmail = searchParams.get("email");
+    const paramCode = searchParams.get("code") || searchParams.get("access_code");
+
+    if (paramEmail && paramCode && !isAuthenticated && !isLoading && !autoLoginAttempted.current) {
+      autoLoginAttempted.current = true;
+      setEmail(paramEmail);
+      setAccessCode(paramCode);
+      
+      const attemptLogin = async () => {
+        setIsLoading(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("accounting-office-portal-auth", {
+            body: { action: "login", email: paramEmail.toLowerCase().trim(), access_code: paramCode.trim().toUpperCase() },
+          });
+
+          if (!error && data?.success && data?.accounting_office) {
+            const office = data.accounting_office;
+            setAccountingOffice(office);
+            setIsAuthenticated(true);
+            localStorage.setItem("accounting_office_session", JSON.stringify({
+              accountingOffice: office,
+              savedAt: Date.now(),
+            }));
+            toast.success("Login realizado com sucesso!");
+            loadData(office.id);
+          } else if (data?.error) {
+            toast.error(data.error);
+          }
+        } catch (err) {
+          console.error("[AccountingPortal] Auto-login error:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      attemptLogin();
+    }
+  }, [searchParams, isAuthenticated, isLoading]);
 
   const loadClinicBySlug = async (slug: string) => {
     try {
