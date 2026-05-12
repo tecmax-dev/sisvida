@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo} from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send } from "lucide-react";
+import { ArrowLeft, Loader2, UserX, UserCheck, Users, Save, Pen, CheckCircle, Send, MessageCircle } from "lucide-react";
 import { extractFunctionsError } from "@/lib/functionsError";
+import { openWhatsApp } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -1142,33 +1143,78 @@ export default function UnionMemberDetailPage() {
                       <div className="text-sm text-muted-foreground bg-muted/30 px-4 py-3 rounded-lg border border-dashed">
                         Nenhuma assinatura digital registrada.
                       </div>
-                      {canManageMembers() && formData.email && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={sendingSignatureRequest}
-                          onClick={async () => {
-                            if (!resolvedClinic || !id) return;
-                            setSendingSignatureRequest(true);
-                            try {
-                              const { data, error } = await supabase.functions.invoke("send-signature-request", {
-                                body: { associadoId: id, clinicId: resolvedClinic.id },
-                              });
-                              if (error) throw error;
-                              if (data?.error) throw new Error(data.error);
-                              toast({ title: "Solicitação enviada!", description: `Email enviado para ${formData.email}` });
-                            } catch (err: any) {
-                              const extracted = extractFunctionsError(err);
-                              toast({ title: "Erro ao enviar", description: extracted.message, variant: "destructive" });
-                            } finally {
-                              setSendingSignatureRequest(false);
-                            }
-                          }}
-                          className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50"
-                        >
-                          {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                          Solicitar Assinatura por Email
-                        </Button>
+                      {canManageMembers() && (
+                        <div className="flex flex-wrap gap-2">
+                          {formData.email && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={sendingSignatureRequest}
+                              onClick={async () => {
+                                if (!resolvedClinic || !id) return;
+                                setSendingSignatureRequest(true);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke("send-signature-request", {
+                                    body: { associadoId: id, clinicId: resolvedClinic.id },
+                                  });
+                                  if (error) throw error;
+                                  if (data?.error) throw new Error(data.error);
+                                  toast({ title: "Solicitação enviada!", description: `Email enviado para ${formData.email}` });
+                                } catch (err: any) {
+                                  const extracted = extractFunctionsError(err);
+                                  toast({ title: "Erro ao enviar", description: extracted.message, variant: "destructive" });
+                                } finally {
+                                  setSendingSignatureRequest(false);
+                                }
+                              }}
+                              className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50"
+                            >
+                              {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                              Solicitar Assinatura por Email
+                            </Button>
+                          )}
+
+                          {formData.phone && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={sendingSignatureRequest}
+                              onClick={async () => {
+                                if (!resolvedClinic || !id) return;
+                                setSendingSignatureRequest(true);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke("send-signature-request", {
+                                    body: { associadoId: id, clinicId: resolvedClinic.id, createOnly: true },
+                                  });
+                                  if (error) throw error;
+                                  if (data?.error) throw new Error(data.error);
+
+                                  const baseUrl = window.location.origin;
+                                  const signatureUrl = `${baseUrl}/assinar/${data.token}`;
+                                  
+                                  const { data: sindicato } = await supabase
+                                    .from("union_entities")
+                                    .select("razao_social")
+                                    .eq("clinic_id", resolvedClinic.id)
+                                    .single();
+
+                                  const message = `✍️ *Autorização de Desconto em Folha*\\n\\nOlá, *${formData.name}*!\\n\\nO *${sindicato?.razao_social || "Sindicato"}* solicita que você assine digitalmente a autorização de desconto em folha.\\n\\n📝 *Acesse o link abaixo para assinar:* \\n${signatureUrl}\\n\\nAtenciosamente,\\n*${sindicato?.razao_social || "Sindicato"}*`;
+
+                                  openWhatsApp(formData.phone, message);
+                                } catch (err: any) {
+                                  const extracted = extractFunctionsError(err);
+                                  toast({ title: "Erro ao gerar link", description: extracted.message, variant: "destructive" });
+                                } finally {
+                                  setSendingSignatureRequest(false);
+                                }
+                              }}
+                              className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                            >
+                              {sendingSignatureRequest ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                              Link Assinatura (Manual por WhatsApp)
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

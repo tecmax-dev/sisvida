@@ -90,7 +90,7 @@ import { BatchFiliacaoDialog } from "@/components/union/members/BatchFiliacaoDia
 import { ImportMembersDialog } from "@/components/admin/import/ImportMembersDialog";
 import { DeleteMemberDialog } from "@/components/union/members/DeleteMemberDialog";
 import { SendSignatureRequestDialog } from "@/components/union/members/SendSignatureRequestDialog";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Pen, KeyRound } from "lucide-react";
 import { SendPatientResetDialog } from "@/components/union/members/SendPatientResetDialog";
@@ -705,6 +705,43 @@ export default function UnionMembersListPage() {
 
       toast({
         title: "Erro ao enviar",
+        description: err.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Gerar link de assinatura e abrir WhatsApp
+  const handleManualSendSignatureWhatsApp = async (member: UnionMember) => {
+    if (!member.phone) {
+      toast({
+        title: "Erro",
+        description: "Telefone do sócio não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-signature-request", {
+        body: {
+          associadoId: member.id,
+          clinicId: resolvedClinic.id,
+          createOnly: true, // Nova flag para não disparar o email se já tiver
+        },
+      });
+
+      if (error) throw error;
+
+      const baseUrl = window.location.origin;
+      const signatureUrl = `${baseUrl}/assinar/${data.token}`;
+      const message = `✍️ *Autorização de Desconto em Folha*\n\nOlá, *${member.name}*!\n\nSolicitamos que você assine digitalmente a autorização de desconto em folha.\n\n📝 *Acesse o link abaixo para assinar:* \n${signatureUrl}\n\nAtenciosamente,\n*${resolvedClinic.name}*`;
+
+      openWhatsApp(member.phone, message);
+    } catch (err: any) {
+      console.error("[manual-send-signature] error", err);
+      toast({
+        title: "Erro ao gerar link",
         description: err.message || "Erro desconhecido",
         variant: "destructive",
       });

@@ -25,6 +25,7 @@ import {
   CalendarCheck,
   Signature,
   Eye,
+  Pen,
 } from "lucide-react";
 import { generateFichaFiliacaoPDF, generateFiliacaoPDFBlob } from "@/lib/filiacao-pdf-generator";
 import { prepareMemberImagesForFiliacaoPdf } from "@/lib/filiacaoPdfAssets";
