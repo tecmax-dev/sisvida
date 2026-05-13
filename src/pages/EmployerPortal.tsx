@@ -594,15 +594,7 @@ const [showTutorial, setShowTutorial] = useState(false);
           accessCode: {
             value: accessCode,
             onChange: setAccessCode
-          }
-        }}
-        helpText={clinic?.phone ? `Não possui código? Ligue: ${clinic.phone}` : "Não possui código? Entre em contato com o sindicato."}
       />
-    );
-  }
-
-  // Main Portal Layout
-  return (
     <div className="min-h-screen bg-[#f5f5f5]">
       {/* Dialogs */}
       <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
@@ -1222,18 +1214,6 @@ const [showTutorial, setShowTutorial] = useState(false);
             clinicId={clinic.id}
             onBack={() => setActiveView("home")}
             onSuccess={() => setActiveView("home")}
-      {/* Floating Tutorial Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button 
-          onClick={() => setShowTutorial(true)}
-          className="rounded-full shadow-2xl h-12 px-6 gap-2 bg-slate-900 hover:bg-slate-800 text-white border border-white/10"
-        >
-          <PlayCircle className="h-5 w-5 text-primary" />
-          <span className="hidden sm:inline">Tutorial de Uso</span>
-        </Button>
-      </div>
-
-      <PortalTutorialVideo open={showTutorial} onOpenChange={setShowTutorial} />
           />
         )}
       </main>
