@@ -74,7 +74,7 @@ const templates: TemplatePayload[] = [
   {
     name: "carteira_vencendo_util",
     language: LANG,
-    category: "MARKETING",
+    category: "UTILITY",
     components: [
       {
         type: "BODY",
@@ -88,7 +88,7 @@ const templates: TemplatePayload[] = [
   {
     name: "carteira_vencida_util",
     language: LANG,
-    category: "MARKETING",
+    category: "UTILITY",
     components: [
       {
         type: "BODY",
@@ -449,12 +449,12 @@ const templates: TemplatePayload[] = [
       language: LANG,
       category: "UTILITY",
       components: [
-         {
-           type: "BODY",
-           text:
-             "Informativo: A agenda de atendimentos médicos para o período de {{1}} já está disponível para consultas.\n\nOs horários podem ser visualizados e agendados diretamente através do aplicativo oficial do Sindicato dos Comerciários.",
-           example: { body_text: [["Maio/2026"]] },
-         },
+        {
+          type: "BODY",
+          text:
+            "Atualização de Serviço Social: A agenda de atendimentos médicos na sede do Sindicato para o período de {{1}} já está disponível para consulta.\n\nOs horários podem ser visualizados e agendados diretamente através do aplicativo oficial.",
+          example: { body_text: [["Maio/2026"]] },
+        },
         { type: "FOOTER", text: "Sindicato dos Comerciários" },
         {
           type: "BUTTONS",
@@ -468,52 +468,54 @@ const templates: TemplatePayload[] = [
         },
       ],
     },
-  {
-    name: "agenda_disponivel",
-    language: LANG,
-    category: "MARKETING",
-  {
-    name: "agenda_disponivel_util",
-    language: LANG,
-    category: "MARKETING",
-    components: [
-      {
-        type: "BODY",
-        text: "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
-        example: { body_text: [["Maria", "Maio/2026"]] },
-      },
-      { type: "FOOTER", text: "Sindicato dos Comerciários" },
-      {
-        type: "BUTTONS",
-        buttons: [
-          {
-            type: "URL",
-            text: "Abrir Aplicativo",
-            url: "https://app.sindicato.com.br/",
-          },
-        ],
-      },
-    ],
-  },
-    components: [
-      {
-        type: "BODY",
-        text: "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
-        example: { body_text: [["Maria", "Maio/2026"]] },
-      },
-      { type: "FOOTER", text: "Sindicato dos Comerciários" },
-      {
-        type: "BUTTONS",
-        buttons: [
-          {
-            type: "URL",
-            text: "Abrir Aplicativo",
-            url: "https://app.sindicato.com.br/",
-          },
-        ],
-      },
-    ],
-  },
+    {
+      name: "agenda_disponivel",
+      language: LANG,
+      category: "UTILITY",
+      components: [
+        {
+          type: "BODY",
+          text:
+            "Notificação de Atendimento Social: Olá, {{1}}. Informamos que o cronograma de atendimentos médicos na sede do Sindicato para o período de {{2}} já está disponível.\n\nPara consultar horários e realizar seu agendamento, acesse o aplicativo oficial.",
+          example: { body_text: [["Maria", "Maio/2026"]] },
+        },
+        { type: "FOOTER", text: "Sindicato dos Comerciários" },
+        {
+          type: "BUTTONS",
+          buttons: [
+            {
+              type: "URL",
+              text: "Acessar Aplicativo",
+              url: "https://app.sindicato.com.br/",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "agenda_disponivel_util",
+      language: LANG,
+      category: "UTILITY",
+      components: [
+        {
+          type: "BODY",
+          text:
+            "Notificação de Atendimento Social: Olá, {{1}}. Informamos que o cronograma de atendimentos médicos na sede do Sindicato para o período de {{2}} já está disponível.\n\nPara consultar horários e realizar seu agendamento, acesse o aplicativo oficial.",
+          example: { body_text: [["Maria", "Maio/2026"]] },
+        },
+        { type: "FOOTER", text: "Sindicato dos Comerciários" },
+        {
+          type: "BUTTONS",
+          buttons: [
+            {
+              type: "URL",
+              text: "Acessar Aplicativo",
+              url: "https://app.sindicato.com.br/",
+            },
+          ],
+        },
+      ],
+    },
   {
     name: "recuperacao_senha_link",
     language: LANG,
