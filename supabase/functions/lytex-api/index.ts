@@ -566,7 +566,9 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
         value: valueInCents,
       },
     ],
-    dueDate: params.dueDate,
+     // Lytex API expects ISO date. If only YYYY-MM-DD is provided, ensure it's treated as local date
+     // to avoid timezone shifts when converted to UTC (Lytex stores as UTC 02:59:59.999Z for Brasilia midnight)
+     dueDate: params.dueDate.includes('T') ? params.dueDate : `${params.dueDate}T12:00:00`,
     paymentMethods: {
       pix: { enable: params.enablePix },
       boleto: { enable: params.enableBoleto },
