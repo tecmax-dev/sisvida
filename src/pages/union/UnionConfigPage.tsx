@@ -12,6 +12,7 @@ import { AdvanceBookingHoursSettings } from "@/components/union/settings/Advance
 import { DependentBookingLimitSettings } from "@/components/union/settings/DependentBookingLimitSettings";
 import { TitularBookingLimitSettings } from "@/components/union/settings/TitularBookingLimitSettings";
 import { PayslipAcceptanceSettings } from "@/components/union/settings/PayslipAcceptanceSettings";
+import { ReminderIntervalSettings } from "@/components/union/settings/ReminderIntervalSettings";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,7 +34,7 @@ export default function UnionConfigPage() {
       if (!resolvedClinic?.id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled, payslip_acceptance_days")
+        .select("booking_months_ahead, min_advance_booking_hours, dependent_booking_period, dependent_booking_limit, dependent_booking_limit_enabled, titular_booking_limit_enabled, payslip_acceptance_days, reminder_interval")
         .eq("id", resolvedClinic.id)
         .single();
       if (error) throw error;
@@ -114,6 +115,12 @@ export default function UnionConfigPage() {
               <AdvanceBookingHoursSettings
                 clinicId={resolvedClinic.id}
                 currentValue={(clinicSettings as any)?.min_advance_booking_hours ?? 6}
+                onUpdate={() => refetchSettings()}
+                isAdmin={isAdmin}
+              />
+              <ReminderIntervalSettings
+                clinicId={resolvedClinic.id}
+                currentValue={(clinicSettings as any)?.reminder_interval ?? 60}
                 onUpdate={() => refetchSettings()}
                 isAdmin={isAdmin}
               />
