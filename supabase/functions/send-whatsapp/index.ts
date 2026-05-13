@@ -529,7 +529,9 @@ serve(async (req) => {
       console.log(`[Clinic ${clinicId}] Using union entity logo: ${unionLogo}`);
     }
 
-    const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
+    // For Sindicato SECMI, force Meta Official. For others, use clinic config or default to evolution.
+    const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
+    const whatsappProvider = isSindicato ? 'meta_official' : (clinicProviderData?.whatsapp_provider || 'evolution');
     const isMetaOfficial = whatsappProvider === 'zapresponder' || whatsappProvider === 'meta_official';
 
     // Force text-only for appointment reminders to reduce risk of WhatsApp ban
@@ -544,8 +546,6 @@ serve(async (req) => {
 
     // ========== META OFFICIAL / ZAP RESPONDER PROVIDER ==========
     if (isMetaOfficial) {
-      const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
-
       if (isSindicato) {
         // Robust fallback: if it's a reminder for Sindicato, force use of the template
         const isReminderRequest = type === 'reminder' || type === 'reminder_direct_reply';
@@ -643,7 +643,12 @@ serve(async (req) => {
             );
           }
         }
-        console.warn(`[Clinic ${clinicId}] Sindicato: Meta official delivery failed. Proceeding to Zap Responder or Evolution fallback.`);
+        console.warn(`[Clinic ${clinicId}] Sindicato: Meta official delivery failed.`);
+        // We return failure for Sindicato if Meta official fails, as per user request to NOT use evolution.
+        return new Response(
+          JSON.stringify({ success: false, error: 'Falha no envio via Meta API Oficial' }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       console.log(`[Clinic ${clinicId}] Sending via Zap Responder wrapper to ${cleanPhone}`);
