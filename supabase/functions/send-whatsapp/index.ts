@@ -593,55 +593,57 @@ serve(async (req) => {
           templateComponents = ["Paciente", "Profissional", "Consulta", "Data", "Horário", "Sindicato dos Comerciários"];
         }
 
+        let metaSuccess = false;
         if (templateName) {
-           console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${templateName} to meta-send-template`);
-           try {
+          console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${templateName} to meta-send-template`);
+          try {
             const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${supabaseServiceKey}`,
-               },
-               body: JSON.stringify({
-                 to: cleanPhone,
-                 template_name: templateName,
-                 language: templateLanguage || 'pt_BR',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                to: cleanPhone,
+                template_name: templateName,
+                language: templateLanguage || 'pt_BR',
                 variables: templateComponents || []
-               }),
-             });
-             const templateResult = await templateResp.json();
-             if (templateResp.ok) {
-                await supabase.from('message_logs').insert({
-                  clinic_id: clinicId,
-                  message_type: type,
-                  phone: cleanPhone,
-                  month_year: monthYear,
-                });
-                return new Response(
-                  JSON.stringify({ success: true, method: 'meta_template_direct', data: templateResult }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
-             }
-             console.error('[Meta Template Direct] Error:', templateResult);
-           } catch (tplErr) {
-             console.error('[Meta Template Direct] Exception:', tplErr);
-           }
+              }),
+            });
+            const templateResult = await templateResp.json();
+            if (templateResp.ok) {
+              await supabase.from('message_logs').insert({
+                clinic_id: clinicId,
+                message_type: type,
+                phone: cleanPhone,
+                month_year: monthYear,
+              });
+              return new Response(
+                JSON.stringify({ success: true, method: 'meta_template_direct', data: templateResult }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            console.error('[Meta Template Direct] Error:', templateResult);
+          } catch (tplErr) {
+            console.error('[Meta Template Direct] Exception:', tplErr);
+          }
         } else {
           console.log(`[Clinic ${clinicId}] Sindicato: Sending direct text via Meta Graph API to ${cleanPhone}`);
-          const success = await sendMetaText(cleanPhone, safeMessage);
-          if (success) {
-             await supabase.from('message_logs').insert({
-               clinic_id: clinicId,
-               message_type: type,
-               phone: cleanPhone,
-               month_year: monthYear,
-             });
-             return new Response(
-               JSON.stringify({ success: true, method: 'meta_direct' }),
-               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-             );
+          metaSuccess = await sendMetaText(cleanPhone, safeMessage);
+          if (metaSuccess) {
+            await supabase.from('message_logs').insert({
+              clinic_id: clinicId,
+              message_type: type,
+              phone: cleanPhone,
+              month_year: monthYear,
+            });
+            return new Response(
+              JSON.stringify({ success: true, method: 'meta_direct' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
         }
+        console.warn(`[Clinic ${clinicId}] Sindicato: Meta official delivery failed. Proceeding to Zap Responder or Evolution fallback.`);
       }
 
       console.log(`[Clinic ${clinicId}] Sending via Zap Responder wrapper to ${cleanPhone}`);
@@ -668,28 +670,24 @@ serve(async (req) => {
 
         const zapResult = await zapResponse.json();
 
-        if (!zapResponse.ok) {
-          console.error('[Zap Responder] Send failed:', zapResult);
+        if (zapResponse.ok) {
+          console.log(`[Zap Responder] Message sent successfully`);
+          // Log message
+          await supabase.from('message_logs').insert({
+            clinic_id: clinicId,
+            message_type: type,
+            phone: cleanPhone,
+            month_year: monthYear,
+          });
+
           return new Response(
-            JSON.stringify({ success: false, error: zapResult.error || 'Erro ao enviar via Zap Responder' }),
-            { status: zapResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: true, data: zapResult.data }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+        } else {
+          console.error('[Zap Responder] Send failed:', zapResult);
+          console.warn(`[Clinic ${clinicId}] Zap Responder failed. Fallback to Evolution if configured.`);
         }
-
-        console.log(`[Zap Responder] Message sent successfully`);
-
-        // Log message
-        await supabase.from('message_logs').insert({
-          clinic_id: clinicId,
-          message_type: type,
-          phone: cleanPhone,
-          month_year: monthYear,
-        });
-
-        return new Response(
-          JSON.stringify({ success: true, data: zapResult.data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       } catch (zapError) {
         console.error('[Zap Responder] Request error:', zapError);
         return new Response(
