@@ -330,7 +330,7 @@ serve(async (req) => {
     const { data: clinics } = await supabase
       .from('clinics')
       .select(`
-        id, name, logo_url, whatsapp_header_image_url,
+        id, name, logo_url, whatsapp_header_image_url, whatsapp_provider,
         union_entities!union_entities_clinic_id_fkey(logo_url)
       `);
 
@@ -346,9 +346,22 @@ serve(async (req) => {
         .eq('clinic_id', clinic.id)
         .maybeSingle();
 
-      if (!evolutionConfig || !evolutionConfig.is_connected) {
-        skippedCount++;
-        continue;
+      const whatsappProvider = clinic.whatsapp_provider || 'evolution';
+      const isMetaProvider = whatsappProvider === 'meta_official' || whatsappProvider === 'zapresponder';
+
+      let evolutionConfig = null;
+      if (!isMetaProvider) {
+        const { data: evoConfig } = await supabase
+          .from('evolution_configs')
+          .select('api_url, api_key, instance_name, is_connected')
+          .eq('clinic_id', clinic.id)
+          .maybeSingle();
+
+        if (!evoConfig || !evoConfig.is_connected) {
+          skippedCount++;
+          continue;
+        }
+        evolutionConfig = evoConfig;
       }
 
       // Fetch homologacao settings
