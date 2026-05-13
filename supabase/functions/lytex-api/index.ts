@@ -1241,14 +1241,6 @@ Deno.serve(async (req) => {
           .update(updateData)
           .eq("id", params.contributionId);
 
-        if (updateError2) {
-          console.error("[Lytex] Erro ao atualizar status:", updateError2);
-        }
-
-        result = { success: true, status: newStatus, invoice };
-        break;
-      }
-
       case "sync_all_pending": {
         // Sincronizar status de TODAS as contribuições pendentes da clínica
         // Usa processamento em lotes paralelos para evitar timeout
