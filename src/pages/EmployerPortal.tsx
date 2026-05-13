@@ -1222,6 +1222,19 @@ const [showTutorial, setShowTutorial] = useState(false);
                 Voltar
               </Button>
             </div>
+          </>
+        )}
+
+        {activeView === "homologacao" && employer && clinic?.id && (
+          <PortalHomologacaoBooking
+            employer={{
+              id: employer.id,
+              name: employer.name,
+              cnpj: employer.cnpj,
+            }}
+            clinicId={clinic.id}
+            onBack={() => setActiveView("home")}
+            onSuccess={() => setActiveView("home")}
           />
         )}
       </main>
