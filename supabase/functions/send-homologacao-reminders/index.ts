@@ -444,15 +444,32 @@ serve(async (req) => {
         let anySuccess = false;
         let emailSent = false;
 
+        const commonParams = {
+          provider: whatsappProvider,
+          clinicId: clinic.id,
+          evolutionConfig,
+          logoUrl,
+          appointmentId: appointment.id
+        };
+
         // Send WhatsApp to company
         if (appointment.company_phone) {
           const companyMessage = formatReminderMessage('company', messageData);
-          const success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            appointment.company_phone,
-            logoUrl,
-            companyMessage
-          );
+          const success = await sendWhatsAppMessage({
+            ...commonParams,
+            phone: appointment.company_phone,
+            message: companyMessage,
+            templateName: 'homologacao_lembrete',
+            templateComponents: [
+              serviceTypeName,
+              messageData.companyName,
+              messageData.employeeName,
+              messageData.companyName,
+              messageData.appointmentDate,
+              messageData.startTime,
+              professional?.name || 'Profissional'
+            ]
+          });
           if (success) anySuccess = true;
           console.log(`Company WhatsApp reminder ${appointment.id}: ${success ? '✓' : '✗'}`);
         }
@@ -485,12 +502,22 @@ serve(async (req) => {
         // Send to manager
         if (settings?.manager_whatsapp) {
           const managerMessage = formatReminderMessage('manager', messageData);
-          const success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            settings.manager_whatsapp,
-            logoUrl,
-            managerMessage
-          );
+          const success = await sendWhatsAppMessage({
+            ...commonParams,
+            phone: settings.manager_whatsapp,
+            message: managerMessage,
+            // Use the same template or a generic one if needed
+            templateName: 'homologacao_lembrete',
+            templateComponents: [
+              serviceTypeName,
+              'Gestor',
+              messageData.employeeName,
+              messageData.companyName,
+              messageData.appointmentDate,
+              messageData.startTime,
+              professional?.name || 'Profissional'
+            ]
+          });
           if (success) anySuccess = true;
           console.log(`Manager reminder ${appointment.id}: ${success ? '✓' : '✗'}`);
         }
@@ -498,12 +525,20 @@ serve(async (req) => {
         // Send to professional
         if (professional?.phone) {
           const professionalMessage = formatReminderMessage('professional', messageData);
-          const success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            professional.phone,
-            logoUrl,
-            professionalMessage
-          );
+          const success = await sendWhatsAppMessage({
+            ...commonParams,
+            phone: professional.phone,
+            message: professionalMessage,
+            templateName: 'homologacao_lembrete_profissional',
+            templateComponents: [
+              serviceTypeName,
+              professional.name || 'Profissional',
+              messageData.employeeName,
+              messageData.companyName,
+              messageData.appointmentDate,
+              messageData.startTime
+            ]
+          });
           if (success) anySuccess = true;
           console.log(`Professional reminder ${appointment.id}: ${success ? '✓' : '✗'}`);
         }
