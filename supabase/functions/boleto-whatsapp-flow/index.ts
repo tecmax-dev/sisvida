@@ -234,17 +234,26 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               const dueDate = existingContrib.due_date ? new Date(existingContrib.due_date) : null;
               const isOverdue = dueDate && dueDate < today;
 
-              if (isOverdue) {
-                responseText = `📍 *Encontrei este período no sistema, mas ele está VENCIDO.*\n\n📅 Vencimento original: *${dueDate ? dueDate.toLocaleDateString('pt-BR') : 'N/A'}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\nPor favor, informe a *nova data de vencimento* desejada (ex: 10/06/2026):`;
-                
-                // Salvar dados na sessão para reutilizar
-                await supabase.from('whatsapp_boleto_sessions').update({ 
-                  contribution_id: existingContrib.id,
-                  value_cents: existingContrib.value
-                }).eq('id', session.id);
-                
-                nextState = 'WAITING_VENCIMENTO';
-              } else if (existingContrib.lytex_invoice_url) {
+               if (existingContrib.value === 0) {
+                 responseText = `📍 *Encontrei este período no sistema, mas o valor está zerado.*\n\nPor favor, informe a *nova data de vencimento* desejada (ex: 10/06/2026):`;
+                 
+                 await supabase.from('whatsapp_boleto_sessions').update({ 
+                   contribution_id: existingContrib.id,
+                   value_cents: 0
+                 }).eq('id', session.id);
+                 
+                 nextState = 'WAITING_VENCIMENTO';
+               } else if (isOverdue) {
+                 responseText = `📍 *Encontrei este período no sistema, mas ele está VENCIDO.*\n\n📅 Vencimento original: *${dueDate ? dueDate.toLocaleDateString('pt-BR') : 'N/A'}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\nPor favor, informe a *nova data de vencimento* desejada (ex: 10/06/2026):`;
+                 
+                 // Salvar dados na sessão para reutilizar
+                 await supabase.from('whatsapp_boleto_sessions').update({ 
+                   contribution_id: existingContrib.id,
+                   value_cents: existingContrib.value
+                 }).eq('id', session.id);
+                 
+                 nextState = 'WAITING_VENCIMENTO';
+               } else if (existingContrib.lytex_invoice_url) {
                 responseText = `📍 *Boleto já existente e dentro do prazo!*\n\n📅 Vencimento: *${dueDate?.toLocaleDateString('pt-BR')}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n🔗 *Link:* ${existingContrib.lytex_invoice_url}\n\nO que deseja fazer?`;
                 buttons = [
                   { id: 'recomecar', title: 'Emitir Outro' },
