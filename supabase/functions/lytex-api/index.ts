@@ -1965,69 +1965,6 @@ Deno.serve(async (req) => {
                     return 2;
                   case "cancelled":
                     return 1;
-       case "sync_pending_to_prosind": {
-         // Sincronizar boletos que foram gerados na Lytex e ainda não constam como sincronizados (usando campo 'notes')
-         // ou que o usuário deseja forçar a sincronização retroativa.
-         const limit = params.limit || 50;
-         const daysBack = params.daysBack || 30;
-         
-         const { data: unsyncedContributions, error: fetchErr } = await supabase
-           .from("employer_contributions")
-           .select(`
-             id, lytex_invoice_id, lytex_invoice_url, value, due_date, competence_month, competence_year, status,
-             employer:employers(name, cnpj)
-           `)
-           .not("lytex_invoice_id", "is", null)
-           .not("status", "eq", "cancelled")
-           .or("notes.is.null,and(notes.not.ilike.%Sincronizado%)")
-           .gte("created_at", new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString())
-           .order("created_at", { ascending: false })
-           .limit(limit);
- 
-         if (fetchErr) throw fetchErr;
- 
-         console.log(`[Lytex] Sincronizando ${unsyncedContributions?.length || 0} boletos retroativos com ProSindWeb...`);
- 
-         const results = [];
-         for (const inv of unsyncedContributions || []) {
-           const employer = inv.employer as any;
-           const description = `Mensalidade ${String(inv.competence_month).padStart(2, "0")}/${inv.competence_year}`;
-           
-           try {
-             await notifyProSind({
-               cnpj: employer?.cnpj || "",
-               name: employer?.name || "Empresa Desconhecida",
-               value: inv.value,
-               dueDate: inv.due_date,
-               description: description,
-               invoiceUrl: inv.lytex_invoice_url || "",
-               invoiceId: inv.lytex_invoice_id || "",
-             });
-             
-             // Marcar como sincronizado no banco para não repetir
-             await supabase
-               .from("employer_contributions")
-               .update({ 
-                 notes: inv.status === 'paid' ? "Sincronizado com ProSindWeb (Pago)" : "Sincronizado com ProSindWeb" 
-               })
-               .eq("id", inv.id);
-               
-             results.push({ id: inv.id, success: true, employer: employer?.name });
-           } catch (e) {
-             console.error(`[Lytex] Erro ao sincronizar ${inv.id}:`, e);
-             results.push({ id: inv.id, success: false, error: (e as Error).message });
-           }
-         }
- 
-         result = { 
-           success: true, 
-           processed: results.length, 
-           synced: results.filter(r => r.success).length,
-           details: results 
-         };
-         break;
-       }
- 
                   default:
                     return 0;
                 }
