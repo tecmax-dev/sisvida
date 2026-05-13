@@ -508,10 +508,12 @@ serve(async (req) => {
       console.log(`Clinic ${clinic.name}: checking appointments from ${todayStr} ${currentTime} until ${maxAheadDate} ${maxAheadTimeStr} (within ${reminderHours}h) [Horário Brasil/Bahia]`);
 
       const whatsappProvider = clinic.whatsapp_provider || 'evolution';
+      const isMetaProvider = whatsappProvider === 'zapresponder' || whatsappProvider === 'meta_official';
+
       let evolutionConfig = null;
       let directReplyEnabled = false;
 
-      if (whatsappProvider === 'zapresponder') {
+      if (isMetaProvider) {
         // For Sindicato/Meta Official, we don't strictly need to check zapster_configs here
         // as the sending function handles the direct routing.
         directReplyEnabled = true; 
@@ -630,9 +632,9 @@ serve(async (req) => {
         ];
 
        let success = false;
-       const whatsappProvider = clinic.whatsapp_provider || 'evolution';
+       const isMetaProvider = (clinic.whatsapp_provider === 'zapresponder' || clinic.whatsapp_provider === 'meta_official');
 
-       if (whatsappProvider === 'zapresponder') {
+       if (isMetaProvider) {
          console.log(`[${clinic.name}] Sending reminder via Meta (send-whatsapp) to ${phoneToUse}`);
          try {
            const metaResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-whatsapp`, {

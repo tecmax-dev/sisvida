@@ -182,51 +182,73 @@ function formatReminderEmailHtml(data: {
   `;
 }
 
-async function sendWhatsAppWithImage(
-  config: EvolutionConfig,
-  phone: string,
-  imageUrl: string,
-  caption: string
-): Promise<boolean> {
+async function sendWhatsAppMessage(params: {
+  provider: string;
+  phone: string;
+  message: string;
+  clinicId: string;
+  evolutionConfig?: EvolutionConfig | null;
+  logoUrl?: string;
+  templateName?: string;
+  templateComponents?: string[];
+  appointmentId?: string;
+}): Promise<boolean> {
+  const { provider, phone, message, clinicId, evolutionConfig, logoUrl, templateName, templateComponents, appointmentId } = params;
+  const isMeta = provider === 'meta_official' || provider === 'zapresponder';
+
+  if (isMeta) {
+    try {
+      console.log(`Sending via Meta to ${phone} using template ${templateName || 'NONE'}`);
+      const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-whatsapp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({
+          phone,
+          message,
+          clinicId,
+          type: 'reminder',
+          templateName,
+          templateComponents,
+          appointmentId
+        }),
+      });
+      const data = await response.json();
+      return response.ok && data.success;
+    } catch (error) {
+      console.error('Error sending Meta WhatsApp:', error);
+      return false;
+    }
+  }
+
+  if (!evolutionConfig) return false;
+
   try {
     let formattedPhone = phone.replace(/\D/g, '');
-    if (!formattedPhone.startsWith('55')) {
-      formattedPhone = '55' + formattedPhone;
-    }
-    // Fix Brazilian mobile: add 9 after DDD if missing
+    if (!formattedPhone.startsWith('55')) formattedPhone = '55' + formattedPhone;
     if (formattedPhone.length === 12 && formattedPhone.startsWith('55')) {
       const ddd = formattedPhone.substring(2, 4);
       const number = formattedPhone.substring(4);
-      if (!number.startsWith('9')) {
-        formattedPhone = `55${ddd}9${number}`;
-      }
+      if (!number.startsWith('9')) formattedPhone = `55${ddd}9${number}`;
     }
 
-    console.log(`Sending WhatsApp with image to ${formattedPhone}`);
-
-    const response = await fetch(`${config.api_url}/message/sendMedia/${config.instance_name}`, {
+    console.log(`Sending via Evolution to ${formattedPhone}`);
+    const response = await fetch(`${evolutionConfig.api_url}/message/sendMedia/${evolutionConfig.instance_name}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.api_key,
-      },
+      headers: { 'Content-Type': 'application/json', 'apikey': evolutionConfig.api_key },
       body: JSON.stringify({
         number: formattedPhone,
         mediatype: 'image',
-        media: imageUrl,
-        caption: caption,
+        media: logoUrl,
+        caption: message,
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('WhatsApp API error:', errorText);
-      return false;
-    }
-
-    return true;
+    return response.ok;
   } catch (error) {
-    console.error('Error sending WhatsApp with image:', error);
+    console.error('Error sending Evolution WhatsApp:', error);
     return false;
   }
 }
@@ -330,7 +352,7 @@ serve(async (req) => {
     const { data: clinics } = await supabase
       .from('clinics')
       .select(`
-        id, name, logo_url, whatsapp_header_image_url,
+        id, name, logo_url, whatsapp_header_image_url, whatsapp_provider,
         union_entities!union_entities_clinic_id_fkey(logo_url)
       `);
 
@@ -346,9 +368,22 @@ serve(async (req) => {
         .eq('clinic_id', clinic.id)
         .maybeSingle();
 
-      if (!evolutionConfig || !evolutionConfig.is_connected) {
-        skippedCount++;
-        continue;
+      const whatsappProvider = clinic.whatsapp_provider || 'evolution';
+      const isMetaProvider = whatsappProvider === 'meta_official' || whatsappProvider === 'zapresponder';
+
+      let evolutionConfig = null;
+      if (!isMetaProvider) {
+        const { data: evoConfig } = await supabase
+          .from('evolution_configs')
+          .select('api_url, api_key, instance_name, is_connected')
+          .eq('clinic_id', clinic.id)
+          .maybeSingle();
+
+        if (!evoConfig || !evoConfig.is_connected) {
+          skippedCount++;
+          continue;
+        }
+        evolutionConfig = evoConfig;
       }
 
       // Fetch homologacao settings
@@ -409,15 +444,32 @@ serve(async (req) => {
         let anySuccess = false;
         let emailSent = false;
 
+        const commonParams = {
+          provider: whatsappProvider,
+          clinicId: clinic.id,
+          evolutionConfig,
+          logoUrl,
+          appointmentId: appointment.id
+        };
+
         // Send WhatsApp to company
         if (appointment.company_phone) {
           const companyMessage = formatReminderMessage('company', messageData);
-          const success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            appointment.company_phone,
-            logoUrl,
-            companyMessage
-          );
+          const success = await sendWhatsAppMessage({
+            ...commonParams,
+            phone: appointment.company_phone,
+            message: companyMessage,
+            templateName: 'homologacao_lembrete',
+            templateComponents: [
+              serviceTypeName,
+              messageData.companyName,
+              messageData.employeeName,
+              messageData.companyName,
+              messageData.appointmentDate,
+              messageData.startTime,
+              professional?.name || 'Profissional'
+            ]
+          });
           if (success) anySuccess = true;
           console.log(`Company WhatsApp reminder ${appointment.id}: ${success ? '✓' : '✗'}`);
         }
@@ -450,12 +502,22 @@ serve(async (req) => {
         // Send to manager
         if (settings?.manager_whatsapp) {
           const managerMessage = formatReminderMessage('manager', messageData);
-          const success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            settings.manager_whatsapp,
-            logoUrl,
-            managerMessage
-          );
+          const success = await sendWhatsAppMessage({
+            ...commonParams,
+            phone: settings.manager_whatsapp,
+            message: managerMessage,
+            // Use the same template or a generic one if needed
+            templateName: 'homologacao_lembrete',
+            templateComponents: [
+              serviceTypeName,
+              'Gestor',
+              messageData.employeeName,
+              messageData.companyName,
+              messageData.appointmentDate,
+              messageData.startTime,
+              professional?.name || 'Profissional'
+            ]
+          });
           if (success) anySuccess = true;
           console.log(`Manager reminder ${appointment.id}: ${success ? '✓' : '✗'}`);
         }
@@ -463,12 +525,20 @@ serve(async (req) => {
         // Send to professional
         if (professional?.phone) {
           const professionalMessage = formatReminderMessage('professional', messageData);
-          const success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            professional.phone,
-            logoUrl,
-            professionalMessage
-          );
+          const success = await sendWhatsAppMessage({
+            ...commonParams,
+            phone: professional.phone,
+            message: professionalMessage,
+            templateName: 'homologacao_lembrete_profissional',
+            templateComponents: [
+              serviceTypeName,
+              professional.name || 'Profissional',
+              messageData.employeeName,
+              messageData.companyName,
+              messageData.appointmentDate,
+              messageData.startTime
+            ]
+          });
           if (success) anySuccess = true;
           console.log(`Professional reminder ${appointment.id}: ${success ? '✓' : '✗'}`);
         }

@@ -99,19 +99,6 @@ serve(async (req) => {
       const neg = (installments[0] as any).negotiation;
       const employer = neg.employers;
 
-      // Get Evolution API config for the clinic
-      const { data: evolutionConfig } = await supabase
-        .from("evolution_configs")
-        .select("api_url, api_key, instance_name, is_connected")
-        .eq("clinic_id", clinicId)
-        .eq("is_connected", true)
-        .maybeSingle();
-
-      if (!evolutionConfig) {
-        console.log(`[overdue-reminders] No Evolution config for clinic ${clinicId}, skipping`);
-        continue;
-      }
-
       // Get clinic name and union logo
       const { data: clinicData } = await supabase
         .from("clinics")
@@ -161,25 +148,25 @@ serve(async (req) => {
       let cleanPhone = employer.phone.replace(/\D/g, "");
       if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
 
-      // Send via Evolution API
+      // Send via send-whatsapp central function
       try {
-        const apiUrl = `${evolutionConfig.api_url}/message/sendMedia/${evolutionConfig.instance_name}`;
-        const evolutionResponse = await fetch(apiUrl, {
+        const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-whatsapp`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apikey: evolutionConfig.api_key,
+            Authorization: `Bearer ${supabaseServiceKey}`,
           },
           body: JSON.stringify({
-            number: cleanPhone,
-            mediatype: "image",
-            media: logoUrl,
-            caption: message,
+            phone: cleanPhone,
+            message,
+            clinicId,
+            type: "custom",
+            imageUrl: logoUrl,
           }),
         });
 
-        const result = await evolutionResponse.json();
-        const success = evolutionResponse.ok;
+        const result = await response.json();
+        const success = response.ok && result.success;
 
         if (!success) {
           console.error(`[overdue-reminders] Failed to send to ${cleanPhone}:`, result);

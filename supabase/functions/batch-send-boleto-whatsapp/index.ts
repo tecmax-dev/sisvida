@@ -54,23 +54,35 @@ Deno.serve(async (req) => {
         "$1.$2.$3/$4-$5"
       );
       const competence = `${String(contrib.competence_month).padStart(2, "0")}/${contrib.competence_year}`;
+      const dueDate = new Date(contrib.due_date + "T12:00:00");
+      const dueDateFormatted = dueDate.toLocaleDateString("pt-BR");
 
       const message = `📋 *Boleto - ${contribType?.name || "Contribuição"}*\n\n` +
         `🏢 *Empresa:* ${companyName}\n` +
         `📄 *CNPJ:* ${cnpjFormatted}\n` +
         `📅 *Competência:* ${competence}\n` +
         `💰 *Valor:* R$ ${valueBRL}\n` +
-        `📆 *Vencimento:* 12/03/2026\n\n` +
+        `📆 *Vencimento:* ${dueDateFormatted}\n\n` +
         `🔗 *Link do boleto:*\n${contrib.lytex_invoice_url || "Não disponível"}\n\n` +
         `_SECMI - Sindicato dos Empregados no Comércio_`;
 
       try {
+        const templateComponents = [
+          companyName,
+          competence,
+          valueBRL,
+          dueDateFormatted,
+          contrib.lytex_invoice_url || "N/A"
+        ];
+
         const { data: sendResult, error: sendError } = await supabase.functions.invoke("send-whatsapp", {
           body: {
             phone,
             message,
             clinicId,
             type: "custom",
+            templateName: "boleto_mensalidade",
+            templateComponents: templateComponents
           },
         });
 

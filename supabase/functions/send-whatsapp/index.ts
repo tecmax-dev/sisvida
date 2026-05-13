@@ -532,6 +532,8 @@ serve(async (req) => {
     }
 
     const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
+    const isMetaOfficial = whatsappProvider === 'zapresponder' || whatsappProvider === 'meta_official';
+
     // Force text-only for appointment reminders to reduce risk of WhatsApp ban
     // (sending media via unofficial APIs increases ban risk)
     const shouldUseTextOnly = sendAsTextOnly === true || isReminder;
@@ -542,8 +544,8 @@ serve(async (req) => {
 
     console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}, textOnly: ${shouldUseTextOnly}, logo: ${logoUrl || 'NONE'}`);
 
-    // ========== ZAP RESPONDER PROVIDER (META OFFICIAL API) ==========
-    if (whatsappProvider === 'zapresponder') {
+    // ========== META OFFICIAL / ZAP RESPONDER PROVIDER ==========
+    if (isMetaOfficial) {
       const isSindicato = clinicId === "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
       if (isSindicato) {
@@ -596,7 +598,7 @@ serve(async (req) => {
         if (templateName) {
            console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${templateName} to meta-send-template`);
            try {
-             const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
+            const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
                method: 'POST',
                headers: {
                  'Content-Type': 'application/json',
@@ -606,7 +608,8 @@ serve(async (req) => {
                  to: cleanPhone,
                  template_name: templateName,
                  language: templateLanguage || 'pt_BR',
-                 variables: templateComponents || []
+                variables: templateComponents || [],
+                phone_number_id: "937233212814035" // Sindicato Official ID
                }),
              });
              const templateResult = await templateResp.json();
