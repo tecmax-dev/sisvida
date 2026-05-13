@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail, FileText, Link2 } from "lucide-react";
+import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail, FileText, Link2, AlertCircle } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
