@@ -492,6 +492,30 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
+    name: "recuperacao_senha_link",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Olá, {{1}}. Você solicitou a recuperação de acesso ao aplicativo do Sindicato dos Comerciários.\n\nPara continuar e definir sua nova senha, toque no link abaixo:",
+        example: { body_text: [["Associado"]] },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          {
+            type: "URL",
+            text: "Recuperar Senha",
+            url: "https://prosindweb.com.br/sindicato/recuperar-senha?{{1}}",
+            example: ["email=teste@exemplo.com&code=123456"],
+          },
+        ],
+      },
+    ],
+  },
+  {
     name: "lembrete_consulta_v2",
     language: LANG,
     category: "UTILITY",
