@@ -333,28 +333,49 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         console.log('[LYTEX_INTEGRATION] Calling lytex-api for', session.employer_cnpj);
         
         try {
-          const { data: finalSession } = await supabase.from('whatsapp_boleto_sessions').select('*').eq('id', session.id).single();
+          const { data: finalSession } = await supabase
+            .from('whatsapp_boleto_sessions')
+            .select('*')
+            .eq('id', session.id)
+            .single();
           
-          // Criar registro na tabela employer_contributions para visibilidade no ProSindWeb
-          const { data: newContrib, error: contribError } = await supabase
-            .from('employer_contributions')
-            .insert({
-              clinic_id: clinic_id,
-              employer_id: finalSession.employer_id,
-              contribution_type_id: DEFAULT_CONTRIBUTION_TYPE_ID,
-              competence_month: finalSession.competence_month,
-              competence_year: finalSession.competence_year,
-              value: finalSession.value_cents,
-              due_date: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
-              status: 'pending',
-              origin: 'lytex',
-              notes: `[Gerado via WhatsApp em ${new Date().toLocaleDateString('pt-BR')}]`
-            })
-            .select('id')
-            .maybeSingle();
+          let contributionId = finalSession.contribution_id;
 
-          if (contribError) {
-            console.error('[CONTRIB_CREATE_FAILED]', contribError);
+          if (!contributionId) {
+            // Criar novo registro se não existir
+            const { data: newContrib, error: contribError } = await supabase
+              .from('employer_contributions')
+              .insert({
+                clinic_id: clinic_id,
+                employer_id: finalSession.employer_id,
+                contribution_type_id: DEFAULT_CONTRIBUTION_TYPE_ID,
+                competence_month: finalSession.competence_month,
+                competence_year: finalSession.competence_year,
+                value: finalSession.value_cents,
+                due_date: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+                status: 'pending',
+                origin: 'lytex',
+                notes: `[Gerado via WhatsApp em ${new Date().toLocaleDateString('pt-BR')}]`
+              })
+              .select('id')
+              .maybeSingle();
+
+            if (contribError) {
+              console.error('[CONTRIB_CREATE_FAILED]', contribError);
+            }
+            contributionId = newContrib?.id;
+          } else {
+            // Atualizar registro existente
+            const { error: updateError } = await supabase
+              .from('employer_contributions')
+              .update({
+                value: finalSession.value_cents,
+                due_date: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+                notes: `[Reemitido via WhatsApp em ${new Date().toLocaleDateString('pt-BR')}]`
+              })
+              .eq('id', contributionId);
+            
+            if (updateError) console.error('[CONTRIB_UPDATE_FAILED]', updateError);
           }
 
           const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
