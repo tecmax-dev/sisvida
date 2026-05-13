@@ -1222,21 +1222,21 @@ const [showTutorial, setShowTutorial] = useState(false);
                 Voltar
               </Button>
             </div>
-          </>
-        )}
-
-        {activeView === "homologacao" && employer && clinic?.id && (
-          <PortalHomologacaoBooking
-            employer={{
-              id: employer.id,
-              name: employer.name,
-              cnpj: employer.cnpj,
-            }}
-            clinicId={clinic.id}
-            onBack={() => setActiveView("home")}
             onSuccess={() => setActiveView("home")}
       {/* Floating Tutorial Button */}
       <div className="fixed bottom-6 right-6 z-50">
+      {/* Floating Tutorial Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button 
+          onClick={() => setShowTutorial(true)}
+          className="rounded-full shadow-2xl h-12 px-6 gap-2 bg-slate-900 hover:bg-slate-800 text-white border border-white/10"
+        >
+          <PlayCircle className="h-5 w-5 text-primary" />
+          <span className="hidden sm:inline">Tutorial de Uso</span>
+        </Button>
+      </div>
+
+      <PortalTutorialVideo open={showTutorial} onOpenChange={setShowTutorial} />
         <Button 
           onClick={() => setShowTutorial(true)}
           className="rounded-full shadow-2xl h-12 px-6 gap-2 bg-slate-900 hover:bg-slate-800 text-white border border-white/10"
