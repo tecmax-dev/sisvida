@@ -598,7 +598,7 @@ serve(async (req) => {
         if (templateName) {
            console.log(`[Clinic ${clinicId}] Sindicato: Routing template ${templateName} to meta-send-template`);
            try {
-             const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
+            const templateResp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/meta-send-template`, {
                method: 'POST',
                headers: {
                  'Content-Type': 'application/json',
@@ -608,7 +608,8 @@ serve(async (req) => {
                  to: cleanPhone,
                  template_name: templateName,
                  language: templateLanguage || 'pt_BR',
-                 variables: templateComponents || []
+                variables: templateComponents || [],
+                phone_number_id: "937233212814035" // Sindicato Official ID
                }),
              });
              const templateResult = await templateResp.json();
