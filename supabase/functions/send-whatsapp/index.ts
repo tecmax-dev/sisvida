@@ -319,9 +319,7 @@ async function sendWhazingConfirmationButtons(
 
 async function sendMetaText(phone: string, text: string): Promise<boolean> {
   try {
-    // Hardcoded official Sindicato number ID (73 3231-1784).
-    // Env var META_PHONE_NUMBER_ID was pointing to a stale/unauthorized ID.
-    const PHONE_ID = "937233212814035";
+    const PHONE_ID = Deno.env.get('META_PHONE_NUMBER_ID');
     const TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
     if (!PHONE_ID || !TOKEN) {
       console.error('[meta-text] Missing META_PHONE_NUMBER_ID or META_WHATSAPP_TOKEN');
