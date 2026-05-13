@@ -18532,10 +18532,20 @@ export type Database = {
         Args: { p_birth_year: number; p_email: string; p_new_password: string }
         Returns: Json
       }
-      reset_patient_password_by_code: {
-        Args: { p_code: string; p_email: string; p_new_password: string }
-        Returns: Json
-      }
+      reset_patient_password_by_code:
+        | {
+            Args: { p_code: string; p_email: string; p_new_password: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birth_year?: number
+              p_code: string
+              p_email: string
+              p_new_password: string
+            }
+            Returns: Json
+          }
       reset_patient_password_with_token:
         | {
             Args: { p_email: string; p_new_password: string; p_token: string }

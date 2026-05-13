@@ -14,15 +14,18 @@ function buildWhatsAppResetMessage(params: {
   email: string;
   code: string;
 }) {
+  const resetLink = `https://prosindweb.com.br/sindicato/recuperar-senha?email=${encodeURIComponent(params.email)}&code=${params.code}`;
+  
   return `Olá, ${params.firstName}, tudo bem?
 
-Aqui é do SECMI. Você pediu para entrar novamente no aplicativo e seu código de confirmação é:
+Aqui é do SECMI. Você pediu para entrar novamente no aplicativo.
 
-${params.code}
+Para continuar, toque no link abaixo:
+${resetLink}
 
-É só abrir o app, informar seu e-mail (${params.email}) e digitar o código acima para continuar.
+Se o link não funcionar, você pode informar seu e-mail (${params.email}) e o código de confirmação: ${params.code}
 
-O código vale por 30 minutos. Se não foi você quem pediu, pode ignorar esta mensagem.
+O código vale por 30 minutos.
 
 Equipe SECMI`;
 }
