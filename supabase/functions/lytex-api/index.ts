@@ -709,9 +709,11 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
   const updatePayload: any = {};
 
   // A Lytex valida dueDate em alguns cenários (ex: PUT). Sempre envie quando disponível.
-  if (params.dueDate) {
-    updatePayload.dueDate = params.dueDate;
-  }
+   // A Lytex valida dueDate em alguns cenários (ex: PUT). Sempre envie quando disponível.
+   if (params.dueDate) {
+     // Ensure local time to avoid timezone shifts
+     updatePayload.dueDate = params.dueDate.includes('T') ? params.dueDate : `${params.dueDate}T12:00:00`;
+   }
 
   // Em várias rotas, a API espera items (mesmo quando só atualiza status)
   if (params.value !== undefined) {
