@@ -597,7 +597,20 @@ const [showTutorial, setShowTutorial] = useState(false);
           }
         }}
         helpText={clinic?.phone ? `Não possui código? Ligue: ${clinic.phone}` : "Não possui código? Entre em contato com o sindicato."}
-      />
+      >
+        <div className="mt-4 flex justify-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowTutorial(true)}
+            className="text-primary border-primary/20 hover:bg-primary/5 transition-colors gap-2"
+          >
+            <PlayCircle className="h-4 w-4" />
+            Como gerar boleto? (Tutorial)
+          </Button>
+        </div>
+        <PortalTutorialVideo open={showTutorial} onOpenChange={setShowTutorial} />
+      </PortalLoginScreen>
     );
   }
 
