@@ -2717,6 +2717,56 @@ Deno.serve(async (req) => {
         break;
       }
 
+       case "sync_all_to_prosind": {
+         // Sincronizar todos os boletos gerados na Lytex que ainda não foram notificados ao ProSind
+         // Por enquanto, processar boletos recentes (últimos 30 dias)
+         const { data: recentInvoices, error: fetchErr } = await supabase
+           .from("employer_contributions")
+           .select(`
+             id, lytex_invoice_id, lytex_invoice_url, value, due_date, competence_month, competence_year,
+             employer:employers(name, cnpj)
+           `)
+           .not("lytex_invoice_id", "is", null)
+           .is("notes", null) // Usar 'notes' como filtro temporário ou adicionar campo real futuramente
+           .order("created_at", { ascending: false })
+           .limit(50);
+ 
+         if (fetchErr) throw fetchErr;
+ 
+         console.log(`[Lytex] Sincronizando ${recentInvoices?.length || 0} boletos com ProSind...`);
+ 
+         const results = [];
+         for (const inv of recentInvoices || []) {
+           const employer = inv.employer as any;
+           const description = `Mensalidade ${String(inv.competence_month).padStart(2, "0")}/${inv.competence_year}`;
+           
+           try {
+             await notifyProSind({
+               cnpj: employer?.cnpj,
+               name: employer?.name,
+               value: inv.value,
+               dueDate: inv.due_date,
+               description,
+               invoiceUrl: inv.lytex_invoice_url || "",
+               invoiceId: inv.lytex_invoice_id || "",
+             });
+             
+             // Marcar como sincronizado no banco
+             await supabase
+               .from("employer_contributions")
+               .update({ notes: "Sincronizado com ProSindWeb" })
+               .eq("id", inv.id);
+               
+             results.push({ id: inv.id, success: true });
+           } catch (e) {
+             results.push({ id: inv.id, success: false, error: (e as Error).message });
+           }
+         }
+ 
+         result = { success: true, processed: results.length, results };
+         break;
+       }
+ 
       case "fetch_paid_invoices": {
         // NOVA AÇÃO: Buscar TODOS os boletos pagos na Lytex e conciliar automaticamente
         // Resolve o problema de boletos pagos não refletidos no sistema
