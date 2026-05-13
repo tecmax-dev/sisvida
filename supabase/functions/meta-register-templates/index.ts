@@ -517,7 +517,7 @@ const templates: TemplatePayload[] = [
       ],
     },
   {
-    name: "recuperacao_senha_link_v2",
+    name: "recuperacao_senha_link_v3",
     language: LANG,
     category: "UTILITY",
     components: [
