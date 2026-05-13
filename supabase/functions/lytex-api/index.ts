@@ -948,15 +948,16 @@ Deno.serve(async (req) => {
 
         const invoice = await createInvoice(invoiceRequest);
 
-        const extractedInvoiceId = invoice?._id || invoice?.id || null;
-        const extractedInvoiceUrl =
-          invoice?.invoiceUrl ||
-          invoice?.linkCheckout ||
-          invoice?.linkBoleto ||
-          invoice?.checkoutUrl ||
-          invoice?.url ||
-          invoice?.links?.checkout ||
-          null;
+         const extractedInvoiceId = invoice?._id || invoice?.id || null;
+         const rawUrl =
+           invoice?.invoiceUrl ||
+           invoice?.linkCheckout ||
+           invoice?.linkBoleto ||
+           invoice?.checkoutUrl ||
+           invoice?.url ||
+           invoice?.links?.checkout ||
+           null;
+         const extractedInvoiceUrl = rawUrl?.includes('404') ? (invoice?.linkBoleto || invoice?.linkCheckout || rawUrl) : rawUrl;
 
         console.log(
           `[Lytex] createInvoice retorno: id=${extractedInvoiceId} url=${extractedInvoiceUrl} installmentId=${params.installmentId || "-"}`,
@@ -1015,14 +1016,15 @@ Deno.serve(async (req) => {
         const invoiceParams = { ...params, registrationNumber: registrationNumber2 } as CreateInvoiceRequest & { registrationNumber?: string };
         const invoice = await createInvoice(invoiceParams);
 
-        // Extrair URL da fatura - Lytex pode retornar em diferentes campos
-        const extractedInvoiceUrl =
-          invoice?.linkCheckout ||
-          invoice?.linkBoleto ||
-          invoice?.invoiceUrl ||
-          invoice?.checkoutUrl ||
-          invoice?.url ||
-          null;
+         // Extrair URL da fatura - Lytex pode retornar em diferentes campos
+         const rawUrl2 =
+           invoice?.linkCheckout ||
+           invoice?.linkBoleto ||
+           invoice?.invoiceUrl ||
+           invoice?.checkoutUrl ||
+           invoice?.url ||
+           null;
+         const extractedInvoiceUrl = rawUrl2?.includes('404') ? (invoice?.linkBoleto || invoice?.linkCheckout || rawUrl2) : rawUrl2;
 
         console.log(`[Lytex] create_invoice (${isPFContrib ? "PF" : "PJ"}): id=${invoice?._id} url=${extractedInvoiceUrl}`);
 
@@ -3742,7 +3744,7 @@ Deno.serve(async (req) => {
                   competence_month: compMonth,
                   competence_year: compYear,
                   lytex_invoice_id: invoiceId,
-                  lytex_invoice_url: invoice.link || invoice.url || invoice.invoiceUrl,
+                   lytex_invoice_url: (invoice.link || invoice.url || invoice.invoiceUrl)?.includes('404') ? (invoice.linkBoleto || invoice.link || invoice.url) : (invoice.link || invoice.url || invoice.invoiceUrl),
                   lytex_original_status: invoice.status || invoice.paymentStatus,
                   origin: source === "secondary" ? "external_lytex" : "lytex",
                   paid_at: paidAt,
