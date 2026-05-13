@@ -451,6 +451,56 @@ function normalizeMoneyToCents(value: number, alreadyInCents: boolean = false): 
   return cents;
 }
 
+ // Helper: Notificar ProSind/SindSystem sobre novo boleto
+ async function notifyProSind(payload: {
+   cnpj: string;
+   name: string;
+   value: number;
+   dueDate: string;
+   description: string;
+   invoiceUrl: string;
+   invoiceId: string;
+ }) {
+   const token = Deno.env.get("SINDSYSTEM_API_TOKEN");
+   const baseUrl = "https://secmi.sindsystem.com.br/api";
+   
+   if (!token) {
+     console.warn("[Lytex] SINDSYSTEM_API_TOKEN não configurado. Pulando notificação ProSind.");
+     return;
+   }
+ 
+   console.log(`[Lytex] Notificando ProSind sobre boleto: ${payload.invoiceId}`);
+ 
+   try {
+     // O endpoint de lançamento no SindSystem segue o padrão /{token}/boleto/lancamento
+     const response = await fetch(`${baseUrl}/${token}/boleto/lancamento`, {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         "Accept": "application/json",
+       },
+       body: JSON.stringify({
+         NRCNPJ: payload.cnpj.replace(/\D/g, ""),
+         NMCLIENTE: payload.name,
+         VLBOLETO: (payload.value / 100).toFixed(2),
+         DTVENCIMENTO: payload.dueDate,
+         DSLANÇAMENTO: payload.description,
+         URLBOLETO: payload.invoiceUrl,
+         IDINTERNO: payload.invoiceId,
+       }),
+     });
+ 
+     if (!response.ok) {
+       const text = await response.text();
+       console.error(`[Lytex] Erro ao notificar ProSind: ${response.status}`, text);
+     } else {
+       console.log("[Lytex] ProSind notificado com sucesso");
+     }
+   } catch (err) {
+     console.error("[Lytex] Erro na requisição ProSind:", err);
+   }
+ }
+ 
 async function createInvoice(params: CreateInvoiceRequest & { registrationNumber?: string }): Promise<any> {
   const token = await getAccessToken();
 
@@ -592,8 +642,24 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
       throw new Error(msg);
     }
 
-    console.log("[Lytex] Cobrança criada com sucesso:", responseData?._id || responseData?.id || "(sem id)");
-    return responseData;
+     const invoice = responseData;
+     console.log("[Lytex] Cobrança criada com sucesso:", invoice?._id || invoice?.id || "(sem id)");
+ 
+     // Notificar ProSindWeb de forma assíncrona (não bloqueante)
+     const extractedUrl = invoice?.invoiceUrl || invoice?.linkCheckout || invoice?.linkBoleto || invoice?.url;
+     if (extractedUrl) {
+       notifyProSind({
+         cnpj: cleanDocument,
+         name: formattedName,
+         value: valueInCents,
+         dueDate: params.dueDate,
+         description: params.description,
+         invoiceUrl: extractedUrl,
+         invoiceId: invoice?._id || invoice?.id || "",
+       }).catch(e => console.error("[Lytex] Erro silencioso notifyProSind:", e));
+     }
+ 
+     return invoice;
   }
 
   throw lastError || new Error("Erro ao criar cobrança após múltiplas tentativas");
@@ -2651,6 +2717,56 @@ Deno.serve(async (req) => {
         break;
       }
 
+       case "sync_all_to_prosind": {
+         // Sincronizar todos os boletos gerados na Lytex que ainda não foram notificados ao ProSind
+         // Por enquanto, processar boletos recentes (últimos 30 dias)
+         const { data: recentInvoices, error: fetchErr } = await supabase
+           .from("employer_contributions")
+           .select(`
+             id, lytex_invoice_id, lytex_invoice_url, value, due_date, competence_month, competence_year,
+             employer:employers(name, cnpj)
+           `)
+           .not("lytex_invoice_id", "is", null)
+           .is("notes", null) // Usar 'notes' como filtro temporário ou adicionar campo real futuramente
+           .order("created_at", { ascending: false })
+           .limit(50);
+ 
+         if (fetchErr) throw fetchErr;
+ 
+         console.log(`[Lytex] Sincronizando ${recentInvoices?.length || 0} boletos com ProSind...`);
+ 
+         const results = [];
+         for (const inv of recentInvoices || []) {
+           const employer = inv.employer as any;
+           const description = `Mensalidade ${String(inv.competence_month).padStart(2, "0")}/${inv.competence_year}`;
+           
+           try {
+             await notifyProSind({
+               cnpj: employer?.cnpj,
+               name: employer?.name,
+               value: inv.value,
+               dueDate: inv.due_date,
+               description,
+               invoiceUrl: inv.lytex_invoice_url || "",
+               invoiceId: inv.lytex_invoice_id || "",
+             });
+             
+             // Marcar como sincronizado no banco
+             await supabase
+               .from("employer_contributions")
+               .update({ notes: "Sincronizado com ProSindWeb" })
+               .eq("id", inv.id);
+               
+             results.push({ id: inv.id, success: true });
+           } catch (e) {
+             results.push({ id: inv.id, success: false, error: (e as Error).message });
+           }
+         }
+ 
+         result = { success: true, processed: results.length, results };
+         break;
+       }
+ 
       case "fetch_paid_invoices": {
         // NOVA AÇÃO: Buscar TODOS os boletos pagos na Lytex e conciliar automaticamente
         // Resolve o problema de boletos pagos não refletidos no sistema
