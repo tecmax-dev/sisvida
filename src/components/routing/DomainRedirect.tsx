@@ -16,12 +16,6 @@ const CUSTOM_DOMAIN_ROUTES: Record<string, {
     defaultRoute: "/sindicato/instalar",
     clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
   },
-  // ProsindWeb - Sindicato dos Comerciários de Ilhéus (Domínio Principal)
-  "prosindweb.com.br": {
-    basePath: "/sindicato",
-    defaultRoute: "/sindicato/instalar",
-    clinicId: "89e7585e-7bce-4e58-91fa-c37080d1170d",
-  },
   // Eclini - App Sindicato Redirect
   "app.eclini.com.br": {
     basePath: "/sindicato",
