@@ -214,27 +214,52 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             competence_year: cYear 
           }).eq('id', session.id);
 
-          // Verificar se já existe boleto para este período e empresa
+          // Verificar se já existe a contribuição (período) no sistema ProSind/Supabase
           const { data: existingContrib } = await supabase
             .from('employer_contributions')
-            .select('lytex_invoice_url, value, due_date')
+            .select('id, lytex_invoice_url, lytex_invoice_id, value, due_date, status')
             .eq('employer_id', session.employer_id)
             .eq('competence_month', cMonth)
             .eq('competence_year', cYear)
-            .not('lytex_invoice_url', 'is', null)
-            .limit(1)
             .maybeSingle();
 
-          if (existingContrib && existingContrib.value > 0) {
-            const formattedDueDate = existingContrib.due_date ? new Date(existingContrib.due_date).toLocaleDateString('pt-BR') : 'N/A';
-            responseText = `📍 *Boleto já existente para este período!*\n\n📅 Vencimento: *${formattedDueDate}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n🔗 *Link:* ${existingContrib.lytex_invoice_url}\n\nO que deseja fazer?`;
-            buttons = [
-              { id: 'recomecar', title: 'Emitir Outro' },
-              { id: 'menu_principal', title: 'Menu Principal' }
-            ];
-            nextState = 'SUCCESS';
+          if (existingContrib) {
+            if (existingContrib.status === 'paid') {
+               responseText = `✅ *Este período (${text}) já consta como PAGO!* \n\nNão é necessário emitir um novo boleto.`;
+               buttons = [{ id: 'menu_principal', title: 'Menu Principal' }];
+               nextState = 'SUCCESS';
+            } else {
+              // Verificar se está vencido
+              const today = new Date();
+              const dueDate = existingContrib.due_date ? new Date(existingContrib.due_date) : null;
+              const isOverdue = dueDate && dueDate < today;
+
+              if (isOverdue) {
+                responseText = `📍 *Encontrei este período no sistema, mas ele está VENCIDO.*\n\n📅 Vencimento original: *${dueDate ? dueDate.toLocaleDateString('pt-BR') : 'N/A'}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\nPor favor, informe a *nova data de vencimento* desejada (ex: 10/06/2026):`;
+                
+                // Salvar dados na sessão para reutilizar
+                await supabase.from('whatsapp_boleto_sessions').update({ 
+                  contribution_id: existingContrib.id,
+                  value_cents: existingContrib.value
+                }).eq('id', session.id);
+                
+                nextState = 'WAITING_VENCIMENTO';
+              } else if (existingContrib.lytex_invoice_url) {
+                responseText = `📍 *Boleto já existente e dentro do prazo!*\n\n📅 Vencimento: *${dueDate?.toLocaleDateString('pt-BR')}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n🔗 *Link:* ${existingContrib.lytex_invoice_url}\n\nO que deseja fazer?`;
+                buttons = [
+                  { id: 'recomecar', title: 'Emitir Outro' },
+                  { id: 'menu_principal', title: 'Menu Principal' }
+                ];
+                nextState = 'SUCCESS';
+              } else {
+                // Existe mas não tem link (raro), pedir valor
+                responseText = `📍 *Encontrei o registro deste período.*\n\nInforme o *valor* para emissão (ex: 150,00):`;
+                await supabase.from('whatsapp_boleto_sessions').update({ contribution_id: existingContrib.id }).eq('id', session.id);
+                nextState = 'WAITING_VALOR';
+              }
+            }
           } else {
-            // Caso não exista ou valor seja zero, prosseguir para valor/vencimento
+            // Caso não exista a contribuição, fluxo normal
             if (session.boleto_type === 'a_vencer') {
               let dueYear = cYear;
               let dueMonth = cMonth + 1;
