@@ -366,9 +366,10 @@ serve(async (req) => {
           clinicId,
            type: "custom",
            templateName: "recuperacao_senha_link_v2",
-           templateComponents: [
-             `email=${encodeURIComponent(patient.email || "")}&code=${code}`
-           ],
+          templateComponents: [
+            firstName,
+            `email=${encodeURIComponent(patient.email || "")}&code=${code}`
+          ],
            sendAsTextOnly: false,
         }),
       });
