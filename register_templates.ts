@@ -6,11 +6,11 @@ const templates = [
   {
     name: "agenda_disponivel",
     language: "pt_BR",
-    category: "MARKETING",
+    category: "UTILITY",
     components: [
       {
         type: "BODY",
-        text: "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
+        text: "Notificação de Atendimento Social: Olá, {{1}}. Informamos que o cronograma de atendimentos médicos na sede do Sindicato para o período de {{2}} já está disponível.\n\nPara consultar horários e realizar seu agendamento, acesse o aplicativo oficial.",
         example: { body_text: [["Maria", "Maio/2026"]] }
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -19,7 +19,7 @@ const templates = [
         buttons: [
           {
             type: "URL",
-            text: "Abrir Aplicativo",
+            text: "Acessar Aplicativo",
             url: "https://app.sindicato.com.br/"
           }
         ]
@@ -33,7 +33,7 @@ const templates = [
     components: [
       {
         type: "BODY",
-        text: "Informativo: A agenda de atendimentos médicos para o período de {{1}} já está disponível para consultas.\n\nOs horários podem ser visualizados e agendados diretamente através do aplicativo oficial do Sindicato dos Comerciários.",
+        text: "Atualização de Serviço Social: A agenda de atendimentos médicos na sede do Sindicato para o período de {{1}} já está disponível para consulta.\n\nOs horários podem ser visualizados e agendados diretamente através do aplicativo oficial.",
         example: { body_text: [["Maio/2026"]] }
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -52,7 +52,7 @@ const templates = [
   {
     name: "carteira_vencida_util",
     language: "pt_BR",
-    category: "MARKETING",
+    category: "UTILITY",
     components: [
       {
         type: "BODY",
@@ -65,15 +65,24 @@ const templates = [
   {
     name: "carteira_vencendo_util",
     language: "pt_BR",
-    category: "MARKETING",
-  {
-    name: "agenda_disponivel_util",
-    language: "pt_BR",
-    category: "MARKETING",
+    category: "UTILITY",
     components: [
       {
         type: "BODY",
-        text: "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
+        text: "Aviso de Atualização: Olá, {{1}}. Notificamos que o prazo de validade da sua carteira de associado encerra em {{2}}.\n\nPara orientações sobre o procedimento de renovação e continuidade do seu registro, consulte o aplicativo oficial do Sindicato dos Comerciários.",
+        example: { body_text: [["João da Silva", "30/03/2026"]] }
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" }
+    ]
+  },
+  {
+    name: "agenda_disponivel_util",
+    language: "pt_BR",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Notificação de Atendimento Social: Olá, {{1}}. Informamos que o cronograma de atendimentos médicos na sede do Sindicato para o período de {{2}} já está disponível.\n\nPara consultar horários e realizar seu agendamento, acesse o aplicativo oficial.",
         example: { body_text: [["Maria", "Maio/2026"]] }
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -82,20 +91,11 @@ const templates = [
         buttons: [
           {
             type: "URL",
-            text: "Abrir Aplicativo",
+            text: "Acessar Aplicativo",
             url: "https://app.sindicato.com.br/"
           }
         ]
       }
-    ]
-  }
-    components: [
-      {
-        type: "BODY",
-        text: "Aviso de Atualização: Olá, {{1}}. Notificamos que o prazo de validade da sua carteira de associado encerra em {{2}}.\n\nPara orientações sobre o procedimento de renovação e continuidade do seu registro, consulte o aplicativo oficial do Sindicato dos Comerciários.",
-        example: { body_text: [["João da Silva", "30/03/2026"]] }
-      },
-      { type: "FOOTER", text: "Sindicato dos Comerciários" }
     ]
   }
 ];
