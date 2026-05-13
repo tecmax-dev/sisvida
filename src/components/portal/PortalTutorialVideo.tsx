@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Play, 
@@ -12,7 +15,9 @@ import {
   FileText,
   Printer,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Download,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -68,6 +73,77 @@ export function PortalTutorialVideo({ open, onOpenChange }: { open: boolean, onO
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFillColor(44, 82, 130); // #2c5282 (ProSind Blue)
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.text("Guia Rapido: Portal da Empresa", 20, 25);
+      
+      doc.setFontSize(10);
+      doc.text("Como gerar boletos e gerenciar contribuicoes", 20, 33);
+
+      // Content
+      let yPos = 55;
+      
+      SCENES.forEach((scene, index) => {
+        // Scene Box
+        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(15, yPos - 5, 180, 30, 3, 3, 'FD');
+
+        // Step Number
+        doc.setFillColor(44, 82, 130);
+        doc.circle(25, yPos + 10, 5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.text((index + 1).toString(), 23.5, yPos + 11.5);
+
+        // Text Content
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text(scene.title, 35, yPos + 5);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(71, 85, 105);
+        
+        // Multi-line caption
+        const splitText = doc.splitTextToSize(scene.caption, 150);
+        doc.text(splitText, 35, yPos + 12);
+
+        yPos += 40;
+        
+        // Add new page if needed
+        if (yPos > 250 && index < SCENES.length - 1) {
+          doc.addPage();
+          yPos = 30;
+        }
+      });
+
+      // Footer
+      doc.setFontSize(9);
+      doc.setTextColor(148, 163, 184);
+      doc.text("© ProSindWeb - Sistema de Gestao Sindical", 105, 285, { align: "center" });
+
+      doc.save("Guia_Rapido_Portal_Empresa.pdf");
+      toast.success("Guia em PDF baixado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar o arquivo PDF.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -425,6 +501,21 @@ export function PortalTutorialVideo({ open, onOpenChange }: { open: boolean, onO
             </div>
 
             <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadPDF}
+                disabled={isExporting}
+                className="bg-transparent border-primary/30 text-primary hover:bg-primary/5 mr-2"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Baixar Guia (PDF)
+              </Button>
+
               <Button 
                 variant="outline" 
                 size="sm" 
