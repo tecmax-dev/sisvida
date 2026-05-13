@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Zap, Check, ShieldCheck, BadgeCheck } from "lucide-react";
+import { MessageSquare, Zap, Check, ShieldCheck, BadgeCheck, Send, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface WhatsAppProviderSelectorProps {
   clinicId: string;
@@ -16,6 +18,8 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
   const { toast } = useToast();
   const [provider, setProvider] = useState<string>("evolution");
   const [loading, setLoading] = useState(true);
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
   const [evolutionConnected, setEvolutionConnected] = useState(false);
   const [twilioConnected, setTwilioConnected] = useState(false);
   const [zapResponderConnected, setZapResponderConnected] = useState(false);
@@ -101,6 +105,47 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
         description: "Erro ao alterar provedor",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!testPhone) {
+      toast({
+        title: "Atenção",
+        description: "Informe um número de telefone para o teste",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: {
+          phone: testPhone,
+          message: "Este é um envio de teste do sistema ProSindWeb para validar sua configuração de WhatsApp.",
+          clinicId: clinicId,
+          type: "custom",
+          sendAsTextOnly: true
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro desconhecido");
+
+      toast({
+        title: "Teste enviado",
+        description: "Verifique o WhatsApp do número informado.",
+      });
+    } catch (error: any) {
+      console.error("Error sending test:", error);
+      toast({
+        title: "Falha no teste",
+        description: error.message || "Erro ao enviar mensagem de teste",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -255,6 +300,33 @@ export function WhatsAppProviderSelector({ clinicId, onProviderChange }: WhatsAp
           </div>
         </RadioGroup>
       </CardContent>
+      <CardFooter className="flex flex-col items-start gap-4 border-t pt-6">
+        <div className="w-full space-y-2">
+          <Label htmlFor="test_phone" className="text-sm font-medium">
+            Validar Configuração (Envio de Teste)
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="test_phone"
+              placeholder="DDD + Número (ex: 73988633535)"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, ""))}
+              className="max-w-[300px]"
+            />
+            <Button 
+              onClick={handleSendTest} 
+              disabled={sendingTest || !testPhone}
+              className="gap-2"
+            >
+              {sendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Enviar Teste
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            O sistema enviará uma mensagem simples para validar a conexão com o provedor selecionado acima.
+          </p>
+        </div>
+      </CardFooter>
     </Card>
   );
 }
