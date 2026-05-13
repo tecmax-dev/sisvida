@@ -417,8 +417,20 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           console.log('[LYTEX_API_RESPONSE]', lytexData);
 
           if (lytexData.success && lytexData.invoice) {
-            const invoiceUrl = lytexData.invoice.linkBoleto || lytexData.invoice.invoiceUrl || lytexData.invoice.linkCheckout;
-            responseText = `✅ *Boleto Gerado com Sucesso!*\n\n🔗 *Link do Boleto:* ${invoiceUrl}\n\nSistema integrado Lytex/ProsindWeb.`;
+            const invoiceUrl = lytexData.invoice.linkBoleto || lytexData.invoice.invoiceUrl || lytexData.invoice.linkCheckout || lytexData.invoice.url;
+            const lytexInvoiceId = lytexData.invoice._id || lytexData.invoice.id;
+
+            // Atualizar a contribuição com os dados da Lytex para que apareça no ProSind
+            await supabase
+              .from('employer_contributions')
+              .update({
+                lytex_invoice_id: lytexInvoiceId,
+                lytex_invoice_url: invoiceUrl,
+                status: 'pending' // Garante que o status está pendente ao reemitir
+              })
+              .eq('id', contributionId);
+
+            responseText = `✅ *Boleto Gerado com Sucesso!*\n\n🔗 *Link do Boleto:* ${invoiceUrl}\n\nO boleto já está disponível no ProSindWeb.`;
           } else {
             console.error('[LYTEX_FAILURE]', lytexData);
             responseText = `❌ *Erro ao gerar boleto na Lytex*\n\nDetalhe: ${lytexData.error || 'Erro desconhecido'}\n\nPor favor, tente novamente mais tarde ou entre em contato com o suporte.`;
