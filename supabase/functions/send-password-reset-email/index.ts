@@ -309,6 +309,7 @@ serve(async (req: Request): Promise<Response> => {
           type: "custom",
               templateName: "recuperacao_senha_link_v2",
               templateComponents: [
+                firstName,
                 `email=${encodeURIComponent(email)}&code=${token}`
               ],
           sendAsTextOnly: false,
