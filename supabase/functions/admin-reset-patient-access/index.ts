@@ -365,10 +365,10 @@ serve(async (req) => {
           message: whatsappMessage,
           clinicId,
            type: "custom",
-           templateName: "recuperacao_senha_link_v1",
-           templateComponents: [
-             `email=${encodeURIComponent(patient.email || "")}&code=${code}`
-           ],
+            templateName: "recuperacao_senha_link_v2",
+            templateComponents: [
+              `email=${encodeURIComponent(patient.email || "")}&code=${code}`
+            ],
            sendAsTextOnly: false,
         }),
       });
