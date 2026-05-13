@@ -1247,13 +1247,6 @@ Deno.serve(async (req) => {
 
         result = { success: true, status: newStatus, invoice };
         break;
-
-        if (updateError2) {
-          console.error("[Lytex] Erro ao atualizar status:", updateError2);
-        }
-
-        result = { success: true, status: newStatus, invoice };
-        break;
       }
 
       case "sync_all_pending": {
