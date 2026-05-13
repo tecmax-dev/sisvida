@@ -13,6 +13,7 @@ type JsonObject = Record<string, unknown>;
 interface SignatureRequestPayload {
   associadoId: string;
   clinicId: string;
+  createOnly?: boolean;
 }
 
 class HttpError extends Error {
@@ -75,6 +76,26 @@ serve(async (req) => {
     }),
   );
 
+  let payload: SignatureRequestPayload;
+  try {
+    payload = await req.json();
+  } catch (e) {
+    return jsonResponse(400, { success: false, error: "JSON inválido no body", details: (e as Error)?.message });
+  }
+
+  console.log(
+    JSON.stringify({
+      requestId,
+      at: "request.payload",
+      payload,
+    }),
+  );
+
+  const { associadoId, clinicId, createOnly } = payload;
+  if (!associadoId || !clinicId) {
+    return jsonResponse(400, { success: false, error: "associadoId e clinicId são obrigatórios" });
+  }
+
   try {
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
@@ -82,40 +103,22 @@ serve(async (req) => {
     const smtpPassword = Deno.env.get("SMTP_PASSWORD");
     const smtpFrom = Deno.env.get("SMTP_FROM");
 
+    const { associadoId, clinicId, createOnly } = payload;
+
     if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
-      throw new HttpError(500, "Serviço de email não configurado.", {
-        smtpHost: !!smtpHost,
-        smtpUser: !!smtpUser,
-        smtpPassword: !!smtpPassword,
-        smtpFrom: !!smtpFrom,
-      });
+      if (createOnly) {
+         console.warn(JSON.stringify({ requestId, at: "smtp.missing.ignored", createOnly: true }));
+      } else {
+        throw new HttpError(500, "Serviço de email não configurado.", {
+          smtpHost: !!smtpHost,
+          smtpUser: !!smtpUser,
+          smtpPassword: !!smtpPassword,
+          smtpFrom: !!smtpFrom,
+        });
+      }
     }
 
-    let payload: SignatureRequestPayload;
-    try {
-      payload = await req.json();
-    } catch (e) {
-      throw new HttpError(400, "JSON inválido no body.", {
-        message: (e as Error)?.message,
-        stack: (e as Error)?.stack,
-      });
-    }
-
-    console.log(
-      JSON.stringify({
-        requestId,
-        at: "request.payload",
-        payload,
-      }),
-    );
-
-    const { associadoId, clinicId } = payload;
-
-    if (!associadoId || !clinicId) {
-      throw new HttpError(400, "associadoId e clinicId são obrigatórios", { payload });
-    }
-
-    if (!authHeader?.startsWith("Bearer ")) {
+     if (!authHeader?.startsWith("Bearer ")) {
       throw new HttpError(401, "Unauthorized", {
         reason: "Missing Bearer token in Authorization header",
       });
@@ -214,7 +217,7 @@ serve(async (req) => {
       throw new HttpError(404, "Sócio não encontrado", { assocError, associadoId, clinicId });
     }
 
-    if (!associado.email || !isValidEmail(associado.email)) {
+    if (!createOnly && (!associado.email || !isValidEmail(associado.email))) {
       throw new HttpError(400, "Sócio não possui email válido cadastrado", {
         email: associado.email,
       });
@@ -325,6 +328,18 @@ serve(async (req) => {
       }
     }
 
+     if (createOnly) {
+       console.log(JSON.stringify({ requestId, at: "request.createOnly.success", token }));
+       return jsonResponse(200, {
+         success: true,
+         requestId,
+         token,
+         expires_at: expiresAtIso,
+         associadoId,
+         clinicId,
+       });
+     }
+
     // Build signature URL
     const baseUrl = Deno.env.get("APP_BASE_URL") || "https://prosindweb.com.br";
     const signatureUrl = `${baseUrl}/assinar/${token}`;
@@ -341,7 +356,6 @@ serve(async (req) => {
         expiresAt: expiresAtIso,
       }),
     );
-
     const logoSection = logoUrl
       ? `<img src="${logoUrl}" alt="Logo" style="max-width:200px;max-height:60px;display:block;margin-bottom:16px;">`
       : "";
