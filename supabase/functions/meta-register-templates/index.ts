@@ -72,9 +72,9 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
-    name: "aviso_vencimento_carteira",
+    name: "carteira_vencendo_util",
     language: LANG,
-    category: "UTILITY",
+    category: "MARKETING",
     components: [
       {
         type: "BODY",
@@ -86,9 +86,9 @@ const templates: TemplatePayload[] = [
     ],
   },
   {
-    name: "aviso_carteira_vencida",
+    name: "carteira_vencida_util",
     language: LANG,
-    category: "UTILITY",
+    category: "MARKETING",
     components: [
       {
         type: "BODY",
@@ -471,7 +471,30 @@ const templates: TemplatePayload[] = [
   {
     name: "agenda_disponivel",
     language: LANG,
-    category: "UTILITY",
+    category: "MARKETING",
+  {
+    name: "agenda_disponivel_util",
+    language: LANG,
+    category: "MARKETING",
+    components: [
+      {
+        type: "BODY",
+        text: "Olá, {{1}}! 😊\n\nA agenda médica de {{2}} já está disponível para agendamentos!\n\n📲 O agendamento é feito exclusivamente pelo nosso aplicativo. Acesse agora e garanta seu horário com praticidade!\n\nCuide da sua saúde! 💙",
+        example: { body_text: [["Maria", "Maio/2026"]] },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+      {
+        type: "BUTTONS",
+        buttons: [
+          {
+            type: "URL",
+            text: "Abrir Aplicativo",
+            url: "https://app.sindicato.com.br/",
+          },
+        ],
+      },
+    ],
+  },
     components: [
       {
         type: "BODY",
