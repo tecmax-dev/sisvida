@@ -28,6 +28,7 @@ interface PortalLoginScreenProps {
     };
   };
   helpText?: string;
+  children?: ReactNode;
 }
 
 export function PortalLoginScreen({
@@ -39,7 +40,8 @@ export function PortalLoginScreen({
   isLoading,
   onSubmit,
   fields,
-  helpText
+  helpText,
+  children
 }: PortalLoginScreenProps) {
   const buttonClass = "bg-primary hover:bg-primary-dark shadow-md";
 
@@ -131,6 +133,7 @@ export function PortalLoginScreen({
               </p>
             )}
           </form>
+          {children}
         </CardContent>
       </Card>
     </div>
