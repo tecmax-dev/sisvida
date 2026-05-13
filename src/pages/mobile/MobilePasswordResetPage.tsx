@@ -9,12 +9,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Mail, Lock, CheckCircle, KeyRound } from "lucide-react";
 import { extractFunctionsErrorAsync } from "@/lib/functionsError";
 
-type Step = "email" | "verify_code" | "password" | "success";
+type Step = "email" | "verify_code" | "validate_birth_year" | "password" | "success";
 
 export default function MobilePasswordResetPage() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,13 +25,20 @@ export default function MobilePasswordResetPage() {
 
   useEffect(() => {
     const emailFromQuery = searchParams.get("email")?.trim();
+    const codeFromQuery = searchParams.get("code")?.trim();
 
     if (!emailFromQuery || !emailFromQuery.includes("@")) {
       return;
     }
 
     setEmail((currentEmail) => currentEmail || emailFromQuery);
-    setStep((currentStep) => currentStep === "email" ? "verify_code" : currentStep);
+    
+    if (codeFromQuery && codeFromQuery.length === 6) {
+      setCode(codeFromQuery);
+      setStep("validate_birth_year");
+    } else {
+      setStep((currentStep) => currentStep === "email" ? "verify_code" : currentStep);
+    }
   }, [searchParams]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -111,6 +119,21 @@ export default function MobilePasswordResetPage() {
       return;
     }
 
+    setStep("validate_birth_year");
+  };
+
+  const handleValidateBirthYear = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!birthYear || birthYear.length !== 4) {
+      toast({
+        title: "Ano inválido",
+        description: "Digite o ano de nascimento com 4 dígitos (ex: 1980).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setStep("password");
   };
 
@@ -141,6 +164,7 @@ export default function MobilePasswordResetPage() {
       const { data, error } = await supabase.rpc("reset_patient_password_by_code", {
         p_email: email,
         p_code: code,
+        p_birth_year: parseInt(birthYear),
         p_new_password: newPassword,
       } as any);
 
@@ -265,10 +289,50 @@ export default function MobilePasswordResetPage() {
             >
               Continuar
             </Button>
-
             <p className="text-xs text-muted-foreground text-center">
               ⏱️ O código expira em 30 minutos. Não recebeu? Volte e tente novamente.
             </p>
+          </form>
+        );
+
+      case "validate_birth_year":
+        return (
+          <form onSubmit={handleValidateBirthYear} className="space-y-6">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
+
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Validar Identidade</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Para sua segurança, informe seu <strong>ano de nascimento</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthYear">Ano de Nascimento</Label>
+              <Input
+                id="birthYear"
+                type="text"
+                inputMode="numeric"
+                placeholder="Ex: 1985"
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                className="h-12 text-center text-xl font-semibold"
+                maxLength={4}
+                disabled={loading}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              disabled={birthYear.length !== 4}
+            >
+              Continuar
+            </Button>
           </form>
         );
 
@@ -368,13 +432,10 @@ export default function MobilePasswordResetPage() {
           {step !== "success" && (
             <button
               onClick={() => {
-                if (step === "email") {
-                  navigate("/app");
-                } else if (step === "verify_code") {
-                  setStep("email");
-                } else if (step === "password") {
-                  setStep("verify_code");
-                }
+                if (step === "email") navigate("/app");
+                else if (step === "verify_code") setStep("email");
+                else if (step === "validate_birth_year") setStep("verify_code");
+                else if (step === "password") setStep("validate_birth_year");
               }}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
             >
