@@ -364,8 +364,12 @@ serve(async (req) => {
           phone: patient.phone,
           message: whatsappMessage,
           clinicId,
-          type: "custom",
-          sendAsTextOnly: true,
+           type: "custom",
+           templateName: "recuperacao_senha_link_v2",
+           templateComponents: [
+             `email=${encodeURIComponent(patient.email || "")}&code=${code}`
+           ],
+           sendAsTextOnly: false,
         }),
       });
 
