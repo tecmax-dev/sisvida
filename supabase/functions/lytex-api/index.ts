@@ -462,31 +462,36 @@ function normalizeMoneyToCents(value: number, alreadyInCents: boolean = false): 
    invoiceId: string;
  }) {
    const token = Deno.env.get("SINDSYSTEM_API_TOKEN");
-   const baseUrl = "https://secmi.sindsystem.com.br/api";
+   const baseUrl = "https://czmnkrurkzuerrcjzbkp.supabase.co/functions/v1/lytex-webhook";
    
-   if (!token) {
-     console.warn("[Lytex] SINDSYSTEM_API_TOKEN não configurado. Pulando notificação ProSind.");
-     return;
-   }
- 
-   console.log(`[Lytex] Notificando ProSind sobre boleto: ${payload.invoiceId}`);
+   console.log(`[Lytex] Notificando Integração ProSindWeb sobre boleto: ${payload.invoiceId}`);
  
    try {
-     // O endpoint de lançamento no SindSystem segue o padrão /{token}/boleto/lancamento
-     const response = await fetch(`${baseUrl}/${token}/boleto/lancamento`, {
+     const response = await fetch(baseUrl, {
        method: "POST",
        headers: {
          "Content-Type": "application/json",
-         "Accept": "application/json",
+         "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
        },
        body: JSON.stringify({
-         NRCNPJ: payload.cnpj.replace(/\D/g, ""),
-         NMCLIENTE: payload.name,
-         VLBOLETO: (payload.value / 100).toFixed(2),
-         DTVENCIMENTO: payload.dueDate,
-         DSLANÇAMENTO: payload.description,
-         URLBOLETO: payload.invoiceUrl,
-         IDINTERNO: payload.invoiceId,
+         webhookType: "invoice_payment", // Usando tipo compatível com o lytex-webhook
+         data: {
+           invoiceId: payload.invoiceId,
+           status: "pending",
+           client: {
+             name: payload.name,
+             cpfCnpj: payload.cnpj.replace(/\D/g, ""),
+           },
+           referenceId: payload.invoiceId,
+         },
+         dueDate: payload.dueDate,
+         // Campos extras para processamento interno se necessário
+         metadata: {
+           description: payload.description,
+           invoiceUrl: payload.invoiceUrl,
+           value: payload.value,
+           source: "internal_sync"
+         }
        }),
      });
  
