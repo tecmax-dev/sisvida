@@ -608,8 +608,7 @@ serve(async (req) => {
                  to: cleanPhone,
                  template_name: templateName,
                  language: templateLanguage || 'pt_BR',
-                variables: templateComponents || [],
-                phone_number_id: "937233212814035" // Sindicato Official ID
+                variables: templateComponents || []
                }),
              });
              const templateResult = await templateResp.json();
