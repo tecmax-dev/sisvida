@@ -76,6 +76,26 @@ serve(async (req) => {
     }),
   );
 
+  let payload: SignatureRequestPayload;
+  try {
+    payload = await req.json();
+  } catch (e) {
+    return jsonResponse(400, { success: false, error: "JSON inválido no body", details: (e as Error)?.message });
+  }
+
+  console.log(
+    JSON.stringify({
+      requestId,
+      at: "request.payload",
+      payload,
+    }),
+  );
+
+  const { associadoId, clinicId, createOnly } = payload;
+  if (!associadoId || !clinicId) {
+    return jsonResponse(400, { success: false, error: "associadoId e clinicId são obrigatórios" });
+  }
+
   try {
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
