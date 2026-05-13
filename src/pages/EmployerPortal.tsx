@@ -41,6 +41,8 @@ import { formatCompetence } from "@/lib/competence-format";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
+import { PortalTutorialVideo } from "@/components/portal/PortalTutorialVideo";
+import { PlayCircle } from "lucide-react";
 
 interface Clinic {
   id: string;
@@ -152,6 +154,7 @@ export default function EmployerPortal() {
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
   const [searchTerm, setSearchTerm] = useState("");
+const [showTutorial, setShowTutorial] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -1219,6 +1222,18 @@ export default function EmployerPortal() {
             clinicId={clinic.id}
             onBack={() => setActiveView("home")}
             onSuccess={() => setActiveView("home")}
+      {/* Floating Tutorial Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button 
+          onClick={() => setShowTutorial(true)}
+          className="rounded-full shadow-2xl h-12 px-6 gap-2 bg-slate-900 hover:bg-slate-800 text-white border border-white/10"
+        >
+          <PlayCircle className="h-5 w-5 text-primary" />
+          <span className="hidden sm:inline">Tutorial de Uso</span>
+        </Button>
+      </div>
+
+      <PortalTutorialVideo open={showTutorial} onOpenChange={setShowTutorial} />
           />
         )}
       </main>
