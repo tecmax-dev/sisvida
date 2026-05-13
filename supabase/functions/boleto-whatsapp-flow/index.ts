@@ -286,17 +286,33 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       } else if (session.state === 'WAITING_VENCIMENTO') {
         const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
         if (dateRegex.test(text)) {
-          responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
-          nextState = 'WAITING_VALOR';
-          // Store the due date in a temporary field if possible, or just keep it in memory for the next response
-          // Since we are stateless between requests (mostly), we use the DB.
-          // 'expires_at' in the table seems to be a TIMESTAMP, but we are storing "10/06/2026"
-          // The previous logs showed: expires_at:2026-10-06 00:00:00+00
-          const [d, m, y] = text.split('/');
-          const isoDate = `${y}-${m}-${d}T12:00:00Z`;
-          await supabase.from('whatsapp_boleto_sessions').update({ 
-            new_due_date: isoDate 
-          }).eq('id', session.id);
+           const [d, m, y] = text.split('/');
+           const isoDate = `${y}-${m}-${d}T12:00:00Z`;
+           
+           // Obter sessão atualizada para checar se temos contribution_id (reemissão)
+           const { data: updatedSession } = await supabase.from('whatsapp_boleto_sessions').select('contribution_id, value_cents, employer_name, competence_month, competence_year').eq('id', session.id).single();
+
+           if (updatedSession?.contribution_id && updatedSession?.value_cents) {
+             // Se estamos reemitindo, pulamos a pergunta do valor
+             await supabase.from('whatsapp_boleto_sessions').update({ new_due_date: isoDate }).eq('id', session.id);
+             
+             const formattedValor = (updatedSession.value_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+             const competencia = `${String(updatedSession.competence_month).padStart(2, '0')}/${updatedSession.competence_year}`;
+             const displayDate = text;
+
+             responseText = `🔍 *Confirmação de Dados (Reemissão)*\n\n🏢 Empresa: *${updatedSession.employer_name}*\n📅 Competência: *${competencia}*\n📅 Vencimento: *${displayDate}*\n💰 Valor: *R$ ${formattedValor}*\n\nOs dados estão corretos?`;
+             buttons = [
+               { id: 'data_sim', title: '✅ Sim' },
+               { id: 'data_nao', title: '❌ Não, Recomeçar' },
+               { id: 'menu_principal', title: 'Menu Principal' }
+             ];
+             nextState = 'CONFIRM_DATA';
+           } else {
+             // Fluxo normal: pedir valor
+             responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
+             nextState = 'WAITING_VALOR';
+             await supabase.from('whatsapp_boleto_sessions').update({ new_due_date: isoDate }).eq('id', session.id);
+           }
         } else {
           responseText = "❌ Data inválida. Informe no formato DD/MM/AAAA (ex: 10/06/2026):";
           nextState = 'WAITING_VENCIMENTO';
