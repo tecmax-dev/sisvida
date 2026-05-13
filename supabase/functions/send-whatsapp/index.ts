@@ -670,28 +670,24 @@ serve(async (req) => {
 
         const zapResult = await zapResponse.json();
 
-        if (!zapResponse.ok) {
-          console.error('[Zap Responder] Send failed:', zapResult);
+        if (zapResponse.ok) {
+          console.log(`[Zap Responder] Message sent successfully`);
+          // Log message
+          await supabase.from('message_logs').insert({
+            clinic_id: clinicId,
+            message_type: type,
+            phone: cleanPhone,
+            month_year: monthYear,
+          });
+
           return new Response(
-            JSON.stringify({ success: false, error: zapResult.error || 'Erro ao enviar via Zap Responder' }),
-            { status: zapResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ success: true, data: zapResult.data }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+        } else {
+          console.error('[Zap Responder] Send failed:', zapResult);
+          console.warn(`[Clinic ${clinicId}] Zap Responder failed. Fallback to Evolution if configured.`);
         }
-
-        console.log(`[Zap Responder] Message sent successfully`);
-
-        // Log message
-        await supabase.from('message_logs').insert({
-          clinic_id: clinicId,
-          message_type: type,
-          phone: cleanPhone,
-          month_year: monthYear,
-        });
-
-        return new Response(
-          JSON.stringify({ success: true, data: zapResult.data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       } catch (zapError) {
         console.error('[Zap Responder] Request error:', zapError);
         return new Response(
