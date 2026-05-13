@@ -8,7 +8,8 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-   const BUILD_VERSION = 'FLOW_V2_BUILD_20260509_FIX';
+    const BUILD_VERSION = 'FLOW_V2_BUILD_20260513_PROSIND_SYNC';
+    const DEFAULT_CONTRIBUTION_TYPE_ID = "48bda88b-1cf9-47b6-b930-781d8a0eb55a";
  
  serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -309,6 +310,28 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         try {
           const { data: finalSession } = await supabase.from('whatsapp_boleto_sessions').select('*').eq('id', session.id).single();
           
+          // Criar registro na tabela employer_contributions para visibilidade no ProSindWeb
+          const { data: newContrib, error: contribError } = await supabase
+            .from('employer_contributions')
+            .insert({
+              clinic_id: clinic_id,
+              employer_id: finalSession.employer_id,
+              contribution_type_id: DEFAULT_CONTRIBUTION_TYPE_ID,
+              competence_month: finalSession.competence_month,
+              competence_year: finalSession.competence_year,
+              value: finalSession.value_cents,
+              due_date: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+              status: 'pending',
+              origin: 'lytex',
+              notes: `[Gerado via WhatsApp em ${new Date().toLocaleDateString('pt-BR')}]`
+            })
+            .select('id')
+            .maybeSingle();
+
+          if (contribError) {
+            console.error('[CONTRIB_CREATE_FAILED]', contribError);
+          }
+
           const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
             method: 'POST',
             headers: {
@@ -321,9 +344,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               clientDocument: finalSession.employer_cnpj,
               value: finalSession.value_cents,
               valueIsInCents: true,
-               dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
-               description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
-               clientId: finalSession.id // Adding clientId as a potential fallback for required reference
+              dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+              description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
+              clientId: newContrib?.id || finalSession.id,
+              installmentId: newContrib?.id
             })
           });
 
