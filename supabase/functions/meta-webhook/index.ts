@@ -38,8 +38,17 @@ serve(async (req) => {
     const messageObj = value?.messages?.[0] || body.message || {};
     const from = (body.wa_id || body.phone || messageObj.from || "").toString().replace(/\D/g, "");
     
-    const extractedButtonId = messageObj.interactive?.button_reply?.id || messageObj.interactive?.list_reply?.id || messageObj.buttonId || null;
-    const extractedButtonTitle = messageObj.interactive?.button_reply?.title || messageObj.interactive?.list_reply?.title || messageObj.buttonText || null;
+    const extractedButtonId = messageObj.interactive?.button_reply?.id || 
+                             messageObj.interactive?.list_reply?.id || 
+                             messageObj.button?.payload || 
+                             messageObj.buttonId || 
+                             null;
+                             
+    const extractedButtonTitle = messageObj.interactive?.button_reply?.title || 
+                                messageObj.interactive?.list_reply?.title || 
+                                messageObj.button?.text || 
+                                messageObj.buttonText || 
+                                null;
     const text = (messageObj.text?.body || messageObj.conversation || "").toString().trim();
 
     console.log('[BUTTON_ID]', extractedButtonId);
@@ -86,6 +95,85 @@ serve(async (req) => {
       });
     } catch (logErr) {
       console.error('[LOG_ERROR]', logErr);
+    }
+
+    // Helper functions for phone matching
+    const normalizeDigits = (v: string) => v.replace(/\D/g, '');
+    const getPhoneVariants = (raw: string) => {
+      let d = normalizeDigits(raw);
+      if (d.startsWith('55') && d.length > 11) d = d.slice(2);
+      const v = [d];
+      if (d.length === 10) v.push(d.slice(0, 2) + '9' + d.slice(2));
+      if (d.length === 11 && d[2] === '9') v.push(d.slice(0, 2) + d.slice(3));
+      return v.flatMap(x => [x, '55' + x]);
+    };
+
+    // --- APPOINTMENT CONFIRMATION/CANCELLATION ---
+    if (extractedButtonId === "Confirmar" || extractedButtonId === "Cancelar") {
+      console.log('[APPOINTMENT_ACTION]', extractedButtonId, 'from:', from);
+      const isConfirm = extractedButtonId === "Confirmar";
+      
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        
+        const variants = getPhoneVariants(from);
+        console.log('[PHONE_VARIANTS]', variants);
+
+        // Lookup upcoming appointments
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: appointments, error: aptError } = await supabase
+          .from('appointments')
+          .select(`
+            id, 
+            status, 
+            appointment_date,
+            patient:patients!inner(name, phone)
+          `)
+          .in('status', ['scheduled', 'confirmed'])
+          .gte('appointment_date', today)
+          .order('appointment_date', { ascending: true })
+          .order('start_time', { ascending: true })
+          .limit(10);
+
+        if (aptError) throw aptError;
+
+        const matchedApt = appointments?.find(a => {
+          const pPhone = (a.patient as any)?.phone;
+          return pPhone && variants.includes(normalizeDigits(pPhone));
+        });
+
+        if (matchedApt) {
+          const newStatus = isConfirm ? 'confirmed' : 'cancelled';
+          console.log('[MATCHED_APT]', matchedApt.id, '->', newStatus);
+          
+          const { error: updateError } = await supabase
+            .from('appointments')
+            .update({ status: newStatus })
+            .eq('id', matchedApt.id);
+          
+          if (updateError) throw updateError;
+
+          const msg = isConfirm 
+            ? "Obrigado! Sua consulta foi *confirmada* com sucesso. ✅"
+            : "Entendido. Sua consulta foi *cancelada*. Se precisar reagendar, entre em contato. ❌";
+          
+          await sendResponse({
+            type: "text",
+            text: { body: msg }
+          });
+          
+          return new Response(JSON.stringify({ ok: true, action: `appointment_${newStatus}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } else {
+          console.log('[APT_NOT_FOUND] for variants:', variants);
+          await sendResponse({
+            type: "text",
+            text: { body: "Não encontramos um agendamento pendente para este número. Por favor, fale com um atendente." }
+          });
+        }
+      } catch (err) {
+        console.error('[APT_ACTION_ERROR]', err);
+      }
     }
 
     const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu|oi lov|ola lov|olá lov)\b/i.test(text);
