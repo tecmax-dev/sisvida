@@ -41,6 +41,8 @@ import { formatCompetence } from "@/lib/competence-format";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
+import { PortalTutorialVideo } from "@/components/portal/PortalTutorialVideo";
+import { PlayCircle } from "lucide-react";
 
 interface Clinic {
   id: string;
@@ -152,6 +154,7 @@ export default function EmployerPortal() {
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
   const [searchTerm, setSearchTerm] = useState("");
+const [showTutorial, setShowTutorial] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -594,7 +597,20 @@ export default function EmployerPortal() {
           }
         }}
         helpText={clinic?.phone ? `Não possui código? Ligue: ${clinic.phone}` : "Não possui código? Entre em contato com o sindicato."}
-      />
+      >
+        <div className="mt-4 flex justify-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowTutorial(true)}
+            className="text-primary border-primary/20 hover:bg-primary/5 transition-colors gap-2"
+          >
+            <PlayCircle className="h-4 w-4" />
+            Como gerar boleto? (Tutorial)
+          </Button>
+        </div>
+        <PortalTutorialVideo open={showTutorial} onOpenChange={setShowTutorial} />
+      </PortalLoginScreen>
     );
   }
 
@@ -1222,6 +1238,19 @@ export default function EmployerPortal() {
           />
         )}
       </main>
+
+      {/* Floating Tutorial Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button 
+          onClick={() => setShowTutorial(true)}
+          className="rounded-full shadow-2xl h-12 px-6 gap-2 bg-slate-900 hover:bg-slate-800 text-white border border-white/10"
+        >
+          <PlayCircle className="h-5 w-5 text-primary" />
+          <span className="hidden sm:inline">Tutorial de Uso</span>
+        </Button>
+      </div>
+
+      <PortalTutorialVideo open={showTutorial} onOpenChange={setShowTutorial} />
     </div>
   );
 }
