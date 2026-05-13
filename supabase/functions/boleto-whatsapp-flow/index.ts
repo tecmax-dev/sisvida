@@ -392,8 +392,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               valueIsInCents: true,
               dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
               description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
-              clientId: newContrib?.id || finalSession.id,
-              installmentId: newContrib?.id
+              clientId: contributionId || finalSession.id,
+              installmentId: contributionId
             })
           });
 
