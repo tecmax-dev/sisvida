@@ -352,7 +352,7 @@ serve(async (req) => {
     const { data: clinics } = await supabase
       .from('clinics')
       .select(`
-        id, name, logo_url, whatsapp_header_image_url, whatsapp_provider,
+        id, name, logo_url, whatsapp_header_image_url, whatsapp_provider, reminder_interval,
         union_entities!union_entities_clinic_id_fkey(logo_url)
       `);
 
@@ -558,8 +558,10 @@ serve(async (req) => {
           errorCount++;
         }
 
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Use the clinic-specific interval (default 60s if not set)
+        const intervalSeconds = clinic.reminder_interval || 60;
+        console.log(`[Clinic ${clinic.name}] Waiting ${intervalSeconds}s before next reminder...`);
+        await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
       }
     }
 

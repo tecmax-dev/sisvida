@@ -22,6 +22,7 @@ interface ClinicWithReminder {
   slug: string;
   reminder_enabled: boolean;
   reminder_hours: number;
+  reminder_interval: number;
   logo_url: string | null;
   whatsapp_header_image_url: string | null;
 }
@@ -446,7 +447,7 @@ serve(async (req) => {
      const { data: clinics, error: clinicsError } = await supabase
        .from('clinics')
        .select(`
-         id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url,
+         id, name, slug, reminder_enabled, reminder_hours, reminder_interval, logo_url, whatsapp_header_image_url,
          whatsapp_provider,
          union_entities!union_entities_clinic_id_fkey(logo_url)
        `)
@@ -743,8 +744,10 @@ serve(async (req) => {
 
         }
 
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Use the clinic-specific interval (default 60s if not set)
+        const intervalSeconds = clinic.reminder_interval || 60;
+        console.log(`[Clinic ${clinic.name}] Waiting ${intervalSeconds}s before next reminder...`);
+        await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
       }
     }
 

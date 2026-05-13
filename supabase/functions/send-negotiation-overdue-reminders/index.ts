@@ -102,7 +102,7 @@ serve(async (req) => {
       // Get clinic name and union logo
       const { data: clinicData } = await supabase
         .from("clinics")
-        .select("name, whatsapp_header_image_url")
+        .select("name, whatsapp_header_image_url, reminder_interval")
         .eq("id", clinicId)
         .single();
 
@@ -211,6 +211,11 @@ serve(async (req) => {
           });
         }
       }
+
+      // Use the clinic-specific interval (default 60s if not set)
+      const intervalSeconds = clinicData?.reminder_interval || 60;
+      console.log(`[Clinic ${clinicData?.name}] Waiting ${intervalSeconds}s before next negotiation reminder...`);
+      await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
     }
 
     console.log(`[overdue-reminders] Done. Sent: ${totalSent}, Failed: ${totalFailed}`);

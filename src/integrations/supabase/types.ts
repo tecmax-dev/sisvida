@@ -2055,6 +2055,7 @@ export type Database = {
           phone: string | null
           reminder_enabled: boolean | null
           reminder_hours: number | null
+          reminder_interval: number | null
           slug: string
           state_code: string | null
           titular_booking_limit_enabled: boolean | null
@@ -2109,6 +2110,7 @@ export type Database = {
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
+          reminder_interval?: number | null
           slug: string
           state_code?: string | null
           titular_booking_limit_enabled?: boolean | null
@@ -2163,6 +2165,7 @@ export type Database = {
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
+          reminder_interval?: number | null
           slug?: string
           state_code?: string | null
           titular_booking_limit_enabled?: boolean | null
