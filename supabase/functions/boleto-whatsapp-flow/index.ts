@@ -280,9 +280,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               const isoDate = due.toISOString();
               await supabase.from('whatsapp_boleto_sessions').update({ new_due_date: isoDate }).eq('id', session.id);
 
-              responseText = (existingContrib && existingContrib.value === 0) 
-                ? "💰 Identificamos o período com valor em aberto. Informe o *valor* para emissão (ex: 150,00):"
-                : "💰 Informe o *valor* do boleto (ex: 150,00):";
+               responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
               nextState = 'WAITING_VALOR';
             } else {
               responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
