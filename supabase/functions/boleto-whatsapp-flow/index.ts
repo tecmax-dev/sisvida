@@ -40,31 +40,41 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       // .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    const isNewSession = !session;
+    const isNewSession = !session || (session.state === 'SUCCESS' && action !== 'button');
     const isStartAction = action === 'start' || text === 'recomeçar' || text === 'inicio';
     
-    if (isNewSession || isStartAction) {
-      console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
-      const newState = 'SELECT_BOLETO_TYPE';
-      
-      const { data: updatedSession, error: upsertError } = await supabase
-        .from('whatsapp_boleto_sessions')
-        .upsert({
-          clinic_id,
-          phone,
-          state: newState,
-          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'clinic_id,phone' })
-        .select()
-        .single();
-
-      if (upsertError) {
-        console.error('[SESSION_UPSERT_FAILED]', upsertError);
-        throw new Error("Session persistence failed");
-      }
-      session = updatedSession;
-    }
+     if (isNewSession || isStartAction) {
+       console.log('[SESSION_INIT_OR_RESET]', session ? 'Resetting' : 'Creating');
+       const newState = 'SELECT_BOLETO_TYPE';
+       
+       const upsertData: any = {
+         clinic_id,
+         phone,
+         state: newState,
+         expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+         updated_at: new Date().toISOString(),
+         employer_id: null,
+         employer_name: null,
+         employer_cnpj: null,
+         competence_month: null,
+         competence_year: null,
+         value_cents: null,
+         new_due_date: null,
+         boleto_type: null
+       };
+ 
+       const { data: updatedSession, error: upsertError } = await supabase
+         .from('whatsapp_boleto_sessions')
+         .upsert(upsertData, { onConflict: 'clinic_id,phone' })
+         .select()
+         .single();
+ 
+       if (upsertError) {
+         console.error('[SESSION_UPSERT_FAILED]', upsertError);
+         throw new Error("Session persistence failed");
+       }
+       session = updatedSession;
+     }
 
     if (!session) {
       console.error('[SESSION_LOAD_FAILED]');
@@ -203,24 +213,46 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             competence_year: cYear 
           }).eq('id', session.id);
 
-          if (session.boleto_type === 'a_vencer') {
-            // Auto-calcula vencimento: dia 10 do mês seguinte à competência, ajustando para dia útil
-            let dueYear = cYear;
-            let dueMonth = cMonth + 1;
-            if (dueMonth > 12) { dueMonth = 1; dueYear += 1; }
-            const due = new Date(Date.UTC(dueYear, dueMonth - 1, 10, 12, 0, 0));
-            // Se cair em sábado (6) ou domingo (0), avançar para próxima segunda
-            const dow = due.getUTCDay();
-            if (dow === 6) due.setUTCDate(due.getUTCDate() + 2);
-            else if (dow === 0) due.setUTCDate(due.getUTCDate() + 1);
-            const isoDate = due.toISOString();
-            await supabase.from('whatsapp_boleto_sessions').update({ new_due_date: isoDate }).eq('id', session.id);
+          // Verificar se já existe boleto para este período e empresa
+          const { data: existingContrib } = await supabase
+            .from('employer_contributions')
+            .select('lytex_invoice_url, value, due_date')
+            .eq('employer_id', session.employer_id)
+            .eq('competence_month', cMonth)
+            .eq('competence_year', cYear)
+            .not('lytex_invoice_url', 'is', null)
+            .limit(1)
+            .maybeSingle();
 
-            responseText = "💰 Informe o *valor* do boleto (ex: 150,00):";
-            nextState = 'WAITING_VALOR';
+          if (existingContrib && existingContrib.value > 0) {
+            const formattedDueDate = existingContrib.due_date ? new Date(existingContrib.due_date).toLocaleDateString('pt-BR') : 'N/A';
+            responseText = `📍 *Boleto já existente para este período!*\n\n📅 Vencimento: *${formattedDueDate}*\n💰 Valor: *R$ ${(existingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n🔗 *Link:* ${existingContrib.lytex_invoice_url}\n\nO que deseja fazer?`;
+            buttons = [
+              { id: 'recomecar', title: 'Emitir Outro' },
+              { id: 'menu_principal', title: 'Menu Principal' }
+            ];
+            nextState = 'SUCCESS';
           } else {
-            responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
-            nextState = 'WAITING_VENCIMENTO';
+            // Caso não exista ou valor seja zero, prosseguir para valor/vencimento
+            if (session.boleto_type === 'a_vencer') {
+              let dueYear = cYear;
+              let dueMonth = cMonth + 1;
+              if (dueMonth > 12) { dueMonth = 1; dueYear += 1; }
+              const due = new Date(Date.UTC(dueYear, dueMonth - 1, 10, 12, 0, 0));
+              const dow = due.getUTCDay();
+              if (dow === 6) due.setUTCDate(due.getUTCDate() + 2);
+              else if (dow === 0) due.setUTCDate(due.getUTCDate() + 1);
+              const isoDate = due.toISOString();
+              await supabase.from('whatsapp_boleto_sessions').update({ new_due_date: isoDate }).eq('id', session.id);
+
+              responseText = (existingContrib && existingContrib.value === 0) 
+                ? "💰 Identificamos o período com valor em aberto. Informe o *valor* para emissão (ex: 150,00):"
+                : "💰 Informe o *valor* do boleto (ex: 150,00):";
+              nextState = 'WAITING_VALOR';
+            } else {
+              responseText = "📅 Informe a *data de vencimento* desejada (ex: 10/06/2026):";
+              nextState = 'WAITING_VENCIMENTO';
+            }
           }
         } else {
           responseText = "❌ Formato inválido. Informe o período como MM/AAAA (ex: 05/2026):";
