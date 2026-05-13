@@ -99,7 +99,7 @@ const templates = [
     ]
   },
   {
-    name: "recuperacao_senha_link_v2",
+    name: "recuperacao_senha_link_v3",
     language: "pt_BR",
     category: "UTILITY",
     components: [

@@ -307,12 +307,12 @@ serve(async (req: Request): Promise<Response> => {
           message: whatsappMessage,
           clinicId: patient.clinic_id,
           type: "custom",
-          templateName: "recuperacao_senha_link_v2",
+          templateName: "recuperacao_senha_link_v3",
           templateComponents: [
             firstName,
             `email=${encodeURIComponent(email)}&code=${token}`
           ],
-          sendAsTextOnly: true,
+          sendAsTextOnly: false,
         }),
       });
 
