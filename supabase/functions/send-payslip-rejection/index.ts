@@ -15,191 +15,101 @@ interface RejectionRequest {
   rejection_reason: string;
 }
 
-interface EvolutionConfig {
-  api_url: string;
-  api_key: string;
-  instance_name: string;
-  is_connected: boolean;
-}
-
-async function sendWhatsAppText(
-  config: EvolutionConfig,
-  phone: string,
-  message: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    let formattedPhone = phone.replace(/\D/g, '');
-    if (!formattedPhone.startsWith('55')) {
-      formattedPhone = '55' + formattedPhone;
-    }
-
-    // Descobrir o JID real consultando a Evolution API.
-    // Em alguns DDDs (especialmente Bahia/Nordeste), o número correto no WhatsApp
-    // pode ser SEM o 9 mesmo sendo celular. Forçar o 9 cegamente faz a entrega falhar.
-    // Geramos as duas variações (com e sem o 9) e perguntamos qual existe.
-    const candidates = new Set<string>();
-    candidates.add(formattedPhone);
-    const national = formattedPhone.slice(2);
-    if (national.length === 10) {
-      const ddd = national.slice(0, 2);
-      const rest = national.slice(2);
-      if (!rest.startsWith('9')) {
-        candidates.add('55' + ddd + '9' + rest);
-      }
-    } else if (national.length === 11) {
-      const ddd = national.slice(0, 2);
-      const rest = national.slice(2);
-      if (rest.startsWith('9')) {
-        candidates.add('55' + ddd + rest.slice(1));
-      }
-    }
-
-    try {
-      const checkResp = await fetch(`${config.api_url}/chat/whatsappNumbers/${config.instance_name}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': config.api_key,
-        },
-        body: JSON.stringify({ numbers: Array.from(candidates) }),
-      });
-      if (checkResp.ok) {
-        const checkData = await checkResp.json();
-        if (Array.isArray(checkData)) {
-          const valid = checkData.find((n: any) => n?.exists === true);
-          if (valid?.jid) {
-            // Usa o número exato que o WhatsApp reconhece (sem o sufixo @s.whatsapp.net)
-            formattedPhone = String(valid.jid).split('@')[0];
-            console.log(`[send-payslip-rejection] Resolved JID for ${phone}: ${formattedPhone}`);
-          } else {
-            console.warn(`[send-payslip-rejection] Number ${phone} not found on WhatsApp`);
-            return { success: false, error: 'Número não está registrado no WhatsApp' };
-          }
-        }
-      }
-    } catch (checkErr) {
-      console.warn('[send-payslip-rejection] JID check failed, proceeding with default:', checkErr);
-    }
-
-    console.log(`[send-payslip-rejection] Sending WhatsApp to ${formattedPhone}`);
-
-    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': config.api_key,
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message,
-      }),
-    });
-
-    const responseText = await response.text();
-    console.log(`[send-payslip-rejection] Evolution API response: ${response.status} - ${responseText}`);
-
-    if (!response.ok) {
-      return { success: false, error: `API error ${response.status}: ${responseText}` };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('[send-payslip-rejection] Error sending WhatsApp:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { 
-      clinic_id, 
-      patient_id, 
-      patient_name, 
-      patient_phone, 
-      card_id,
-      rejection_reason 
-    }: RejectionRequest = await req.json();
-
-    console.log('[send-payslip-rejection] Processing rejection notification', {
+    const {
       clinic_id,
       patient_id,
       patient_name,
-      rejection_reason
-    });
+      patient_phone,
+      card_id,
+      rejection_reason,
+    }: RejectionRequest = await req.json();
 
-    // Get clinic info
+    console.log('[send-payslip-rejection] Processando', { clinic_id, patient_id, patient_name, patient_phone });
+
     const { data: clinic } = await supabase
       .from('clinics')
       .select('name, whatsapp_provider')
       .eq('id', clinic_id)
-      .single();
+      .maybeSingle();
 
-    if (!clinic) {
-      throw new Error('Clínica não encontrada');
-    }
+    if (!clinic) throw new Error('Clínica não encontrada');
 
-    // Get Evolution config for clinic
-    const { data: evolutionConfig } = await supabase
-      .from('evolution_configs')
-      .select('api_url, api_key, instance_name, is_connected')
-      .eq('clinic_id', clinic_id)
-      .eq('is_connected', true)
-      .single();
-
-    if (!evolutionConfig) {
-      console.log('[send-payslip-rejection] No Evolution instance configured for clinic');
-      // Still create the pending request, just skip WhatsApp
-    }
-
-    // Get current month name in Portuguese
-    const months = [
-      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-    ];
-    const now = new Date();
-    const currentMonth = months[now.getMonth()];
-    const currentYear = now.getFullYear();
-    const previousMonth = months[now.getMonth() === 0 ? 11 : now.getMonth() - 1];
-
-    // Format message
-    const firstName = patient_name.split(' ')[0];
-    const message = `⚠️ Olá, ${firstName}!
-
-Infelizmente não foi possível aprovar seu contracheque.
-
-📋 *Motivo:* ${rejection_reason}
-
-Para renovar sua carteirinha, envie um novo contracheque:
-✅ Do mês atual (${currentMonth}/${currentYear}) ou do mês anterior (${previousMonth})
-✅ Com seu nome e data visíveis
-✅ Foto legível e completa
-
-Basta responder esta mensagem com a foto do documento atualizado.
-
-Obrigado pela compreensão!
-Equipe ${clinic.name}`;
-
-    // Send WhatsApp message if Evolution is configured
+    const provider = (clinic.whatsapp_provider || 'evolution') as string;
+    const firstName = (patient_name || '').split(' ')[0] || patient_name || 'Associado(a)';
     let whatsappSent = false;
-    if (evolutionConfig) {
-      const result = await sendWhatsAppText(evolutionConfig as EvolutionConfig, patient_phone, message);
-      whatsappSent = result.success;
-      if (!result.success) {
-        console.error('[send-payslip-rejection] Failed to send WhatsApp:', result.error);
-      } else {
-        console.log('[send-payslip-rejection] WhatsApp notification sent successfully');
+    let errorDetail: any = null;
+
+    // 1) Meta Cloud API: template carteirinha_recusada
+    if (patient_phone) {
+      try {
+        const metaRes = await supabase.functions.invoke('meta-send-template', {
+          body: {
+            to: patient_phone,
+            template_name: 'carteirinha_recusada',
+            variables: [firstName, rejection_reason || 'Não informado'],
+          },
+        });
+
+        if (!metaRes.error && metaRes.data?.success) {
+          whatsappSent = true;
+          console.log('[send-payslip-rejection] Meta template enviado');
+        } else {
+          errorDetail = metaRes.error || metaRes.data;
+          console.warn('[send-payslip-rejection] Meta template falhou:', errorDetail);
+        }
+      } catch (err) {
+        console.error('[send-payslip-rejection] Erro meta-send-template:', err);
+        errorDetail = err instanceof Error ? err.message : String(err);
       }
     }
 
-    // Create a new pending request for the patient to resubmit
+    // 2) Fallback Evolution apenas para clínicas que NÃO são meta_official
+    if (!whatsappSent && patient_phone && provider !== 'meta_official') {
+      const { data: evolutionConfig } = await supabase
+        .from('evolution_configs')
+        .select('api_url, api_key, instance_name, is_connected')
+        .eq('clinic_id', clinic_id)
+        .eq('is_connected', true)
+        .maybeSingle();
+
+      if (evolutionConfig) {
+        const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+        const now = new Date();
+        const currentMonth = months[now.getMonth()];
+        const currentYear = now.getFullYear();
+        const previousMonth = months[now.getMonth() === 0 ? 11 : now.getMonth() - 1];
+
+        const message = `⚠️ Olá, ${firstName}!\n\nInfelizmente não foi possível aprovar seu contracheque.\n\n📋 *Motivo:* ${rejection_reason}\n\nPara renovar sua carteirinha, envie um novo contracheque:\n✅ Do mês atual (${currentMonth}/${currentYear}) ou do mês anterior (${previousMonth})\n✅ Com seu nome e data visíveis\n✅ Foto legível e completa\n\nBasta responder esta mensagem com a foto do documento atualizado.\n\nObrigado pela compreensão!\nEquipe ${clinic.name}`;
+
+        let formattedPhone = patient_phone.replace(/\D/g, '');
+        if (!formattedPhone.startsWith('55')) formattedPhone = '55' + formattedPhone;
+
+        try {
+          const response = await fetch(`${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': evolutionConfig.api_key },
+            body: JSON.stringify({ number: formattedPhone, text: message }),
+          });
+          if (response.ok) {
+            whatsappSent = true;
+          } else {
+            errorDetail = `Evolution API error: ${await response.text()}`;
+          }
+        } catch (err) {
+          errorDetail = err instanceof Error ? err.message : String(err);
+        }
+      }
+    }
+
+    // Cria nova solicitação pendente para reenvio
     const { error: insertError } = await supabase
       .from('payslip_requests')
       .insert({
@@ -208,26 +118,22 @@ Equipe ${clinic.name}`;
         card_id,
         status: 'pending',
         notes: `Aguardando reenvio após rejeição: ${rejection_reason}`,
-        requested_at: new Date().toISOString()
+        requested_at: new Date().toISOString(),
       });
 
-    if (insertError) {
-      console.error('[send-payslip-rejection] Error creating new pending request:', insertError);
-    } else {
-      console.log('[send-payslip-rejection] New pending request created for resubmission');
-    }
+    if (insertError) console.error('[send-payslip-rejection] Erro criando solicitação pendente:', insertError);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         whatsapp_sent: whatsappSent,
-        message: whatsappSent 
-          ? 'Notificação enviada e nova solicitação criada' 
-          : 'Nova solicitação criada (WhatsApp não configurado)'
+        error: errorDetail,
+        message: whatsappSent
+          ? 'Notificação enviada e nova solicitação criada'
+          : 'Nova solicitação criada (notificação WhatsApp falhou ou indisponível)',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error: any) {
     console.error('[send-payslip-rejection] Error:', error);
     return new Response(
