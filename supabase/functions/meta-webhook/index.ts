@@ -29,9 +29,34 @@ serve(async (req) => {
     const change = entry?.changes?.[0];
     const value = change?.value;
     
-    // Skip status updates
+    // Registrar status de entrega da Meta (sent/delivered/read/failed) para evitar falso positivo.
     if (value?.statuses) {
-      console.log('[SKIP] Status update');
+      console.log('[STATUS_UPDATE] Meta status update');
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+        for (const status of value.statuses || []) {
+          const recipient = String(status.recipient_id || '').replace(/\D/g, '');
+          await supabase.from('whatsapp_audit_logs').insert({
+            phone: recipient || 'unknown',
+            direction: 'status',
+            content: status.status || null,
+            message_type: 'meta_status',
+            metadata: {
+              provider: 'meta_official',
+              message_id: status.id || null,
+              status: status.status || null,
+              recipient_id: status.recipient_id || null,
+              timestamp: status.timestamp || null,
+              errors: status.errors || null,
+              raw_payload: body,
+            },
+          });
+        }
+      } catch (statusLogErr) {
+        console.error('[STATUS_LOG_ERROR]', statusLogErr);
+      }
       return new Response("ok", { status: 200 });
     }
 
