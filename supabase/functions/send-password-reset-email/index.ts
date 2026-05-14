@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
-const META_SUCCESS_STATUSES = new Set(["SENT", "DELIVERED", "READ"]);
+const META_SUCCESS_STATUSES = new Set(["DELIVERED", "READ"]);
 
 function buildWhatsAppPhoneCandidates(rawPhone: string): string[] {
   let digits = rawPhone.replace(/@s\.whatsapp\.net$/, "").replace(/\D/g, "");
@@ -344,62 +344,56 @@ serve(async (req: Request): Promise<Response> => {
         code: token,
       });
 
-      const authHeader = `Bearer ${supabaseServiceKey}`;
-
-      const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
-        body: JSON.stringify({
-          phone: patient.phone,
-          message: whatsappMessage,
-          clinicId: patient.clinic_id,
-          type: "custom",
-              templateName: "recuperacao_senha_link_v2",
-              templateComponents: [
-                firstName,
-                `email=${encodeURIComponent(email)}&code=${token}`
-              ],
-          sendAsTextOnly: false,
-        }),
-      });
-
-      const whatsappResult = await whatsappResponse.json().catch(() => null);
-
-      // Detecta falha de WhatsApp para acionar fallback de e-mail.
-      let whatsappFailed = false;
+      let whatsappFailed = true;
       let whatsappFailureReason: string | null = null;
 
-      if (!whatsappResponse.ok || whatsappResult?.success === false) {
-        whatsappFailed = true;
-        whatsappFailureReason = whatsappResult?.error || "Erro ao enviar WhatsApp";
-        console.error("WhatsApp send error:", { status: whatsappResponse.status, whatsappResult });
-      } else {
+      for (const phoneCandidate of buildWhatsAppPhoneCandidates(patient.phone)) {
+        const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseServiceKey}` },
+          body: JSON.stringify({
+            phone: phoneCandidate,
+            message: whatsappMessage,
+            clinicId: patient.clinic_id,
+            type: "custom",
+            templateName: "recuperacao_senha_link_v2",
+            templateComponents: [firstName, `email=${encodeURIComponent(email)}&code=${token}`],
+            sendAsTextOnly: false,
+          }),
+        });
+
+        const whatsappResult = await whatsappResponse.json().catch(() => null);
+        if (!whatsappResponse.ok || whatsappResult?.success === false) {
+          whatsappFailureReason = whatsappResult?.error || "Erro ao enviar WhatsApp";
+          console.error("WhatsApp send error:", { phoneCandidate, status: whatsappResponse.status, whatsappResult });
+          continue;
+        }
+
         const usedFallbackChannel = whatsappResult?.data?.fallback === "whazing_apioficial";
-        const metaTemplateMessageId = whatsappResult?.method === "meta_template_direct"
-          ? whatsappResult?.data?.message_id
-          : null;
+        const metaTemplateMessageId = whatsappResult?.method === "meta_template_direct" ? whatsappResult?.data?.message_id : null;
         const messageId = whatsappResult?.data?.key?.id || metaTemplateMessageId;
 
         if (!messageId && !usedFallbackChannel) {
-          whatsappFailed = true;
           whatsappFailureReason = "WhatsApp não retornou protocolo de rastreamento";
           console.error("WhatsApp send did not return message id:", whatsappResult);
-        } else if (metaTemplateMessageId) {
-          console.log(`Reset code accepted by Meta WhatsApp to ${patient.phone} with message id ${metaTemplateMessageId}`);
-        } else if (!usedFallbackChannel) {
-          const finalStatus = await waitForWhatsAppFinalStatus(supabase, messageId);
-          if (finalStatus.error) {
-            whatsappFailed = true;
-            whatsappFailureReason = finalStatus.error;
-          } else {
-            console.log(`Reset code sent via WhatsApp to ${patient.phone} with final status ${finalStatus.status}`);
-          }
-        } else {
-          console.log(`Reset code sent via WhatsApp fallback channel to ${patient.phone}`);
+          continue;
         }
+
+        const finalStatus = metaTemplateMessageId
+          ? await waitForMetaDeliveryStatus(supabase, metaTemplateMessageId)
+          : usedFallbackChannel
+            ? { status: "SENT" }
+            : await waitForWhatsAppFinalStatus(supabase, messageId);
+
+        if (finalStatus.error) {
+          whatsappFailureReason = finalStatus.error;
+          console.warn("WhatsApp candidate failed final delivery:", { phoneCandidate, messageId, finalStatus });
+          continue;
+        }
+
+        whatsappFailed = false;
+        console.log(`Reset code delivered via WhatsApp to ${phoneCandidate} with final status ${finalStatus.status}`);
+        break;
       }
 
       // Sucesso WhatsApp → resposta direta
