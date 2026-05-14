@@ -328,12 +328,17 @@ serve(async (req: Request): Promise<Response> => {
         console.error("WhatsApp send error:", { status: whatsappResponse.status, whatsappResult });
       } else {
         const usedFallbackChannel = whatsappResult?.data?.fallback === "whazing_apioficial";
-        const messageId = whatsappResult?.data?.key?.id;
+        const metaTemplateMessageId = whatsappResult?.method === "meta_template_direct"
+          ? whatsappResult?.data?.message_id
+          : null;
+        const messageId = whatsappResult?.data?.key?.id || metaTemplateMessageId;
 
         if (!messageId && !usedFallbackChannel) {
           whatsappFailed = true;
           whatsappFailureReason = "WhatsApp não retornou protocolo de rastreamento";
           console.error("WhatsApp send did not return message id:", whatsappResult);
+        } else if (metaTemplateMessageId) {
+          console.log(`Reset code accepted by Meta WhatsApp to ${patient.phone} with message id ${metaTemplateMessageId}`);
         } else if (!usedFallbackChannel) {
           const finalStatus = await waitForWhatsAppFinalStatus(supabase, messageId);
           if (finalStatus.error) {
