@@ -421,6 +421,20 @@ const templates: TemplatePayload[] = [
        { type: "FOOTER", text: "Sindicato dos Comerciários" },
      ],
    },
+  {
+    name: "carteirinha_recusada",
+    language: LANG,
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text:
+          "⚠️ Olá, {{1}}!\n\nInfelizmente seu contracheque enviado para renovação da carteirinha não foi aprovado.\n\nMotivo: {{2}}\n\nPara renovar sua carteirinha, envie um novo contracheque legível, do mês atual ou anterior, com seu nome e data visíveis. Basta responder esta mensagem com a foto do documento atualizado.\n\nObrigado pela compreensão!",
+        example: { body_text: [["João", "Documento ilegível"]] },
+      },
+      { type: "FOOTER", text: "Sindicato dos Comerciários" },
+    ],
+  },
    {
      name: "agendamento_consulta",
      language: LANG,
