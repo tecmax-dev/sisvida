@@ -24,6 +24,26 @@ function normalizePhone(raw: string): string {
   return digits.startsWith("55") ? digits : `55${digits}`;
 }
 
+function countComponentVariables(components: any[]): number {
+  return components.reduce((total, comp) => {
+    if (comp.type === "BODY" || comp.type === "HEADER") {
+      const text = comp.text || "";
+      const matches = text.match(/\{\{\d+\}\}/g);
+      if (!matches) return total;
+      return total + new Set(matches.map((m: string) => m.replace(/[^0-9]/g, ""))).size;
+    }
+
+    if (comp.type === "BUTTONS") {
+      const buttons = comp.buttons || [];
+      return total + buttons.filter((button: any) =>
+        button.type === "URL" && /\{\{\d+\}\}/.test(button.url || "")
+      ).length;
+    }
+
+    return total;
+  }, 0);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -104,10 +124,11 @@ serve(async (req) => {
           );
         }
       }
-      if ((tpl.variables_count ?? 0) !== variables.length) {
+      const expectedVariables = countComponentVariables((tpl?.components as any[]) || []);
+      if (expectedVariables !== variables.length) {
         return new Response(
           JSON.stringify({
-            error: `Quantidade de variáveis inválida. Template requer ${tpl.variables_count}, recebido ${variables.length}.`,
+            error: `Quantidade de variáveis inválida. Template requer ${expectedVariables}, recebido ${variables.length}.`,
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -153,7 +174,14 @@ serve(async (req) => {
           const button = buttons[bIdx];
           
           if (button.type === "URL" && button.url && button.url.includes("{{1}}")) {
-            const compVars = variables.slice(varIndex, varIndex + 1);
+            const buttonUrlPrefix = button.url.slice(0, button.url.indexOf("{{1}}"));
+            const compVars = variables.slice(varIndex, varIndex + 1).map((value) => {
+              const text = String(value);
+              if (!buttonUrlPrefix.includes("?") && text.includes("=") && !text.startsWith("?") && !text.startsWith("&")) {
+                return `?${text}`;
+              }
+              return text;
+            });
             varIndex += 1;
             
             metaComponents.push({
