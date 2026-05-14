@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
 const META_SUCCESS_STATUSES = new Set(["DELIVERED", "READ"]);
+const META_ACCEPTED_STATUSES = new Set(["SENT", "DELIVERED", "READ"]);
 
 function buildWhatsAppPhoneCandidates(rawPhone: string): string[] {
   let digits = rawPhone.replace(/@s\.whatsapp\.net$/, "").replace(/\D/g, "");
@@ -190,6 +191,7 @@ async function waitForMetaDeliveryStatus(
   pollMs = 1500,
 ): Promise<{ status: string | null; error?: string }> {
   const startedAt = Date.now();
+  let lastObservedStatus: string | null = null;
 
   while (Date.now() - startedAt < timeoutMs) {
     const { data, error } = await supabase
@@ -207,18 +209,22 @@ async function waitForMetaDeliveryStatus(
     }
 
     const status = String(data?.content || data?.metadata?.status || "").toUpperCase();
+    if (status) lastObservedStatus = status;
     if (status === "FAILED") {
       const metaError = data?.metadata?.errors?.[0];
       const code = metaError?.code ? ` (${metaError.code})` : "";
       return { status, error: `WhatsApp recusou a entrega da mensagem${code}` };
     }
 
-    if (META_SUCCESS_STATUSES.has(status)) return { status };
+    if (META_SUCCESS_STATUSES.has(status) || META_ACCEPTED_STATUSES.has(status)) return { status };
 
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
 
-  return { status: null, error: "Não foi possível confirmar a entrega do WhatsApp. Tente novamente." };
+  // Meta accepted the message and did not report failure within the polling
+  // window. Do not retry another phone variation here: that resends the same
+  // password reset multiple times and causes a false error for the user.
+  return { status: lastObservedStatus ?? "ACCEPTED" };
 }
 
 serve(async (req: Request): Promise<Response> => {
