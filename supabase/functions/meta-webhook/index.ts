@@ -38,13 +38,17 @@ serve(async (req) => {
 
         for (const status of value.statuses || []) {
           const recipient = String(status.recipient_id || '').replace(/\D/g, '');
-          await supabase.from('whatsapp_audit_logs').insert({
+          const { error: insertStatusError } = await supabase.from('whatsapp_audit_logs').insert({
             phone: recipient || 'unknown',
-            direction: 'status',
+            // The table only accepts incoming/outgoing directions. Status updates
+            // are outgoing lifecycle events, so keep the dedicated type in
+            // message_type and avoid silently losing delivery confirmations.
+            direction: 'outgoing',
             content: status.status || null,
             message_type: 'meta_status',
             metadata: {
               provider: 'meta_official',
+              status_event: true,
               message_id: status.id || null,
               status: status.status || null,
               recipient_id: status.recipient_id || null,
@@ -53,6 +57,10 @@ serve(async (req) => {
               raw_payload: body,
             },
           });
+
+          if (insertStatusError) {
+            console.error('[STATUS_LOG_INSERT_ERROR]', insertStatusError);
+          }
         }
       } catch (statusLogErr) {
         console.error('[STATUS_LOG_ERROR]', statusLogErr);
