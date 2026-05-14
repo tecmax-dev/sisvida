@@ -40,10 +40,7 @@ serve(async (req) => {
           const recipient = String(status.recipient_id || '').replace(/\D/g, '');
           const { error: insertStatusError } = await supabase.from('whatsapp_audit_logs').insert({
             phone: recipient || 'unknown',
-            // The table only accepts incoming/outgoing directions. Status updates
-            // are outgoing lifecycle events, so keep the dedicated type in
-            // message_type and avoid silently losing delivery confirmations.
-            direction: 'outgoing',
+            direction: 'status',
             content: status.status || null,
             message_type: 'meta_status',
             metadata: {
