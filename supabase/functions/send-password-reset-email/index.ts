@@ -8,6 +8,18 @@ const corsHeaders = {
 };
 
 const SUCCESS_WHATSAPP_STATUSES = new Set(["SERVER_ACK", "DELIVERY_ACK", "READ"]);
+const META_SUCCESS_STATUSES = new Set(["SENT", "DELIVERED", "READ"]);
+
+function buildWhatsAppPhoneCandidates(rawPhone: string): string[] {
+  let digits = rawPhone.replace(/@s\.whatsapp\.net$/, "").replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length > 11) digits = digits.slice(2);
+
+  const candidates = new Set<string>([digits]);
+  if (digits.length === 10) candidates.add(`${digits.slice(0, 2)}9${digits.slice(2)}`);
+  if (digits.length === 11 && digits[2] === "9") candidates.add(`${digits.slice(0, 2)}${digits.slice(3)}`);
+
+  return [...candidates].filter(Boolean);
+}
 
 function buildWhatsAppResetMessage(params: {
   firstName: string;
@@ -169,6 +181,44 @@ async function waitForWhatsAppFinalStatus(
     status: null,
     error: "Não foi possível confirmar a entrega do WhatsApp. Tente novamente.",
   };
+}
+
+async function waitForMetaDeliveryStatus(
+  supabase: any,
+  messageId: string,
+  timeoutMs = 25000,
+  pollMs = 1500,
+): Promise<{ status: string | null; error?: string }> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const { data, error } = await supabase
+      .from("whatsapp_audit_logs")
+      .select("content, metadata")
+      .eq("metadata->>message_id", messageId)
+      .eq("message_type", "meta_status")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking Meta WhatsApp status:", error);
+      return { status: null, error: "Erro ao validar o status final do WhatsApp" };
+    }
+
+    const status = String(data?.content || data?.metadata?.status || "").toUpperCase();
+    if (status === "FAILED") {
+      const metaError = data?.metadata?.errors?.[0];
+      const code = metaError?.code ? ` (${metaError.code})` : "";
+      return { status, error: `WhatsApp recusou a entrega da mensagem${code}` };
+    }
+
+    if (META_SUCCESS_STATUSES.has(status)) return { status };
+
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+
+  return { status: null, error: "Não foi possível confirmar a entrega do WhatsApp. Tente novamente." };
 }
 
 serve(async (req: Request): Promise<Response> => {
