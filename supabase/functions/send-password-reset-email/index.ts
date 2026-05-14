@@ -216,7 +216,7 @@ async function waitForMetaDeliveryStatus(
       return { status, error: `WhatsApp recusou a entrega da mensagem${code}` };
     }
 
-    if (META_SUCCESS_STATUSES.has(status)) return { status };
+    if (META_SUCCESS_STATUSES.has(status) || META_ACCEPTED_STATUSES.has(status)) return { status };
 
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
