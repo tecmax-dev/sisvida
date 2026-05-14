@@ -75,10 +75,34 @@ serve(async (req) => {
         );
       }
       if (tpl.status !== "APPROVED") {
-        return new Response(
-          JSON.stringify({ error: `Template não aprovado (status atual: ${tpl.status})` }),
-          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        // Auto-heal: status local pode estar desatualizado em relação à Meta.
+        // Forçar sincronização e re-checar antes de falhar.
+        console.log(`[meta-send-template] Status local ${tpl.status} para ${template_name}. Forçando sync com Meta...`);
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/meta-sync-templates`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_ROLE}`,
+            },
+            body: "{}",
+          });
+          const { data: refreshed } = await supabase
+            .from("whatsapp_meta_templates")
+            .select("status, variables_count, components")
+            .eq("name", template_name)
+            .eq("language", language)
+            .maybeSingle();
+          if (refreshed) tpl = refreshed;
+        } catch (e) {
+          console.error("[meta-send-template] Falha ao re-sincronizar templates:", e);
+        }
+        if (tpl.status !== "APPROVED") {
+          return new Response(
+            JSON.stringify({ error: `Template não aprovado (status atual: ${tpl.status})` }),
+            { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
       }
       if ((tpl.variables_count ?? 0) !== variables.length) {
         return new Response(
