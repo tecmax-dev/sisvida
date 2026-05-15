@@ -229,10 +229,24 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
      // STATE VIEWS (LOGIC)
      if (nextState === 'SELECT_BOLETO_TYPE') {
-       responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
+       const reusing = session.state === 'CONFIRM_REUSE_CNPJ' && text === 'reuse_cnpj_sim' && session.employer_name;
+       responseText = reusing
+         ? `Vamos lá! Boleto para *${session.employer_name}*. É *a vencer* (novo) ou *vencido* (2ª via)?`
+         : `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
        buttons = [
          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         { id: 'menu_principal', title: 'Menu Principal' }
+       ];
+     } else if (nextState === 'CONFIRM_REUSE_CNPJ') {
+       const empName = session.employer_name || 'a empresa anterior';
+       const empCnpj = session.employer_cnpj
+         ? session.employer_cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+         : '';
+       responseText = `Deseja emitir outro boleto para a mesma empresa?\n\n🏢 *${empName}*${empCnpj ? `\n📄 CNPJ: ${empCnpj}` : ''}`;
+       buttons = [
+         { id: 'reuse_cnpj_sim', title: '✅ Mesmo CNPJ' },
+         { id: 'reuse_cnpj_nao', title: '🔄 Outro CNPJ' },
          { id: 'menu_principal', title: 'Menu Principal' }
        ];
      } else if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
