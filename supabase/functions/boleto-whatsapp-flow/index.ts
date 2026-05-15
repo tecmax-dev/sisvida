@@ -502,29 +502,30 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             );
           }
 
-          const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseServiceKey}`
-            },
-            body: JSON.stringify({
-              action: 'createInvoice',
-              clientName: finalSession.employer_name,
-              clientDocument: finalSession.employer_cnpj,
-              value: finalSession.value_cents,
-              valueIsInCents: true,
-              dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
-              description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
-              clientId: contributionId || finalSession.id,
-              installmentId: contributionId
-            })
-          });
+          if (!responseText) {
+            const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`
+              },
+              body: JSON.stringify({
+                action: 'createInvoice',
+                clientName: finalSession.employer_name,
+                clientDocument: finalSession.employer_cnpj,
+                value: finalSession.value_cents,
+                valueIsInCents: true,
+                dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+                description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
+                clientId: contributionId,
+                installmentId: contributionId
+              })
+            });
 
           const lytexData = await lytexResponse.json();
           console.log('[LYTEX_API_RESPONSE]', lytexData);
 
-          if (lytexData.success && lytexData.invoice) {
+            if (lytexData.success && lytexData.invoice) {
             const invoiceUrl = lytexData.invoice.linkBoleto || lytexData.invoice.invoiceUrl || lytexData.invoice.linkCheckout || lytexData.invoice.url;
             const lytexInvoiceId = lytexData.invoice._id || lytexData.invoice.id;
 
@@ -539,9 +540,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               .eq('id', contributionId);
 
             responseText = `✅ *Boleto Gerado com Sucesso!*\n\n🔗 *Link do Boleto:* ${invoiceUrl}\n\nO boleto já está disponível no ProSindWeb.`;
-          } else {
-            console.error('[LYTEX_FAILURE]', lytexData);
-            responseText = `❌ *Erro ao gerar boleto na Lytex*\n\nDetalhe: ${lytexData.error || 'Erro desconhecido'}\n\nPor favor, tente novamente mais tarde ou entre em contato com o suporte.`;
+            } else {
+              console.error('[LYTEX_FAILURE]', lytexData);
+              responseText = `❌ *Erro ao gerar boleto na Lytex*\n\nDetalhe: ${lytexData.error || 'Erro desconhecido'}\n\nPor favor, tente novamente mais tarde ou entre em contato com o suporte.`;
+            }
           }
         } catch (e) {
           console.error('[LYTEX_INTEGRATION_CRITICAL_ERROR]', e);
