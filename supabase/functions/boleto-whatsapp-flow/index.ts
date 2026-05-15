@@ -140,6 +140,14 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       session.boleto_type = tipo;
     }
 
+    if (session.state === 'SELECT_CONTRIBUTION_TYPE' && (text === 'boleto_type_1' || text === 'boleto_type_2')) {
+      const selectedTypeId = text === 'boleto_type_2'
+        ? TAXA_NEGOCIAL_CONTRIBUTION_TYPE_ID
+        : DEFAULT_CONTRIBUTION_TYPE_ID;
+      await supabase.from('whatsapp_boleto_sessions').update({ contribution_type_id: selectedTypeId }).eq('id', session.id);
+      session.contribution_type_id = selectedTypeId;
+    }
+
     // Text input states persistence (allow state to persist while waiting for text)
     const textInputStates = ['WAITING_CNPJ', 'WAITING_PERIODO', 'WAITING_VENCIMENTO', 'WAITING_VALOR', 'WAITING_CONTRIBUICAO', 'CONFIRM_DATA'];
     if (!nextState && textInputStates.includes(session.state)) {
