@@ -162,6 +162,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         new_due_date: null
       }).eq('id', session.id);
       session.boleto_type = tipo;
+      // If employer already known (reuse flow), skip CNPJ step
+      if (session.employer_id) {
+        nextState = 'SELECT_CONTRIBUTION_TYPE';
+      }
     }
 
     // Handle "Emitir Outro" → ask if reuse same CNPJ
