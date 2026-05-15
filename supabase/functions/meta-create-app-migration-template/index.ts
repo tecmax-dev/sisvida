@@ -60,7 +60,7 @@ serve(async (req) => {
         components: [
           {
             type: "BODY",
-            text: "{{1}}, {{2}}. Aqui é do Sindicato dos Comerciários.\n\n{{3}}\n\nFicamos à disposição por este canal.",
+            text: "Sindicato dos Comerciários.\n\n{{1}}, {{2}}.\n\n{{3}}\n\nFicamos à disposição por este canal de atendimento oficial.",
             example: { body_text: [["Bom dia", "João da Silva", "Estamos entrando em contato para tratar do seu atendimento junto ao sindicato."]] },
           },
           { type: "FOOTER", text: "Sindicato dos Comerciários" },
