@@ -476,6 +476,17 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             if (updateError) console.error('[CONTRIB_UPDATE_FAILED]', updateError);
           }
 
+          if (!contributionId) {
+            console.error('[CONTRIB_ID_MISSING_AFTER_IDEMPOTENT_CREATE]');
+            responseText = "❌ Não foi possível localizar ou criar o período no ProSindWeb. Tente novamente em instantes.";
+            nextState = 'CONFIRM_DATA';
+            await supabase.from('whatsapp_boleto_sessions').update({ state: 'CONFIRM_DATA' }).eq('id', session.id);
+            return new Response(
+              JSON.stringify({ success: true, response: responseText, buttons: [], newState: nextState }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
           const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
             method: 'POST',
             headers: {
