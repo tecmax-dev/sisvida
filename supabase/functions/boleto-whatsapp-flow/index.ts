@@ -8,8 +8,17 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-    const BUILD_VERSION = 'FLOW_V2_BUILD_20260513_PROSIND_SYNC';
+    const BUILD_VERSION = 'FLOW_V3_BUILD_20260515_PROSIND_IDEMPOTENT';
     const DEFAULT_CONTRIBUTION_TYPE_ID = "48bda88b-1cf9-47b6-b930-781d8a0eb55a";
+    const TAXA_NEGOCIAL_CONTRIBUTION_TYPE_ID = "b9c234de-e13b-4c10-a880-616ec4abc66b";
+
+    const pickCanonicalContribution = (rows: any[] | null | undefined) => {
+      const activeRows = (rows || []).filter((row) => row.status !== 'cancelled');
+      return activeRows.find((row) => row.status === 'paid')
+        || activeRows.find((row) => row.lytex_invoice_url)
+        || activeRows[0]
+        || null;
+    };
  
  serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -57,6 +66,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          employer_id: null,
          employer_name: null,
          employer_cnpj: null,
+          contribution_id: null,
+          contribution_type_id: null,
          competence_month: null,
          competence_year: null,
          value_cents: null,
@@ -127,8 +138,31 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     // Persist boleto_type selection ('a_vencer' = auto due date, 'vencido' = ask user)
     if (session.state === 'SELECT_BOLETO_TYPE' && (text === 'boleto_a_vencer' || text === 'boleto_vencido')) {
       const tipo = text === 'boleto_a_vencer' ? 'a_vencer' : 'vencido';
-      await supabase.from('whatsapp_boleto_sessions').update({ boleto_type: tipo }).eq('id', session.id);
+      await supabase.from('whatsapp_boleto_sessions').update({
+        boleto_type: tipo,
+        contribution_id: null,
+        contribution_type_id: null,
+        competence_month: null,
+        competence_year: null,
+        value_cents: null,
+        new_due_date: null
+      }).eq('id', session.id);
       session.boleto_type = tipo;
+    }
+
+    if (session.state === 'SELECT_CONTRIBUTION_TYPE' && (text === 'boleto_type_1' || text === 'boleto_type_2')) {
+      const selectedTypeId = text === 'boleto_type_2'
+        ? TAXA_NEGOCIAL_CONTRIBUTION_TYPE_ID
+        : DEFAULT_CONTRIBUTION_TYPE_ID;
+      await supabase.from('whatsapp_boleto_sessions').update({
+        contribution_type_id: selectedTypeId,
+        contribution_id: null,
+        competence_month: null,
+        competence_year: null,
+        value_cents: null,
+        new_due_date: null
+      }).eq('id', session.id);
+      session.contribution_type_id = selectedTypeId;
     }
 
     // Text input states persistence (allow state to persist while waiting for text)
@@ -214,14 +248,24 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             competence_year: cYear 
           }).eq('id', session.id);
 
-          // Verificar se já existe a contribuição (período) no sistema ProSind/Supabase
-          const { data: existingContrib } = await supabase
+          const selectedContributionTypeId = session.contribution_type_id || DEFAULT_CONTRIBUTION_TYPE_ID;
+
+          // Verificar se já existe a contribuição (período/tipo) no sistema ProSind/Supabase
+          const { data: existingContribRows, error: existingContribError } = await supabase
             .from('employer_contributions')
             .select('id, lytex_invoice_url, lytex_invoice_id, value, due_date, status')
             .eq('employer_id', session.employer_id)
+            .eq('contribution_type_id', selectedContributionTypeId)
             .eq('competence_month', cMonth)
             .eq('competence_year', cYear)
-            .maybeSingle();
+            .neq('status', 'cancelled')
+            .order('created_at', { ascending: true });
+
+          if (existingContribError) {
+            console.error('[EXISTING_CONTRIB_LOOKUP_FAILED]', existingContribError);
+          }
+
+          const existingContrib = pickCanonicalContribution(existingContribRows);
 
           if (existingContrib) {
             if (existingContrib.status === 'paid') {
@@ -353,6 +397,30 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         }
     } else if (session.state === 'CONFIRM_DATA') {
       if (text === 'data_sim') {
+        const { data: processingLock, error: processingLockError } = await supabase
+          .from('whatsapp_boleto_sessions')
+          .update({ state: 'PROCESSING', updated_at: new Date().toISOString() })
+          .eq('id', session.id)
+          .eq('state', 'CONFIRM_DATA')
+          .select('id')
+          .maybeSingle();
+
+        if (processingLockError) {
+          console.error('[PROCESSING_LOCK_FAILED]', processingLockError);
+        }
+
+        if (!processingLock) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              response: '⏳ Sua solicitação de boleto já está sendo processada. Aguarde a próxima mensagem para evitar geração duplicada.',
+              buttons: [],
+              newState: session.state
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         console.log('[LYTEX_INTEGRATION] Calling lytex-api for', session.employer_cnpj);
         
         try {
@@ -363,15 +431,52 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             .single();
           
           let contributionId = finalSession.contribution_id;
+          const selectedContributionTypeId = finalSession.contribution_type_id || DEFAULT_CONTRIBUTION_TYPE_ID;
+          let reusedExistingContrib: any = null;
 
           if (!contributionId) {
-            // Criar novo registro se não existir
+            // Última checagem idempotente: reaproveita o período/tipo se ele já existir no ProSindWeb
+            const { data: existingContribRows, error: existingContribError } = await supabase
+              .from('employer_contributions')
+              .select('id, lytex_invoice_url, lytex_invoice_id, value, due_date, status')
+              .eq('employer_id', finalSession.employer_id)
+              .eq('contribution_type_id', selectedContributionTypeId)
+              .eq('competence_month', finalSession.competence_month)
+              .eq('competence_year', finalSession.competence_year)
+              .neq('status', 'cancelled')
+              .order('created_at', { ascending: true });
+
+            if (existingContribError) console.error('[FINAL_EXISTING_CONTRIB_LOOKUP_FAILED]', existingContribError);
+
+            const existingContrib = pickCanonicalContribution(existingContribRows);
+            if (existingContrib) {
+              reusedExistingContrib = existingContrib;
+              contributionId = existingContrib.id;
+              await supabase.from('whatsapp_boleto_sessions').update({ contribution_id: contributionId }).eq('id', session.id);
+            }
+          }
+
+          if (reusedExistingContrib?.status === 'paid') {
+            responseText = `✅ *Este período já consta como PAGO!*\n\nNão é necessário emitir um novo boleto.`;
+            buttons = [{ id: 'menu_principal', title: 'Menu Principal' }];
+            nextState = 'SUCCESS';
+          } else if (reusedExistingContrib?.lytex_invoice_url && reusedExistingContrib?.due_date && new Date(reusedExistingContrib.due_date) >= new Date()) {
+            const dueDate = new Date(reusedExistingContrib.due_date + 'T12:00:00');
+            responseText = `📍 *Boleto já existente para este período!*\n\n📅 Vencimento: *${dueDate.toLocaleDateString('pt-BR')}*\n💰 Valor: *R$ ${(reusedExistingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n🔗 *Link:* ${reusedExistingContrib.lytex_invoice_url}`;
+            buttons = [{ id: 'menu_principal', title: 'Menu Principal' }];
+            nextState = 'SUCCESS';
+          } else if (false) {
+            // placeholder to keep the mutually exclusive generation branch below explicit
+          }
+
+          if (!responseText && !contributionId) {
+            // Criar novo registro somente se o período/tipo ainda não existir
             const { data: newContrib, error: contribError } = await supabase
               .from('employer_contributions')
               .insert({
                 clinic_id: clinic_id,
                 employer_id: finalSession.employer_id,
-                contribution_type_id: DEFAULT_CONTRIBUTION_TYPE_ID,
+                contribution_type_id: selectedContributionTypeId,
                 competence_month: finalSession.competence_month,
                 competence_year: finalSession.competence_year,
                 value: finalSession.value_cents,
@@ -387,7 +492,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               console.error('[CONTRIB_CREATE_FAILED]', contribError);
             }
             contributionId = newContrib?.id;
-          } else {
+          } else if (!responseText) {
             // Atualizar registro existente
             const { error: updateError } = await supabase
               .from('employer_contributions')
@@ -401,29 +506,41 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             if (updateError) console.error('[CONTRIB_UPDATE_FAILED]', updateError);
           }
 
-          const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseServiceKey}`
-            },
-            body: JSON.stringify({
-              action: 'createInvoice',
-              clientName: finalSession.employer_name,
-              clientDocument: finalSession.employer_cnpj,
-              value: finalSession.value_cents,
-              valueIsInCents: true,
-              dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
-              description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
-              clientId: contributionId || finalSession.id,
-              installmentId: contributionId
-            })
-          });
+          if (!contributionId) {
+            console.error('[CONTRIB_ID_MISSING_AFTER_IDEMPOTENT_CREATE]');
+            responseText = "❌ Não foi possível localizar ou criar o período no ProSindWeb. Tente novamente em instantes.";
+            nextState = 'CONFIRM_DATA';
+            await supabase.from('whatsapp_boleto_sessions').update({ state: 'CONFIRM_DATA' }).eq('id', session.id);
+            return new Response(
+              JSON.stringify({ success: true, response: responseText, buttons: [], newState: nextState }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          if (!responseText) {
+            const lytexResponse = await fetch(`${supabaseUrl}/functions/v1/lytex-api`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`
+              },
+              body: JSON.stringify({
+                action: 'createInvoice',
+                clientName: finalSession.employer_name,
+                clientDocument: finalSession.employer_cnpj,
+                value: finalSession.value_cents,
+                valueIsInCents: true,
+                dueDate: finalSession.new_due_date ? finalSession.new_due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+                description: `Mensalidade ${String(finalSession.competence_month).padStart(2, '0')}/${finalSession.competence_year}`,
+                clientId: contributionId,
+                installmentId: contributionId
+              })
+            });
 
           const lytexData = await lytexResponse.json();
           console.log('[LYTEX_API_RESPONSE]', lytexData);
 
-          if (lytexData.success && lytexData.invoice) {
+            if (lytexData.success && lytexData.invoice) {
             const invoiceUrl = lytexData.invoice.linkBoleto || lytexData.invoice.invoiceUrl || lytexData.invoice.linkCheckout || lytexData.invoice.url;
             const lytexInvoiceId = lytexData.invoice._id || lytexData.invoice.id;
 
@@ -438,9 +555,10 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               .eq('id', contributionId);
 
             responseText = `✅ *Boleto Gerado com Sucesso!*\n\n🔗 *Link do Boleto:* ${invoiceUrl}\n\nO boleto já está disponível no ProSindWeb.`;
-          } else {
-            console.error('[LYTEX_FAILURE]', lytexData);
-            responseText = `❌ *Erro ao gerar boleto na Lytex*\n\nDetalhe: ${lytexData.error || 'Erro desconhecido'}\n\nPor favor, tente novamente mais tarde ou entre em contato com o suporte.`;
+            } else {
+              console.error('[LYTEX_FAILURE]', lytexData);
+              responseText = `❌ *Erro ao gerar boleto na Lytex*\n\nDetalhe: ${lytexData.error || 'Erro desconhecido'}\n\nPor favor, tente novamente mais tarde ou entre em contato com o suporte.`;
+            }
           }
         } catch (e) {
           console.error('[LYTEX_INTEGRATION_CRITICAL_ERROR]', e);
