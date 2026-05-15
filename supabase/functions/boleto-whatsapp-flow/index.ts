@@ -382,6 +382,30 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         }
     } else if (session.state === 'CONFIRM_DATA') {
       if (text === 'data_sim') {
+        const { data: processingLock, error: processingLockError } = await supabase
+          .from('whatsapp_boleto_sessions')
+          .update({ state: 'PROCESSING', updated_at: new Date().toISOString() })
+          .eq('id', session.id)
+          .eq('state', 'CONFIRM_DATA')
+          .select('id')
+          .maybeSingle();
+
+        if (processingLockError) {
+          console.error('[PROCESSING_LOCK_FAILED]', processingLockError);
+        }
+
+        if (!processingLock) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              response: '⏳ Sua solicitação de boleto já está sendo processada. Aguarde a próxima mensagem para evitar geração duplicada.',
+              buttons: [],
+              newState: session.state
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         console.log('[LYTEX_INTEGRATION] Calling lytex-api for', session.employer_cnpj);
         
         try {
