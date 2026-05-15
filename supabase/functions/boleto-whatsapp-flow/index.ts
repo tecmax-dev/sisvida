@@ -8,8 +8,17 @@ const corsHeaders = {
 
 const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
-    const BUILD_VERSION = 'FLOW_V2_BUILD_20260513_PROSIND_SYNC';
+    const BUILD_VERSION = 'FLOW_V3_BUILD_20260515_PROSIND_IDEMPOTENT';
     const DEFAULT_CONTRIBUTION_TYPE_ID = "48bda88b-1cf9-47b6-b930-781d8a0eb55a";
+    const TAXA_NEGOCIAL_CONTRIBUTION_TYPE_ID = "b9c234de-e13b-4c10-a880-616ec4abc66b";
+
+    const pickCanonicalContribution = (rows: any[] | null | undefined) => {
+      const activeRows = (rows || []).filter((row) => row.status !== 'cancelled');
+      return activeRows.find((row) => row.status === 'paid')
+        || activeRows.find((row) => row.lytex_invoice_url)
+        || activeRows[0]
+        || null;
+    };
  
  serve(async (req) => {
   if (req.method === "OPTIONS") {
