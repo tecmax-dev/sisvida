@@ -231,14 +231,24 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             competence_year: cYear 
           }).eq('id', session.id);
 
-          // Verificar se já existe a contribuição (período) no sistema ProSind/Supabase
-          const { data: existingContrib } = await supabase
+          const selectedContributionTypeId = session.contribution_type_id || DEFAULT_CONTRIBUTION_TYPE_ID;
+
+          // Verificar se já existe a contribuição (período/tipo) no sistema ProSind/Supabase
+          const { data: existingContribRows, error: existingContribError } = await supabase
             .from('employer_contributions')
             .select('id, lytex_invoice_url, lytex_invoice_id, value, due_date, status')
             .eq('employer_id', session.employer_id)
+            .eq('contribution_type_id', selectedContributionTypeId)
             .eq('competence_month', cMonth)
             .eq('competence_year', cYear)
-            .maybeSingle();
+            .neq('status', 'cancelled')
+            .order('created_at', { ascending: true });
+
+          if (existingContribError) {
+            console.error('[EXISTING_CONTRIB_LOOKUP_FAILED]', existingContribError);
+          }
+
+          const existingContrib = pickCanonicalContribution(existingContribRows);
 
           if (existingContrib) {
             if (existingContrib.status === 'paid') {
