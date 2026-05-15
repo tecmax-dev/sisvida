@@ -138,7 +138,15 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
     // Persist boleto_type selection ('a_vencer' = auto due date, 'vencido' = ask user)
     if (session.state === 'SELECT_BOLETO_TYPE' && (text === 'boleto_a_vencer' || text === 'boleto_vencido')) {
       const tipo = text === 'boleto_a_vencer' ? 'a_vencer' : 'vencido';
-      await supabase.from('whatsapp_boleto_sessions').update({ boleto_type: tipo }).eq('id', session.id);
+      await supabase.from('whatsapp_boleto_sessions').update({
+        boleto_type: tipo,
+        contribution_id: null,
+        contribution_type_id: null,
+        competence_month: null,
+        competence_year: null,
+        value_cents: null,
+        new_due_date: null
+      }).eq('id', session.id);
       session.boleto_type = tipo;
     }
 
@@ -146,7 +154,14 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       const selectedTypeId = text === 'boleto_type_2'
         ? TAXA_NEGOCIAL_CONTRIBUTION_TYPE_ID
         : DEFAULT_CONTRIBUTION_TYPE_ID;
-      await supabase.from('whatsapp_boleto_sessions').update({ contribution_type_id: selectedTypeId }).eq('id', session.id);
+      await supabase.from('whatsapp_boleto_sessions').update({
+        contribution_type_id: selectedTypeId,
+        contribution_id: null,
+        competence_month: null,
+        competence_year: null,
+        value_cents: null,
+        new_due_date: null
+      }).eq('id', session.id);
       session.contribution_type_id = selectedTypeId;
     }
 
