@@ -66,6 +66,8 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
          employer_id: null,
          employer_name: null,
          employer_cnpj: null,
+          contribution_id: null,
+          contribution_type_id: null,
          competence_month: null,
          competence_year: null,
          value_cents: null,
