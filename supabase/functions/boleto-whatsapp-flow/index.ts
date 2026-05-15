@@ -416,15 +416,37 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
             .single();
           
           let contributionId = finalSession.contribution_id;
+          const selectedContributionTypeId = finalSession.contribution_type_id || DEFAULT_CONTRIBUTION_TYPE_ID;
 
           if (!contributionId) {
-            // Criar novo registro se não existir
+            // Última checagem idempotente: reaproveita o período/tipo se ele já existir no ProSindWeb
+            const { data: existingContribRows, error: existingContribError } = await supabase
+              .from('employer_contributions')
+              .select('id, lytex_invoice_url, lytex_invoice_id, value, due_date, status')
+              .eq('employer_id', finalSession.employer_id)
+              .eq('contribution_type_id', selectedContributionTypeId)
+              .eq('competence_month', finalSession.competence_month)
+              .eq('competence_year', finalSession.competence_year)
+              .neq('status', 'cancelled')
+              .order('created_at', { ascending: true });
+
+            if (existingContribError) console.error('[FINAL_EXISTING_CONTRIB_LOOKUP_FAILED]', existingContribError);
+
+            const existingContrib = pickCanonicalContribution(existingContribRows);
+            if (existingContrib) {
+              contributionId = existingContrib.id;
+              await supabase.from('whatsapp_boleto_sessions').update({ contribution_id: contributionId }).eq('id', session.id);
+            }
+          }
+
+          if (!contributionId) {
+            // Criar novo registro somente se o período/tipo ainda não existir
             const { data: newContrib, error: contribError } = await supabase
               .from('employer_contributions')
               .insert({
                 clinic_id: clinic_id,
                 employer_id: finalSession.employer_id,
-                contribution_type_id: DEFAULT_CONTRIBUTION_TYPE_ID,
+                contribution_type_id: selectedContributionTypeId,
                 competence_month: finalSession.competence_month,
                 competence_year: finalSession.competence_year,
                 value: finalSession.value_cents,
