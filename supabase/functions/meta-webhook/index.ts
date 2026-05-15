@@ -449,7 +449,13 @@ serve(async (req) => {
       .eq('phone', from)
       .maybeSingle();
 
-    if (boletoSession && (boletoSession.state !== 'SUCCESS' || extractedButtonId?.startsWith('boleto_'))) {
+    const boletoForwardIds = new Set(['recomecar', 'reuse_cnpj_sim', 'reuse_cnpj_nao']);
+    const shouldForwardBoleto = !!boletoSession && (
+      boletoSession.state !== 'SUCCESS' ||
+      extractedButtonId?.startsWith('boleto_') ||
+      (extractedButtonId && boletoForwardIds.has(extractedButtonId))
+    );
+    if (shouldForwardBoleto) {
       const boletoFlowRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/boleto-whatsapp-flow`, {
         method: 'POST',
         headers: {
