@@ -131,6 +131,13 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
       'CONFIRM_DATA': {
         'data_sim': 'SUCCESS',
         'data_nao': 'SELECT_BOLETO_TYPE'
+      },
+      'SUCCESS': {
+        'recomecar': 'CONFIRM_REUSE_CNPJ'
+      },
+      'CONFIRM_REUSE_CNPJ': {
+        'reuse_cnpj_sim': 'SELECT_BOLETO_TYPE',
+        'reuse_cnpj_nao': 'SELECT_BOLETO_TYPE'
       }
      };
 
@@ -155,6 +162,37 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
         new_due_date: null
       }).eq('id', session.id);
       session.boleto_type = tipo;
+      // If employer already known (reuse flow), skip CNPJ step
+      if (session.employer_id) {
+        nextState = 'SELECT_CONTRIBUTION_TYPE';
+      }
+    }
+
+    // Handle "Emitir Outro" → ask if reuse same CNPJ
+    if (session.state === 'SUCCESS' && text === 'recomecar') {
+      // Clear period/value/contribution but KEEP employer for possible reuse
+      await supabase.from('whatsapp_boleto_sessions').update({
+        contribution_id: null,
+        contribution_type_id: null,
+        competence_month: null,
+        competence_year: null,
+        value_cents: null,
+        new_due_date: null,
+        boleto_type: null
+      }).eq('id', session.id);
+    }
+
+    // Handle reuse CNPJ choice
+    if (session.state === 'CONFIRM_REUSE_CNPJ' && text === 'reuse_cnpj_nao') {
+      // Clear employer so user is asked for a new CNPJ
+      await supabase.from('whatsapp_boleto_sessions').update({
+        employer_id: null,
+        employer_name: null,
+        employer_cnpj: null
+      }).eq('id', session.id);
+      session.employer_id = null;
+      session.employer_name = null;
+      session.employer_cnpj = null;
     }
 
     if (session.state === 'SELECT_CONTRIBUTION_TYPE' && (text === 'boleto_type_1' || text === 'boleto_type_2')) {
@@ -195,10 +233,24 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
      // STATE VIEWS (LOGIC)
      if (nextState === 'SELECT_BOLETO_TYPE') {
-       responseText = `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
+       const reusing = session.state === 'CONFIRM_REUSE_CNPJ' && text === 'reuse_cnpj_sim' && session.employer_name;
+       responseText = reusing
+         ? `Vamos lá! Boleto para *${session.employer_name}*. É *a vencer* (novo) ou *vencido* (2ª via)?`
+         : `Vou te ajudar com o seu boleto. O boleto é *a vencer* (novo) ou *vencido* (2ª via)?`;
        buttons = [
          { id: 'boleto_a_vencer', title: 'A Vencer (Novo)' },
          { id: 'boleto_vencido', title: 'Vencido (2ª Via)' },
+         { id: 'menu_principal', title: 'Menu Principal' }
+       ];
+     } else if (nextState === 'CONFIRM_REUSE_CNPJ') {
+       const empName = session.employer_name || 'a empresa anterior';
+       const empCnpj = session.employer_cnpj
+         ? session.employer_cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+         : '';
+       responseText = `Deseja emitir outro boleto para a mesma empresa?\n\n🏢 *${empName}*${empCnpj ? `\n📄 CNPJ: ${empCnpj}` : ''}`;
+       buttons = [
+         { id: 'reuse_cnpj_sim', title: '✅ Mesmo CNPJ' },
+         { id: 'reuse_cnpj_nao', title: '🔄 Outro CNPJ' },
          { id: 'menu_principal', title: 'Menu Principal' }
        ];
      } else if (nextState === 'WAITING_CNPJ' && session.state !== 'WAITING_CNPJ') {
