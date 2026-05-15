@@ -25,8 +25,12 @@ serve(async (req) => {
       );
     }
 
-    const payload = {
-      name: "migracao_app_playstore",
+    const url0 = new URL(req.url);
+    const which = url0.searchParams.get("template") || "migracao_app_playstore";
+
+    const payloads: Record<string, any> = {
+      migracao_app_playstore: {
+        name: "migracao_app_playstore",
       category: "UTILITY",
       language: "pt_BR",
       components: [
@@ -48,7 +52,29 @@ serve(async (req) => {
           ],
         },
       ],
+      },
+      atendimento_inicio: {
+        name: "atendimento_inicio",
+        category: "UTILITY",
+        language: "pt_BR",
+        components: [
+          {
+            type: "BODY",
+            text: "{{1}}, {{2}}. Aqui é do Sindicato dos Comerciários.\n\n{{3}}\n\nFicamos à disposição por este canal.",
+            example: { body_text: [["Bom dia", "João da Silva", "Estamos entrando em contato para tratar do seu atendimento junto ao sindicato."]] },
+          },
+          { type: "FOOTER", text: "Sindicato dos Comerciários" },
+        ],
+      },
     };
+
+    const payload = payloads[which];
+    if (!payload) {
+      return new Response(
+        JSON.stringify({ error: "template desconhecido", available: Object.keys(payloads) }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const url =
       "https://graph.facebook.com/" + META_GRAPH_VERSION + "/" + WABA_ID + "/message_templates";
