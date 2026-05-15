@@ -36,6 +36,19 @@ function mapToContributionStatus(payload: LytexWebhookPayload): "paid" | "proces
   const webhookType = normalizeLytexStatus(payload.webhookType);
   const status = normalizeLytexStatus(payload.data?.status);
 
+  // A Lytex pode enviar webhookType "invoice_payment" durante sincronizações internas
+  // mesmo quando o status real da fatura ainda é "pending". O status explícito
+  // da fatura deve prevalecer para evitar marcar boletos não pagos como pagos.
+  const paidStatuses = new Set(["paid", "payed", "approved", "confirmed", "settled", "completed"]);
+  const cancelledStatuses = new Set(["canceled", "cancelled", "voided", "reversed"]);
+  const processingStatuses = new Set(["processing", "in_process", "scheduled", "pending_payment"]);
+  const pendingStatuses = new Set(["pending", "open", "created", "waiting_payment", "awaiting_payment"]);
+
+  if (paidStatuses.has(status)) return "paid";
+  if (cancelledStatuses.has(status)) return "cancelled";
+  if (processingStatuses.has(status)) return "processing";
+  if (pendingStatuses.has(status)) return "pending";
+
   // Prioriza webhookType, mas faz fallback pelo status.
   const paidSignals = new Set([
     "invoicepayment",
@@ -67,16 +80,6 @@ function mapToContributionStatus(payload: LytexWebhookPayload): "paid" | "proces
     "in_process",
   ]);
   if (processingSignals.has(webhookType)) return "processing";
-
-  // Fallback pelo status
-  const paidStatuses = new Set(["paid", "payed", "approved", "confirmed", "settled", "completed"]);
-  if (paidStatuses.has(status)) return "paid";
-
-  const cancelledStatuses = new Set(["canceled", "cancelled", "voided", "reversed"]);
-  if (cancelledStatuses.has(status)) return "cancelled";
-
-  const processingStatuses = new Set(["processing", "in_process", "scheduled", "pending_payment"]);
-  if (processingStatuses.has(status)) return "processing";
 
   return "pending";
 }
@@ -114,7 +117,7 @@ Deno.serve(async (req) => {
 
     // Validar assinatura se secret estiver configurado
     if (webhookSecret && payload.signature && payload.data) {
-      const isValid = verifySignature(payload.data, payload.signature, webhookSecret);
+      const isValid = await verifySignature(payload.data, payload.signature, webhookSecret);
       if (!isValid) {
         console.error("[Lytex Webhook] Assinatura inválida");
         return new Response(JSON.stringify({ error: "Assinatura inválida" }), {
