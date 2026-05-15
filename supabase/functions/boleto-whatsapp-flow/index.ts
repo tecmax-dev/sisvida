@@ -417,6 +417,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
           
           let contributionId = finalSession.contribution_id;
           const selectedContributionTypeId = finalSession.contribution_type_id || DEFAULT_CONTRIBUTION_TYPE_ID;
+          let reusedExistingContrib: any = null;
 
           if (!contributionId) {
             // Última checagem idempotente: reaproveita o período/tipo se ele já existir no ProSindWeb
@@ -434,12 +435,26 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
             const existingContrib = pickCanonicalContribution(existingContribRows);
             if (existingContrib) {
+              reusedExistingContrib = existingContrib;
               contributionId = existingContrib.id;
               await supabase.from('whatsapp_boleto_sessions').update({ contribution_id: contributionId }).eq('id', session.id);
             }
           }
 
-          if (!contributionId) {
+          if (reusedExistingContrib?.status === 'paid') {
+            responseText = `✅ *Este período já consta como PAGO!*\n\nNão é necessário emitir um novo boleto.`;
+            buttons = [{ id: 'menu_principal', title: 'Menu Principal' }];
+            nextState = 'SUCCESS';
+          } else if (reusedExistingContrib?.lytex_invoice_url && reusedExistingContrib?.due_date && new Date(reusedExistingContrib.due_date) >= new Date()) {
+            const dueDate = new Date(reusedExistingContrib.due_date + 'T12:00:00');
+            responseText = `📍 *Boleto já existente para este período!*\n\n📅 Vencimento: *${dueDate.toLocaleDateString('pt-BR')}*\n💰 Valor: *R$ ${(reusedExistingContrib.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n🔗 *Link:* ${reusedExistingContrib.lytex_invoice_url}`;
+            buttons = [{ id: 'menu_principal', title: 'Menu Principal' }];
+            nextState = 'SUCCESS';
+          } else if (false) {
+            // placeholder to keep the mutually exclusive generation branch below explicit
+          }
+
+          if (!responseText && !contributionId) {
             // Criar novo registro somente se o período/tipo ainda não existir
             const { data: newContrib, error: contribError } = await supabase
               .from('employer_contributions')
@@ -462,7 +477,7 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
               console.error('[CONTRIB_CREATE_FAILED]', contribError);
             }
             contributionId = newContrib?.id;
-          } else {
+          } else if (!responseText) {
             // Atualizar registro existente
             const { error: updateError } = await supabase
               .from('employer_contributions')
