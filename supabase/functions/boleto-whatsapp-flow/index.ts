@@ -14,10 +14,17 @@ const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
     const pickCanonicalContribution = (rows: any[] | null | undefined) => {
       const activeRows = (rows || []).filter((row) => row.status !== 'cancelled');
-      return activeRows.find((row) => row.status === 'paid')
-        || activeRows.find((row) => row.lytex_invoice_url)
-        || activeRows[0]
-        || null;
+      if (activeRows.length === 0) return null;
+      // Prioridade: boleto em aberto (pending/overdue) com link válido — esse é o que o usuário quer pagar
+      const openWithLink = activeRows.find(
+        (row) => row.lytex_invoice_url && row.status !== 'paid'
+      );
+      if (openWithLink) return openWithLink;
+      // Se TODOS estão pagos, retorna o pago
+      const allPaid = activeRows.every((row) => row.status === 'paid');
+      if (allPaid) return activeRows.find((row) => row.status === 'paid') || null;
+      // Caso contrário, qualquer ativo não-pago
+      return activeRows.find((row) => row.status !== 'paid') || activeRows[0];
     };
  
  serve(async (req) => {
