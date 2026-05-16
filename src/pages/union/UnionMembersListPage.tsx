@@ -220,6 +220,9 @@ export default function UnionMembersListPage() {
   // Signature request dialog state
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
 
+  // WhatsApp booking unavailable notice dialog state
+  const [whatsappBookingNoticeOpen, setWhatsappBookingNoticeOpen] = useState(false);
+
   // Patient reset dialog state
   const [patientResetDialogOpen, setPatientResetDialogOpen] = useState(false);
   const [selectedMemberForReset, setSelectedMemberForReset] = useState<UnionMember | null>(null);
