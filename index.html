@@ -53,7 +53,9 @@
     <script>
       (function() {
         var path = window.location.pathname;
-        var isSindicato = path.startsWith('/app') || path.startsWith('/sindicato');
+         var isSindicato = (path.startsWith('/app') || path.startsWith('/sindicato')) && 
+                           window.location.hostname !== 'prosindweb.com.br' && 
+                           window.location.hostname !== 'www.prosindweb.com.br';
         
         if (isSindicato) {
           // --- SECMI / Sindicato branding ---
