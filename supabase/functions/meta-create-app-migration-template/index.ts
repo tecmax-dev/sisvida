@@ -30,23 +30,23 @@ serve(async (req) => {
 
     const payloads: Record<string, any> = {
       migracao_app_playstore: {
-        name: "migracao_app_playstore",
+        name: "migracao_app_playstore_v2",
       category: "UTILITY",
       language: "pt_BR",
       components: [
         {
           type: "BODY",
           text:
-            "Comunicado de Serviço: Olá, {{1}}. Informamos que o aplicativo oficial do Sindicato dos Comerciários já está disponível na Play Store.\n\nPara continuar utilizando os serviços com melhor desempenho, segurança e notificações, recomendamos a migração da versão atual (PWA) para a versão oficial publicada na loja.\n\nApós a instalação, basta acessar com seu login habitual. Seus dados e benefícios permanecem os mesmos.",
+            "Sindicato dos Comerciários — aviso de atualização do aplicativo.\n\n{{1}}, identificamos que você utiliza a versão web (PWA) do app do sindicato.\n\nPara manter o acesso aos serviços do associado (carteirinha, contracheque, autorizações e agendamentos), atualize para a versão oficial publicada na Play Store.\n\nO login e os dados do associado permanecem os mesmos.",
           example: { body_text: [["João da Silva"]] },
         },
-        { type: "FOOTER", text: "Sindicato dos Comerciários" },
+        { type: "FOOTER", text: "Atendimento ao associado" },
         {
           type: "BUTTONS",
           buttons: [
             {
               type: "URL",
-              text: "Baixar na Play Store",
+              text: "Atualizar aplicativo",
               url: PLAY_STORE_URL,
             },
           ],
