@@ -209,7 +209,8 @@ serve(async (req) => {
     const isGreeting = /\b(oi|ola|olá|bom dia|boa tarde|boa noite|inicio|início|começar|comecar|menu|oi lov|ola lov|olá lov)\b/i.test(text);
     const isBoleto = /\b(boleto|segunda via|pagamento|gerar boleto|2 via|2ª via)\b/i.test(text);
     const isCCT = /\b(cct|convenção|convencao|coletiva|piso|salário|salario|piso salarial)\b/i.test(text);
-    const isHomologacao = /\b(homologação|homologacao|agendar|agendamento|rescisão|rescisao)\b/i.test(text);
+    const isAgendarConsulta = /\b(agendar consulta|marcar consulta|agendamento de consulta|consulta médica|consulta medica)\b/i.test(text);
+    const isHomologacao = /\b(homologação|homologacao|rescisão|rescisao)\b/i.test(text);
     const isCarteirinha = /\b(carteirinha|carteira|associado|sócio|socio|atualizar carteira)\b/i.test(text);
     const isThanks = /\b(obrigado|obrigada|grato|grata|valeu|thanks|agradeço|agradecido|agradecida)\b/i.test(text);
     const isNo = /\b(nao|não|no|nada mais|encerrar|finalizar)\b/i.test(text);
@@ -276,6 +277,7 @@ serve(async (req) => {
               {
                 title: "Serviços Associado",
                 rows: [
+                  { id: "agendar_consulta", title: "Agendar Consulta", description: "Disponível a partir de 30/05/2026" },
                   { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
                   { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
                   { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
@@ -375,6 +377,11 @@ serve(async (req) => {
     if (extractedButtonId === "whazing_sub_carteirinha") {
       await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
       return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
+    }
+
+    if (extractedButtonId === "agendar_consulta" || (isAgendarConsulta && !isGreeting)) {
+      await sendResponse(followUpAction("O agendamento de consultas pelo WhatsApp estará disponível a partir do dia *30/05/2026*."));
+      return new Response(JSON.stringify({ ok: true, action: "agendar_consulta_indisponivel" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (extractedButtonId === "whazing_sub_app") {
