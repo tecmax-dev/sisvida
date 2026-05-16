@@ -277,6 +277,7 @@ serve(async (req) => {
                 title: "Serviços Associado",
                 rows: [
                   { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
+                  { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
                   { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
                   { id: "whazing_sub_outros", title: "Outros Assuntos", description: "Falar com atendente" }
                 ]
@@ -374,6 +375,36 @@ serve(async (req) => {
     if (extractedButtonId === "whazing_sub_carteirinha") {
       await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
       return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
+    }
+
+    if (extractedButtonId === "whazing_sub_app") {
+      const playUrl = "https://play.google.com/store/apps/details?id=br.org.secmi.comerciariosilheus.app";
+      // 1) Mensagem com CTA URL abrindo direto a Play Store
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "cta_url",
+          header: { type: "text", text: "Aplicativo do Sindicato" },
+          body: {
+            text:
+              "📱 Tenha o sindicato na palma da mão!\n\n" +
+              "Com o app você acessa:\n" +
+              "• Carteirinha digital\n" +
+              "• 2ª via de boletos\n" +
+              "• Autorizações e benefícios\n" +
+              "• Avisos e notificações em tempo real\n\n" +
+              "Toque no botão abaixo para instalar gratuitamente na Play Store."
+          },
+          footer: { text: "Disponível para Android" },
+          action: {
+            name: "cta_url",
+            parameters: { display_text: "Baixar na Play Store", url: playUrl }
+          }
+        }
+      });
+      // 2) Follow-up com opções de navegação
+      await sendResponse(followUpAction("Após instalar, faça login com seu CPF cadastrado no sindicato."));
+      return new Response(JSON.stringify({ ok: true, action: "app_playstore" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (extractedButtonId === "whazing_sub_boleto" || (isBoleto && !isGreeting)) {
