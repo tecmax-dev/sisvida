@@ -802,6 +802,14 @@ export default function UnionMembersListPage() {
               Fichas em Lote
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setWhatsappBookingNoticeOpen(true)}
+              className="gap-2"
+            >
+              <CalendarClock className="h-4 w-4" />
+              Agendamento WhatsApp
+            </Button>
+            <Button
               className="bg-primary hover:bg-primary/90"
               onClick={() => navigate("/union/socios/novo")}
             >
