@@ -83,6 +83,7 @@ function json(body: unknown, status = 200) {
 
 async function handleGerarBoletoPorCnpj(payload: any) {
   const rawCnpj = String(payload?.cnpj ?? "").replace(/\D/g, "");
+  const competenciaFiltro = parseCompetencia(payload);
   if (rawCnpj.length !== 14) {
     return json({
       success: false,
@@ -112,12 +113,20 @@ async function handleGerarBoletoPorCnpj(payload: any) {
   }
 
   // Buscar contribuições em aberto (pendentes ou vencidas) com boleto Lytex já emitido
-  const { data: contribs, error: contribErr } = await supabase
+  let contribQuery = supabase
     .from("employer_contributions")
     .select("id, competence_month, competence_year, value, due_date, status, lytex_invoice_url, lytex_boleto_digitable_line, lytex_pix_code")
     .eq("employer_id", employer.id)
     .in("status", ["pending", "overdue"])
     .order("due_date", { ascending: true });
+
+  if (competenciaFiltro) {
+    contribQuery = contribQuery
+      .eq("competence_month", competenciaFiltro.month)
+      .eq("competence_year", competenciaFiltro.year);
+  }
+
+  const { data: contribs, error: contribErr } = await contribQuery;
 
   if (contribErr) {
     console.error("[gerar_boleto] erro contribuições:", contribErr);
@@ -137,9 +146,40 @@ async function handleGerarBoletoPorCnpj(payload: any) {
       pix_copia_cola: c.lytex_pix_code ?? null,
     }));
 
+  if (boletos.length > 1 && !competenciaFiltro) {
+    const opcoes = boletos.map((boleto: any) => ({
+      contribution_id: boleto.contribution_id,
+      competencia: boleto.competencia,
+      valor_reais: boleto.valor_reais,
+      vencimento: boleto.vencimento,
+      status: boleto.status,
+    }));
+
+    return json({
+      success: true,
+      action: "gerar_boleto",
+      tipo_retorno: "selecionar_competencia",
+      requires_selection: true,
+      empresa: {
+        id: employer.id,
+        nome: employer.name,
+        cnpj: employer.cnpj,
+        email: employer.email,
+        telefone: employer.phone,
+      },
+      quantidade: boletos.length,
+      opcoes,
+      mensagem: `Encontrei ${boletos.length} boletos em aberto para ${employer.name}. Pergunte ao usuário qual competência deseja acessar antes de enviar qualquer link.`,
+      texto_para_cliente: `Encontrei ${boletos.length} boletos em aberto para ${employer.name}. Informe a competência desejada, por exemplo: ${opcoes[0]?.competencia}.`,
+      instrucao_ia: "Não diga que os boletos foram gerados e não envie um único link como se representasse todos. Mostre as competências disponíveis e peça para o usuário escolher uma. Depois chame novamente esta ação enviando cnpj e competencia.",
+    });
+  }
+
   return json({
     success: true,
     action: "gerar_boleto",
+    tipo_retorno: boletos.length === 1 ? "boleto_unico" : "sem_boleto",
+    requires_selection: false,
     empresa: {
       id: employer.id,
       nome: employer.name,
@@ -149,8 +189,47 @@ async function handleGerarBoletoPorCnpj(payload: any) {
     },
     quantidade: boletos.length,
     boletos,
+    boleto: boletos[0] ?? null,
     mensagem: boletos.length === 0
-      ? "Nenhum boleto em aberto encontrado para esta empresa."
-      : `${boletos.length} boleto(s) em aberto.`,
+      ? competenciaFiltro
+        ? "Nenhum boleto em aberto encontrado para esta empresa nesta competência."
+        : "Nenhum boleto em aberto encontrado para esta empresa."
+      : `Boleto da competência ${boletos[0].competencia} encontrado.`,
+    texto_para_cliente: boletos.length === 0
+      ? competenciaFiltro
+        ? "Não encontrei boleto em aberto para essa competência."
+        : "Não encontrei boletos em aberto para esta empresa."
+      : `Boleto da competência ${boletos[0].competencia}: ${boletos[0].boleto_url}`,
   });
+}
+
+function parseCompetencia(payload: any): { month: number; year: number } | null {
+  const raw = String(
+    payload?.competencia ??
+    payload?.competence ??
+    payload?.mes_ano ??
+    ""
+  ).trim();
+
+  const monthFromPayload = Number(payload?.competence_month ?? payload?.mes ?? payload?.month);
+  const yearFromPayload = Number(payload?.competence_year ?? payload?.ano ?? payload?.year);
+  if (Number.isInteger(monthFromPayload) && Number.isInteger(yearFromPayload) && monthFromPayload >= 1 && monthFromPayload <= 12 && yearFromPayload >= 2000) {
+    return { month: monthFromPayload, year: yearFromPayload };
+  }
+
+  const slashMatch = raw.match(/^(\d{1,2})\D+(\d{4})$/);
+  if (slashMatch) {
+    const month = Number(slashMatch[1]);
+    const year = Number(slashMatch[2]);
+    if (month >= 1 && month <= 12) return { month, year };
+  }
+
+  const isoMatch = raw.match(/^(\d{4})\D+(\d{1,2})$/);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    if (month >= 1 && month <= 12) return { month, year };
+  }
+
+  return null;
 }
