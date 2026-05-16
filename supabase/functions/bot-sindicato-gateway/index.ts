@@ -175,10 +175,40 @@ async function handleGerarBoletoPorCnpj(payload: any) {
     });
   }
 
+  const tipoRetorno =
+    boletos.length === 0
+      ? "sem_boleto"
+      : boletos.length === 1
+        ? "boleto_unico"
+        : "multiplos_boletos_competencia";
+
+  let mensagem: string;
+  let textoCliente: string;
+  let instrucaoIa: string | undefined;
+
+  if (boletos.length === 0) {
+    mensagem = competenciaFiltro
+      ? "Nenhum boleto em aberto encontrado para esta empresa nesta competência."
+      : "Nenhum boleto em aberto encontrado para esta empresa.";
+    textoCliente = competenciaFiltro
+      ? "Não encontrei boleto em aberto para essa competência."
+      : "Não encontrei boletos em aberto para esta empresa.";
+  } else if (boletos.length === 1) {
+    mensagem = `Boleto da competência ${boletos[0].competencia} encontrado.`;
+    textoCliente = `Boleto da competência ${boletos[0].competencia}: ${boletos[0].boleto_url}`;
+  } else {
+    const linhas = boletos
+      .map((b: any, i: number) => `${i + 1}) Vencimento ${b.vencimento} – R$ ${Number(b.valor_reais).toFixed(2)} → ${b.boleto_url}`)
+      .join("\n");
+    mensagem = `Encontrei ${boletos.length} boletos em aberto na competência ${boletos[0].competencia}. Envie TODOS os links ao cliente, um para cada boleto.`;
+    textoCliente = `Foram encontrados ${boletos.length} boletos em aberto na competência ${boletos[0].competencia}:\n${linhas}`;
+    instrucaoIa = "Existem múltiplos boletos para a mesma competência. NÃO envie apenas um link. Liste todos os boletos com vencimento, valor e link individual para cada um.";
+  }
+
   return json({
     success: true,
     action: "gerar_boleto",
-    tipo_retorno: boletos.length === 1 ? "boleto_unico" : "sem_boleto",
+    tipo_retorno: tipoRetorno,
     requires_selection: false,
     empresa: {
       id: employer.id,
@@ -190,16 +220,9 @@ async function handleGerarBoletoPorCnpj(payload: any) {
     quantidade: boletos.length,
     boletos,
     boleto: boletos[0] ?? null,
-    mensagem: boletos.length === 0
-      ? competenciaFiltro
-        ? "Nenhum boleto em aberto encontrado para esta empresa nesta competência."
-        : "Nenhum boleto em aberto encontrado para esta empresa."
-      : `Boleto da competência ${boletos[0].competencia} encontrado.`,
-    texto_para_cliente: boletos.length === 0
-      ? competenciaFiltro
-        ? "Não encontrei boleto em aberto para essa competência."
-        : "Não encontrei boletos em aberto para esta empresa."
-      : `Boleto da competência ${boletos[0].competencia}: ${boletos[0].boleto_url}`,
+    mensagem,
+    texto_para_cliente: textoCliente,
+    ...(instrucaoIa ? { instrucao_ia: instrucaoIa } : {}),
   });
 }
 
