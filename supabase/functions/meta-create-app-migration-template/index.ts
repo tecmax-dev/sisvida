@@ -60,7 +60,7 @@ serve(async (req) => {
         components: [
           {
             type: "BODY",
-            text: "Sindicato dos Comerciários — atendimento ao associado.\n\n{{1}}, {{2}}. Segue retorno referente à sua solicitação:\n\n{{3}}",
+            text: "Sindicato dos Comerciários — atendimento ao associado.\n\n{{1}}, {{2}}. Segue retorno da sua solicitação:\n\n{{3}}\n\nAtenciosamente, equipe de atendimento.",
             example: { body_text: [["Bom dia", "João da Silva", "Sua carteirinha já está disponível para retirada na sede do sindicato."]] },
           },
           { type: "FOOTER", text: "Sindicato dos Comerciários" },
