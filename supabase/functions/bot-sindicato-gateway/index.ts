@@ -41,6 +41,28 @@ serve(async (req) => {
       return await handleGerarBoletoPorCnpj(payload);
     }
 
+    // Ação especial: agendar_consulta (em manutenção até 30/05/2026)
+    if (
+      action === "agendar_consulta" ||
+      action === "agendamento" ||
+      action === "marcar_consulta" ||
+      action === "agendar"
+    ) {
+      return json({
+        success: true,
+        action: "agendar_consulta",
+        tipo_retorno: "indisponivel_temporariamente",
+        disponivel: false,
+        disponivel_em: "2026-05-30",
+        mensagem:
+          "O agendamento de consultas pelo WhatsApp ainda não está disponível. Informe ao associado que o recurso será liberado a partir de 30/05/2026.",
+        texto_para_cliente:
+          "📅 *Agendamento de consultas pelo WhatsApp*\n\nEste recurso ainda não está disponível.\n\n*Liberação prevista: 30/05/2026.*\n\nEnquanto isso, realize seu agendamento pelo aplicativo ProsindWeb.",
+        instrucao_ia:
+          "Não tente coletar dados nem prosseguir com agendamento. Apenas envie a mensagem informando que o recurso estará disponível a partir de 30/05/2026 e oriente o uso do aplicativo.",
+      });
+    }
+
     const target = ACTION_MAP[action];
     if (!target) {
       return json({
