@@ -54,14 +54,14 @@ serve(async (req) => {
       ],
       },
       atendimento_inicio: {
-        name: "atendimento_inicio",
+        name: "atendimento_inicio_v2",
         category: "UTILITY",
         language: "pt_BR",
         components: [
           {
             type: "BODY",
-            text: "Sindicato dos Comerciários.\n\n{{1}}, {{2}}.\n\n{{3}}\n\nFicamos à disposição por este canal de atendimento oficial.",
-            example: { body_text: [["Bom dia", "João da Silva", "Estamos entrando em contato para tratar do seu atendimento junto ao sindicato."]] },
+            text: "Sindicato dos Comerciários — atendimento ao associado.\n\n{{1}}, {{2}}. Segue retorno referente à sua solicitação:\n\n{{3}}",
+            example: { body_text: [["Bom dia", "João da Silva", "Sua carteirinha já está disponível para retirada na sede do sindicato."]] },
           },
           { type: "FOOTER", text: "Sindicato dos Comerciários" },
         ],
