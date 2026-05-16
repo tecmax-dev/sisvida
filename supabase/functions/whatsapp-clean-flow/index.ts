@@ -110,8 +110,8 @@ serve(async (req) => {
           body: { text: "Você selecionou *Sou Associado*.\n\nEscolha o que deseja:" },
           action: {
             buttons: [
+              { type: "reply", reply: { id: "agendar_consulta", title: "Agendar Consulta" } },
               { type: "reply", reply: { id: "whazing_sub_carteirinha", title: "Atualizar Carteira" } },
-              { type: "reply", reply: { id: "whazing_sub_cct", title: "CCT / Pisos" } },
               { type: "reply", reply: { id: "whazing_sub_outros", title: "Outros Assuntos" } }
             ]
           }
@@ -176,6 +176,11 @@ serve(async (req) => {
     if (extractedButtonId === "whazing_sub_carteirinha") {
       await sendResponse(followUpAction("Para atualizar sua carteirinha, você pode fazer diretamente pelo nosso aplicativo ou enviar os documentos por aqui."));
       return new Response(JSON.stringify({ ok: true, action: "carteirinha" }));
+    }
+
+    if (extractedButtonId === "agendar_consulta") {
+      await sendResponse(followUpAction("O agendamento de consultas pelo WhatsApp estará disponível a partir do dia *30/05/2026*."));
+      return new Response(JSON.stringify({ ok: true, action: "agendar_consulta_indisponivel" }));
     }
 
     if (extractedButtonId === "whazing_sub_boleto") {
