@@ -66,6 +66,28 @@ serve(async (req) => {
           { type: "FOOTER", text: "Sindicato dos Comerciários" },
         ],
       },
+      informativo_agenda_medica: {
+        name: "informativo_agenda_medica_v2",
+        category: "UTILITY",
+        language: "pt_BR",
+        components: [
+          {
+            type: "BODY",
+            text:
+              "Sindicato dos Comerciários — informativo da agenda de atendimento médico (utilidade pública, sem fins lucrativos).\n\n{{1}}, informamos a disponibilidade de atendimento médico no sindicato:\n\nEspecialidade: {{2}}\nProfissional: {{3}}\nData: {{4}}\nHorário: {{5}}\n\nAgendamento pelo aplicativo do sindicato ou na recepção.",
+            example: {
+              body_text: [[
+                "João da Silva",
+                "Clínico Geral",
+                "Dr. Carlos Almeida",
+                "20/05/2026",
+                "14:00",
+              ]],
+            },
+          },
+          { type: "FOOTER", text: "Atendimento ao associado" },
+        ],
+      },
     };
 
     const payload = payloads[which];
