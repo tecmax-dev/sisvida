@@ -1626,6 +1626,30 @@ export default function UnionMembersListPage() {
           phone: selectedMemberForReset.phone,
         } : null}
       />
+
+      {/* WhatsApp Booking Unavailable Notice */}
+      <AlertDialog open={whatsappBookingNoticeOpen} onOpenChange={setWhatsappBookingNoticeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-primary" />
+              Agendamento por WhatsApp
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 pt-2">
+              <span className="block">
+                Este recurso permitirá que os sócios realizem agendamentos diretamente pelo WhatsApp,
+                respeitando todas as regras e limites configurados no aplicativo.
+              </span>
+              <span className="block font-semibold text-foreground">
+                Disponível a partir de 30/05/2026.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Entendi</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
