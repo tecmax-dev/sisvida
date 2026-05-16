@@ -5,6 +5,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ID da clínica do Sindicato (mesmo usado no fluxo de boleto)
+const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
+// Whitelist para teste do fluxo de agendamento de consulta via WhatsApp.
+// Aceita variantes com/sem DDI 55 e com/sem 9 adicional.
+const BOOKING_WHITELIST_RAW = ["5573988633535"];
+
+const _normalizeBookingPhone = (raw: string) => {
+  let d = (raw || "").replace(/\D/g, "");
+  if (d.startsWith("55") && d.length > 11) d = d.slice(2);
+  // remove 9 extra para celulares (ex: 73988633535 -> 73988633535 / 7388633535)
+  const variants = new Set<string>([d]);
+  if (d.length === 11 && d[2] === "9") variants.add(d.slice(0, 2) + d.slice(3));
+  if (d.length === 10) variants.add(d.slice(0, 2) + "9" + d.slice(2));
+  return Array.from(variants).flatMap((v) => [v, "55" + v]);
+};
+
+const BOOKING_WHITELIST = new Set<string>(
+  BOOKING_WHITELIST_RAW.flatMap(_normalizeBookingPhone)
+);
+
+const isBookingWhitelisted = (phone: string) =>
+  _normalizeBookingPhone(phone).some((v) => BOOKING_WHITELIST.has(v));
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -125,6 +149,83 @@ serve(async (req) => {
       });
     } catch (logErr) {
       console.error('[LOG_ERROR]', logErr);
+    }
+
+    // ============ FLUXO DE AGENDAMENTO DE CONSULTA (BETA - WHITELIST) ============
+    // Delega para o booking-web-chat que já implementa CPF + dependentes +
+    // profissional + data + horário + criação do appointment (todas as regras
+    // de negócio herdadas via triggers do DB).
+    try {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const isAgendarConsultaTrigger =
+        extractedButtonId === "agendar_consulta" ||
+        /\b(agendar consulta|marcar consulta|agendamento de consulta|consulta médica|consulta medica)\b/i.test(text);
+
+      const { data: activeBookingSession } = await supabase
+        .from("whatsapp_booking_sessions")
+        .select("id, state")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("phone", from)
+        .neq("state", "FINISHED")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const shouldEnterBookingFlow =
+        isBookingWhitelisted(from) &&
+        (isAgendarConsultaTrigger || !!activeBookingSession);
+
+      if (shouldEnterBookingFlow) {
+        console.log("[BOOKING_FLOW] Forwarding to booking-web-chat", {
+          from,
+          hasSession: !!activeBookingSession,
+          trigger: isAgendarConsultaTrigger,
+        });
+
+        // Se acabou de iniciar, manda mensagem vazia para o web-chat exibir o prompt de CPF
+        const messageToForward = isAgendarConsultaTrigger && !activeBookingSession
+          ? ""
+          : (text || "");
+
+        const bookingRes = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/booking-web-chat`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              clinic_id: SINDICATO_CLINIC_ID,
+              phone: from,
+              message: messageToForward,
+            }),
+          }
+        );
+
+        const bookingData = await bookingRes.json();
+        const replyText =
+          bookingData?.response ||
+          "Desculpe, não consegui processar o agendamento. Tente novamente.";
+
+        await sendResponse({
+          type: "text",
+          text: { body: replyText },
+        });
+
+        return new Response(
+          JSON.stringify({ ok: true, action: "booking_flow", state: bookingData?.state }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } catch (bookingErr) {
+      console.error("[BOOKING_FLOW_ERROR]", bookingErr);
+      // Em caso de erro, deixa cair no fluxo normal abaixo.
     }
 
     // Helper functions for phone matching
