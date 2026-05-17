@@ -30,6 +30,7 @@ Conta WABA: 1471541957159237. Locale: pt_BR. Versão Graph: configurada via META
 | `homologacao_lembrete_profissional_v2` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 6: serviço, profissional, funcionário, empresa, data, hora | lembrete profissional com botões |
 | `homologacao_lembrete_v3` | UTILITY | QUICK_REPLY: Confirmar, Cancelar; URL: Reagendar (slug via {{1}}) | 6 body + 1 URL var | v3 corrigido: texto fixo no início, sem variável repetida, slug real (`andrea-matos`) no exemplo |
 | `homologacao_lembrete_profissional_v3` | UTILITY | QUICK_REPLY: Confirmar, Cancelar | 5: profissional, funcionário, empresa, data, hora | v3 corrigido para profissional |
+| `vaga_medica_<slug>` (8 templates) | UTILITY* | URL: Acessar Aplicativo (https://prosindweb.com.br/) | 3: nome, data, hora | Notificação de vaga social disponível por profissional ativo do sindicato. Um template por profissional: daniela_sales, eliney_silva, jorge_avelar, jose_alcides, juliane_leite, marcelo_aguiar, pedro_roberto, uiara_tiuba. Edge function `meta-create-vaga-templates` registra todos. *jorge_avelar foi reclassificado como MARKETING pela Meta na revisão — recriar com texto mais utilitário se rejeitado. |
 
 ## Templates pendentes de criação manual no painel Meta
 
