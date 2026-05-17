@@ -1147,8 +1147,9 @@ serve(async (req) => {
           .single();
         const duration = (proData as any)?.appointment_duration || 30;
 
-        // Calculate end time
-        const [h, m] = startTime.split(":").map(Number);
+        // Normalize startTime to HH:MM (DB may return "HH:MM:SS")
+        const normalizedStart = String(startTime).substring(0, 5);
+        const [h, m] = normalizedStart.split(":").map(Number);
         const endMinutes = h * 60 + m + duration;
         const endH = Math.floor(endMinutes / 60);
         const endM = endMinutes % 60;
@@ -1161,7 +1162,7 @@ serve(async (req) => {
           patient_id: patientId,
           professional_id: professionalId,
           appointment_date: appointmentDate,
-          start_time: startTime + ":00",
+          start_time: `${normalizedStart}:00`,
           end_time: endTime,
           duration_minutes: duration,
           status: "scheduled",
