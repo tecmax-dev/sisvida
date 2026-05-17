@@ -359,7 +359,12 @@ serve(async (req) => {
             type: "interactive",
             interactive: {
               type: "list",
-              body: { text: truncate(stripNumberedList(replyText), 1024) },
+              body: {
+                text: truncate(
+                  replyState === "CANCEL_SELECT_APPT" ? replyText : stripNumberedList(replyText),
+                  1024,
+                ),
+              },
               action: {
                 button: "Escolher",
                 sections: [{
