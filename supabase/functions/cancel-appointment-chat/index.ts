@@ -208,11 +208,11 @@ serve(async (req) => {
         appointments_list: list,
       });
       const lines = list.map((a: any, i: number) => {
-        const who = a.beneficiary ? ` — ${a.beneficiary}` : "";
-        return `${i + 1} - ${fmtDate(a.date)} ${weekday(a.date)} ${a.time} • ${a.professional_name}${who}`;
+        const who = a.beneficiary ? `Dependente: ${a.beneficiary}` : `Titular: ${session.patient_name}`;
+        return `*${i + 1}.* 📅 ${fmtDate(a.date)} (${weekday(a.date)}) às ${a.time}\n   👤 ${who}\n   👨‍⚕️ ${a.professional_name}`;
       });
       return respond(
-        `Selecione a consulta que deseja *cancelar*:\n\n${lines.join("\n")}`,
+        `Selecione a consulta que deseja *cancelar*:\n\n${lines.join("\n\n")}`,
         "CANCEL_SELECT_APPT",
       );
     }
