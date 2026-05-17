@@ -285,12 +285,11 @@ function getBrazilianDateTime(): { date: string; time: string; dayOfWeek: number
   
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
   
-  // Check business hours: 09:00-12:00 and 13:00-16:00
+  // Check business hours: 09:00-16:00 (contínuo, sem intervalo de almoço)
   const [h, m] = brTime.split(':').map(Number);
   const totalMinutes = h * 60 + m;
-  const isMorning = totalMinutes >= 540 && totalMinutes < 720;  // 09:00-12:00
-  const isAfternoon = totalMinutes >= 780 && totalMinutes < 960; // 13:00-16:00
-  const isBusinessHours = isWeekday && (isMorning || isAfternoon);
+  const isWithinHours = totalMinutes >= 540 && totalMinutes < 960;  // 09:00-16:00
+  const isBusinessHours = isWeekday && isWithinHours;
   
   return {
     date: brDate,
@@ -964,7 +963,7 @@ async function executeTool(
            console.log(`[ai-assistant] Transfer/Ticket triggered for ${ticketPhone}: ${assunto}`);
           return JSON.stringify({
             success: true,
-            message: `Chamado registrado com sucesso! Assunto: "${assunto}". Um atendente responderá assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h).`
+            message: `Chamado registrado com sucesso! Assunto: "${assunto}". Um atendente responderá assim que o atendimento estiver disponível (segunda a sexta, 09h-16h).`
           });
         }
 
@@ -1308,7 +1307,7 @@ Responda apenas ao assunto solicitado.`;
     const timeContextSection = `## CONTEXTO TEMPORAL (INFORMAÇÃO DO SERVIDOR - USE PARA DECISÕES)
 - **Data/Hora atual (Brasil):** ${brDateTime.formatted}
 - **Dia da semana:** ${brDateTime.dayName}
-- **Horário de atendimento humano:** Segunda a sexta, 09h às 12h e 13h às 16h (exceto feriados)
+- **Horário de atendimento humano:** Segunda a sexta, 09h às 16h (exceto feriados)
 - **Status atual do atendimento humano:** ${isHumanAvailable ? '✅ DISPONÍVEL (dentro do horário)' : `❌ INDISPONÍVEL (${isHoliday ? `feriado: ${holidayName}` : !brDateTime.isBusinessDay ? 'fim de semana' : 'fora do horário'})`}
 ${isHoliday ? `- **Feriado hoje:** ${holidayName}` : ''}
 
@@ -1355,21 +1354,21 @@ Quando o usuário escolher a opção 5, digitar "falar com atendente", "outros a
 2. **Se o usuário responder "Outro assunto", "outro", "outros", ou qualquer resposta vaga/genérica que não especifique um assunto claro**, NÃO pergunte novamente. Trate como pedido direto de atendimento humano e prossiga imediatamente com o encaminhamento (passo 3).
 3. **Após o usuário informar um assunto ESPECÍFICO**, tente responder a dúvida diretamente se estiver dentro dos seus conhecimentos (CCT, piso salarial, endereço, horários, etc.).
 4. **Se não conseguir resolver** ou se o usuário insistir em falar com um humano:
-   **IMPORTANTE:** Sempre informe que o atendimento humano funciona de **segunda a sexta-feira, das 09h às 12h e das 13h às 16h, exceto feriados**.
+   **IMPORTANTE:** Sempre informe que o atendimento humano funciona de **segunda a sexta-feira, das 09h às 16h, exceto feriados**.
    
    ${isHumanAvailable ? `### ATENDIMENTO HUMANO DISPONÍVEL (AGORA)
    O atendimento humano está disponível AGORA. Encaminhe normalmente:
-   Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Nosso atendimento humano funciona de segunda a sexta, das 09h às 12h e das 13h às 16h (exceto feriados). Por favor, aguarde um momento. 🙏"` : `### ATENDIMENTO HUMANO INDISPONÍVEL (AGORA)
+   Exemplo: "Entendi! Vou encaminhar você para um atendente que poderá ajudar com [assunto]. Nosso atendimento humano funciona de segunda a sexta, das 09h às 16h (exceto feriados). Por favor, aguarde um momento. 🙏"` : `### ATENDIMENTO HUMANO INDISPONÍVEL (AGORA)
    O atendimento humano NÃO está disponível agora (${isHoliday ? `feriado: ${holidayName}` : !brDateTime.isBusinessDay ? 'fim de semana' : 'fora do horário comercial'}).
    
    **FLUXO OBRIGATÓRIO quando fora do horário:**
    a) Informe que o atendimento humano está indisponível no momento e o horário de funcionamento.
    b) **OFEREÇA ao usuário a opção de abrir um chamado** para que o atendente responda quando estiver disponível.
-      Exemplo: "Nosso atendimento humano funciona de segunda a sexta-feira, das 09h às 12h e das 13h às 16h (exceto feriados). No momento estamos fora do horário. 😊
+      Exemplo: "Nosso atendimento humano funciona de segunda a sexta-feira, das 09h às 16h (exceto feriados). No momento estamos fora do horário. 😊
       
       Mas posso abrir um *chamado* para você! Assim, quando nosso atendimento retornar, um atendente já terá o seu pedido e entrará em contato. Deseja que eu abra o chamado? 📋"
    c) **Se o usuário ACEITAR abrir o chamado**, use a função "abrir_chamado_atendimento" com o assunto informado pelo usuário.
-   d) **Após abrir o chamado com sucesso**, confirme: "Pronto! ✅ Seu chamado sobre *[assunto]* foi registrado com sucesso. Um atendente entrará em contato assim que o atendimento estiver disponível (segunda a sexta, 09h-12h e 13h-16h). 🙏"
+   d) **Após abrir o chamado com sucesso**, confirme: "Pronto! ✅ Seu chamado sobre *[assunto]* foi registrado com sucesso. Um atendente entrará em contato assim que o atendimento estiver disponível (segunda a sexta, 09h-16h). 🙏"
    e) **Se o usuário NÃO quiser abrir chamado**, respeite e informe que pode retornar no horário de atendimento.`}
 
 ## DADOS DE CONTATO DO SINDICATO (USE EXATAMENTE ESTES DADOS!)
@@ -1465,7 +1464,7 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
 - NUNCA trate pessoas como "clientes", são associados
 - Devoluções/estornos de Taxa Negocial: transfira para atendimento humano
 - Salário de padeiro: não representamos essa categoria (apenas Sindipan)
-- Falar com atendente: consulte o CONTEXTO TEMPORAL acima para saber se o atendimento humano está disponível. Horário: segunda a sexta, 09h-12h e 13h-16h, exceto feriados. Fora do horário, ofereça abrir chamado.
+- Falar com atendente: consulte o CONTEXTO TEMPORAL acima para saber se o atendimento humano está disponível. Horário: segunda a sexta, 09h-16h, exceto feriados. Fora do horário, ofereça abrir chamado.
 - Problemas com agendamento no app: peça CPF do titular para verificar
 - Problemas com agendamento no app: peça CPF do titular para verificar
 - DESPEDIDAS: Quando o usuário se despedir (tchau, obrigado, até logo, etc.), responda APENAS com uma frase curta de despedida (ex: "Disponha! Até mais! 👋"). NUNCA repita dados de contato na despedida - o sistema já envia essas informações automaticamente.`;
