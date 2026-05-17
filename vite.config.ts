@@ -44,12 +44,12 @@ export default defineConfig(({ mode }) => ({
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
           { url: '/cache-bust-v20260517-prosindweb-upload-favicon', revision: null },
-          { url: '/favicon.ico', revision: 'prosindweb-upload-20260517' },
-          { url: '/favicon-prosindweb.png', revision: 'prosindweb-upload-20260517' },
-          { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-upload-20260517' },
-          { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-upload-20260517' },
+          { url: '/favicon.ico', revision: 'prosindweb-cachebust-20260517b' },
+          { url: '/favicon-prosindweb.png', revision: 'prosindweb-cachebust-20260517b' },
+          { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-cachebust-20260517b' },
+          { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-cachebust-20260517b' },
           { url: '/manifest.json', revision: 'sindicato-20260517' },
-          { url: '/site.webmanifest', revision: 'prosindweb-upload-20260517' },
+          { url: '/site.webmanifest', revision: 'prosindweb-cachebust-20260517b' },
           { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260517' },
         ],
         runtimeCaching: [

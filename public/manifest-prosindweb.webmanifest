@@ -13,25 +13,25 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/favicon-prosindweb.png?v=prosindweb-upload-20260517",
+      "src": "/favicon-prosindweb.png?v=prosindweb-cachebust-20260517b",
       "sizes": "64x64",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/prosindweb-apple-touch-icon.png?v=prosindweb-upload-20260517",
+      "src": "/prosindweb-apple-touch-icon.png?v=prosindweb-cachebust-20260517b",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/prosindweb-pwa-192x192.png?v=prosindweb-upload-20260517",
+      "src": "/prosindweb-pwa-192x192.png?v=prosindweb-cachebust-20260517b",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/prosindweb-pwa-512x512.png?v=prosindweb-upload-20260517",
+      "src": "/prosindweb-pwa-512x512.png?v=prosindweb-cachebust-20260517b",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
