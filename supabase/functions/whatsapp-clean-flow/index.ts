@@ -296,12 +296,25 @@ serve(async (req) => {
     }
 
     if (extractedButtonId === "whazing_sub_outros" || extractedButtonId === "falar_atendente") {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const supportStatus = await getHumanSupportStatus(supabase);
+
+      if (!supportStatus.available) {
+        console.log(`[HUMAN_SUPPORT_BLOCKED] ${supportStatus.dayName}, ${supportStatus.date} ${supportStatus.time} - ${supportStatus.reason}`);
+        await sendResponse({
+          type: "text",
+          text: { body: unavailableSupportMessage(supportStatus.reason) }
+        });
+        return new Response(JSON.stringify({ ok: true, action: "human_support_unavailable", reason: supportStatus.reason }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       await sendResponse({
         type: "text",
         text: { body: "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳" }
       });
       // Here you would typically trigger a handoff to human (Whazing/ZapResponder)
-      return new Response(JSON.stringify({ ok: true, action: "handoff" }));
+      return new Response(JSON.stringify({ ok: true, action: "handoff" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {
