@@ -1166,7 +1166,7 @@ serve(async (req) => {
           end_time: endTime,
           duration_minutes: duration,
           status: "scheduled",
-          type: "primeira-consulta",
+          type: "first_visit",
         };
 
         // Add dependent_id if booking for dependent
