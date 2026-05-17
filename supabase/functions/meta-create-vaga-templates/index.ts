@@ -26,7 +26,7 @@ const PROFISSIONAIS: Prof[] = [
 
 function buildTemplate(p: Prof) {
   return {
-    name: `vaga_medica_${p.slug}_v2`,
+    name: `vaga_medica_${p.slug}_v3`,
     language: "pt_BR",
     category: "UTILITY",
     components: [
