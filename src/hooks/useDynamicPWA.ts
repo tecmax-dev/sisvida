@@ -10,9 +10,9 @@ const DEFAULT_BRANDING = {
   name: "ProsindWeb - Gestão Sindical e Clínica",
   shortName: "ProsindWeb",
   description: "Sistema completo de gestão para sindicatos e clínicas.",
-  logo: "/favicon-prosindweb.png?v=prosindweb-cachebust-20260517b",
-  appleIcon: "/prosindweb-apple-touch-icon.png?v=prosindweb-cachebust-20260517b",
-  manifest: "/manifest-prosindweb.webmanifest?v=prosindweb-cachebust-20260517b",
+  logo: "/favicon.png?v=prosindweb-final-20260517c",
+  appleIcon: "/prosindweb-apple-touch-icon.png?v=prosindweb-final-20260517c",
+  manifest: "/manifest-prosindweb.webmanifest?v=prosindweb-final-20260517c",
 };
 
 interface ClinicBranding {
@@ -83,7 +83,7 @@ export function useDynamicPWA() {
 
     // Restore favicon
     updateLinkElement("icon", DEFAULT_BRANDING.logo);
-    updateLinkElement("shortcut icon", "/favicon.ico?v=prosindweb-cachebust-20260517b");
+    updateLinkElement("shortcut icon", "/favicon.ico?v=prosindweb-final-20260517c");
     updateLinkElement("apple-touch-icon", DEFAULT_BRANDING.appleIcon);
 
     // Restore meta tags

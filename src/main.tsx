@@ -4,6 +4,28 @@ import App from "./App.tsx";
 import "./index.css";
 import { startUIIntegrityGuard } from "./hooks/useUIIntegrityGuard";
 
+const isProsindWebMarketingRoot = () => {
+  const host = window.location.hostname;
+  const path = window.location.pathname;
+  return (
+    (host === "prosindweb.com.br" || host === "www.prosindweb.com.br") &&
+    !path.startsWith("/app") &&
+    !path.startsWith("/sindicato")
+  );
+};
+
+const isPreviewOrIframe = () => {
+  const host = window.location.hostname;
+  const isPreviewHost = host.includes("id-preview--") || host.includes("lovableproject.com");
+  let isIframe = false;
+  try {
+    isIframe = window.self !== window.top;
+  } catch {
+    isIframe = true;
+  }
+  return isPreviewHost || isIframe;
+};
+
 /**
  * BOOTSTRAP IMPERATIVO PARA APP MOBILE
  * Executa verificação de sessão ANTES do React renderizar
@@ -40,7 +62,7 @@ async function renderApp() {
    * e os ícones cacheados pelo Chrome WebAPK na primeira carga após a atualização.
    * Roda apenas uma vez por dispositivo (flag salva em localStorage).
    */
-  const CACHE_WIPE_VERSION = "20260428-icon-renewal";
+  const CACHE_WIPE_VERSION = "20260517-prosindweb-favicon-final";
   try {
     const last = localStorage.getItem("__pwa_cache_wipe_version");
     if (last !== CACHE_WIPE_VERSION) {
@@ -63,23 +85,27 @@ async function renderApp() {
     console.warn("[PWA] Cache wipe falhou (não é crítico):", err);
   }
 
-  // Registrar PWA e aplicar novas versões automaticamente para evitar shell desatualizado
-  const updateSW = registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      console.info('[PWA] Nova versão disponível - aplicando atualização automática');
-      void updateSW(true);
-    },
-    onOfflineReady() {
-      console.info('[PWA] App pronto para uso offline');
-    },
-    onRegistered() {
-      console.info('[PWA] Service Worker registrado');
-    },
-    onRegisterError(error) {
-      console.error('[PWA] Erro no registro do SW:', error);
-    },
-  });
+  const shouldDisableServiceWorker = isPreviewOrIframe() || isProsindWebMarketingRoot();
+
+  if (!shouldDisableServiceWorker) {
+    // Registrar PWA e aplicar novas versões automaticamente para evitar shell desatualizado
+    const updateSW = registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        console.info('[PWA] Nova versão disponível - aplicando atualização automática');
+        void updateSW(true);
+      },
+      onOfflineReady() {
+        console.info('[PWA] App pronto para uso offline');
+      },
+      onRegistered() {
+        console.info('[PWA] Service Worker registrado');
+      },
+      onRegisterError(error) {
+        console.error('[PWA] Erro no registro do SW:', error);
+      },
+    });
+  }
 
   // Força checagem de atualização ao abrir o app instalado
   if ('serviceWorker' in navigator) {
