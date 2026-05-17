@@ -5,7 +5,11 @@
   "theme_color": "#16a394",
   "background_color": "#16a394",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui", "browser"],
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/app?source=pwa",
@@ -21,67 +25,67 @@
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
-      "src": "/icon-72x72.png",
+      "src": "/sindicato-icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-96x96.png",
+      "src": "/sindicato-icon-96x96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-128x128.png",
+      "src": "/sindicato-icon-128x128.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-144x144.png",
+      "src": "/sindicato-icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-152x152.png",
+      "src": "/sindicato-icon-152x152.png",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-192x192.png",
+      "src": "/sindicato-icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-384x384.png",
+      "src": "/sindicato-icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/sindicato-icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-192x192.png",
+      "src": "/sindicato-icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/pwa-512x512.png",
+      "src": "/sindicato-icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/apple-touch-icon-sindicato.png",
+      "src": "/sindicato-icon-180x180.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
@@ -117,7 +121,10 @@
       "label": "Carteirinha digital em tela ampla"
     }
   ],
-  "categories": ["business", "utilities"],
+  "categories": [
+    "business",
+    "utilities"
+  ],
   "lang": "pt-BR",
   "dir": "ltr",
   "shortcuts": [
@@ -126,14 +133,24 @@
       "short_name": "Carteirinha",
       "description": "Acesse sua carteirinha digital",
       "url": "/app/carteirinha",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Agendar Consulta",
       "short_name": "Agendar",
       "description": "Agende sua consulta",
       "url": "/app/agendamentos",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
