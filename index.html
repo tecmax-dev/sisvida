@@ -199,6 +199,38 @@
     
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <!-- Cache cleanup: força limpeza única no domínio ProsindWeb -->
+    <script>
+      (function() {
+        try {
+          var host = window.location.hostname;
+          var isProsindWeb = host === 'prosindweb.com.br' || host === 'www.prosindweb.com.br';
+          var FLAG = 'prosindweb-cache-cleared-20260517b';
+          if (isProsindWeb && !localStorage.getItem(FLAG)) {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+              }).catch(function(){});
+            }
+            if (window.caches && caches.keys) {
+              caches.keys().then(function(keys) {
+                return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+              }).then(function() {
+                localStorage.setItem(FLAG, '1');
+                if (!sessionStorage.getItem(FLAG + '-reloaded')) {
+                  sessionStorage.setItem(FLAG + '-reloaded', '1');
+                  window.location.reload();
+                }
+              }).catch(function(){
+                localStorage.setItem(FLAG, '1');
+              });
+            } else {
+              localStorage.setItem(FLAG, '1');
+            }
+          }
+        } catch (e) { /* noop */ }
+      })();
+    </script>
   </head>
 
   <body style="background-color: #16a394;">
