@@ -313,12 +313,14 @@ serve(async (req) => {
             break;
           case "CANCEL_SELECT_APPT": {
             const list = Array.isArray(sess.appointments_list) ? sess.appointments_list : [];
+            const WD = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
             options = list.slice(0, 10).map((a: any, i: number) => {
               const [y, m, d] = String(a.date).split("-");
-              const dayStr = `${d}/${m}`;
-              const title = truncate(`${dayStr} ${a.time}`, 24);
+              const wd = WD[new Date(`${y}-${m}-${d}T12:00:00`).getDay()] || "";
+              const who = a.beneficiary ? `Dep: ${a.beneficiary}` : "Titular";
+              const title = truncate(`${i + 1}. ${d}/${m} ${wd} ${a.time}`, 24);
               const desc = truncate(
-                `${a.professional_name || ""}${a.beneficiary ? " • " + a.beneficiary : ""}`,
+                `${who} • ${a.professional_name || "Profissional"}`,
                 72,
               );
               return { id: `book_${i + 1}`, title, description: desc };
