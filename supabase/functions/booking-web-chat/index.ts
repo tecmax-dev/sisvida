@@ -112,6 +112,7 @@ async function getOrCreateSession(
     .select("*")
     .eq("clinic_id", clinicId)
     .eq("phone", phone)
+    .is("action_type", null)
     .neq("state", "FINISHED")
     .order("created_at", { ascending: false })
     .limit(1)
