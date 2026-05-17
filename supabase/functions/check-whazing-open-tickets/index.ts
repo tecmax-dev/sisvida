@@ -149,7 +149,7 @@ serve(async (req) => {
       const message = `Olá, ${name}! 👋\n\n` +
         `Identificamos que você tem uma solicitação em aberto conosco.\n\n` +
         `📅 Hoje, *${br.dayName}* (${dateFormatted}), nosso atendimento humano está *indisponível* (${unavailableReason}).\n\n` +
-        `🕐 O atendimento humano funciona de *segunda a sexta, das 09h às 12h e das 13h às 16h* (exceto feriados).\n\n` +
+        `🕐 O atendimento humano funciona de *segunda a sexta, das 09h às 16h* (exceto feriados).\n\n` +
         `Seu chamado está registrado e será respondido assim que nosso atendimento retornar. ✅\n\n` +
         `Se precisar de algo urgente, posso tentar ajudar como assistente virtual! É só me enviar sua dúvida. 🤖`;
 
