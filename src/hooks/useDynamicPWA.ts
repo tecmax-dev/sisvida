@@ -10,7 +10,9 @@ const DEFAULT_BRANDING = {
   name: "ProsindWeb - Gestão Sindical e Clínica",
   shortName: "ProsindWeb",
   description: "Sistema completo de gestão para sindicatos e clínicas.",
-  logo: "/favicon-prosindweb.png",
+  logo: "/favicon-prosindweb.png?v=prosindweb-20260517",
+  appleIcon: "/prosindweb-apple-touch-icon.png?v=prosindweb-20260517",
+  manifest: "/manifest-prosindweb.webmanifest?v=prosindweb-20260517",
 };
 
 interface ClinicBranding {
@@ -81,7 +83,8 @@ export function useDynamicPWA() {
 
     // Restore favicon
     updateLinkElement("icon", DEFAULT_BRANDING.logo);
-    updateLinkElement("apple-touch-icon", DEFAULT_BRANDING.logo);
+    updateLinkElement("shortcut icon", "/favicon.ico?v=prosindweb-20260517");
+    updateLinkElement("apple-touch-icon", DEFAULT_BRANDING.appleIcon);
 
     // Restore meta tags
     updateMetaTag("apple-mobile-web-app-title", DEFAULT_BRANDING.shortName);
@@ -105,13 +108,13 @@ export function useDynamicPWA() {
 
   const restoreDefaultManifest = () => {
     const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-    if (manifestLink && !manifestLink.href.includes("manifest.webmanifest")) {
-      // Already using default or VitePWA manifest
-      return;
-    }
-    // VitePWA generates manifest automatically, just remove custom one if exists
-    if (manifestLink && manifestLink.href.includes("blob:")) {
-      manifestLink.remove();
+    if (manifestLink) {
+      manifestLink.href = DEFAULT_BRANDING.manifest;
+    } else {
+      const newManifestLink = document.createElement("link");
+      newManifestLink.rel = "manifest";
+      newManifestLink.href = DEFAULT_BRANDING.manifest;
+      document.head.appendChild(newManifestLink);
     }
   };
 
