@@ -26,15 +26,15 @@ const PROFISSIONAIS: Prof[] = [
 
 function buildTemplate(p: Prof) {
   return {
-    name: `vaga_medica_${p.slug}`,
+    name: `vaga_medica_${p.slug}_v3`,
     language: "pt_BR",
     category: "UTILITY",
     components: [
       {
         type: "BODY",
         text:
-          `Notificação de Atendimento Social: Olá, {{1}}. Informamos que há vaga disponível para atendimento social de ${p.especialidade} com ${p.nome}, na sede do Sindicato dos Comerciários, no dia {{2}} às {{3}}.\n\n` +
-          `O atendimento é gratuito e exclusivo aos associados. Para confirmar o agendamento, acesse o aplicativo oficial.`,
+          `Olá, {{1}}. Há um horário disponível em sua agenda de ${p.especialidade} com ${p.nome} no dia {{2}} às {{3}}, na sede do Sindicato dos Comerciários.\n\n` +
+          `Para confirmar ou reagendar, acesse o aplicativo oficial.`,
         example: { body_text: [["Maria", "20/05/2026", "14:30"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
