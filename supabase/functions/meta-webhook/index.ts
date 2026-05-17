@@ -657,6 +657,7 @@ serve(async (req) => {
                 title: "Serviços Associado",
                 rows: [
                   { id: "agendar_consulta", title: "Agendar Consulta", description: "Disponível a partir de 30/05/2026" },
+                  { id: "cancelar_consulta", title: "Cancelar Consulta", description: "Desmarcar consulta agendada" },
                   { id: "whazing_sub_carteirinha", title: "Atualizar Carteira", description: "Renovação e 2ª via" },
                   { id: "whazing_sub_app", title: "Aplicativo", description: "Baixar app na Play Store" },
                   { id: "whazing_sub_cct", title: "CCT / Pisos", description: "Convenções e salários" },
