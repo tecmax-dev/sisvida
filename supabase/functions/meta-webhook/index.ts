@@ -168,6 +168,53 @@ serve(async (req) => {
         extractedButtonId === "cancelar_consulta" ||
         /\b(cancelar|desmarcar)\s+(a\s+|minha\s+|uma\s+)?consulta\b/i.test(text);
 
+      // ---------- EXPIRAÇÃO DE SESSÃO ----------
+      // Detecta sessões abandonadas (expires_at < now) e avisa o usuário.
+      const nowIso = new Date().toISOString();
+      const { data: expiredSessions } = await supabase
+        .from("whatsapp_booking_sessions")
+        .select("id, action_type")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("phone", from)
+        .neq("state", "FINISHED")
+        .lt("expires_at", nowIso);
+
+      if (expiredSessions && expiredSessions.length > 0) {
+        const wasCancel = expiredSessions.some((s: any) => s.action_type === "cancel");
+        await supabase
+          .from("whatsapp_booking_sessions")
+          .delete()
+          .in("id", expiredSessions.map((s: any) => s.id));
+
+        // Se o usuário está iniciando explicitamente um novo fluxo, segue sem avisar.
+        const isRestartingFlow = isAgendarConsultaTrigger || isCancelarConsultaTrigger;
+        if (!isRestartingFlow) {
+          const motivo = wasCancel ? "cancelamento" : "agendamento";
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: {
+                text:
+                  `⏱️ Sua sessão de *${motivo}* expirou por inatividade.\n\n` +
+                  `Vamos recomeçar do início. Toque em uma opção:`,
+              },
+              action: {
+                buttons: [
+                  { type: "reply", reply: { id: "agendar_consulta", title: "Agendar Consulta" } },
+                  { type: "reply", reply: { id: "cancelar_consulta", title: "Cancelar Consulta" } },
+                  { type: "reply", reply: { id: "menu_principal", title: "Menu Principal" } },
+                ],
+              },
+            },
+          });
+          return new Response(
+            JSON.stringify({ ok: true, action: "session_expired", flow: motivo }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
+
       // Sessão ativa do fluxo de cancelamento (action_type='cancel')
       const { data: activeCancelSession } = await supabase
         .from("whatsapp_booking_sessions")
@@ -176,6 +223,7 @@ serve(async (req) => {
         .eq("phone", from)
         .eq("action_type", "cancel")
         .neq("state", "FINISHED")
+        .gte("expires_at", nowIso)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -188,6 +236,7 @@ serve(async (req) => {
         .eq("phone", from)
         .is("action_type", null)
         .neq("state", "FINISHED")
+        .gte("expires_at", nowIso)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
