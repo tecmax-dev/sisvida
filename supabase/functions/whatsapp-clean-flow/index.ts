@@ -202,7 +202,7 @@ serve(async (req) => {
           action: {
             name: "cta_url",
             parameters: {
-              display_text: "Convenções Anteriores",
+               display_text: "Ver Anteriores",
               url: "https://comerciariosilheus.org.br/ccts/",
             },
           },
