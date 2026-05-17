@@ -89,8 +89,7 @@ async function createOrResetSession(
     .from("whatsapp_booking_sessions")
     .delete()
     .eq("clinic_id", clinicId)
-    .eq("phone", phone)
-    .is("action_type", null);
+    .eq("phone", phone);
 
   const { data: session, error } = await supabase
     .from("whatsapp_booking_sessions")

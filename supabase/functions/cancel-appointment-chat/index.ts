@@ -60,6 +60,13 @@ async function getOrCreate(
   if (existing && new Date(existing.expires_at) >= new Date()) return existing;
   if (existing) await supabase.from("whatsapp_booking_sessions").delete().eq("id", existing.id);
 
+  // Unique constraint is (clinic_id, phone) — clear any other session type
+  await supabase
+    .from("whatsapp_booking_sessions")
+    .delete()
+    .eq("clinic_id", clinicId)
+    .eq("phone", phone);
+
   const { data: created, error } = await supabase
     .from("whatsapp_booking_sessions")
     .insert({
