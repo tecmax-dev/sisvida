@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => ({
         "pwa-192x192.png",
         "pwa-512x512.png",
         "favicon.ico",
+        "favicon-prosindweb.png",
+        "prosindweb-apple-touch-icon.png",
+        "prosindweb-pwa-192x192.png",
+        "prosindweb-pwa-512x512.png",
       ],
       // Manifest is served only from public/manifest.json.
       // This prevents PWABuilder from reading VitePWA's generated /manifest.webmanifest
@@ -39,10 +43,14 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260428-package-final-v3', revision: null },
-          { url: '/manifest.json', revision: '20260428-package-final-v3' },
-          { url: '/site.webmanifest', revision: '20260428-package-final-v3' },
-          { url: '/manifest-sindicato.webmanifest', revision: '20260428-package-final-v3' },
+          { url: '/cache-bust-v20260517-prosindweb-favicon', revision: null },
+          { url: '/favicon.ico', revision: 'prosindweb-20260517' },
+          { url: '/favicon-prosindweb.png', revision: 'prosindweb-20260517' },
+          { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-20260517' },
+          { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-20260517' },
+          { url: '/manifest.json', revision: 'sindicato-20260517' },
+          { url: '/site.webmanifest', revision: 'prosindweb-20260517' },
+          { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260517' },
         ],
         runtimeCaching: [
           // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
