@@ -176,21 +176,28 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
+      const isBookingButton =
+        typeof extractedButtonId === "string" && extractedButtonId.startsWith("book_");
+
       const shouldEnterBookingFlow =
         isBookingWhitelisted(from) &&
-        (isAgendarConsultaTrigger || !!activeBookingSession);
+        (isAgendarConsultaTrigger || !!activeBookingSession || isBookingButton);
 
       if (shouldEnterBookingFlow) {
         console.log("[BOOKING_FLOW] Forwarding to booking-web-chat", {
           from,
           hasSession: !!activeBookingSession,
           trigger: isAgendarConsultaTrigger,
+          isBookingButton,
         });
 
-        // Se acabou de iniciar, manda mensagem vazia para o web-chat exibir o prompt de CPF
+        // Se acabou de iniciar, manda mensagem vazia para o web-chat exibir o prompt de CPF.
+        // Se for clique em botão do fluxo, extrai o número (book_1 -> "1").
         const messageToForward = isAgendarConsultaTrigger && !activeBookingSession
           ? ""
-          : (text || "");
+          : isBookingButton
+            ? extractedButtonId!.replace(/^book_/, "")
+            : (text || "");
 
         const bookingRes = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/booking-web-chat`,
@@ -212,14 +219,138 @@ serve(async (req) => {
         const replyText =
           bookingData?.response ||
           "Desculpe, não consegui processar o agendamento. Tente novamente.";
+        const replyState: string | undefined = bookingData?.state;
 
-        await sendResponse({
-          type: "text",
-          text: { body: replyText },
-        });
+        // Carrega sessão atualizada para montar botões/listas a partir das opções disponíveis.
+        const { data: updatedSession } = await supabase
+          .from("whatsapp_booking_sessions")
+          .select("*")
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .eq("phone", from)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Remove a lista numerada do texto (ex: "1 - Foo\n2 - Bar") quando vamos renderizar botões.
+        const stripNumberedList = (txt: string) =>
+          txt
+            .split("\n")
+            .filter((l) => !/^\s*\d+\s*-\s+/.test(l))
+            .join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+
+        const truncate = (s: string, n: number) =>
+          (s || "").length > n ? (s || "").slice(0, n - 1) + "…" : (s || "");
+
+        // Decide opções por state.
+        type Opt = { id: string; title: string; description?: string };
+        let options: Opt[] = [];
+        let listSectionTitle = "Opções";
+
+        const sess: any = updatedSession || {};
+        switch (replyState) {
+          case "CONFIRM_IDENTITY":
+            options = [
+              { id: "book_1", title: "Confirmar" },
+              { id: "book_2", title: "Não sou eu" },
+            ];
+            break;
+          case "SELECT_BOOKING_FOR":
+            options = [
+              { id: "book_1", title: "Para mim" },
+              { id: "book_2", title: "Dependente" },
+            ];
+            break;
+          case "SELECT_DEPENDENT": {
+            const deps = Array.isArray(sess.available_dependents) ? sess.available_dependents : [];
+            options = deps.slice(0, 10).map((d: any, i: number) => ({
+              id: `book_${i + 1}`,
+              title: truncate(d.name || `Dependente ${i + 1}`, 24),
+            }));
+            listSectionTitle = "Dependentes";
+            break;
+          }
+          case "SELECT_PROFESSIONAL": {
+            const pros = Array.isArray(sess.available_professionals) ? sess.available_professionals : [];
+            options = pros.slice(0, 10).map((p: any, i: number) => ({
+              id: `book_${i + 1}`,
+              title: truncate(p.name || `Profissional ${i + 1}`, 24),
+              description: truncate(p.specialty || "", 72),
+            }));
+            listSectionTitle = "Profissionais";
+            break;
+          }
+          case "SELECT_DATE": {
+            const dates = Array.isArray(sess.available_dates) ? sess.available_dates : [];
+            options = dates.slice(0, 10).map((d: any, i: number) => ({
+              id: `book_${i + 1}`,
+              title: truncate(`${d.formatted}`, 24),
+              description: truncate(d.weekday || "", 72),
+            }));
+            listSectionTitle = "Datas";
+            break;
+          }
+          case "SELECT_TIME": {
+            const times = Array.isArray(sess.available_times) ? sess.available_times : [];
+            options = times.slice(0, 10).map((t: any, i: number) => ({
+              id: `book_${i + 1}`,
+              title: truncate(t.formatted || t.time, 24),
+            }));
+            listSectionTitle = "Horários";
+            break;
+          }
+          case "CONFIRM_APPOINTMENT":
+            options = [
+              { id: "book_1", title: "Confirmar" },
+              { id: "book_2", title: "Cancelar" },
+            ];
+            break;
+          default:
+            options = [];
+        }
+
+        if (options.length === 0) {
+          await sendResponse({ type: "text", text: { body: replyText } });
+        } else if (options.length <= 3) {
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: { text: truncate(stripNumberedList(replyText), 1024) },
+              action: {
+                buttons: options.map((o) => ({
+                  type: "reply",
+                  reply: { id: o.id, title: truncate(o.title, 20) },
+                })),
+              },
+            },
+          });
+        } else {
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "list",
+              body: { text: truncate(stripNumberedList(replyText), 1024) },
+              action: {
+                button: "Escolher",
+                sections: [
+                  {
+                    title: truncate(listSectionTitle, 24),
+                    rows: options.map((o) => ({
+                      id: o.id,
+                      title: truncate(o.title, 24),
+                      ...(o.description ? { description: truncate(o.description, 72) } : {}),
+                    })),
+                  },
+                ],
+              },
+            },
+          });
+        }
 
         return new Response(
-          JSON.stringify({ ok: true, action: "booking_flow", state: bookingData?.state }),
+          JSON.stringify({ ok: true, action: "booking_flow", state: replyState, options: options.length }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
