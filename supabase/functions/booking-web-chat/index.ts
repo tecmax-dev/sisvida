@@ -85,7 +85,12 @@ async function createOrResetSession(
   phone: string,
   state: BookingState
 ): Promise<BookingSession> {
-  await supabase.from("whatsapp_booking_sessions").delete().eq("clinic_id", clinicId).eq("phone", phone);
+  await supabase
+    .from("whatsapp_booking_sessions")
+    .delete()
+    .eq("clinic_id", clinicId)
+    .eq("phone", phone)
+    .is("action_type", null);
 
   const { data: session, error } = await supabase
     .from("whatsapp_booking_sessions")
