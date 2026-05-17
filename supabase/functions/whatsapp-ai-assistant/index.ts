@@ -285,12 +285,11 @@ function getBrazilianDateTime(): { date: string; time: string; dayOfWeek: number
   
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
   
-  // Check business hours: 09:00-12:00 and 13:00-16:00
+  // Check business hours: 09:00-16:00 (contínuo, sem intervalo de almoço)
   const [h, m] = brTime.split(':').map(Number);
   const totalMinutes = h * 60 + m;
-  const isMorning = totalMinutes >= 540 && totalMinutes < 720;  // 09:00-12:00
-  const isAfternoon = totalMinutes >= 780 && totalMinutes < 960; // 13:00-16:00
-  const isBusinessHours = isWeekday && (isMorning || isAfternoon);
+  const isWithinHours = totalMinutes >= 540 && totalMinutes < 960;  // 09:00-16:00
+  const isBusinessHours = isWeekday && isWithinHours;
   
   return {
     date: brDate,
