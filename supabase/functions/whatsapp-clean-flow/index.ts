@@ -5,6 +5,83 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SINDICATO_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+const SUPPORT_START_MINUTES = 9 * 60;
+const SUPPORT_END_MINUTES = 16 * 60;
+
+function calculateEaster(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function getNationalHolidayName(year: number, month: number, day: number): string | null {
+  const fixed = [
+    { name: "Confraternização Universal", m: 1, d: 1 },
+    { name: "Tiradentes", m: 4, d: 21 },
+    { name: "Dia do Trabalho", m: 5, d: 1 },
+    { name: "Independência do Brasil", m: 9, d: 7 },
+    { name: "Nossa Senhora Aparecida", m: 10, d: 12 },
+    { name: "Finados", m: 11, d: 2 },
+    { name: "Proclamação da República", m: 11, d: 15 },
+    { name: "Natal", m: 12, d: 25 },
+  ];
+  for (const holiday of fixed) if (holiday.m === month && holiday.d === day) return holiday.name;
+
+  const easter = calculateEaster(year);
+  const check = (offset: number, name: string) => {
+    const d = new Date(year, easter.getMonth(), easter.getDate() + offset);
+    return month === d.getMonth() + 1 && day === d.getDate() ? name : null;
+  };
+  return check(-2, "Sexta-feira Santa") || check(-47, "Carnaval") || check(0, "Páscoa") || check(60, "Corpus Christi") || null;
+}
+
+function getBrazilianDateTime() {
+  const now = new Date();
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const time = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+  const dayName = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(now);
+  const dayShort = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(now);
+  const dayOfWeek = ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[dayShort] ?? 0;
+  const [hour, minute] = time.split(':').map(Number);
+  const totalMinutes = hour * 60 + minute;
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const isBusinessHours = isWeekday && totalMinutes >= SUPPORT_START_MINUTES && totalMinutes < SUPPORT_END_MINUTES;
+  return { date, time, dayName, isWeekday, isBusinessHours };
+}
+
+async function getHumanSupportStatus(supabase: any) {
+  const br = getBrazilianDateTime();
+  const [year, month, day] = br.date.split('-').map(Number);
+  const nationalHoliday = getNationalHolidayName(year, month, day);
+  const { data: clinicHolidays } = await supabase
+    .from('clinic_holidays')
+    .select('name')
+    .eq('clinic_id', SINDICATO_CLINIC_ID)
+    .or(`holiday_date.eq.${br.date},and(is_recurring.eq.true,recurring_month.eq.${month},recurring_day.eq.${day})`);
+  const holidayName = nationalHoliday || clinicHolidays?.[0]?.name || null;
+  const available = br.isBusinessHours && !holidayName;
+  const reason = holidayName ? `feriado (${holidayName})` : !br.isWeekday ? 'fim de semana' : !br.isBusinessHours ? 'fora do horário de atendimento' : '';
+  return { ...br, available, reason };
+}
+
+const unavailableSupportMessage = (reason: string) =>
+  `Nosso atendimento humano está indisponível no momento${reason ? `: ${reason}` : ''}.\n\n` +
+  `O atendimento humano funciona de *segunda a sexta-feira, das 09h às 16h*, exceto feriados.\n\n` +
+  `Posso ajudar por aqui como assistente virtual. Se preferir, envie seu assunto que deixaremos registrado para retorno assim que o atendimento estiver disponível. 📋`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -219,12 +296,25 @@ serve(async (req) => {
     }
 
     if (extractedButtonId === "whazing_sub_outros" || extractedButtonId === "falar_atendente") {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const supportStatus = await getHumanSupportStatus(supabase);
+
+      if (!supportStatus.available) {
+        console.log(`[HUMAN_SUPPORT_BLOCKED] ${supportStatus.dayName}, ${supportStatus.date} ${supportStatus.time} - ${supportStatus.reason}`);
+        await sendResponse({
+          type: "text",
+          text: { body: unavailableSupportMessage(supportStatus.reason) }
+        });
+        return new Response(JSON.stringify({ ok: true, action: "human_support_unavailable", reason: supportStatus.reason }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       await sendResponse({
         type: "text",
         text: { body: "Entendido. Vou te encaminhar para um de nossos atendentes. Por favor, aguarde um momento. ⏳" }
       });
       // Here you would typically trigger a handoff to human (Whazing/ZapResponder)
-      return new Response(JSON.stringify({ ok: true, action: "handoff" }));
+      return new Response(JSON.stringify({ ok: true, action: "handoff" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ ok: true, status: "unhandled" }), {

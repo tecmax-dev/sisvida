@@ -58,7 +58,7 @@ function getBrazilianDateTime() {
   const [h, m] = brTime.split(':').map(Number);
   const totalMin = h * 60 + m;
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  const isBusinessHours = isWeekday && ((totalMin >= 540 && totalMin < 720) || (totalMin >= 780 && totalMin < 960));
+  const isBusinessHours = isWeekday && totalMin >= 540 && totalMin < 960;
 
   return { date: brDate, time: brTime, dayOfWeek, dayName: brDayName, isWeekday, isBusinessHours };
 }
