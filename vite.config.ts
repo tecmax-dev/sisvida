@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
         "pwa-192x192.png",
         "pwa-512x512.png",
         "favicon.ico",
+        "favicon.png",
         "favicon-prosindweb.png",
         "prosindweb-apple-touch-icon.png",
         "prosindweb-pwa-192x192.png",
@@ -43,14 +44,15 @@ export default defineConfig(({ mode }) => ({
         ],
         // Force cache invalidation with version timestamp
         additionalManifestEntries: [
-          { url: '/cache-bust-v20260517-prosindweb-upload-favicon', revision: null },
-          { url: '/favicon.ico', revision: 'prosindweb-cachebust-20260517b' },
-          { url: '/favicon-prosindweb.png', revision: 'prosindweb-cachebust-20260517b' },
-          { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-cachebust-20260517b' },
-          { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-cachebust-20260517b' },
-          { url: '/manifest.json', revision: 'sindicato-20260517' },
-          { url: '/site.webmanifest', revision: 'prosindweb-cachebust-20260517b' },
-          { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260517' },
+          { url: '/cache-bust-v20260517-prosindweb-final-favicon', revision: null },
+          { url: '/favicon.ico', revision: 'prosindweb-final-20260517c' },
+          { url: '/favicon.png', revision: 'prosindweb-final-20260517c' },
+          { url: '/favicon-prosindweb.png', revision: 'prosindweb-final-20260517c' },
+          { url: '/prosindweb-apple-touch-icon.png', revision: 'prosindweb-final-20260517c' },
+          { url: '/manifest-prosindweb.webmanifest', revision: 'prosindweb-final-20260517c' },
+          { url: '/manifest.json', revision: 'sindicato-20260517c' },
+          { url: '/site.webmanifest', revision: 'prosindweb-final-20260517c' },
+          { url: '/manifest-sindicato.webmanifest', revision: 'sindicato-20260517c' },
         ],
         runtimeCaching: [
           // Disponibilidade/agendamento mobile - nunca usar cache para evitar slots fantasmas
