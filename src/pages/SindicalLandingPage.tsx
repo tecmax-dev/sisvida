@@ -998,7 +998,7 @@ export default function SindicalLandingPage() {
   useEffect(() => {
     const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     const originalHref = favicon?.href || "/favicon.ico";
-    if (favicon) favicon.href = "/favicon-prosindweb.png";
+    if (favicon) favicon.href = "/favicon.png?v=prosindweb-final-20260517c";
     document.title = "ProsindWeb - Sistema de Gestão Sindical";
     return () => {
       if (favicon) favicon.href = originalHref;
