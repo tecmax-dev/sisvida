@@ -895,7 +895,27 @@ serve(async (req) => {
     }
 
     if (extractedButtonId === "whazing_sub_cct" || (isCCT && !isGreeting)) {
-      await sendResponse(followUpAction("As Convenções Coletivas e Tabelas de Pisos Salariais estão disponíveis em nosso site ou podem ser solicitadas aqui."));
+      // 1) Mensagem com CTA URL para convenções anteriores
+      await sendResponse({
+        type: "interactive",
+        interactive: {
+          type: "cta_url",
+          body: {
+            text:
+              "📄 As Convenções Coletivas e Tabelas de Pisos Salariais vigentes estão disponíveis em nosso site ou podem ser solicitadas aqui.\n\n" +
+              "Acesse também o histórico de convenções anteriores pelo botão abaixo.",
+          },
+          action: {
+            name: "cta_url",
+            parameters: {
+              display_text: "Convenções Anteriores",
+              url: "https://comerciariosilheus.org.br/ccts/",
+            },
+          },
+        },
+      });
+      // 2) Follow-up com opções de navegação
+      await sendResponse(followUpAction("Posso ajudar com mais alguma coisa?"));
       return new Response(JSON.stringify({ ok: true, action: "cct" }));
     }
 
