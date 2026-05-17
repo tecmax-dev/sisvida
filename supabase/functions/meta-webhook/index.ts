@@ -151,10 +151,8 @@ serve(async (req) => {
       console.error('[LOG_ERROR]', logErr);
     }
 
-    // ============ FLUXO DE AGENDAMENTO DE CONSULTA (BETA - WHITELIST) ============
-    // Delega para o booking-web-chat que já implementa CPF + dependentes +
-    // profissional + data + horário + criação do appointment (todas as regras
-    // de negócio herdadas via triggers do DB).
+    // ============ FLUXOS DE AGENDAMENTO / CANCELAMENTO (BETA - WHITELIST) ============
+    // Delega para edge functions dedicadas que implementam todas as regras de negócio.
     try {
       const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
       const supabase = createClient(
@@ -166,11 +164,29 @@ serve(async (req) => {
         extractedButtonId === "agendar_consulta" ||
         /\b(agendar consulta|marcar consulta|agendamento de consulta|consulta médica|consulta medica)\b/i.test(text);
 
-      const { data: activeBookingSession } = await supabase
+      const isCancelarConsultaTrigger =
+        extractedButtonId === "cancelar_consulta" ||
+        /\b(cancelar|desmarcar)\s+(a\s+|minha\s+|uma\s+)?consulta\b/i.test(text);
+
+      // Sessão ativa do fluxo de cancelamento (action_type='cancel')
+      const { data: activeCancelSession } = await supabase
         .from("whatsapp_booking_sessions")
-        .select("id, state")
+        .select("id, state, action_type")
         .eq("clinic_id", SINDICATO_CLINIC_ID)
         .eq("phone", from)
+        .eq("action_type", "cancel")
+        .neq("state", "FINISHED")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Sessão ativa do fluxo de agendamento (sem action_type)
+      const { data: activeBookingSession } = await supabase
+        .from("whatsapp_booking_sessions")
+        .select("id, state, action_type")
+        .eq("clinic_id", SINDICATO_CLINIC_ID)
+        .eq("phone", from)
+        .is("action_type", null)
         .neq("state", "FINISHED")
         .order("created_at", { ascending: false })
         .limit(1)
@@ -179,9 +195,140 @@ serve(async (req) => {
       const isBookingButton =
         typeof extractedButtonId === "string" && extractedButtonId.startsWith("book_");
 
+      const shouldEnterCancelFlow =
+        isBookingWhitelisted(from) &&
+        (isCancelarConsultaTrigger || !!activeCancelSession);
+
       const shouldEnterBookingFlow =
+        !shouldEnterCancelFlow &&
         isBookingWhitelisted(from) &&
         (isAgendarConsultaTrigger || !!activeBookingSession || isBookingButton);
+
+      // ---------- CANCELAMENTO ----------
+      if (shouldEnterCancelFlow) {
+        console.log("[CANCEL_FLOW] Forwarding to cancel-appointment-chat", {
+          from, hasSession: !!activeCancelSession, trigger: isCancelarConsultaTrigger, isBookingButton,
+        });
+
+        const messageToForward = isCancelarConsultaTrigger && !activeCancelSession
+          ? ""
+          : isBookingButton
+            ? extractedButtonId!.replace(/^book_/, "")
+            : (text || "");
+
+        const cancelRes = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/cancel-appointment-chat`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              clinic_id: SINDICATO_CLINIC_ID,
+              phone: from,
+              message: messageToForward,
+            }),
+          }
+        );
+        const cancelData = await cancelRes.json();
+        const replyText: string = cancelData?.response || "Não consegui processar o cancelamento.";
+        const replyState: string | undefined = cancelData?.state;
+
+        const { data: updatedSession } = await supabase
+          .from("whatsapp_booking_sessions")
+          .select("*")
+          .eq("clinic_id", SINDICATO_CLINIC_ID)
+          .eq("phone", from)
+          .eq("action_type", "cancel")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const stripNumberedList = (txt: string) =>
+          txt.split("\n").filter((l) => !/^\s*\d+\s*-\s+/.test(l)).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+        const truncate = (s: string, n: number) =>
+          (s || "").length > n ? (s || "").slice(0, n - 1) + "…" : (s || "");
+
+        type Opt = { id: string; title: string; description?: string };
+        let options: Opt[] = [];
+        let listSectionTitle = "Opções";
+        const sess: any = updatedSession || {};
+
+        switch (replyState) {
+          case "CANCEL_CONFIRM_IDENTITY":
+            options = [
+              { id: "book_1", title: "Confirmar" },
+              { id: "book_2", title: "Não sou eu" },
+            ];
+            break;
+          case "CANCEL_SELECT_APPT": {
+            const list = Array.isArray(sess.appointments_list) ? sess.appointments_list : [];
+            options = list.slice(0, 10).map((a: any, i: number) => {
+              const [y, m, d] = String(a.date).split("-");
+              const dayStr = `${d}/${m}`;
+              const title = truncate(`${dayStr} ${a.time}`, 24);
+              const desc = truncate(
+                `${a.professional_name || ""}${a.beneficiary ? " • " + a.beneficiary : ""}`,
+                72,
+              );
+              return { id: `book_${i + 1}`, title, description: desc };
+            });
+            listSectionTitle = "Consultas";
+            break;
+          }
+          case "CANCEL_CONFIRM":
+            options = [
+              { id: "book_1", title: "Sim, cancelar" },
+              { id: "book_2", title: "Não, manter" },
+            ];
+            break;
+          default:
+            options = [];
+        }
+
+        if (options.length === 0) {
+          await sendResponse({ type: "text", text: { body: replyText } });
+        } else if (options.length <= 3) {
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "button",
+              body: { text: truncate(stripNumberedList(replyText), 1024) },
+              action: {
+                buttons: options.map((o) => ({
+                  type: "reply",
+                  reply: { id: o.id, title: truncate(o.title, 20) },
+                })),
+              },
+            },
+          });
+        } else {
+          await sendResponse({
+            type: "interactive",
+            interactive: {
+              type: "list",
+              body: { text: truncate(stripNumberedList(replyText), 1024) },
+              action: {
+                button: "Escolher",
+                sections: [{
+                  title: truncate(listSectionTitle, 24),
+                  rows: options.map((o) => ({
+                    id: o.id,
+                    title: truncate(o.title, 24),
+                    ...(o.description ? { description: truncate(o.description, 72) } : {}),
+                  })),
+                }],
+              },
+            },
+          });
+        }
+
+        return new Response(
+          JSON.stringify({ ok: true, action: "cancel_flow", state: replyState, options: options.length }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (shouldEnterBookingFlow) {
         console.log("[BOOKING_FLOW] Forwarding to booking-web-chat", {
