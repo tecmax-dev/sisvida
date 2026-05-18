@@ -47,6 +47,15 @@ interface DependentInclusionFormProps {
 function getFriendlyErrorMessage(rawMessage?: string): string {
   if (!rawMessage) return "Ocorreu um erro inesperado. Tente novamente mais tarde.";
   const msg = rawMessage.toLowerCase();
+  if (msg.includes("cpf_associado_existente") || (msg.includes("associado") && msg.includes("titular"))) {
+    return "Este CPF já está cadastrado como associado/titular nesta entidade. Não é permitido incluí-lo como dependente.";
+  }
+  if (msg.includes("cpf já cadastrado como dependente") || msg.includes("já cadastrado como dependente")) {
+    return "Este CPF já está cadastrado como dependente nesta entidade.";
+  }
+  if (msg.includes("filhos devem ter até 21")) {
+    return "Filhos podem ser cadastrados como dependentes apenas até 21 anos de idade.";
+  }
   if (msg.includes("unique") && msg.includes("cpf")) {
     return "Este CPF já está cadastrado como dependente. Verifique os dados e tente novamente.";
   }
