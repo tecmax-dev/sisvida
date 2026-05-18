@@ -56,6 +56,15 @@ function getFriendlyErrorMessage(rawMessage?: string): string {
   if (msg.includes("filhos devem ter até 21")) {
     return "Filhos podem ser cadastrados como dependentes apenas até 21 anos de idade.";
   }
+  if (msg.includes("solicitação pendente") || msg.includes("solicitacao pendente")) {
+    return "Já existe uma solicitação pendente para este CPF. Aguarde a análise do sindicato.";
+  }
+  if (msg.includes("associado não encontrado") || msg.includes("associado nao encontrado") || msg.includes("faça login novamente") || msg.includes("faca login novamente")) {
+    return "Sua sessão de associado expirou ou está inválida. Entre novamente no aplicativo e tente de novo.";
+  }
+  if (msg.includes("não é permitido criar novos cadastros") || msg.includes("nao e permitido criar novos cadastros")) {
+    return "Não foi possível validar o cadastro do associado no sindicato. Entre novamente no aplicativo e tente de novo.";
+  }
   if (msg.includes("unique") && msg.includes("cpf")) {
     return "Este CPF já está cadastrado como dependente. Verifique os dados e tente novamente.";
   }
