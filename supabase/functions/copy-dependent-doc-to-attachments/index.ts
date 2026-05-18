@@ -18,7 +18,7 @@ function json(status: number, body: unknown) {
 function extractStoragePath(input: string): string {
   // Accept full public/signed URLs or raw storage paths
   if (!input) return input;
-  const m = input.match(/\/object\/(?:public|sign)\/dependent-documents\/([^?]+)/);
+  const m = input.match(/\/object\/(?:public|sign)\/(?:dependent-documents|dependent-cpf-photos)\/([^?]+)/);
   if (m) {
     try {
       return decodeURIComponent(m[1]);
@@ -27,6 +27,10 @@ function extractStoragePath(input: string): string {
     }
   }
   return input;
+}
+
+function inferSourceBucket(input: string): string {
+  return input.includes("/dependent-documents/") ? "dependent-documents" : "dependent-cpf-photos";
 }
 
 function guessContentType(name: string): string {
@@ -89,10 +93,18 @@ Deno.serve(async (req) => {
 
     const sourcePath = extractStoragePath(cpf_photo_url);
 
-    // Download original from dependent-documents bucket
-    const { data: fileBlob, error: dlError } = await admin.storage
-      .from("dependent-documents")
+    const sourceBucket = inferSourceBucket(cpf_photo_url);
+
+    let { data: fileBlob, error: dlError } = await admin.storage
+      .from(sourceBucket)
       .download(sourcePath);
+
+    if (dlError || !fileBlob) {
+      const fallbackBucket = sourceBucket === "dependent-documents" ? "dependent-cpf-photos" : "dependent-documents";
+      const fallback = await admin.storage.from(fallbackBucket).download(sourcePath);
+      fileBlob = fallback.data;
+      dlError = fallback.error;
+    }
 
     if (dlError || !fileBlob) {
       console.error("[copy-dependent-doc] download error:", dlError);
