@@ -132,6 +132,8 @@ const formatPhone = (value: string): string => {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
 
+const DEPENDENT_DOCUMENT_BUCKET = "dependent-cpf-photos";
+
 interface FormData {
   name: string;
   cpf: string;
@@ -356,7 +358,7 @@ export function DependentInclusionForm({
       const fileName = `${patientId}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("dependent-documents")
+        .from(DEPENDENT_DOCUMENT_BUCKET)
         .upload(fileName, documentFile, {
           cacheControl: "3600",
           upsert: false,
@@ -364,7 +366,7 @@ export function DependentInclusionForm({
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        throw new Error("Erro ao enviar documento");
+        throw new Error(uploadError.message || "Erro ao enviar documento");
       }
 
       // Return just the path (not public URL) since bucket is private
