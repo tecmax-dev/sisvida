@@ -41,7 +41,7 @@ function buildTemplate(p: Prof) {
       {
         type: "BUTTONS",
         buttons: [
-          { type: "URL", text: "Acessar Aplicativo", url: "https://prosindweb.com.br/" },
+          { type: "URL", text: "Acessar Aplicativo", url: "https://prosindweb.com.br/sindicato" },
         ],
       },
     ],
