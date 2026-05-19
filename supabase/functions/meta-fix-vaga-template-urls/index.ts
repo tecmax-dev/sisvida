@@ -30,11 +30,15 @@ async function listAllTemplates(wabaId: string, token: string): Promise<Template
   const out: TemplateRecord[] = [];
   let url: string | null =
     `https://graph.facebook.com/${META_GRAPH_VERSION}/${wabaId}/message_templates?fields=id,name,language,status,components&limit=200`;
-  while (url) {
+  let pages = 0;
+  while (url && pages < 10) {
+    pages++;
+    console.log(`[list] page ${pages}: ${url}`);
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const json: any = await res.json();
     if (!res.ok) throw new Error(`list failed: ${JSON.stringify(json)}`);
     if (Array.isArray(json.data)) out.push(...json.data);
+    console.log(`[list] page ${pages} got ${json?.data?.length ?? 0} items, total ${out.length}`);
     url = json?.paging?.next ?? null;
   }
   return out;
@@ -73,9 +77,11 @@ serve(async (req) => {
 
     const all = await listAllTemplates(WABA_ID, TOKEN);
     const targets = all.filter((t) => TEMPLATE_NAME_PREFIXES.some((p) => t.name.startsWith(p)));
+    console.log(`[main] total templates=${all.length} targets=${targets.length}`);
 
     const results: any[] = [];
     for (const t of targets) {
+      console.log(`[edit] ${t.name} (${t.language}) id=${t.id}`);
       const { changed, components } = rewriteComponents(t.components || []);
       if (!changed) {
         results.push({ name: t.name, language: t.language, skipped: "url já correta" });
@@ -89,7 +95,7 @@ serve(async (req) => {
       });
       const json = await res.json();
       results.push({ name: t.name, language: t.language, ok: res.ok, status: res.status, meta: json });
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 200));
     }
 
     return new Response(
