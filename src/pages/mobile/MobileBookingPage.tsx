@@ -129,6 +129,7 @@ export default function MobileBookingPage() {
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [noShowBlock, setNoShowBlock] = useState<{ professionalId: string; until: string } | null>(null);
   const [cardExpired, setCardExpired] = useState(false);
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
@@ -296,6 +297,14 @@ export default function MobileBookingPage() {
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
         setBlockedMessage(data.blockedMessage);
+      }
+
+      // Bloqueio por falta é POR PROFISSIONAL (apenas o profissional onde ocorreu a falta).
+      if (data.noShowBlock && data.noShowBlock.professionalId && data.noShowBlock.until) {
+        setNoShowBlock({
+          professionalId: data.noShowBlock.professionalId,
+          until: data.noShowBlock.until,
+        });
       }
 
     } catch (err) {
