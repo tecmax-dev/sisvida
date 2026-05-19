@@ -143,7 +143,7 @@ serve(async (req) => {
       // Query 3: Dados do paciente (bloqueio + birth_date)
       supabase
         .from("patients")
-        .select("no_show_blocked_until, no_show_blocked_professional_id, no_show_unblocked_at, is_active, birth_date")
+        .select("no_show_blocked_until, no_show_blocked_professional_id, no_show_unblocked_at, is_active, birth_date, gender")
         .eq("id", patientId)
         .single(),
 
@@ -246,6 +246,7 @@ serve(async (req) => {
         maxAppointmentsPerCpfMonth,
         minAdvanceBookingHours,
         titularBirthDate: patientData?.birth_date ?? null,
+        titularGender: patientData?.gender ?? null,
         _debug: { elapsed_ms: elapsed }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
