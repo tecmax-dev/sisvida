@@ -20,7 +20,7 @@ const templates = [
           {
             type: "URL",
             text: "Acessar Aplicativo",
-            url: "https://app.sindicato.com.br/"
+            url: "https://prosindweb.com.br/app"
           }
         ]
       }
@@ -43,7 +43,7 @@ const templates = [
           {
             type: "URL",
             text: "Acessar Aplicativo",
-            url: "https://app.sindicato.com.br/"
+            url: "https://prosindweb.com.br/app"
           }
         ]
       }
@@ -92,7 +92,7 @@ const templates = [
           {
             type: "URL",
             text: "Acessar Aplicativo",
-            url: "https://app.sindicato.com.br/"
+            url: "https://prosindweb.com.br/app"
           }
         ]
       }
