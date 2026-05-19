@@ -457,7 +457,10 @@ export default function MobileBookingPage() {
       return;
     }
 
-    // Regra Daniela Sales: Serviço de Massoterapia somente para mulheres (sexo feminino).
+    // Regra Daniela Sales: O Serviço de Massoterapia é SOMENTE para mulheres.
+    // Como Daniela também atende outros procedimentos (abertos a homens), apenas
+    // pedimos confirmação quando o paciente é do sexo masculino (titular) ou quando
+    // não temos certeza do sexo (dependente). Nunca bloqueamos de forma categórica.
     const profSelected = professionals.find(p => p.id === selectedProfessionalId);
     const isDanielaSales = !!profSelected && /daniela\s+sales/i.test(profSelected.name);
     if (isDanielaSales) {
@@ -465,19 +468,16 @@ export default function MobileBookingPage() {
         const g = (titularGender || "").toLowerCase().trim();
         const isMale = g === "m" || g === "masculino";
         if (isMale) {
-          toast({
-            title: "Atendimento exclusivo para mulheres",
-            description: "O Serviço de Massoterapia com Daniela Sales é somente para mulheres (sexo feminino).",
-            variant: "destructive",
-          });
-          return;
+          const ok = window.confirm(
+            "ATENÇÃO: O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino).\n\nDaniela também atende outros procedimentos disponíveis para homens.\n\nConfirma que este agendamento NÃO é para Massoterapia?"
+          );
+          if (!ok) return;
         }
       } else if (patientType === "dependent") {
-        // Dependentes não possuem gênero cadastrado: pedir confirmação explícita.
         const dep = dependents.find(d => d.id === selectedDependentId);
         const depName = dep?.name || "o(a) dependente";
         const confirmed = window.confirm(
-          `O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino).\n\nConfirma que ${depName} é do sexo feminino?`
+          `ATENÇÃO: O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino).\n\nDaniela também atende outros procedimentos disponíveis para homens.\n\nSe este agendamento for para Massoterapia, confirme que ${depName} é do sexo feminino. Caso contrário, confirme que o agendamento NÃO é para Massoterapia.\n\nDeseja prosseguir?`
         );
         if (!confirmed) return;
       }
