@@ -29,6 +29,16 @@ import { ptBR } from "date-fns/locale";
 import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 import { Badge } from "@/components/ui/badge";
 import { useMobileAuth } from "@/contexts/MobileAuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 // Category tabs removed - showing all professionals in single list
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
@@ -145,6 +155,8 @@ export default function MobileBookingPage() {
   const [minAdvanceBookingHours, setMinAdvanceBookingHours] = useState(6);
   const [titularBirthDate, setTitularBirthDate] = useState<string | null>(null);
   const [titularGender, setTitularGender] = useState<string | null>(null);
+  const [massageConfirmOpen, setMassageConfirmOpen] = useState(false);
+  const [massageConfirmText, setMassageConfirmText] = useState("");
   
   const clinicIdRef = useRef<string | null>(null);
   
@@ -466,23 +478,29 @@ export default function MobileBookingPage() {
     if (isDanielaSales) {
       if (patientType === "titular") {
         const g = (titularGender || "").toLowerCase().trim();
-        const isMale = g === "m" || g === "masculino";
+        const isMale = g === "m" || g === "masculino" || g === "male";
         if (isMale) {
-          const ok = window.confirm(
-            "ATENÇÃO: O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino).\n\nDaniela também atende outros procedimentos disponíveis para homens.\n\nConfirma que este agendamento NÃO é para Massoterapia?"
+          setMassageConfirmText(
+            "O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino). Daniela também atende outros procedimentos disponíveis para homens.\n\nConfirma que este agendamento NÃO é para Massoterapia?"
           );
-          if (!ok) return;
+          setMassageConfirmOpen(true);
+          return;
         }
       } else if (patientType === "dependent") {
         const dep = dependents.find(d => d.id === selectedDependentId);
         const depName = dep?.name || "o(a) dependente";
-        const confirmed = window.confirm(
-          `ATENÇÃO: O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino).\n\nDaniela também atende outros procedimentos disponíveis para homens.\n\nSe este agendamento for para Massoterapia, confirme que ${depName} é do sexo feminino. Caso contrário, confirme que o agendamento NÃO é para Massoterapia.\n\nDeseja prosseguir?`
+        setMassageConfirmText(
+          `O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino). Daniela também atende outros procedimentos disponíveis para homens.\n\nSe for Massoterapia, confirme que ${depName} é do sexo feminino. Caso contrário, confirme que o agendamento NÃO é para Massoterapia.\n\nDeseja prosseguir?`
         );
-        if (!confirmed) return;
+        setMassageConfirmOpen(true);
+        return;
       }
     }
 
+    await performBooking();
+  };
+
+  const performBooking = async () => {
     setSubmitting(true);
 
     try {
@@ -991,6 +1009,30 @@ export default function MobileBookingPage() {
           )}
         </div>
       </ScrollArea>
+      <AlertDialog open={massageConfirmOpen} onOpenChange={setMassageConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Atenção — Massoterapia
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {massageConfirmText}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setMassageConfirmOpen(false);
+                void performBooking();
+              }}
+            >
+              Confirmar e agendar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
