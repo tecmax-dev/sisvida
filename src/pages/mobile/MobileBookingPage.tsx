@@ -1009,6 +1009,30 @@ export default function MobileBookingPage() {
           )}
         </div>
       </ScrollArea>
+      <AlertDialog open={massageConfirmOpen} onOpenChange={setMassageConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Atenção — Massoterapia
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {massageConfirmText}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setMassageConfirmOpen(false);
+                void performBooking();
+              }}
+            >
+              Confirmar e agendar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
