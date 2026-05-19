@@ -143,7 +143,7 @@ serve(async (req) => {
       // Query 3: Dados do paciente (bloqueio + birth_date)
       supabase
         .from("patients")
-        .select("no_show_blocked_until, no_show_unblocked_at, is_active, birth_date")
+        .select("no_show_blocked_until, no_show_blocked_professional_id, no_show_unblocked_at, is_active, birth_date")
         .eq("id", patientId)
         .single(),
 
@@ -186,6 +186,7 @@ serve(async (req) => {
 
     // Verificar bloqueio do paciente
     let blockedMessage: string | null = null;
+    let noShowBlock: { professionalId: string | null; until: string | null } | null = null;
     const patientData = patientResult.data;
     if (patientData) {
       if (patientData.no_show_blocked_until) {
@@ -194,7 +195,16 @@ serve(async (req) => {
         const isUnblockedByAdmin = !!patientData.no_show_unblocked_at;
 
         if (isStillWithinBlock && !isUnblockedByAdmin) {
-          blockedMessage = `Você está bloqueado para agendamentos até ${blockedUntil.toLocaleDateString("pt-BR")}`;
+          // Bloqueio é POR PROFISSIONAL: aplica-se apenas ao profissional onde houve a falta.
+          // Se não houver profissional vinculado, mantemos o bloqueio global por segurança.
+          if (patientData.no_show_blocked_professional_id) {
+            noShowBlock = {
+              professionalId: patientData.no_show_blocked_professional_id,
+              until: patientData.no_show_blocked_until,
+            };
+          } else {
+            blockedMessage = `Você está bloqueado para agendamentos até ${blockedUntil.toLocaleDateString("pt-BR")}`;
+          }
         }
       }
 
@@ -224,6 +234,7 @@ serve(async (req) => {
         professionals,
         dependents,
         blockedMessage,
+        noShowBlock,
         noActiveCard: false,
         cardExpired: false,
         bookingMonthsAhead,
