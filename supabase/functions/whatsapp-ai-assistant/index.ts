@@ -195,6 +195,10 @@ const tools = [
           horario: { 
             type: "string", 
             description: "Horário no formato HH:MM" 
+          },
+          confirmacao_massoterapia: {
+            type: "string",
+            description: "Use APENAS quando o profissional for Daniela Sales E o paciente for do sexo masculino. Antes de chamar com este parâmetro, exiba ao paciente o aviso de que Massoterapia com Daniela é somente para mulheres, mas que ela atende outros procedimentos para homens. Só passe 'confirmo' aqui quando o paciente confirmar que o agendamento NÃO é para Massoterapia."
           }
         },
         required: ["patient_id", "nome_profissional", "data", "horario"]
