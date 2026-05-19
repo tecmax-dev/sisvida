@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const META_GRAPH_VERSION = "v21.0";
-const NEW_URL = "https://prosindweb.com.br/sindicato";
+const NEW_URL = "https://prosindweb.com.br/app";
 
 // Nomes dos templates de "vaga médica / agenda disponível" cujos botões precisam
 // ser corrigidos. O botão "Acessar Aplicativo" estava apontando para
@@ -50,7 +50,16 @@ function rewriteComponents(components: any[]): { changed: boolean; components: a
     if (c.type !== "BUTTONS" || !Array.isArray(c.buttons)) return c;
     const buttons = c.buttons.map((b: any) => {
       if (b.type === "URL" && typeof b.url === "string") {
-        if (b.url !== NEW_URL && (b.url.startsWith("https://app.sindicato.com.br") || b.url === "https://prosindweb.com.br/" || b.url === "https://prosindweb.com.br")) {
+        const u = b.url;
+        const needsFix =
+          u !== NEW_URL && (
+            u.startsWith("https://app.sindicato.com.br") ||
+            u === "https://prosindweb.com.br" ||
+            u === "https://prosindweb.com.br/" ||
+            u === "https://prosindweb.com.br/sindicato" ||
+            u === "https://prosindweb.com.br/sindicato/"
+          );
+        if (needsFix) {
           changed = true;
           return { ...b, url: NEW_URL };
         }
