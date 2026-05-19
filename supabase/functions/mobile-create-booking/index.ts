@@ -66,12 +66,12 @@ Deno.serve(async (req) => {
     const [{ data: patient, error: patientError }, { data: professional, error: professionalError }] = await Promise.all([
       supabase
         .from("patients")
-        .select("id, clinic_id, is_active")
+        .select("id, clinic_id, is_active, gender")
         .eq("id", patientId)
         .maybeSingle(),
       supabase
         .from("professionals")
-        .select("id, clinic_id, is_active")
+        .select("id, clinic_id, is_active, name")
         .eq("id", professionalId)
         .maybeSingle(),
     ]);
@@ -82,6 +82,17 @@ Deno.serve(async (req) => {
 
     if (professionalError || !professional || professional.clinic_id !== clinicId || professional.is_active === false) {
       return errorResponse("Profissional indisponível.");
+    }
+
+    // Regra Daniela Sales: Massoterapia somente para mulheres (sexo feminino).
+    // Aplicada apenas quando o agendamento é para o titular (dependentes não possuem gênero cadastrado).
+    if (professional.name && /daniela\s+sales/i.test(professional.name) && !dependentId) {
+      const g = String(patient.gender || "").toLowerCase().trim();
+      if (g === "m" || g === "masculino") {
+        return errorResponse(
+          "O Serviço de Massoterapia com Daniela Sales é somente para mulheres (sexo feminino).",
+        );
+      }
     }
 
     if (dependentId) {
