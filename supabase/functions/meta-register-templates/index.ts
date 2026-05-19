@@ -38,7 +38,7 @@ const templates: TemplatePayload[] = [
         type: "BODY",
         text:
           "Olá, {{1}}. Sua mensalidade do Sindicato dos Comerciários referente a {{2}} está disponível.\n\nValor: R$ {{3}}\nVencimento: {{4}}\n\nAcesse o boleto e o código PIX em: {{5}} (link individual).",
-        example: { body_text: [["João da Silva", "03/2026", "45,00", "10/03/2026", "https://app.sindicato.com.br/b/abc123"]] },
+        example: { body_text: [["João da Silva", "03/2026", "45,00", "10/03/2026", "https://prosindweb.com.br/sindicato/b/abc123"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
     ],
@@ -51,7 +51,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Lembrete da sua consulta no Sindicato dos Comerciários.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nEm caso de imprevisto, reagende em: https://app.sindicato.com.br",
+          "Olá, {{1}}. Lembrete da sua consulta no Sindicato dos Comerciários.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nEm caso de imprevisto, reagende em: https://prosindweb.com.br/sindicato",
         example: { body_text: [["Maria Santos", "Dr. Carlos Mendes", "Cardiologia", "15/03/2026", "14:30", "Sede Central - Rua Principal, 100"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -65,7 +65,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://app.sindicato.com.br",
+          "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://prosindweb.com.br/sindicato",
         example: { body_text: [["Maria Santos", "Dr. Carlos Mendes", "Cardiologia", "15/03/2026", "14:30", "Sede Central - Rua Principal, 100"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -108,7 +108,7 @@ const templates: TemplatePayload[] = [
         type: "BODY",
         text:
           "Olá, {{1}}. Identificamos que sua mensalidade referente a {{2}} está em aberto.\n\nValor original: R$ {{3}}\nVencimento original: {{4}}\n\nPara regularizar com a 2ª via atualizada, acesse: {{5}} (link individual).",
-        example: { body_text: [["João da Silva", "02/2026", "45,00", "10/02/2026", "https://app.sindicato.com.br/b/abc123"]] },
+        example: { body_text: [["João da Silva", "02/2026", "45,00", "10/02/2026", "https://prosindweb.com.br/sindicato/b/abc123"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
     ],
@@ -121,7 +121,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua autorização para {{2}} está pronta.\n\nProfissional: {{3}}\nValidade: {{4}}\n\nAcesse o documento em: https://app.sindicato.com.br",
+          "Olá, {{1}}. Sua autorização para {{2}} está pronta.\n\nProfissional: {{3}}\nValidade: {{4}}\n\nAcesse o documento em: https://prosindweb.com.br/sindicato",
         example: { body_text: [["Maria Santos", "Consulta de Cardiologia", "Dr. Carlos Mendes", "30/04/2026"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -155,7 +155,7 @@ const templates: TemplatePayload[] = [
       {
         type: "BODY",
         text:
-          "Olá, {{1}}. Sua filiação ao Sindicato dos Comerciários foi aprovada.\n\nNúmero de matrícula: {{2}}\nPlano: {{3}}\n\nAcesse o app para visualizar sua carteira digital e benefícios em: https://app.sindicato.com.br",
+          "Olá, {{1}}. Sua filiação ao Sindicato dos Comerciários foi aprovada.\n\nNúmero de matrícula: {{2}}\nPlano: {{3}}\n\nAcesse o app para visualizar sua carteira digital e benefícios em: https://prosindweb.com.br/sindicato",
         example: { body_text: [["João da Silva", "2026-00123", "Plano Família"]] },
       },
       { type: "FOOTER", text: "Sindicato dos Comerciários" },
@@ -443,7 +443,7 @@ const templates: TemplatePayload[] = [
        {
          type: "BODY",
          text:
-           "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://app.sindicato.com.br",
+           "Olá, {{1}}. Sua consulta foi agendada com sucesso.\n\nProfissional: {{2}}\nEspecialidade: {{3}}\nData: {{4}} às {{5}}\nLocal: {{6}}\n\nPara reagendar ou cancelar, acesse: https://prosindweb.com.br/sindicato",
          example: {
            body_text: [[
              "Maria Santos",
