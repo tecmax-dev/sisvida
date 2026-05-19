@@ -476,7 +476,7 @@ const templates: TemplatePayload[] = [
             {
               type: "URL",
               text: "Acessar Aplicativo",
-              url: "https://app.sindicato.com.br",
+              url: "https://prosindweb.com.br/sindicato",
             },
           ],
         },
@@ -500,7 +500,7 @@ const templates: TemplatePayload[] = [
             {
               type: "URL",
               text: "Acessar Aplicativo",
-              url: "https://app.sindicato.com.br/",
+              url: "https://prosindweb.com.br/sindicato",
             },
           ],
         },
@@ -524,7 +524,7 @@ const templates: TemplatePayload[] = [
             {
               type: "URL",
               text: "Acessar Aplicativo",
-              url: "https://app.sindicato.com.br/",
+              url: "https://prosindweb.com.br/sindicato",
             },
           ],
         },
