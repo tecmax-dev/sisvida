@@ -820,6 +820,23 @@ async function executeTool(
 
         const professional = foundProfessionals[0];
         const duration = professional.appointment_duration || 30;
+
+        // Regra Daniela Sales: Massoterapia somente para mulheres (sexo feminino).
+        if (professional.name && /daniela\s+sales/i.test(professional.name)) {
+          const { data: patientGenderRow } = await supabase
+            .from('patients')
+            .select('gender')
+            .eq('id', patient_id)
+            .maybeSingle();
+          const g = String(patientGenderRow?.gender || '').toLowerCase().trim();
+          if (g === 'm' || g === 'masculino') {
+            return JSON.stringify({
+              success: false,
+              message: '⚠️ O Serviço de Massoterapia com Daniela Sales é *somente para mulheres* (sexo feminino). Não é possível concluir este agendamento.'
+            });
+          }
+        }
+
         const [h, m] = horario.split(':').map(Number);
         const endMinutes = h * 60 + m + duration;
         const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;

@@ -144,6 +144,7 @@ export default function MobileBookingPage() {
   const [maxAppointmentsPerCpfMonth, setMaxAppointmentsPerCpfMonth] = useState(1);
   const [minAdvanceBookingHours, setMinAdvanceBookingHours] = useState(6);
   const [titularBirthDate, setTitularBirthDate] = useState<string | null>(null);
+  const [titularGender, setTitularGender] = useState<string | null>(null);
   
   const clinicIdRef = useRef<string | null>(null);
   
@@ -293,6 +294,8 @@ export default function MobileBookingPage() {
       
       // Setar data de nascimento do titular
       if (data.titularBirthDate) setTitularBirthDate(data.titularBirthDate);
+      // Setar gênero do titular (necessário para regras específicas como Daniela Sales)
+      if (data.titularGender) setTitularGender(data.titularGender);
 
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
@@ -452,6 +455,32 @@ export default function MobileBookingPage() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Regra Daniela Sales: Serviço de Massoterapia somente para mulheres (sexo feminino).
+    const profSelected = professionals.find(p => p.id === selectedProfessionalId);
+    const isDanielaSales = !!profSelected && /daniela\s+sales/i.test(profSelected.name);
+    if (isDanielaSales) {
+      if (patientType === "titular") {
+        const g = (titularGender || "").toLowerCase().trim();
+        const isMale = g === "m" || g === "masculino";
+        if (isMale) {
+          toast({
+            title: "Atendimento exclusivo para mulheres",
+            description: "O Serviço de Massoterapia com Daniela Sales é somente para mulheres (sexo feminino).",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (patientType === "dependent") {
+        // Dependentes não possuem gênero cadastrado: pedir confirmação explícita.
+        const dep = dependents.find(d => d.id === selectedDependentId);
+        const depName = dep?.name || "o(a) dependente";
+        const confirmed = window.confirm(
+          `O Serviço de Massoterapia com Daniela Sales é SOMENTE para mulheres (sexo feminino).\n\nConfirma que ${depName} é do sexo feminino?`
+        );
+        if (!confirmed) return;
+      }
     }
 
     setSubmitting(true);
