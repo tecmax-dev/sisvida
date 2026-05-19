@@ -129,6 +129,7 @@ export default function MobileBookingPage() {
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const [noShowBlock, setNoShowBlock] = useState<{ professionalId: string; until: string } | null>(null);
   const [cardExpired, setCardExpired] = useState(false);
   const [cardExpiryDate, setCardExpiryDate] = useState<string | null>(null);
   const [noActiveCard, setNoActiveCard] = useState(false);
@@ -296,6 +297,14 @@ export default function MobileBookingPage() {
       // Setar mensagem de bloqueio (se houver)
       if (data.blockedMessage) {
         setBlockedMessage(data.blockedMessage);
+      }
+
+      // Bloqueio por falta é POR PROFISSIONAL (apenas o profissional onde ocorreu a falta).
+      if (data.noShowBlock && data.noShowBlock.professionalId && data.noShowBlock.until) {
+        setNoShowBlock({
+          professionalId: data.noShowBlock.professionalId,
+          until: data.noShowBlock.until,
+        });
       }
 
     } catch (err) {
@@ -812,23 +821,39 @@ export default function MobileBookingPage() {
                       }
                     }
 
+                    // Bloqueio por falta: aplica-se SOMENTE ao profissional onde houve a falta,
+                    // e SOMENTE para o titular (dependentes não herdam o bloqueio).
+                    let isNoShowBlocked = false;
+                    let noShowReason = "";
+                    if (
+                      noShowBlock &&
+                      noShowBlock.professionalId === prof.id &&
+                      patientType === "titular"
+                    ) {
+                      const until = new Date(noShowBlock.until);
+                      isNoShowBlocked = true;
+                      noShowReason = `Bloqueado para este profissional até ${until.toLocaleDateString("pt-BR")} por falta anterior`;
+                    }
+                    const isBlocked = isAgeBlocked || isNoShowBlocked;
+                    const blockReason = isAgeBlocked ? ageBlockReason : noShowReason;
+
                     return (
                       <Card 
                         key={prof.id}
                         className={cn(
                           "transition-colors",
-                          isAgeBlocked 
+                          isBlocked 
                             ? "opacity-50 cursor-not-allowed" 
                             : "cursor-pointer active:scale-[0.98]",
-                          selectedProfessionalId === prof.id && !isAgeBlocked
+                          selectedProfessionalId === prof.id && !isBlocked
                             ? "border-emerald-600 bg-emerald-50" 
                             : ""
                         )}
                         onClick={() => {
-                          if (isAgeBlocked) {
+                          if (isBlocked) {
                             toast({
-                              title: "Restrição de idade",
-                              description: ageBlockReason,
+                              title: isNoShowBlocked ? "Agendamento bloqueado" : "Restrição de idade",
+                              description: blockReason,
                               variant: "destructive",
                             });
                             return;
@@ -861,13 +886,18 @@ export default function MobileBookingPage() {
                                 ⚠️ {ageBlockReason}
                               </p>
                             )}
+                            {isNoShowBlocked && (
+                              <p className="text-xs text-red-500 font-medium mt-0.5">
+                                ⚠️ {noShowReason}
+                              </p>
+                            )}
                             {prof.max_patient_age != null && !isAgeBlocked && (
                               <p className="text-xs text-amber-600 mt-0.5">
                                 Até {prof.max_patient_age} anos
                               </p>
                             )}
                           </div>
-                          {selectedProfessionalId === prof.id && !isAgeBlocked && (
+                          {selectedProfessionalId === prof.id && !isBlocked && (
                             <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                           )}
                         </CardContent>
